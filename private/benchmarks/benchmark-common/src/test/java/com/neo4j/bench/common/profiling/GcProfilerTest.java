@@ -8,6 +8,7 @@ package com.neo4j.bench.common.profiling;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.common.util.JvmVersion;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkGroup;
@@ -54,7 +55,7 @@ class GcProfilerTest
 
         BenchmarkGroupDirectory groupDirectory = BenchmarkGroupDirectory.createAt( parentDir, benchmarkGroup );
         BenchmarkDirectory benchmarkDirectory = groupDirectory.findOrCreate( benchmark );
-        forkDirectory = benchmarkDirectory.create( "fork", Collections.emptyList() );
+        forkDirectory = benchmarkDirectory.create( "fork" );
     }
 
     @Test
@@ -62,7 +63,10 @@ class GcProfilerTest
     {
         GcProfiler profiler = new GcProfiler();
         JvmVersion jvmVersion = JvmVersion.create( 8, "" );
-        JvmArgs jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark, Parameters.CLIENT, null );
+        JvmArgs jvmArgs = profiler.jvmArgs( jvmVersion,
+                                            forkDirectory,
+                                            getProfilerRecordingDescriptor( Parameters.CLIENT ),
+                                            null );
         assertThat( jvmArgs.toArgs(), hasItem( equalTo( "-XX:+PrintGC" ) ) );
     }
 
@@ -71,8 +75,20 @@ class GcProfilerTest
     {
         GcProfiler profiler = new GcProfiler();
         JvmVersion jvmVersion = JvmVersion.create( 9, "" );
-        JvmArgs jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark, Parameters.NONE, null );
+        JvmArgs jvmArgs = profiler.jvmArgs( jvmVersion,
+                                            forkDirectory,
+                                            getProfilerRecordingDescriptor( Parameters.NONE ),
+                                            null );
         LOG.debug( jvmArgs.toString() );
         assertThat( jvmArgs.toArgs(), hasItem( startsWith( "-Xlog:gc,safepoint,gc+age=trace" ) ) );
+    }
+
+    private ProfilerRecordingDescriptor getProfilerRecordingDescriptor( Parameters parameters )
+    {
+        return ProfilerRecordingDescriptor.create( benchmarkGroup,
+                                                   benchmark,
+                                                   RunPhase.MEASUREMENT,
+                                                   ParameterizedProfiler.defaultProfiler( ProfilerType.GC ),
+                                                   parameters );
     }
 }

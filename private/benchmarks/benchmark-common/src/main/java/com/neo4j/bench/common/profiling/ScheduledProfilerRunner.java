@@ -8,9 +8,6 @@ package com.neo4j.bench.common.profiling;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.BenchmarkGroup;
-import com.neo4j.bench.model.model.Parameters;
 
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -20,39 +17,32 @@ import java.util.stream.Collectors;
 
 public class ScheduledProfilerRunner
 {
-    public static ScheduledProfilerRunner from( List<ExternalProfiler> externalProfilers )
+    public static List<ScheduledProfiler> toScheduleProfilers( List<ExternalProfiler> externalProfilers )
     {
-        List<ScheduledProfiler> schedulerProfilers =
-                externalProfilers.stream().filter( k -> k instanceof ScheduledProfiler )
-                        .map( ScheduledProfiler.class::cast ).collect( Collectors.toList() );
-        return new ScheduledProfilerRunner( schedulerProfilers );
+        return externalProfilers.stream()
+                                .filter( k -> k instanceof ScheduledProfiler )
+                                .map( ScheduledProfiler.class::cast )
+                                .collect( Collectors.toList() );
     }
 
-    private final List<ScheduledProfiler> scheduledProfilers;
     private final ScheduledExecutorService scheduledThreadPool;
 
-    private ScheduledProfilerRunner( List<ScheduledProfiler> scheduledProfilers )
+    public ScheduledProfilerRunner()
     {
-        this.scheduledProfilers = scheduledProfilers;
         scheduledThreadPool = Executors.newScheduledThreadPool( Runtime.getRuntime().availableProcessors() );
     }
 
-    public void start(
-            ForkDirectory forkDirectory,
-            BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark,
-            Parameters parameters,
-            Jvm jvm,
-            Pid pid )
+    public void submit( ScheduledProfiler profiler,
+                        ForkDirectory forkDirectory,
+                        ProfilerRecordingDescriptor profilerRecordingDescriptor,
+                        Jvm jvm,
+                        Pid pid )
     {
-        scheduledProfilers.forEach( scheduledProfiler -> scheduleProfiler(
-                scheduledProfiler,
-                forkDirectory,
-                benchmarkGroup,
-                benchmark,
-                parameters,
-                jvm,
-                pid ) );
+        scheduleProfiler( profiler,
+                          forkDirectory,
+                          profilerRecordingDescriptor,
+                          jvm,
+                          pid );
     }
 
     public void stop()
@@ -76,15 +66,13 @@ public class ScheduledProfilerRunner
     private void scheduleProfiler(
             ScheduledProfiler scheduledProfiler,
             ForkDirectory forkDirectory,
-            BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark,
-            Parameters additionalParameters,
+            ProfilerRecordingDescriptor profilerRecordingDescriptor,
             Jvm jvm,
             Pid pid )
     {
         FixedRateValue fixedRate = getFixedRate( scheduledProfiler );
         scheduledThreadPool.scheduleAtFixedRate(
-                new ScheduledProfilerRun( scheduledProfiler, forkDirectory, benchmarkGroup, benchmark, additionalParameters, jvm, pid ),
+                new ScheduledProfilerRun( scheduledProfiler, forkDirectory, profilerRecordingDescriptor, jvm, pid ),
                 0,
                 fixedRate.period,
                 fixedRate.timeUnit );
@@ -118,9 +106,7 @@ public class ScheduledProfilerRunner
 
         private final ScheduledProfiler scheduledProfiler;
         private final ForkDirectory forkDirectory;
-        private final BenchmarkGroup benchmarkGroup;
-        private final Benchmark benchmark;
-        private final Parameters additionalParameters;
+        private final ProfilerRecordingDescriptor profilerRecordingDescriptor;
         private final Jvm jvm;
         private final Pid pid;
 
@@ -129,18 +115,14 @@ public class ScheduledProfilerRunner
         private ScheduledProfilerRun(
                 ScheduledProfiler scheduledProfiler,
                 ForkDirectory forkDirectory,
-                BenchmarkGroup benchmarkGroup,
-                Benchmark benchmark,
-                Parameters additionalParameters,
+                ProfilerRecordingDescriptor profilerRecordingDescriptor,
                 Jvm jvm,
                 Pid pid )
         {
             super();
             this.scheduledProfiler = scheduledProfiler;
             this.forkDirectory = forkDirectory;
-            this.benchmarkGroup = benchmarkGroup;
-            this.benchmark = benchmark;
-            this.additionalParameters = additionalParameters;
+            this.profilerRecordingDescriptor = profilerRecordingDescriptor;
             this.jvm = jvm;
             this.pid = pid;
         }
@@ -153,9 +135,7 @@ public class ScheduledProfilerRunner
                 scheduledProfiler.onSchedule(
                         tick,
                         forkDirectory,
-                        benchmarkGroup,
-                        benchmark,
-                        additionalParameters,
+                        profilerRecordingDescriptor,
                         jvm,
                         pid );
             }

@@ -10,6 +10,7 @@ import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.client.env.InstanceDiscovery;
+import com.neo4j.bench.client.reporter.ResultsReporter;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
@@ -44,7 +45,6 @@ import com.neo4j.bench.model.model.Repository;
 import com.neo4j.bench.model.model.TestRun;
 import com.neo4j.bench.model.model.TestRunReport;
 import com.neo4j.bench.model.util.JsonUtil;
-import com.neo4j.bench.reporter.ResultsReporter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,10 +61,10 @@ import java.util.Optional;
 import org.neo4j.configuration.GraphDatabaseSettings;
 
 import static com.google.common.collect.Sets.newHashSet;
+import static com.neo4j.bench.common.results.ErrorReportingPolicy.REPORT_THEN_FAIL;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_DB_PATH;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_ERROR_POLICY;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_NEO4J_CONFIG;
-import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_PROFILER_RECORDINGS_DIR;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_WORK_DIR;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
@@ -97,13 +97,6 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
              title = "Work directory" )
     @Required
     protected File workDir;
-
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_PROFILER_RECORDINGS_DIR},
-             description = "Directory where profiler recordings will be collected",
-             title = "Profile recordings output directory" )
-    @Required
-    private File profilerRecordingsOutputDir;
 
     @Option( type = OptionType.COMMAND,
              name = {CMD_ERROR_POLICY},
@@ -170,27 +163,21 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
         TestRunReport testRunReport = runReport( params,
                                                  workDir,
                                                  storeDir,
-                                                 profilerRecordingsOutputDir,
+
                                                  neo4jConfigFile,
                                                  errorPolicy,
                                                  testRunId );
-        ResultsReporter resultsReporter = new ResultsReporter( profilerRecordingsOutputDir,
-                                                               testRunReport,
-                                                               s3Bucket,
-                                                               true,
-                                                               resultsStoreUsername,
+        Path profilerRecordingsOutputDir = workDir.toPath().resolve( "profiler_recordings_temp" );
+        ResultsReporter resultsReporter = new ResultsReporter( resultsStoreUsername,
                                                                resultsStorePassword,
-                                                               resultsStoreUri,
-                                                               workDir,
-                                                               awsEndpointURL );
+                                                               resultsStoreUri );
 
-        resultsReporter.report();
+        resultsReporter.reportAndUpload( testRunReport, profilerRecordingsOutputDir, s3Bucket, workDir, awsEndpointURL, REPORT_THEN_FAIL );
     }
 
     public static TestRunReport runReport( RunMacroWorkloadParams params,
                                            File workDir,
                                            File storeDir,
-                                           File profilerRecordingsOutputDir,
                                            File neo4jConfigFile,
                                            ErrorReporter.ErrorPolicy errorPolicy,
                                            String testRunId )
@@ -354,9 +341,6 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
             BenchmarkGroupBenchmarkMetricsPrinter verboseMetricsPrinter = new BenchmarkGroupBenchmarkMetricsPrinter( true );
             LOG.debug( verboseMetricsPrinter.toPrettyString( allResults, errorReporter.errors() ) );
 
-            Path profilerRecordingsOutputFile = workDir.toPath().resolve( profilerRecordingsOutputDir.toPath() );
-            LOG.debug( "Copying profiler recordings to: " + profilerRecordingsOutputFile.toAbsolutePath() );
-            groupDir.copyProfilerRecordings( profilerRecordingsOutputFile );
             return testRunReport;
         }
     }

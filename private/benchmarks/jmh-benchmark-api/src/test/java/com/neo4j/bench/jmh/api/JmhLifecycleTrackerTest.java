@@ -80,7 +80,7 @@ public class JmhLifecycleTrackerTest
         BenchmarkGroupDirectory groupDir = groupsAfter.get( 0 );
         assertThat( groupDir.benchmarkGroup(), equalTo( GROUP ) );
 
-        List<BenchmarkDirectory> benchDirs = groupDir.benchmarksDirectories();
+        List<BenchmarkDirectory> benchDirs = groupDir.benchmarkDirectories();
         assertThat( benchDirs.size(), equalTo( 1 ) );
         BenchmarkDirectory benchDir = benchDirs.get( 0 );
         assertThat( benchDir.benchmark(), equalTo( BENCHMARK ) );
@@ -121,7 +121,7 @@ public class JmhLifecycleTrackerTest
         ForkDirectory forkDir0 = before.addTrial( runnerParams, GROUP, BENCHMARK );
 
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.searchAllIn( tempDir ).get( 0 );
-        BenchmarkDirectory benchDir = groupDir.benchmarksDirectories().get( 0 );
+        BenchmarkDirectory benchDir = groupDir.benchmarkDirectories().get( 0 );
 
         List<ForkDirectory> forkDirs = benchDir.forks();
         assertThat( forkDirs.size(), equalTo( 1 ) );
@@ -174,7 +174,7 @@ public class JmhLifecycleTrackerTest
         ForkDirectory forkDir1 = before.addTrial( runnerParams, GROUP, BENCHMARK );
 
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.searchAllIn( tempDir ).get( 0 );
-        BenchmarkDirectory benchDir = groupDir.benchmarksDirectories().get( 0 );
+        BenchmarkDirectory benchDir = groupDir.benchmarkDirectories().get( 0 );
 
         List<ForkDirectory> forkDirs = benchDir.forks();
         assertThat( forkDirs.size(), equalTo( 1 ) );

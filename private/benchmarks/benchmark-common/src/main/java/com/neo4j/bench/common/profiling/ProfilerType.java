@@ -45,12 +45,6 @@ public enum ProfilerType
                     // TODO uncomment
                     // new SecondaryRecordingCreator.JfrFlameGraphCreator(),
                     new SecondaryRecordingCreator.MemoryAllocationFlamegraphCreator() ) ),
-    STRACE(
-            StraceTracer.class,
-            RecordingType.TRACE_STRACE,
-            // requires no environment variables
-            Sets.newHashSet(),
-            SecondaryRecordingCreator.NONE ),
     JVM_LOGGING(
             JvmTracer.class,
             RecordingType.TRACE_JVM,

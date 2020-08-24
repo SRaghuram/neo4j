@@ -9,8 +9,10 @@ import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
 import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.profiling.RecordingDescriptor;
 import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.DeploymentModes;
@@ -499,15 +501,17 @@ class EndToEndIT extends BaseEndToEndIT
                 {
                     for ( Parameters params : parameters )
                     {
-                        ProfilerRecordingDescriptor recordingDescriptor = ProfilerRecordingDescriptor.create(
+                        ProfilerRecordingDescriptor profilerRecordingDescriptor = ProfilerRecordingDescriptor.create(
                                 query.benchmarkGroup(),
                                 query.benchmark(),
                                 RunPhase.MEASUREMENT,
-                                profilerType,
-                                params );
+                                ParameterizedProfiler.defaultProfiler( profilerType ),
+                                // TODO should this be 'params'?
+                                Parameters.NONE );
                         for ( RecordingType recordingType : profilerType.allRecordingTypes() )
                         {
-                            String profilerArtifactFilename = recordingDescriptor.filename( recordingType );
+                            RecordingDescriptor recordingDescriptor = profilerRecordingDescriptor.recordingDescriptorFor( recordingType );
+                            String profilerArtifactFilename = recordingDescriptor.filename();
                             File file = recordingDir.resolve( profilerArtifactFilename ).toFile();
                             assertThat( "File not found: " + file.getAbsolutePath(), file, anExistingFile() );
                         }

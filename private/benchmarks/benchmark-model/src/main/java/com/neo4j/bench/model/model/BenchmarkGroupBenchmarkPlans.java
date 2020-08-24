@@ -5,7 +5,12 @@
  */
 package com.neo4j.bench.model.model;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,7 +22,51 @@ import static java.util.Objects.requireNonNull;
 
 public class BenchmarkGroupBenchmarkPlans
 {
-    private final Map<BenchmarkGroup,Map<Benchmark,Plan>> inner = new HashMap<>();
+    public static class BenchmarkPlans
+    {
+        @JsonDeserialize( keyUsing = Benchmark.BenchmarkKeyDeserializer.class )
+        private final Map<Benchmark,Plan> inner = new HashMap<>();
+
+        public boolean containsBenchmark( Benchmark benchmark )
+        {
+            return inner.containsKey( benchmark );
+        }
+
+        public Plan getPlanFor( Benchmark benchmark )
+        {
+            return inner.get( benchmark );
+        }
+
+        public void put( Benchmark benchmark, Plan plan )
+        {
+            if ( containsBenchmark( benchmark ) )
+            {
+                throw new IllegalStateException( format( "Multiple plans for benchmark: %s\nExisting: %s\nNew: %s",
+                                                         benchmark, getPlanFor( benchmark ), plan ) );
+            }
+            inner.put( benchmark, plan );
+        }
+
+        public Collection<Benchmark> benchmarks()
+        {
+            return inner.keySet();
+        }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            return EqualsBuilder.reflectionEquals( this, o );
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return HashCodeBuilder.reflectionHashCode( this );
+        }
+    }
+
+    @JsonDeserialize( keyUsing = BenchmarkGroup.BenchmarkGroupKeyDeserializer.class )
+    private final Map<BenchmarkGroup,BenchmarkPlans> inner = new HashMap<>();
 
     public void add( BenchmarkGroup group, Benchmark benchmark, Plan plan )
     {
@@ -25,24 +74,19 @@ public class BenchmarkGroupBenchmarkPlans
         requireNonNull( benchmark );
         requireNonNull( plan );
 
-        Map<Benchmark,Plan> groupBenchmarkPlans = inner.computeIfAbsent( group, key -> new HashMap<>() );
-        if ( groupBenchmarkPlans.containsKey( benchmark ) )
-        {
-            throw new IllegalStateException( format( "Multiple plans for benchmark: %s\nExisting: %s\nNew: %s",
-                    benchmark, groupBenchmarkPlans.get( benchmark ), plan ) );
-        }
+        BenchmarkPlans groupBenchmarkPlans = inner.computeIfAbsent( group, key -> new BenchmarkPlans() );
         groupBenchmarkPlans.put( benchmark, plan );
     }
 
     public List<BenchmarkPlan> benchmarkPlans()
     {
         List<BenchmarkPlan> benchmarkPlans = new ArrayList<>();
-        for ( Entry<BenchmarkGroup,Map<Benchmark,Plan>> groupEntry : inner.entrySet() )
+        for ( Entry<BenchmarkGroup,BenchmarkPlans> groupEntry : inner.entrySet() )
         {
-            for ( Entry<Benchmark,Plan> benchmarkEntry : groupEntry.getValue().entrySet() )
+            for ( Benchmark benchmark : groupEntry.getValue().benchmarks() )
             {
                 benchmarkPlans.add(
-                        new BenchmarkPlan( groupEntry.getKey(), benchmarkEntry.getKey(), benchmarkEntry.getValue() ) );
+                        new BenchmarkPlan( groupEntry.getKey(), benchmark, groupEntry.getValue().getPlanFor( benchmark ) ) );
             }
         }
         return benchmarkPlans;

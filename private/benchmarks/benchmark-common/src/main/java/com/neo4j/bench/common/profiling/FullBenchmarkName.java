@@ -5,9 +5,12 @@
  */
 package com.neo4j.bench.common.profiling;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.model.model.BenchmarkGroupBenchmark;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import static com.neo4j.bench.common.util.BenchmarkUtil.sanitize;
 
@@ -26,7 +29,8 @@ public class FullBenchmarkName
     private final BenchmarkGroup benchmarkGroup;
     private final Benchmark benchmark;
 
-    private FullBenchmarkName( BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+    private FullBenchmarkName( @JsonProperty( "benchmarkGroup" ) BenchmarkGroup benchmarkGroup,
+                               @JsonProperty( "benchmark" ) Benchmark benchmark )
     {
         this.benchmarkGroup = benchmarkGroup;
         this.benchmark = benchmark;
@@ -40,5 +44,23 @@ public class FullBenchmarkName
     public String name()
     {
         return benchmarkGroup.name() + "." + benchmark.name();
+    }
+
+    @Override
+    public String toString()
+    {
+        return name();
+    }
+
+    @Override
+    public boolean equals( Object o )
+    {
+        return EqualsBuilder.reflectionEquals( this, o );
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return HashCodeBuilder.reflectionHashCode( this );
     }
 }

@@ -5,20 +5,13 @@
  */
 package com.neo4j.bench.jmh.api;
 
-import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
-import com.neo4j.bench.common.util.Resources;
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.BenchmarkGroup;
-import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
-import com.neo4j.bench.model.model.Benchmarks;
-import com.neo4j.bench.model.model.Metrics;
-import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
-import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
+import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.ErrorReporter;
 import com.neo4j.bench.common.util.Jvm;
+import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
 import com.neo4j.bench.jmh.api.config.BenchmarksFinder;
 import com.neo4j.bench.jmh.api.config.BenchmarksValidator.BenchmarkValidationResult;
@@ -27,6 +20,12 @@ import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import com.neo4j.bench.jmh.api.config.Validation;
 import com.neo4j.bench.jmh.api.profile.AbstractMicroProfiler;
 import com.neo4j.bench.jmh.api.profile.NoOpProfiler;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
+import com.neo4j.bench.model.model.Benchmarks;
+import com.neo4j.bench.model.model.Metrics;
+import com.neo4j.bench.model.model.Neo4jConfig;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.results.Result;
 import org.openjdk.jmh.results.RunResult;
@@ -130,8 +129,7 @@ public abstract class Runner
             Path workDir,
             ErrorReporter errorReporter,
             String[] jmhArgs,
-            Jvm jvm,
-            Path profilerRecordingsOutputDir )
+            Jvm jvm )
     {
         BenchmarkUtil.assertDirectoryExists( workDir );
         JmhLifecycleTracker.init( workDir );
@@ -186,21 +184,11 @@ public abstract class Runner
                             runnerParams,
                             errorReporter );
 
-                    try
-                    {
-                        if ( !profilers.isEmpty() )
-                        {
-                            moveProfilerRecordingsTo( profilerRecordingsOutputDir, workDir );
-                        }
-                    }
-                    finally
-                    {
-                        // Print Pretty Results Summary
-                        boolean verbose = true;
-                        String prettyResultsString = new BenchmarkGroupBenchmarkMetricsPrinter( verbose )
-                                .toPrettyString( benchmarkGroupBenchmarkMetrics, errorReporter.errors() );
-                        LOG.debug( prettyResultsString );
-                    }
+                    // Print Pretty Results Summary
+                    boolean verbose = true;
+                    String prettyResultsString = new BenchmarkGroupBenchmarkMetricsPrinter( verbose )
+                            .toPrettyString( benchmarkGroupBenchmarkMetrics, errorReporter.errors() );
+                    LOG.debug( prettyResultsString );
                 }
             }
             Instant finish = Instant.now();
@@ -472,17 +460,6 @@ public abstract class Runner
                                                neo4jConfig );
                                    } );
             }
-        }
-    }
-
-    private static void moveProfilerRecordingsTo( Path profilerRecordingsDir, Path workDir )
-    {
-        LOG.debug( "Moving profile recordings to: " + profilerRecordingsDir.toAbsolutePath() );
-        BenchmarkUtil.tryMkDir( profilerRecordingsDir );
-        List<BenchmarkGroupDirectory> groupDirs = BenchmarkGroupDirectory.searchAllIn( workDir );
-        for ( BenchmarkGroupDirectory groupDir : groupDirs )
-        {
-            groupDir.copyProfilerRecordings( profilerRecordingsDir );
         }
     }
 }

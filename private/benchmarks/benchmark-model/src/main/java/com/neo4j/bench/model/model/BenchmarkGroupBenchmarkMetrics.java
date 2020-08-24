@@ -5,12 +5,14 @@
  */
 package com.neo4j.bench.model.model;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.model.profiling.ProfilerRecordings;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,18 +25,56 @@ import static java.util.stream.Collectors.joining;
 
 public class BenchmarkGroupBenchmarkMetrics
 {
-    private final Map<BenchmarkGroup,Map<Benchmark,AnnotatedMetrics>> inner = new HashMap<>();
+    public static class BenchmarkMetrics
+    {
+        @JsonDeserialize( keyUsing = Benchmark.BenchmarkKeyDeserializer.class )
+        private final Map<Benchmark,AnnotatedMetrics> inner = new HashMap<>();
+
+        private Collection<Benchmark> benchmarks()
+        {
+            return inner.keySet();
+        }
+
+        private AnnotatedMetrics getMetricsFor( Benchmark benchmark )
+        {
+            return inner.get( benchmark );
+        }
+
+        public boolean containsBenchmark( Benchmark benchmark )
+        {
+            return inner.containsKey( benchmark );
+        }
+
+        public void put( Benchmark benchmark, AnnotatedMetrics annotatedMetrics )
+        {
+            inner.put( benchmark, annotatedMetrics );
+        }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            return EqualsBuilder.reflectionEquals( this, o );
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return HashCodeBuilder.reflectionHashCode( this );
+        }
+    }
+
+    @JsonDeserialize( keyUsing = BenchmarkGroup.BenchmarkGroupKeyDeserializer.class )
+    private final Map<BenchmarkGroup,BenchmarkMetrics> inner = new HashMap<>();
 
     public void addAll( BenchmarkGroupBenchmarkMetrics other )
     {
         requireNonNull( other );
         for ( BenchmarkGroup group : other.inner.keySet() )
         {
-            Map<Benchmark,AnnotatedMetrics> annotatedBenchmarks = other.inner.get( group );
-            for ( var entry : annotatedBenchmarks.entrySet() )
+            BenchmarkMetrics annotatedBenchmarks = other.inner.get( group );
+            for ( Benchmark benchmark : annotatedBenchmarks.benchmarks() )
             {
-                Benchmark benchmark = entry.getKey();
-                AnnotatedMetrics annotatedMetrics = entry.getValue();
+                AnnotatedMetrics annotatedMetrics = annotatedBenchmarks.getMetricsFor( benchmark );
                 add( group, benchmark, annotatedMetrics.metrics(), annotatedMetrics.maybeAuxiliaryMetrics(), annotatedMetrics.neo4jConfig() );
             }
         }
@@ -48,12 +88,12 @@ public class BenchmarkGroupBenchmarkMetrics
         // auxiliary metrics may be null
         requireNonNull( neo4jConfig );
 
-        Map<Benchmark,AnnotatedMetrics> benchmarkMetrics = inner.computeIfAbsent( group, key -> new HashMap<>() );
-        if ( benchmarkMetrics.containsKey( benchmark ) )
+        BenchmarkMetrics benchmarkMetrics = inner.computeIfAbsent( group, key -> new BenchmarkMetrics() );
+        if ( benchmarkMetrics.containsBenchmark( benchmark ) )
         {
             throw new IllegalStateException( format( "Multiple results for benchmark: %s\nExisting: %s\nNew: %s",
                                                      benchmark,
-                                                     benchmarkMetrics.get( benchmark ).metrics(),
+                                                     benchmarkMetrics.getMetricsFor( benchmark ).metrics(),
                                                      metrics ) );
         }
         benchmarkMetrics.put( benchmark, new AnnotatedMetrics( metrics, maybeAuxiliaryMetrics, neo4jConfig ) );
@@ -62,14 +102,14 @@ public class BenchmarkGroupBenchmarkMetrics
     public List<BenchmarkGroupBenchmark> benchmarkGroupBenchmarks()
     {
         return inner.keySet().stream()
-                    .flatMap( group -> inner.get( group ).keySet().stream()
+                    .flatMap( group -> inner.get( group ).benchmarks().stream()
                                             .map( benchmark -> new BenchmarkGroupBenchmark( group, benchmark ) ) )
                     .collect( Collectors.toList() );
     }
 
     public void attachProfilerRecording( BenchmarkGroup group, Benchmark benchmark, ProfilerRecordings profilerRecordings )
     {
-        inner.get( group ).get( benchmark ).attachProfilesRecording( profilerRecordings );
+        inner.get( group ).getMetricsFor( benchmark ).attachProfilesRecording( profilerRecordings );
     }
 
     public AnnotatedMetrics getMetricsFor( BenchmarkGroupBenchmark benchmarkGroupBenchmark )
@@ -79,7 +119,7 @@ public class BenchmarkGroupBenchmarkMetrics
 
     public AnnotatedMetrics getMetricsFor( BenchmarkGroup group, Benchmark benchmark )
     {
-        return inner.get( group ).get( benchmark );
+        return inner.get( group ).getMetricsFor( benchmark );
     }
 
     public List<List<Object>> toList()
@@ -90,13 +130,13 @@ public class BenchmarkGroupBenchmarkMetrics
     private List<Row> toRows()
     {
         List<Row> list = new ArrayList<>();
-        for ( Map.Entry<BenchmarkGroup,Map<Benchmark,AnnotatedMetrics>> groupEntry : inner.entrySet() )
+        for ( Map.Entry<BenchmarkGroup,BenchmarkMetrics> groupEntry : inner.entrySet() )
         {
             BenchmarkGroup group = groupEntry.getKey();
-            for ( Map.Entry<Benchmark,AnnotatedMetrics> benchmarkMetrics : groupEntry.getValue().entrySet() )
+            BenchmarkMetrics benchmarkMetrics = groupEntry.getValue();
+            for ( Benchmark benchmark : benchmarkMetrics.benchmarks() )
             {
-                Benchmark benchmark = benchmarkMetrics.getKey();
-                AnnotatedMetrics annotatedMetrics = benchmarkMetrics.getValue();
+                AnnotatedMetrics annotatedMetrics = benchmarkMetrics.getMetricsFor( benchmark );
                 list.add( new Row(
                         group,
                         benchmark,
@@ -134,28 +174,6 @@ public class BenchmarkGroupBenchmarkMetrics
     public String toString()
     {
         return toRows().stream().map( row -> row.toString() + "\n" ).collect( joining() );
-    }
-
-    private static class Entry
-    {
-        private final String benchmark;
-        private double error;
-
-        private Entry( String benchmark, double error )
-        {
-            this.benchmark = benchmark;
-            this.error = error;
-        }
-
-        public String benchmark()
-        {
-            return benchmark;
-        }
-
-        public double error()
-        {
-            return error;
-        }
     }
 
     public static class AnnotatedMetrics

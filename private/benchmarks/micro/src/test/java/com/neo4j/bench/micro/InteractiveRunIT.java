@@ -191,8 +191,7 @@ class InteractiveRunIT extends AnnotationsFixture
             int measurementForks,
             String... methods ) throws Exception
     {
-        File storesDir = temporaryFolder.directory( UUID.randomUUID().toString() ).toFile();
-        Path profilerRecordingDirectory = temporaryFolder.directory( UUID.randomUUID().toString() );
+        File workDir = temporaryFolder.directory( UUID.randomUUID().toString() ).toFile();
         int iterationCount = 1;
         TimeValue iterationDuration = TimeValue.seconds( 1 );
         Main.run(
@@ -201,8 +200,7 @@ class InteractiveRunIT extends AnnotationsFixture
                 iterationCount,
                 iterationDuration,
                 ParameterizedProfiler.defaultProfilers( ProfilerType.JFR ),
-                storesDir.toPath(),
-                profilerRecordingDirectory,
+                workDir.toPath(),
                 errorPolicy,
                 Paths.get( Jvm.defaultJvmOrFail().launchJava() ),
                 methods );
@@ -212,14 +210,14 @@ class InteractiveRunIT extends AnnotationsFixture
         // (1) JFR recordings are created
         // (2) only executions for the enabled benchmark is actually run
         // (3) for each JFR recording file a FlameGraph should be created
-        int jfrCount = ProfilerTestUtil.recordingCountIn( profilerRecordingDirectory, RecordingType.JFR );
+        int jfrCount = ProfilerTestUtil.recordingCountIn( workDir, RecordingType.JFR );
         assertThat( jfrCount, equalTo( expectedBenchmarkCount ) );
         // in 4.0 we do NOT generate Flamegraphs
-        int jfrFlameGraphCount = ProfilerTestUtil.recordingCountIn( profilerRecordingDirectory, RecordingType.JFR_FLAMEGRAPH );
+        int jfrFlameGraphCount = ProfilerTestUtil.recordingCountIn( workDir, RecordingType.JFR_FLAMEGRAPH );
         assertThat( jfrFlameGraphCount, equalTo( 0 ) );
 
         // expected number of stores are present
-        try ( Stream<Path> paths = Files.walk( storesDir.toPath() ) )
+        try ( Stream<Path> paths = Files.walk( workDir.toPath() ) )
         {
             List<String> pathNames = paths
                     .filter( Files::isDirectory )

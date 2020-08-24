@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.neo4j.test.extension.Inject;
@@ -184,7 +183,7 @@ public class ResultsTest
     {
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( temporaryFolder.directory( "fork" ) , GROUP );
         BenchmarkDirectory benchDir = groupDir.findOrCreate( BENCH );
-        ForkDirectory forkDir = benchDir.create( FORK, new ArrayList<>() );
+        ForkDirectory forkDir = benchDir.create( FORK );
         return Paths.get( forkDir.toAbsolutePath() );
     }
 }

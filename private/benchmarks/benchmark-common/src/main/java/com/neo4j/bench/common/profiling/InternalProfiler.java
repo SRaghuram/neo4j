@@ -6,11 +6,8 @@
 package com.neo4j.bench.common.profiling;
 
 import com.neo4j.bench.common.process.Pid;
-import com.neo4j.bench.common.util.Jvm;
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.BenchmarkGroup;
-import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.util.Jvm;
 
 public interface InternalProfiler extends Profiler
 {
@@ -22,16 +19,12 @@ public interface InternalProfiler extends Profiler
      * @param jvm Java to use
      * @param forkDirectory directory to write files into
      * @param pid ID of the process to be profiled
-     * @param benchmarkGroup benchmark group
-     * @param benchmark benchmark
-     * @param additionalParameters additional parameters, used to distinguish processes when multiple processes are involved in executing the same benchmark
+     * @param profilerRecordingDescriptor contains the data and logic needed to create appropriate profiler recording files
      */
     void onWarmupBegin( Jvm jvm,
                         ForkDirectory forkDirectory,
                         Pid pid,
-                        BenchmarkGroup benchmarkGroup,
-                        Benchmark benchmark,
-                        Parameters additionalParameters );
+                        ProfilerRecordingDescriptor profilerRecordingDescriptor );
 
     /**
      * Will be called immediately after benchmark warmup finishes.
@@ -41,16 +34,12 @@ public interface InternalProfiler extends Profiler
      * @param jvm Java to use
      * @param forkDirectory directory to write files into
      * @param pid ID of the process to be profiled
-     * @param benchmarkGroup benchmark group
-     * @param benchmark benchmark
-     * @param additionalParameters additional parameters, used to distinguish processes when multiple processes are involved in executing the same benchmark
+     * @param profilerRecordingDescriptor contains the data and logic needed to create appropriate profiler recording files
      */
     void onWarmupFinished( Jvm jvm,
                            ForkDirectory forkDirectory,
                            Pid pid,
-                           BenchmarkGroup benchmarkGroup,
-                           Benchmark benchmark,
-                           Parameters additionalParameters );
+                           ProfilerRecordingDescriptor profilerRecordingDescriptor );
 
     /**
      * Will be called immediately before benchmark measurement begins.
@@ -60,16 +49,12 @@ public interface InternalProfiler extends Profiler
      * @param jvm Java to use
      * @param forkDirectory directory to write files into
      * @param pid ID of the process to be profiled
-     * @param benchmarkGroup benchmark group
-     * @param benchmark benchmark
-     * @param additionalParameters additional parameters, used to distinguish processes when multiple processes are involved in executing the same benchmark
+     * @param profilerRecordingDescriptor contains the data and logic needed to create appropriate profiler recording files
      */
     void onMeasurementBegin( Jvm jvm,
                              ForkDirectory forkDirectory,
                              Pid pid,
-                             BenchmarkGroup benchmarkGroup,
-                             Benchmark benchmark,
-                             Parameters additionalParameters );
+                             ProfilerRecordingDescriptor profilerRecordingDescriptor );
 
     /**
      * Will be called immediately after benchmark measurement finishes.
@@ -79,14 +64,10 @@ public interface InternalProfiler extends Profiler
      * @param jvm Java to use
      * @param forkDirectory directory to write files into
      * @param pid ID of the process to be profiled
-     * @param benchmarkGroup benchmark group
-     * @param benchmark benchmark
-     * @param additionalParameters additional parameters, used to distinguish processes when multiple processes are involved in executing the same benchmark
+     * @param profilerRecordingDescriptor contains the data and logic needed to create appropriate profiler recording files
      */
     void onMeasurementFinished( Jvm jvm,
                                 ForkDirectory forkDirectory,
                                 Pid pid,
-                                BenchmarkGroup benchmarkGroup,
-                                Benchmark benchmark,
-                                Parameters additionalParameters );
+                                ProfilerRecordingDescriptor profilerRecordingDescriptor );
 }

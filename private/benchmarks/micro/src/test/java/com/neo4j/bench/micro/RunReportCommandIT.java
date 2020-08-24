@@ -58,8 +58,6 @@ class RunReportCommandIT
             File benchmarkConfig = temporaryFolder.file( "benchmark.config" ).toFile();
             Files.write( benchmarkConfig.toPath(), List.of( "# empty config file" ) );
 
-            Path jsonFile = temporaryFolder.file( "file.json" );
-            Path profileOutputDirectory = temporaryFolder.directory( "output" );
             Path storesDir = temporaryFolder.directory( "benchmark_stores" );
 
             List<String> commandArgs = RunReportCommand.argsFor(
@@ -77,7 +75,7 @@ class RunReportCommandIT
                     "-Xms2g -Xmx2g",
                     benchmarkConfig.toPath(),
                     "-i 1 -wi 1 -r 1 -w 1 -f 1",
-                    profileOutputDirectory,
+
                     storesDir,
                     ErrorReporter.ErrorPolicy.FAIL,
                     Jvm.defaultJvm(),

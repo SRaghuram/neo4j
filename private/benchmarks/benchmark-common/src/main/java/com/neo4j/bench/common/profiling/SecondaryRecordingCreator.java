@@ -40,7 +40,7 @@ abstract class SecondaryRecordingCreator
 
     abstract Set<RecordingType> recordingTypes();
 
-    abstract void create( ProfilerRecordingDescriptor recordingDescriptor, ForkDirectory forkDirectory );
+    abstract void create( ProfilerRecordingDescriptor profilerRecordingDescriptor, ForkDirectory forkDirectory );
 
     static SecondaryRecordingCreator allOf( SecondaryRecordingCreator... creators )
     {
@@ -63,7 +63,7 @@ abstract class SecondaryRecordingCreator
         }
 
         @Override
-        void create( ProfilerRecordingDescriptor recordingDescriptor, ForkDirectory forkDirectory )
+        void create( ProfilerRecordingDescriptor profilerRecordingDescriptor, ForkDirectory forkDirectory )
         {
             // do nothing
         }
@@ -96,9 +96,9 @@ abstract class SecondaryRecordingCreator
         }
 
         @Override
-        void create( ProfilerRecordingDescriptor recordingDescriptor, ForkDirectory forkDirectory )
+        void create( ProfilerRecordingDescriptor profilerRecordingDescriptor, ForkDirectory forkDirectory )
         {
-            secondaryRecordingCreators.forEach( r -> r.create( recordingDescriptor, forkDirectory ) );
+            secondaryRecordingCreators.forEach( r -> r.create( profilerRecordingDescriptor, forkDirectory ) );
         }
     }
 
@@ -118,19 +118,19 @@ abstract class SecondaryRecordingCreator
         }
 
         @Override
-        void create( ProfilerRecordingDescriptor recordingDescriptor, ForkDirectory forkDirectory )
+        void create( ProfilerRecordingDescriptor profilerRecordingDescriptor, ForkDirectory forkDirectory )
         {
-
-            Path jfrRecording = getProfilerRecording( forkDirectory, recordingDescriptor );
+            Path jfrRecording = forkDirectory.findRegisteredPathFor( profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.JFR ) );
 
             try
             {
                 // generate collapsed stack frames, into temporary location
-                Path collapsedStackFrames = forkDirectory.create( recordingDescriptor.sanitizedName() + ".collapsed.stack" );
+                RecordingDescriptor jfrMemFlameDescriptor = profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.JFR_MEMALLOC_FLAMEGRAPH );
+                Path collapsedStackFrames = forkDirectory.create( jfrMemFlameDescriptor.sanitizedName() + ".collapsed.stack" );
                 StackCollapse stackCollapse = JfrMemoryStackCollapse.forMemoryAllocation( jfrRecording );
                 StackCollapseWriter.write( stackCollapse, collapsedStackFrames );
                 // generate flamegraphs
-                Path flameGraphSvg = getFlameGraphSvg( forkDirectory, recordingDescriptor, RecordingType.JFR_MEMALLOC_FLAMEGRAPH );
+                Path flameGraphSvg = forkDirectory.registerPathFor( jfrMemFlameDescriptor );
                 Path flameGraphDir = BenchmarkUtil.getPathEnvironmentVariable( FLAME_GRAPH_DIR );
                 BenchmarkUtil.assertDirectoryExists( flameGraphDir );
 
@@ -158,22 +158,22 @@ abstract class SecondaryRecordingCreator
         }
 
         @Override
-        void create( ProfilerRecordingDescriptor recordingDescriptor, ForkDirectory forkDirectory )
+        void create( ProfilerRecordingDescriptor profilerRecordingDescriptor, ForkDirectory forkDirectory )
         {
-            Path gcLogFile = forkDirectory.pathFor( recordingDescriptor );
+            Path gcLogRecording = forkDirectory.findRegisteredPathFor( profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.GC_LOG ) );
             try
             {
-                GcLog gcLog = GcLog.parse( gcLogFile );
+                GcLog gcLog = GcLog.parse( gcLogRecording );
 
-                Path gcLogJson = forkDirectory.pathFor( recordingDescriptor.sanitizedFilename( RecordingType.GC_SUMMARY ) );
+                Path gcLogJson = forkDirectory.registerPathFor( profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.GC_SUMMARY ) );
                 JsonUtil.serializeJson( gcLogJson, gcLog );
 
-                Path gcLogCsv = forkDirectory.pathFor( recordingDescriptor.sanitizedFilename( RecordingType.GC_CSV ) );
+                Path gcLogCsv = forkDirectory.registerPathFor( profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.GC_CSV ) );
                 gcLog.toCSV( gcLogCsv );
             }
             catch ( IOException e )
             {
-                throw new RuntimeException( "Error processing GC log file: " + gcLogFile.toAbsolutePath(), e );
+                throw new RuntimeException( "Error processing GC log file: " + gcLogRecording.toAbsolutePath(), e );
             }
         }
     }
@@ -195,10 +195,10 @@ abstract class SecondaryRecordingCreator
         }
 
         @Override
-        void create( ProfilerRecordingDescriptor recordingDescriptor, ForkDirectory forkDirectory )
+        void create( ProfilerRecordingDescriptor profilerRecordingDescriptor, ForkDirectory forkDirectory )
         {
-            Path profilerRecording = SecondaryRecordingCreator.getProfilerRecording( forkDirectory, recordingDescriptor );
-            Path flameGraphSvg = SecondaryRecordingCreator.getFlameGraphSvg( forkDirectory, recordingDescriptor, RecordingType.JFR_FLAMEGRAPH );
+            Path jfrRecording = forkDirectory.findRegisteredPathFor( profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.JFR ) );
+            Path flameGraphSvg = forkDirectory.registerPathFor( profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.JFR_FLAMEGRAPH ) );
             Path jfrFlameGraphDir = BenchmarkUtil.getPathEnvironmentVariable( JFR_FLAMEGRAPH_DIR );
             BenchmarkUtil.assertDirectoryExists( jfrFlameGraphDir );
 
@@ -212,9 +212,9 @@ abstract class SecondaryRecordingCreator
             List<String> args = Lists.newArrayList( "bash",
                                                     CREATE_FLAMEGRAPH_SH,
                                                     "-f",
-                                                    profilerRecording.toAbsolutePath().toString(),
+                                                    jfrRecording.toAbsolutePath().toString(),
                                                     "-i" );
-            SecondaryRecordingCreator.waitOnProcess( args, jfrFlameGraphDir, ProfilerType.JFR, profilerRecording, flameGraphSvg );
+            SecondaryRecordingCreator.waitOnProcess( args, jfrFlameGraphDir, flameGraphSvg );
         }
     }
 
@@ -233,31 +233,17 @@ abstract class SecondaryRecordingCreator
         }
 
         @Override
-        void create( ProfilerRecordingDescriptor recordingDescriptor, ForkDirectory forkDirectory )
+        void create( ProfilerRecordingDescriptor profilerRecordingDescriptor, ForkDirectory forkDirectory )
         {
-            Path profilerRecording = SecondaryRecordingCreator.getProfilerRecording( forkDirectory, recordingDescriptor );
-            Path flameGraphSvg = SecondaryRecordingCreator.getFlameGraphSvg( forkDirectory, recordingDescriptor, RecordingType.ASYNC_FLAMEGRAPH );
+            Path asyncRecording = forkDirectory.findRegisteredPathFor( profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.ASYNC ) );
+            Path flameGraphSvg = forkDirectory.registerPathFor( profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.ASYNC_FLAMEGRAPH ) );
             Path asyncFlameGraphDir = BenchmarkUtil.getPathEnvironmentVariable( FLAME_GRAPH_DIR );
             BenchmarkUtil.assertDirectoryExists( asyncFlameGraphDir );
-            Flamegraph.createFlamegraphs( forkDirectory, asyncFlameGraphDir, profilerRecording.toAbsolutePath(), flameGraphSvg );
+            Flamegraph.createFlamegraphs( forkDirectory, asyncFlameGraphDir, asyncRecording, flameGraphSvg );
         }
     }
 
-    private static Path getFlameGraphSvg( ForkDirectory forkDirectory, ProfilerRecordingDescriptor recordingDescriptor, RecordingType recordingType )
-    {
-        Path flameGraphSvg = forkDirectory.pathFor( recordingDescriptor.sanitizedFilename( recordingType ) );
-        BenchmarkUtil.assertDoesNotExist( flameGraphSvg );
-        return flameGraphSvg;
-    }
-
-    private static Path getProfilerRecording( ForkDirectory forkDirectory, ProfilerRecordingDescriptor recordingDescriptor )
-    {
-        Path profilerRecording = forkDirectory.pathFor( recordingDescriptor );
-        BenchmarkUtil.assertFileExists( profilerRecording );
-        return profilerRecording;
-    }
-
-    private static void waitOnProcess( List<String> args, Path workDirectory, ProfilerType profilerType, Path profilerRecording, Path flameGraphSvg )
+    private static void waitOnProcess( List<String> args, Path workDirectory, Path flameGraphSvg )
     {
         try
         {
@@ -272,10 +258,7 @@ abstract class SecondaryRecordingCreator
         }
         catch ( Exception e )
         {
-            throw new RuntimeException( "Error creating " + profilerType + " FlameGraph\n" +
-                                        "From recording : " + profilerRecording.toAbsolutePath() + "\n" +
-                                        "To FlameGraph  : " + flameGraphSvg.toAbsolutePath(),
-                                        e );
+            throw new RuntimeException( "Error while waiting on process : " + args, e );
         }
     }
 }

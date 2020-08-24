@@ -5,14 +5,11 @@
  */
 package com.neo4j.bench.common.profiling;
 
-import com.neo4j.bench.common.util.JvmVersion;
-import com.neo4j.bench.common.util.Resources;
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.BenchmarkGroup;
-import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.common.results.ForkDirectory;
-import com.neo4j.bench.common.results.RunPhase;
+import com.neo4j.bench.common.util.JvmVersion;
+import com.neo4j.bench.common.util.Resources;
+import com.neo4j.bench.model.profiling.RecordingType;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -31,9 +28,7 @@ public class NoOpProfiler implements ExternalProfiler
     @Override
     public List<String> invokeArgs(
             ForkDirectory forkDirectory,
-            BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark,
-            Parameters additionalParameters )
+            ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         return Collections.emptyList();
     }
@@ -42,9 +37,7 @@ public class NoOpProfiler implements ExternalProfiler
     public JvmArgs jvmArgs(
             JvmVersion jvmVersion,
             ForkDirectory forkDirectory,
-            BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark,
-            Parameters additionalParameters,
+            ProfilerRecordingDescriptor profilerRecordingDescriptor,
             Resources resources )
     {
         return JvmArgs.empty();
@@ -53,28 +46,18 @@ public class NoOpProfiler implements ExternalProfiler
     @Override
     public void beforeProcess(
             ForkDirectory forkDirectory,
-            BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark,
-            Parameters additionalParameters )
+            ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
     }
 
     @Override
     public void afterProcess(
             ForkDirectory forkDirectory,
-            BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark,
-            Parameters additionalParameters )
+            ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
-        ProfilerRecordingDescriptor recordingDescriptor = ProfilerRecordingDescriptor.create(
-                benchmarkGroup,
-                benchmark,
-                RunPhase.MEASUREMENT,
-                ProfilerType.NO_OP,
-                additionalParameters );
         try
         {
-            Files.createFile( forkDirectory.pathFor( recordingDescriptor ) );
+            Files.createFile( forkDirectory.registerPathFor( profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.NONE ) ) );
         }
         catch ( IOException e )
         {
@@ -84,9 +67,7 @@ public class NoOpProfiler implements ExternalProfiler
 
     @Override
     public void processFailed( ForkDirectory forkDirectory,
-                               BenchmarkGroup benchmarkGroup,
-                               Benchmark benchmark,
-                               Parameters additionalParameters )
+                               ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
     }
 }

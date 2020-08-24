@@ -50,10 +50,6 @@ if [[ -z "$JAVA_HOME" ]]; then
  exit 1
 fi
 
-uuid=$(uuidgen)
-profiler_recording_output_dir="${micro_benchmarks_dir}"/"${uuid}"
-mkdir "${profiler_recording_output_dir}"
-
 echo "Neo4j version: ${neo4j_version}"
 echo "Neo4j commit: ${neo4j_commit}"
 echo "Neo4j branch: ${neo4j_branch}"
@@ -72,7 +68,6 @@ echo "JVM args: ${jvm_args}"
 echo "JMH args: ${jmh_args}"
 echo "FlameGraph dir: ${FLAMEGRAPH_DIR}"
 echo "JFR FlameGraph Dir: ${JFR_FLAMEGRAPH}"
-echo "Profiler Recordings dir: ${profiler_recording_output_dir}"
 echo "Profilers: ${profilers}"
 echo "Build triggered by : ${triggered_by}"
 echo "Work directory : ${work_dir}"
@@ -96,7 +91,6 @@ ${jvm_path} -jar "${jar_path}" run-export  \
         --config "${benchmark_config}" \
         --triggered-by "${triggered_by}" \
         --stores-dir "${work_dir}" \
-        --profiles-dir "${profiler_recording_output_dir}" \
         --profilers "${profilers}" \
         --results-store-uri "${results_store_uri}" \
         --results-store-user "${results_store_user}" \

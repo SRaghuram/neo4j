@@ -5,16 +5,14 @@
  */
 package com.neo4j.bench.common.results;
 
-import com.neo4j.bench.common.profiling.ParameterizedProfiler;
-import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
-import com.neo4j.bench.common.profiling.ProfilerType;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.neo4j.bench.common.profiling.RecordingDescriptor;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.ErrorReporter;
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.BenchmarkGroup;
-import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.model.util.JsonUtil;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -24,57 +22,54 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.SimpleFileVisitor;
-import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
+import java.util.function.BiConsumer;
+import java.util.function.Predicate;
 
-import static com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor.Match.IS_SANITIZED;
 import static com.neo4j.bench.common.util.BenchmarkUtil.assertDirectoryExists;
 import static com.neo4j.bench.common.util.BenchmarkUtil.assertDoesNotExist;
 import static com.neo4j.bench.common.util.BenchmarkUtil.assertFileExists;
 import static java.lang.String.format;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
 
 public class ForkDirectory
 {
     private static final String FORK_JSON = "fork.json";
-    public static final String PLAN_JSON = "plan.json";
+    static final String PLAN_JSON = "plan.json";
     private final Path dir;
     private final ForkDescription forkDescription;
 
-    public static ForkDirectory findOrFailAt( Path parentDir, String name )
+    static ForkDirectory findOrFailAt( Path parentDir, String name )
     {
         Path forkDir = parentDir.resolve( BenchmarkUtil.sanitize( name ) );
         return openAt( forkDir );
     }
 
-    public static ForkDirectory findOrCreateAt( Path parentDir, String name, List<ParameterizedProfiler> profilers )
+    static ForkDirectory findOrCreateAt( Path parentDir, String name )
     {
         Path dir = parentDir.resolve( BenchmarkUtil.sanitize( name ) );
         if ( Files.exists( dir ) )
         {
-            Path jsonPath = pathFor( dir, FORK_JSON );
-            updateForkDetails( jsonPath, profilers );
             return openAt( dir );
         }
         else
         {
-            return createAt( parentDir, name, profilers );
+            return createAt( parentDir, name );
         }
     }
 
-    public static ForkDirectory createAt( Path parentDir, String name, List<ParameterizedProfiler> profilers )
+    static ForkDirectory createAt( Path parentDir, String name )
     {
         try
         {
             Path dir = parentDir.resolve( BenchmarkUtil.sanitize( name ) );
             assertDoesNotExist( dir );
             Files.createDirectory( dir );
-            saveForkDetails( dir, name, profilers );
+            saveForkDetails( dir, name );
             return openAt( dir );
         }
         catch ( IOException e )
@@ -90,18 +85,10 @@ public class ForkDirectory
         return new ForkDirectory( dir );
     }
 
-    private static void saveForkDetails( Path dir, String name, List<ParameterizedProfiler> profilers )
+    private static void saveForkDetails( Path dir, String name )
     {
         Path jsonPath = create( dir, FORK_JSON );
         ForkDescription forkDescription = new ForkDescription( name );
-        forkDescription.addProfilers( profilers );
-        JsonUtil.serializeJson( jsonPath, forkDescription );
-    }
-
-    private static void updateForkDetails( Path jsonPath, List<ParameterizedProfiler> profilers )
-    {
-        ForkDescription forkDescription = loadDescription( jsonPath );
-        forkDescription.addProfilers( profilers );
         JsonUtil.serializeJson( jsonPath, forkDescription );
     }
 
@@ -109,43 +96,6 @@ public class ForkDirectory
     {
         this.dir = dir;
         this.forkDescription = loadDescription( dir.resolve( FORK_JSON ) );
-    }
-
-    public void unsanitizeProfilerRecordingsFor( BenchmarkGroup benchmarkGroup,
-                                                 Benchmark benchmark,
-                                                 ProfilerType profilerType,
-                                                 Parameters additionalParameters )
-    {
-        for ( RunPhase runPhase : RunPhase.values() )
-        {
-            ProfilerRecordingDescriptor recordingDescriptor = ProfilerRecordingDescriptor.create( benchmarkGroup,
-                                                                                                  benchmark,
-                                                                                                  runPhase,
-                                                                                                  profilerType,
-                                                                                                  additionalParameters );
-            unsanitizeProfilerRecordingsFor( recordingDescriptor );
-        }
-    }
-
-    private void unsanitizeProfilerRecordingsFor( ProfilerRecordingDescriptor recordingDescriptor )
-    {
-        try
-        {
-            for ( RecordingType recordingType : recordingDescriptor.recordingTypes() )
-            {
-                Path sanitizedFile = pathFor( recordingDescriptor.sanitizedFilename( recordingType ) );
-                if ( Files.exists( sanitizedFile ) )
-                {
-                    Files.move( sanitizedFile,
-                                pathFor( recordingDescriptor.filename( recordingType ) ),
-                                StandardCopyOption.REPLACE_EXISTING );
-                }
-            }
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException( "Error while try to rename recordings for:\n" + recordingDescriptor, e );
-        }
     }
 
     public String name()
@@ -158,38 +108,19 @@ public class ForkDirectory
         return dir.toAbsolutePath().toString();
     }
 
-    public void copyProfilerRecordings( BenchmarkGroup benchmarkGroup, Benchmark benchmark, Path targetDir, Set<RecordingType> excluding )
+    public void copyProfilerRecordings( Path targetDir,
+                                        Predicate<RecordingDescriptor> doCopyPredicate,
+                                        BiConsumer<RecordingDescriptor,Path> onCopyConsumer )
     {
         try
         {
-            // copy all profiler recordings, except those that are explicitly excluded
-            List<RecordingType> recordingTypes = profilers().stream()
-                                                            .flatMap( profilerType -> profilerType.allRecordingTypes().stream() )
-                                                            .filter( recordingType -> !excluding.contains( recordingType ) )
-                                                            .collect( Collectors.toList() );
+            Map<RecordingDescriptor,Path> recordings = forkDescription.recordings;
+            Map<Path,RecordingDescriptor> validRecordings = recordings.keySet().stream()
+                                                                      .filter( descriptor -> descriptor.runPhase().equals( RunPhase.MEASUREMENT ) )
+                                                                      .collect( toMap( recordings::get, identity() ) );
 
-            PathMatcher pathMatcher = path ->
-            {
-                for ( RecordingType recordingType : recordingTypes )
-                {
-                    ProfilerRecordingDescriptor.ParseResult parsedRecording = ProfilerRecordingDescriptor.tryParse( path.getFileName().toString(),
-                                                                                                                    recordingType,
-                                                                                                                    benchmarkGroup,
-                                                                                                                    benchmark,
-                                                                                                                    RunPhase.MEASUREMENT );
-                    if ( parsedRecording.isMatch() )
-                    {
-                        return true;
-                    }
-                    else if ( parsedRecording.match().equals( IS_SANITIZED ) )
-                    {
-                        throw new RuntimeException( "Found an un-sanitized profiler recording: " + path.toAbsolutePath() );
-                    }
-                }
-                return false;
-            };
-
-            Files.walkFileTree( dir, new CopyMatchedFilesVisitor( targetDir, pathMatcher ) );
+            Files.walkFileTree( dir,
+                                new CopyMatchedFilesVisitor( targetDir, new SanitizingPathMatcher( validRecordings, doCopyPredicate, onCopyConsumer ) ) );
         }
         catch ( IOException e )
         {
@@ -200,12 +131,64 @@ public class ForkDirectory
         }
     }
 
+    private static class SanitizingPathMatcher implements PathMatcher
+    {
+        private final Map<Path,RecordingDescriptor> validRecordings;
+        private final Predicate<RecordingDescriptor> doCopyPredicate;
+        private final BiConsumer<RecordingDescriptor,Path> onCopyConsumer;
+
+        private SanitizingPathMatcher( Map<Path,RecordingDescriptor> validRecordings,
+                                       Predicate<RecordingDescriptor> doCopyPredicate,
+                                       BiConsumer<RecordingDescriptor,Path> onCopyConsumer )
+        {
+            this.validRecordings = validRecordings;
+            this.doCopyPredicate = doCopyPredicate;
+            this.onCopyConsumer = onCopyConsumer;
+        }
+
+        @Override
+        public boolean matches( Path recording )
+        {
+            boolean doCopy = validRecordings.containsKey( recording ) &&
+                             doCopyPredicate.test( validRecordings.get( recording ) );
+            if ( doCopy )
+            {
+                onCopyConsumer.accept( validRecordings.get( recording ), recording );
+            }
+            return doCopy;
+        }
+
+        private String deSanitizedName( Path recording )
+        {
+            RecordingDescriptor recordingDescriptor = validRecordings.get( recording );
+            if ( null == recordingDescriptor )
+            {
+                throw new IllegalStateException( format( "Tried to de-sanitize a file that has no associated recording descriptor\n" +
+                                                         "File: %s",
+                                                         recording.toAbsolutePath() ) );
+            }
+            String filename = recording.getFileName().toString();
+            if ( filename.equals( recordingDescriptor.sanitizedFilename() ) )
+            {
+                return recordingDescriptor.filename();
+            }
+            else
+            {
+                throw new IllegalStateException( format( "Encountered unexpected profiler recording filename\n" +
+                                                         "Expected name : %s\n" +
+                                                         "Actual name   : %s",
+                                                         recordingDescriptor.filename(),
+                                                         recording.toAbsolutePath().toString() ) );
+            }
+        }
+    }
+
     private static class CopyMatchedFilesVisitor extends SimpleFileVisitor<Path>
     {
         private final Path toPath;
-        private final PathMatcher matcher;
+        private final SanitizingPathMatcher matcher;
 
-        private CopyMatchedFilesVisitor( Path toPath, PathMatcher matcher )
+        private CopyMatchedFilesVisitor( Path toPath, SanitizingPathMatcher matcher )
         {
             this.toPath = toPath;
             this.matcher = matcher;
@@ -222,7 +205,7 @@ public class ForkDirectory
         {
             if ( matcher.matches( file ) )
             {
-                Files.copy( file, toPath.resolve( file.getFileName() ) );
+                Files.copy( file, toPath.resolve( matcher.deSanitizedName( file ) ) );
             }
             return FileVisitResult.CONTINUE;
         }
@@ -257,9 +240,23 @@ public class ForkDirectory
         return create( dir, filename );
     }
 
-    public Path pathFor( ProfilerRecordingDescriptor profilerRecordingDescriptor )
+    public Path registerPathFor( RecordingDescriptor recordingDescriptor )
     {
-        return pathFor( profilerRecordingDescriptor.sanitizedFilename() );
+        Path path = pathFor( recordingDescriptor.sanitizedFilename() );
+        forkDescription.registerRecording( recordingDescriptor, path );
+        Path jsonPath = pathFor( dir, FORK_JSON );
+        JsonUtil.serializeJson( jsonPath, forkDescription );
+        return path;
+    }
+
+    public Path findRegisteredPathFor( RecordingDescriptor recordingDescriptor )
+    {
+        Path path = pathFor( recordingDescriptor.sanitizedFilename() );
+        if ( !forkDescription.recordings.containsKey( recordingDescriptor ) )
+        {
+            throw new IllegalStateException( "Fork directory does not have a registered recording for: " + recordingDescriptor );
+        }
+        return path;
     }
 
     public Path pathFor( String filename )
@@ -286,9 +283,21 @@ public class ForkDirectory
         return dir.resolve( "error-" + UUID.randomUUID() + ".log" );
     }
 
-    public Set<ProfilerType> profilers()
+    public Map<RecordingDescriptor,Path> recordings()
     {
-        return forkDescription.parameterizedProfilers().stream().map( ParameterizedProfiler::profilerType ).collect( Collectors.toSet() );
+        return forkDescription.recordings;
+    }
+
+    boolean isMeasurementFork()
+    {
+        return !isProfiledFork();
+    }
+
+    private boolean isProfiledFork()
+    {
+        return forkDescription.recordings.keySet().stream()
+                                         .anyMatch( recordingDescriptor -> !recordingDescriptor.recordingType().equals( RecordingType.NONE ) &&
+                                                                           !recordingDescriptor.recordingType().equals( RecordingType.HEAP_DUMP ) );
     }
 
     private static ForkDescription loadDescription( Path jsonPath )
@@ -328,18 +337,20 @@ public class ForkDirectory
 
     private static class ForkDescription
     {
-        private final String name;
-        private final Set<ParameterizedProfiler> parameterizedProfilers;
+        private String name;
+        @JsonDeserialize( keyUsing = RecordingDescriptor.RecordingDescriptorKeyDeserializer.class )
+        private Map<RecordingDescriptor,Path> recordings;
 
         private ForkDescription()
         {
-            this( "INVALID_NAME" );
+            this.name = "INVALID_NAME";
+            this.recordings = null;
         }
 
         private ForkDescription( String name )
         {
             this.name = name;
-            this.parameterizedProfilers = new HashSet<>();
+            this.recordings = new HashMap<>();
         }
 
         private String name()
@@ -351,14 +362,25 @@ public class ForkDirectory
             return name;
         }
 
-        private Set<ParameterizedProfiler> parameterizedProfilers()
+        private void registerRecording( RecordingDescriptor recordingDescriptor, Path recordingFile )
         {
-            return parameterizedProfilers;
+            if ( recordings.containsValue( recordingFile ) )
+            {
+                throw new IllegalStateException( format( "Recording file has already been registered: %s", recordingFile.toAbsolutePath() ) );
+            }
+            recordings.put( recordingDescriptor, recordingFile );
         }
 
-        private void addProfilers( Collection<ParameterizedProfiler> newProfilers )
+        @Override
+        public boolean equals( Object o )
         {
-            this.parameterizedProfilers.addAll( newProfilers );
+            return EqualsBuilder.reflectionEquals( this, o );
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return HashCodeBuilder.reflectionHashCode( this );
         }
     }
 }

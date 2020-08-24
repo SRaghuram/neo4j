@@ -5,12 +5,8 @@
  */
 package com.neo4j.bench.common.results;
 
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.BenchmarkGroup;
-import com.neo4j.bench.common.profiling.ParameterizedProfiler;
-import com.neo4j.bench.common.profiling.ProfilerType;
-import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.util.JsonUtil;
 
 import java.io.IOException;
@@ -19,12 +15,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Stream;
 
 import static com.neo4j.bench.common.util.BenchmarkUtil.assertDirectoryExists;
 import static java.lang.String.format;
-import static java.util.Collections.singleton;
 import static java.util.stream.Collectors.toList;
 
 public class BenchmarkDirectory
@@ -138,27 +132,21 @@ public class BenchmarkDirectory
         return ForkDirectory.findOrFailAt( dir, forkName );
     }
 
-    public ForkDirectory findOrCreate( String forkName, List<ParameterizedProfiler> profilers )
+    public ForkDirectory findOrCreate( String forkName )
     {
-        return ForkDirectory.findOrCreateAt( dir, forkName, profilers );
+        return ForkDirectory.findOrCreateAt( dir, forkName );
     }
 
-    public ForkDirectory create( String forkName, List<ParameterizedProfiler> profilers )
+    public ForkDirectory create( String forkName )
     {
-        return ForkDirectory.createAt( dir, forkName, profilers );
+        return ForkDirectory.createAt( dir, forkName );
     }
 
     public List<ForkDirectory> measurementForks()
     {
         return forks().stream()
-                      .filter( BenchmarkDirectory::isMeasurementFork )
+                      .filter( ForkDirectory::isMeasurementFork )
                       .collect( toList() );
-    }
-
-    private static boolean isMeasurementFork( ForkDirectory forkDirectory )
-    {
-        Set<ProfilerType> profilers = forkDirectory.profilers();
-        return profilers.isEmpty() || profilers.equals( singleton( ProfilerType.NO_OP ) );
     }
 
     public List<Path> plans()
@@ -182,10 +170,5 @@ public class BenchmarkDirectory
         {
             throw new UncheckedIOException( "Error retrieving fork directories", e );
         }
-    }
-
-    void copyProfilerRecordings( BenchmarkGroup benchmarkGroup, Path targetDir, Set<RecordingType> excluding )
-    {
-        forks().forEach( fork -> fork.copyProfilerRecordings( benchmarkGroup, benchmark, targetDir, excluding ) );
     }
 }

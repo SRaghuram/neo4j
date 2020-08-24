@@ -6,13 +6,8 @@
 package com.neo4j.bench.jmh.api;
 
 import com.google.common.collect.ImmutableSet;
-import com.neo4j.bench.model.model.BenchmarkGroupBenchmark;
-import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
-import com.neo4j.bench.model.model.Metrics;
-import com.neo4j.bench.model.model.TestRunError;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
-import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.common.util.ErrorReporter;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.jmh.api.config.BenchmarkConfigFile;
@@ -20,6 +15,11 @@ import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
 import com.neo4j.bench.jmh.api.config.BenchmarksFinder;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import com.neo4j.bench.jmh.api.config.Validation;
+import com.neo4j.bench.model.model.BenchmarkGroupBenchmark;
+import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
+import com.neo4j.bench.model.model.Metrics;
+import com.neo4j.bench.model.model.TestRunError;
+import com.neo4j.bench.model.profiling.RecordingType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.openjdk.jmh.runner.options.TimeValue;
@@ -62,7 +62,6 @@ public class RunIT
     {
         Path benchmarkConfig = Files.createTempFile( temporaryFolder, "benchmarkConfig", ".tmp" );
         Path workDir = Files.createTempDirectory( temporaryFolder, "work" );
-        Path profilerRecordingsOutputDir = Files.createTempDirectory( temporaryFolder, "recordings" );
 
         List<ParameterizedProfiler> profilers = (forkCount == 0) ? Collections.emptyList()
                                                                  : defaultProfilers( ProfilerType.JFR );
@@ -93,8 +92,7 @@ public class RunIT
                 workDir,
                 errorReporter,
                 jmhArgs,
-                Jvm.defaultJvm(),
-                profilerRecordingsOutputDir );
+                Jvm.defaultJvm() );
 
         List<BenchmarkGroupBenchmark> benchmarks = results.benchmarkGroupBenchmarks();
         assertThat( errorReporter.toString(), benchmarks.size(), equalTo( 4 ) );
@@ -138,7 +136,7 @@ public class RunIT
         if ( forkCount > 0 )
         {
             // Check that the correct profiler recordings are created
-            long jfrRecordingType = ProfilerRecordingsTestUtil.recordingCountIn( profilerRecordingsOutputDir, RecordingType.JFR );
+            long jfrRecordingType = ProfilerRecordingsTestUtil.recordingCountIn( workDir, RecordingType.JFR );
             long expectedJfrRecordingCount = suiteDescription.benchmarks().stream().mapToLong( b -> b.explode().size() ).sum();
             assertThat( jfrRecordingType, equalTo( expectedJfrRecordingCount ) );
         }
@@ -161,7 +159,6 @@ public class RunIT
     private void shouldRunFromSingleBenchmark( int forkCount ) throws IOException
     {
         Path workDir = Files.createTempDirectory( temporaryFolder, "work" );
-        Path profilerRecordingsOutputDir = Files.createTempDirectory( temporaryFolder, "recordings" );
 
         List<ParameterizedProfiler> profilers = (forkCount == 0) ? Collections.emptyList()
                                                                  : defaultProfilers(  ProfilerType.JFR  );
@@ -183,8 +180,7 @@ public class RunIT
                 workDir,
                 errorReporter,
                 jmhArgs,
-                Jvm.defaultJvm(),
-                profilerRecordingsOutputDir );
+                Jvm.defaultJvm() );
 
         List<BenchmarkGroupBenchmark> benchmarks = results.benchmarkGroupBenchmarks();
         assertThat( errorReporter.toString(), benchmarks.size(), equalTo( 2 ) );
@@ -214,7 +210,7 @@ public class RunIT
         if ( forkCount > 0 )
         {
             // Check that the correct profiler recordings are created
-            long jfrRecordingType = ProfilerRecordingsTestUtil.recordingCountIn( profilerRecordingsOutputDir, RecordingType.JFR );
+            long jfrRecordingType = ProfilerRecordingsTestUtil.recordingCountIn( workDir, RecordingType.JFR );
             long expectedJfrRecordingCount = suiteDescription.benchmarks().stream().mapToLong( b -> b.explode().size() ).sum();
             assertThat( jfrRecordingType, equalTo( expectedJfrRecordingCount ) );
         }

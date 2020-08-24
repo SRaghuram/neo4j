@@ -5,9 +5,6 @@
  */
 package com.neo4j.bench.common.profiling;
 
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.BenchmarkGroup;
-import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.common.process.ProcessWrapper;
 import com.neo4j.bench.common.results.ForkDirectory;
@@ -20,17 +17,13 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 
-import static com.neo4j.bench.common.results.RunPhase.MEASUREMENT;
-
 public class IoStatTracer implements ExternalProfiler
 {
     private ProcessWrapper iostat;
 
     @Override
     public List<String> invokeArgs( ForkDirectory forkDirectory,
-                                    BenchmarkGroup benchmarkGroup,
-                                    Benchmark benchmark,
-                                    Parameters additionalParameters )
+                                    ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         return Collections.emptyList();
     }
@@ -38,9 +31,7 @@ public class IoStatTracer implements ExternalProfiler
     @Override
     public JvmArgs jvmArgs( JvmVersion jvmVersion,
                             ForkDirectory forkDirectory,
-                            BenchmarkGroup benchmarkGroup,
-                            Benchmark benchmark,
-                            Parameters additionalParameters,
+                            ProfilerRecordingDescriptor profilerRecordingDescriptor,
                             Resources resources )
     {
         return JvmArgs.empty();
@@ -48,17 +39,10 @@ public class IoStatTracer implements ExternalProfiler
 
     @Override
     public void beforeProcess( ForkDirectory forkDirectory,
-                               BenchmarkGroup benchmarkGroup,
-                               Benchmark benchmark,
-                               Parameters additionalParameters )
+                               ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
-        ProfilerRecordingDescriptor recordingDescriptor = ProfilerRecordingDescriptor.create( benchmarkGroup,
-                                                                                              benchmark,
-                                                                                              MEASUREMENT,
-                                                                                              ProfilerType.IO_STAT,
-                                                                                              additionalParameters );
-
-        Path iostatLog = forkDirectory.pathFor( recordingDescriptor.sanitizedFilename( RecordingType.TRACE_IOSTAT ) );
+        RecordingDescriptor recordingDescriptor = profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.TRACE_IOSTAT );
+        Path iostatLog = forkDirectory.registerPathFor( recordingDescriptor );
         iostat = ProcessWrapper.start( new ProcessBuilder()
                                                .command( "iostat", "2", "-t", "-x" )
                                                .redirectOutput( iostatLog.toFile() )
@@ -67,16 +51,14 @@ public class IoStatTracer implements ExternalProfiler
 
     @Override
     public void afterProcess( ForkDirectory forkDirectory,
-                              BenchmarkGroup benchmarkGroup,
-                              Benchmark benchmark,
-                              Parameters additionalParameters )
+                              ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         iostat.stop();
     }
 
     @Override
-    public void processFailed( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
-                               Parameters additionalParameters )
+    public void processFailed( ForkDirectory forkDirectory,
+                               ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         // do nothing
     }

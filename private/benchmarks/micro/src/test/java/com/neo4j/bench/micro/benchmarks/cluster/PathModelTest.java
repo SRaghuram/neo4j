@@ -89,7 +89,7 @@ public class PathModelTest
         Path workDir = testDirectory.absolutePath();
         BenchmarkGroupDirectory benchmarkGroupDirectory = BenchmarkGroupDirectory.createAt( workDir, benchmarkGroup );
         BenchmarkDirectory benchmarkDirectory = benchmarkGroupDirectory.findOrCreate( benchmark );
-        ForkDirectory forkDirectory = benchmarkDirectory.create( "fork", Collections.emptyList() );
+        ForkDirectory forkDirectory = benchmarkDirectory.create( "fork" );
 
         editionModuleBackedAbstractBenchmark.benchmarkSetup( benchmarkGroup, benchmark, Neo4jConfig.empty(), forkDirectory );
 

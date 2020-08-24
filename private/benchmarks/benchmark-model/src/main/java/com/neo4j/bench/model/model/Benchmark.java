@@ -5,6 +5,8 @@
  */
 package com.neo4j.bench.model.model;
 
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.KeyDeserializer;
 import com.neo4j.bench.model.util.JsonUtil;
 
 import java.util.HashMap;
@@ -17,6 +19,15 @@ import static java.util.Objects.requireNonNull;
 
 public class Benchmark
 {
+    public static class BenchmarkKeyDeserializer extends KeyDeserializer
+    {
+        @Override
+        public Object deserializeKey( String key, DeserializationContext ctxt )
+        {
+            return JsonUtil.deserializeJson( key, Benchmark.class );
+        }
+    }
+
     public enum Mode
     {
         THROUGHPUT,
@@ -177,14 +188,12 @@ public class Benchmark
     @Override
     public String toString()
     {
-        //        return format( "%s(%s=%s, %s=%s, %s=%s, %s=%s, parameters=%s)",
-        //                getClass().getSimpleName(),
-        //                NAME, name,
-        //                SIMPLE_NAME, simpleName,
-        //                DESCRIPTION, description,
-        //                MODE, mode,
-        //                parameters() );
-        // TODO JSON map key deserialization depends on this. Do not change until that dependency is removed/fixed.
-        return JsonUtil.serializeJson( this );
+        return format( "%s(%s=%s, %s=%s, %s=%s, %s=%s, parameters=%s)",
+                       getClass().getSimpleName(),
+                       NAME, name,
+                       SIMPLE_NAME, simpleName,
+                       DESCRIPTION, description,
+                       MODE, mode,
+                       parameters() );
     }
 }

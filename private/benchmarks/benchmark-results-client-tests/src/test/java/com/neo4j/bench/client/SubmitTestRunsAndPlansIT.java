@@ -13,6 +13,7 @@ import com.neo4j.bench.client.queries.regression.AttachRegression;
 import com.neo4j.bench.client.queries.schema.CreateSchema;
 import com.neo4j.bench.client.queries.schema.SetStoreVersion;
 import com.neo4j.bench.client.queries.schema.VerifyStoreSchema;
+import com.neo4j.bench.client.reporter.ResultsReporter;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.model.model.Annotation;
 import com.neo4j.bench.model.model.AuxiliaryMetrics;
@@ -36,20 +37,15 @@ import com.neo4j.bench.model.model.Repository;
 import com.neo4j.bench.model.model.TestRun;
 import com.neo4j.bench.model.model.TestRunError;
 import com.neo4j.bench.model.model.TestRunReport;
-import com.neo4j.bench.model.util.JsonUtil;
 import com.neo4j.harness.junit.extension.EnterpriseNeo4jExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.io.File;
-import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -99,6 +95,7 @@ public class SubmitTestRunsAndPlansIT
     @Inject
     public TestDirectory temporaryFolder;
 
+    private ResultsReporter resultsReporter;
     private URI boltUri;
 
     @BeforeEach
@@ -107,6 +104,7 @@ public class SubmitTestRunsAndPlansIT
         HostnamePort address = ((GraphDatabaseAPI) databaseService).getDependencyResolver()
                                                                    .resolveDependency( ConnectorPortRegister.class ).getLocalAddress( "bolt" );
         boltUri = URI.create( "bolt://" + address.toString() );
+        resultsReporter = new ResultsReporter( USERNAME, PASSWORD, boltUri );
     }
 
     @AfterEach
@@ -148,22 +146,14 @@ public class SubmitTestRunsAndPlansIT
             BenchmarkGroup group = new BenchmarkGroup( "group1" );
             Benchmark benchmark1 = Benchmark.benchmarkFor( "desc1", "bench1", Benchmark.Mode.LATENCY, emptyMap() );
             Benchmark benchmark2 = Benchmark.benchmarkFor( "desc2", "bench2", Benchmark.Mode.LATENCY, emptyMap() );
-            File testRunResultsJson1 = temporaryFolder.file( "results1.json" ).toFile();
             TestRunReport testRunReport = createTestRunReportTwoProjects(
                     testRun1,
                     newArrayList(), // no plans
                     newArrayList(), // no errors
                     group,
                     benchmark1, benchmark2 );
-            JsonUtil.serializeJson( testRunResultsJson1.toPath(), testRunReport );
             // no exception is expected
-            Main.main( new String[]{
-                    "report",
-                    ReportCommand.CMD_RESULTS_STORE_URI, boltUri.toString(),
-                    ReportCommand.CMD_RESULTS_STORE_USER, USERNAME,
-                    ReportCommand.CMD_RESULTS_STORE_PASSWORD, PASSWORD,
-                    ReportCommand.CMD_TEST_RUN_RESULTS, testRunResultsJson1.getAbsolutePath(),
-                    ReportCommand.CMD_ERROR_POLICY, FAIL.name()} );
+            resultsReporter.report( testRunReport, FAIL );
 
             QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
             assertLabelCount( "TestRun", 1, client );
@@ -192,24 +182,16 @@ public class SubmitTestRunsAndPlansIT
              */
 
             TestRun testRun2 = new TestRun( "id2", 1, 1, 1, 1, "user" );
-            final File testRunResultsJson2 = temporaryFolder.file( "results2.json" ).toFile();
-            testRunReport = createTestRunReportTwoProjects(
+            TestRunReport testRunReport2 = createTestRunReportTwoProjects(
                     testRun2,
                     newArrayList(), // no plans
                     newArrayList( new TestRunError( "group1", "benchmark1", "description 1" ),
                                   new TestRunError( "group2", "benchmark2", "description 2" ) ), // has errors
                     group,
                     benchmark1, benchmark2 );
-            JsonUtil.serializeJson( testRunResultsJson2.toPath(), testRunReport );
+
             BenchmarkUtil.assertException( RuntimeException.class,
-                                           () ->
-                                                   Main.main( new String[]{
-                                                           "report",
-                                                           ReportCommand.CMD_RESULTS_STORE_URI, boltUri.toString(),
-                                                           ReportCommand.CMD_RESULTS_STORE_USER, USERNAME,
-                                                           ReportCommand.CMD_RESULTS_STORE_PASSWORD, PASSWORD,
-                                                           ReportCommand.CMD_TEST_RUN_RESULTS, testRunResultsJson2.getAbsolutePath(),
-                                                           ReportCommand.CMD_ERROR_POLICY, FAIL.name()} ) );
+                                           () -> resultsReporter.report( testRunReport2, FAIL ) );
 
             QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
             assertLabelCount( "TestRun", 1, client );
@@ -238,14 +220,7 @@ public class SubmitTestRunsAndPlansIT
              */
 
             BenchmarkUtil.assertException( RuntimeException.class,
-                                           () ->
-                                                   Main.main( new String[]{
-                                                           "report",
-                                                           ReportCommand.CMD_RESULTS_STORE_URI, boltUri.toString(),
-                                                           ReportCommand.CMD_RESULTS_STORE_USER, USERNAME,
-                                                           ReportCommand.CMD_RESULTS_STORE_PASSWORD, PASSWORD,
-                                                           ReportCommand.CMD_TEST_RUN_RESULTS, testRunResultsJson2.getAbsolutePath(),
-                                                           ReportCommand.CMD_ERROR_POLICY, REPORT_THEN_FAIL.name()} ) );
+                                           () -> resultsReporter.report( testRunReport2, REPORT_THEN_FAIL ) );
 
             QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
             assertLabelCount( "TestRun", 2, client );
@@ -274,23 +249,15 @@ public class SubmitTestRunsAndPlansIT
              */
 
             TestRun testRun3 = new TestRun( "id3", 1, 1, 1, 1, "user" );
-            File testRunResultsJson3 = temporaryFolder.file( "results3.json" ).toFile();
-            testRunReport = createTestRunReportTwoProjects(
+            TestRunReport testRunReport3 = createTestRunReportTwoProjects(
                     testRun3,
                     newArrayList(), // no plans
                     newArrayList( new TestRunError( "group1", "benchmark1", "description 1" ),
                                   new TestRunError( "group2", "benchmark2", "description 2" ) ), // has errors
                     group,
                     benchmark1, benchmark2 );
-            JsonUtil.serializeJson( testRunResultsJson3.toPath(), testRunReport );
             // no exception is expected
-            Main.main( new String[]{
-                    "report",
-                    ReportCommand.CMD_RESULTS_STORE_URI, boltUri.toString(),
-                    ReportCommand.CMD_RESULTS_STORE_USER, USERNAME,
-                    ReportCommand.CMD_RESULTS_STORE_PASSWORD, PASSWORD,
-                    ReportCommand.CMD_TEST_RUN_RESULTS, testRunResultsJson3.getAbsolutePath(),
-                    ReportCommand.CMD_ERROR_POLICY, IGNORE.name()} );
+            resultsReporter.report( testRunReport3, IGNORE );
 
             QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
             assertLabelCount( "TestRun", 3, client );
@@ -344,7 +311,6 @@ public class SubmitTestRunsAndPlansIT
                     new BenchmarkPlan( group, benchmark1, plan( "a" ) ),
                     new BenchmarkPlan( group, benchmark2, plan( "a" ) ) );
 
-            File testRunResultsJson1 = temporaryFolder.file( "results1.json" ).toFile();
             ArrayList<TestRunError> errors = newArrayList();
             TestRunReport testRunReport1 = createTestRunReportTwoProjects(
                     testRun1,
@@ -352,21 +318,7 @@ public class SubmitTestRunsAndPlansIT
                     errors,
                     group,
                     benchmark1, benchmark2, benchmark3 );
-            JsonUtil.serializeJson(
-                    testRunResultsJson1.toPath(), testRunReport1 );
-            File profileDir = createProfileFiles( temporaryFolder, group, benchmark1, benchmark2 );
-            Main.main( new String[]{
-                    "add-profiles",
-                    AddProfilesCommand.CMD_DIR, profileDir.getAbsolutePath(),
-                    AddProfilesCommand.CMD_TEST_RUN_RESULTS, testRunResultsJson1.getAbsolutePath(),
-                    AddProfilesCommand.CMD_S3_BUCKET, "some-s3-bucket"} );
-            Main.main( new String[]{
-                    "report",
-                    ReportCommand.CMD_RESULTS_STORE_URI, boltUri.toString(),
-                    ReportCommand.CMD_RESULTS_STORE_USER, USERNAME,
-                    ReportCommand.CMD_RESULTS_STORE_PASSWORD, PASSWORD,
-                    ReportCommand.CMD_TEST_RUN_RESULTS, testRunResultsJson1.getAbsolutePath(),
-                    ReportCommand.CMD_ERROR_POLICY, (errors.isEmpty() ? FAIL : IGNORE).name()} );
+            resultsReporter.report( testRunReport1, errors.isEmpty() ? FAIL : IGNORE );
 
             Annotation annotation1 = new Annotation( "comment1", 1, "author1" );
             QUERY_RETRIER
@@ -400,21 +352,13 @@ public class SubmitTestRunsAndPlansIT
                     new BenchmarkPlan( group, benchmark1, plan( "a" ) ),
                     new BenchmarkPlan( group, benchmark2, plan( "b" ) ),
                     new BenchmarkPlan( group, benchmark4, plan( "c" ) ) );
-            File testRunResultsJson2 = temporaryFolder.file( "results2.json" ).toFile();
             TestRunReport testRunReport2 = createTestRunReport(
                     testRun2,
                     benchmarkPlans2,
                     errors,
                     group,
                     benchmark1, benchmark2, benchmark4 );
-            JsonUtil.serializeJson( testRunResultsJson2.toPath(), testRunReport2 );
-            Main.main( new String[]{
-                    "report",
-                    ReportCommand.CMD_RESULTS_STORE_URI, boltUri.toString(),
-                    ReportCommand.CMD_RESULTS_STORE_USER, USERNAME,
-                    ReportCommand.CMD_RESULTS_STORE_PASSWORD, PASSWORD,
-                    ReportCommand.CMD_TEST_RUN_RESULTS, testRunResultsJson2.getAbsolutePath(),
-                    ReportCommand.CMD_ERROR_POLICY, (errors.isEmpty() ? FAIL : IGNORE).name()} );
+            resultsReporter.report( testRunReport2, errors.isEmpty() ? FAIL : IGNORE );
 
             int addedAnnotations = 0;
             for ( BenchmarkGroupBenchmark bgb : testRunReport2.benchmarkGroupBenchmarks() )
@@ -513,25 +457,11 @@ public class SubmitTestRunsAndPlansIT
             List<BenchmarkPlan> benchmarkPlans = newArrayList(
                     new BenchmarkPlan( group, benchmark1, plan( "a" ) ),
                     new BenchmarkPlan( group, benchmark2, plan( "b" ) ) );
-            File testRunResultsJson = temporaryFolder.file( "results.json" ).toFile();
             ArrayList<TestRunError> errors = newArrayList( new TestRunError( "group1", "benchmark1", "description 1" ),
                                                            new TestRunError( "group2", "benchmark2", "description 2" ) );
             TestRunReport testRunReport1 =
                     createTestRunReport( testRun1, benchmarkPlans, errors, group, benchmark1, benchmark2 );
-            JsonUtil.serializeJson( testRunResultsJson.toPath(), testRunReport1 );
-            File profileDir = createProfileFiles( temporaryFolder, group, benchmark1, benchmark2 );
-            Main.main( new String[]{
-                    "add-profiles",
-                    AddProfilesCommand.CMD_DIR, profileDir.getAbsolutePath(),
-                    AddProfilesCommand.CMD_TEST_RUN_RESULTS, testRunResultsJson.getAbsolutePath(),
-                    AddProfilesCommand.CMD_S3_BUCKET, "some-s3-bucket"} );
-            Main.main( new String[]{
-                    "report",
-                    ReportCommand.CMD_RESULTS_STORE_URI, boltUri.toString(),
-                    ReportCommand.CMD_RESULTS_STORE_USER, USERNAME,
-                    ReportCommand.CMD_RESULTS_STORE_PASSWORD, PASSWORD,
-                    ReportCommand.CMD_TEST_RUN_RESULTS, testRunResultsJson.getAbsolutePath(),
-                    ReportCommand.CMD_ERROR_POLICY, (errors.isEmpty() ? FAIL : IGNORE).name()} );
+            resultsReporter.report( testRunReport1, errors.isEmpty() ? FAIL : IGNORE );
 
             Annotation annotation1 = new Annotation( "comment1", 1, "author1" );
             QUERY_RETRIER
@@ -612,25 +542,11 @@ public class SubmitTestRunsAndPlansIT
             List<BenchmarkPlan> benchmarkPlans = newArrayList(
                     new BenchmarkPlan( group, benchmark1, plan( "a" ) ),
                     new BenchmarkPlan( group, benchmark2, plan( "a" ) ) );
-            File testRunResultsJson = temporaryFolder.file( "results.json" ).toFile();
             ArrayList<TestRunError> errors = newArrayList( new TestRunError( "group1", "benchmark1", "description 1" ),
                                                            new TestRunError( "group2", "benchmark2", "description 2" ) );
             TestRunReport testRunReport1 =
                     createTestRunReport( testRun1, benchmarkPlans, errors, group, benchmark1, benchmark2 );
-            JsonUtil.serializeJson( testRunResultsJson.toPath(), testRunReport1 );
-            File profileDir = createProfileFiles( temporaryFolder, group, benchmark1, benchmark2 );
-            Main.main( new String[]{
-                    "add-profiles",
-                    AddProfilesCommand.CMD_DIR, profileDir.getAbsolutePath(),
-                    AddProfilesCommand.CMD_TEST_RUN_RESULTS, testRunResultsJson.getAbsolutePath(),
-                    AddProfilesCommand.CMD_S3_BUCKET, "some-s3-bucket"} );
-            Main.main( new String[]{
-                    "report",
-                    ReportCommand.CMD_RESULTS_STORE_URI, boltUri.toString(),
-                    ReportCommand.CMD_RESULTS_STORE_USER, USERNAME,
-                    ReportCommand.CMD_RESULTS_STORE_PASSWORD, PASSWORD,
-                    ReportCommand.CMD_TEST_RUN_RESULTS, testRunResultsJson.getAbsolutePath(),
-                    ReportCommand.CMD_ERROR_POLICY, (errors.isEmpty() ? FAIL : IGNORE).name()} );
+            resultsReporter.report( testRunReport1, errors.isEmpty() ? FAIL : IGNORE );
 
             Annotation annotation1 = new Annotation( "comment1", 1, "author1" );
             QUERY_RETRIER
@@ -714,27 +630,6 @@ public class SubmitTestRunsAndPlansIT
         assertLabelCount( "Operator", 0, client );
         // Annotation specific
         assertLabelCount( "Annotation", 0, client );
-    }
-
-    private static File createProfileFiles(
-            TestDirectory temporaryFolder,
-            BenchmarkGroup group,
-            Benchmark benchmark1,
-            Benchmark benchmark2 ) throws IOException
-    {
-        Path absolutePath = temporaryFolder.absolutePath();
-        Path topFolder = absolutePath.resolve( "profiles" );
-        Files.createDirectories( topFolder );
-        Files.createFile( absolutePath.resolve( "archive.tar.gz" ) );
-
-        Files.createFile( absolutePath.resolve( "profiles/" + group.name() + "." + benchmark1.name() + ".jfr" ) );
-        Files.createFile( absolutePath.resolve( "profiles/" + group.name() + "." + benchmark1.name() + "-jfr.svg" ) );
-        Files.createFile( absolutePath.resolve( "profiles/" + group.name() + "." + benchmark1.name() + ".async" ) );
-        Files.createFile( absolutePath.resolve( "profiles/" + group.name() + "." + benchmark1.name() + "-async.svg" ) );
-
-        Files.createFile( absolutePath.resolve( "profiles/" + group.name() + "." + benchmark2.name() + ".jfr" ) );
-        Files.createFile( absolutePath.resolve( "profiles/" + group.name() + "." + benchmark2.name() + "-jfr.svg" ) );
-        return topFolder.toFile();
     }
 
     private void assertLabelCount( String label, int expectedCount, StoreClient client )

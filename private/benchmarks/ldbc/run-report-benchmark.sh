@@ -121,9 +121,6 @@ echo "Async Dir:           ${ASYNC_PROFILER_DIR}"
 echo "------------------------------------------------"
 echo "------------------------------------------------"
 
-profiler_recording_dir_name=$(uuidgen)
-profiler_recording_dir="${ldbc_results_dir}/${profiler_recording_dir_name}"
-
 jar_path="${ldbc_benchmarks_dir}/neo4j-connectors/target/ldbc.jar"
 
 #shellcheck disable=SC2068
@@ -163,7 +160,6 @@ ${jvm_path} -XX:OnOutOfMemoryError="$out_of_memory_script --jvm-pid %p --output-
   --triggered-by "${triggered_by}" \
   --trace \
   --profilers "${profilers}" \
-  --profiles-dir "${profiler_recording_dir}" \
   --results-store-uri "${results_store_uri}" \
   --results-store-user "${results_store_user}" \
   --results-store-pass "${results_store_pass}" \

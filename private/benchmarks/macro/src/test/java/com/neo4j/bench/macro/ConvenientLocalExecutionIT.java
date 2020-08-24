@@ -127,7 +127,7 @@ class ConvenientLocalExecutionIT
         RunMacroWorkloadCommand.runReport( workloadParams,
                                            RESULT_DIR.toFile(),
                                            STORE_DIR.toFile(),
-                                           profilerRecordingsDir.toFile(),
+
                                            neo4jConfigFile().toFile(),
                                            ErrorReporter.ErrorPolicy.SKIP,
                                            null );

@@ -5,28 +5,23 @@
  */
 package com.neo4j.bench.common.profiling;
 
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.BenchmarkGroup;
-import com.neo4j.bench.model.model.Parameters;
-import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.JvmVersion;
 import com.neo4j.bench.common.util.Resources;
+import com.neo4j.bench.model.process.JvmArgs;
+import com.neo4j.bench.model.profiling.RecordingType;
 
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 
-import static com.neo4j.bench.common.results.RunPhase.MEASUREMENT;
 import static java.lang.String.format;
 
 public class JvmTracer implements ExternalProfiler
 {
     @Override
     public List<String> invokeArgs( ForkDirectory forkDirectory,
-                                    BenchmarkGroup benchmarkGroup,
-                                    Benchmark benchmark,
-                                    Parameters additionalParameters )
+                                    ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         return Collections.emptyList();
     }
@@ -34,19 +29,12 @@ public class JvmTracer implements ExternalProfiler
     @Override
     public JvmArgs jvmArgs( JvmVersion jvmVersion,
                             ForkDirectory forkDirectory,
-                            BenchmarkGroup benchmarkGroup,
-                            Benchmark benchmark,
-                            Parameters additionalParameters,
+                            ProfilerRecordingDescriptor profilerRecordingDescriptor,
                             Resources resources )
     {
-        ProfilerRecordingDescriptor recordingDescriptor = ProfilerRecordingDescriptor.create( benchmarkGroup,
-                                                                                              benchmark,
-                                                                                              MEASUREMENT,
-                                                                                              ProfilerType.JVM_LOGGING,
-                                                                                              additionalParameters );
-
+        RecordingDescriptor recordingDescriptor = profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.TRACE_JVM );
         Path safepointLogs = forkDirectory.create( recordingDescriptor.sanitizedName() + ".safepoint.log" );
-        Path vmLog = forkDirectory.pathFor( recordingDescriptor );
+        Path vmLog = forkDirectory.registerPathFor( recordingDescriptor );
         return JvmArgs.from(
                 "-XX:+UnlockDiagnosticVMOptions",
                 "-XX:+CITime",
@@ -57,25 +45,21 @@ public class JvmTracer implements ExternalProfiler
 
     @Override
     public void beforeProcess( ForkDirectory forkDirectory,
-                               BenchmarkGroup benchmarkGroup,
-                               Benchmark benchmark,
-                               Parameters additionalParameters )
+                               ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         // do nothing
     }
 
     @Override
     public void afterProcess( ForkDirectory forkDirectory,
-                              BenchmarkGroup benchmarkGroup,
-                              Benchmark benchmark,
-                              Parameters additionalParameters )
+                              ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         // do nothing
     }
 
     @Override
-    public void processFailed( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
-                               Parameters additionalParameters )
+    public void processFailed( ForkDirectory forkDirectory,
+                               ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         // do nothing
     }

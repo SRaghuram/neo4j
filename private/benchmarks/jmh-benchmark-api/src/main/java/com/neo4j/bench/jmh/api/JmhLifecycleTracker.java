@@ -5,17 +5,17 @@
  */
 package com.neo4j.bench.jmh.api;
 
-import com.neo4j.bench.common.process.HasPid;
-import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.common.process.HasPid;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.BenchmarkUtil;
-import com.neo4j.bench.model.util.JsonUtil;
 import com.neo4j.bench.jmh.api.profile.AbstractMicroProfiler;
+import com.neo4j.bench.model.util.JsonUtil;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.openjdk.jmh.infra.BenchmarkParams;
@@ -131,7 +131,7 @@ public class JmhLifecycleTracker
         BenchmarkDirectory benchmarkDir = benchmarkGroupDir.findOrCreate( benchmark );
         if ( forkDirectoryStatus.isNew )
         {
-            return benchmarkDir.create( forkDirectoryStatus.forkName, runnerParams.profilers() );
+            return benchmarkDir.create( forkDirectoryStatus.forkName );
         }
         else
         {
@@ -149,7 +149,7 @@ public class JmhLifecycleTracker
                // when fork count > 0, the fork directory should have been created already
                ? benchmarkDir.findOrFail( forkDirectoryStatus.forkName )
                // when fork count = 0 (special/debug case) the first call into this method will need to create the fork directory too
-               : benchmarkDir.findOrCreate( forkDirectoryStatus.forkName, runnerParams.profilers() );
+               : benchmarkDir.findOrCreate( forkDirectoryStatus.forkName );
     }
 
     public void reset()

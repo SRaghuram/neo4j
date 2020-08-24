@@ -12,8 +12,10 @@ import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
 import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.profiling.RecordingDescriptor;
 import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Jvm;
@@ -190,15 +192,16 @@ public class EndToEndIT extends BaseEndToEndIT
 
         for ( ProfilerType profilerType : profilers )
         {
-            ProfilerRecordingDescriptor recordingDescriptor = ProfilerRecordingDescriptor.create(
+            ProfilerRecordingDescriptor profilerRecordingDescriptor = ProfilerRecordingDescriptor.create(
                     benchmarkGroup,
                     benchmark,
                     RunPhase.MEASUREMENT,
-                    profilerType,
+                    ParameterizedProfiler.defaultProfiler( profilerType ),
                     Parameters.NONE );
             for ( RecordingType recordingType : profilerType.allRecordingTypes() )
             {
-                String profilerArtifactFilename = recordingDescriptor.filename( recordingType );
+                RecordingDescriptor recordingDescriptor = profilerRecordingDescriptor.recordingDescriptorFor( recordingType );
+                String profilerArtifactFilename = recordingDescriptor.filename();
                 File file = recordingDir.resolve( profilerArtifactFilename ).toFile();
                 assertThat( "File not found: " + file.getAbsolutePath(), file, anExistingFile() );
             }

@@ -28,6 +28,7 @@ import com.ldbc.driver.temporal.SystemTimeSource;
 import com.ldbc.driver.util.FileUtils;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration;
 import com.neo4j.bench.client.env.InstanceDiscovery;
+import com.neo4j.bench.client.reporter.ResultsReporter;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
@@ -36,10 +37,12 @@ import com.neo4j.bench.common.profiling.ExternalProfiler;
 import com.neo4j.bench.common.profiling.InternalProfiler;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.Profiler;
+import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.common.util.Args;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Jvm;
@@ -67,8 +70,6 @@ import com.neo4j.bench.model.model.TestRunReport;
 import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.model.util.JsonUtil;
-import com.neo4j.bench.reporter.ResultsReporter;
-import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,7 +80,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,6 +91,7 @@ import static com.ldbc.driver.runtime.metrics.WorkloadResultsSnapshot.fromJson;
 import static com.ldbc.driver.util.ClassLoaderHelper.loadWorkload;
 import static com.ldbc.driver.util.FileUtils.copyDir;
 import static com.ldbc.driver.util.MapUtils.loadPropertiesToMap;
+import static com.neo4j.bench.common.results.ErrorReportingPolicy.REPORT_THEN_FAIL;
 import static com.neo4j.bench.common.util.BenchmarkUtil.assertFileNotEmpty;
 import static com.neo4j.bench.common.util.BenchmarkUtil.lessWhiteSpace;
 import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.assertDisallowFormatMigration;
@@ -388,6 +389,7 @@ public class RunReportCommand implements Runnable
              title = "Run with various monitoring tools" )
     private boolean doTrace;
 
+    // TODO remove
     private static final String CMD_PROFILES_DIR = "--profiles-dir";
     @Option( type = OptionType.COMMAND,
              name = {CMD_PROFILES_DIR},
@@ -622,16 +624,11 @@ public class RunReportCommand implements Runnable
             LOG.debug( "Export results to: " + jsonOutput.getAbsolutePath() );
             JsonUtil.serializeJson( jsonOutput.toPath(), testRunReport );
 
-            ResultsReporter resultsReporter = new ResultsReporter( profilesDir,
-                                                                   testRunReport,
-                                                                   s3Bucket,
-                                                                   true,
-                                                                   resultsStoreUsername,
+            Path profilerRecordingsOutputDir = workingDir.toPath().resolve( "profiler_recordings_temp" );
+            ResultsReporter resultsReporter = new ResultsReporter( resultsStoreUsername,
                                                                    resultsStorePassword,
-                                                                   resultsStoreUri,
-                                                                   workingDir,
-                                                                   awsEndpointURL );
-            resultsReporter.report();
+                                                                   resultsStoreUri );
+            resultsReporter.reportAndUpload( testRunReport, profilerRecordingsOutputDir, s3Bucket, workingDir, awsEndpointURL, REPORT_THEN_FAIL );
         }
         catch ( Exception e )
         {
@@ -661,7 +658,7 @@ public class RunReportCommand implements Runnable
             {
                 List<ParameterizedProfiler> profilers = new ArrayList<>( baseProfilers );
                 profilers.add( profiler );
-                ForkDirectory forkDir = benchmarkDir.create( "profiling-fork-" + profiler.profilerType().name(), profilers );
+                ForkDirectory forkDir = benchmarkDir.create( "profiling-fork-" + profiler.profilerType().name() );
                 runBenchmarkRepetition(
                         benchmarkGroup,
                         summaryBenchmark,
@@ -676,7 +673,7 @@ public class RunReportCommand implements Runnable
 
             for ( int repetition = 0; repetition < repetitionCount; repetition++ )
             {
-                ForkDirectory forkDir = benchmarkDir.create( "fork-" + repetition, Collections.emptyList() );
+                ForkDirectory forkDir = benchmarkDir.create( "fork-" + repetition );
                 runBenchmarkRepetition(
                         benchmarkGroup,
                         summaryBenchmark,
@@ -690,6 +687,7 @@ public class RunReportCommand implements Runnable
                 resultsDirectories.add( ResultsDirectory.fromDirectory( Paths.get( forkDir.toAbsolutePath() ).toFile() ) );
             }
 
+            // TODO update this block. maybe remove this block completely, but ResultReporter needs to then be used
             if ( null != profilesDir )
             {
                 BenchmarkUtil.tryMkDir( profilesDir.toPath() );
@@ -700,7 +698,8 @@ public class RunReportCommand implements Runnable
                                                                          .map( ProfilerType::allRecordingTypes )
                                                                          .flatMap( List::stream )
                                                                          .collect( toSet() );
-                groupDir.copyProfilerRecordings( profilesDir.toPath(), excludedRecordingTypes );
+                // TODO changes stuff here
+//                groupDir.copyProfilerRecordings( profilesDir.toPath(), excludedRecordingTypes );
             }
         }
         catch ( Exception e )
@@ -854,7 +853,11 @@ public class RunReportCommand implements Runnable
         {
             for ( ExternalProfiler profiler : profilers )
             {
-                JvmArgs profilerJvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, summaryBenchmark, Parameters.NONE, resources );
+                JvmArgs profilerJvmArgs = profiler.jvmArgs( jvmVersion,
+                                                            forkDirectory,
+                                                            getProfilerRecordingDescriptor( benchmarkGroup, summaryBenchmark, profiler ),
+                                                            resources );
+//                JvmArgs profilerJvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, summaryBenchmark, Parameters.NONE, resources );
                 jvmArgs = jvmArgs.merge( profilerJvmArgs );
             }
             File outputLog = forkDirectory.create( "ldbc-output.txt" ).toFile();
@@ -862,7 +865,9 @@ public class RunReportCommand implements Runnable
             List<String> jvmInvokeArgs = new ArrayList<>();
             for ( ExternalProfiler profiler : profilers )
             {
-                List<String> profilerJvmInvokeArgs = profiler.invokeArgs( forkDirectory, benchmarkGroup, summaryBenchmark, Parameters.NONE );
+//                List<String> profilerJvmInvokeArgs = profiler.invokeArgs( forkDirectory, benchmarkGroup, summaryBenchmark, Parameters.NONE );
+                List<String> profilerJvmInvokeArgs = profiler.invokeArgs( forkDirectory,
+                                                                          getProfilerRecordingDescriptor( benchmarkGroup, summaryBenchmark, profiler ));
                 jvmInvokeArgs.addAll( profilerJvmInvokeArgs );
             }
 
@@ -881,6 +886,17 @@ public class RunReportCommand implements Runnable
                     .redirectOutput( outputLog )
                     .start();
         }
+    }
+
+    private static ProfilerRecordingDescriptor getProfilerRecordingDescriptor( BenchmarkGroup benchmarkGroup,
+                                                                               Benchmark summaryBenchmark,
+                                                                               ExternalProfiler profiler )
+    {
+        return ProfilerRecordingDescriptor.create( benchmarkGroup,
+                                                   summaryBenchmark,
+                                                   RunPhase.MEASUREMENT,
+                                                   ParameterizedProfiler.defaultProfiler( ProfilerType.typeOf( profiler ) ),
+                                                   Parameters.NONE );
     }
 
     private TestRunReport packageResults(

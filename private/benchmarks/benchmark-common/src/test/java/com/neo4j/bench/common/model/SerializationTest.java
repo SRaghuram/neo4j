@@ -3,11 +3,39 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.model.model;
+package com.neo4j.bench.common.model;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.neo4j.bench.common.profiling.FullBenchmarkName;
+import com.neo4j.bench.common.profiling.RecordingDescriptor;
+import com.neo4j.bench.common.results.RunPhase;
+import com.neo4j.bench.model.model.Annotation;
+import com.neo4j.bench.model.model.AuxiliaryMetrics;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkConfig;
+import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.BenchmarkGroupBenchmark;
+import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
+import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkPlans;
+import com.neo4j.bench.model.model.BenchmarkMetrics;
+import com.neo4j.bench.model.model.BenchmarkPlan;
+import com.neo4j.bench.model.model.BenchmarkTool;
+import com.neo4j.bench.model.model.Benchmarks;
+import com.neo4j.bench.model.model.Environment;
+import com.neo4j.bench.model.model.Java;
+import com.neo4j.bench.model.model.Metrics;
+import com.neo4j.bench.model.model.Neo4jConfig;
+import com.neo4j.bench.model.model.Parameters;
+import com.neo4j.bench.model.model.Plan;
+import com.neo4j.bench.model.model.PlanOperator;
+import com.neo4j.bench.model.model.PlanTree;
+import com.neo4j.bench.model.model.Project;
+import com.neo4j.bench.model.model.Repository;
+import com.neo4j.bench.model.model.TestRun;
+import com.neo4j.bench.model.model.TestRunError;
+import com.neo4j.bench.model.model.TestRunReport;
 import com.neo4j.bench.model.profiling.ProfilerRecordings;
 import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.model.util.JsonUtil;
@@ -16,6 +44,7 @@ import org.junit.jupiter.api.Test;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -171,6 +200,18 @@ public class SerializationTest
         Benchmark before = benchmarkFor( "desc", "name", LATENCY, params );
         // then
         shouldSerializeAndDeserialize( before );
+    }
+
+    @Test
+    public void shouldSerializeRecordingDescriptor() throws IOException
+    {
+        // given
+        BenchmarkGroup group = new BenchmarkGroup( "group1" );
+        Benchmark benchmark = benchmarkFor( "desc", "simple_name", Benchmark.Mode.THROUGHPUT, Collections.singletonMap( "key", "val" ) );
+        FullBenchmarkName fullBenchmarkName = FullBenchmarkName.from( group, benchmark );
+        RecordingDescriptor recordingDescriptor = new RecordingDescriptor( fullBenchmarkName, RunPhase.MEASUREMENT, RecordingType.JFR, Parameters.CLIENT );
+
+        shouldSerializeAndDeserialize( recordingDescriptor );
     }
 
     @Test

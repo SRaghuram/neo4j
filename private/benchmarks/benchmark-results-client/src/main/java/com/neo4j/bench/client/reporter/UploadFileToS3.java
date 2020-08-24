@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.reporter;
+package com.neo4j.bench.client.reporter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

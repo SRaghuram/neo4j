@@ -6,21 +6,21 @@
 package com.neo4j.bench.common.profiling;
 
 import com.google.common.collect.ImmutableList;
+import com.neo4j.bench.common.process.Pid;
+import com.neo4j.bench.common.results.BenchmarkDirectory;
+import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
+import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.results.RunPhase;
+import com.neo4j.bench.common.util.Jvm;
+import com.neo4j.bench.common.util.JvmVersion;
+import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.Benchmark.Mode;
 import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.process.JvmArgs;
-import com.neo4j.bench.common.process.Pid;
-import com.neo4j.bench.common.results.BenchmarkDirectory;
-import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
-import com.neo4j.bench.common.results.ForkDirectory;
-import com.neo4j.bench.common.util.Jvm;
-import com.neo4j.bench.common.util.JvmVersion;
-import com.neo4j.bench.common.util.Resources;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,34 +29,32 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+import static com.neo4j.bench.common.profiling.ParameterizedProfiler.defaultProfiler;
+import static com.neo4j.bench.common.profiling.ProfilerType.NO_OP;
+import static java.util.Collections.emptyMap;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-
-import static java.util.Collections.emptyMap;
 
 public class ScheduledProfilerRunnerTest
 {
     @Test
-    public void startAndStopEmptyProfilers() throws IOException
+    public void startAndStopEmptyProfilers()
     {
         // given
-        BenchmarkGroup benchmarkGroup = new BenchmarkGroup( "benchmarkgroup" );
-        BenchmarkGroupDirectory benchmarkGroupDirectory =
-                BenchmarkGroupDirectory.createAt( Files.createTempDirectory( "macro" ), benchmarkGroup );
-        Benchmark benchmark = Benchmark.benchmarkFor( "description", "simpleName", Mode.LATENCY, emptyMap() );
-        BenchmarkDirectory benchmarkDirectory = benchmarkGroupDirectory.findOrCreate( benchmark );
-        ForkDirectory forkDirectory = benchmarkDirectory.findOrCreate( "forkName", Collections.emptyList() );
-        ScheduledProfilerRunner scheduledProfilers = ScheduledProfilerRunner.from( Collections.emptyList() );
-        Jvm jvm = Jvm.defaultJvmOrFail();
+        ScheduledProfilerRunner scheduledProfilerRunner = new ScheduledProfilerRunner();
+
         // when
-        scheduledProfilers.start( forkDirectory, benchmarkGroup, benchmark, Parameters.NONE, jvm, new Pid( 1111 ) );
+        // nothing submitted
+
         // then
-        assertTrue( scheduledProfilers.isRunning() );
+        assertTrue( scheduledProfilerRunner.isRunning() );
+
         //when
-        scheduledProfilers.stop();
+        scheduledProfilerRunner.stop();
+
         // then
-        assertFalse( scheduledProfilers.isRunning() );
+        assertFalse( scheduledProfilerRunner.isRunning() );
     }
 
     @Test
@@ -68,30 +66,33 @@ public class ScheduledProfilerRunnerTest
                 BenchmarkGroupDirectory.createAt( Files.createTempDirectory( "macro" ), benchmarkGroup );
         Benchmark benchmark = Benchmark.benchmarkFor( "description", "simpleName", Mode.LATENCY, emptyMap() );
         BenchmarkDirectory benchmarkDirectory = benchmarkGroupDirectory.findOrCreate( benchmark );
-        ForkDirectory forkDirectory = benchmarkDirectory.findOrCreate( "forkName", Collections.emptyList() );
+        ForkDirectory forkDirectory = benchmarkDirectory.findOrCreate( "forkName" );
         CompletableFuture<List<Tick>> futureTicks = new CompletableFuture<>();
-        List<ExternalProfiler> externalProfilers = Arrays.asList( new SimpleScheduledProfiler( futureTicks, 5 ) );
-        ScheduledProfilerRunner scheduledProfilers = ScheduledProfilerRunner.from( externalProfilers );
+        List<ExternalProfiler> externalProfilers = Arrays.asList( new SimpleScheduledProfiler( futureTicks, 2 ) );
+        ScheduledProfilerRunner scheduledProfilerRunner = new ScheduledProfilerRunner();
+        List<ScheduledProfiler> scheduledProfilers = ScheduledProfilerRunner.toScheduleProfilers( externalProfilers );
         Jvm jvm = Jvm.defaultJvmOrFail();
         // when
-        scheduledProfilers.start(
-                forkDirectory,
-                benchmarkGroup,
-                benchmark,
-                Parameters.NONE,
-                jvm,
-                new Pid( 1111 ) );
+        scheduledProfilers.forEach( profiler -> scheduledProfilerRunner.submit( profiler,
+                                                                                forkDirectory,
+                                                                                ProfilerRecordingDescriptor.create( benchmarkGroup,
+                                                                                                                    benchmark,
+                                                                                                                    RunPhase.MEASUREMENT,
+                                                                                                                    defaultProfiler( NO_OP ), /*not used*/
+                                                                                                                    Parameters.NONE ),
+                                                                                jvm,
+                                                                                new Pid( 1111 ) /*not used*/ ) );
         try
         {
             // then, wait double time of default fixed rate,
             // to make sure scheduled profiler gets called
-            assertArrayEquals( new long[] {0,1,2,3,4}, futureTicks.get( 1, TimeUnit.MINUTES).stream().mapToLong( Tick::counter ).toArray());
+            assertArrayEquals( new long[]{0, 1}, futureTicks.get( 1, TimeUnit.MINUTES ).stream().mapToLong( Tick::counter ).toArray() );
         }
         finally
         {
-            scheduledProfilers.stop();
+            scheduledProfilerRunner.stop();
         }
-        assertFalse( scheduledProfilers.isRunning() );
+        assertFalse( scheduledProfilerRunner.isRunning() );
     }
 
     public static class SimpleScheduledProfiler implements ExternalProfiler, ScheduledProfiler
@@ -108,45 +109,50 @@ public class ScheduledProfilerRunnerTest
         }
 
         @Override
-        public List<String> invokeArgs( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
-                Parameters additionalParameters )
+        public List<String> invokeArgs( ForkDirectory forkDirectory,
+                                        ProfilerRecordingDescriptor profilerRecordingDescriptor )
         {
             return Collections.emptyList();
         }
 
         @Override
-        public JvmArgs jvmArgs( JvmVersion jvmVersion, ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup,
-                Benchmark benchmark, Parameters additionalParameters, Resources resources )
+        public JvmArgs jvmArgs( JvmVersion jvmVersion,
+                                ForkDirectory forkDirectory,
+                ProfilerRecordingDescriptor profilerRecordingDescriptor,
+                                Resources resources )
         {
             return JvmArgs.empty();
         }
 
         @Override
-        public void beforeProcess( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
-                Parameters additionalParameters )
+        public void beforeProcess( ForkDirectory forkDirectory,
+                                   ProfilerRecordingDescriptor profilerRecordingDescriptor )
         {
         }
 
         @Override
-        public void afterProcess( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
-                Parameters additionalParameters )
+        public void afterProcess( ForkDirectory forkDirectory,
+                                  ProfilerRecordingDescriptor profilerRecordingDescriptor )
         {
         }
 
         @Override
-        public void processFailed( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
-                Parameters additionalParameters )
+        public void processFailed( ForkDirectory forkDirectory,
+                                   ProfilerRecordingDescriptor profilerRecordingDescriptor )
         {
         }
 
         @Override
-        public void onSchedule( Tick tick, ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
-                Parameters additionalParameters, Jvm jvm, Pid pid )
+        public void onSchedule( Tick tick,
+                                ForkDirectory forkDirectory,
+                                ProfilerRecordingDescriptor profilerRecordingDescriptor,
+                                Jvm jvm,
+                                Pid pid )
         {
             ticks.add( tick );
             if ( ticks.size() == waitUntil )
             {
-                futureTicks.complete( ImmutableList.copyOf( ticks ));
+                futureTicks.complete( ImmutableList.copyOf( ticks ) );
             }
         }
     }

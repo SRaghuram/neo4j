@@ -79,10 +79,6 @@ macro_benchmark_dir=$(pwd)
 
 jar_path="${macro_benchmark_dir}/target/macro.jar"
 
-uuid=$(uuidgen)
-profiler_recording_output_dir="${macro_benchmark_dir}"/"${uuid}"
-mkdir "${profiler_recording_output_dir}"
-
 # path to on-out-of-memory script
 basedir=$(dirname "$(realpath "$0")")
 out_of_memory_script="$basedir/on-out-of-memory.sh"
@@ -121,7 +117,6 @@ echo "Recreate Schema                                                : ${recreat
 echo "Cypher planner                                                 : ${planner}"
 echo "Cypher runtime                                                 : ${runtime}"
 echo "Path to the jar                                                : ${jar_path}"
-echo "Profiler Recording directory                                   : ${profiler_recording_output_dir}"
 echo "Triggered by                                                   : ${triggered_by}"
 echo "Error policy                                                   : ${error_policy}"
 echo "Neo4j Directory                                                : ${deployment}"
@@ -160,7 +155,6 @@ ${jvm} -Xmx1g -XX:OnOutOfMemoryError="$out_of_memory_script --jvm-pid %p --outpu
   --jvm-args "${jvm_args}" \
   --planner "${planner}" \
   --runtime "${runtime}" \
-  --profiler-recordings-dir "${profiler_recording_output_dir}" \
   --triggered-by "${triggered_by}" \
   --neo4j-deployment "${deployment}" \
   --queries "${queries}" \

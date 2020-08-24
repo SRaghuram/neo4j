@@ -6,10 +6,6 @@
 package com.neo4j.bench.common.profiling;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.BenchmarkGroup;
-import com.neo4j.bench.model.model.Parameters;
-import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
@@ -17,11 +13,16 @@ import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.JvmVersion;
 import com.neo4j.bench.common.util.Resources;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.Benchmark.Mode;
+import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.Parameters;
+import com.neo4j.bench.model.process.JvmArgs;
+import com.neo4j.bench.model.profiling.RecordingType;
 import org.apache.commons.io.filefilter.RegexFileFilter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.FileFilter;
@@ -33,11 +34,6 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
-import org.neo4j.test.rule.TestDirectory;
-
-import static com.neo4j.bench.model.model.Benchmark.Mode;
 import static com.neo4j.bench.model.model.Benchmark.benchmarkFor;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -75,7 +71,7 @@ public class OOMProfilerTest
                 Collections.emptyMap() );
         BenchmarkDirectory benchmarkDirectory = benchmarkGroupDirectory.findOrCreate( benchmark );
 
-        forkDirectory = benchmarkDirectory.findOrCreate( "fork", ParameterizedProfiler.defaultProfilers( ProfilerType.OOM ) );
+        forkDirectory = benchmarkDirectory.findOrCreate( "fork" );
         forkDirectoryPath = Paths.get( forkDirectory.toAbsolutePath() );
     }
 
@@ -89,7 +85,10 @@ public class OOMProfilerTest
         JvmArgs jvmArgs;
         try ( Resources resources = new Resources( forkDirectoryPath ) )
         {
-            jvmArgs = oomProfiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark, Parameters.NONE, resources );
+            jvmArgs = oomProfiler.jvmArgs( jvmVersion,
+                                           forkDirectory,
+                                           getProfilerRecordingDescriptor(),
+                                           resources );
         }
 
         // then
@@ -106,24 +105,22 @@ public class OOMProfilerTest
     {
 
         OOMProfiler oomProfiler = new OOMProfiler();
+        ProfilerRecordingDescriptor profilerRecordingDescriptor = getProfilerRecordingDescriptor();
 
         // when
         try ( Resources resources = new Resources( forkDirectoryPath ) )
         {
-            oomProfiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark, Parameters.NONE, resources );
+            oomProfiler.jvmArgs( jvmVersion,
+                                 forkDirectory,
+                                 profilerRecordingDescriptor,
+                                 resources );
             // create mock heap dump
             Files.createFile( OOMProfiler.getOOMDirectory( forkDirectory ).resolve( "12345.hprof" ) );
-            oomProfiler.processFailed( forkDirectory, benchmarkGroup, benchmark, Parameters.NONE );
+            oomProfiler.processFailed( forkDirectory, profilerRecordingDescriptor );
         }
 
         // then
-        ProfilerRecordingDescriptor recordingDescriptor = ProfilerRecordingDescriptor.create(
-                benchmarkGroup,
-                benchmark,
-                RunPhase.MEASUREMENT,
-                ProfilerType.OOM,
-                Parameters.NONE );
-        Path recordingPath = forkDirectory.pathFor( recordingDescriptor );
+        Path recordingPath = forkDirectory.findRegisteredPathFor( profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.HEAP_DUMP ) );
 
         assertTrue( Files.isRegularFile( recordingPath ) );
     }
@@ -133,22 +130,20 @@ public class OOMProfilerTest
     {
 
         OOMProfiler oomProfiler = new OOMProfiler();
+        ProfilerRecordingDescriptor profilerRecordingDescriptor = getProfilerRecordingDescriptor();
 
         // when
         try ( Resources resources = new Resources( forkDirectoryPath ) )
         {
-            oomProfiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark, Parameters.NONE, resources );
-            oomProfiler.afterProcess( forkDirectory, benchmarkGroup, benchmark, Parameters.NONE );
+            oomProfiler.jvmArgs( jvmVersion,
+                                 forkDirectory,
+                                 profilerRecordingDescriptor,
+                                 resources );
+            oomProfiler.afterProcess( forkDirectory, profilerRecordingDescriptor );
         }
 
         // then
-        ProfilerRecordingDescriptor recordingDescriptor = ProfilerRecordingDescriptor.create(
-                benchmarkGroup,
-                benchmark,
-                RunPhase.MEASUREMENT,
-                ProfilerType.OOM,
-                Parameters.NONE );
-        Path recordingPath = forkDirectory.pathFor( recordingDescriptor );
+        Path recordingPath = forkDirectory.findRegisteredPathFor( profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.HEAP_DUMP ) );
 
         assertTrue( Files.isRegularFile( recordingPath ) );
     }
@@ -166,7 +161,11 @@ public class OOMProfilerTest
         // when
         try ( Resources resources = new Resources( forkDirectoryPath ) )
         {
-            JvmArgs jvmArgs = oomProfiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark, Parameters.NONE, resources );
+            ProfilerRecordingDescriptor profilerRecordingDescriptor = getProfilerRecordingDescriptor();
+            JvmArgs jvmArgs = oomProfiler.jvmArgs( jvmVersion,
+                                                   forkDirectory,
+                                                   profilerRecordingDescriptor,
+                                                   resources );
             List<String> args = Lists.newArrayList(
                     java.toString(),
                     "-Xmx16m",
@@ -202,5 +201,14 @@ public class OOMProfilerTest
         {
             fail( format( "heap dump file name %s didn't match the pattern", memoryDump ) );
         }
+    }
+
+    private ProfilerRecordingDescriptor getProfilerRecordingDescriptor()
+    {
+        return ProfilerRecordingDescriptor.create( benchmarkGroup,
+                                                   benchmark,
+                                                   RunPhase.MEASUREMENT,
+                                                   ParameterizedProfiler.defaultProfiler( ProfilerType.OOM ),
+                                                   Parameters.NONE );
     }
 }

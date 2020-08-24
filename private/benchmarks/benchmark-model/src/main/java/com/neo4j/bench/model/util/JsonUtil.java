@@ -6,14 +6,9 @@
 package com.neo4j.bench.model.util;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.KeyDeserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.BenchmarkGroup;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -33,59 +28,11 @@ import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 
 public class JsonUtil
 {
-    static class BenchmarkKeyDeserializer extends KeyDeserializer
-    {
-        @Override
-        public Object deserializeKey( String s, DeserializationContext deserializationContext ) throws IOException
-        {
-            try
-            {
-                return OBJECT_MAPPER_HACKATRON
-                        .readerFor( Benchmark.class )
-                        .readValue( s.getBytes( StandardCharsets.UTF_8 ) );
-            }
-            catch ( IOException e )
-            {
-                throw new UncheckedIOException( e );
-            }
-        }
-    }
-
-    static class BenchmarkGroupKeyDeserializer extends KeyDeserializer
-    {
-        @Override
-        public Object deserializeKey( String s, DeserializationContext deserializationContext ) throws IOException
-        {
-            try
-            {
-                return OBJECT_MAPPER_HACKATRON
-                        .readerFor( BenchmarkGroup.class )
-                        .readValue( s.getBytes( StandardCharsets.UTF_8 ) );
-            }
-            catch ( IOException e )
-            {
-                throw new UncheckedIOException( e );
-            }
-        }
-    }
-
-    private static final SimpleModule MODULE =
-            new SimpleModule( "Benchmark Deserializer Module" )
-                    .addKeyDeserializer( Benchmark.class, new BenchmarkKeyDeserializer() )
-                    .addKeyDeserializer( BenchmarkGroup.class, new BenchmarkGroupKeyDeserializer() );
-
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
             .disable( SerializationFeature.FAIL_ON_EMPTY_BEANS )
             .setVisibility( ALL, NONE )
             .setVisibility( FIELD, ANY )
-            .registerModule( MODULE )
             .registerModule( new JavaTimeModule() )
-            .enableDefaultTyping();
-
-    private static final ObjectMapper OBJECT_MAPPER_HACKATRON = new ObjectMapper()
-            .disable( SerializationFeature.FAIL_ON_EMPTY_BEANS )
-            .setVisibility( ALL, NONE )
-            .setVisibility( FIELD, ANY )
             .enableDefaultTyping();
 
     public static void serializeJson( Path file, Object object )

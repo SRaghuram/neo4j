@@ -37,9 +37,6 @@ import org.neo4j.harness.junit.extension.Neo4jExtension;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
-import static com.neo4j.bench.client.ReIndexStoreCommand.CMD_RESULTS_STORE_PASSWORD;
-import static com.neo4j.bench.client.ReIndexStoreCommand.CMD_RESULTS_STORE_URI;
-import static com.neo4j.bench.client.ReIndexStoreCommand.CMD_RESULTS_STORE_USER;
 import static com.neo4j.bench.model.model.Repository.CAPS;
 import static com.neo4j.bench.model.model.Repository.IMPORT_BENCH;
 import static com.neo4j.bench.model.model.Repository.LDBC_BENCH;
@@ -146,10 +143,7 @@ public class SyntheticStoreGeneratorIT
 
     private SyntheticStoreGenerator.GenerationResult generateStoreUsing( SyntheticStoreGenerator generator ) throws Exception
     {
-        Main.main( new String[]{"index",
-                                CMD_RESULTS_STORE_USER, USERNAME,
-                                CMD_RESULTS_STORE_PASSWORD, PASSWORD,
-                                CMD_RESULTS_STORE_URI, boltUri.toString()} );
+        Main.main( ReIndexStoreCommand.argsFor( USERNAME, PASSWORD, neo4j.boltURI() ) );
 
         try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {

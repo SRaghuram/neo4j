@@ -5,21 +5,17 @@
  */
 package com.neo4j.bench.common.profiling;
 
+import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.common.process.ProcessWrapper;
+import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.JvmVersion;
 import com.neo4j.bench.common.util.Resources;
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.BenchmarkGroup;
-import com.neo4j.bench.model.model.Parameters;
-import com.neo4j.bench.model.process.JvmArgs;
-import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.model.profiling.RecordingType;
 
 import java.lang.ProcessBuilder.Redirect;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
-
-import static com.neo4j.bench.common.results.RunPhase.MEASUREMENT;
 
 public class MpStatTracer implements ExternalProfiler
 {
@@ -27,9 +23,7 @@ public class MpStatTracer implements ExternalProfiler
 
     @Override
     public List<String> invokeArgs( ForkDirectory forkDirectory,
-                                    BenchmarkGroup benchmarkGroup,
-                                    Benchmark benchmark,
-                                    Parameters additionalParameters )
+                                    ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         return Collections.emptyList();
     }
@@ -37,9 +31,7 @@ public class MpStatTracer implements ExternalProfiler
     @Override
     public JvmArgs jvmArgs( JvmVersion jvmVersion,
                             ForkDirectory forkDirectory,
-                            BenchmarkGroup benchmarkGroup,
-                            Benchmark benchmark,
-                            Parameters additionalParameters,
+                            ProfilerRecordingDescriptor profilerRecordingDescriptor,
                             Resources resources )
     {
         return JvmArgs.empty();
@@ -47,17 +39,9 @@ public class MpStatTracer implements ExternalProfiler
 
     @Override
     public void beforeProcess( ForkDirectory forkDirectory,
-                               BenchmarkGroup benchmarkGroup,
-                               Benchmark benchmark,
-                               Parameters additionalParameters )
+                               ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
-        ProfilerRecordingDescriptor recordingDescriptor = ProfilerRecordingDescriptor.create( benchmarkGroup,
-                                                                                              benchmark,
-                                                                                              MEASUREMENT,
-                                                                                              ProfilerType.MP_STAT,
-                                                                                              additionalParameters );
-
-        Path mpstatLog = forkDirectory.pathFor( recordingDescriptor );
+        Path mpstatLog = forkDirectory.registerPathFor( profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.TRACE_MPSTAT ) );
         mpstat = ProcessWrapper.start( new ProcessBuilder()
                                                .command( "mpstat", "2", "-P", "ALL" )
                                                .redirectOutput( mpstatLog.toFile() )
@@ -66,16 +50,14 @@ public class MpStatTracer implements ExternalProfiler
 
     @Override
     public void afterProcess( ForkDirectory forkDirectory,
-                              BenchmarkGroup benchmarkGroup,
-                              Benchmark benchmark,
-                              Parameters additionalParameters )
+                              ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         mpstat.stop();
     }
 
     @Override
-    public void processFailed( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
-                               Parameters additionalParameters )
+    public void processFailed( ForkDirectory forkDirectory,
+                               ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         // do nothing
     }

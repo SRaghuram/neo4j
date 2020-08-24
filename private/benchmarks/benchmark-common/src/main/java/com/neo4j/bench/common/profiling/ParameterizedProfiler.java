@@ -135,6 +135,11 @@ public class ParameterizedProfiler
         this.parameters = parameters;
     }
 
+    public static ParameterizedProfiler defaultProfiler( ProfilerType profilers )
+    {
+        return defaultProfilers( Arrays.asList( profilers ) ).get( 0 );
+    }
+
     public static List<ParameterizedProfiler> defaultProfilers( ProfilerType... profilers )
     {
         return defaultProfilers( Arrays.asList( profilers ) );

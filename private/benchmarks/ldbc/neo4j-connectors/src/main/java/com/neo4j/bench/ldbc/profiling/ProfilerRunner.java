@@ -17,8 +17,12 @@ import com.neo4j.bench.common.process.JpsPid;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.profiling.ExternalProfiler;
 import com.neo4j.bench.common.profiling.InternalProfiler;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
+import com.neo4j.bench.common.profiling.Profiler;
+import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.common.util.Jvm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,9 +82,9 @@ public class ProfilerRunner
                                            internalProfiler.onWarmupBegin( jvm,
                                                                            forkDirectory,
                                                                            pid,
-                                                                           benchmarkGroup,
-                                                                           benchmark,
-                                                                           Parameters.NONE );
+                                                                           getProfilerRecordingDescriptor( benchmarkGroup,
+                                                                                                           benchmark,
+                                                                                                           internalProfiler ) );
                                            LOG.debug( internalProfiler.getClass().getSimpleName() + ".onWarmupBegin - DONE" );
                                        } );
 
@@ -91,9 +95,9 @@ public class ProfilerRunner
                                            internalProfiler.onWarmupFinished( jvm,
                                                                               forkDirectory,
                                                                               pid,
-                                                                              benchmarkGroup,
-                                                                              benchmark,
-                                                                              Parameters.NONE );
+                                                                              getProfilerRecordingDescriptor( benchmarkGroup,
+                                                                                                              benchmark,
+                                                                                                              internalProfiler ) );
                                            LOG.debug( internalProfiler.getClass().getSimpleName() + ".onWarmupFinished - DONE" );
                                        } );
 
@@ -104,9 +108,9 @@ public class ProfilerRunner
                                            internalProfiler.onMeasurementBegin( jvm,
                                                                                 forkDirectory,
                                                                                 pid,
-                                                                                benchmarkGroup,
-                                                                                benchmark,
-                                                                                Parameters.NONE );
+                                                                                getProfilerRecordingDescriptor( benchmarkGroup,
+                                                                                                                benchmark,
+                                                                                                                internalProfiler ) );
                                            LOG.debug( internalProfiler.getClass().getSimpleName() + ".onMeasurementBegin - DONE" );
                                        } );
 
@@ -119,24 +123,13 @@ public class ProfilerRunner
                                            internalProfiler.onMeasurementFinished( jvm,
                                                                                    forkDirectory,
                                                                                    pid,
-                                                                                   benchmarkGroup,
-                                                                                   benchmark,
-                                                                                   Parameters.NONE );
+                                                                                   getProfilerRecordingDescriptor( benchmarkGroup,
+                                                                                                                   benchmark,
+                                                                                                                   internalProfiler ) );
                                            LOG.debug( internalProfiler.getClass().getSimpleName() + ".onMeasurementFinished - DONE" );
                                        } );
             // Race condition here
             assertProcessAlive( process );
-
-            for ( InternalProfiler internalProfiler : internalProfilers )
-            {
-                ProfilerType profilerType = ProfilerType.typeOf( internalProfiler );
-                if ( !profilerType.isExternal() )
-                {
-                    // profiler recording cleanup should only happen once
-                    // if profiler is both internal and external, cleanup will happen in afterTrial()
-                    forkDirectory.unsanitizeProfilerRecordingsFor( benchmarkGroup, benchmark, profilerType, Parameters.NONE );
-                }
-            }
         }
         catch ( Exception e )
         {
@@ -153,7 +146,10 @@ public class ProfilerRunner
         externalProfilers.forEach( externalProfiler ->
                                    {
                                        LOG.debug( "Before Process (START):  " + externalProfiler.description() );
-                                       externalProfiler.beforeProcess( forkDirectory, benchmarkGroup, benchmark, Parameters.NONE );
+                                       externalProfiler.beforeProcess( forkDirectory,
+                                                                       getProfilerRecordingDescriptor( benchmarkGroup,
+                                                                                                       benchmark,
+                                                                                                       externalProfiler ) );
                                        LOG.debug( "Before Process (FINISH): " + externalProfiler.description() );
                                    } );
     }
@@ -167,15 +163,12 @@ public class ProfilerRunner
         externalProfilers.forEach( externalProfiler ->
                                    {
                                        LOG.debug( "After Process (START):  " + externalProfiler.description() );
-                                       externalProfiler.afterProcess( forkDirectory, benchmarkGroup, benchmark, Parameters.NONE );
+                                       externalProfiler.afterProcess( forkDirectory,
+                                                                      getProfilerRecordingDescriptor( benchmarkGroup,
+                                                                                                      benchmark,
+                                                                                                      externalProfiler ) );
                                        LOG.debug( "After Process (FINISH): " + externalProfiler.description() );
                                    } );
-
-        for ( ExternalProfiler externalProfiler : externalProfilers )
-        {
-            ProfilerType profilerType = ProfilerType.typeOf( externalProfiler );
-            forkDirectory.unsanitizeProfilerRecordingsFor( benchmarkGroup, benchmark, profilerType, Parameters.NONE );
-        }
     }
 
     private static void waitForWarmupToBegin(
@@ -310,6 +303,17 @@ public class ProfilerRunner
         {
             return start;
         }
+    }
+
+    private static ProfilerRecordingDescriptor getProfilerRecordingDescriptor( BenchmarkGroup benchmarkGroup,
+                                                                               Benchmark benchmark,
+                                                                               Profiler internalProfiler )
+    {
+        return ProfilerRecordingDescriptor.create( benchmarkGroup,
+                                                   benchmark,
+                                                   RunPhase.MEASUREMENT,
+                                                   ParameterizedProfiler.defaultProfiler( ProfilerType.typeOf( internalProfiler ) ),
+                                                   Parameters.NONE );
     }
 
     private static String soFar( Instant start )

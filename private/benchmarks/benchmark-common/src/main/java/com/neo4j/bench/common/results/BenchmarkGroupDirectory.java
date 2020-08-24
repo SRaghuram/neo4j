@@ -5,25 +5,20 @@
  */
 package com.neo4j.bench.common.results;
 
+import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkGroup;
-import com.neo4j.bench.common.profiling.NoOpProfiler;
-import com.neo4j.bench.model.profiling.RecordingType;
-import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.model.util.JsonUtil;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
-import static java.util.Collections.emptySet;
 import static java.util.stream.Collectors.toList;
 
 public class BenchmarkGroupDirectory
@@ -142,12 +137,12 @@ public class BenchmarkGroupDirectory
 
     public List<Benchmark> benchmarks()
     {
-        return benchmarksDirectories().stream()
-                                      .map( BenchmarkDirectory::benchmark )
-                                      .collect( toList() );
+        return benchmarkDirectories().stream()
+                                     .map( BenchmarkDirectory::benchmark )
+                                     .collect( toList() );
     }
 
-    public List<BenchmarkDirectory> benchmarksDirectories()
+    public List<BenchmarkDirectory> benchmarkDirectories()
     {
         return findInnerDirs( dir ).stream()
                                    .filter( BenchmarkDirectory::isBenchmarkDir )
@@ -173,24 +168,6 @@ public class BenchmarkGroupDirectory
     public BenchmarkDirectory findOrFail( Benchmark benchmark )
     {
         return BenchmarkDirectory.findOrFailAt( dir, benchmark );
-    }
-
-    public void copyProfilerRecordings( Path targetDir )
-    {
-        copyProfilerRecordings( targetDir, emptySet() );
-    }
-
-    public void copyProfilerRecordings( Path targetDir, Set<RecordingType> excluding )
-    {
-        Set<RecordingType> excludingPlusNone = new HashSet<>( excluding );
-        /**
-         * No need to copy/keep 'none' recording type
-         * <p>
-         * See {@link NoOpProfiler} for explanation about why this profiler is required.
-         */
-        excludingPlusNone.add( RecordingType.NONE );
-        BenchmarkGroup benchmarkGroup = benchmarkGroup();
-        benchmarksDirectories().forEach( benchmarkDirectory -> benchmarkDirectory.copyProfilerRecordings( benchmarkGroup, targetDir, excludingPlusNone ) );
     }
 
     private static List<Path> findInnerDirs( Path dir )

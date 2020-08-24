@@ -40,7 +40,7 @@ public class FlamegraphTest
                 BenchmarkGroupDirectory.findOrCreateAt( tempFolder.directory( "benchmark" ), new BenchmarkGroup( "group" ) );
         BenchmarkDirectory benchmarkDirectory =
                 benchmarkGroupDirectory.findOrCreate( Benchmark.benchmarkFor( "description", "simpleName", Benchmark.Mode.LATENCY, Collections.emptyMap() ) );
-        ForkDirectory forkDirectory = benchmarkDirectory.create( "1", ParameterizedProfiler.defaultProfilers( ProfilerType.JFR ) );
+        ForkDirectory forkDirectory = benchmarkDirectory.create( "1" );
         // when
         Flamegraph.createFlamegraphs( forkDirectory, flamegraphDir, collapsedStack, svgPath );
         // then

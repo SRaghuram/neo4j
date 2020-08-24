@@ -66,8 +66,7 @@ public class Main
             Class<? extends BaseBenchmark> benchmark,
             String... methods )
     {
-        Path storesDir = Paths.get( "benchmark_stores" );
-        Path profilerRecordingsOutputDir = Paths.get( "profiler_recordings" );
+        Path workDir = Paths.get( "work_dir" );
         int forkCount = 1;
         List<ParameterizedProfiler> profilers = ParameterizedProfiler.defaultProfilers( ProfilerType.JFR );
         ErrorReporter.ErrorPolicy errorPolicy = ErrorReporter.ErrorPolicy.FAIL;
@@ -77,8 +76,7 @@ public class Main
              JmhOptionsUtil.DEFAULT_ITERATION_COUNT,
              JmhOptionsUtil.DEFAULT_ITERATION_DURATION,
              profilers,
-             storesDir,
-             profilerRecordingsOutputDir,
+             workDir,
              errorPolicy,
              jvmFile,
              methods );
@@ -92,7 +90,7 @@ public class Main
      * @param iterationCount number of measurement iterations JMH will run, default is 5
      * @param iterationDuration duration of JMH measurement iterations, default is 5 seconds
      * @param profilers profilers to run with -- profilers run in a fork (different process)
-     * @param storesDir directory location of stores (and configurations)
+     * @param workDir directory location of stores (and configurations)
      * @param errorPolicy specifies how to deal with errors (skip vs fail fast)
      * @param methods methods of benchmark class to run, if none are provided all will be run
      */
@@ -102,16 +100,15 @@ public class Main
             int iterationCount,
             TimeValue iterationDuration,
             List<ParameterizedProfiler> profilers,
-            Path storesDir,
-            Path profilerRecordingsOutputDir,
+            Path workDir,
             ErrorReporter.ErrorPolicy errorPolicy,
             Path jvmFile,
             String... methods )
     {
-        if ( !Files.exists( storesDir ) )
+        if ( !Files.exists( workDir ) )
         {
-            LOG.debug( "Creating stores directory: " + storesDir.toAbsolutePath() );
-            tryMkDir( storesDir );
+            LOG.debug( "Creating work directory: " + workDir.toAbsolutePath() );
+            tryMkDir( workDir );
         }
 
         // only used in interactive mode, to apply more (normally unsupported) benchmark annotations to JMH configuration
@@ -129,10 +126,9 @@ public class Main
                     profilers,
                     jvmArgs,
                     threadCounts,
-                    storesDir,
+                    workDir,
                     new ErrorReporter( errorPolicy ),
                     jmhArgs,
-                    Jvm.bestEffortOrFail( jvmFile ),
-                    profilerRecordingsOutputDir );
+                    Jvm.bestEffortOrFail( jvmFile ) );
     }
 }

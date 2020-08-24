@@ -5,32 +5,41 @@
  */
 package com.neo4j.bench.jmh.api;
 
-import com.neo4j.bench.model.profiling.RecordingType;
+import com.neo4j.bench.common.profiling.RecordingDescriptor;
+import com.neo4j.bench.common.results.BenchmarkDirectory;
+import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
+import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.model.profiling.RecordingType;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.stream.Stream;
-
-import static java.lang.String.format;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 class ProfilerRecordingsTestUtil
 {
     static int recordingCountIn( Path dir, RecordingType recordingType )
     {
         BenchmarkUtil.assertDirectoryExists( dir );
-        try ( Stream<Path> paths = Files.walk( dir ) )
+        AtomicInteger count = new AtomicInteger();
+        for ( BenchmarkGroupDirectory groupDir : BenchmarkGroupDirectory.searchAllIn( dir ) )
         {
-            return (int) paths
-                    .filter( Files::isRegularFile )
-                    .filter( file -> file.toString().endsWith( recordingType.extension() ) )
-                    .count();
+            for ( BenchmarkDirectory benchDir : groupDir.benchmarkDirectories() )
+            {
+                for ( ForkDirectory forkDir : benchDir.forks() )
+                {
+                    Map<RecordingDescriptor,Path> recordings = forkDir.recordings();
+                    recordings.forEach( ( descriptor, recording ) ->
+                                        {
+                                            if ( descriptor.recordingType().equals( recordingType ) && Files.exists( recording ) )
+                                            {
+                                                count.incrementAndGet();
+                                            }
+                                        } );
+                }
+            }
         }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException( format( "Error counting number of '%s' in: %s", recordingType, dir.toAbsolutePath() ), e );
-        }
+        return count.get();
     }
 }

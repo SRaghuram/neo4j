@@ -6,17 +6,20 @@
 package com.neo4j.bench.jmh.api.profile;
 
 import com.neo4j.bench.common.process.HasPid;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.Profiler;
+import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
+import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.results.RunPhase;
+import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.JvmVersion;
 import com.neo4j.bench.common.util.Resources;
+import com.neo4j.bench.jmh.api.JmhLifecycleTracker;
+import com.neo4j.bench.jmh.api.RunnerParams;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.model.model.Parameters;
-import com.neo4j.bench.common.profiling.ProfilerType;
-import com.neo4j.bench.common.results.ForkDirectory;
-import com.neo4j.bench.common.util.Jvm;
-import com.neo4j.bench.jmh.api.JmhLifecycleTracker;
-import com.neo4j.bench.jmh.api.RunnerParams;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.infra.IterationParams;
 import org.openjdk.jmh.profile.ExternalProfiler;
@@ -105,9 +108,8 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
         if ( profilerType.isExternal() )
         {
             return ((com.neo4j.bench.common.profiling.ExternalProfiler) innerProfiler).invokeArgs( forkDir,
-                                                                                                   benchmarkGroup,
-                                                                                                   benchmark,
-                                                                                                   Parameters.NONE );
+                                                                                                   getProfilerRecordingDescriptor( benchmarkGroup,
+                                                                                                                                   benchmark ) );
         }
         else
         {
@@ -135,9 +137,8 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
                         .jvmArgs(
                                 jvmVersion,
                                 forkDir,
-                                benchmarkGroup,
-                                benchmark,
-                                Parameters.NONE,
+                                getProfilerRecordingDescriptor(benchmarkGroup,
+                                benchmark),
                                 resources )
                         .toArgs();
             }
@@ -160,7 +161,9 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
         ForkDirectory forkDir = getOrFailForkDir( runnerParams, benchmarkParams, benchmarkGroup, benchmark );
         if ( profilerType.isExternal() )
         {
-            ((com.neo4j.bench.common.profiling.ExternalProfiler) innerProfiler).beforeProcess( forkDir, benchmarkGroup, benchmark, Parameters.NONE );
+            ((com.neo4j.bench.common.profiling.ExternalProfiler) innerProfiler).beforeProcess( forkDir,
+                                                                                               getProfilerRecordingDescriptor( benchmarkGroup,
+                                                                                                                               benchmark ) );
         }
     }
 
@@ -177,8 +180,9 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
         ForkDirectory forkDir = getOrFailForkDir( runnerParams, benchmarkParams, benchmarkGroup, benchmark );
         if ( profilerType.isExternal() )
         {
-            ((com.neo4j.bench.common.profiling.ExternalProfiler) innerProfiler).afterProcess( forkDir, benchmarkGroup, benchmark, Parameters.NONE );
-            forkDir.unsanitizeProfilerRecordingsFor( benchmarkGroup, benchmark, profilerType, Parameters.NONE );
+            ((com.neo4j.bench.common.profiling.ExternalProfiler) innerProfiler).afterProcess( forkDir,
+                                                                                              getProfilerRecordingDescriptor( benchmarkGroup,
+                                                                                                                              benchmark ) );
         }
         /**
          * JMH processes keep {@link org.openjdk.jmh.profile.Profiler} instances around for as long as they can.
@@ -224,9 +228,8 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
             ((com.neo4j.bench.common.profiling.InternalProfiler) innerProfiler).onMeasurementBegin( jvm,
                                                                                                     forkDir,
                                                                                                     HasPid.getPid(),
-                                                                                                    benchmarkGroup,
-                                                                                                    benchmark,
-                                                                                                    Parameters.NONE );
+                                                                                                    getProfilerRecordingDescriptor( benchmarkGroup,
+                                                                                                                                    benchmark ) );
         }
     }
 
@@ -242,19 +245,21 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
             ForkDirectory forkDir = getOrFailForkDir( runnerParams, benchmarkParams, benchmarkGroup, benchmark );
             Jvm jvm = Jvm.bestEffortOrFail( Paths.get( benchmarkParams.getJvm() ) );
             ((com.neo4j.bench.common.profiling.InternalProfiler) innerProfiler).onMeasurementFinished( jvm,
-                                                                                                      forkDir,
-                                                                                                      HasPid.getPid(),
-                                                                                                      benchmarkGroup,
-                                                                                                      benchmark,
-                                                                                                      Parameters.NONE );
-            if ( !profilerType.isExternal() )
-            {
-                // profiler recording cleanup should only happen once
-                // if profiler is both internal and external, cleanup will happen in afterTrial()
-                forkDir.unsanitizeProfilerRecordingsFor( benchmarkGroup, benchmark, profilerType, Parameters.NONE );
-            }
+                                                                                                       forkDir,
+                                                                                                       HasPid.getPid(),
+                                                                                                       getProfilerRecordingDescriptor( benchmarkGroup,
+                                                                                                                                       benchmark ) );
         }
         return Collections.emptyList();
+    }
+
+    private ProfilerRecordingDescriptor getProfilerRecordingDescriptor( BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+    {
+        return ProfilerRecordingDescriptor.create( benchmarkGroup,
+                                                   benchmark,
+                                                   RunPhase.MEASUREMENT,
+                                                   ParameterizedProfiler.defaultProfiler( profilerType ),
+                                                   Parameters.NONE );
     }
 
     private static Benchmark extractBenchmark( BenchmarkParams params )

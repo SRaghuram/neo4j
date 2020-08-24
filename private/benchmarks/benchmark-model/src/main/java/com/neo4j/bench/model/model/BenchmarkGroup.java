@@ -5,6 +5,8 @@
  */
 package com.neo4j.bench.model.model;
 
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.KeyDeserializer;
 import com.neo4j.bench.model.util.JsonUtil;
 
 import java.util.Objects;
@@ -13,6 +15,15 @@ import static java.util.Objects.requireNonNull;
 
 public class BenchmarkGroup
 {
+    public static class BenchmarkGroupKeyDeserializer extends KeyDeserializer
+    {
+        @Override
+        public Object deserializeKey( String key, DeserializationContext ctxt )
+        {
+            return JsonUtil.deserializeJson( key, BenchmarkGroup.class );
+        }
+    }
+
     public static final String NAME = "name";
 
     private final String name;
@@ -60,8 +71,6 @@ public class BenchmarkGroup
     @Override
     public String toString()
     {
-        //        return "BenchmarkGroup{name='" + name + "'}";
-        // TODO JSON map key deserialization depends on this. Do not change until that dependency is removed/fixed.
-        return JsonUtil.serializeJson( this );
+        return "BenchmarkGroup{name='" + name + "'}";
     }
 }

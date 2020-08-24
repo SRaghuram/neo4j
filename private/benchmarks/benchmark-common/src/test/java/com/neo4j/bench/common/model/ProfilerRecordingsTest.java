@@ -7,6 +7,7 @@ package com.neo4j.bench.common.model;
 
 import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
 import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.profiling.RecordingDescriptor;
 import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.model.model.Benchmark;
@@ -21,8 +22,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.neo4j.bench.common.profiling.ParameterizedProfiler.defaultProfiler;
 import static com.neo4j.bench.model.model.Benchmark.Mode.LATENCY;
-import static com.neo4j.bench.model.model.Benchmark.benchmarkFor;
 import static java.util.Collections.singletonMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -33,7 +34,7 @@ class ProfilerRecordingsTest
     void shouldWorkInRegularCase()
     {
         BenchmarkGroup benchmarkGroup = new BenchmarkGroup( "group" );
-        Benchmark benchmark = benchmarkFor( "description", "simple_name", LATENCY, singletonMap( "k", "v" ) );
+        Benchmark benchmark = Benchmark.benchmarkFor( "description", "simple_name", LATENCY, singletonMap( "k", "v" ) );
 
         // empty map
         List<Map<String,String>> parametersList = new ArrayList<>();
@@ -62,11 +63,13 @@ class ProfilerRecordingsTest
                 for ( Map<String,String> parametersMap : parametersList )
                 {
                     Parameters parameters = Parameters.fromMap( parametersMap );
-                    String noParamsFilename = ProfilerRecordingDescriptor.create( benchmarkGroup,
-                                                                                  benchmark,
-                                                                                  RunPhase.MEASUREMENT,
-                                                                                  profilerType,
-                                                                                  parameters ).sanitizedFilename( recordingType );
+                    ProfilerRecordingDescriptor profilerRecordingDescriptor = ProfilerRecordingDescriptor.create( benchmarkGroup,
+                                                                                                                  benchmark,
+                                                                                                                  RunPhase.MEASUREMENT,
+                                                                                                                  defaultProfiler( profilerType ),
+                                                                                                                  parameters );
+                    RecordingDescriptor recordingDescriptor = profilerRecordingDescriptor.recordingDescriptorFor( profilerType.recordingType() );
+                    String noParamsFilename = recordingDescriptor.sanitizedFilename();
                     profilerRecordings.with( recordingType, parameters, "other-s3-bucket/" + noParamsFilename );
                     expectedSize++;
                     assertThat( profilerRecordings.toMap().size(), equalTo( expectedSize ) );
@@ -80,14 +83,16 @@ class ProfilerRecordingsTest
     {
         ProfilerRecordings profilerRecordings = new ProfilerRecordings();
         BenchmarkGroup benchmarkGroup = new BenchmarkGroup( "group" );
-        Benchmark benchmark = benchmarkFor( "description", "simple_name", LATENCY, singletonMap( "k", "v" ) );
+        Benchmark benchmark = Benchmark.benchmarkFor( "description", "simple_name", LATENCY, singletonMap( "k", "v" ) );
         RecordingType recordingType = RecordingType.ASYNC;
 
-        String filename = ProfilerRecordingDescriptor.create( benchmarkGroup,
-                                                              benchmark,
-                                                              RunPhase.MEASUREMENT,
-                                                              ProfilerType.ASYNC,
-                                                              Parameters.CLIENT ).sanitizedFilename( recordingType );
+        ProfilerRecordingDescriptor profilerRecordingDescriptor = ProfilerRecordingDescriptor.create( benchmarkGroup,
+                                                                                                      benchmark,
+                                                                                                      RunPhase.MEASUREMENT,
+                                                                                                      defaultProfiler( ProfilerType.JFR ),
+                                                                                                      Parameters.CLIENT );
+        RecordingDescriptor recordingDescriptor = profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.JFR );
+        String filename = recordingDescriptor.sanitizedFilename();
 
         // add client process recording
         profilerRecordings.with( recordingType, Parameters.CLIENT, "other-s3-bucket/" + filename );

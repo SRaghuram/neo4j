@@ -128,8 +128,6 @@ public class RunMacroWorkloadParams
     public static final String CMD_NEO4J_CONFIG = "--neo4j-config";
     public static final String CMD_WORK_DIR = "--work-dir";
     public static final String CMD_DB_PATH = "--db-dir";
-    public static final String CMD_RESULTS_JSON = "--results";
-    public static final String CMD_PROFILER_RECORDINGS_DIR = "--profiler-recordings-dir";
     public static final String CMD_BATCH_JOB_ID = "--batch-job-id";
     public static final String CMD_DB_NAME = "--db-name";
     public static final String CMD_JOB_PARAMETERS = "--job-parameters";

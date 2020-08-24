@@ -6,23 +6,26 @@
 package com.neo4j.bench.macro.execution.process;
 
 import com.neo4j.bench.common.database.Store;
-import com.neo4j.bench.model.model.Parameters;
-import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ExternalProfiler;
-import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.OOMProfiler;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.workload.Query;
+import com.neo4j.bench.model.model.Parameters;
+import com.neo4j.bench.model.process.JvmArgs;
 
 import java.nio.file.Path;
 import java.util.List;
 
+import static com.neo4j.bench.common.profiling.ParameterizedProfiler.defaultProfiler;
+import static com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor.create;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 
@@ -118,9 +121,11 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
                 // Both recordings may be the same, if it is a system-wide profiler
                 // But it is important that each recording is named accordingly, so profilers must be started with the correct parameters
                 externalProfilers.forEach( profiler -> profiler.beforeProcess( forkDirectory,
-                                                                               query.benchmarkGroup(),
-                                                                               query.benchmark(),
-                                                                               serverParameters ) );
+                                                                               create( query.benchmarkGroup(),
+                                                                                       query.benchmark(),
+                                                                                       RunPhase.MEASUREMENT,
+                                                                                       defaultProfiler( ProfilerType.typeOf( profiler ) ),
+                                                                                       serverParameters ) ) );
             }
 
             try ( CONNECTION connection = launcher.initDatabaseServer( jvm, store, neo4jConfigFile, forkDirectory, serverJvmArgs ) )
@@ -138,14 +143,14 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
             }
             finally
             {
-                unsanitizeProfilerRecordings( clientParameters );
                 if ( launcher.isDatabaseInDifferentProcess() )
                 {
                     externalProfilers.forEach( profiler -> profiler.afterProcess( forkDirectory,
-                                                                                  query.benchmarkGroup(),
-                                                                                  query.benchmark(),
-                                                                                  serverParameters ) );
-                    unsanitizeProfilerRecordings( serverParameters );
+                                                                                  create( query.benchmarkGroup(),
+                                                                                          query.benchmark(),
+                                                                                          RunPhase.MEASUREMENT,
+                                                                                          defaultProfiler( ProfilerType.typeOf( profiler ) ),
+                                                                                          serverParameters ) ) );
                 }
             }
         }
@@ -172,21 +177,6 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
                                         Parameters clientParameters,
                                         Resources resources );
 
-    /**
-     * Renames profiler recording names into their parsable forms.
-     * This is necessary because profilers generate sanitized filenames, so various tools (e.g., JVM, Async, JFR) do not complain.
-     */
-    private void unsanitizeProfilerRecordings( Parameters additionalParameters )
-    {
-        for ( ParameterizedProfiler profiler : profilers )
-        {
-            forkDirectory.unsanitizeProfilerRecordingsFor( query.benchmarkGroup(),
-                                                           query.benchmark(),
-                                                           profiler.profilerType(),
-                                                           additionalParameters );
-        }
-    }
-
     static JvmArgs addExternalProfilerJvmArgs( List<ExternalProfiler> externalProfilers,
                                                Jvm jvm,
                                                ForkDirectory forkDirectory,
@@ -198,9 +188,11 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
         JvmArgs profilersJvmArgs = externalProfilers.stream()
                                                     .map( profiler -> profiler.jvmArgs( jvm.version(),
                                                                                         forkDirectory,
-                                                                                        query.benchmarkGroup(),
-                                                                                        query.benchmark(),
-                                                                                        parameters,
+                                                                                        create( query.benchmarkGroup(),
+                                                                                                query.benchmark(),
+                                                                                                RunPhase.MEASUREMENT,
+                                                                                                defaultProfiler( ProfilerType.typeOf( profiler ) ),
+                                                                                                parameters ),
                                                                                         resources ) )
                                                     .reduce( JvmArgs.empty(), JvmArgs::merge );
 

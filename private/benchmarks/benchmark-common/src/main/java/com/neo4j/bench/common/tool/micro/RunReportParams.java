@@ -60,14 +60,11 @@ public class RunReportParams
     public static final String CMD_JMH_ARGS = "--jmh";
     private String jmhArgs = "";
 
-    public static final String CMD_PROFILES_DIR = "--profiles-dir";
-    private File profilerOutput;
-
     public static final String CMD_PROFILERS = "--profilers";
     private String parameterizedProfilers = "";
 
-    public static final String CMD_STORES_DIR = "--stores-dir";
-    private File storesDir = Paths.get( "benchmark_stores" ).toFile();
+    public static final String CMD_WORK_DIR = "--stores-dir";
+    private File workDir;
 
     public static final String CMD_ERROR_POLICY = "--error-policy";
     private ErrorReporter.ErrorPolicy errorPolicy = ErrorReporter.ErrorPolicy.SKIP;
@@ -92,9 +89,8 @@ public class RunReportParams
                             String jvmArgsString,
                             File benchConfigFile,
                             String jmhArgs,
-                            File profilerOutput,
                             String profilerNames,
-                            File storesDir,
+                            File workDir,
                             ErrorReporter.ErrorPolicy errorPolicy,
                             File jvmFile,
                             String triggeredBy )
@@ -113,9 +109,8 @@ public class RunReportParams
         this.jvmArgsString = jvmArgsString;
         this.benchConfigFile = benchConfigFile;
         this.jmhArgs = jmhArgs;
-        this.profilerOutput = profilerOutput;
         this.parameterizedProfilers = profilerNames;
-        this.storesDir = storesDir;
+        this.workDir = workDir;
         this.errorPolicy = errorPolicy;
         this.jvmFile = jvmFile;
         this.triggeredBy = triggeredBy;
@@ -191,19 +186,14 @@ public class RunReportParams
         return jmhArgs;
     }
 
-    public File profilerOutput()
-    {
-        return profilerOutput;
-    }
-
     public String parameterizedProfilers()
     {
         return parameterizedProfilers;
     }
 
-    public File storesDir()
+    public File workDir()
     {
-        return storesDir;
+        return workDir;
     }
 
     public ErrorReporter.ErrorPolicy errorPolicy()

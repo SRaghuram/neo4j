@@ -5,14 +5,11 @@
  */
 package com.neo4j.bench.common.profiling;
 
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.BenchmarkGroup;
-import com.neo4j.bench.model.model.Parameters;
-import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.common.process.ProcessWrapper;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.JvmVersion;
 import com.neo4j.bench.common.util.Resources;
+import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.model.profiling.RecordingType;
 
 import java.lang.ProcessBuilder.Redirect;
@@ -20,17 +17,13 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 
-import static com.neo4j.bench.common.results.RunPhase.MEASUREMENT;
-
 public class VmStatTracer implements ExternalProfiler
 {
     private ProcessWrapper vmstat;
 
     @Override
     public List<String> invokeArgs( ForkDirectory forkDirectory,
-                                    BenchmarkGroup benchmarkGroup,
-                                    Benchmark benchmark,
-                                    Parameters additionalParameters )
+                                    ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         return Collections.emptyList();
     }
@@ -38,9 +31,7 @@ public class VmStatTracer implements ExternalProfiler
     @Override
     public JvmArgs jvmArgs( JvmVersion jvmVersion,
                             ForkDirectory forkDirectory,
-                            BenchmarkGroup benchmarkGroup,
-                            Benchmark benchmark,
-                            Parameters additionalParameters,
+                            ProfilerRecordingDescriptor profilerRecordingDescriptor,
                             Resources resources )
     {
         return JvmArgs.empty();
@@ -48,17 +39,10 @@ public class VmStatTracer implements ExternalProfiler
 
     @Override
     public void beforeProcess( ForkDirectory forkDirectory,
-                               BenchmarkGroup benchmarkGroup,
-                               Benchmark benchmark,
-                               Parameters additionalParameters )
+                               ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
-        ProfilerRecordingDescriptor recordingDescriptor = ProfilerRecordingDescriptor.create( benchmarkGroup,
-                                                                                              benchmark,
-                                                                                              MEASUREMENT,
-                                                                                              ProfilerType.VM_STAT,
-                                                                                              additionalParameters );
-
-        Path vmstatLog = forkDirectory.pathFor( recordingDescriptor.sanitizedFilename( RecordingType.TRACE_VMSTAT ) );
+        RecordingDescriptor recordingDescriptor = profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.TRACE_VMSTAT );
+        Path vmstatLog = forkDirectory.registerPathFor( recordingDescriptor );
         vmstat = ProcessWrapper.start( new ProcessBuilder()
                                                .command( "vmstat", "2", "-t", "-w", "-S", "M" )
                                                .redirectOutput( vmstatLog.toFile() )
@@ -67,18 +51,14 @@ public class VmStatTracer implements ExternalProfiler
 
     @Override
     public void afterProcess( ForkDirectory forkDirectory,
-                              BenchmarkGroup benchmarkGroup,
-                              Benchmark benchmark,
-                              Parameters additionalParameters )
+                              ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         vmstat.stop();
     }
 
     @Override
     public void processFailed( ForkDirectory forkDirectory,
-                               BenchmarkGroup benchmarkGroup,
-                               Benchmark benchmark,
-                               Parameters additionalParameters )
+                               ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         // do nothing
     }

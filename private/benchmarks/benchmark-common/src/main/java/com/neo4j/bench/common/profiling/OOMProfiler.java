@@ -7,12 +7,8 @@ package com.neo4j.bench.common.profiling;
 
 import com.google.common.collect.ImmutableSet;
 import com.neo4j.bench.common.results.ForkDirectory;
-import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.common.util.JvmVersion;
 import com.neo4j.bench.common.util.Resources;
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.BenchmarkGroup;
-import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.model.profiling.RecordingType;
 import org.slf4j.Logger;
@@ -38,9 +34,7 @@ public class OOMProfiler implements ExternalProfiler
     @Override
     public List<String> invokeArgs(
             ForkDirectory forkDirectory,
-            BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark,
-            Parameters additionalParameters )
+            ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         return Collections.emptyList();
     }
@@ -49,9 +43,7 @@ public class OOMProfiler implements ExternalProfiler
     public JvmArgs jvmArgs(
             JvmVersion jvmVersion,
             ForkDirectory forkDirectory,
-            BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark,
-            Parameters additionalParameters,
+            ProfilerRecordingDescriptor profilerRecordingDescriptor,
             Resources resources )
     {
         Path oomScript = findOnOutOfMemoryScript( resources );
@@ -66,28 +58,19 @@ public class OOMProfiler implements ExternalProfiler
     @Override
     public void beforeProcess(
             ForkDirectory forkDirectory,
-            BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark,
-            Parameters additionalParameters )
+            ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
     }
 
     @Override
     public void afterProcess(
             ForkDirectory forkDirectory,
-            BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark,
-            Parameters additionalParameters )
+            ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
-        ProfilerRecordingDescriptor recordingDescriptor = ProfilerRecordingDescriptor.create(
-                benchmarkGroup,
-                benchmark,
-                RunPhase.MEASUREMENT,
-                ProfilerType.OOM,
-                additionalParameters );
         try
         {
-            Files.createFile( forkDirectory.pathFor( recordingDescriptor ) );
+            RecordingDescriptor recordingDescriptor = profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.HEAP_DUMP );
+            Files.createFile( forkDirectory.registerPathFor( recordingDescriptor ) );
         }
         catch ( IOException e )
         {
@@ -96,8 +79,8 @@ public class OOMProfiler implements ExternalProfiler
     }
 
     @Override
-    public void processFailed( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
-                               Parameters additionalParameters )
+    public void processFailed( ForkDirectory forkDirectory,
+                               ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         Path oomDirectory = getOOMDirectory( forkDirectory );
 
@@ -109,13 +92,8 @@ public class OOMProfiler implements ExternalProfiler
 
             if ( allHeapDumps.size() == 1 )
             {
-                ProfilerRecordingDescriptor recordingDescriptor = ProfilerRecordingDescriptor.create(
-                        benchmarkGroup,
-                        benchmark,
-                        RunPhase.MEASUREMENT,
-                        ProfilerType.OOM,
-                        additionalParameters );
-                Files.move( allHeapDumps.get( 0 ), forkDirectory.pathFor( recordingDescriptor ) );
+                RecordingDescriptor recordingDescriptor = profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.HEAP_DUMP );
+                Files.move( allHeapDumps.get( 0 ), forkDirectory.registerPathFor( recordingDescriptor ) );
             }
             else if ( allHeapDumps.size() == 0 )
             {

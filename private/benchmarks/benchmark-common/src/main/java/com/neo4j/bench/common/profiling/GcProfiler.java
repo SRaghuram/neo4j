@@ -9,38 +9,29 @@ import com.google.common.collect.Lists;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.JvmVersion;
 import com.neo4j.bench.common.util.Resources;
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.BenchmarkGroup;
-import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.model.profiling.RecordingType;
-import com.neo4j.bench.model.util.JsonUtil;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 
 import static com.neo4j.bench.common.profiling.ProfilerType.GC;
-import static com.neo4j.bench.common.results.RunPhase.MEASUREMENT;
 import static com.neo4j.bench.common.util.BenchmarkUtil.appendFile;
 import static java.lang.String.format;
 
 public class GcProfiler implements ExternalProfiler
 {
     // profiler log -- used by this class only
-    private static String gcProfilerLogName( Parameters parameters )
+    private static String gcProfilerLogName( RecordingDescriptor recordingDescriptor )
     {
-        String additionalParametersString = parameters.isEmpty() ? "" : "-" + parameters.toString();
-        return "gc-profiler" + additionalParametersString + ".log";
+        return "gc-profiler-" + recordingDescriptor.sanitizedName() + ".log";
     }
 
     @Override
     public List<String> invokeArgs( ForkDirectory forkDirectory,
-                                    BenchmarkGroup benchmarkGroup,
-                                    Benchmark benchmark,
-                                    Parameters additionalParameters )
+                                    ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         return Collections.emptyList();
     }
@@ -48,90 +39,37 @@ public class GcProfiler implements ExternalProfiler
     @Override
     public JvmArgs jvmArgs( JvmVersion jvmVersion,
                             ForkDirectory forkDirectory,
-                            BenchmarkGroup benchmarkGroup,
-                            Benchmark benchmark,
-                            Parameters additionalParameters,
+                            ProfilerRecordingDescriptor profilerRecordingDescriptor,
                             Resources resources )
     {
-        ProfilerRecordingDescriptor recordingDescriptor = ProfilerRecordingDescriptor.create( benchmarkGroup,
-                                                                                              benchmark,
-                                                                                              MEASUREMENT,
-                                                                                              GC,
-                                                                                              additionalParameters );
-        Path gcLog = forkDirectory.pathFor( recordingDescriptor );
-        List<String> gcLogJvmArgs = jvmLogArgs( jvmVersion, gcLog.toAbsolutePath().toString() );
+        RecordingDescriptor recordingDescriptor = profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.GC_LOG );
+        Path gcLogFile = forkDirectory.registerPathFor( recordingDescriptor );
+        List<String> gcLogJvmArgs = jvmLogArgs( jvmVersion, gcLogFile.toAbsolutePath().toString() );
 
         // profiler log -- used by this class only
-        Path profilerLog = forkDirectory.create( gcProfilerLogName( additionalParameters ) );
+        Path profilerLog = forkDirectory.create( gcProfilerLogName( recordingDescriptor ) );
         appendFile( profilerLog, Instant.now(), "Added GC specific JVM args: " + gcLogJvmArgs );
         return JvmArgs.from( gcLogJvmArgs );
     }
 
     @Override
     public void beforeProcess( ForkDirectory forkDirectory,
-                               BenchmarkGroup benchmarkGroup,
-                               Benchmark benchmark,
-                               Parameters additionalParameters )
+                               ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         // do nothing
     }
 
     @Override
     public void afterProcess( ForkDirectory forkDirectory,
-                              BenchmarkGroup benchmarkGroup,
-                              Benchmark benchmark,
-                              Parameters additionalParameters )
+                              ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
-        ProfilerRecordingDescriptor recordingDescriptor = ProfilerRecordingDescriptor.create( benchmarkGroup,
-                                                                                              benchmark,
-                                                                                              MEASUREMENT,
-                                                                                              GC,
-                                                                                              additionalParameters );
-
-        // profiler log -- used by this class only
-        Path profilerLog = forkDirectory.findOrCreate( gcProfilerLogName( additionalParameters ) );
-
-        Path gcLogFile = forkDirectory.pathFor( recordingDescriptor );
-
-        try
-        {
-            appendFile( profilerLog,
-                        Instant.now(),
-                        "Parsing GC log file: " + gcLogFile.toAbsolutePath() );
-
-            GcLog gcLog = GcLog.parse( gcLogFile );
-
-            Path gcLogJson = forkDirectory.pathFor( recordingDescriptor.sanitizedFilename( RecordingType.GC_SUMMARY ) );
-            Path gcLogCsv = forkDirectory.pathFor( recordingDescriptor.sanitizedFilename( RecordingType.GC_CSV ) );
-
-            appendFile( profilerLog,
-                        Instant.now(),
-                        "Exporting GC log data to JSON: " + gcLogJson.toAbsolutePath() );
-
-            JsonUtil.serializeJson( gcLogJson, gcLog );
-
-            appendFile( profilerLog,
-                        Instant.now(),
-                        "Exporting GC log data to CSV: " + gcLogCsv.toAbsolutePath() );
-
-            gcLog.toCSV( gcLogCsv );
-
-            appendFile( profilerLog,
-                        Instant.now(),
-                        "Successfully processed GC log" );
-        }
-        catch ( IOException e )
-        {
-            appendFile( profilerLog,
-                        Instant.now(),
-                        "Error processing GC log file: " + gcLogFile.toAbsolutePath() );
-            throw new RuntimeException( "Error processing GC log file: " + gcLogFile.toAbsolutePath(), e );
-        }
+        GC.maybeSecondaryRecordingCreator()
+          .ifPresent( secondaryRecordingCreator -> secondaryRecordingCreator.create( profilerRecordingDescriptor, forkDirectory ) );
     }
 
     @Override
-    public void processFailed( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
-                               Parameters additionalParameters )
+    public void processFailed( ForkDirectory forkDirectory,
+                               ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         // do nothing
     }

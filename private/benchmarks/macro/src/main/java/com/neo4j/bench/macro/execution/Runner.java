@@ -5,13 +5,13 @@
  */
 package com.neo4j.bench.macro.execution;
 
-import com.neo4j.bench.macro.cli.BaseRunWorkloadCommand;
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.BenchmarkGroup;
-import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.profiling.InternalProfiler;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
+import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
+import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.execution.database.Database;
 import com.neo4j.bench.macro.execution.measurement.MeasurementControl;
@@ -19,6 +19,9 @@ import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.execution.measurement.Results.Phase;
 import com.neo4j.bench.macro.workload.ParametersReader;
 import com.neo4j.bench.macro.workload.QueryString;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,9 +62,11 @@ public class Runner
                 pidProfilers.get( pid ).forEach( profiler -> profiler.onWarmupBegin( jvm,
                                                                                      forkDirectory,
                                                                                      pid,
-                                                                                     benchmarkGroup,
-                                                                                     benchmark,
-                                                                                     pidParameters.get( pid ) ) );
+                                                                                     getProfilerRecordingDescriptor( benchmarkGroup,
+                                                                                                                     benchmark,
+                                                                                                                     RunPhase.WARMUP,
+                                                                                                                     profiler,
+                                                                                                                     pidParameters.get( pid ) ) ) );
             }
 
             /*
@@ -83,9 +88,11 @@ public class Runner
                 pidProfilers.get( pid ).forEach( profiler -> profiler.onWarmupFinished( jvm,
                                                                                         forkDirectory,
                                                                                         pid,
-                                                                                        benchmarkGroup,
-                                                                                        benchmark,
-                                                                                        pidParameters.get( pid ) ) );
+                                                                                        getProfilerRecordingDescriptor( benchmarkGroup,
+                                                                                                                        benchmark,
+                                                                                                                        RunPhase.WARMUP,
+                                                                                                                        profiler,
+                                                                                                                        pidParameters.get( pid ) ) ) );
             }
         }
         else
@@ -101,9 +108,11 @@ public class Runner
             pidProfilers.get( pid ).forEach( profiler -> profiler.onMeasurementBegin( jvm,
                                                                                       forkDirectory,
                                                                                       pid,
-                                                                                      benchmarkGroup,
-                                                                                      benchmark,
-                                                                                      pidParameters.get( pid ) ) );
+                                                                                      getProfilerRecordingDescriptor( benchmarkGroup,
+                                                                                                                      benchmark,
+                                                                                                                      RunPhase.MEASUREMENT,
+                                                                                                                      profiler,
+                                                                                                                      pidParameters.get( pid ) ) ) );
         }
 
         /*
@@ -123,10 +132,25 @@ public class Runner
             pidProfilers.get( pid ).forEach( profiler -> profiler.onMeasurementFinished( jvm,
                                                                                          forkDirectory,
                                                                                          pid,
-                                                                                         benchmarkGroup,
-                                                                                         benchmark,
-                                                                                         pidParameters.get( pid ) ) );
+                                                                                         getProfilerRecordingDescriptor( benchmarkGroup,
+                                                                                                                         benchmark,
+                                                                                                                         RunPhase.MEASUREMENT,
+                                                                                                                         profiler,
+                                                                                                                         pidParameters.get( pid ) ) ) );
         }
+    }
+
+    private static ProfilerRecordingDescriptor getProfilerRecordingDescriptor( BenchmarkGroup benchmarkGroup,
+                                                                               Benchmark benchmark,
+                                                                               RunPhase runPhase,
+                                                                               InternalProfiler profiler,
+                                                                               Parameters additionalParameters )
+    {
+        return ProfilerRecordingDescriptor.create( benchmarkGroup,
+                                                   benchmark,
+                                                   runPhase,
+                                                   ParameterizedProfiler.defaultProfiler( ProfilerType.typeOf( profiler ) ),
+                                                   additionalParameters );
     }
 
     private static void execute( QueryString queryString,

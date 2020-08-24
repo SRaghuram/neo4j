@@ -5,9 +5,6 @@
  */
 package com.neo4j.bench.common.profiling;
 
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.BenchmarkGroup;
-import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;
@@ -16,7 +13,6 @@ import com.neo4j.bench.common.util.Jvm;
  * Profilers implementing this interface will be invoked periodically, during benchmark run.
  * By default, every 5 seconds. This can by change. You can add {@link FixedRate} annotation
  * to profiler implementation.
- *
  */
 @FixedRate
 public interface ScheduledProfiler extends ExternalProfiler
@@ -33,18 +29,14 @@ public interface ScheduledProfiler extends ExternalProfiler
      *
      * @param tick incremented with every invocation of scheduler profiler
      * @param forkDirectory forkDirectory directory to write files into
-     * @param benchmarkGroup benchmark group
-     * @param benchmark benchmark
-     * @param additionalParameters additional parameters
+     * @param profilerRecordingDescriptor contains the data and logic needed to create appropriate profiler recording files
      * @param jvm Java to use
      * @param pid ID of the process to be profiled
      */
     void onSchedule(
             Tick tick,
             ForkDirectory forkDirectory,
-            BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark,
-            Parameters additionalParameters,
+            ProfilerRecordingDescriptor profilerRecordingDescriptor,
             Jvm jvm,
             Pid pid );
 }

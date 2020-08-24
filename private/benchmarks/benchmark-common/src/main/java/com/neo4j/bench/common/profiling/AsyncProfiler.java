@@ -11,10 +11,8 @@ import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.JvmVersion;
 import com.neo4j.bench.common.util.Resources;
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.BenchmarkGroup;
-import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.process.JvmArgs;
+import com.neo4j.bench.model.profiling.RecordingType;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,7 +21,6 @@ import java.util.Collections;
 import java.util.List;
 
 import static com.neo4j.bench.common.profiling.ProfilerType.ASYNC;
-import static com.neo4j.bench.common.results.RunPhase.MEASUREMENT;
 import static com.neo4j.bench.common.util.BenchmarkUtil.appendFile;
 import static com.neo4j.bench.common.util.BenchmarkUtil.assertDirectoryExists;
 import static com.neo4j.bench.common.util.BenchmarkUtil.assertDoesNotExist;
@@ -36,24 +33,20 @@ public class AsyncProfiler implements InternalProfiler, ExternalProfiler
     private static final long DEFAULT_FRAME_BUFFER = 8 * 1024 * 1024;
 
     // profiler log -- used by this class only
-    private static String asyncProfilerLogName( Parameters parameters )
+    private static String asyncProfilerLogName( RecordingDescriptor recordingDescriptor )
     {
-        String additionalParametersString = parameters.isEmpty() ? "" : "-" + parameters.toString();
-        return "async-profiler" + additionalParametersString + ".log";
+        return "async-profiler-" + recordingDescriptor.sanitizedName() + ".log";
     }
 
     // Async profiler log -- used as redirect for the process that starts the Async recording
-    private static String asyncLogName( Parameters parameters )
+    private static String asyncLogName( RecordingDescriptor recordingDescriptor )
     {
-        String additionalParametersString = parameters.isEmpty() ? "" : "-" + parameters.toString();
-        return "async" + additionalParametersString + ".log";
+        return "async-" + recordingDescriptor.sanitizedName() + ".log";
     }
 
     @Override
     public List<String> invokeArgs( ForkDirectory forkDirectory,
-                                    BenchmarkGroup benchmarkGroup,
-                                    Benchmark benchmark,
-                                    Parameters additionalParameters )
+                                    ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         return Collections.emptyList();
     }
@@ -61,9 +54,7 @@ public class AsyncProfiler implements InternalProfiler, ExternalProfiler
     @Override
     public JvmArgs jvmArgs( JvmVersion jvmVersion,
                             ForkDirectory forkDirectory,
-                            BenchmarkGroup benchmarkGroup,
-                            Benchmark benchmark,
-                            Parameters additionalParameters,
+                            ProfilerRecordingDescriptor profilerRecordingDescriptor,
                             Resources resources )
     {
         return JvmArgs.from(
@@ -73,9 +64,7 @@ public class AsyncProfiler implements InternalProfiler, ExternalProfiler
 
     @Override
     public void beforeProcess( ForkDirectory forkDirectory,
-                               BenchmarkGroup benchmarkGroup,
-                               Benchmark benchmark,
-                               Parameters additionalParameters )
+                               ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         // do nothing
     }
@@ -85,9 +74,7 @@ public class AsyncProfiler implements InternalProfiler, ExternalProfiler
             Jvm jvm,
             ForkDirectory forkDirectory,
             Pid pid,
-            BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark,
-            Parameters additionalParameters )
+            ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         // do nothing
     }
@@ -97,9 +84,7 @@ public class AsyncProfiler implements InternalProfiler, ExternalProfiler
             Jvm jvm,
             ForkDirectory forkDirectory,
             Pid pid,
-            BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark,
-            Parameters additionalParameters )
+            ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         // do nothing
     }
@@ -109,11 +94,9 @@ public class AsyncProfiler implements InternalProfiler, ExternalProfiler
             Jvm jvm,
             ForkDirectory forkDirectory,
             Pid pid,
-            BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark,
-            Parameters additionalParameters )
+            ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
-        startAsync( forkDirectory, pid, additionalParameters );
+        startAsync( forkDirectory, pid, profilerRecordingDescriptor );
     }
 
     @Override
@@ -121,44 +104,39 @@ public class AsyncProfiler implements InternalProfiler, ExternalProfiler
             Jvm jvm,
             ForkDirectory forkDirectory,
             Pid pid,
-            BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark,
-            Parameters additionalParameters )
+            ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         stopAsync( forkDirectory,
                    pid,
-                   ProfilerRecordingDescriptor.create( benchmarkGroup, benchmark, MEASUREMENT, ASYNC, additionalParameters ) );
+                   profilerRecordingDescriptor );
     }
 
     @Override
     public void afterProcess( ForkDirectory forkDirectory,
-                              BenchmarkGroup benchmarkGroup,
-                              Benchmark benchmark,
-                              Parameters additionalParameters )
+                              ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         // do nothing
     }
 
     @Override
     public void processFailed( ForkDirectory forkDirectory,
-                               BenchmarkGroup benchmarkGroup,
-                               Benchmark benchmark,
-                               Parameters additionalParameters )
+                               ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         // do nothing
     }
 
     private void startAsync( ForkDirectory forkDirectory,
                              Pid pid,
-                             Parameters additionalParameters )
+                             ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         try
         {
+            RecordingDescriptor recordingDescriptor = profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.ASYNC );
             // profiler log -- used by this class only
-            Path profilerLog = forkDirectory.create( asyncProfilerLogName( additionalParameters ) );
+            Path profilerLog = forkDirectory.create( asyncProfilerLogName( recordingDescriptor ) );
 
             // Async profiler log -- used as redirect for the process that starts the Async recording
-            Path asyncLog = forkDirectory.create( asyncLogName( additionalParameters ) );
+            Path asyncLog = forkDirectory.create( asyncLogName( recordingDescriptor ) );
 
             // start profiling
             String[] asyncProfilerCommand = {
@@ -206,19 +184,20 @@ public class AsyncProfiler implements InternalProfiler, ExternalProfiler
 
     private void stopAsync( ForkDirectory forkDirectory,
                             Pid pid,
-                            ProfilerRecordingDescriptor recordingDescriptor )
+                            ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         try
         {
+            RecordingDescriptor recordingDescriptor = profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.ASYNC );
             // async profiler recording
-            Path asyncRecording = forkDirectory.pathFor( recordingDescriptor );
+            Path asyncRecording = forkDirectory.registerPathFor( recordingDescriptor );
             assertDoesNotExist( asyncRecording );
 
             // profiler log -- used by this class only
-            Path profilerLog = forkDirectory.findOrFail( asyncProfilerLogName( recordingDescriptor.additionalParams() ) );
+            Path profilerLog = forkDirectory.findOrFail( asyncProfilerLogName( recordingDescriptor ) );
 
             // Async profiler log -- used as redirect for the process that starts the Async recording
-            Path asyncLog = forkDirectory.findOrFail( asyncLogName( recordingDescriptor.additionalParams() ) );
+            Path asyncLog = forkDirectory.findOrFail( asyncLogName( recordingDescriptor ) );
 
             // stop profiling
             String[] asyncProfilerCommand = {
@@ -287,7 +266,7 @@ public class AsyncProfiler implements InternalProfiler, ExternalProfiler
                         "See: " + profilerLog.toAbsolutePath() );
             }
             ASYNC.maybeSecondaryRecordingCreator()
-                 .ifPresent( secondaryRecordingCreator -> secondaryRecordingCreator.create( recordingDescriptor, forkDirectory ) );
+                 .ifPresent( secondaryRecordingCreator -> secondaryRecordingCreator.create( profilerRecordingDescriptor, forkDirectory ) );
         }
         catch ( Exception e )
         {

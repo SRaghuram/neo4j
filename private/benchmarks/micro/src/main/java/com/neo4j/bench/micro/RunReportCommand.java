@@ -12,6 +12,7 @@ import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.client.env.InstanceDiscovery;
+import com.neo4j.bench.client.reporter.ResultsReporter;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
@@ -33,13 +34,13 @@ import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.bench.model.model.Repository;
 import com.neo4j.bench.model.model.TestRun;
 import com.neo4j.bench.model.model.TestRunReport;
-import com.neo4j.bench.reporter.ResultsReporter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -47,6 +48,7 @@ import java.util.List;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.io.fs.FileUtils;
 
+import static com.neo4j.bench.common.results.ErrorReportingPolicy.REPORT_THEN_FAIL;
 import static com.neo4j.bench.common.util.Args.concatArgs;
 import static com.neo4j.bench.common.util.Args.splitArgs;
 import static com.neo4j.bench.common.util.BenchmarkUtil.tryMkDir;
@@ -111,22 +113,21 @@ public class RunReportCommand extends BaseRunReportCommand
     @Override
     public void doRun( RunReportParams runReportParams )
     {
-        TestRunReport testRunReport = runReport( runReportParams );
-        ResultsReporter resultsReporter = new ResultsReporter( runReportParams.profilerOutput(),
-                                                               testRunReport,
-                                                               s3Bucket,
-                                                               true,
-                                                               resultsStoreUsername,
+        TestRunReport testRunReport = run( runReportParams );
+        Path tempProfilerRecordingsOutputDir = runReportParams.workDir().toPath().resolve( "profiler_recordings_temp" );
+        ResultsReporter resultsReporter = new ResultsReporter( resultsStoreUsername,
                                                                resultsStorePassword,
-                                                               resultsStoreUri,
-                                                               runReportParams.storesDir(),
-                                                               awsEndpointURL );
-        resultsReporter.report();
-
+                                                               resultsStoreUri );
+        resultsReporter.reportAndUpload( testRunReport,
+                                         tempProfilerRecordingsOutputDir,
+                                         s3Bucket,
+                                         runReportParams.workDir(),
+                                         awsEndpointURL,
+                                         REPORT_THEN_FAIL );
         try
         {
-            LOG.debug( "Deleting: " + runReportParams.storesDir().getAbsolutePath() );
-            FileUtils.deleteDirectory( runReportParams.storesDir().toPath() );
+            LOG.debug( "Deleting: " + runReportParams.workDir().getAbsolutePath() );
+            FileUtils.deleteDirectory( runReportParams.workDir().toPath() );
         }
         catch ( IOException e )
         {
@@ -134,7 +135,7 @@ public class RunReportCommand extends BaseRunReportCommand
         }
     }
 
-    private static TestRunReport runReport( RunReportParams runReportParams )
+    private static TestRunReport run( RunReportParams runReportParams )
     {
         List<ParameterizedProfiler> profilers = ParameterizedProfiler.parse( runReportParams.parameterizedProfilers() );
         for ( ParameterizedProfiler profiler : profilers )
@@ -167,10 +168,10 @@ public class RunReportCommand extends BaseRunReportCommand
                                                                               : runReportParams.benchConfigFile().toPath() );
         ErrorReporter errorReporter = new ErrorReporter( runReportParams.errorPolicy() );
 
-        if ( !runReportParams.storesDir().exists() )
+        if ( !runReportParams.workDir().exists() )
         {
-            LOG.debug( "Creating stores directory: " + runReportParams.storesDir().getAbsolutePath() );
-            tryMkDir( runReportParams.storesDir().toPath() );
+            LOG.debug( "Creating stores directory: " + runReportParams.workDir().getAbsolutePath() );
+            tryMkDir( runReportParams.workDir().toPath() );
         }
 
         Instant start = Instant.now();
@@ -178,11 +179,10 @@ public class RunReportCommand extends BaseRunReportCommand
                                                                    profilers,
                                                                    jvmArgs,
                                                                    DEFAULT_THREAD_COUNTS,
-                                                                   runReportParams.storesDir().toPath(),
+                                                                   runReportParams.workDir().toPath(),
                                                                    errorReporter,
                                                                    splitArgs( runReportParams.jmhArgs(), " " ),
-                                                                   Jvm.bestEffortOrFail( runReportParams.jvmFile() ),
-                                                                   runReportParams.profilerOutput().toPath() );
+                                                                   Jvm.bestEffortOrFail( runReportParams.jvmFile() ) );
         Instant finish = Instant.now();
 
         String testRunId = BenchmarkUtil.generateUniqueId();
@@ -194,9 +194,10 @@ public class RunReportCommand extends BaseRunReportCommand
                 runReportParams.parentBuild(),
                 runReportParams.triggeredBy() );
         BenchmarkConfig benchmarkConfig = suiteDescription.toBenchmarkConfig();
-        BenchmarkTool tool =
-                new BenchmarkTool( Repository.MICRO_BENCH, runReportParams.toolCommit(), runReportParams.toolOwner(),
-                                   runReportParams.toolBranch() );
+        BenchmarkTool tool = new BenchmarkTool( Repository.MICRO_BENCH,
+                                                runReportParams.toolCommit(),
+                                                runReportParams.toolOwner(),
+                                                runReportParams.toolBranch() );
         Java java = Java.current( String.join( " ", jvmArgs ) );
 
         InstanceDiscovery instanceDiscovery = InstanceDiscovery.create();

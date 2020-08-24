@@ -9,15 +9,17 @@ import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
+import com.google.common.collect.Lists;
 import com.neo4j.bench.client.queries.schema.CreateSchema;
 import com.neo4j.bench.client.queries.schema.DropSchema;
 
 import java.net.URI;
+import java.util.List;
 
 @Command( name = "index" )
 public class ReIndexStoreCommand implements Runnable
 {
-    public static final String CMD_RESULTS_STORE_USER = "--results-store-user";
+    private static final String CMD_RESULTS_STORE_USER = "--results-store-user";
     @Option( type = OptionType.COMMAND,
             name = {CMD_RESULTS_STORE_USER},
             description = "Username for Neo4j database server that stores benchmarking results",
@@ -25,7 +27,7 @@ public class ReIndexStoreCommand implements Runnable
     @Required
     private String resultsStoreUsername;
 
-    public static final String CMD_RESULTS_STORE_PASSWORD = "--results-store-pass";
+    private static final String CMD_RESULTS_STORE_PASSWORD = "--results-store-pass";
     @Option( type = OptionType.COMMAND,
             name = {CMD_RESULTS_STORE_PASSWORD},
             description = "Password for Neo4j database server that stores benchmarking results",
@@ -33,7 +35,7 @@ public class ReIndexStoreCommand implements Runnable
     @Required
     private String resultsStorePassword;
 
-    public static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
+    private static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
     @Option( type = OptionType.COMMAND,
             name = {CMD_RESULTS_STORE_URI},
             description = "URI to Neo4j database server for storing benchmarking results",
@@ -53,5 +55,15 @@ public class ReIndexStoreCommand implements Runnable
         {
             throw new RuntimeException( "Error re-indexing results store: " + resultsStoreUri, e );
         }
+    }
+
+    public static List<String> argsFor( String resultsStoreUsername,
+                                        String resultsStorePassword,
+                                        URI resultsStoreUri )
+    {
+        return Lists.newArrayList( "index",
+                                   CMD_RESULTS_STORE_USER, resultsStoreUsername,
+                                   CMD_RESULTS_STORE_PASSWORD, resultsStorePassword,
+                                   CMD_RESULTS_STORE_URI, resultsStoreUri.toString() );
     }
 }

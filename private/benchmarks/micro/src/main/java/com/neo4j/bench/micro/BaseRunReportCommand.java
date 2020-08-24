@@ -10,7 +10,7 @@ import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.AllowedEnumValues;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
-import com.neo4j.bench.client.ReportCommand;
+import com.neo4j.bench.client.reporter.ResultsReporter;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.tool.micro.RunReportParams;
 import com.neo4j.bench.model.options.Edition;
@@ -37,8 +37,7 @@ import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_NEO4J_EDITIO
 import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_NEO4J_VERSION;
 import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_PARENT_TEAMCITY_BUILD;
 import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_PROFILERS;
-import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_PROFILES_DIR;
-import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_STORES_DIR;
+import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_WORK_DIR;
 import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_TEAMCITY_BUILD;
 import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_TOOL_BRANCH;
 import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_TOOL_COMMIT;
@@ -98,7 +97,7 @@ public abstract class BaseRunReportCommand implements Runnable
 
     @Option( type = OptionType.COMMAND,
              name = {CMD_TOOL_OWNER},
-             description = "Owner of repository containg the benchmarking tool used to run benchmark",
+             description = "Owner of repository containing the benchmarking tool used to run benchmark",
              title = "Benchmark Tool Owner" )
     @Required
     private String toolOwner = "neo-technology";
@@ -143,23 +142,16 @@ public abstract class BaseRunReportCommand implements Runnable
     private String jmhArgs = "";
 
     @Option( type = OptionType.COMMAND,
-             name = {CMD_PROFILES_DIR},
-             description = "Where to collect profiler recordings for executed benchmarks",
-             title = "Profile recordings output directory" )
-    @Required // this argument is actually required, but only in the case that at least one profiler is enabled
-    private File profilerOutput;
-
-    @Option( type = OptionType.COMMAND,
              name = {CMD_PROFILERS},
              description = "Comma separated list of profilers to run with",
              title = "Profilers" )
     private String profilerNames = "";
 
     @Option( type = OptionType.COMMAND,
-             name = {CMD_STORES_DIR},
+             name = {CMD_WORK_DIR},
              description = "Directory where stores, configurations, etc. will be created",
-             title = "Stores directory" )
-    private File storesDir = Paths.get( "benchmark_stores" ).toFile();
+             title = "Work directory" )
+    private File workDir = Paths.get( "benchmark_stores" ).toFile();
 
     @Option( type = OptionType.COMMAND,
              name = {CMD_ERROR_POLICY},
@@ -196,8 +188,7 @@ public abstract class BaseRunReportCommand implements Runnable
             String jvmArgs,
             Path config,
             String jmhArgs,
-            Path profilesDir,
-            Path storesDir,
+            Path workDir,
             ErrorReporter.ErrorPolicy errorPolicy,
             Jvm jvm,
             String triggeredBy,
@@ -237,23 +228,21 @@ public abstract class BaseRunReportCommand implements Runnable
                 config.toAbsolutePath().toString(),
                 CMD_JMH_ARGS,
                 jmhArgs,
-                CMD_PROFILES_DIR,
-                profilesDir.toAbsolutePath().toString(),
-                CMD_STORES_DIR,
-                storesDir.toAbsolutePath().toString(),
+                CMD_WORK_DIR,
+                workDir.toAbsolutePath().toString(),
                 CMD_ERROR_POLICY,
                 errorPolicy.name(),
                 CMD_TRIGGERED_BY,
                 triggeredBy,
                 CMD_PROFILERS,
                 ProfilerType.serializeProfilers( profilers ),
-                ReportCommand.CMD_RESULTS_STORE_PASSWORD,
+                ResultsReporter.CMD_RESULTS_STORE_PASSWORD,
                 resultStorePass,
-                ReportCommand.CMD_RESULTS_STORE_USER,
+                ResultsReporter.CMD_RESULTS_STORE_USER,
                 resultStoreUser,
                 RunReportCommand.CMD_S3_BUCKET,
                 s3Bucket,
-                ReportCommand.CMD_RESULTS_STORE_URI,
+                ResultsReporter.CMD_RESULTS_STORE_URI,
                 resultStoreUri
         );
         if ( jvm.hasPath() )
@@ -282,9 +271,8 @@ public abstract class BaseRunReportCommand implements Runnable
                                      jvmArgsString,
                                      benchConfigFile,
                                      jmhArgs,
-                                     profilerOutput,
                                      profilerNames,
-                                     storesDir,
+                                     workDir,
                                      errorPolicy,
                                      jvmFile,
                                      triggeredBy );

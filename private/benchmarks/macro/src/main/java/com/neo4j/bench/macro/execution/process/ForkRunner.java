@@ -7,12 +7,7 @@ package com.neo4j.bench.macro.execution.process;
 
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
-import com.neo4j.bench.macro.cli.BaseRunWorkloadCommand;
-import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
-import com.neo4j.bench.model.model.Neo4jConfig;
-import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.common.process.JpsPid;
-import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.common.process.JvmProcess;
 import com.neo4j.bench.common.process.JvmProcessArgs;
 import com.neo4j.bench.common.process.PgrepAndPsPid;
@@ -28,6 +23,10 @@ import com.neo4j.bench.macro.Main;
 import com.neo4j.bench.macro.cli.ExportPlanCommand;
 import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.workload.Query;
+import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
+import com.neo4j.bench.model.model.Neo4jConfig;
+import com.neo4j.bench.model.options.Edition;
+import com.neo4j.bench.model.process.JvmArgs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +36,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 
 public class ForkRunner
@@ -69,7 +67,7 @@ public class ForkRunner
             for ( ParameterizedProfiler profiler : profilers )
             {
                 String forkName = "profiler-fork-" + profiler.profilerType().name().toLowerCase();
-                ForkDirectory forkDirectory = benchmarkDir.create( forkName, singletonList( profiler ) );
+                ForkDirectory forkDirectory = benchmarkDir.create( forkName );
                 Path neo4jConfigFile = forkDirectory.create( "neo4j.conf" );
                 Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
                 RunnableFork profilerFork = fork( launcher,
@@ -90,7 +88,7 @@ public class ForkRunner
             for ( int forkNumber = 0; forkNumber < Math.max( measurementForkCount, 1 ); forkNumber++ )
             {
                 String forkName = "measurement-fork-" + forkNumber;
-                ForkDirectory forkDirectory = benchmarkDir.create( forkName, emptyList() );
+                ForkDirectory forkDirectory = benchmarkDir.create( forkName );
                 Path neo4jConfigFile = forkDirectory.create( "neo4j.conf" );
                 Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
 

@@ -5,23 +5,21 @@
  */
 package com.neo4j.bench.common.profiling;
 
+import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.process.ProcessWrapper;
 import com.neo4j.bench.common.profiling.nmt.NativeMemoryTrackingSnapshot;
 import com.neo4j.bench.common.profiling.nmt.NativeMemoryTrackingSummaryReport;
+import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.JvmVersion;
 import com.neo4j.bench.common.util.Resources;
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.BenchmarkGroup;
-import com.neo4j.bench.model.model.Parameters;
-import com.neo4j.bench.model.process.JvmArgs;
-import com.neo4j.bench.common.results.ForkDirectory;
-import com.neo4j.bench.common.results.RunPhase;
-import com.neo4j.bench.common.util.Jvm;
+import com.neo4j.bench.model.profiling.RecordingType;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
@@ -35,9 +33,7 @@ public class NativeMemoryTrackingProfiler implements ScheduledProfiler
     @Override
     public List<String> invokeArgs(
             ForkDirectory forkDirectory,
-            BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark,
-            Parameters additionalParameters )
+            ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         return emptyList();
     }
@@ -46,9 +42,7 @@ public class NativeMemoryTrackingProfiler implements ScheduledProfiler
     public JvmArgs jvmArgs(
             JvmVersion jvmVersion,
             ForkDirectory forkDirectory,
-            BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark,
-            Parameters additionalParameters,
+            ProfilerRecordingDescriptor profilerRecordingDescriptor,
             Resources resources )
     {
         return JvmArgs.from( "-XX:NativeMemoryTracking=summary" );
@@ -57,40 +51,32 @@ public class NativeMemoryTrackingProfiler implements ScheduledProfiler
     @Override
     public void beforeProcess(
             ForkDirectory forkDirectory,
-            BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark,
-            Parameters additionalParameters )
+            ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
     }
 
     @Override
     public void afterProcess(
             ForkDirectory forkDirectory,
-            BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark,
-            Parameters additionalParameters )
+            ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
-        ProfilerRecordingDescriptor csvReport = ProfilerRecordingDescriptor.create(
-                benchmarkGroup,
-                benchmark,
-                RunPhase.MEASUREMENT,
-                ProfilerType.NMT,
-                additionalParameters );
+        RecordingDescriptor recordingDescriptor = profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.NMT_SUMMARY );
         try
         {
             NativeMemoryTrackingSummaryReport summaryReport =
                     NativeMemoryTrackingSummaryReport.create( Paths.get( forkDirectory.toAbsolutePath() ) );
-            summaryReport.toCSV( forkDirectory.pathFor( csvReport ) );
+            Path nmtRecording = forkDirectory.registerPathFor( recordingDescriptor );
+            summaryReport.toCSV( nmtRecording );
         }
         catch ( IOException e )
         {
-            throw new UncheckedIOException( format( "cannot create NMT profiler report at %s", csvReport ), e );
+            throw new UncheckedIOException( format( "Error creating NMT recording for:\n%s", recordingDescriptor ), e );
         }
     }
 
     @Override
-    public void processFailed( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
-                               Parameters additionalParameters )
+    public void processFailed( ForkDirectory forkDirectory,
+                               ProfilerRecordingDescriptor profilerRecordingDescriptor )
     {
         // do nothing
     }
@@ -99,9 +85,7 @@ public class NativeMemoryTrackingProfiler implements ScheduledProfiler
     public void onSchedule(
             Tick tick,
             ForkDirectory forkDirectory,
-            BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark,
-            Parameters additionalParameters,
+            ProfilerRecordingDescriptor profilerRecordingDescriptor,
             Jvm jvm,
             Pid pid )
     {
