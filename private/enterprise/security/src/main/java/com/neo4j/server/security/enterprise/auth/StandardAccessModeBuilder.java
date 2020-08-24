@@ -319,7 +319,7 @@ class StandardAccessModeBuilder
                 addPrivilegeAction( privilege );
             }
 
-            if ( action == DBMS_ACTIONS || action == ADMIN_PROCEDURE )
+            if ( action == DBMS_ACTIONS || action == ADMIN_PROCEDURE || action == ADMIN )
             {
                 executeAllProcedures.put( privilegeType, true );
             }

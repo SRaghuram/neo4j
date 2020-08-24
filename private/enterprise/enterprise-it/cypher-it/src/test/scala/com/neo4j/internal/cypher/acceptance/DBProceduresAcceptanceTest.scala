@@ -18,7 +18,10 @@ import scala.collection.JavaConverters.asScalaBufferConverter
 
 class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
-  override protected def onNewGraphDatabase(): Unit = clearPublicRole()
+  override protected def onNewGraphDatabase(): Unit = {
+    clearPublicRole()
+    execute("GRANT EXECUTE PROCEDURES * ON DBMS TO PUBLIC")
+  }
 
   /*
     ------------ db.relationshipTypes ------------

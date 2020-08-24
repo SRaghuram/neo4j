@@ -928,12 +928,13 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute("CREATE DATABASE foo")
     execute(s"REVOKE MATCH {*} ON GRAPH * FROM $role")
     execute(s"REVOKE WRITE ON GRAPH * FROM $role")
+    execute(s"REVOKE INDEX ON DATABASE * FROM $role")
+    execute(s"REVOKE CONSTRAINT ON DATABASE * FROM $role")
+    execute(s"REVOKE NAME MANAGEMENT ON DATABASE * FROM $role")
     // have to deny since we can't revoke compound admin privilege
-    execute(s"DENY INDEX ON DATABASE * TO $role")
-    execute(s"DENY CONSTRAINT ON DATABASE * TO $role")
-    execute(s"DENY NAME MANAGEMENT ON DATABASE * TO $role")
     execute(s"DENY START ON DATABASE * TO $role")
     execute(s"DENY STOP ON DATABASE * TO $role")
+    // technically we should deny transaction management and procedure execution as well but this should just die with the ADMIN compound
 
     // THEN
     testAlwaysAllowedForAdmin(populatedRoles)
@@ -983,6 +984,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute("CREATE DATABASE foo")
     execute(s"REVOKE MATCH {*} ON GRAPH * FROM $role")
     execute(s"REVOKE WRITE ON GRAPH * FROM $role")
+    // technically we should revoke index, constraint and name management as well but this should just die with the ADMIN compound
 
     // THEN
     testAlwaysAllowedForAdmin(populatedRoles)
@@ -1018,7 +1020,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
   }
 
   private def testAlwaysAllowedForAdmin(populatedRoles: Int): Unit = {
-    // create and alter granted(users
+    // create and alter users
     executeOnSystem("Alice", "oldSecret", "ALTER CURRENT USER SET PASSWORD FROM 'oldSecret' TO 'secret'")
     executeOnSystem("Alice", "secret", "CREATE USER Bob SET PASSWORD 'notSecret'")
     executeOnSystem("Alice", "secret", "ALTER USER Bob SET PASSWORD 'newSecret'")
@@ -1045,6 +1047,8 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     executeOnSystem("Alice", "secret", "DROP ROLE mine")
     executeOnSystem("Alice", "secret", "DROP USER Bob")
     executeOnSystem("Alice", "secret", "DROP DATABASE bar")
+
+    // technically we should add execute procedure as well but this should just die with the ADMIN compound
   }
 
   // Disable normal database creation because we need different settings on each test

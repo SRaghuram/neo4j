@@ -795,7 +795,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         assertFail( readSubject, "CALL test.allowedWriteProcedure",
                 "Create node with labels 'VeryUniqueLabel' is not allowed for user 'readSubject' with roles [PUBLIC, reader] restricted to TOKEN_WRITE." );
         assertFail( writeSubject, "CALL test.allowedSchemaProcedure",
-                "Schema operations are not allowed for user 'writeSubject' with roles [PUBLIC, publisher]." );
+                "Schema operations are not allowed for user 'writeSubject' with roles [PUBLIC, publisher] restricted to SCHEMA." );
         assertFail( mats, "CALL test.numNodes",
                 "Database access is not allowed for user 'mats' with roles [PUBLIC, failer]." );
         // UDFs

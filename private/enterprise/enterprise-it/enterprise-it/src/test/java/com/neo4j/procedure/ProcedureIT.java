@@ -36,7 +36,6 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.internal.kernel.api.procs.ProcedureCallContext;
 import org.neo4j.io.fs.FileUtils;
@@ -517,7 +516,7 @@ public class ProcedureIT
     }
 
     @Test
-    void shouldCallProcedureWithByteArrayWithParameter() throws Throwable
+    void shouldCallProcedureWithByteArrayWithParameter()
     {
         // Given
         try ( Transaction tx = db.beginTx() )
@@ -532,7 +531,7 @@ public class ProcedureIT
     }
 
     @Test
-    void shouldCallProcedureWithByteArrayWithParameterAndYield() throws Throwable
+    void shouldCallProcedureWithByteArrayWithParameterAndYield()
     {
         // Given
         try ( Transaction tx = db.beginTx() )
@@ -547,7 +546,7 @@ public class ProcedureIT
     }
 
     @Test
-    void shouldCallProcedureWithByteArrayWithParameterAndYieldAndParameterReuse() throws Throwable
+    void shouldCallProcedureWithByteArrayWithParameterAndYieldAndParameterReuse()
     {
         // Given
         try ( Transaction tx = db.beginTx() )
@@ -566,7 +565,7 @@ public class ProcedureIT
     }
 
     @Test
-    void shouldNotBeAbleCallWithCypherLiteralInByteArrayProcedure() throws Throwable
+    void shouldNotBeAbleCallWithCypherLiteralInByteArrayProcedure()
     {
         QueryExecutionException exception = assertThrows( QueryExecutionException.class, () ->
         {
@@ -580,7 +579,7 @@ public class ProcedureIT
     }
 
     @Test
-    void shouldCallProcedureListWithNull() throws Throwable
+    void shouldCallProcedureListWithNull()
     {
         // Given
         try ( Transaction tx = db.beginTx() )
@@ -880,7 +879,7 @@ public class ProcedureIT
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class,
                             () -> tx.execute( "CALL com.neo4j.procedure.writeProcedureCallingSchemaProcedure" ).next() );
-            assertThat( exception.getMessage() ).startsWith( "Schema operations are not allowed" );
+            assertThat( exception.getMessage() ).contains( "Schema operations are not allowed" );
         }
     }
 
@@ -893,7 +892,7 @@ public class ProcedureIT
             // When
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.readOnlyTryingToWriteSchema" ).next() );
-            assertThat( exception.getMessage() ).startsWith( "Schema operations are not allowed" );
+            assertThat( exception.getMessage() ).contains( "Schema operations are not allowed" );
         }
     }
 
@@ -1373,8 +1372,8 @@ public class ProcedureIT
         GraphDatabaseAPI gdapi = (GraphDatabaseAPI) db;
 
         // When
-        AuthorizationViolationException exception =
-                assertThrows( AuthorizationViolationException.class, () ->
+        QueryExecutionException exception =
+                assertThrows( QueryExecutionException.class, () ->
                 {
                     try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.EXPLICIT, AnonymousContext.write() ) )
                     {
@@ -1700,6 +1699,7 @@ public class ProcedureIT
         }
     }
 
+    @SuppressWarnings( "WeakerAccess" )
     public static class Output
     {
         public long someVal = 1337;
@@ -1714,6 +1714,7 @@ public class ProcedureIT
         }
     }
 
+    @SuppressWarnings( "WeakerAccess" )
     public static class InheritedOutput extends Output
     {
         public String anotherVal;
@@ -1725,6 +1726,7 @@ public class ProcedureIT
         }
     }
 
+    @SuppressWarnings( "WeakerAccess" )
     public static class PrimitiveOutput
     {
         public String string;
@@ -1741,6 +1743,7 @@ public class ProcedureIT
         }
     }
 
+    @SuppressWarnings( "WeakerAccess" )
     public static class MapOutput
     {
         public Map<String,Object> map;
@@ -1751,6 +1754,7 @@ public class ProcedureIT
         }
     }
 
+    @SuppressWarnings( "WeakerAccess" )
     public static class ListOutput
     {
         public List<Long> list;
@@ -1761,6 +1765,7 @@ public class ProcedureIT
         }
     }
 
+    @SuppressWarnings( "WeakerAccess" )
     public static class BytesOutput
     {
         public byte[] bytes;
@@ -1771,6 +1776,7 @@ public class ProcedureIT
         }
     }
 
+    @SuppressWarnings( {"unused", "WeakerAccess"} )
     public static class DoubleOutput
     {
         public double result;
@@ -1785,6 +1791,7 @@ public class ProcedureIT
         }
     }
 
+    @SuppressWarnings( "WeakerAccess" )
     public static class NodeOutput
     {
         public Node node;
@@ -1805,6 +1812,7 @@ public class ProcedureIT
         }
     }
 
+    @SuppressWarnings( "WeakerAccess" )
     public static class MyOutputRecord
     {
         public String name;
@@ -1815,6 +1823,7 @@ public class ProcedureIT
         }
     }
 
+    @SuppressWarnings( "WeakerAccess" )
     public static class PathOutputRecord
     {
         public Path path;
@@ -1825,6 +1834,7 @@ public class ProcedureIT
         }
     }
 
+    @SuppressWarnings( "WeakerAccess" )
     public static class NodeListRecord
     {
         public List<Node> nodes;
@@ -1835,7 +1845,7 @@ public class ProcedureIT
         }
     }
 
-    @SuppressWarnings( "unused" )
+    @SuppressWarnings( {"unused", "WeakerAccess"} )
     public static class ClassWithProceduresUsingKernelTransaction
     {
         @Context
@@ -1848,7 +1858,7 @@ public class ProcedureIT
         }
     }
 
-    @SuppressWarnings( "unused" )
+    @SuppressWarnings( {"unused", "WeakerAccess"} )
     public static class ClassWithProcedures
     {
         @Context
@@ -2283,6 +2293,7 @@ public class ProcedureIT
         }
     }
 
+    @SuppressWarnings( "unused" )
     public static class ClassWithFunctions
     {
         @UserFunction()

@@ -1613,6 +1613,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
     execute("GRANT READ {id} ON GRAPH * TO custom")
+    execute("GRANT EXECUTE PROCEDURE db.index.fulltext.queryRelationships ON DBMS TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute(
@@ -1736,6 +1737,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     // GIVEN
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+    execute("GRANT EXECUTE PROCEDURE db.index.fulltext.queryRelationships ON DBMS TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute(
@@ -1813,6 +1815,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     // GIVEN
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * ELEMENTS * TO custom")
+    execute("GRANT EXECUTE PROCEDURE db.index.fulltext.queryRelationships ON DBMS TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute(

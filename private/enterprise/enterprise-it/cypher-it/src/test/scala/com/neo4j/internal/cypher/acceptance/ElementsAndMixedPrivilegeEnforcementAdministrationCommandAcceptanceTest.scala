@@ -166,6 +166,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
     val query = "CALL db.propertyKeys() YIELD propertyKey RETURN propertyKey ORDER BY propertyKey"
 
     selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT EXECUTE PROCEDURE db.propertyKeys ON DBMS TO custom")
     execute("GRANT TRAVERSE ON GRAPH * NODES ignore TO custom")
 
     // THEN
