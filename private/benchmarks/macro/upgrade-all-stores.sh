@@ -41,7 +41,6 @@ db_and_workloads=(
  "offshore_leaks;offshore_leaks"
  "fraud-poc;fraud-poc-credit"
  "alacrity;alacrity"
- "fraud-poc-aml;fraud-poc-aml"
  "ciena;ciena"
  "zero;zero")
 
