@@ -33,7 +33,7 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
 
-public abstract class SupportedEnterpriseVersion extends KnownEnterpriseSecurityComponentVersion
+public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownEnterpriseSecurityComponentVersion
 {
     static Label SEGMENT_LABEL = Label.label( "Segment" );
 
@@ -51,7 +51,7 @@ public abstract class SupportedEnterpriseVersion extends KnownEnterpriseSecurity
     Node allDb;
     Node dbResource;
 
-    protected SupportedEnterpriseVersion( int version, String description, Log log )
+    protected SupportedEnterpriseSecurityComponentVersion( int version, String description, Log log )
     {
         super( version, description, log );
     }

@@ -26,30 +26,24 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent.LATEST_VERSION;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
 
-public class EnterpriseVersion_3_41d1 extends SupportedEnterpriseVersion
+/**
+ * Version 4 of the security model is identical to version 3, but with the Version node now existing and containing the correct version information.
+ */
+public class EnterpriseSecurityComponentVersion_4_41 extends SupportedEnterpriseSecurityComponentVersion
 {
     private final KnownEnterpriseSecurityComponentVersion previous;
 
-    public EnterpriseVersion_3_41d1( Log log, KnownEnterpriseSecurityComponentVersion previous )
+    public EnterpriseSecurityComponentVersion_4_41( Log log, KnownEnterpriseSecurityComponentVersion previous )
     {
-        super( 3, VERSION_41D1, log );
+        super( 4, VERSION_41, log );
         this.previous = previous;
     }
-
-    @Override
-    public boolean detected( Transaction tx )
-    {
-        return nodesWithLabelExist( tx, DATABASE_ALL_LABEL ) &&
-               nodesWithLabelExist( tx, DATABASE_DEFAULT_LABEL ) &&
-               componentNotInVersionNode( tx );
-    }
-
-    // INITIALIZATION
 
     @Override
     public void setUpDefaultPrivileges( Transaction tx )
     {
         super.setUpDefaultPrivileges( tx );
+        this.setVersionProperty( tx, version );
     }
 
     @Override
@@ -58,51 +52,35 @@ public class EnterpriseVersion_3_41d1 extends SupportedEnterpriseVersion
         super.assignDefaultPrivileges( role, predefinedRole );
     }
 
-    // UPGRADE
-
     @Override
     public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest )
     {
         assert latest.version == LATEST_VERSION;
-        log.info( String.format( "Upgrading security model from %s by adding version information", this.description ) );
-        // Upgrade from 4.1.0-Drop01 to 4.1.x, which means add the Version node
         setVersionProperty( tx, latest.version );
         Node publicRole = tx.findNode( ROLE_LABEL, "name", PUBLIC );
         grantExecutePrivilegeTo( tx, publicRole );
     }
-
-    // RUNTIME
 
     @Override
     boolean supportsUpdateAction( PrivilegeAction action )
     {
         switch ( action )
         {
-        // User management
-        case CREATE_USER:
-        case DROP_USER:
-        case SHOW_USER:
-        case ALTER_USER:
-        case USER_MANAGEMENT:
+        // More user management
+        case SET_USER_STATUS:
+        case SET_PASSWORDS:
 
-        // Database management
-        case CREATE_DATABASE:
-        case DROP_DATABASE:
-        case DATABASE_MANAGEMENT:
+        // Fine-grained write
+        case CREATE_ELEMENT:
+        case DELETE_ELEMENT:
+        case SET_LABEL:
+        case REMOVE_LABEL:
+        case SET_PROPERTY:
 
-        // Privilege management
-        case SHOW_PRIVILEGE:
-        case ASSIGN_PRIVILEGE:
-        case REMOVE_PRIVILEGE:
-        case PRIVILEGE_MANAGEMENT:
+        case GRAPH_ACTIONS:
 
-        case DBMS_ACTIONS:
-
-        case TRANSACTION_MANAGEMENT:
-        case SHOW_TRANSACTION:
-        case TERMINATE_TRANSACTION:
+        case MERGE:
             return true;
-
         default:
             return previous.supportsUpdateAction( action );
         }

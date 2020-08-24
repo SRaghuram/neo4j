@@ -20,7 +20,7 @@ import org.neo4j.logging.Log;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent.LATEST_VERSION;
 
-public class EnterpriseVersion_5_42d4 extends SupportedEnterpriseVersion
+public class EnterpriseVersion_5_42d4 extends SupportedEnterpriseSecurityComponentVersion
 {
     private final KnownEnterpriseSecurityComponentVersion previous;
     private Node procedurePriv;

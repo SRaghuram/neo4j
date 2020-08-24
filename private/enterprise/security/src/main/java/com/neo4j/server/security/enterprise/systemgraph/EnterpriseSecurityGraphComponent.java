@@ -10,15 +10,15 @@ import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
-import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersion_0_35;
-import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersion_1_36;
-import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersion_2_40;
-import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersion_3_41d1;
-import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersion_4_41;
+import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_0_35;
+import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_1_36;
+import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_2_40;
+import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_3_41D1;
+import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_4_41;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersion_5_42d4;
-import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersion_Future;
+import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_Future;
 import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion;
-import com.neo4j.server.security.enterprise.systemgraph.versions.NoEnterpriseComponentVersion;
+import com.neo4j.server.security.enterprise.systemgraph.versions.NoEnterpriseSecurityComponentVersion;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -60,7 +60,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
 
     private final UserRepository defaultAdminRepository;
     private final KnownSystemComponentVersions<KnownEnterpriseSecurityComponentVersion> knownSecurityComponentVersions =
-            new KnownSystemComponentVersions<>( new NoEnterpriseComponentVersion() );
+            new KnownSystemComponentVersions<>( new NoEnterpriseSecurityComponentVersion() );
     private final CustomSecurityInitializer customSecurityInitializer;
     private final Log log;
     public static final String COMPONENT = "security-privileges";
@@ -72,18 +72,18 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         this.customSecurityInitializer = new CustomSecurityInitializer( config, log );
         this.log = log;
 
-        EnterpriseVersion_2_40 version2 = new EnterpriseVersion_2_40( log );
-        EnterpriseVersion_3_41d1 version3 = new EnterpriseVersion_3_41d1( log, version2 );
-        EnterpriseVersion_4_41 version4 = new EnterpriseVersion_4_41( log, version3 );
+        EnterpriseSecurityComponentVersion_2_40 version2 = new EnterpriseSecurityComponentVersion_2_40( log );
+        EnterpriseSecurityComponentVersion_3_41D1 version3 = new EnterpriseSecurityComponentVersion_3_41D1( log, version2 );
+        EnterpriseSecurityComponentVersion_4_41 version4 = new EnterpriseSecurityComponentVersion_4_41( log, version3 );
         EnterpriseVersion_5_42d4 version5 = new EnterpriseVersion_5_42d4( log, version4 );
 
-        knownSecurityComponentVersions.add( new EnterpriseVersion_0_35( log, migrationRoleRepository, customSecurityInitializer ) );
-        knownSecurityComponentVersions.add( new EnterpriseVersion_1_36( log, config ) );
+        knownSecurityComponentVersions.add( new EnterpriseSecurityComponentVersion_0_35( log, migrationRoleRepository, customSecurityInitializer ) );
+        knownSecurityComponentVersions.add( new EnterpriseSecurityComponentVersion_1_36( log, config ) );
         knownSecurityComponentVersions.add( version2 );
         knownSecurityComponentVersions.add( version3 );
         knownSecurityComponentVersions.add( version4 );
         knownSecurityComponentVersions.add( version5 );
-        knownSecurityComponentVersions.add( new EnterpriseVersion_Future( log, knownSecurityComponentVersions.latestSecurityGraphVersion() ) );
+        knownSecurityComponentVersions.add( new EnterpriseSecurityComponentVersion_Future( log, knownSecurityComponentVersions.latestSecurityGraphVersion() ) );
     }
 
     @Override
@@ -126,7 +126,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
             log.info( "Upgrading component '%s' with version %d and status %s to latest version",
                     COMPONENT, currentVersion.version, currentVersion.getStatus() );
 
-            if ( currentVersion.version == NoEnterpriseComponentVersion.VERSION )
+            if ( currentVersion.version == NoEnterpriseSecurityComponentVersion.VERSION )
             {
                 log.debug( "The current version does not have a security graph, doing a full initialization" );
                 initializeLatestSystemGraph( tx );

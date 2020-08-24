@@ -13,11 +13,11 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.logging.NullLog;
 
-public class NoEnterpriseComponentVersion extends KnownEnterpriseSecurityComponentVersion
+public class NoEnterpriseSecurityComponentVersion extends KnownEnterpriseSecurityComponentVersion
 {
     public static final int VERSION = -1;
 
-    public NoEnterpriseComponentVersion()
+    public NoEnterpriseSecurityComponentVersion()
     {
         super( VERSION, String.format( "no '%s' graph found", EnterpriseSecurityGraphComponent.COMPONENT ), NullLog.getInstance() );
     }

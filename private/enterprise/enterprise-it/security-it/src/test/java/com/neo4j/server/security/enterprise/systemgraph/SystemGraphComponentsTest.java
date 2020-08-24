@@ -12,7 +12,7 @@ import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion;
 import com.neo4j.server.security.enterprise.systemgraph.versions.PrivilegeBuilder;
-import com.neo4j.server.security.enterprise.systemgraph.versions.SupportedEnterpriseVersion;
+import com.neo4j.server.security.enterprise.systemgraph.versions.SupportedEnterpriseSecurityComponentVersion;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -289,7 +289,7 @@ class SystemGraphComponentsTest
 
     private void initEnterpriseFutureUnknown() throws Exception
     {
-        KnownEnterpriseSecurityComponentVersion builder = new EnterpriseVersionFake( mock( Log.class ) );
+        KnownEnterpriseSecurityComponentVersion builder = new EnterpriseSecurityComponentVersionFake( mock( Log.class ) );
         inTx( tx -> builder.initializePrivileges( tx, PredefinedRoles.roles, Map.of( ADMIN, Set.of( INITIAL_USER_NAME ) ) ) );
     }
 
@@ -313,9 +313,9 @@ class SystemGraphComponentsTest
         }
     }
 
-    private static class EnterpriseVersionFake extends SupportedEnterpriseVersion
+    private static class EnterpriseSecurityComponentVersionFake extends SupportedEnterpriseSecurityComponentVersion
     {
-        EnterpriseVersionFake( Log log )
+        EnterpriseSecurityComponentVersionFake( Log log )
         {
             super( Integer.MAX_VALUE, "Neo4j 8.8.88", log );
         }

@@ -34,7 +34,12 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent.LATEST_VERSION;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
 
-public class EnterpriseVersion_2_40 extends SupportedEnterpriseVersion
+/***
+ * This is the EnterpriseSecurityComponent version for Neo4j 4.0
+ * Compared with the previous version (for Neo4j 3.6) it has a whole new schema,
+ * so all roles and users must be re-added and the default privileges created.
+ */
+public class EnterpriseSecurityComponentVersion_2_40 extends SupportedEnterpriseSecurityComponentVersion
 {
     private Node traverseNodePriv;
     private Node traverserRelPriv;
@@ -47,7 +52,7 @@ public class EnterpriseVersion_2_40 extends SupportedEnterpriseVersion
     private Node schemaPriv;
     private Node adminPriv;
 
-    public EnterpriseVersion_2_40( Log log )
+    public EnterpriseSecurityComponentVersion_2_40( Log log )
     {
         super( 2, VERSION_40, log );
     }
@@ -182,7 +187,7 @@ public class EnterpriseVersion_2_40 extends SupportedEnterpriseVersion
     {
         assert latest.version == LATEST_VERSION;
         log.info( String.format( "Upgrading security model from %s by restructuring privileges", this.description ) );
-        // Upgrade from 4.0.x to 4.1.x, which means add the Version node, change global writes and split schema into index and constraint
+        // Upgrade from 4.0.x to 4.1.x, which means add the Version node, change global writes,split schema into index and constraint and add the public role
         setVersionProperty( tx, latest.version );
         upgradeWriteFromAllPropertiesToGraphResource( tx );
         upgradeFromSchemaPrivilegeToIndexAndContraintPrivileges( tx );

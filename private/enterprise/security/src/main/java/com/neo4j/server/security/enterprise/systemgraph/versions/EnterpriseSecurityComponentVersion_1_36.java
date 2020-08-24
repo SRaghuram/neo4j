@@ -29,7 +29,11 @@ import org.neo4j.logging.Log;
 
 import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent.LATEST_VERSION;
 
-public class EnterpriseVersion_1_36 extends KnownEnterpriseSecurityComponentVersion
+/***
+ * This component version is for the system database in Neo4j 3.6 which had its own schema for users and roles.
+ * Note that the system database was enterprise-only in 3.6.
+ */
+public class EnterpriseSecurityComponentVersion_1_36 extends KnownEnterpriseSecurityComponentVersion
 {
     private final Label databaseLabel = Label.label( "Database" );
     private final Label dbRoleLabel = Label.label( "DbRole" );
@@ -38,7 +42,7 @@ public class EnterpriseVersion_1_36 extends KnownEnterpriseSecurityComponentVers
     private final RelationshipType forDatabase = RelationshipType.withName( "FOR_DATABASE" );
     private Config config;
 
-    public EnterpriseVersion_1_36( Log log, Config config )
+    public EnterpriseSecurityComponentVersion_1_36( Log log, Config config )
     {
         super( 1, VERSION_36, log );
         this.config = config;

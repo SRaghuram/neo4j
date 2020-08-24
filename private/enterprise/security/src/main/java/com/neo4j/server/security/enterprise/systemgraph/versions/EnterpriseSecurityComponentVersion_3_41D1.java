@@ -26,24 +26,37 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent.LATEST_VERSION;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
 
-/**
- * Version 4 of the security model is identical to version 3, but with the Version node now existing and containing the correct version information.
+/***
+ * This is the EnterpriseSecurityComponent version for Neo4j 4.1-drop1.
+ * Compared with the previous version,
+ *      - the global write privilege is connected to a GraphResource instead of an AllPropertiesResource
+ *      - the schema privilege has been split into separate index and constraint privileges
+ *      - the public role has been added
  */
-public class EnterpriseVersion_4_41 extends SupportedEnterpriseVersion
+public class EnterpriseSecurityComponentVersion_3_41D1 extends SupportedEnterpriseSecurityComponentVersion
 {
     private final KnownEnterpriseSecurityComponentVersion previous;
 
-    public EnterpriseVersion_4_41( Log log, KnownEnterpriseSecurityComponentVersion previous )
+    public EnterpriseSecurityComponentVersion_3_41D1( Log log, KnownEnterpriseSecurityComponentVersion previous )
     {
-        super( 4, VERSION_41, log );
+        super( 3, VERSION_41D1, log );
         this.previous = previous;
     }
+
+    @Override
+    public boolean detected( Transaction tx )
+    {
+        return nodesWithLabelExist( tx, DATABASE_ALL_LABEL ) &&
+               nodesWithLabelExist( tx, DATABASE_DEFAULT_LABEL ) &&
+               componentNotInVersionNode( tx );
+    }
+
+    // INITIALIZATION
 
     @Override
     public void setUpDefaultPrivileges( Transaction tx )
     {
         super.setUpDefaultPrivileges( tx );
-        this.setVersionProperty( tx, version );
     }
 
     @Override
@@ -52,35 +65,51 @@ public class EnterpriseVersion_4_41 extends SupportedEnterpriseVersion
         super.assignDefaultPrivileges( role, predefinedRole );
     }
 
+    // UPGRADE
+
     @Override
     public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest )
     {
         assert latest.version == LATEST_VERSION;
+        log.info( String.format( "Upgrading security model from %s by adding version information", this.description ) );
+        // Upgrade from 4.1.0-Drop01 to 4.1.x, which means add the Version node
         setVersionProperty( tx, latest.version );
         Node publicRole = tx.findNode( ROLE_LABEL, "name", PUBLIC );
         grantExecutePrivilegeTo( tx, publicRole );
     }
+
+    // RUNTIME
 
     @Override
     boolean supportsUpdateAction( PrivilegeAction action )
     {
         switch ( action )
         {
-        // More user management
-        case SET_USER_STATUS:
-        case SET_PASSWORDS:
+        // User management
+        case CREATE_USER:
+        case DROP_USER:
+        case SHOW_USER:
+        case ALTER_USER:
+        case USER_MANAGEMENT:
 
-        // Fine-grained write
-        case CREATE_ELEMENT:
-        case DELETE_ELEMENT:
-        case SET_LABEL:
-        case REMOVE_LABEL:
-        case SET_PROPERTY:
+        // Database management
+        case CREATE_DATABASE:
+        case DROP_DATABASE:
+        case DATABASE_MANAGEMENT:
 
-        case GRAPH_ACTIONS:
+        // Privilege management
+        case SHOW_PRIVILEGE:
+        case ASSIGN_PRIVILEGE:
+        case REMOVE_PRIVILEGE:
+        case PRIVILEGE_MANAGEMENT:
 
-        case MERGE:
+        case DBMS_ACTIONS:
+
+        case TRANSACTION_MANAGEMENT:
+        case SHOW_TRANSACTION:
+        case TERMINATE_TRANSACTION:
             return true;
+
         default:
             return previous.supportsUpdateAction( action );
         }

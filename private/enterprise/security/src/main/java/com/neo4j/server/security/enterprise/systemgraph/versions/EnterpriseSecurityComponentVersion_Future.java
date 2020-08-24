@@ -18,11 +18,11 @@ import org.neo4j.logging.Log;
  * the leader has been upgraded to a newer version of Neo4j, but followers have not. When this case is detected, all security
  * authorization should be disabled and the results of the dbms.upgradeStatus procedure should explain the problem.
  */
-public class EnterpriseVersion_Future extends KnownEnterpriseSecurityComponentVersion
+public class EnterpriseSecurityComponentVersion_Future extends KnownEnterpriseSecurityComponentVersion
 {
     private final KnownEnterpriseSecurityComponentVersion latestVersion;
 
-    public EnterpriseVersion_Future( Log log, KnownEnterpriseSecurityComponentVersion latestKnownVersion )
+    public EnterpriseSecurityComponentVersion_Future( Log log, KnownEnterpriseSecurityComponentVersion latestKnownVersion )
     {
         super( Integer.MIN_VALUE, "Unrecognized future version", log );
         this.latestVersion = latestKnownVersion;

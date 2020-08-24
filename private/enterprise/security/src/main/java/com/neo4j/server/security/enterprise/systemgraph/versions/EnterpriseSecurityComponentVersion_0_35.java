@@ -26,13 +26,13 @@ import org.neo4j.server.security.auth.ListSnapshot;
 
 import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent.LATEST_VERSION;
 
-public class EnterpriseVersion_0_35 extends KnownEnterpriseSecurityComponentVersion
+public class EnterpriseSecurityComponentVersion_0_35 extends KnownEnterpriseSecurityComponentVersion
 {
     private final RoleRepository roleRepository;
     private CustomSecurityInitializer customSecurityInitializer;
     public static final int VERSION = 0;
 
-    public EnterpriseVersion_0_35( Log log, RoleRepository roleRepository, CustomSecurityInitializer customSecurityInitializer )
+    public EnterpriseSecurityComponentVersion_0_35( Log log, RoleRepository roleRepository, CustomSecurityInitializer customSecurityInitializer )
     {
         super( VERSION, "Neo4j 3.5", log );
         this.roleRepository = roleRepository;
