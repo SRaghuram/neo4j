@@ -57,9 +57,9 @@ if [[ ! "$OSTYPE" == *"darwin"* ]]; then
 	INSTALL_TEMP_DIR=$(mktemp -d)
 	(
 	cd "$INSTALL_TEMP_DIR"
-	curl --fail --silent --show-error --retry 5 --remote-name --location https://github.com/jvm-profiling-tools/async-profiler/archive/v1.4.tar.gz
+	curl --fail --silent --show-error --retry 5 --remote-name --location https://github.com/jvm-profiling-tools/async-profiler/releases/download/v1.8/async-profiler-1.8-linux-x64.tar.gz
 	mkdir -p "$ASYNC_PROFILER_DIR"
-	tar -C "$ASYNC_PROFILER_DIR" --strip-components=1 -xzf "$INSTALL_TEMP_DIR/v1.4.tar.gz"
+	tar -C "$ASYNC_PROFILER_DIR" --strip-components=1 -xzf "$INSTALL_TEMP_DIR/async-profiler-1.8-linux-x64.tar.gz"
 	cd "$ASYNC_PROFILER_DIR" && make
 	)
 fi

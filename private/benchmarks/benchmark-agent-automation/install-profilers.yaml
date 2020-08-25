@@ -39,6 +39,11 @@
         command: ./gradlew installDist
         args:
           chdir: /tmp/jfr-flame-graph
+      - name: remove old backup of jfr-flame-graph
+        file:
+          path: /opt/profiling/jfr-flame-graph.old/jfr-flame-graph
+          state: absent
+        become: yes
       - name: backup jfr-flame-graph
         command: mv -v /opt/profiling/jfr-flame-graph /opt/profiling/jfr-flame-graph.old
         become: yes
@@ -74,8 +79,9 @@
           - async_profiler
       - name: install async profiler
         unarchive:
-          src: https://github.com/jvm-profiling-tools/async-profiler/releases/download/v1.6/async-profiler-1.6-linux-x64.tar.gz
+          src: https://github.com/jvm-profiling-tools/async-profiler/releases/download/v1.8/async-profiler-1.8-linux-x64.tar.gz
           dest: "/opt/profiling/async-profiler"
+          extra_opts: [--strip-components=1]
           remote_src: yes
         become: yes
         tags:
