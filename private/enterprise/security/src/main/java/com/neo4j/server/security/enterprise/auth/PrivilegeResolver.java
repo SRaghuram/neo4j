@@ -31,11 +31,9 @@ public class PrivilegeResolver
     private final SystemGraphRealm systemGraphRealm;
     private final String upgradeUsername;
     private final Boolean restrictUpgrade;
-
+    private final ResourcePrivilege accessOnSystem;
+    private final ResourcePrivilege executeUpgrade;
     private final Map<String, Set<ResourcePrivilege>> roleToPrivilege = new HashMap<>();
-
-    private ResourcePrivilege accessOnSystem;
-    private ResourcePrivilege executeUpgrade;
 
     public PrivilegeResolver( SystemGraphRealm systemGraphRealm, Config config )
     {
@@ -45,6 +43,8 @@ public class PrivilegeResolver
 
         try
         {
+            // Privileges for the upgrade user
+
             // ACCESS ON DATABASE system
             accessOnSystem = new ResourcePrivilege( GRANT, ACCESS, new DatabaseResource(), Segment.ALL, SYSTEM_DATABASE_NAME );
             // EXECUTE dbms.upgrade* ON DBMS

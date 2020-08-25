@@ -132,9 +132,9 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     execute("GRANT EXECUTE PROCEDURE dbms.listConfig ON DBMS TO custom")
 
     // THEN
-    the[QueryExecutionException] thrownBy {
+    (the[QueryExecutionException] thrownBy {
       executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
-    } should have message "Permission denied."
+    }).getMessage should include(FAIL_EXECUTE_ADMIN_PROC)
   }
 
   test("should fail execute procedure with no privileges") {
@@ -145,9 +145,9 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
 
     // THEN
-    the[AuthorizationViolationException] thrownBy {
+    (the[AuthorizationViolationException] thrownBy {
       executeOnDefault("foo", "bar", "CALL db.labels")
-    } should have message "Permission denied."
+    }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 
   test("should fail execute dbms procedure with no privileges") {
@@ -155,9 +155,9 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     setupUserAndGraph("foo", "bar")
 
     // THEN
-    the[AuthorizationViolationException] thrownBy {
+    (the[AuthorizationViolationException] thrownBy {
       executeOnDefault("foo", "bar", "CALL dbms.showCurrentUser()")
-    } should have message "Permission denied."
+    }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 
   test("should fail execute procedure with deny procedure") {
@@ -170,9 +170,9 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     execute("DENY EXECUTE PROCEDURE db.labels ON DBMS TO custom")
 
     // THEN
-    the[AuthorizationViolationException] thrownBy {
+    (the[AuthorizationViolationException] thrownBy {
       executeOnDefault("foo", "bar", "CALL db.labels")
-    } should have message "Permission denied."
+    }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 
   test("should fail execute dbms procedure with deny procedure") {
@@ -184,8 +184,8 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     execute("DENY EXECUTE PROCEDURE dbms.showCurrentUser ON DBMS TO custom")
 
     // THEN
-    the[AuthorizationViolationException] thrownBy {
+    (the[AuthorizationViolationException] thrownBy {
       executeOnDefault("foo", "bar", "CALL dbms.showCurrentUser()")
-    } should have message "Permission denied."
+    }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 }

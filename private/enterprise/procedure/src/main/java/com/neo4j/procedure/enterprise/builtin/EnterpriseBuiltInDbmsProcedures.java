@@ -69,6 +69,7 @@ import org.neo4j.scheduler.ActiveGroup;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
+import static java.lang.String.format;
 import static java.lang.String.valueOf;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -316,7 +317,8 @@ public class EnterpriseBuiltInDbmsProcedures
                         }
                         else
                         {
-                            throw new AuthorizationViolationException( PERMISSION_DENIED );
+                            throw new AuthorizationViolationException(
+                                    format( "Executing admin procedure is not allowed for %s.", securityContext.description() ) );
                         }
                     }
                 }
@@ -531,7 +533,7 @@ public class EnterpriseBuiltInDbmsProcedures
             securityContext.assertCredentialsNotExpired();
             if ( !securityContext.allowExecuteAdminProcedure() )
             {
-                throw new AuthorizationViolationException( PERMISSION_DENIED );
+                throw new AuthorizationViolationException( format("Executing admin procedure is not allowed for %s.", securityContext.description() ) );
             }
         }
     }

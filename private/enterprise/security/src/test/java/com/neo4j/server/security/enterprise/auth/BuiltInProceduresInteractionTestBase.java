@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import org.neo4j.procedure.builtin.QueryId;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.commons.lang3.mutable.MutableObject;
@@ -62,6 +61,7 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.newapi.Operations;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
+import org.neo4j.procedure.builtin.QueryId;
 import org.neo4j.test.Barrier;
 import org.neo4j.test.DoubleLatch;
 import org.neo4j.test.rule.concurrent.ThreadingRule;
@@ -97,6 +97,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -208,11 +209,11 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void failToListLocksWhenNotAdmin()
     {
-        assertFail( schemaSubject, "CALL db.listLocks()", "Permission denied." );
-        assertFail( writeSubject, "CALL db.listLocks()", "Permission denied." );
-        assertFail( editorSubject, "CALL db.listLocks()", "Permission denied." );
-        assertFail( readSubject, "CALL db.listLocks()", "Permission denied." );
-        assertFail( pwdSubject, "CALL db.listLocks()", "Permission denied." );
+        assertFail( schemaSubject, "CALL db.listLocks()", FAIL_EXECUTE_ADMIN_PROC );
+        assertFail( writeSubject, "CALL db.listLocks()", FAIL_EXECUTE_ADMIN_PROC );
+        assertFail( editorSubject, "CALL db.listLocks()", FAIL_EXECUTE_ADMIN_PROC );
+        assertFail( readSubject, "CALL db.listLocks()", FAIL_EXECUTE_ADMIN_PROC );
+        assertFail( pwdSubject, "CALL db.listLocks()", CHANGE_PWD_ERR_MSG );
     }
 
     @Test
@@ -2134,9 +2135,9 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     void setConfigValueShouldBeAccessibleOnlyToAdmins()
     {
         String call = "CALL dbms.setConfigValue('dbms.logs.query.enabled', 'off')";
-        assertFail( writeSubject, call, PERMISSION_DENIED );
-        assertFail( schemaSubject, call, PERMISSION_DENIED );
-        assertFail( readSubject, call, PERMISSION_DENIED );
+        assertFail( writeSubject, call, FAIL_EXECUTE_ADMIN_PROC );
+        assertFail( schemaSubject, call, FAIL_EXECUTE_ADMIN_PROC );
+        assertFail( readSubject, call, FAIL_EXECUTE_ADMIN_PROC );
 
         assertEmpty( adminSubject, call );
     }
@@ -2348,9 +2349,9 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     void shouldNotClearQueryCachesIfNotAdmin()
     {
         assertFail( noneSubject, "CALL db.clearQueryCaches()", ACCESS_DENIED );
-        assertFail( readSubject, "CALL db.clearQueryCaches()", PERMISSION_DENIED );
-        assertFail( writeSubject, "CALL db.clearQueryCaches()", PERMISSION_DENIED );
-        assertFail( schemaSubject, "CALL db.clearQueryCaches()", PERMISSION_DENIED );
+        assertFail( readSubject, "CALL db.clearQueryCaches()", FAIL_EXECUTE_ADMIN_PROC );
+        assertFail( writeSubject, "CALL db.clearQueryCaches()", FAIL_EXECUTE_ADMIN_PROC );
+        assertFail( schemaSubject, "CALL db.clearQueryCaches()", FAIL_EXECUTE_ADMIN_PROC );
     }
 
     @Test
@@ -2369,9 +2370,9 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         String query = String.format( "CALL %s", procedure );
         setupFakeSystemComponents();
         assertFail( DEFAULT_DATABASE_NAME, noneSubject, query, ACCESS_DENIED );
-        assertFail( DEFAULT_DATABASE_NAME, readSubject, query, PERMISSION_DENIED );
-        assertFail( DEFAULT_DATABASE_NAME, writeSubject, query, PERMISSION_DENIED );
-        assertFail( DEFAULT_DATABASE_NAME, schemaSubject, query, PERMISSION_DENIED );
+        assertFail( DEFAULT_DATABASE_NAME, readSubject, query, FAIL_EXECUTE_ADMIN_PROC );
+        assertFail( DEFAULT_DATABASE_NAME, writeSubject, query, FAIL_EXECUTE_ADMIN_PROC );
+        assertFail( DEFAULT_DATABASE_NAME, schemaSubject, query, FAIL_EXECUTE_ADMIN_PROC );
         assertFail( DEFAULT_DATABASE_NAME, adminSubject, query,
                 String.format( "This is an administration command and it should be executed against the system database: %s", procedure ) );
     }
@@ -2382,10 +2383,10 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     {
         String query = String.format( "CALL %s", procedure );
         setupFakeSystemComponents();
-        assertFail( SYSTEM_DATABASE_NAME, noneSubject, query, PERMISSION_DENIED );
-        assertFail( SYSTEM_DATABASE_NAME, readSubject, query, PERMISSION_DENIED );
-        assertFail( SYSTEM_DATABASE_NAME, writeSubject, query, PERMISSION_DENIED );
-        assertFail( SYSTEM_DATABASE_NAME, schemaSubject, query, PERMISSION_DENIED );
+        assertFail( SYSTEM_DATABASE_NAME, noneSubject, query, FAIL_EXECUTE_ADMIN_PROC );
+        assertFail( SYSTEM_DATABASE_NAME, readSubject, query, FAIL_EXECUTE_ADMIN_PROC );
+        assertFail( SYSTEM_DATABASE_NAME, writeSubject, query, FAIL_EXECUTE_ADMIN_PROC );
+        assertFail( SYSTEM_DATABASE_NAME, schemaSubject, query, FAIL_EXECUTE_ADMIN_PROC );
     }
 
     @Test

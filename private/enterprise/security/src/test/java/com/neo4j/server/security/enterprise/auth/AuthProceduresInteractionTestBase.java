@@ -31,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.internal.kernel.api.security.AuthenticationResult.PASSWORD_CHANGE_REQUIRED;
 import static org.neo4j.server.security.systemgraph.SystemGraphRealmHelper.IS_SUSPENDED;
@@ -129,9 +130,9 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldNotChangeUserPasswordIfNotAdmin()
     {
-        assertSystemCommandFail( schemaSubject, "CALL dbms.security.changeUserPassword( 'readSubject', '321' )", PERMISSION_DENIED );
-        assertSystemCommandFail( schemaSubject, "CALL dbms.security.changeUserPassword( 'jake', '321' )", PERMISSION_DENIED );
-        assertSystemCommandFail( schemaSubject, "CALL dbms.security.changeUserPassword( 'readSubject', '' )", PERMISSION_DENIED );
+        assertSystemCommandFail( schemaSubject, "CALL dbms.security.changeUserPassword( 'readSubject', '321' )", FAIL_EXECUTE_ADMIN_PROC );
+        assertSystemCommandFail( schemaSubject, "CALL dbms.security.changeUserPassword( 'jake', '321' )", FAIL_EXECUTE_ADMIN_PROC );
+        assertSystemCommandFail( schemaSubject, "CALL dbms.security.changeUserPassword( 'readSubject', '' )", FAIL_EXECUTE_ADMIN_PROC );
     }
 
     // Should fail nicely to change own password for non-admin or admin subject if password invalid
@@ -222,9 +223,9 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     void shouldNotAllowNonAdminCreateUser()
     {
         testFailCreateUser( pwdSubject, CHANGE_PWD_ERR_MSG );
-        testFailCreateUser( readSubject, PERMISSION_DENIED );
-        testFailCreateUser( writeSubject, PERMISSION_DENIED );
-        testFailCreateUser( schemaSubject, PERMISSION_DENIED );
+        testFailCreateUser( readSubject, FAIL_EXECUTE_ADMIN_PROC );
+        testFailCreateUser( writeSubject, FAIL_EXECUTE_ADMIN_PROC );
+        testFailCreateUser( schemaSubject, FAIL_EXECUTE_ADMIN_PROC );
     }
 
     //---------- delete user -----------
@@ -247,12 +248,12 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     void shouldNotDeleteUserIfNotAdmin()
     {
         testFailDeleteUser( pwdSubject, "readSubject", CHANGE_PWD_ERR_MSG );
-        testFailDeleteUser( readSubject, "readSubject", PERMISSION_DENIED );
-        testFailDeleteUser( writeSubject, "readSubject", PERMISSION_DENIED );
+        testFailDeleteUser( readSubject, "readSubject", FAIL_EXECUTE_ADMIN_PROC );
+        testFailDeleteUser( writeSubject, "readSubject", FAIL_EXECUTE_ADMIN_PROC );
 
-        testFailDeleteUser( schemaSubject, "readSubject", PERMISSION_DENIED );
-        testFailDeleteUser( schemaSubject, "Craig", PERMISSION_DENIED );
-        testFailDeleteUser( schemaSubject, "", PERMISSION_DENIED );
+        testFailDeleteUser( schemaSubject, "readSubject", FAIL_EXECUTE_ADMIN_PROC );
+        testFailDeleteUser( schemaSubject, "Craig", FAIL_EXECUTE_ADMIN_PROC ); // non-existing user
+        testFailDeleteUser( schemaSubject, "", FAIL_EXECUTE_ADMIN_PROC ); // missing username
     }
 
     @Test
@@ -294,9 +295,9 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldFailToSuspendIfNotAdmin()
     {
-        assertSystemCommandFail( schemaSubject, "CALL dbms.security.suspendUser('readSubject')", PERMISSION_DENIED );
-        assertSystemCommandFail( schemaSubject, "CALL dbms.security.suspendUser('Craig')", PERMISSION_DENIED );
-        assertSystemCommandFail( schemaSubject, "CALL dbms.security.suspendUser('')", PERMISSION_DENIED );
+        assertSystemCommandFail( schemaSubject, "CALL dbms.security.suspendUser('readSubject')", FAIL_EXECUTE_ADMIN_PROC );
+        assertSystemCommandFail( schemaSubject, "CALL dbms.security.suspendUser('Craig')", FAIL_EXECUTE_ADMIN_PROC );
+        assertSystemCommandFail( schemaSubject, "CALL dbms.security.suspendUser('')", FAIL_EXECUTE_ADMIN_PROC );
     }
 
     @Test
@@ -355,9 +356,9 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     void shouldFailToActivateIfNotAdmin()
     {
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.suspendUser('readSubject')" );
-        assertSystemCommandFail( schemaSubject, "CALL dbms.security.activateUser('readSubject')", PERMISSION_DENIED );
-        assertSystemCommandFail( schemaSubject, "CALL dbms.security.activateUser('Craig')", PERMISSION_DENIED );
-        assertSystemCommandFail( schemaSubject, "CALL dbms.security.activateUser('')", PERMISSION_DENIED );
+        assertSystemCommandFail( schemaSubject, "CALL dbms.security.activateUser('readSubject')", FAIL_EXECUTE_ADMIN_PROC );
+        assertSystemCommandFail( schemaSubject, "CALL dbms.security.activateUser('Craig')", FAIL_EXECUTE_ADMIN_PROC );
+        assertSystemCommandFail( schemaSubject, "CALL dbms.security.activateUser('')", FAIL_EXECUTE_ADMIN_PROC );
     }
 
     @Test
@@ -406,12 +407,12 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     void shouldFailToAddRoleToUserIfNotAdmin()
     {
         testFailAddRoleToUser( pwdSubject, PUBLISHER, "readSubject", CHANGE_PWD_ERR_MSG );
-        testFailAddRoleToUser( readSubject, PUBLISHER, "readSubject", PERMISSION_DENIED );
-        testFailAddRoleToUser( writeSubject, PUBLISHER, "readSubject", PERMISSION_DENIED );
+        testFailAddRoleToUser( readSubject, PUBLISHER, "readSubject", FAIL_EXECUTE_ADMIN_PROC );
+        testFailAddRoleToUser( writeSubject, PUBLISHER, "readSubject", FAIL_EXECUTE_ADMIN_PROC );
 
-        testFailAddRoleToUser( schemaSubject, PUBLISHER, "readSubject", PERMISSION_DENIED );
-        testFailAddRoleToUser( schemaSubject, PUBLISHER, "Olivia", PERMISSION_DENIED );
-        testFailAddRoleToUser( schemaSubject, "thisRoleDoesNotExist", "Olivia", PERMISSION_DENIED );
+        testFailAddRoleToUser( schemaSubject, PUBLISHER, "readSubject", FAIL_EXECUTE_ADMIN_PROC );
+        testFailAddRoleToUser( schemaSubject, PUBLISHER, "Olivia", FAIL_EXECUTE_ADMIN_PROC );
+        testFailAddRoleToUser( schemaSubject, "thisRoleDoesNotExist", "Olivia", FAIL_EXECUTE_ADMIN_PROC );
     }
 
     //---------- remove user from role -----------
@@ -435,12 +436,12 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     void shouldFailToRemoveRoleFromUserIfNotAdmin()
     {
         testFailRemoveRoleFromUser( pwdSubject, PUBLISHER, "readSubject", CHANGE_PWD_ERR_MSG );
-        testFailRemoveRoleFromUser( readSubject, PUBLISHER, "readSubject", PERMISSION_DENIED );
-        testFailRemoveRoleFromUser( writeSubject, PUBLISHER, "readSubject", PERMISSION_DENIED );
+        testFailRemoveRoleFromUser( readSubject, PUBLISHER, "readSubject", FAIL_EXECUTE_ADMIN_PROC );
+        testFailRemoveRoleFromUser( writeSubject, PUBLISHER, "readSubject", FAIL_EXECUTE_ADMIN_PROC );
 
-        testFailRemoveRoleFromUser( schemaSubject, READER, "readSubject", PERMISSION_DENIED );
-        testFailRemoveRoleFromUser( schemaSubject, READER, "Olivia", PERMISSION_DENIED );
-        testFailRemoveRoleFromUser( schemaSubject, "thisRoleDoesNotExist", "Olivia", PERMISSION_DENIED );
+        testFailRemoveRoleFromUser( schemaSubject, READER, "readSubject", FAIL_EXECUTE_ADMIN_PROC );
+        testFailRemoveRoleFromUser( schemaSubject, READER, "Olivia", FAIL_EXECUTE_ADMIN_PROC );
+        testFailRemoveRoleFromUser( schemaSubject, "thisRoleDoesNotExist", "Olivia", FAIL_EXECUTE_ADMIN_PROC );
     }
 
     //---------- manage multiple roles -----------
@@ -493,9 +494,9 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     void shouldNotAllowNonAdminCreateRole()
     {
         testFailCreateRole( pwdSubject, CHANGE_PWD_ERR_MSG );
-        testFailCreateRole( readSubject, PERMISSION_DENIED );
-        testFailCreateRole( writeSubject, PERMISSION_DENIED );
-        testFailCreateRole( schemaSubject, PERMISSION_DENIED );
+        testFailCreateRole( readSubject, FAIL_EXECUTE_ADMIN_PROC );
+        testFailCreateRole( writeSubject, FAIL_EXECUTE_ADMIN_PROC );
+        testFailCreateRole( schemaSubject, FAIL_EXECUTE_ADMIN_PROC );
     }
 
     //---------- delete role -----------
@@ -504,10 +505,10 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     void shouldThrowIfNonAdminTryingToDeleteRole()
     {
         assertSystemCommandSuccess( adminSubject, format( "CALL dbms.security.createRole('%s')", "new_role" ) );
-        testFailDeleteRole( schemaSubject, "new_role", PERMISSION_DENIED );
-        testFailDeleteRole( writeSubject, "new_role", PERMISSION_DENIED );
-        testFailDeleteRole( readSubject, "new_role", PERMISSION_DENIED );
-        testFailDeleteRole( noneSubject, "new_role", PERMISSION_DENIED );
+        testFailDeleteRole( schemaSubject, "new_role", FAIL_EXECUTE_ADMIN_PROC );
+        testFailDeleteRole( writeSubject, "new_role", FAIL_EXECUTE_ADMIN_PROC );
+        testFailDeleteRole( readSubject, "new_role", FAIL_EXECUTE_ADMIN_PROC );
+        testFailDeleteRole( noneSubject, "new_role", FAIL_EXECUTE_ADMIN_PROC );
     }
 
     @Test
@@ -539,7 +540,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     {
         assertSystemCommandSuccess( adminSubject, format( "CALL dbms.security.deleteRole('%s')", ADMIN ) );
 
-        assertSystemCommandFail( adminSubject, format( "CALL dbms.security.deleteRole('%s')", PUBLISHER ), "Permission denied" );
+        assertSystemCommandFail( adminSubject, format( "CALL dbms.security.deleteRole('%s')", PUBLISHER ), FAIL_EXECUTE_ADMIN_PROC );
 
         // Needs to run SHOW ROLES with auth disabled since we removed the admin
         List<Object> roles = new LinkedList<>();
@@ -653,9 +654,9 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     void shouldNotAllowNonAdminListUsers()
     {
         testFailListUsers( pwdSubject, CHANGE_PWD_ERR_MSG );
-        testFailListUsers( readSubject, PERMISSION_DENIED );
-        testFailListUsers( writeSubject, PERMISSION_DENIED );
-        testFailListUsers( schemaSubject, PERMISSION_DENIED );
+        testFailListUsers( readSubject, FAIL_EXECUTE_ADMIN_PROC );
+        testFailListUsers( writeSubject, FAIL_EXECUTE_ADMIN_PROC );
+        testFailListUsers( schemaSubject, FAIL_EXECUTE_ADMIN_PROC );
     }
 
     //---------- list roles -----------
@@ -688,9 +689,9 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     void shouldNotAllowNonAdminListRoles()
     {
         testFailListRoles( pwdSubject, CHANGE_PWD_ERR_MSG );
-        testFailListRoles( readSubject, PERMISSION_DENIED );
-        testFailListRoles( writeSubject, PERMISSION_DENIED );
-        testFailListRoles( schemaSubject, PERMISSION_DENIED );
+        testFailListRoles( readSubject, FAIL_EXECUTE_ADMIN_PROC );
+        testFailListRoles( writeSubject, FAIL_EXECUTE_ADMIN_PROC );
+        testFailListRoles( schemaSubject, FAIL_EXECUTE_ADMIN_PROC );
     }
 
     //---------- list roles for user -----------
@@ -760,9 +761,9 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     void shouldNotListUsersForRoleIfNotAdmin()
     {
         testFailListRoleUsers( pwdSubject, ADMIN, CHANGE_PWD_ERR_MSG );
-        testFailListRoleUsers( readSubject, ADMIN, PERMISSION_DENIED );
-        testFailListRoleUsers( writeSubject, ADMIN, PERMISSION_DENIED );
-        testFailListRoleUsers( schemaSubject, ADMIN, PERMISSION_DENIED );
+        testFailListRoleUsers( readSubject, ADMIN, FAIL_EXECUTE_ADMIN_PROC );
+        testFailListRoleUsers( writeSubject, ADMIN, FAIL_EXECUTE_ADMIN_PROC );
+        testFailListRoleUsers( schemaSubject, ADMIN, FAIL_EXECUTE_ADMIN_PROC );
     }
 
     //---------- clearing authentication cache -----------
@@ -777,9 +778,9 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     void shouldNotClearAuthCacheIfNotAdmin()
     {
         assertFail( pwdSubject, "CALL dbms.security.clearAuthCache()", CHANGE_PWD_ERR_MSG );
-        assertFail( readSubject, "CALL dbms.security.clearAuthCache()", PERMISSION_DENIED );
-        assertFail( writeSubject, "CALL dbms.security.clearAuthCache()", PERMISSION_DENIED );
-        assertFail( schemaSubject, "CALL dbms.security.clearAuthCache()", PERMISSION_DENIED );
+        assertFail( readSubject, "CALL dbms.security.clearAuthCache()", FAIL_EXECUTE_ADMIN_PROC );
+        assertFail( writeSubject, "CALL dbms.security.clearAuthCache()", FAIL_EXECUTE_ADMIN_PROC );
+        assertFail( schemaSubject, "CALL dbms.security.clearAuthCache()", FAIL_EXECUTE_ADMIN_PROC );
     }
 
     //---------- permissions -----------
@@ -907,7 +908,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         testFailRead( noneSubject, ACCESS_DENIED );
         testFailWrite( noneSubject, ACCESS_DENIED );
         testFailSchema( noneSubject, ACCESS_DENIED );
-        testFailCreateUser( noneSubject, PERMISSION_DENIED );
+        testFailCreateUser( noneSubject, FAIL_EXECUTE_ADMIN_PROC );
         assertSystemCommandSuccess( noneSubject, "ALTER CURRENT USER SET PASSWORD FROM 'abc' TO '321'" );
     }
 
@@ -918,7 +919,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         testFailWrite( readSubject );
         testFailTokenWrite( readSubject, CREATE_LABEL_OPS_NOT_ALLOWED );
         testFailSchema( readSubject );
-        testFailCreateUser( readSubject, PERMISSION_DENIED );
+        testFailCreateUser( readSubject, FAIL_EXECUTE_ADMIN_PROC );
         assertSystemCommandSuccess( readSubject, "ALTER CURRENT USER SET PASSWORD FROM '123' TO '321'" );
     }
 
@@ -929,7 +930,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         testSuccessfulWrite( editorSubject );
         testFailTokenWrite( editorSubject );
         testFailSchema( editorSubject );
-        testFailCreateUser( editorSubject, PERMISSION_DENIED );
+        testFailCreateUser( editorSubject, FAIL_EXECUTE_ADMIN_PROC );
         assertSystemCommandSuccess( editorSubject, "ALTER CURRENT USER SET PASSWORD FROM 'abc' TO '321'" );
     }
 
@@ -940,7 +941,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         testSuccessfulWrite( writeSubject );
         testSuccessfulTokenWrite( writeSubject );
         testFailSchema( writeSubject );
-        testFailCreateUser( writeSubject, PERMISSION_DENIED );
+        testFailCreateUser( writeSubject, FAIL_EXECUTE_ADMIN_PROC );
         assertSystemCommandSuccess( writeSubject, "ALTER CURRENT USER SET PASSWORD FROM 'abc' TO '321'" );
     }
 
@@ -951,7 +952,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         testSuccessfulWrite( schemaSubject );
         testSuccessfulTokenWrite( schemaSubject );
         testSuccessfulSchema( schemaSubject );
-        testFailCreateUser( schemaSubject, PERMISSION_DENIED );
+        testFailCreateUser( schemaSubject, FAIL_EXECUTE_ADMIN_PROC );
         assertSystemCommandSuccess( schemaSubject, "ALTER CURRENT USER SET PASSWORD FROM 'abc' TO '321'" );
     }
 
@@ -974,7 +975,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         testSuccessfulRead( schemaSubject, 3 );
         testSuccessfulWrite( schemaSubject );
         testSuccessfulSchema( schemaSubject );
-        testFailCreateUser( schemaSubject, PERMISSION_DENIED );
+        testFailCreateUser( schemaSubject, FAIL_EXECUTE_ADMIN_PROC );
         assertSystemCommandSuccess( schemaSubject, "ALTER CURRENT USER SET PASSWORD FROM 'abc' TO '321'" );
     }
 }

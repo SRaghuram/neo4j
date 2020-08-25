@@ -90,16 +90,16 @@ public abstract class ProcedureInteractionTestBase<S>
     static final Matcher<Object> ONE_AS_LONG = equalTo( 1L );
     static final Matcher<Object> TWO_AS_INT = equalTo( 2 );
     static final Matcher<Object> TWO_AS_LONG = equalTo( 2L );
-    static final String SCHEMA_OPS_NOT_ALLOWED = "Schema operations are not allowed";
     private static final String PROCEDURE_TIMEOUT_ERROR = "Procedure got: Transaction guard check failed";
+    static final String SCHEMA_OPS_NOT_ALLOWED = "Schema operations are not allowed";
+    static final String ACCESS_DENIED = "Database access is not allowed for user";
+    static final String CREATE_LABEL_OPS_NOT_ALLOWED = "Creating new node label is not allowed";
+    static final String CREATE_RELTYPE_OPS_NOT_ALLOWED = "Creating new relationship type is not allowed";
+    static final String CREATE_PROPERTYKEY_OPS_NOT_ALLOWED = "Creating new property name is not allowed";
+    static final String FAIL_EXECUTE_ADMIN_PROC = "Executing admin procedure is not allowed";
     String CHANGE_PWD_ERR_MSG = AuthorizationViolationException.PERMISSION_DENIED;
     private static final String BOLT_PWD_ERR_MSG =
             "The credentials you provided were valid, but must be changed before you can use this instance.";
-    String PERMISSION_DENIED = "Permission denied.";
-    String ACCESS_DENIED = "Database access is not allowed for user";
-    String CREATE_LABEL_OPS_NOT_ALLOWED = "Creating new node label is not allowed";
-    String CREATE_RELTYPE_OPS_NOT_ALLOWED = "Creating new relationship type is not allowed";
-    String CREATE_PROPERTYKEY_OPS_NOT_ALLOWED = "Creating new property name is not allowed";
 
     protected boolean IS_EMBEDDED = true;
 

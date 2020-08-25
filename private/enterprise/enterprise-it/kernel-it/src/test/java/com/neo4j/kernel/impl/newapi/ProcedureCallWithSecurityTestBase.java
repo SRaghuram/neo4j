@@ -13,7 +13,6 @@ import java.util.Map;
 import org.neo4j.collection.RawIterator;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.ProcedureCallContext;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
@@ -59,6 +58,8 @@ public abstract class ProcedureCallWithSecurityTestBase<G extends KernelAPIWrite
     private final CallableProcedure exampleProc2 = procedure( exampleProc2Signature );
 
     private static AuthManager authManager;
+
+    private final String FAIL_EXECUTE_PROC = "Executing procedure is not allowed for user";
 
     @Override
     public void createSystemGraph( GraphDatabaseService graphDb )
@@ -123,7 +124,7 @@ public abstract class ProcedureCallWithSecurityTestBase<G extends KernelAPIWrite
             QualifiedName procedureName = procedureName( "test", "proc2" );
             var procedureId = tx.procedures().procedureGet( procedureName ).id();
             assertThatThrownBy(() -> tx.procedures().procedureCallRead( procedureId, new AnyValue[]{}, ProcedureCallContext.EMPTY ))
-                    .hasMessageContaining( AuthorizationViolationException.PERMISSION_DENIED );
+                    .hasMessageContaining( FAIL_EXECUTE_PROC );
         }
     }
 
@@ -136,7 +137,7 @@ public abstract class ProcedureCallWithSecurityTestBase<G extends KernelAPIWrite
             QualifiedName procedureName = procedureName( "test", "proc2" );
             var procedureId = tx.procedures().procedureGet( procedureName ).id();
             assertThatThrownBy(() -> tx.procedures().procedureCallWrite( procedureId, new AnyValue[]{}, ProcedureCallContext.EMPTY ))
-                    .hasMessageContaining( AuthorizationViolationException.PERMISSION_DENIED );
+                    .hasMessageContaining( FAIL_EXECUTE_PROC );
         }
     }
 
@@ -161,7 +162,7 @@ public abstract class ProcedureCallWithSecurityTestBase<G extends KernelAPIWrite
             QualifiedName procedureName = procedureName( "example", "proc1" );
             var procedureId = tx.procedures().procedureGet( procedureName ).id();
             assertThatThrownBy(() -> tx.procedures().procedureCallRead( procedureId, new AnyValue[]{}, ProcedureCallContext.EMPTY ))
-                    .hasMessageContaining( AuthorizationViolationException.PERMISSION_DENIED );
+                    .hasMessageContaining( FAIL_EXECUTE_PROC );
         }
     }
 

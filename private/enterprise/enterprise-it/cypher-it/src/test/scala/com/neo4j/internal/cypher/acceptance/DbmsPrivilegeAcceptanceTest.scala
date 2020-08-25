@@ -8,7 +8,6 @@ package com.neo4j.internal.cypher.acceptance
 import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_40
 import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41D1
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
-import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.security.AuthorizationViolationException
 
 class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase with EnterpriseComponentVersionTestSupport {
@@ -259,10 +258,10 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     } should have message "Permission denied."
     execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set(granted(traverse).node("A").role("otherRole").graph("*").map))
 
-    // Should not be able to execute @admin procedure
-    the[AuthorizationViolationException] thrownBy {
+    // Should not be able to execute (@admin) procedure
+    (the[AuthorizationViolationException] thrownBy {
       executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.default_database')")
-    } should have message "Permission denied."
+    }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 
   test("should fail dbms management when denied all dbms privileges privilege") {

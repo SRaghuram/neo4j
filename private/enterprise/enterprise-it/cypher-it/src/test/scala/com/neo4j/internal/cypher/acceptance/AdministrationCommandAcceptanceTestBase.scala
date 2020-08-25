@@ -45,6 +45,8 @@ import org.neo4j.server.security.systemgraph.UserSecurityGraphComponent
 
 abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFunSuite with EnterpriseGraphDatabaseTestSupport {
   val DEFAULT: String = "DEFAULT"
+  val FAIL_EXECUTE_ADMIN_PROC: String = "Executing admin procedure is not allowed"
+  val FAIL_EXECUTE_PROC: String = "Executing procedure is not allowed"
 
   val neo4jUser: Map[String, Any] = adminUser("neo4j")
   val neo4jUserActive: Map[String, Any] = adminUser("neo4j", passwordChangeRequired = false)

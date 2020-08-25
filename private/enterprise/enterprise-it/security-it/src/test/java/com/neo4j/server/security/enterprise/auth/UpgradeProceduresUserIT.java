@@ -232,7 +232,7 @@ class UpgradeProceduresUserIT
 
         try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
         {
-            assertThatThrownBy( () -> tx.execute( query ) ).hasMessageContaining( AuthorizationViolationException.PERMISSION_DENIED );
+            assertThatThrownBy( () -> tx.execute( query ) ).hasMessageContaining( "Executing admin procedure is not allowed" );
         }
 
         LoginContext adminUser = assertLoginSuccess( database, INITIAL_USER_NAME, "foo" );

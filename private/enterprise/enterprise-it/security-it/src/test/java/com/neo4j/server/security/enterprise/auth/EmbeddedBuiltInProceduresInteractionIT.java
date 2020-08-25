@@ -30,6 +30,7 @@ import org.neo4j.test.DoubleLatch;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 
 public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInteractionTestBase<EnterpriseLoginContext>
 {

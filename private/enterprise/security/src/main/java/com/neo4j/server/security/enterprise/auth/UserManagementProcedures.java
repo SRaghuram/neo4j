@@ -146,6 +146,7 @@ public class UserManagementProcedures extends AuthProceduresBase
         return listUsers( "dbms.security.listUsers" );
     }
 
+    @SuppressWarnings( "unchecked" )
     private Stream<UserResult> listUsers( String callingProcedure ) throws ProcedureException
     {
         var result = new ArrayList<UserResult>();
@@ -156,7 +157,6 @@ public class UserManagementProcedures extends AuthProceduresBase
             execute.accept( row ->
             {
                 var user = row.getString( "user" );
-                // TODO: Don't like this cast here
                 var roles = (List<String>) row.get( "roles" );
                 var changeRequired = row.getBoolean( "passwordChangeRequired" );
                 var suspended = row.getBoolean( "suspended" );
