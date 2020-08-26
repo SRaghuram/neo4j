@@ -5,8 +5,12 @@
  */
 package com.neo4j.causalclustering.discovery;
 
+import com.neo4j.causalclustering.identity.RaftMemberId;
+
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.neo4j.kernel.database.DatabaseId;
 
 public class CoreTopologyListenerService
 {
@@ -27,13 +31,13 @@ public class CoreTopologyListenerService
         listeners.remove( listener );
     }
 
-    public void notifyListeners( DatabaseCoreTopology coreTopology )
+    public void notifyListeners( DatabaseId databaseId, Set<RaftMemberId> memberIds )
     {
         for ( CoreTopologyService.Listener listener : listeners )
         {
-            if ( listener.namedDatabaseId().databaseId().equals( coreTopology.databaseId() ) )
+            if ( listener.namedDatabaseId().databaseId().equals( databaseId ) )
             {
-                listener.onCoreTopologyChange( coreTopology );
+                listener.onCoreTopologyChange( memberIds );
             }
         }
     }

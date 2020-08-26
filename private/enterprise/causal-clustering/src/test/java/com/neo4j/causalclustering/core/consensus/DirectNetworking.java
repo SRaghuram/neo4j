@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.core.consensus;
 
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.time.Instant;
 import java.util.Collections;
@@ -21,19 +21,19 @@ import org.neo4j.kernel.database.DatabaseIdRepository;
 
 public class DirectNetworking
 {
-    private final Map<MemberId,com.neo4j.causalclustering.messaging.Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>>> handlers =
+    private final Map<RaftMemberId,com.neo4j.causalclustering.messaging.Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>>> handlers =
             new HashMap<>();
-    private final Map<MemberId,Queue<RaftMessages.InboundRaftMessageContainer<?>>> messageQueues = new HashMap<>();
-    private final Set<MemberId> disconnectedMembers = Collections.newSetFromMap( new ConcurrentHashMap<>() );
+    private final Map<RaftMemberId,Queue<RaftMessages.InboundRaftMessageContainer<?>>> messageQueues = new HashMap<>();
+    private final Set<RaftMemberId> disconnectedMembers = Collections.newSetFromMap( new ConcurrentHashMap<>() );
     private final RaftId raftId = RaftId.from( DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID.databaseId() );
 
     public void processMessages()
     {
         while ( messagesToBeProcessed() )
         {
-            for ( Map.Entry<MemberId,Queue<RaftMessages.InboundRaftMessageContainer<?>>> entry : messageQueues.entrySet() )
+            for ( Map.Entry<RaftMemberId,Queue<RaftMessages.InboundRaftMessageContainer<?>>> entry : messageQueues.entrySet() )
             {
-                MemberId id = entry.getKey();
+                RaftMemberId id = entry.getKey();
                 Queue<RaftMessages.InboundRaftMessageContainer<?>> queue = entry.getValue();
                 if ( !queue.isEmpty() )
                 {
@@ -56,27 +56,27 @@ public class DirectNetworking
         return false;
     }
 
-    public void disconnect( MemberId id )
+    public void disconnect( RaftMemberId id )
     {
         disconnectedMembers.add( id );
     }
 
-    public void reconnect( MemberId id )
+    public void reconnect( RaftMemberId id )
     {
         disconnectedMembers.remove( id );
     }
 
-    public class Outbound implements com.neo4j.causalclustering.messaging.Outbound<MemberId,RaftMessages.RaftMessage>
+    public class Outbound implements com.neo4j.causalclustering.messaging.Outbound<RaftMemberId,RaftMessages.RaftMessage>
     {
-        private final MemberId me;
+        private final RaftMemberId me;
 
-        public Outbound( MemberId me )
+        public Outbound( RaftMemberId me )
         {
             this.me = me;
         }
 
         @Override
-        public synchronized void send( MemberId to, final RaftMessages.RaftMessage message, boolean block )
+        public synchronized void send( RaftMemberId to, final RaftMessages.RaftMessage message, boolean block )
         {
             if ( canDeliver( to ) )
             {
@@ -84,7 +84,7 @@ public class DirectNetworking
             }
         }
 
-        private boolean canDeliver( MemberId to )
+        private boolean canDeliver( RaftMemberId to )
         {
             return messageQueues.containsKey( to ) &&
                     !disconnectedMembers.contains( to ) &&
@@ -94,9 +94,9 @@ public class DirectNetworking
 
     public class Inbound implements com.neo4j.causalclustering.messaging.Inbound<RaftMessages.InboundRaftMessageContainer<?>>
     {
-        private final MemberId id;
+        private final RaftMemberId id;
 
-        public Inbound( MemberId id )
+        public Inbound( RaftMemberId id )
         {
             this.id = id;
         }

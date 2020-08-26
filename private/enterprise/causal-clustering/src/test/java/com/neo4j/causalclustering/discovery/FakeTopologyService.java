@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseToMember
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.configuration.ServerGroupName;
 
 import java.util.ArrayList;
@@ -215,6 +216,12 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     }
 
     @Override
+    public SocketAddress lookupCatchupAddress( RaftMemberId upstream ) throws CatchupAddressResolutionException
+    {
+        return lookupCatchupAddress( resolveServerFromRaftMember( upstream ) );
+    }
+
+    @Override
     public RoleInfo lookupRole( NamedDatabaseId ignored, MemberId memberId )
     {
         var role = coreRoles.get( memberId );
@@ -231,8 +238,20 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     {
         return coreRoles.entrySet().stream()
                         .filter( entry -> entry.getValue() == RoleInfo.LEADER )
-                        .map( entry -> new LeaderInfo( entry.getKey(), 1 ) )
+                        .map( entry -> new LeaderInfo( RaftMemberId.from( entry.getKey() ), 1 ) )
                         .findFirst().orElse( null );
+    }
+
+    @Override
+    public MemberId resolveServerFromRaftMember( RaftMemberId raftMemberId )
+    {
+        return MemberId.of( raftMemberId );
+    }
+
+    @Override
+    public RaftMemberId resolveRaftMemberForServer( NamedDatabaseId namedDatabaseId, MemberId serverId )
+    {
+        return RaftMemberId.from( serverId );
     }
 
     public void removeLeader()

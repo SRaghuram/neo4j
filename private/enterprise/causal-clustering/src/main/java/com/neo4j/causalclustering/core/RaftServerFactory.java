@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core;
 import com.neo4j.causalclustering.core.consensus.RaftMessageNettyHandler;
 import com.neo4j.causalclustering.core.consensus.protocol.RaftProtocolServerInstaller;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.logging.RaftMessageLogger;
 import com.neo4j.causalclustering.messaging.LoggingInbound;
 import com.neo4j.causalclustering.messaging.marshalling.DecodingDispatcher;
@@ -64,14 +64,14 @@ public class RaftServerFactory
     private final GlobalModule globalModule;
     private final ClusteringIdentityModule clusteringIdentityModule;
     private final ApplicationSupportedProtocols supportedApplicationProtocol;
-    private final RaftMessageLogger<MemberId> raftMessageLogger;
+    private final RaftMessageLogger<RaftMemberId> raftMessageLogger;
     private final LogProvider logProvider;
     private final NettyPipelineBuilderFactory pipelineBuilderFactory;
     private final Collection<ModifierSupportedProtocols> supportedModifierProtocols;
     private final DatabaseIdRepository databaseIdRepository;
 
     RaftServerFactory( GlobalModule globalModule, ClusteringIdentityModule clusteringIdentityModule, NettyPipelineBuilderFactory pipelineBuilderFactory,
-            RaftMessageLogger<MemberId> raftMessageLogger, ApplicationSupportedProtocols supportedApplicationProtocol,
+            RaftMessageLogger<RaftMemberId> raftMessageLogger, ApplicationSupportedProtocols supportedApplicationProtocol,
             Collection<ModifierSupportedProtocols> supportedModifierProtocols, DatabaseIdRepository databaseIdRepository )
     {
         this.globalModule = globalModule;
@@ -115,7 +115,8 @@ public class RaftServerFactory
                                      globalModule.getLogService().getUserLogProvider(), raftListenAddress, RAFT_SERVER_NAME, raftServerExecutor,
                                      globalModule.getConnectorPortRegister(), BootstrapConfiguration.serverConfig( config ) );
 
-        var loggingRaftInbound = new LoggingInbound( nettyHandler, raftMessageLogger, clusteringIdentityModule.memberId(), databaseIdRepository );
+        var myself = /*RaftMessageLogger*/ RaftMemberId.from( clusteringIdentityModule.memberId() );
+        var loggingRaftInbound = new LoggingInbound( nettyHandler, raftMessageLogger, myself, databaseIdRepository );
         loggingRaftInbound.registerHandler( raftMessageDispatcher );
 
         return raftServer;

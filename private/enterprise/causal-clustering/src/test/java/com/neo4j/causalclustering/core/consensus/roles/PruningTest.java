@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
 import com.neo4j.causalclustering.core.consensus.outcome.PruneLogCommand;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -19,12 +19,12 @@ import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContextBuilder.contextWithState;
 import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.builder;
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class PruningTest
 {
-    private MemberId myself = member( 0 );
+    private RaftMemberId myself = raftMember( 0 );
 
     @ParameterizedTest
     @EnumSource( Role.class )

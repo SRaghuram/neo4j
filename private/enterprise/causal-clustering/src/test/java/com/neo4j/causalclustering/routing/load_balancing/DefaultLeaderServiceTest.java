@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.core.consensus.LeaderListener;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -29,9 +30,12 @@ class DefaultLeaderServiceTest
     private final NamedDatabaseId dbone = from( "one", UUID.randomUUID() );
     private final NamedDatabaseId dbtwo = from( "one", UUID.randomUUID() );
 
-    private final MemberId memberOne = IdFactory.randomMemberId();
-    private final MemberId memberTwo = IdFactory.randomMemberId();
-    private final MemberId topologyLeader = IdFactory.randomMemberId();
+    private final RaftMemberId memberOne = IdFactory.randomRaftMemberId();
+    private final MemberId serverOne = MemberId.of( memberOne );
+    private final RaftMemberId memberTwo = IdFactory.randomRaftMemberId();
+    private final MemberId serverTwo = MemberId.of( memberTwo );
+    private final RaftMemberId topologyLeader = IdFactory.randomRaftMemberId();
+    private final MemberId topologyLeaderServer = MemberId.of( topologyLeader );
 
     private TopologyService topologyService = mock( TopologyService.class );
     private DefaultLeaderService leaderService = new DefaultLeaderService( topologyService, NullLogProvider.nullLogProvider() );
@@ -44,6 +48,9 @@ class DefaultLeaderServiceTest
         dbOneListener = leaderService.createListener( dbone );
         dbTwoListener = leaderService.createListener( dbtwo );
         when( topologyService.getLeader( any( NamedDatabaseId.class ) ) ).thenReturn( leaderInfo( topologyLeader ) );
+        when( topologyService.resolveServerFromRaftMember( memberOne ) ).thenReturn( serverOne );
+        when( topologyService.resolveServerFromRaftMember( memberTwo ) ).thenReturn( serverTwo );
+        when( topologyService.resolveServerFromRaftMember( topologyLeader ) ).thenReturn( topologyLeaderServer );
     }
 
     @Test
@@ -52,40 +59,40 @@ class DefaultLeaderServiceTest
         dbOneListener.onLeaderSwitch( leaderInfo( memberOne ) );
         dbTwoListener.onLeaderSwitch( leaderInfo( memberTwo ) );
 
-        assertThat( leaderService.getLeaderId( dbone ) ).contains( memberOne );
-        assertThat( leaderService.getLeaderId( dbtwo ) ).contains( memberTwo );
+        assertThat( leaderService.getLeaderServer( dbone ) ).contains( serverOne );
+        assertThat( leaderService.getLeaderServer( dbtwo ) ).contains( serverTwo );
     }
 
     @Test
     void shouldReactToLeaderSwitch()
     {
         dbOneListener.onLeaderSwitch( leaderInfo( memberOne ) );
-        assertThat( leaderService.getLeaderId( dbone ) ).contains( memberOne );
+        assertThat( leaderService.getLeaderServer( dbone ) ).contains( serverOne );
 
         dbOneListener.onLeaderSwitch( leaderInfo( memberTwo ) );
-        assertThat( leaderService.getLeaderId( dbone ) ).contains( memberTwo );
+        assertThat( leaderService.getLeaderServer( dbone ) ).contains( serverTwo );
     }
 
     @Test
     void shouldFallbackToDiscovery()
     {
         dbOneListener.onLeaderSwitch( leaderInfo( memberOne ) );
-        assertThat( leaderService.getLeaderId( dbone ) ).contains( memberOne );
+        assertThat( leaderService.getLeaderServer( dbone ) ).contains( serverOne );
 
         dbOneListener.onLeaderSwitch( leaderInfo( null ) );
-        assertThat( leaderService.getLeaderId( dbone ) ).contains( topologyLeader );
+        assertThat( leaderService.getLeaderServer( dbone ) ).contains( topologyLeaderServer );
     }
 
     @Test
     void shoulReactToUnregisterEvent()
     {
         dbOneListener.onLeaderSwitch( leaderInfo( memberOne ) );
-        assertThat( leaderService.getLeaderId( dbone ) ).contains( memberOne );
+        assertThat( leaderService.getLeaderServer( dbone ) ).contains( serverOne );
         dbOneListener.onUnregister();
-        assertThat( leaderService.getLeaderId( dbone ) ).contains( topologyLeader );
+        assertThat( leaderService.getLeaderServer( dbone ) ).contains( topologyLeaderServer );
     }
 
-    private static LeaderInfo leaderInfo( MemberId memberOne )
+    private static LeaderInfo leaderInfo( RaftMemberId memberOne )
     {
         return new LeaderInfo( memberOne, 1 );
     }

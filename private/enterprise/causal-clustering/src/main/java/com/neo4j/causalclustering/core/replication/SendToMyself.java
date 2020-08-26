@@ -6,15 +6,15 @@
 package com.neo4j.causalclustering.core.replication;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 
 public class SendToMyself
 {
-    private final MemberId myself;
-    private final Outbound<MemberId,RaftMessages.RaftMessage> outbound;
+    private final RaftMemberId myself;
+    private final Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound;
 
-    public SendToMyself( MemberId myself, Outbound<MemberId,RaftMessages.RaftMessage> outbound )
+    public SendToMyself( RaftMemberId myself, Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound )
     {
         this.myself = myself;
         this.outbound = outbound;

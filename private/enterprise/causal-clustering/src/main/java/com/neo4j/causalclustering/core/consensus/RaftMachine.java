@@ -17,7 +17,7 @@ import com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContex
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -41,7 +41,7 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
 
     private final RaftState state;
     private final RaftMessageHandlingContext messageHandlingContext;
-    private final MemberId myself;
+    private final RaftMemberId myself;
 
     private final LeaderAvailabilityTimers leaderAvailabilityTimers;
     private final RaftMembershipManager membershipManager;
@@ -49,8 +49,9 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
     private final Log log;
     private volatile Role currentRole = Role.FOLLOWER;
 
-    public RaftMachine( MemberId myself, LeaderAvailabilityTimers leaderAvailabilityTimers, LogProvider logProvider, RaftMembershipManager membershipManager,
-            InFlightCache inFlightCache, RaftOutcomeApplier outcomeApplier, RaftState state, RaftMessageHandlingContext messageHandlingContext )
+    public RaftMachine( RaftMemberId myself, LeaderAvailabilityTimers leaderAvailabilityTimers, LogProvider logProvider,
+            RaftMembershipManager membershipManager, InFlightCache inFlightCache, RaftOutcomeApplier outcomeApplier, RaftState state,
+            RaftMessageHandlingContext messageHandlingContext )
     {
         this.myself = myself;
         this.leaderAvailabilityTimers = leaderAvailabilityTimers;
@@ -120,7 +121,7 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
         membershipManager.install( coreState.committed() );
     }
 
-    public synchronized void setTargetMembershipSet( Set<MemberId> targetMembers )
+    public synchronized void setTargetMembershipSet( Set<RaftMemberId> targetMembers )
     {
         membershipManager.setTargetMembershipSet( targetMembers );
 
@@ -179,7 +180,7 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
         return currentRole;
     }
 
-    public MemberId memberId()
+    public RaftMemberId memberId()
     {
         return myself;
     }
@@ -201,12 +202,12 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
         return state.term();
     }
 
-    public Set<MemberId> votingMembers()
+    public Set<RaftMemberId> votingMembers()
     {
         return membershipManager.votingMembers();
     }
 
-    public Set<MemberId> replicationMembers()
+    public Set<RaftMemberId> replicationMembers()
     {
         return membershipManager.replicationMembers();
     }

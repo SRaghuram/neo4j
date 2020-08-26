@@ -17,7 +17,7 @@ import com.neo4j.causalclustering.core.consensus.membership.MemberIdSet;
 import com.neo4j.causalclustering.core.consensus.membership.MembershipEntry;
 import com.neo4j.causalclustering.core.consensus.schedule.OnDemandTimerService;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.identity.RaftTestMemberSetBuilder;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
@@ -31,7 +31,7 @@ import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.appe
 import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.voteRequest;
 import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.voteResponse;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.FOLLOWER;
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -43,13 +43,13 @@ import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 class RaftMachineTest
 {
     private final int electionTimeout = 500;
-    private MemberId myself = member( 0 );
+    private RaftMemberId myself = raftMember( 0 );
 
     /* A few members that we use at will in tests. */
-    private MemberId member1 = member( 1 );
-    private MemberId member2 = member( 2 );
-    private MemberId member3 = member( 3 );
-    private MemberId member4 = member( 4 );
+    private RaftMemberId member1 = raftMember( 1 );
+    private RaftMemberId member2 = raftMember( 2 );
+    private RaftMemberId member3 = raftMember( 3 );
+    private RaftMemberId member4 = raftMember( 4 );
 
     private ReplicatedInteger data1 = ReplicatedInteger.valueOf( 1 );
     private ReplicatedInteger data2 = ReplicatedInteger.valueOf( 2 );
@@ -384,7 +384,7 @@ class RaftMachineTest
     {
         // Given
         DirectNetworking network = new DirectNetworking();
-        final MemberId newMember = member( 99 );
+        final RaftMemberId newMember = raftMember( 99 );
         DirectNetworking.Inbound newMemberInbound = network.new Inbound( newMember );
         final OutboundMessageCollector messages = new OutboundMessageCollector();
         newMemberInbound.registerHandler( message -> messages.send( newMember, message.message() ) );

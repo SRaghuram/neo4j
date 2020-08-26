@@ -9,7 +9,7 @@ import com.neo4j.bench.micro.benchmarks.cluster.EditionModuleBackedAbstractBench
 import com.neo4j.bench.micro.benchmarks.cluster.LocalNetworkPlatform;
 import com.neo4j.bench.micro.benchmarks.cluster.ProtocolVersion;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.Inbound;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
@@ -29,7 +29,7 @@ public abstract class AbstractRaftBenchmark extends EditionModuleBackedAbstractB
 {
     private static final boolean DEBUG = false;
 
-    static final MemberId MEMBER_ID = MemberId.of( UUID.randomUUID() );
+    static final RaftMemberId MEMBER_ID = RaftMemberId.of( UUID.randomUUID() );
     private final LocalNetworkPlatform platform = new LocalNetworkPlatform();
     private Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> handler;
     private RaftMessages.OutboundRaftMessageContainer<RaftMessages.RaftMessage> message;

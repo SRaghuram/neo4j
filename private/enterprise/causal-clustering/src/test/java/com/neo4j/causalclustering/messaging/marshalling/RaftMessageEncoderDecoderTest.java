@@ -20,8 +20,8 @@ import com.neo4j.causalclustering.core.state.machines.status.StatusRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.TokenType;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.marshalling.v2.SupportedMessagesV2;
 import com.neo4j.causalclustering.messaging.marshalling.v3.SupportedMessagesV3;
 import com.neo4j.causalclustering.messaging.marshalling.v3.decoding.RaftMessageDecoderV3;
@@ -73,7 +73,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  */
 class RaftMessageEncoderDecoderTest
 {
-    private static final MemberId MEMBER_ID = IdFactory.randomMemberId();
+    private static final RaftMemberId MEMBER_ID = IdFactory.randomRaftMemberId();
 
     private static final List<ApplicationProtocolVersion> PROTOCOLS = ApplicationProtocols.withCategory( RAFT )
             .stream()

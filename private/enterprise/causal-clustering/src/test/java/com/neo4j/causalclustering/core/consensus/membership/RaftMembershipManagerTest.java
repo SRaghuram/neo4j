@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.consensus.outcome.RaftLogCommand;
 import com.neo4j.causalclustering.core.consensus.outcome.TruncateLogCommand;
 import com.neo4j.causalclustering.core.replication.SendToMyself;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -30,7 +30,7 @@ import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 import static com.neo4j.causalclustering.identity.RaftTestMemberSetBuilder.INSTANCE;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -49,7 +49,7 @@ import static org.neo4j.logging.NullLogProvider.getInstance;
 class RaftMembershipManagerTest
 {
     private final Log log = NullLog.getInstance();
-    private final MemberId myself = member( 0 );
+    private final RaftMemberId myself = raftMember( 0 );
     private final SendToMyself sendToMyself = mock( SendToMyself.class );
 
     @Inject
@@ -256,7 +256,7 @@ class RaftMembershipManagerTest
         return raftMembershipManager( log, logProvider, Set.of() );
     }
 
-    private RaftMembershipManager raftMembershipManager( InMemoryRaftLog log, LogProvider logProvider, Set<MemberId> initialMembers )
+    private RaftMembershipManager raftMembershipManager( InMemoryRaftLog log, LogProvider logProvider, Set<RaftMemberId> initialMembers )
     {
         RaftMembershipState initialState;
         if ( initialMembers.isEmpty() )

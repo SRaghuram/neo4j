@@ -11,7 +11,7 @@ import com.neo4j.causalclustering.core.consensus.explorer.ClusterState;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 class OutOfOrderDeliveryTest
@@ -20,15 +20,15 @@ class OutOfOrderDeliveryTest
     void shouldReOrder() throws Exception
     {
         // given
-        ClusterState clusterState = new ClusterState( asSet( member( 0 ) ) );
-        clusterState.queues.get( member( 0 ) ).add( new Election( member( 0 ) ) );
-        clusterState.queues.get( member( 0 ) ).add( new Heartbeat( member( 0 ) ) );
+        ClusterState clusterState = new ClusterState( asSet( raftMember( 0 ) ) );
+        clusterState.queues.get( raftMember( 0 ) ).add( new Election( raftMember( 0 ) ) );
+        clusterState.queues.get( raftMember( 0 ) ).add( new Heartbeat( raftMember( 0 ) ) );
 
         // when
-        ClusterState reOrdered = new OutOfOrderDelivery( member( 0 ) ).advance( clusterState );
+        ClusterState reOrdered = new OutOfOrderDelivery( raftMember( 0 ) ).advance( clusterState );
 
         // then
-        Assertions.assertEquals( new Heartbeat( member( 0 ) ), reOrdered.queues.get( member( 0 ) ).poll() );
-        Assertions.assertEquals( new Election( member( 0 ) ), reOrdered.queues.get( member( 0 ) ).poll() );
+        Assertions.assertEquals( new Heartbeat( raftMember( 0 ) ), reOrdered.queues.get( raftMember( 0 ) ).poll() );
+        Assertions.assertEquals( new Election( raftMember( 0 ) ), reOrdered.queues.get( raftMember( 0 ) ).poll() );
     }
 }

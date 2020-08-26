@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.consensus.membership.MembershipEntry;
 import com.neo4j.causalclustering.core.consensus.schedule.OnDemandTimerService;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.identity.RaftTestMemberSetBuilder;
 import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.causalclustering.messaging.Outbound;
@@ -26,7 +26,7 @@ import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.vote
 import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.voteResponse;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.CANDIDATE;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.atLeast;
@@ -38,14 +38,14 @@ import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 class ElectionTest
 {
-    private MemberId myself = member( 0 );
+    private RaftMemberId myself = raftMember( 0 );
 
     /* A few members that we use at will in tests. */
-    private MemberId member1 = member( 1 );
-    private MemberId member2 = member( 2 );
+    private RaftMemberId member1 = raftMember( 1 );
+    private RaftMemberId member2 = raftMember( 2 );
 
     private Inbound inbound = mock( Inbound.class );
-    private Outbound<MemberId,RaftMessages.RaftMessage> outbound = mock( Outbound.class );
+    private Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound = mock( Outbound.class );
 
     @Test
     void candidateShouldWinElectionAndBecomeLeader() throws Exception

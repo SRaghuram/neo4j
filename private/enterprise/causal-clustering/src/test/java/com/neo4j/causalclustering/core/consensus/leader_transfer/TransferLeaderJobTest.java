@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.core.consensus.leader_transfer;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
 import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.configuration.CausalClusteringSettings;
@@ -36,16 +37,16 @@ import static org.neo4j.time.Clocks.fakeClock;
 class TransferLeaderJobTest
 {
     private final ClusteringIdentityModule identityModule = new StubClusteringIdentityModule();
-    private final MemberId myself = identityModule.memberId();
     private final ClusteringIdentityModule remoteIdentityModule = new StubClusteringIdentityModule();
-    private final MemberId core1 = remoteIdentityModule.memberId();
     private final NamedDatabaseId databaseId1 = randomNamedDatabaseId();
     private final NamedDatabaseId databaseId2 = randomNamedDatabaseId();
-    private final RaftMembershipResolver raftMembershipResolver = new StubRaftMembershipResolver( myself, core1 );
+    private final RaftMemberId myself = identityModule.memberId( databaseId1 );
+    private final RaftMemberId remote = remoteIdentityModule.memberId( databaseId2 );
+    private final RaftMembershipResolver raftMembershipResolver = new StubRaftMembershipResolver( myself, remote );
     private final TrackingMessageHandler messageHandler = new TrackingMessageHandler();
     private final DatabasePenalties databasePenalties = new DatabasePenalties( Duration.ofMillis( 1 ), fakeClock() );
     private final LeadershipTransferor leadershipTransferor =
-            new LeadershipTransferor( messageHandler, identityModule, databasePenalties, raftMembershipResolver, fakeClock() );
+            new LeadershipTransferor( messageHandler, identityModule, databasePenalties, raftMembershipResolver, fakeClock(), MemberId::of );
 
     @Test
     void shouldChooseToTransferIfIAmNotInPriority()
@@ -65,7 +66,7 @@ class TransferLeaderJobTest
         assertEquals( messageHandler.proposals.size(), 1 );
         var propose = messageHandler.proposals.get( 0 );
         assertEquals( propose.raftId().uuid(), databaseId1.databaseId().uuid() );
-        assertEquals( propose.message().proposed(), core1 );
+        assertEquals( propose.message().proposed(), remote );
         assertEquals( propose.message().priorityGroups(), Set.of( new ServerGroupName( "prio" ) ) );
     }
 
@@ -134,7 +135,7 @@ class TransferLeaderJobTest
                 .set( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "prio" ) ).build();
         var serverGroupsSupplier = listen( config );
 
-        var transferee = core1;
+        var transferee = remote;
         var selectionStrategyInputs = new ArrayList<TransferCandidates>();
         SelectionStrategy mockSelectionStrategy = validTopologies ->
         {
@@ -157,7 +158,7 @@ class TransferLeaderJobTest
     void shouldNotDoNormalLoadBalancingForSystemDatabase()
     {
         // given
-        var transferee = core1;
+        var transferee = remote;
         var selectionStrategyInputs = new ArrayList<TransferCandidates>();
         SelectionStrategy mockSelectionStrategy = validTopologies ->
         {
@@ -190,7 +191,7 @@ class TransferLeaderJobTest
     }
 
     @Test
-    void shouldHandleMoreThanOneDatbaseInPrio()
+    void shouldHandleMoreThanOneDatabaseInPrio()
     {
         var databaseOne = DatabaseIdFactory.from( "one", randomUUID() );
         var databaseIds = Set.of( databaseOne, DatabaseIdFactory.from( "two", randomUUID() ) );
@@ -212,7 +213,7 @@ class TransferLeaderJobTest
         assertEquals( messageHandler.proposals.size(), 1 );
         var propose = messageHandler.proposals.get( 0 );
         assertEquals( propose.raftId().uuid(), databaseOne.databaseId().uuid() );
-        assertEquals( propose.message().proposed(), core1 );
+        assertEquals( propose.message().proposed(), remote );
         assertEquals( propose.message().priorityGroups(), ServerGroupName.setOf( "one" ) );
     }
 
@@ -240,7 +241,7 @@ class TransferLeaderJobTest
 
         // then I should try and pass on leadership
         assertThat( messageHandler.proposals.get( 0 ).message() ).isEqualTo(
-                new RaftMessages.LeadershipTransfer.Proposal( myself, core1, Set.of( new ServerGroupName( "prio" ) ) ) );
+                new RaftMessages.LeadershipTransfer.Proposal( myself, remote, Set.of( new ServerGroupName( "prio" ) ) ) );
     }
 
     static class TrackingMessageHandler implements Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>>

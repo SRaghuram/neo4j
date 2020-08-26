@@ -56,7 +56,7 @@ public class AddressCollector
     {
         var coreTopology = topologyService.coreTopologyForDatabase( namedDatabaseId );
         var rrTopology = topologyService.readReplicaTopologyForDatabase( namedDatabaseId );
-        var optionalLeaderId = leaderService.getLeaderId( namedDatabaseId );
+        var optionalLeaderId = leaderService.getLeaderServer( namedDatabaseId );
 
         var timeToLive = config.get( GraphDatabaseSettings.routing_ttl ).toMillis();
         var shouldShuffle = config.get( CausalClusteringSettings.load_balancing_shuffle );
@@ -69,7 +69,7 @@ public class AddressCollector
 
     private List<SocketAddress> routeEndpoints( DatabaseCoreTopology coreTopology, Policy policy, boolean shouldShuffle )
     {
-        var routers = coreTopology.members().entrySet().stream().map( AddressCollector::newServerInfo );
+        var routers = coreTopology.servers().entrySet().stream().map( AddressCollector::newServerInfo );
 
         if ( policy != null )
         {
@@ -112,11 +112,11 @@ public class AddressCollector
                                                boolean shouldShuffle,
                                                NamedDatabaseId dbId )
     {
-        var possibleReaders = rrTopology.members().entrySet().stream().map( AddressCollector::newServerInfo ).collect( toSet() );
+        var possibleReaders = rrTopology.servers().entrySet().stream().map( AddressCollector::newServerInfo ).collect( toSet() );
 
         if ( config.get( cluster_allow_reads_on_followers ) || possibleReaders.isEmpty() )
         {
-            var coreMembers = coreTopology.members().entrySet().stream().map( AddressCollector::newServerInfo ).collect( toSet() );
+            var coreMembers = coreTopology.servers().entrySet().stream().map( AddressCollector::newServerInfo ).collect( toSet() );
 
             // if the leader is present and it is not alone filter it out from the read end points
             if ( optionalLeaderId.isPresent() && coreMembers.size() > 1 )

@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.core.replication;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.state.machines.status.Status;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,7 +42,7 @@ class ClusterStatusResponseCollectorTest
         //given
         var collector = new ClusterStatusResponseCollector();
         var requestId = UUID.randomUUID();
-        var statusResponse = new RaftMessages.StatusResponse( IdFactory.randomMemberId(),
+        var statusResponse = new RaftMessages.StatusResponse( IdFactory.randomRaftMemberId(),
                                                               new Status( Status.Message.OK ),
                                                               UUID.randomUUID() );
 
@@ -63,7 +62,7 @@ class ClusterStatusResponseCollectorTest
         //given
         var collector = new ClusterStatusResponseCollector();
         var requestId = UUID.randomUUID();
-        var statusResponse = new RaftMessages.StatusResponse( IdFactory.randomMemberId(),
+        var statusResponse = new RaftMessages.StatusResponse( IdFactory.randomRaftMemberId(),
                                                               new Status( Status.Message.OK ),
                                                               requestId );
         //when
@@ -83,10 +82,10 @@ class ClusterStatusResponseCollectorTest
         //given
         var collector = new ClusterStatusResponseCollector();
         var requestId = UUID.randomUUID();
-        var statusResponse1 = new RaftMessages.StatusResponse( IdFactory.randomMemberId(),
+        var statusResponse1 = new RaftMessages.StatusResponse( IdFactory.randomRaftMemberId(),
                                                                new Status( Status.Message.OK ),
                                                                requestId );
-        var statusResponse2 = new RaftMessages.StatusResponse( IdFactory.randomMemberId(),
+        var statusResponse2 = new RaftMessages.StatusResponse( IdFactory.randomRaftMemberId(),
                                                                new Status( Status.Message.OK ),
                                                                requestId );
         var responsesList = List.of( statusResponse1, statusResponse2 );
@@ -112,10 +111,10 @@ class ClusterStatusResponseCollectorTest
         //given
         var collector = new ClusterStatusResponseCollector();
         var requestId = UUID.randomUUID();
-        var statusResponse1 = new RaftMessages.StatusResponse( IdFactory.randomMemberId(),
+        var statusResponse1 = new RaftMessages.StatusResponse( IdFactory.randomRaftMemberId(),
                                                                new Status( Status.Message.OK ),
                                                                requestId );
-        var statusResponse2 = new RaftMessages.StatusResponse( IdFactory.randomMemberId(),
+        var statusResponse2 = new RaftMessages.StatusResponse( IdFactory.randomRaftMemberId(),
                                                                new Status( Status.Message.OK ),
                                                                requestId );
         var responsesList = List.of( statusResponse1, statusResponse2 );

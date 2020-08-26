@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -23,7 +23,7 @@ import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.hear
 import static com.neo4j.causalclustering.core.consensus.roles.AppendEntriesRequestTest.ContentGenerator.content;
 import static com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContextBuilder.contextWithState;
 import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.builder;
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class HeartbeatTest
@@ -35,8 +35,8 @@ class HeartbeatTest
         } );
     }
 
-    private MemberId myself = member( 0 );
-    private MemberId leader = member( 1 );
+    private RaftMemberId myself = raftMember( 0 );
+    private RaftMemberId leader = raftMember( 1 );
 
     @ParameterizedTest
     @MethodSource( "data" )

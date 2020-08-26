@@ -15,7 +15,7 @@ import com.neo4j.causalclustering.core.consensus.outcome.OutcomeTestBuilder;
 import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -41,14 +41,14 @@ public class RaftStateBuilder
     }
 
     private Outcome outcome = OutcomeTestBuilder.builder().build();
-    public MemberId myself;
-    private Set<MemberId> votingMembers = emptySet();
-    private Set<MemberId> replicationMembers = emptySet();
+    public RaftMemberId myself;
+    private Set<RaftMemberId> votingMembers = emptySet();
+    private Set<RaftMemberId> replicationMembers = emptySet();
     private RaftLog entryLog = new InMemoryRaftLog();
     private boolean beforeTimersStarted;
-    private ExpiringSet<MemberId> leadershipTransfers = new ExpiringSet<>( Duration.ofSeconds( 1 ), new FakeClock() );
+    private ExpiringSet<RaftMemberId> leadershipTransfers = new ExpiringSet<>( Duration.ofSeconds( 1 ), new FakeClock() );
 
-    public RaftStateBuilder myself( MemberId myself )
+    public RaftStateBuilder myself( RaftMemberId myself )
     {
         this.myself = myself;
         return this;
@@ -60,13 +60,13 @@ public class RaftStateBuilder
         return this;
     }
 
-    public RaftStateBuilder votingMembers( Set<MemberId> currentMembers )
+    public RaftStateBuilder votingMembers( Set<RaftMemberId> currentMembers )
     {
         this.votingMembers = currentMembers;
         return this;
     }
 
-    private RaftStateBuilder additionalReplicationMembers( Set<MemberId> replicationMembers )
+    private RaftStateBuilder additionalReplicationMembers( Set<RaftMemberId> replicationMembers )
     {
         this.replicationMembers = replicationMembers;
         return this;
@@ -102,27 +102,27 @@ public class RaftStateBuilder
         return state;
     }
 
-    public RaftStateBuilder votingMembers( MemberId... members )
+    public RaftStateBuilder votingMembers( RaftMemberId... members )
     {
         return votingMembers( asSet( members ) );
     }
 
-    public RaftStateBuilder additionalReplicationMembers( MemberId... members )
+    public RaftStateBuilder additionalReplicationMembers( RaftMemberId... members )
     {
         return additionalReplicationMembers( asSet( members ) );
     }
 
-    public RaftStateBuilder messagesSentToFollower( MemberId member, long nextIndex )
+    public RaftStateBuilder messagesSentToFollower( RaftMemberId member, long nextIndex )
     {
         return this;
     }
 
     private static class StubMembership implements RaftMembership
     {
-        private Set<MemberId> votingMembers;
-        private final Set<MemberId> replicationMembers;
+        private Set<RaftMemberId> votingMembers;
+        private final Set<RaftMemberId> replicationMembers;
 
-        private StubMembership( Set<MemberId> votingMembers, Set<MemberId> additionalReplicationMembers )
+        private StubMembership( Set<RaftMemberId> votingMembers, Set<RaftMemberId> additionalReplicationMembers )
         {
             this.votingMembers = votingMembers;
             this.replicationMembers = new HashSet<>( votingMembers );
@@ -130,13 +130,13 @@ public class RaftStateBuilder
         }
 
         @Override
-        public Set<MemberId> votingMembers()
+        public Set<RaftMemberId> votingMembers()
         {
             return votingMembers;
         }
 
         @Override
-        public Set<MemberId> replicationMembers()
+        public Set<RaftMemberId> replicationMembers()
         {
             return replicationMembers;
         }

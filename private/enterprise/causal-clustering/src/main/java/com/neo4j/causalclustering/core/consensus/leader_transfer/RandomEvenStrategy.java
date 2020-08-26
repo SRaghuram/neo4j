@@ -7,16 +7,18 @@ package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.causalclustering.core.consensus.leader_transfer.StrategyUtils.selectRandom;
@@ -27,12 +29,15 @@ public class RandomEvenStrategy implements SelectionStrategy
     private final Supplier<Set<NamedDatabaseId>> databasesSupplier;
     private final ClusteringIdentityModule identityModule;
     private final LeaderService leaderService;
+    private final Function<RaftMemberId,ServerId> serverIdResolver;
 
-    RandomEvenStrategy( Supplier<Set<NamedDatabaseId>> databasesSupplier, LeaderService leaderService, ClusteringIdentityModule identityModule )
+    RandomEvenStrategy( Supplier<Set<NamedDatabaseId>> databasesSupplier, LeaderService leaderService, ClusteringIdentityModule identityModule,
+                        Function<RaftMemberId,ServerId> serverIdResolver )
     {
         this.leaderService = leaderService;
         this.databasesSupplier = databasesSupplier;
         this.identityModule = identityModule;
+        this.serverIdResolver = serverIdResolver;
     }
 
     @Override
@@ -43,31 +48,34 @@ public class RandomEvenStrategy implements SelectionStrategy
             return LeaderTransferTarget.NO_TARGET;
         }
 
-        var allMembers = validTopologies.stream()
-                                        .flatMap( t -> t.members().stream() )
+        var allServers = validTopologies.stream()
+                                        .flatMap( t -> serversOf( t.members() ).stream() )
                                         .collect( Collectors.toSet() );
 
-        var validMembers = membersWithFewerLeaderships( allMembers );
+        var validServers = serversWithFewerLeaderships( allServers );
         var targetTopologies = validTopologies.stream()
-                       .filter( t -> !Collections.disjoint( validMembers, t.members() ) )
+                       .filter( t -> !Collections.disjoint( validServers, serversOf( t.members() ) ) )
                        .collect( Collectors.toList() );
 
         var randomTopology = selectRandom( targetTopologies );
 
         var randomTarget = randomTopology.flatMap( t ->
         {
-            var validMembersInTopology = findValidMembersForTopology( t, validMembers );
-            return selectRandom( validMembersInTopology ).map( m -> new LeaderTransferTarget( t.databaseId(), m ) );
+            var validMembersInTopology = findValidMembersForTopology( t, validServers );
+            return selectRandom( validMembersInTopology ).map( memberId -> new LeaderTransferTarget( t.databaseId(), memberId ) );
         } );
 
         return randomTarget.orElse( LeaderTransferTarget.NO_TARGET );
     }
 
-    private Set<MemberId> findValidMembersForTopology( TransferCandidates targetTopology, Set<MemberId> validMembers )
+    private Set<ServerId> serversOf( Set<RaftMemberId> members )
     {
-        var memberIntersection = new HashSet<>( targetTopology.members() );
-        memberIntersection.retainAll( validMembers );
-        return memberIntersection;
+        return members.stream().map( serverIdResolver ).collect( Collectors.toSet() );
+    }
+
+    private Set<RaftMemberId> findValidMembersForTopology( TransferCandidates targetTopology, Set<ServerId> validMembers )
+    {
+        return targetTopology.members().stream().filter( member -> validMembers.contains( serverIdResolver.apply( member ) ) ).collect( Collectors.toSet() );
     }
 
     /**
@@ -77,16 +85,16 @@ public class RandomEvenStrategy implements SelectionStrategy
      *
      * @return returns a set of cluster members with *more* than one fewer leaderships than this instance
      */
-    private Set<MemberId> membersWithFewerLeaderships( Set<MemberId> allMembers )
+    private Set<ServerId> serversWithFewerLeaderships( Set<? extends ServerId> allMembers )
     {
         var databaseIds = databasesSupplier.get();
-        var leadershipCounts = databaseIds.stream()
-                   .flatMap( dbId -> leaderService.getLeaderId( dbId ).stream() )
+        Map<ServerId,Long> leadershipCounts = databaseIds.stream()
+                   .flatMap( dbId -> leaderService.getLeaderServer( dbId ).stream() )
                    .collect( Collectors.groupingBy( identity(), Collectors.counting() ) );
 
         allMembers.forEach( member -> leadershipCounts.putIfAbsent( member, 0L ) );
 
-        var myLeadershipCount = leadershipCounts.getOrDefault( identityModule.memberId(), 0L );
+        var myLeadershipCount = leadershipCounts.getOrDefault( identityModule.myself(), 0L );
 
         return leadershipCounts.entrySet().stream()
                                .filter( e -> e.getValue() < ( myLeadershipCount - 1 ) )

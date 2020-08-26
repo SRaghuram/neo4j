@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.Objects;
 import java.util.Set;
@@ -15,15 +15,15 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 class TransferCandidates
 {
     private final NamedDatabaseId namedDatabaseId;
-    private final Set<MemberId> members;
+    private final Set<RaftMemberId> members;
 
-    TransferCandidates( NamedDatabaseId namedDatabaseId, Set<MemberId> members )
+    TransferCandidates( NamedDatabaseId namedDatabaseId, Set<RaftMemberId> members )
     {
         this.namedDatabaseId = namedDatabaseId;
         this.members = members;
     }
 
-    public Set<MemberId> members()
+    public Set<RaftMemberId> members()
     {
         return members;
     }

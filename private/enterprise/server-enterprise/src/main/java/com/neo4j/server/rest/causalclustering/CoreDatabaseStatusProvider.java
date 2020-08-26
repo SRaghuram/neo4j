@@ -6,6 +6,7 @@
 package com.neo4j.server.rest.causalclustering;
 
 import com.neo4j.causalclustering.core.consensus.DurationSinceLastMessageMonitor;
+import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipManager;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
@@ -13,6 +14,7 @@ import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
 
 import java.time.Duration;
@@ -54,7 +56,7 @@ class CoreDatabaseStatusProvider
 
     ClusteringDatabaseStatusResponse currentStatus()
     {
-        var myId = topologyService.memberId();
+        var myId = raftMachine.memberId();
         var leaderId = getLeader();
         var votingMembers = Set.copyOf( raftMembershipManager.votingMembers() );
         var participatingInRaftGroup = leaderId != null && votingMembers.contains( myId );
@@ -66,13 +68,8 @@ class CoreDatabaseStatusProvider
                                                      millisSinceLastLeaderMessage, raftCommandsPerSecond, true, topologyService.isHealthy() );
     }
 
-    private MemberId getLeader()
+    private RaftMemberId getLeader()
     {
-        var leaderInfo = raftMachine.getLeaderInfo();
-        if ( leaderInfo.isEmpty() )
-        {
-            return null;
-        }
-        return leaderInfo.get().memberId();
+        return raftMachine.getLeaderInfo().map( LeaderInfo::memberId ).orElse( null );
     }
 }

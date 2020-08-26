@@ -6,8 +6,8 @@
 package com.neo4j.causalclustering.messaging.marshalling;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -20,7 +20,7 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
     {
         RaftMessages.RaftMessage message = decoratedMessage.message();
         RaftId raftId = decoratedMessage.raftId();
-        MemberId.Marshal memberMarshal = new MemberId.Marshal();
+        RaftMemberId.Marshal memberMarshal = new RaftMemberId.Marshal();
 
         NetworkWritableChannel channel = new NetworkWritableChannel( out );
         channel.put( ContentType.Message.get() );
@@ -31,17 +31,17 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
         message.dispatch( createHandler( memberMarshal, channel ) );
     }
 
-    protected Handler createHandler( MemberId.Marshal memberMarshal, NetworkWritableChannel channel )
+    protected Handler createHandler( RaftMemberId.Marshal memberMarshal, NetworkWritableChannel channel )
     {
         return new Handler( memberMarshal, channel );
     }
 
     protected static class Handler implements RaftMessages.Handler<Void,Exception>
     {
-        protected final MemberId.Marshal memberMarshal;
+        protected final RaftMemberId.Marshal memberMarshal;
         protected final NetworkWritableChannel channel;
 
-        protected Handler( MemberId.Marshal memberMarshal, NetworkWritableChannel channel )
+        protected Handler( RaftMemberId.Marshal memberMarshal, NetworkWritableChannel channel )
         {
             this.memberMarshal = memberMarshal;
             this.channel = channel;

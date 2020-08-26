@@ -20,9 +20,15 @@ import org.neo4j.memory.MemoryTracker;
 public class CoreIdentityModule extends ClusteringIdentityModule
 {
     /**
-     * This field needs to be removed, a Map is needed here keyed by NamedDatabaseId or DatabaseId or Id
+     * This fields type should be changed to ServerId over time
      */
     private final MemberId myself;
+
+    /**
+     * This field needs to be removed, a Map is needed here keyed by NamedDatabaseId or DatabaseId or UUID
+     */
+    // TODO: This field needs to be removed, a Map is needed here keyed by NamedDatabaseId or DatabaseId or UUID
+    private final RaftMemberId tempRaftMemberId;
 
     public static CoreIdentityModule create( LogProvider logProvider, FileSystemAbstraction fs, Neo4jLayout layout, MemoryTracker memoryTracker,
             ClusterStateStorageFactory storageFactory )
@@ -36,6 +42,7 @@ public class CoreIdentityModule extends ClusteringIdentityModule
     private CoreIdentityModule( MemberId memberId )
     {
         this.myself = memberId;
+        this.tempRaftMemberId = new RaftMemberId( memberId.getUuid() );
     }
 
     @Override
@@ -57,8 +64,8 @@ public class CoreIdentityModule extends ClusteringIdentityModule
     }
 
     @Override
-    public MemberId memberId( NamedDatabaseId namedDatabaseId )
+    public RaftMemberId memberId( NamedDatabaseId namedDatabaseId )
     {
-        return myself;
+        return tempRaftMemberId;
     }
 }

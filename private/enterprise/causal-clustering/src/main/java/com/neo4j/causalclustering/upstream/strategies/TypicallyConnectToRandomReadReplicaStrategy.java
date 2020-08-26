@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.upstream.strategies;
 
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 
 import java.util.ArrayList;
@@ -50,10 +49,10 @@ public class TypicallyConnectToRandomReadReplicaStrategy extends UpstreamDatabas
         else
         {
             // shuffled members
-            List<MemberId> readReplicaMembers = new ArrayList<>( topologyService.readReplicaTopologyForDatabase( namedDatabaseId ).members().keySet() );
+            List<MemberId> readReplicaMembers = new ArrayList<>( topologyService.readReplicaTopologyForDatabase( namedDatabaseId ).servers().keySet() );
             Collections.shuffle( readReplicaMembers );
 
-            List<MemberId> coreMembers = new ArrayList<>( topologyService.coreTopologyForDatabase( namedDatabaseId ).members().keySet() );
+            List<MemberId> coreMembers = new ArrayList<>( topologyService.coreTopologyForDatabase( namedDatabaseId ).servers().keySet() );
             Collections.shuffle( coreMembers );
 
             return Stream.concat( readReplicaMembers.stream(), coreMembers.stream() ).filter( not( myself::equals ) ).findFirst();
@@ -80,7 +79,7 @@ public class TypicallyConnectToRandomReadReplicaStrategy extends UpstreamDatabas
     private Optional<MemberId> randomCoreMember( NamedDatabaseId namedDatabaseId )
     {
         List<MemberId> coreMembersNotSelf = topologyService.coreTopologyForDatabase( namedDatabaseId )
-                .members().keySet().stream()
+                .servers().keySet().stream()
                 .filter( not( myself::equals ) )
                 .collect( Collectors.toList() );
 
@@ -96,7 +95,7 @@ public class TypicallyConnectToRandomReadReplicaStrategy extends UpstreamDatabas
     private List<MemberId> otherCoreMembers( NamedDatabaseId namedDatabaseId )
     {
         return topologyService.coreTopologyForDatabase( namedDatabaseId )
-                .members().keySet().stream()
+                .servers().keySet().stream()
                 .filter( not( myself::equals ) )
                 .collect( Collectors.toList() );
     }
@@ -104,7 +103,7 @@ public class TypicallyConnectToRandomReadReplicaStrategy extends UpstreamDatabas
     private List<MemberId> otherReadReplicas( NamedDatabaseId namedDatabaseId )
     {
         return topologyService.readReplicaTopologyForDatabase( namedDatabaseId )
-                .members().keySet().stream()
+                .servers().keySet().stream()
                 .filter( not( myself::equals ) )
                 .collect( Collectors.toList() );
     }

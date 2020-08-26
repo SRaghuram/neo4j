@@ -6,22 +6,22 @@
 package com.neo4j.causalclustering.messaging.marshalling.v3.encoding;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
-import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.RaftMessageEncoder;
+import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 
 public final class RaftMessageEncoderV3 extends RaftMessageEncoder
 {
     @Override
-    protected Handler createHandler( MemberId.Marshal memberMarshal, NetworkWritableChannel channel )
+    protected Handler createHandler( RaftMemberId.Marshal memberMarshal, NetworkWritableChannel channel )
     {
         return new HandlerV3( memberMarshal, channel );
     }
 
     public static class HandlerV3 extends Handler
     {
-        public HandlerV3( MemberId.Marshal memberMarshal, NetworkWritableChannel channel )
+        public HandlerV3( RaftMemberId.Marshal memberMarshal, NetworkWritableChannel channel )
         {
             super( memberMarshal, channel );
         }

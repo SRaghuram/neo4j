@@ -62,6 +62,7 @@ import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftBinder;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.logging.RaftMessageLogger;
 import com.neo4j.causalclustering.messaging.LoggingOutbound;
 import com.neo4j.causalclustering.messaging.Outbound;
@@ -161,7 +162,7 @@ class CoreDatabaseFactory
     private final ClusteringIdentityModule identityModule;
     private final RaftGroupFactory raftGroupFactory;
     private final RaftMessageDispatcher raftMessageDispatcher;
-    private final RaftMessageLogger<MemberId> raftLogger;
+    private final RaftMessageLogger<RaftMemberId> raftLogger;
 
     private final PageCacheTracer pageCacheTracer;
     private final RecoveryFacade recoveryFacade;
@@ -175,7 +176,7 @@ class CoreDatabaseFactory
                          CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, TemporaryDatabaseFactory temporaryDatabaseFactory,
                          ClusteringIdentityModule identityModule, RaftGroupFactory raftGroupFactory,
                          RaftMessageDispatcher raftMessageDispatcher, CatchupComponentsProvider catchupComponentsProvider, RecoveryFacade recoveryFacade,
-                         RaftMessageLogger<MemberId> raftLogger, Outbound<SocketAddress,RaftMessages.OutboundRaftMessageContainer<?>> raftSender,
+                         RaftMessageLogger<RaftMemberId> raftLogger, Outbound<SocketAddress,RaftMessages.OutboundRaftMessageContainer<?>> raftSender,
                          ReplicatedDatabaseEventService databaseEventService,
                          ClusterSystemGraphDbmsModel dbmsModel, DatabaseStartAborter databaseStartAborter )
     {
@@ -377,7 +378,7 @@ class CoreDatabaseFactory
     private RaftBinder createRaftBinder( NamedDatabaseId namedDatabaseId, Config config, Monitors monitors, SimpleStorage<RaftId> raftIdStorage,
                                          BootstrapContext bootstrapContext, TemporaryDatabaseFactory temporaryDatabaseFactory,
                                          DatabaseLogProvider debugLog, ClusterSystemGraphDbmsModel systemGraph, MemoryTracker memoryTracker,
-                                         MemberId myIdentity )
+                                         RaftMemberId myIdentity )
     {
         var pageCache = new DatabasePageCache( this.pageCache, EmptyVersionContextSupplier.EMPTY, namedDatabaseId.name() );
         var raftBootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, pageCache, fileSystem, debugLog,
@@ -386,7 +387,7 @@ class CoreDatabaseFactory
         var minimumCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
         var refuseToBeLeader = config.get( CausalClusteringSettings.refuse_to_be_leader );
         var clusterBindingTimeout = config.get( CausalClusteringInternalSettings.cluster_binding_timeout );
-        return new RaftBinder( namedDatabaseId, myIdentity, raftIdStorage, topologyService, systemGraph, clock, () -> sleep( 100 ),
+        return new RaftBinder( namedDatabaseId, myIdentity, identityModule.memberId(), raftIdStorage, topologyService, systemGraph, clock, () -> sleep( 100 ),
                                clusterBindingTimeout, raftBootstrapper, minimumCoreHosts, refuseToBeLeader, monitors );
     }
 
@@ -438,8 +439,8 @@ class CoreDatabaseFactory
     }
 
     private RaftReplicator createReplicator( NamedDatabaseId namedDatabaseId, LeaderLocator leaderLocator, LocalSessionPool sessionPool,
-                                             ProgressTracker progressTracker, Monitors monitors, Outbound<MemberId,RaftMessage> raftOutbound,
-                                             DatabaseLogProvider debugLog, MemberId myIdentity )
+                                             ProgressTracker progressTracker, Monitors monitors, Outbound<RaftMemberId,RaftMessage> raftOutbound,
+                                             DatabaseLogProvider debugLog, RaftMemberId myIdentity )
     {
         Duration initialBackoff = config.get( CausalClusteringSettings.replication_retry_timeout_base );
         Duration upperBoundBackoff = config.get( CausalClusteringSettings.replication_retry_timeout_limit );

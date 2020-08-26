@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.core.consensus;
 
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +33,7 @@ class RaftMessageMonitoringHandlerTest
     private Duration messageQueueDelay = Duration.ofMillis( 5 );
     private Duration messageProcessingDelay = Duration.ofMillis( 7 );
     private RaftMessages.InboundRaftMessageContainer<?> message = RaftMessages.InboundRaftMessageContainer.of(
-            now.minus( messageQueueDelay ), IdFactory.randomRaftId(), new RaftMessages.Heartbeat( IdFactory.randomMemberId(), 0, 0, 0 )
+            now.minus( messageQueueDelay ), IdFactory.randomRaftId(), new RaftMessages.Heartbeat( IdFactory.randomRaftMemberId(), 0, 0, 0 )
     );
     private Clock clock = Clocks.tickOnAccessClock( now, messageProcessingDelay );
 

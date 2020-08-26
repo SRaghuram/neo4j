@@ -6,17 +6,17 @@
 package com.neo4j.causalclustering.core.consensus.vote;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 public class VoteRequestBuilder
 {
     private long lastLogTerm;
-    private MemberId from;
+    private RaftMemberId from;
     private long term;
-    private MemberId candidate;
+    private RaftMemberId candidate;
     private long lastLogIndex;
 
-    public VoteRequestBuilder from( MemberId from )
+    public VoteRequestBuilder from( RaftMemberId from )
     {
         this.from = from;
         return this;
@@ -28,7 +28,7 @@ public class VoteRequestBuilder
         return this;
     }
 
-    public VoteRequestBuilder candidate( MemberId candidate )
+    public VoteRequestBuilder candidate( RaftMemberId candidate )
     {
         this.candidate = candidate;
         return this;

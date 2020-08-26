@@ -81,11 +81,11 @@ class SegmentedRaftLogPartialEntryRecoveryTest
 
         // Add a bunch of entries, preferably one of each available kind.
         raftLog.append( new RaftLogEntry( 4, new NewLeaderBarrier() ) );
-        raftLog.append( new RaftLogEntry( 4, new ReplicatedLeaseRequest( IdFactory.randomMemberId(),
+        raftLog.append( new RaftLogEntry( 4, new ReplicatedLeaseRequest( IdFactory.randomRaftMemberId(),
                 1, databaseId ) ) );
-        raftLog.append( new RaftLogEntry( 4, new ReplicatedLeaseRequest( IdFactory.randomMemberId(),
+        raftLog.append( new RaftLogEntry( 4, new ReplicatedLeaseRequest( IdFactory.randomRaftMemberId(),
                 1, databaseId ) ) );
-        raftLog.append( new RaftLogEntry( 4, new ReplicatedLeaseRequest( IdFactory.randomMemberId(), 1, databaseId ) ) );
+        raftLog.append( new RaftLogEntry( 4, new ReplicatedLeaseRequest( IdFactory.randomRaftMemberId(), 1, databaseId ) ) );
         raftLog.append( new RaftLogEntry( 4, new NewLeaderBarrier() ) );
         raftLog.append( new RaftLogEntry( 5, new ReplicatedTokenRequest( databaseId, TokenType.LABEL, "labelToken", new byte[]{ 1, 2, 3 } ) ) );
         raftLog.append( new RaftLogEntry( 5,

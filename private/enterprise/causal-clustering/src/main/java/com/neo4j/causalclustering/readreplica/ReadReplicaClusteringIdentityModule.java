@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.UUID;
 
@@ -49,8 +50,8 @@ public class ReadReplicaClusteringIdentityModule extends ClusteringIdentityModul
     }
 
     @Override
-    public MemberId memberId( NamedDatabaseId namedDatabaseId )
+    public RaftMemberId memberId( NamedDatabaseId namedDatabaseId )
     {
-        return memberId;
+        throw new IllegalStateException( "RaftMemberId should not be used on readreplicas" );
     }
 }

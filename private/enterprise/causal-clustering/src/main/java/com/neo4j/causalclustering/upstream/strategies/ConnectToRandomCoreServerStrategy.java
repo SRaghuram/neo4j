@@ -46,12 +46,12 @@ public class ConnectToRandomCoreServerStrategy extends UpstreamDatabaseSelection
     {
         final DatabaseCoreTopology coreTopology = topologyService.coreTopologyForDatabase( namedDatabaseId );
 
-        if ( coreTopology.members().isEmpty() )
+        if ( coreTopology.servers().isEmpty() )
         {
             throw new UpstreamDatabaseSelectionException( "No core servers available" );
         }
 
-        var members = new ArrayList<>( coreTopology.members().keySet() );
+        var members = new ArrayList<>( coreTopology.servers().keySet() );
         Collections.shuffle( members );
         return members.stream();
     }

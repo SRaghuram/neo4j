@@ -5,14 +5,14 @@
  */
 package com.neo4j.causalclustering.core.consensus.membership;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.Set;
 
-public class MemberIdSetBuilder implements RaftMembers.Builder<MemberId>
+public class MemberIdSetBuilder implements RaftMembers.Builder<RaftMemberId>
 {
     @Override
-    public RaftMembers<MemberId> build( Set<MemberId> members )
+    public RaftMembers<RaftMemberId> build( Set<RaftMemberId> members )
     {
         return new MemberIdSet( members );
     }

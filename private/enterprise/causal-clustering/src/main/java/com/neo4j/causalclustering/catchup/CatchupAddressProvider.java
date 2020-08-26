@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.catchup;
 
-import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.LeaderProvider;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;

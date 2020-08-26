@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.core.consensus.membership;
 
 import com.neo4j.causalclustering.core.consensus.DirectNetworking;
 import com.neo4j.causalclustering.core.consensus.RaftTestFixture;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.MatcherAssert;
@@ -20,7 +20,7 @@ import static com.neo4j.causalclustering.core.consensus.RaftMachine.Timeouts.ELE
 import static com.neo4j.causalclustering.core.consensus.RaftMachine.Timeouts.HEARTBEAT;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.FOLLOWER;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 
 class RaftMembershipTest
 {
@@ -30,7 +30,7 @@ class RaftMembershipTest
         // given
         DirectNetworking net = new DirectNetworking();
 
-        final MemberId[] ids = {member( 0 ), member( 1 ), member( 2 )};
+        final RaftMemberId[] ids = {raftMember( 0 ), raftMember( 1 ), raftMember( 2 )};
 
         RaftTestFixture fixture = new RaftTestFixture( net, 3, ids );
 
@@ -52,13 +52,13 @@ class RaftMembershipTest
         // given
         DirectNetworking net = new DirectNetworking();
 
-        final MemberId leader = member( 0 );
-        final MemberId stable1 = member( 1 );
-        final MemberId stable2 = member( 2 );
-        final MemberId toBeAdded = member( 3 );
+        final RaftMemberId leader = raftMember( 0 );
+        final RaftMemberId stable1 = raftMember( 1 );
+        final RaftMemberId stable2 = raftMember( 2 );
+        final RaftMemberId toBeAdded = raftMember( 3 );
 
-        final MemberId[] initialMembers = {leader, stable1, stable2};
-        final MemberId[] finalMembers = {leader, stable1, stable2, toBeAdded};
+        final RaftMemberId[] initialMembers = {leader, stable1, stable2};
+        final RaftMemberId[] finalMembers = {leader, stable1, stable2, toBeAdded};
 
         RaftTestFixture fixture = new RaftTestFixture( net, 3, finalMembers );
         fixture.bootstrap( initialMembers );
@@ -86,15 +86,15 @@ class RaftMembershipTest
         // given
         DirectNetworking net = new DirectNetworking();
 
-        final MemberId leader = member( 0 );
-        final MemberId stable1 = member( 1 );
-        final MemberId stable2 = member( 2 );
-        final MemberId toBeAdded1 = member( 3 );
-        final MemberId toBeAdded2 = member( 4 );
-        final MemberId toBeAdded3 = member( 5 );
+        final RaftMemberId leader = raftMember( 0 );
+        final RaftMemberId stable1 = raftMember( 1 );
+        final RaftMemberId stable2 = raftMember( 2 );
+        final RaftMemberId toBeAdded1 = raftMember( 3 );
+        final RaftMemberId toBeAdded2 = raftMember( 4 );
+        final RaftMemberId toBeAdded3 = raftMember( 5 );
 
-        final MemberId[] initialMembers = {leader, stable1, stable2};
-        final MemberId[] finalMembers = {leader, stable1, stable2, toBeAdded1, toBeAdded2, toBeAdded3};
+        final RaftMemberId[] initialMembers = {leader, stable1, stable2};
+        final RaftMemberId[] finalMembers = {leader, stable1, stable2, toBeAdded1, toBeAdded2, toBeAdded3};
 
         RaftTestFixture fixture = new RaftTestFixture( net, 3, finalMembers );
         fixture.bootstrap( initialMembers );
@@ -127,12 +127,12 @@ class RaftMembershipTest
         DirectNetworking net = new DirectNetworking();
 
         // given
-        final MemberId leader = member( 0 );
-        final MemberId stable = member( 1 );
-        final MemberId toBeRemoved = member( 2 );
+        final RaftMemberId leader = raftMember( 0 );
+        final RaftMemberId stable = raftMember( 1 );
+        final RaftMemberId toBeRemoved = raftMember( 2 );
 
-        final MemberId[] initialMembers = {leader, stable, toBeRemoved};
-        final MemberId[] finalMembers = {leader, stable};
+        final RaftMemberId[] initialMembers = {leader, stable, toBeRemoved};
+        final RaftMemberId[] finalMembers = {leader, stable};
 
         RaftTestFixture fixture = new RaftTestFixture( net, 2, initialMembers );
         fixture.bootstrap( initialMembers );
@@ -155,14 +155,14 @@ class RaftMembershipTest
         DirectNetworking net = new DirectNetworking();
 
         // given
-        final MemberId leader = member( 0 );
-        final MemberId stable = member( 1 );
-        final MemberId toBeRemoved1 = member( 2 );
-        final MemberId toBeRemoved2 = member( 3 );
-        final MemberId toBeRemoved3 = member( 4 );
+        final RaftMemberId leader = raftMember( 0 );
+        final RaftMemberId stable = raftMember( 1 );
+        final RaftMemberId toBeRemoved1 = raftMember( 2 );
+        final RaftMemberId toBeRemoved2 = raftMember( 3 );
+        final RaftMemberId toBeRemoved3 = raftMember( 4 );
 
-        final MemberId[] initialMembers = {leader, stable, toBeRemoved1, toBeRemoved2, toBeRemoved3};
-        final MemberId[] finalMembers = {leader, stable};
+        final RaftMemberId[] initialMembers = {leader, stable, toBeRemoved1, toBeRemoved2, toBeRemoved3};
+        final RaftMemberId[] finalMembers = {leader, stable};
 
         RaftTestFixture fixture = new RaftTestFixture( net, 2, initialMembers );
         fixture.bootstrap( initialMembers );
@@ -186,17 +186,17 @@ class RaftMembershipTest
         DirectNetworking net = new DirectNetworking();
 
         // given
-        final MemberId leader = member( 0 );
-        final MemberId stable = member( 1 );
-        final MemberId toBeRemoved1 = member( 2 );
-        final MemberId toBeRemoved2 = member( 3 );
-        final MemberId toBeAdded1 = member( 4 );
-        final MemberId toBeAdded2 = member( 5 );
+        final RaftMemberId leader = raftMember( 0 );
+        final RaftMemberId stable = raftMember( 1 );
+        final RaftMemberId toBeRemoved1 = raftMember( 2 );
+        final RaftMemberId toBeRemoved2 = raftMember( 3 );
+        final RaftMemberId toBeAdded1 = raftMember( 4 );
+        final RaftMemberId toBeAdded2 = raftMember( 5 );
 
-        final MemberId[] everyone = {leader, stable, toBeRemoved1, toBeRemoved2, toBeAdded1, toBeAdded2};
+        final RaftMemberId[] everyone = {leader, stable, toBeRemoved1, toBeRemoved2, toBeAdded1, toBeAdded2};
 
-        final MemberId[] initialMembers = {leader, stable, toBeRemoved1, toBeRemoved2};
-        final MemberId[] finalMembers = {leader, stable, toBeAdded1, toBeAdded2};
+        final RaftMemberId[] initialMembers = {leader, stable, toBeRemoved1, toBeRemoved2};
+        final RaftMemberId[] finalMembers = {leader, stable, toBeAdded1, toBeAdded2};
 
         RaftTestFixture fixture = new RaftTestFixture( net, 3, everyone );
         fixture.bootstrap( initialMembers );
@@ -229,12 +229,12 @@ class RaftMembershipTest
         DirectNetworking net = new DirectNetworking();
 
         // given
-        final MemberId leader = member( 0 );
-        final MemberId stable1 = member( 1 );
-        final MemberId stable2 = member( 2 );
+        final RaftMemberId leader = raftMember( 0 );
+        final RaftMemberId stable1 = raftMember( 1 );
+        final RaftMemberId stable2 = raftMember( 2 );
 
-        final MemberId[] initialMembers = {leader, stable1, stable2};
-        final MemberId[] finalMembers = {stable1, stable2};
+        final RaftMemberId[] initialMembers = {leader, stable1, stable2};
+        final RaftMemberId[] finalMembers = {stable1, stable2};
 
         RaftTestFixture fixture = new RaftTestFixture( net, 2, initialMembers );
         fixture.bootstrap( initialMembers );
@@ -260,13 +260,13 @@ class RaftMembershipTest
         DirectNetworking net = new DirectNetworking();
 
         // given
-        final MemberId leader1 = member( 0 );
-        final MemberId leader2 = member( 1 );
-        final MemberId stable1 = member( 2 );
-        final MemberId stable2 = member( 3 );
+        final RaftMemberId leader1 = raftMember( 0 );
+        final RaftMemberId leader2 = raftMember( 1 );
+        final RaftMemberId stable1 = raftMember( 2 );
+        final RaftMemberId stable2 = raftMember( 3 );
 
-        final MemberId[] allMembers = {leader1, leader2, stable1, stable2};
-        final MemberId[] fewerMembers = {leader2, stable1, stable2};
+        final RaftMemberId[] allMembers = {leader1, leader2, stable1, stable2};
+        final RaftMemberId[] fewerMembers = {leader2, stable1, stable2};
 
         RaftTestFixture fixture = new RaftTestFixture( net, 3, allMembers );
         fixture.bootstrap( allMembers );
@@ -300,13 +300,13 @@ class RaftMembershipTest
         DirectNetworking net = new DirectNetworking();
 
         // given
-        final MemberId leader = member( 0 );
-        final MemberId unstable = member( 1 );
-        final MemberId stable1 = member( 2 );
-        final MemberId stable2 = member( 3 );
+        final RaftMemberId leader = raftMember( 0 );
+        final RaftMemberId unstable = raftMember( 1 );
+        final RaftMemberId stable1 = raftMember( 2 );
+        final RaftMemberId stable2 = raftMember( 3 );
 
-        final MemberId[] allMembers = {leader, unstable, stable1, stable2};
-        final MemberId[] fewerMembers = {leader, stable1, stable2};
+        final RaftMemberId[] allMembers = {leader, unstable, stable1, stable2};
+        final RaftMemberId[] fewerMembers = {leader, stable1, stable2};
 
         RaftTestFixture fixture = new RaftTestFixture( net, 3, allMembers );
         fixture.bootstrap( allMembers );
@@ -338,11 +338,11 @@ class RaftMembershipTest
         DirectNetworking net = new DirectNetworking();
 
         // given
-        final MemberId leader1 = member( 0 );
-        final MemberId leader2 = member( 1 );
-        final MemberId stable = member( 2 );
+        final RaftMemberId leader1 = raftMember( 0 );
+        final RaftMemberId leader2 = raftMember( 1 );
+        final RaftMemberId stable = raftMember( 2 );
 
-        final MemberId[] initialMembers = {leader1, leader2, stable};
+        final RaftMemberId[] initialMembers = {leader1, leader2, stable};
 
         RaftTestFixture fixture = new RaftTestFixture( net, 2, initialMembers );
         fixture.bootstrap( initialMembers );

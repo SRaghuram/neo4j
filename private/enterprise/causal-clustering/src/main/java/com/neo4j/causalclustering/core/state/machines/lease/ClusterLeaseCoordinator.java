@@ -5,11 +5,10 @@
  */
 package com.neo4j.causalclustering.core.state.machines.lease;
 
-import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.replication.ReplicationResult;
 import com.neo4j.causalclustering.core.replication.Replicator;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -37,13 +36,13 @@ public class ClusterLeaseCoordinator implements LeaseService
     private volatile int invalidLeaseId = NO_LEASE;
     private volatile int myLeaseId = NO_LEASE;
 
-    private final MemberId myself;
+    private final RaftMemberId myself;
     private final Replicator replicator;
     private final LeaderLocator leaderLocator;
     private final ReplicatedLeaseStateMachine leaseStateMachine;
     private final NamedDatabaseId namedDatabaseId;
 
-    public ClusterLeaseCoordinator( MemberId myself, Replicator replicator, LeaderLocator leaderLocator, ReplicatedLeaseStateMachine leaseStateMachine,
+    public ClusterLeaseCoordinator( RaftMemberId myself, Replicator replicator, LeaderLocator leaderLocator, ReplicatedLeaseStateMachine leaseStateMachine,
             NamedDatabaseId namedDatabaseId )
     {
         this.myself = myself;
@@ -131,7 +130,7 @@ public class ClusterLeaseCoordinator implements LeaseService
     private void ensureLeader() throws LeaseException
     {
         var leaderInfo = leaderLocator.getLeaderInfo();
-        MemberId leader = null;
+        RaftMemberId leader = null;
         if ( leaderInfo.isPresent() )
         {
             leader = leaderInfo.get().memberId();

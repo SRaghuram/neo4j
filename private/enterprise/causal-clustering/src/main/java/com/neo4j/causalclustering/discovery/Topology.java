@@ -15,5 +15,5 @@ public interface Topology<T extends DiscoveryServerInfo>
 {
     DatabaseId databaseId();
 
-    Map<MemberId, T> members();
+    Map<MemberId, T> servers();
 }

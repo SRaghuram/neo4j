@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.discovery.ClientConnector;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.Map;
 import java.util.Optional;
@@ -24,7 +25,7 @@ import org.neo4j.logging.LogProvider;
 
 public class DefaultLeaderService implements LeaderService, GlobalLeaderListener
 {
-    private final Map<NamedDatabaseId,MemberId> currentLeaders = new ConcurrentHashMap<>();
+    private final Map<NamedDatabaseId,RaftMemberId> currentLeaders = new ConcurrentHashMap<>();
     private final TopologyService topologyService;
     private final Log log;
 
@@ -40,12 +41,13 @@ public class DefaultLeaderService implements LeaderService, GlobalLeaderListener
     }
 
     @Override
-    public Optional<MemberId> getLeaderId( NamedDatabaseId namedDatabaseId )
+    public Optional<MemberId> getLeaderServer( NamedDatabaseId namedDatabaseId )
     {
-        return currentLeaderAccordingToRaft( namedDatabaseId ).or( () -> leaderFromTopology( namedDatabaseId ) );
+        return currentLeaderAccordingToRaft( namedDatabaseId ).or( () -> leaderFromTopology( namedDatabaseId ) )
+                .map( topologyService::resolveServerFromRaftMember );
     }
 
-    private Optional<MemberId> leaderFromTopology( NamedDatabaseId namedDatabaseId )
+    private Optional<RaftMemberId> leaderFromTopology( NamedDatabaseId namedDatabaseId )
     {
         // this cluster member does not participate in the Raft group for the specified database
         // lookup the leader ID using the discovery service
@@ -54,7 +56,7 @@ public class DefaultLeaderService implements LeaderService, GlobalLeaderListener
         return leaderId;
     }
 
-    private Optional<MemberId> currentLeaderAccordingToRaft( NamedDatabaseId namedDatabaseId )
+    private Optional<RaftMemberId> currentLeaderAccordingToRaft( NamedDatabaseId namedDatabaseId )
     {
         var leader = Optional.ofNullable( currentLeaders.get( namedDatabaseId ) );
         leader.ifPresent( l ->
@@ -69,12 +71,12 @@ public class DefaultLeaderService implements LeaderService, GlobalLeaderListener
     @Override
     public Optional<SocketAddress> getLeaderBoltAddress( NamedDatabaseId namedDatabaseId )
     {
-        var leaderBoltAddress = getLeaderId( namedDatabaseId ).flatMap( this::resolveBoltAddress );
+        var leaderBoltAddress = getLeaderServer( namedDatabaseId ).flatMap( this::resolveBoltAddress );
         log.debug( "Leader for database %s has Bolt address %s", namedDatabaseId, leaderBoltAddress );
         return leaderBoltAddress;
     }
 
-    private Optional<MemberId> getLeaderIdFromTopologyService( NamedDatabaseId namedDatabaseId )
+    private Optional<RaftMemberId> getLeaderIdFromTopologyService( NamedDatabaseId namedDatabaseId )
     {
         return Optional.ofNullable( topologyService.getLeader( namedDatabaseId ) ).map( LeaderInfo::memberId );
     }

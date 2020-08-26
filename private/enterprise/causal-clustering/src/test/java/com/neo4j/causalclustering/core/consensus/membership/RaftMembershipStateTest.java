@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.membership;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.BoundedNetworkWritableChannel;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import io.netty.buffer.ByteBuf;
@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
@@ -24,8 +24,8 @@ class RaftMembershipStateTest
 {
     private RaftMembershipState state = new RaftMembershipState();
 
-    private Set<MemberId> membersA = asSet( member( 0 ), member( 1 ), member( 2 ) );
-    private Set<MemberId> membersB = asSet( member( 0 ), member( 1 ), member( 2 ), member( 3 ) );
+    private Set<RaftMemberId> membersA = asSet( raftMember( 0 ), raftMember( 1 ), raftMember( 2 ) );
+    private Set<RaftMemberId> membersB = asSet( raftMember( 0 ), raftMember( 1 ), raftMember( 2 ), raftMember( 3 ) );
 
     @Test
     void shouldHaveCorrectInitialState()

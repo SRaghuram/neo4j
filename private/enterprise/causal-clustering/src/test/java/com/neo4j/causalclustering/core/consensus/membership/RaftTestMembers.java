@@ -5,21 +5,21 @@
  */
 package com.neo4j.causalclustering.core.consensus.membership;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.marshalling.ReplicatedContentHandler;
 
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 import static java.lang.String.format;
 
-public class RaftTestMembers implements RaftMembers<MemberId>
+public class RaftTestMembers implements RaftMembers<RaftMemberId>
 {
-    private final Set<MemberId> members = new HashSet<>();
+    private final Set<RaftMemberId> members = new HashSet<>();
 
-    public RaftTestMembers( Set<MemberId> members )
+    public RaftTestMembers( Set<RaftMemberId> members )
     {
         this.members.addAll( members );
     }
@@ -28,17 +28,17 @@ public class RaftTestMembers implements RaftMembers<MemberId>
     {
         for ( int memberId : memberIds )
         {
-            this.members.add( member( memberId ) );
+            this.members.add( raftMember( memberId ) );
         }
     }
 
-    public RaftTestMembers( MemberId... memberIds )
+    public RaftTestMembers( RaftMemberId... memberIds )
     {
         this.members.addAll( Arrays.asList( memberIds ) );
     }
 
     @Override
-    public Set<MemberId> getMembers()
+    public Set<RaftMemberId> getMembers()
     {
         return members;
     }

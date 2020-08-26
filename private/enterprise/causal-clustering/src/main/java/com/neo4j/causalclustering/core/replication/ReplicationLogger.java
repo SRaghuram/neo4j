@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.replication;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import org.neo4j.logging.Log;
 
@@ -24,7 +24,7 @@ class ReplicationLogger
         this.log = log;
     }
 
-    void newAttempt( DistributedOperation operation, MemberId leader )
+    void newAttempt( DistributedOperation operation, RaftMemberId leader )
     {
         attempts++;
         if ( attempts > 1 )

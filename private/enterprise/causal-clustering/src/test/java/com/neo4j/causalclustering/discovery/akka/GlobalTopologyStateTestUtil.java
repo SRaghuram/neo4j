@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -36,7 +37,7 @@ final class GlobalTopologyStateTestUtil
         if ( leaderId != null )
         {
             coreMembers.put( leaderId, addressesForCore( 0, false, Set.of( databaseId ) ) );
-            topologyState.onDbLeaderUpdate( Map.of( databaseId, new LeaderInfo( leaderId, 42 ) ) );
+            topologyState.onDbLeaderUpdate( Map.of( databaseId, new LeaderInfo( RaftMemberId.from( leaderId ), 42 ) ) );
         }
 
         if ( followerIds != null )

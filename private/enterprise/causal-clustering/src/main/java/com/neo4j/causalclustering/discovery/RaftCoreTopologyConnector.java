@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.discovery;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.LeaderListener;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.Set;
 
@@ -46,10 +46,9 @@ public class RaftCoreTopologyConnector extends LifecycleAdapter implements CoreT
     }
 
     @Override
-    public synchronized void onCoreTopologyChange( DatabaseCoreTopology coreTopology )
+    public synchronized void onCoreTopologyChange( Set<RaftMemberId> memberIds )
     {
-        Set<MemberId> targetMembers = coreTopology.members().keySet();
-        raftMachine.setTargetMembershipSet( targetMembers );
+        raftMachine.setTargetMembershipSet( memberIds );
     }
 
     @Override

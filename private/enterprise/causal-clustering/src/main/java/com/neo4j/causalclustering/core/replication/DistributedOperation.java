@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.core.replication;
 
 import com.neo4j.causalclustering.core.replication.session.GlobalSession;
 import com.neo4j.causalclustering.core.replication.session.LocalOperationId;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.marshalling.ContentBuilder;
 import com.neo4j.causalclustering.messaging.marshalling.ReplicatedContentHandler;
 
@@ -71,7 +71,7 @@ public class DistributedOperation implements ReplicatedContent
     {
         channel.putLong( globalSession().sessionId().getMostSignificantBits() );
         channel.putLong( globalSession().sessionId().getLeastSignificantBits() );
-        new MemberId.Marshal().marshal( globalSession().owner(), channel );
+        new RaftMemberId.Marshal().marshal( globalSession().owner(), channel );
 
         channel.putLong( operationId.localSessionId() );
         channel.putLong( operationId.sequenceNumber() );
@@ -81,7 +81,7 @@ public class DistributedOperation implements ReplicatedContent
     {
         long mostSigBits = channel.getLong();
         long leastSigBits = channel.getLong();
-        MemberId owner = new MemberId.Marshal().unmarshal( channel );
+        RaftMemberId owner = new RaftMemberId.Marshal().unmarshal( channel );
         GlobalSession globalSession = new GlobalSession( new UUID( mostSigBits, leastSigBits ), owner );
 
         long localSessionId = channel.getLong();

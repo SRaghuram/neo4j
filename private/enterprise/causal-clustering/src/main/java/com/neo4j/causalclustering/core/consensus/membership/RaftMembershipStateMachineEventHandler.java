@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.core.consensus.membership;
 
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.Set;
 
@@ -17,13 +17,13 @@ interface RaftMembershipStateMachineEventHandler
 
     RaftMembershipStateMachineEventHandler onRaftGroupCommitted();
 
-    RaftMembershipStateMachineEventHandler onFollowerStateChange( FollowerStates<MemberId> followerStates );
+    RaftMembershipStateMachineEventHandler onFollowerStateChange( FollowerStates<RaftMemberId> followerStates );
 
-    RaftMembershipStateMachineEventHandler onMissingMember( MemberId member );
+    RaftMembershipStateMachineEventHandler onMissingMember( RaftMemberId member );
 
-    RaftMembershipStateMachineEventHandler onSuperfluousMember( MemberId member );
+    RaftMembershipStateMachineEventHandler onSuperfluousMember( RaftMemberId member );
 
-    RaftMembershipStateMachineEventHandler onTargetChanged( Set<MemberId> targetMembers );
+    RaftMembershipStateMachineEventHandler onTargetChanged( Set<RaftMemberId> targetMembers );
 
     RaftMembershipStateMachineEventHandler onLeadershipTransfer( boolean areTransferring );
 
@@ -46,25 +46,25 @@ interface RaftMembershipStateMachineEventHandler
         }
 
         @Override
-        public RaftMembershipStateMachineEventHandler onMissingMember( MemberId member )
+        public RaftMembershipStateMachineEventHandler onMissingMember( RaftMemberId member )
         {
             return this;
         }
 
         @Override
-        public RaftMembershipStateMachineEventHandler onSuperfluousMember( MemberId member )
+        public RaftMembershipStateMachineEventHandler onSuperfluousMember( RaftMemberId member )
         {
             return this;
         }
 
         @Override
-        public RaftMembershipStateMachineEventHandler onFollowerStateChange( FollowerStates<MemberId> followerStates )
+        public RaftMembershipStateMachineEventHandler onFollowerStateChange( FollowerStates<RaftMemberId> followerStates )
         {
             return this;
         }
 
         @Override
-        public RaftMembershipStateMachineEventHandler onTargetChanged( Set targetMembers )
+        public RaftMembershipStateMachineEventHandler onTargetChanged( Set<RaftMemberId> targetMembers )
         {
             return this;
         }

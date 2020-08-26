@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.routing.load_balancing;
 
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.Optional;
 
@@ -14,7 +15,7 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 
 public interface LeaderService
 {
-    Optional<MemberId> getLeaderId( NamedDatabaseId namedDatabaseId );
+    Optional<MemberId> getLeaderServer( NamedDatabaseId namedDatabaseId );
 
     Optional<SocketAddress> getLeaderBoltAddress( NamedDatabaseId namedDatabaseId );
 }

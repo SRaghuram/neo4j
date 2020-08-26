@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
 import com.neo4j.causalclustering.core.consensus.shipping.RaftLogShippingManager;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -43,7 +43,7 @@ class RaftOutcomeApplierTest
 {
     private RaftState raftState = mock( RaftState.class );
     private LogProvider logProvider = NullLogProvider.getInstance();
-    private Outbound<MemberId,RaftMessages.RaftMessage> outbound = mock( Outbound.class );
+    private Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound = mock( Outbound.class );
     private RaftMessageTimerResetMonitor raftMessageTimerResetMonitor = mock( RaftMessageTimerResetMonitor.class );
     private LeaderAvailabilityTimers leaderAvailabilityTimers = mock( LeaderAvailabilityTimers.class );
     private RaftLogShippingManager logShipping = mock( RaftLogShippingManager.class );
@@ -68,7 +68,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldSendMessages() throws IOException
     {
-        var outgoingMessages = Stream.generate( IdFactory::randomMemberId )
+        var outgoingMessages = Stream.generate( IdFactory::randomRaftMemberId )
                 .map( member -> new RaftMessages.Directed( member, null ) )
                 .limit( 3 )
                 .collect( Collectors.toList() );
@@ -223,7 +223,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldNotifyLeaderChangesIfNewLeader() throws IOException
     {
-        when( raftState.leader() ).thenReturn( IdFactory.randomMemberId() );
+        when( raftState.leader() ).thenReturn( IdFactory.randomRaftMemberId() );
         var outcome = outcomeTestBuilder.build();
         var listener = mock( LeaderListener.class );
         raftOutcomeApplier.registerListener( listener );
@@ -236,7 +236,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldNotNotifyLeaderChangesIfNoNewLeader() throws IOException
     {
-        MemberId leader = IdFactory.randomMemberId();
+        RaftMemberId leader = IdFactory.randomRaftMemberId();
         when( raftState.leader() ).thenReturn( leader );
         var outcome = outcomeTestBuilder.setLeader( leader ).build();
         var listener = mock( LeaderListener.class );
@@ -251,7 +251,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldNotifyLeaderChangesIfNullNewLeader() throws IOException
     {
-        MemberId leader = IdFactory.randomMemberId();
+        RaftMemberId leader = IdFactory.randomRaftMemberId();
         when( raftState.leader() ).thenReturn( leader );
         var outcome = outcomeTestBuilder.setLeader( null ).build();
         var listener = mock( LeaderListener.class );
@@ -274,7 +274,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldNotifyLeaderChangesIfNullOldLeader() throws IOException
     {
-        MemberId leader = IdFactory.randomMemberId();
+        RaftMemberId leader = IdFactory.randomRaftMemberId();
         when( raftState.leader() ).thenReturn( null );
         var outcome = outcomeTestBuilder.setLeader( leader ).build();
         var listener = mock( LeaderListener.class );
@@ -319,7 +319,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldChangeMembershipManagerStateIfTransferringLeadership() throws IOException
     {
-        var transferTarget = IdFactory.randomMemberId();
+        var transferTarget = IdFactory.randomRaftMemberId();
         var outcome = outcomeTestBuilder.setRole( Role.LEADER )
                                         .startTransferringLeadership( transferTarget )
                                         .build();
@@ -333,7 +333,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldNotChangeMembershipManagerStateIfNextRoleIsNotLeader() throws IOException
     {
-        var transferTarget = IdFactory.randomMemberId();
+        var transferTarget = IdFactory.randomRaftMemberId();
         var outcome = outcomeTestBuilder.setRole( Role.FOLLOWER )
                                         .startTransferringLeadership( transferTarget )
                                         .build();

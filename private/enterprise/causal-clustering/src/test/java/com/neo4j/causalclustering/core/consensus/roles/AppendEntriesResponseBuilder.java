@@ -6,13 +6,13 @@
 package com.neo4j.causalclustering.core.consensus.roles;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 public class AppendEntriesResponseBuilder
 {
     private boolean success;
     private long term = -1;
-    private MemberId from;
+    private RaftMemberId from;
     private long matchIndex = -1;
     private long appendIndex = -1;
 
@@ -23,7 +23,7 @@ public class AppendEntriesResponseBuilder
         return new RaftMessages.AppendEntries.Response( from, term, success, matchIndex, appendIndex );
     }
 
-    public AppendEntriesResponseBuilder from( MemberId from )
+    public AppendEntriesResponseBuilder from( RaftMemberId from )
     {
         this.from = from;
         return this;

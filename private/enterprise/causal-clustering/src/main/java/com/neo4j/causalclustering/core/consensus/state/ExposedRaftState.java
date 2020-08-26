@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.state;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.Set;
 
@@ -21,5 +21,5 @@ public interface ExposedRaftState
 
     long term();
 
-    Set<MemberId> votingMembers();
+    Set<RaftMemberId> votingMembers();
 }

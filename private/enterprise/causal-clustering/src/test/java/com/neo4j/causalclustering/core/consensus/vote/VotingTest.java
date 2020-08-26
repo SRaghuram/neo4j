@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.core.consensus.vote;
 
 import com.neo4j.causalclustering.core.consensus.roles.Voting;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -16,7 +16,7 @@ import org.neo4j.logging.NullLog;
 
 class VotingTest
 {
-    private MemberId candidate = IdFactory.randomMemberId();
+    private RaftMemberId candidate = IdFactory.randomRaftMemberId();
 
     private long logTerm = 10;
     private long currentTerm = 20;

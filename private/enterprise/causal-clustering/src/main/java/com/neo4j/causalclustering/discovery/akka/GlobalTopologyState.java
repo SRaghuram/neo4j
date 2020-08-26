@@ -17,6 +17,7 @@ import com.neo4j.causalclustering.discovery.Topology;
 import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -24,11 +25,13 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
@@ -44,7 +47,7 @@ import static org.neo4j.internal.helpers.Strings.printMap;
 public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateSink, BootstrapStateUpdateSink, DatabaseStateUpdateSink
 {
     private final Log log;
-    private final Consumer<DatabaseCoreTopology> callback;
+    private final BiConsumer<DatabaseId,Set<RaftMemberId>> callback;
     private volatile Map<MemberId,CoreServerInfo> coresByMemberId;
     private volatile Map<MemberId,ReadReplicaInfo> readReplicasByMemberId;
     private volatile Map<DatabaseId,LeaderInfo> remoteDbLeaderMap;
@@ -54,7 +57,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     private final Map<DatabaseId, ReplicatedDatabaseState> coreStatesByDatabase = new ConcurrentHashMap<>();
     private final Map<DatabaseId, ReplicatedDatabaseState> readReplicaStatesByDatabase = new ConcurrentHashMap<>();
 
-    GlobalTopologyState( LogProvider logProvider, Consumer<DatabaseCoreTopology> listener )
+    GlobalTopologyState( LogProvider logProvider, BiConsumer<DatabaseId,Set<RaftMemberId>> listener )
     {
         this.log = logProvider.getLog( getClass() );
         this.coresByMemberId = emptyMap();
@@ -77,7 +80,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
             }
             this.coresByMemberId = extractServerInfos( coreTopologiesByDatabase );
             logTopologyChange( "Core topology", newCoreTopology, databaseId, currentCoreTopology );
-            callback.accept( newCoreTopology );
+            callback.accept( databaseId, newCoreTopology.members( this::resolveRaftMemberForServer ) );
         }
 
         if ( hasNoMembers( newCoreTopology ) )
@@ -205,13 +208,13 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
 
     private void logTopologyChange( String topologyDescription, Topology<?> newTopology, DatabaseId databaseId, Topology<?> oldTopology )
     {
-        var allMembers = Collections.unmodifiableSet( newTopology.members().keySet() );
+        var allMembers = Collections.unmodifiableSet( newTopology.servers().keySet() );
 
-        var lostMembers = new HashSet<>( oldTopology.members().keySet() );
+        var lostMembers = new HashSet<>( oldTopology.servers().keySet() );
         lostMembers.removeAll( allMembers );
 
-        var newMembers = new HashMap<>( newTopology.members() );
-        newMembers.keySet().removeAll( oldTopology.members().keySet() );
+        var newMembers = new HashMap<>( newTopology.servers() );
+        newMembers.keySet().removeAll( oldTopology.servers().keySet() );
 
         if ( !newMembers.isEmpty() || !lostMembers.isEmpty() )
         {
@@ -225,22 +228,33 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         }
     }
 
+    public MemberId resolveServerFromRaftMember( RaftMemberId raftMemberId )
+    {
+        return MemberId.of( raftMemberId );
+    }
+
+    public RaftMemberId resolveRaftMemberForServer( DatabaseId databaseId, ServerId serverId )
+    {
+        return RaftMemberId.from( serverId );
+    }
+
     public RoleInfo role( NamedDatabaseId namedDatabaseId, MemberId memberId )
     {
         var databaseId = namedDatabaseId.databaseId();
         var rrTopology = readReplicaTopologiesByDatabase.get( databaseId );
         var coreTopology = coreTopologiesByDatabase.get( databaseId );
 
-        if ( coreTopology != null && coreTopology.members().containsKey( memberId ) )
+        if ( coreTopology != null && coreTopology.servers().containsKey( memberId ) )
         {
             var leaderInfo = remoteDbLeaderMap.getOrDefault( databaseId, LeaderInfo.INITIAL );
-            if ( Objects.equals( memberId, leaderInfo.memberId() ) )
+            var raftMemberId = resolveRaftMemberForServer( namedDatabaseId.databaseId(), memberId );
+            if ( Objects.equals( raftMemberId, leaderInfo.memberId() ) )
             {
                 return RoleInfo.LEADER;
             }
             return RoleInfo.FOLLOWER;
         }
-        else if ( rrTopology != null && rrTopology.members().containsKey( memberId ) )
+        else if ( rrTopology != null && rrTopology.servers().containsKey( memberId ) )
         {
             return RoleInfo.READ_REPLICA;
         }
@@ -333,7 +347,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         Map<MemberId,T> result = new HashMap<>();
         for ( Topology<T> topology : topologies.values() )
         {
-            for ( Map.Entry<MemberId,T> entry : topology.members().entrySet() )
+            for ( Map.Entry<MemberId,T> entry : topology.servers().entrySet() )
             {
                 result.put( entry.getKey(), entry.getValue() );
             }
@@ -343,6 +357,6 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
 
     private static boolean hasNoMembers( Topology<?> topology )
     {
-        return topology.members().isEmpty();
+        return topology.servers().isEmpty();
     }
 }

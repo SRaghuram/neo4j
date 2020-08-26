@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.core.consensus.ElectionTimerMode;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.Collection;
 import java.util.Objects;
@@ -31,7 +31,7 @@ public class Outcome implements ConsensusOutcome
     private final Role role;
 
     private final long term;
-    private final MemberId leader;
+    private final RaftMemberId leader;
 
     private final long leaderCommit;
 
@@ -41,33 +41,33 @@ public class Outcome implements ConsensusOutcome
     private final long commitIndex;
 
     /* Follower */
-    private final MemberId votedFor;
+    private final RaftMemberId votedFor;
     private final ElectionTimerMode electionTimerMode;
     private final SnapshotRequirement snapshotRequirement;
     private final boolean isPreElection;
-    private final Set<MemberId> preVotesForMe;
+    private final Set<RaftMemberId> preVotesForMe;
 
     /* Candidate */
-    private final Set<MemberId> votesForMe;
+    private final Set<RaftMemberId> votesForMe;
     private final long lastLogIndexBeforeWeBecameLeader;
 
     /* Leader */
-    private final FollowerStates<MemberId> followerStates;
+    private final FollowerStates<RaftMemberId> followerStates;
     private final Collection<ShipCommand> shipCommands;
     private final boolean electedLeader;
     private final long steppingDownInTerm;
-    private final Set<MemberId> heartbeatResponses;
+    private final Set<RaftMemberId> heartbeatResponses;
     private final RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection;
-    private final MemberId transferringLeadershipTo;
+    private final RaftMemberId transferringLeadershipTo;
     private final RaftMessages.StatusResponse statusResponse;
 
-    Outcome( Role role, long term, MemberId leader, long leaderCommit, MemberId votedFor,
-             Set<MemberId> votesForMe, Set<MemberId> preVotesForMe, long lastLogIndexBeforeWeBecameLeader,
-             FollowerStates<MemberId> followerStates, ElectionTimerMode electionTimerMode,
+    Outcome( Role role, long term, RaftMemberId leader, long leaderCommit, RaftMemberId votedFor,
+             Set<RaftMemberId> votesForMe, Set<RaftMemberId> preVotesForMe, long lastLogIndexBeforeWeBecameLeader,
+             FollowerStates<RaftMemberId> followerStates, ElectionTimerMode electionTimerMode,
              Collection<RaftLogCommand> logCommands, Collection<RaftMessages.Directed> outgoingMessages,
-             Collection<ShipCommand> shipCommands, long commitIndex, Set<MemberId> heartbeatResponses, boolean isPreElection, boolean electedLeader,
+             Collection<ShipCommand> shipCommands, long commitIndex, Set<RaftMemberId> heartbeatResponses, boolean isPreElection, boolean electedLeader,
              long steppingDownInTerm, SnapshotRequirement snapshotRequirement, RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection,
-             MemberId transferringLeadershipTo, RaftMessages.StatusResponse statusResponse )
+             RaftMemberId transferringLeadershipTo, RaftMessages.StatusResponse statusResponse )
     {
         this.role = role;
         this.term = term;
@@ -130,7 +130,7 @@ public class Outcome implements ConsensusOutcome
         return term;
     }
 
-    public MemberId getLeader()
+    public RaftMemberId getLeader()
     {
         return leader;
     }
@@ -150,7 +150,7 @@ public class Outcome implements ConsensusOutcome
         return outgoingMessages;
     }
 
-    public MemberId getVotedFor()
+    public RaftMemberId getVotedFor()
     {
         return votedFor;
     }
@@ -166,7 +166,7 @@ public class Outcome implements ConsensusOutcome
         return Optional.ofNullable( snapshotRequirement );
     }
 
-    public Set<MemberId> getVotesForMe()
+    public Set<RaftMemberId> getVotesForMe()
     {
         return votesForMe;
     }
@@ -176,7 +176,7 @@ public class Outcome implements ConsensusOutcome
         return lastLogIndexBeforeWeBecameLeader;
     }
 
-    public FollowerStates<MemberId> getFollowerStates()
+    public FollowerStates<RaftMemberId> getFollowerStates()
     {
         return followerStates;
     }
@@ -207,7 +207,7 @@ public class Outcome implements ConsensusOutcome
         return commitIndex;
     }
 
-    public Set<MemberId> getHeartbeatResponses()
+    public Set<RaftMemberId> getHeartbeatResponses()
     {
         return heartbeatResponses;
     }
@@ -217,7 +217,7 @@ public class Outcome implements ConsensusOutcome
         return isPreElection;
     }
 
-    public Set<MemberId> getPreVotesForMe()
+    public Set<RaftMemberId> getPreVotesForMe()
     {
         return preVotesForMe;
     }
@@ -227,7 +227,7 @@ public class Outcome implements ConsensusOutcome
         return Optional.ofNullable(leadershipTransferRejection);
     }
 
-    public Optional<MemberId> transferringLeadershipTo()
+    public Optional<RaftMemberId> transferringLeadershipTo()
     {
         return Optional.ofNullable( transferringLeadershipTo );
     }

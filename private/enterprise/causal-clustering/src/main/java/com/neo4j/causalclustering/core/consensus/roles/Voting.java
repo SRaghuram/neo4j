@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core.consensus.roles;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.outcome.OutcomeBuilder;
 import com.neo4j.causalclustering.core.consensus.state.ReadableRaftState;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.io.IOException;
 
@@ -25,7 +25,7 @@ public class Voting
     }
 
     static void handleVoteVerdict( ReadableRaftState state, OutcomeBuilder outcomeBuilder,
-            long term, RaftMessages.Vote.Request voteRequest, Log log, MemberId votedFor ) throws IOException
+            long term, RaftMessages.Vote.Request voteRequest, Log log, RaftMemberId votedFor ) throws IOException
     {
         boolean votedForAnother = votedFor != null && !votedFor.equals( voteRequest.candidate() );
         boolean willVoteForCandidate = shouldVoteFor( state, voteRequest, votedForAnother, log, term );
@@ -66,23 +66,23 @@ public class Voting
             boolean committedToVotingForAnother, Log log, long term )
             throws IOException
     {
-        long requestTerm = voteRequest.term();
-        MemberId candidate = voteRequest.candidate();
-        long requestLastLogTerm = voteRequest.lastLogTerm();
-        long requestLastLogIndex = voteRequest.lastLogIndex();
+        var requestTerm = voteRequest.term();
+        var candidate = voteRequest.candidate();
+        var requestLastLogTerm = voteRequest.lastLogTerm();
+        var requestLastLogIndex = voteRequest.lastLogIndex();
         return shouldAnyVoteFor( requestTerm, candidate, requestLastLogTerm, requestLastLogIndex, state, log, term, committedToVotingForAnother, false );
     }
 
     private static boolean shouldPreVoteFor( ReadableRaftState state, RaftMessages.PreVote.Request voteRequest, Log log, long term ) throws IOException
     {
-        long requestTerm = voteRequest.term();
-        MemberId candidate = voteRequest.candidate();
-        long requestLastLogTerm = voteRequest.lastLogTerm();
-        long requestLastLogIndex = voteRequest.lastLogIndex();
+        var requestTerm = voteRequest.term();
+        var candidate = voteRequest.candidate();
+        var requestLastLogTerm = voteRequest.lastLogTerm();
+        var requestLastLogIndex = voteRequest.lastLogIndex();
         return shouldAnyVoteFor( requestTerm, candidate, requestLastLogTerm, requestLastLogIndex, state, log, term, false, true );
     }
 
-    private static boolean shouldAnyVoteFor( long requestTerm, MemberId candidate, long requestLastLogTerm, long requestLastLogIndex,
+    private static boolean shouldAnyVoteFor( long requestTerm, RaftMemberId candidate, long requestLastLogTerm, long requestLastLogIndex,
             ReadableRaftState state, Log log, long term, boolean committedToVotingForAnother, boolean isPreVote ) throws IOException
     {
         long contextLastAppended = state.entryLog().appendIndex();
@@ -100,7 +100,7 @@ public class Voting
                 log, isPreVote );
     }
 
-    public static boolean shouldAnyVoteFor( MemberId candidate, long contextTerm, long requestTerm, long contextLastLogTerm, long requestLastLogTerm,
+    public static boolean shouldAnyVoteFor( RaftMemberId candidate, long contextTerm, long requestTerm, long contextLastLogTerm, long requestLastLogTerm,
             long contextLastAppended, long requestLastLogIndex, boolean committedToVotingForAnother, Log log, boolean isPreVote )
     {
         String voteType = isPreVote ? "pre-vote" : "vote";

@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.core.state.CoreStateFiles;
 import com.neo4j.causalclustering.core.state.storage.DurableStateStorage;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
 import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
-import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -25,7 +24,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectorySupportExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
@@ -70,7 +69,7 @@ class ReplicatedLeaseStateMachineTest
         int firstCandidateId = Lease.nextCandidateId( stateMachine.snapshot().leaseId() );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLeaseRequest( member( 0 ), firstCandidateId, databaseId ), 0, r -> {} );
+        stateMachine.applyCommand( new ReplicatedLeaseRequest( raftMember( 0 ), firstCandidateId, databaseId ), 0, r -> {} );
 
         // then
         assertEquals( firstCandidateId + 1, Lease.nextCandidateId( stateMachine.snapshot().leaseId() ) );
@@ -85,13 +84,13 @@ class ReplicatedLeaseStateMachineTest
         int firstCandidateId = Lease.nextCandidateId( stateMachine.snapshot().leaseId() );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLeaseRequest( member( 0 ), firstCandidateId, databaseId ), 1, r -> {} );
+        stateMachine.applyCommand( new ReplicatedLeaseRequest( raftMember( 0 ), firstCandidateId, databaseId ), 1, r -> {} );
 
         // then
         assertEquals( firstCandidateId, stateMachine.snapshot().leaseId() );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLeaseRequest( member( 0 ), firstCandidateId + 1, databaseId ), 2, r -> {} );
+        stateMachine.applyCommand( new ReplicatedLeaseRequest( raftMember( 0 ), firstCandidateId + 1, databaseId ), 2, r -> {} );
 
         // then
         assertEquals( firstCandidateId + 1, stateMachine.snapshot().leaseId() );
@@ -106,16 +105,16 @@ class ReplicatedLeaseStateMachineTest
         int firstCandidateId = Lease.nextCandidateId( stateMachine.snapshot().leaseId() );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLeaseRequest( member( 0 ), firstCandidateId, databaseId ), 1, r -> {} );
+        stateMachine.applyCommand( new ReplicatedLeaseRequest( raftMember( 0 ), firstCandidateId, databaseId ), 1, r -> {} );
 
         // then
-        assertEquals( member( 0 ), stateMachine.snapshot().owner() );
+        assertEquals( raftMember( 0 ), stateMachine.snapshot().owner() );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLeaseRequest( member( 1 ), firstCandidateId + 1, databaseId ), 2, r -> {} );
+        stateMachine.applyCommand( new ReplicatedLeaseRequest( raftMember( 1 ), firstCandidateId + 1, databaseId ), 2, r -> {} );
 
         // then
-        assertEquals( member( 1 ), stateMachine.snapshot().owner() );
+        assertEquals( raftMember( 1 ), stateMachine.snapshot().owner() );
     }
 
     @Test
@@ -127,20 +126,20 @@ class ReplicatedLeaseStateMachineTest
         int firstCandidateId = Lease.nextCandidateId( stateMachine.snapshot().leaseId() );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLeaseRequest( member( 0 ), firstCandidateId, databaseId ), 1, r -> {} );
-        stateMachine.applyCommand( new ReplicatedLeaseRequest( member( 1 ), firstCandidateId, databaseId ), 2, r -> {} );
+        stateMachine.applyCommand( new ReplicatedLeaseRequest( raftMember( 0 ), firstCandidateId, databaseId ), 1, r -> {} );
+        stateMachine.applyCommand( new ReplicatedLeaseRequest( raftMember( 1 ), firstCandidateId, databaseId ), 2, r -> {} );
 
         // then
         assertEquals( 0, stateMachine.snapshot().leaseId() );
-        assertEquals( member( 0 ), stateMachine.snapshot().owner() );
+        assertEquals( raftMember( 0 ), stateMachine.snapshot().owner() );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLeaseRequest( member( 1 ), firstCandidateId + 1, databaseId ), 3, r -> {} );
-        stateMachine.applyCommand( new ReplicatedLeaseRequest( member( 0 ), firstCandidateId + 1, databaseId ), 4, r -> {} );
+        stateMachine.applyCommand( new ReplicatedLeaseRequest( raftMember( 1 ), firstCandidateId + 1, databaseId ), 3, r -> {} );
+        stateMachine.applyCommand( new ReplicatedLeaseRequest( raftMember( 0 ), firstCandidateId + 1, databaseId ), 4, r -> {} );
 
         // then
         assertEquals( 1, stateMachine.snapshot().leaseId() );
-        assertEquals( member( 1 ), stateMachine.snapshot().owner() );
+        assertEquals( raftMember( 1 ), stateMachine.snapshot().owner() );
     }
 
     @Test
@@ -152,31 +151,31 @@ class ReplicatedLeaseStateMachineTest
         int firstCandidateId = Lease.nextCandidateId( stateMachine.snapshot().leaseId() );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLeaseRequest( member( 0 ), firstCandidateId + 1, databaseId ), 1, r -> {} ); // not accepted
+        stateMachine.applyCommand( new ReplicatedLeaseRequest( raftMember( 0 ), firstCandidateId + 1, databaseId ), 1, r -> {} ); // not accepted
 
         // then
         assertEquals( NO_LEASE, stateMachine.snapshot().leaseId() );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLeaseRequest( member( 0 ), firstCandidateId, databaseId ), 2, r -> {} ); // accepted
+        stateMachine.applyCommand( new ReplicatedLeaseRequest( raftMember( 0 ), firstCandidateId, databaseId ), 2, r -> {} ); // accepted
 
         // then
         assertEquals( stateMachine.snapshot().leaseId(), firstCandidateId );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLeaseRequest( member( 0 ), firstCandidateId + 1, databaseId ), 3, r -> {} ); // accepted
+        stateMachine.applyCommand( new ReplicatedLeaseRequest( raftMember( 0 ), firstCandidateId + 1, databaseId ), 3, r -> {} ); // accepted
 
         // then
         assertEquals( stateMachine.snapshot().leaseId(), firstCandidateId + 1 );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLeaseRequest( member( 0 ), firstCandidateId, databaseId ), 4, r -> {} ); // not accepted
+        stateMachine.applyCommand( new ReplicatedLeaseRequest( raftMember( 0 ), firstCandidateId, databaseId ), 4, r -> {} ); // not accepted
 
         // then
         assertEquals( stateMachine.snapshot().leaseId(), firstCandidateId + 1 );
 
         // when
-        stateMachine.applyCommand( new ReplicatedLeaseRequest( member( 0 ), firstCandidateId + 3, databaseId ), 5, r -> {} ); // not accepted
+        stateMachine.applyCommand( new ReplicatedLeaseRequest( raftMember( 0 ), firstCandidateId + 3, databaseId ), 5, r -> {} ); // not accepted
 
         // then
         assertEquals( stateMachine.snapshot().leaseId(), firstCandidateId + 1 );
@@ -190,8 +189,8 @@ class ReplicatedLeaseStateMachineTest
 
         SafeStateMarshal<ReplicatedLeaseState> marshal = new ReplicatedLeaseState.Marshal();
 
-        MemberId memberA = member( 0 );
-        MemberId memberB = member( 1 );
+        var memberA = raftMember( 0 );
+        var memberB = raftMember( 1 );
         int candidateId;
 
         DurableStateStorage<ReplicatedLeaseState> storage = new DurableStateStorage<>( fsa, testDir.homePath(),
@@ -237,8 +236,8 @@ class ReplicatedLeaseStateMachineTest
         {
             ReplicatedLeaseStateMachine stateMachine = new ReplicatedLeaseStateMachine( storage );
 
-            MemberId memberA = member( 0 );
-            MemberId memberB = member( 1 );
+            var memberA = raftMember( 0 );
+            var memberB = raftMember( 1 );
 
             stateMachine.applyCommand( new ReplicatedLeaseRequest( memberA, 0, databaseId ), 3, r ->
             {
@@ -260,7 +259,7 @@ class ReplicatedLeaseStateMachineTest
         // Given
         @SuppressWarnings( "unchecked" )
         StateStorage<ReplicatedLeaseState> storage = mock( StateStorage.class );
-        MemberId initialHoldingCoreMember = member( 0 );
+        var initialHoldingCoreMember = raftMember( 0 );
         ReplicatedLeaseState initialState = new ReplicatedLeaseState( 123,
                 new ReplicatedLeaseRequest( initialHoldingCoreMember, 3, databaseId ) );
         when( storage.getInitialState() ).thenReturn( initialState );

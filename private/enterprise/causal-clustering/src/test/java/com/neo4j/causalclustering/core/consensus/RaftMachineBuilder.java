@@ -22,11 +22,10 @@ import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.replication.SendToMyself;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.causalclustering.messaging.Outbound;
 import com.neo4j.configuration.CausalClusteringSettings;
-import com.neo4j.configuration.ServerGroupsSupplier;
 
 import java.io.IOException;
 import java.time.Clock;
@@ -43,7 +42,7 @@ import static com.neo4j.configuration.ServerGroupsSupplier.listen;
 
 public class RaftMachineBuilder
 {
-    private final MemberId member;
+    private final RaftMemberId member;
     private final int expectedClusterSize;
     private final RaftMembers.Builder memberSetBuilder;
     private final Clock clock;
@@ -57,7 +56,7 @@ public class RaftMachineBuilder
     private Inbound<RaftMessages.InboundRaftMessageContainer<?>> inbound = handler ->
     {
     };
-    private Outbound<MemberId,RaftMessages.RaftMessage> outbound = ( to, message, block ) ->
+    private Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound = ( to, message, block ) ->
     {
     };
 
@@ -81,7 +80,7 @@ public class RaftMachineBuilder
     };
     private InFlightCache inFlightCache = new ConsecutiveInFlightCache();
 
-    public RaftMachineBuilder( MemberId member, int expectedClusterSize, RaftMembers.Builder memberSetBuilder, Clock clock )
+    public RaftMachineBuilder( RaftMemberId member, int expectedClusterSize, RaftMembers.Builder memberSetBuilder, Clock clock )
     {
         this.member = member;
         this.expectedClusterSize = expectedClusterSize;
@@ -165,7 +164,7 @@ public class RaftMachineBuilder
         return this;
     }
 
-    public RaftMachineBuilder outbound( Outbound<MemberId,RaftMessages.RaftMessage> outbound )
+    public RaftMachineBuilder outbound( Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound )
     {
         this.outbound = outbound;
         return this;

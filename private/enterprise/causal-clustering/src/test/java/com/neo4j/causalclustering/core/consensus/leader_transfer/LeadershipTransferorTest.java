@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
 import com.neo4j.configuration.ServerGroupName;
 import org.junit.jupiter.api.Test;
@@ -20,6 +21,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.time.Clocks;
@@ -34,19 +36,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class LeadershipTransferorTest
 {
     private final ClusteringIdentityModule clusteringIdentityModule = new StubClusteringIdentityModule();
-    private final MemberId myself = clusteringIdentityModule.memberId();
-    private final MemberId other = IdFactory.randomMemberId();
     private final NamedDatabaseId fooId = DatabaseIdFactory.from( "foo", UUID.randomUUID() );
+    private final RaftMemberId myself = clusteringIdentityModule.memberId( fooId );
+    private final RaftMemberId other = IdFactory.randomRaftMemberId();
+    private final ServerId otherServer = MemberId.of( other );
     private final ServerGroupName serverGroupName = new ServerGroupName( "prio" );
 
     @Test
-    void shouldThrowIfNoGrupExistsForDatabase()
+    void shouldThrowIfNoGroupExistsForDatabase()
     {
         // given
         var leadershipTransferor = new LeadershipTransferor( message ->
         {
         }, clusteringIdentityModule, new DatabasePenalties( Duration.ofSeconds( 10 ), Clocks.fakeClock() ), new StubRaftMembershipResolver( myself, other ),
-                Clocks.fakeClock() );
+                Clocks.fakeClock(), MemberId::of );
 
         // when there is no server id with the database
         Function<NamedDatabaseId,Set<ServerGroupName>> namedDatabaseIdSetFunction = dbid -> Set.of();
@@ -66,7 +69,7 @@ class LeadershipTransferorTest
         var leadershipTransferor = new LeadershipTransferor( message ->
         {
         }, clusteringIdentityModule, new DatabasePenalties( Duration.ofSeconds( 10 ), Clocks.fakeClock() ), new StubRaftMembershipResolver( myself, other ),
-                Clocks.fakeClock() );
+                Clocks.fakeClock(), MemberId::of );
 
         // and
         var noOp = SelectionStrategy.NO_OP;
@@ -85,7 +88,7 @@ class LeadershipTransferorTest
         AtomicReference<RaftMessages.InboundRaftMessageContainer<?>> raftMessage = new AtomicReference<>();
         var leadershipTransferor =
                 new LeadershipTransferor( raftMessage::set, clusteringIdentityModule, new DatabasePenalties( Duration.ofSeconds( 10 ), Clocks.fakeClock() ),
-                        new StubRaftMembershipResolver( myself, other ), Clocks.fakeClock() );
+                        new StubRaftMembershipResolver( myself, other ), Clocks.fakeClock(), MemberId::of );
 
         // when
         var result = leadershipTransferor.toPrioritisedGroup( List.of( fooId ), new RandomStrategy(), dbi -> Set.of( serverGroupName ) );
@@ -104,7 +107,7 @@ class LeadershipTransferorTest
         AtomicReference<RaftMessages.InboundRaftMessageContainer<?>> raftMessage = new AtomicReference<>();
         var leadershipTransferor =
                 new LeadershipTransferor( raftMessage::set, clusteringIdentityModule, new DatabasePenalties( Duration.ofSeconds( 10 ), Clocks.fakeClock() ),
-                        new StubRaftMembershipResolver( myself, other ), Clocks.fakeClock() );
+                        new StubRaftMembershipResolver( myself, other ), Clocks.fakeClock(), MemberId::of );
 
         // when
         var result = leadershipTransferor.balanceLeadership( List.of( fooId ), new RandomStrategy() );
@@ -123,10 +126,10 @@ class LeadershipTransferorTest
         AtomicReference<RaftMessages.InboundRaftMessageContainer<?>> raftMessage = new AtomicReference<>();
         var databasePenalties = new DatabasePenalties( Duration.ofSeconds( 10 ), Clocks.fakeClock() );
         var leadershipTransferor = new LeadershipTransferor( raftMessage::set, clusteringIdentityModule, databasePenalties,
-                new StubRaftMembershipResolver( myself, other ), Clocks.fakeClock() );
+                new StubRaftMembershipResolver( myself, other ), Clocks.fakeClock(), MemberId::of );
 
         // and
-        databasePenalties.issuePenalty( other, fooId );
+        databasePenalties.issuePenalty( otherServer, fooId );
 
         // when
         var result = leadershipTransferor.balanceLeadership( List.of( fooId ), new RandomStrategy() );
@@ -143,10 +146,10 @@ class LeadershipTransferorTest
         AtomicReference<RaftMessages.InboundRaftMessageContainer<?>> raftMessage = new AtomicReference<>();
         var databasePenalties = new DatabasePenalties( Duration.ofSeconds( 10 ), Clocks.fakeClock() );
         var leadershipTransferor = new LeadershipTransferor( raftMessage::set, clusteringIdentityModule, databasePenalties,
-                new StubRaftMembershipResolver( myself, other ), Clocks.fakeClock() );
+                new StubRaftMembershipResolver( myself, other ), Clocks.fakeClock(), MemberId::of );
 
         // and
-        databasePenalties.issuePenalty( other, fooId );
+        databasePenalties.issuePenalty( otherServer, fooId );
 
         // when
         var result = leadershipTransferor.toPrioritisedGroup( List.of( fooId ), new RandomStrategy(), dbid -> Set.of( serverGroupName ) );

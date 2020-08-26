@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 
 import java.util.ArrayList;
@@ -13,9 +13,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class OutboundMessageCollector implements Outbound<MemberId, RaftMessages.RaftMessage>
+public class OutboundMessageCollector implements Outbound<RaftMemberId, RaftMessages.RaftMessage>
 {
-    private Map<MemberId, List<RaftMessages.RaftMessage>> sentMessages = new HashMap<>();
+    private Map<RaftMemberId, List<RaftMessages.RaftMessage>> sentMessages = new HashMap<>();
 
     public void clear()
     {
@@ -23,17 +23,17 @@ public class OutboundMessageCollector implements Outbound<MemberId, RaftMessages
     }
 
     @Override
-    public void send( MemberId to, RaftMessages.RaftMessage message, boolean block )
+    public void send( RaftMemberId to, RaftMessages.RaftMessage message, boolean block )
     {
         raftMessages( to ).add( message );
     }
 
-    private List<RaftMessages.RaftMessage> raftMessages( MemberId to )
+    private List<RaftMessages.RaftMessage> raftMessages( RaftMemberId to )
     {
         return sentMessages.computeIfAbsent( to, k -> new ArrayList<>() );
     }
 
-    public List<RaftMessages.RaftMessage> sentTo( MemberId member )
+    public List<RaftMessages.RaftMessage> sentTo( RaftMemberId member )
     {
         List<RaftMessages.RaftMessage> messages = sentMessages.get( member );
 
@@ -45,7 +45,7 @@ public class OutboundMessageCollector implements Outbound<MemberId, RaftMessages
         return messages;
     }
 
-    public boolean hasAnyEntriesTo( MemberId member )
+    public boolean hasAnyEntriesTo( RaftMemberId member )
     {
         List<RaftMessages.RaftMessage> messages = sentMessages.get( member );
         return messages != null && messages.size() != 0;

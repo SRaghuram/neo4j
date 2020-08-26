@@ -31,6 +31,7 @@ import org.neo4j.time.Clocks;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -60,11 +61,11 @@ class CoreTopologyChangeListenerTest
     @Test
     void shouldNotifyListenersOnTopologyChange()
     {
-        DatabaseCoreTopology coreTopology = new DatabaseCoreTopology( namedDatabaseId.databaseId(), IdFactory.randomRaftId(), Map.of() );
-        Listener listener = mock( Listener.class );
+        var coreTopology = new DatabaseCoreTopology( namedDatabaseId.databaseId(), IdFactory.randomRaftId(), Map.of() );
+        var listener = mock( Listener.class );
         when( listener.namedDatabaseId() ).thenReturn( namedDatabaseId );
         service.addLocalCoreTopologyListener( listener );
         service.topologyState().onTopologyUpdate( coreTopology );
-        verify( listener ).onCoreTopologyChange( coreTopology );
+        verify( listener, times( 2 ) ).onCoreTopologyChange( coreTopology.members( service.topologyState()::resolveRaftMemberForServer ) );
     }
 }

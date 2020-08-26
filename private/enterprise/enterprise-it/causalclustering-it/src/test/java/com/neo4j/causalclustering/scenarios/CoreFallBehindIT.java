@@ -24,6 +24,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.extension.Inject;
@@ -157,6 +158,6 @@ class CoreFallBehindIT
     private boolean isSystemDatabaseMember( CoreClusterMember core ) throws TimeoutException
     {
         RaftMachine raft = cluster.awaitLeader( SYSTEM_DATABASE_NAME ).resolveDependency( SYSTEM_DATABASE_NAME, RaftMachine.class );
-        return raft.votingMembers().contains( core.id() );
+        return raft.votingMembers().contains( core.raftMemberIdFor( DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID ) );
     }
 }

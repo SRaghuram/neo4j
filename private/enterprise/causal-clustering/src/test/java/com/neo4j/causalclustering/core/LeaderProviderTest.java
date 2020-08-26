@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
@@ -26,8 +26,8 @@ import static org.mockito.Mockito.when;
 public class LeaderProviderTest
 {
     private NamedDatabaseId databaseId = DatabaseIdFactory.from( "system", UUID.randomUUID() );
-    private MemberId leaderFromRaft = IdFactory.randomMemberId();
-    private MemberId leaderFromDiscovery = IdFactory.randomMemberId();
+    private RaftMemberId leaderFromRaft = IdFactory.randomRaftMemberId();
+    private RaftMemberId leaderFromDiscovery = IdFactory.randomRaftMemberId();
 
     @Test
     void shouldReturnEmptyIfBothAreEmpty()

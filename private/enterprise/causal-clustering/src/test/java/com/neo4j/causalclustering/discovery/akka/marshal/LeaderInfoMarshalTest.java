@@ -19,7 +19,7 @@ public class LeaderInfoMarshalTest extends BaseMarshalTest<LeaderInfo>
     @Override
     Collection<LeaderInfo> originals()
     {
-        return singletonList( new LeaderInfo( IdFactory.randomMemberId(), 12L ) );
+        return singletonList( new LeaderInfo( IdFactory.randomRaftMemberId(), 12L ) );
     }
 
     @Override

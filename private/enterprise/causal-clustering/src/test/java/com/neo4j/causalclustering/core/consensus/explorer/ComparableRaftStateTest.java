@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import org.neo4j.logging.NullLogProvider;
 
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
@@ -22,13 +22,13 @@ class ComparableRaftStateTest
     {
         // given
         NullLogProvider logProvider = NullLogProvider.getInstance();
-        ComparableRaftState state1 = new ComparableRaftState( member( 0 ),
-                asSet( member( 0 ), member( 1 ), member( 2 ) ),
-                asSet( member( 0 ), member( 1 ), member( 2 ) ), false, new InMemoryRaftLog(), new ConsecutiveInFlightCache(), logProvider );
+        ComparableRaftState state1 = new ComparableRaftState( raftMember( 0 ),
+                asSet( raftMember( 0 ), raftMember( 1 ), raftMember( 2 ) ),
+                asSet( raftMember( 0 ), raftMember( 1 ), raftMember( 2 ) ), false, new InMemoryRaftLog(), new ConsecutiveInFlightCache(), logProvider );
 
-        ComparableRaftState state2 = new ComparableRaftState( member( 0 ),
-                asSet( member( 0 ), member( 1 ), member( 2 ) ),
-                asSet( member( 0 ), member( 1 ), member( 2 ) ), false, new InMemoryRaftLog(), new ConsecutiveInFlightCache(), logProvider );
+        ComparableRaftState state2 = new ComparableRaftState( raftMember( 0 ),
+                asSet( raftMember( 0 ), raftMember( 1 ), raftMember( 2 ) ),
+                asSet( raftMember( 0 ), raftMember( 1 ), raftMember( 2 ) ), false, new InMemoryRaftLog(), new ConsecutiveInFlightCache(), logProvider );
 
         // then
         assertEquals(state1, state2);

@@ -184,7 +184,7 @@ public class ReadReplicaTopologyActor extends AbstractLoggingActor
         log().debug( "Built read replica topology for database {}: {}", databaseId, readReplicaTopology );
 
         topologySink.offer( readReplicaTopology );
-        if ( readReplicaTopology.members().isEmpty() )
+        if ( readReplicaTopology.servers().isEmpty() )
         {
             readReplicaTopologies.remove( databaseId );
         }

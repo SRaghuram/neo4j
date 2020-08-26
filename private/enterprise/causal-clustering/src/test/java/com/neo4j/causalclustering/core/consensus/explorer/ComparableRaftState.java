@@ -14,8 +14,7 @@ import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
 import com.neo4j.causalclustering.core.consensus.outcome.RaftLogCommand;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
 import com.neo4j.causalclustering.core.consensus.state.ReadableRaftState;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.configuration.ServerGroupName;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -30,27 +29,27 @@ import static java.lang.String.format;
 
 public class ComparableRaftState implements ReadableRaftState
 {
-    protected final MemberId myself;
-    private final Set<MemberId> votingMembers;
-    private final Set<MemberId> replicationMembers;
+    protected final RaftMemberId myself;
+    private final Set<RaftMemberId> votingMembers;
+    private final Set<RaftMemberId> replicationMembers;
     private final Log log;
     protected long term;
-    protected MemberId leader;
+    protected RaftMemberId leader;
     private LeaderInfo leaderInfo = LeaderInfo.INITIAL;
     private long leaderCommit = -1;
-    private MemberId votedFor;
-    private Set<MemberId> votesForMe = new HashSet<>();
-    private Set<MemberId> preVotesForMe = new HashSet<>();
-    private Set<MemberId> heartbeatResponses = new HashSet<>();
+    private RaftMemberId votedFor;
+    private Set<RaftMemberId> votesForMe = new HashSet<>();
+    private Set<RaftMemberId> preVotesForMe = new HashSet<>();
+    private Set<RaftMemberId> heartbeatResponses = new HashSet<>();
     private long lastLogIndexBeforeWeBecameLeader = -1;
-    private FollowerStates<MemberId> followerStates = new FollowerStates<>();
+    private FollowerStates<RaftMemberId> followerStates = new FollowerStates<>();
     protected final RaftLog entryLog;
     private final InFlightCache inFlightCache;
     private long commitIndex = -1;
     private boolean isPreElection;
     private boolean timersStarted;
 
-    ComparableRaftState( MemberId myself, Set<MemberId> votingMembers, Set<MemberId> replicationMembers, boolean timersStarted,
+    ComparableRaftState( RaftMemberId myself, Set<RaftMemberId> votingMembers, Set<RaftMemberId> replicationMembers, boolean timersStarted,
                          RaftLog entryLog, InFlightCache inFlightCache, LogProvider logProvider )
     {
         this.myself = myself;
@@ -69,19 +68,19 @@ public class ComparableRaftState implements ReadableRaftState
     }
 
     @Override
-    public MemberId myself()
+    public RaftMemberId myself()
     {
         return myself;
     }
 
     @Override
-    public Set<MemberId> votingMembers()
+    public Set<RaftMemberId> votingMembers()
     {
         return votingMembers;
     }
 
     @Override
-    public Set<MemberId> replicationMembers()
+    public Set<RaftMemberId> replicationMembers()
     {
         return replicationMembers;
     }
@@ -93,7 +92,7 @@ public class ComparableRaftState implements ReadableRaftState
     }
 
     @Override
-    public MemberId leader()
+    public RaftMemberId leader()
     {
         return leader;
     }
@@ -111,19 +110,19 @@ public class ComparableRaftState implements ReadableRaftState
     }
 
     @Override
-    public MemberId votedFor()
+    public RaftMemberId votedFor()
     {
         return votedFor;
     }
 
     @Override
-    public Set<MemberId> votesForMe()
+    public Set<RaftMemberId> votesForMe()
     {
         return votesForMe;
     }
 
     @Override
-    public Set<MemberId> heartbeatResponses()
+    public Set<RaftMemberId> heartbeatResponses()
     {
         return heartbeatResponses;
     }
@@ -135,7 +134,7 @@ public class ComparableRaftState implements ReadableRaftState
     }
 
     @Override
-    public FollowerStates<MemberId> followerStates()
+    public FollowerStates<RaftMemberId> followerStates()
     {
         return followerStates;
     }
@@ -159,7 +158,7 @@ public class ComparableRaftState implements ReadableRaftState
     }
 
     @Override
-    public Set<MemberId> preVotesForMe()
+    public Set<RaftMemberId> preVotesForMe()
     {
         return preVotesForMe;
     }

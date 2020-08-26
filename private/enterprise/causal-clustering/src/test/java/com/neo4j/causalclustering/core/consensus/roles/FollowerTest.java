@@ -19,7 +19,7 @@ import com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContex
 import com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContextBuilder;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
 import com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -39,19 +39,19 @@ import static com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlin
 import static com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContextBuilder.contextWithState;
 import static com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContextBuilder.contextWithStateWithPreVote;
 import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.builder;
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 class FollowerTest
 {
-    private final MemberId myself = member( 0 );
+    private final RaftMemberId myself = raftMember( 0 );
 
     /* A few members that we use at will in tests. */
-    private final MemberId member1 = member( 1 );
-    private final MemberId member2 = member( 2 );
-    private final MemberId member3 = member( 3 );
-    private final MemberId member4 = member( 4 );
+    private final RaftMemberId member1 = raftMember( 1 );
+    private final RaftMemberId member2 = raftMember( 2 );
+    private final RaftMemberId member3 = raftMember( 3 );
+    private final RaftMemberId member4 = raftMember( 4 );
 
     @Test
     void shouldImmediatelyHandleRejectionMessageOnLeadershipTransferProposal() throws Exception

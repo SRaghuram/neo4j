@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
 import com.neo4j.causalclustering.core.consensus.outcome.OutcomeBuilder;
 import com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContext;
 import com.neo4j.causalclustering.core.consensus.state.ReadableRaftState;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.configuration.ServerGroupName;
 
 import java.io.IOException;
@@ -288,7 +287,7 @@ class Follower implements RaftMessageHandler
             else
             {
                 log.info( "Election timeout triggered but refusing to be leader or instance is shutting down" );
-                Set<MemberId> memberIds = state.votingMembers();
+                var memberIds = state.votingMembers();
                 if ( memberIds != null && memberIds.contains( state.myself() ) )
                 {
                     outcomeBuilder.setPreElection( true );

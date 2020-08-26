@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.routing.load_balancing.DefaultLeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.dbms.EnterpriseOperatorState;
@@ -250,7 +251,7 @@ class GetRoutingTableProcedureForSingleDCTest
         // given
         var theLeader = getLeaderForId( 0 );
         leaderService.setLeader( theLeader );
-        var coreMembers = Map.of( theLeader, addressesForCore( 0, false ) );
+        var coreMembers = Map.of( member( 0 ), addressesForCore( 0, false ) );
 
         setupCoreTopologyService( coreTopologyService, coreMembers, readReplicaInfoMap( 1 ) );
 
@@ -283,7 +284,7 @@ class GetRoutingTableProcedureForSingleDCTest
         var theLeader = getLeaderForId( 0 );
         leaderService.setLeader( theLeader );
 
-        var coreMembers = Map.of( theLeader, addressesForCore( 0, false ) );
+        var coreMembers = Map.of( member( 0 ), addressesForCore( 0, false ) );
 
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
 
@@ -476,7 +477,7 @@ class GetRoutingTableProcedureForSingleDCTest
         assertEquals( Status.Database.DatabaseUnavailable, error.status() );
     }
 
-    private static MemberId getLeaderForId( int id )
+    private RaftMemberId getLeaderForId( int id )
     {
         return leader( id, 1 ).memberId();
     }
@@ -661,7 +662,7 @@ class GetRoutingTableProcedureForSingleDCTest
 
     private static class MutableLeaderService implements LeaderService
     {
-        Map<NamedDatabaseId,MemberId> leaders = new HashMap<>();
+        Map<NamedDatabaseId,RaftMemberId> leaders = new HashMap<>();
         private NamedDatabaseId defaultDb;
         private CoreTopologyService coreTopologyService;
 
@@ -672,9 +673,9 @@ class GetRoutingTableProcedureForSingleDCTest
         }
 
         @Override
-        public Optional<MemberId> getLeaderId( NamedDatabaseId namedDatabaseId )
+        public Optional<MemberId> getLeaderServer( NamedDatabaseId namedDatabaseId )
         {
-            return Optional.ofNullable( leaders.get( namedDatabaseId ) );
+            return getLeaderId( namedDatabaseId ).map( MemberId::of );
         }
 
         @Override
@@ -683,17 +684,23 @@ class GetRoutingTableProcedureForSingleDCTest
             var leader = leaders.get( namedDatabaseId );
             if ( leader != null )
             {
-                return Optional.ofNullable( coreTopologyService.allCoreServers().get( leader ) ).map( coreInfo -> coreInfo.connectors().clientBoltAddress() );
+                return Optional.ofNullable( coreTopologyService.allCoreServers().get( MemberId.of( leader ) ) )
+                        .map( coreInfo -> coreInfo.connectors().clientBoltAddress() );
             }
             return Optional.empty();
         }
 
-        void setLeader( MemberId leader )
+        private Optional<RaftMemberId> getLeaderId( NamedDatabaseId namedDatabaseId )
+        {
+            return Optional.ofNullable( leaders.get( namedDatabaseId ) );
+        }
+
+        void setLeader( RaftMemberId leader )
         {
             setLeader( defaultDb, leader );
         }
 
-        void setLeader( NamedDatabaseId namedDatabaseId, MemberId leader )
+        void setLeader( NamedDatabaseId namedDatabaseId, RaftMemberId leader )
         {
             this.leaders.put( namedDatabaseId, leader );
         }

@@ -10,13 +10,13 @@ import com.neo4j.causalclustering.core.consensus.membership.MemberIdSet;
 import com.neo4j.causalclustering.core.consensus.protocol.RaftProtocolClientInstaller;
 import com.neo4j.causalclustering.core.consensus.protocol.RaftProtocolServerInstaller;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
-import com.neo4j.causalclustering.messaging.marshalling.v2.SupportedMessagesV2;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.marshalling.DecodingDispatcher;
 import com.neo4j.causalclustering.messaging.marshalling.RaftMessageComposer;
 import com.neo4j.causalclustering.messaging.marshalling.RaftMessageDecoder;
 import com.neo4j.causalclustering.messaging.marshalling.RaftMessageEncoder;
+import com.neo4j.causalclustering.messaging.marshalling.v2.SupportedMessagesV2;
 import com.neo4j.causalclustering.messaging.marshalling.v3.SupportedMessagesV3;
 import com.neo4j.causalclustering.messaging.marshalling.v3.decoding.RaftMessageDecoderV3;
 import com.neo4j.causalclustering.messaging.marshalling.v3.encoding.RaftMessageEncoderV3;
@@ -259,7 +259,7 @@ class RaftSenderIT
 
         // when
         SocketAddress to = new SocketAddress( raftServer.address().getHostname(), raftServer.address().getPort() );
-        MemberId memberId = IdFactory.randomMemberId();
+        RaftMemberId memberId = IdFactory.randomRaftMemberId();
         RaftId raftId = IdFactory.randomRaftId();
 
         RaftMessages.NewEntry.Request newEntryMessage = new RaftMessages.NewEntry.Request( memberId, new MemberIdSet( asSet( memberId ) ) );

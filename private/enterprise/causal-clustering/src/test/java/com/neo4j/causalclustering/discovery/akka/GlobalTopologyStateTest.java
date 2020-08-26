@@ -16,6 +16,7 @@ import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.configuration.ServerGroupName;
 import org.junit.jupiter.api.Test;
 
@@ -23,7 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
@@ -48,7 +49,7 @@ import static org.neo4j.logging.LogAssertions.assertThat;
 class GlobalTopologyStateTest
 {
     @SuppressWarnings( "unchecked" )
-    private final Consumer<DatabaseCoreTopology> listener = mock( Consumer.class );
+    private final BiConsumer<DatabaseId,Set<RaftMemberId>> listener = mock( BiConsumer.class );
     private final AssertableLogProvider logProvider = new AssertableLogProvider();
     private final GlobalTopologyState state = new GlobalTopologyState( logProvider, listener );
 
@@ -108,10 +109,10 @@ class GlobalTopologyStateTest
                 Map.of( coreId1, coreInfo1, coreId2, coreInfo2, coreId3, coreInfo3 ) );
 
         state.onTopologyUpdate( coreTopology1 );
-        verify( listener ).accept( coreTopology1 );
+        verify( listener ).accept( databaseId1, toRaftMembers( coreTopology1 ) );
 
         state.onTopologyUpdate( coreTopology2 );
-        verify( listener ).accept( coreTopology2 );
+        verify( listener ).accept( databaseId1, toRaftMembers( coreTopology2 ) );
     }
 
     @Test
@@ -123,7 +124,7 @@ class GlobalTopologyStateTest
         state.onTopologyUpdate( coreTopology );
         state.onTopologyUpdate( coreTopology );
 
-        verify( listener ).accept( coreTopology );
+        verify( listener ).accept( databaseId1, toRaftMembers( coreTopology ) );
     }
 
     @Test
@@ -153,7 +154,8 @@ class GlobalTopologyStateTest
         var coreTopology2 = new DatabaseCoreTopology( databaseId2, RaftId.from( databaseId2 ), coreMembers );
         state.onTopologyUpdate( coreTopology2 );
 
-        var leaderInfos = Map.<DatabaseId,LeaderInfo>of( databaseId1, new LeaderInfo( coreId1, 42 ), databaseId2, new LeaderInfo( coreId3, 4242 ) );
+        var leaderInfos = Map.<DatabaseId,LeaderInfo>of( databaseId1,
+                new LeaderInfo( RaftMemberId.from( coreId1 ), 42 ), databaseId2, new LeaderInfo( RaftMemberId.from( coreId3 ), 4242 ) );
 
         state.onDbLeaderUpdate( leaderInfos );
 
@@ -206,7 +208,8 @@ class GlobalTopologyStateTest
         state.onTopologyUpdate( coreTopology1 );
         state.onTopologyUpdate( coreTopology2 );
 
-        state.onDbLeaderUpdate( Map.of( databaseId1, new LeaderInfo( coreId1, 42 ), databaseId2, new LeaderInfo( coreId3, 42 ) ) );
+        state.onDbLeaderUpdate( Map.of( databaseId1,
+                new LeaderInfo( RaftMemberId.from( coreId1 ), 42 ), databaseId2, new LeaderInfo( RaftMemberId.from( coreId3 ), 42 ) ) );
 
         assertEquals( RoleInfo.LEADER, state.role( namedDatabaseId1, coreId1 ) );
         assertEquals( RoleInfo.FOLLOWER, state.role( namedDatabaseId1, coreId2 ) );
@@ -333,8 +336,8 @@ class GlobalTopologyStateTest
         state.onTopologyUpdate( coreTopology2 );
 
         // changes from both topologies are reported
-        verify( listener ).accept( coreTopology1 );
-        verify( listener ).accept( coreTopology2 );
+        verify( listener ).accept( databaseId1, toRaftMembers( coreTopology1 ) );
+        verify( listener ).accept( databaseId1, toRaftMembers( coreTopology2 ) );
 
         // seconds core topology is not stored because it does not contain any members
         var emptyTopology1 = state.coreTopologyForDatabase( namedDatabaseId1 );
@@ -374,32 +377,33 @@ class GlobalTopologyStateTest
         // given
         var prefix = "Database leader(s) update:" + lineSeparator() + "  ";
         var leaders = new HashMap<DatabaseId,LeaderInfo>();
-        leaders.put( databaseId2, new LeaderInfo( coreId3, 1 ) );
+        leaders.put( databaseId2, new LeaderInfo( RaftMemberId.from( coreId3 ), 1 ) );
         state.onDbLeaderUpdate( Map.copyOf( leaders ) );
 
         // when
         logProvider.clear();
-        leaders.put( databaseId1, new LeaderInfo( coreId1, 1 ) );
+        leaders.put( databaseId1, new LeaderInfo( RaftMemberId.from( coreId1 ), 1 ) );
         state.onDbLeaderUpdate( Map.copyOf( leaders ) );
         // then
         assertThat( logProvider ).forClass( GlobalTopologyState.class ).forLevel( INFO ).containsMessages(
-                format( "%sDiscovered leader %s in term %d for database %s", prefix, coreId1, 1, databaseId1 ) );
+                format( "%sDiscovered leader %s in term %d for database %s", prefix, RaftMemberId.from( coreId1 ), 1, databaseId1 ) );
 
         // when
         logProvider.clear();
-        leaders.put( databaseId1, new LeaderInfo( coreId1, 2 ) );
+        leaders.put( databaseId1, new LeaderInfo( RaftMemberId.from( coreId1 ), 2 ) );
         state.onDbLeaderUpdate( Map.copyOf( leaders ) );
         // then
         assertThat( logProvider ).forClass( GlobalTopologyState.class ).forLevel( INFO ).containsMessages(
-                format( "%sDatabase %s leader remains %s but term changed to %d", prefix, databaseId1, coreId1, 2 ) );
+                format( "%sDatabase %s leader remains %s but term changed to %d", prefix, databaseId1, RaftMemberId.from( coreId1 ), 2 ) );
 
         // when
         logProvider.clear();
-        leaders.put( databaseId1, new LeaderInfo( coreId2, 3 ) );
+        leaders.put( databaseId1, new LeaderInfo( RaftMemberId.from( coreId2 ), 3 ) );
         state.onDbLeaderUpdate( Map.copyOf( leaders ) );
         // then
         assertThat( logProvider ).forClass( GlobalTopologyState.class ).forLevel( INFO ).containsMessages(
-                format( "%sDatabase %s switch leader from %s to %s in term %d", prefix, databaseId1, coreId1, coreId2, 3 ) );
+                format( "%sDatabase %s switch leader from %s to %s in term %d", prefix, databaseId1,
+                        RaftMemberId.from( coreId1 ), RaftMemberId.from( coreId2 ), 3 ) );
 
         // whens
         logProvider.clear();
@@ -407,7 +411,7 @@ class GlobalTopologyStateTest
         state.onDbLeaderUpdate( Map.copyOf( leaders ) );
         // then
         assertThat( logProvider ).forClass( GlobalTopologyState.class ).forLevel( INFO ).containsMessages(
-                format( "%sDatabase %s lost its leader. Previous leader was %s", prefix, databaseId1, coreId2 ) );
+                format( "%sDatabase %s lost its leader. Previous leader was %s", prefix, databaseId1, RaftMemberId.from( coreId2 ) ) );
     }
 
     private static CoreServerInfo newCoreInfo( MemberId memberId, Set<DatabaseId> databaseIds )
@@ -431,4 +435,10 @@ class GlobalTopologyStateTest
         var groups = ServerGroupName.setOf( "group-1-" + memberId.getUuid(), "group-2-" + memberId.getUuid() );
         return new ReadReplicaInfo( connectorUris, catchupAddress, groups, databaseIds );
     }
+
+    private Set<RaftMemberId> toRaftMembers( DatabaseCoreTopology coreTopology )
+    {
+        return coreTopology.members( state::resolveRaftMemberForServer );
+    }
+
 }

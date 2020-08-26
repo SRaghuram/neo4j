@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core.consensus.explorer;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -22,17 +22,17 @@ import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.b
 
 public class ClusterState
 {
-    public final Map<MemberId, Role> roles;
-    public final Map<MemberId, ComparableRaftState> states;
-    public final Map<MemberId, Queue<RaftMessages.RaftMessage>> queues;
+    public final Map<RaftMemberId, Role> roles;
+    public final Map<RaftMemberId, ComparableRaftState> states;
+    public final Map<RaftMemberId, Queue<RaftMessages.RaftMessage>> queues;
 
-    public ClusterState( Set<MemberId> members ) throws IOException
+    public ClusterState( Set<RaftMemberId> members ) throws IOException
     {
         this.roles = new HashMap<>();
         this.states = new HashMap<>();
         this.queues = new HashMap<>();
 
-        for ( MemberId member : members )
+        for ( RaftMemberId member : members )
         {
             roles.put( member, Role.FOLLOWER );
             RaftState memberState = builder().myself( member ).votingMembers( members ).build();
@@ -75,7 +75,7 @@ public class ClusterState
     public String toString()
     {
         StringBuilder builder = new StringBuilder();
-        for ( MemberId member : roles.keySet() )
+        for ( RaftMemberId member : roles.keySet() )
         {
             builder.append( member ).append( " : " ).append( roles.get( member ) ).append( "\n" );
             builder.append( "  state: " ).append( states.get( member ) ).append( "\n" );

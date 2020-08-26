@@ -47,49 +47,49 @@ class TopologyBuilderTest
 
       "missing all member metadata" in new Fixture {
         val topology = topologyBuilder().buildCoreTopology(databaseId, raftId, clusterState(3), MetadataMessage.EMPTY)
-        topology.members() shouldBe empty
+        topology.servers() shouldBe empty
       }
 
       "missing all members" in new Fixture {
         val emptyClusterState = ClusterViewMessage.EMPTY
         val topology = topologyBuilder().buildCoreTopology(databaseId, raftId, emptyClusterState, memberMetaData(3))
-        topology.members() shouldBe empty
+        topology.servers() shouldBe empty
       }
 
       "all members unreachable" in new Fixture {
         val topology = topologyBuilder().buildCoreTopology(databaseId, raftId, clusterState(3, 3), memberMetaData(3))
-        topology.members() shouldBe empty
+        topology.servers() shouldBe empty
       }
 
       "no member contains the database" in new Fixture {
         val otherDatabaseId = randomNamedDatabaseId().databaseId()
         val topology = topologyBuilder().buildCoreTopology(otherDatabaseId, raftId, clusterState(3), memberMetaData(3))
         topology.databaseId() shouldBe otherDatabaseId
-        topology.members() shouldBe empty
+        topology.servers() shouldBe empty
       }
     }
 
     "return a topology with members only in both metadata and cluster" when {
       "cluster has more members that metadata" in new Fixture {
         val topology = topologyBuilder().buildCoreTopology(databaseId, raftId, clusterState(4), memberMetaData(3))
-        topology.members() should have size 3
+        topology.servers() should have size 3
       }
 
       "metadata has more members than cluster" in new Fixture {
         val topology = topologyBuilder().buildCoreTopology(databaseId, raftId, clusterState(3), memberMetaData(4))
-        topology.members() should have size 3
+        topology.servers() should have size 3
       }
     }
 
     "return a topology without unreachable members" in new Fixture {
       val topology = topologyBuilder().buildCoreTopology(databaseId, raftId, clusterState(4, 1), memberMetaData(4))
-      topology.members() should have size 3
+      topology.servers() should have size 3
     }
 
     "return a topology with all members from cluster and metadata if have same number and none unreachable" in new Fixture {
       val clusterSize = 7
       val topology = topologyBuilder().buildCoreTopology(databaseId, raftId, clusterState(clusterSize), memberMetaData(clusterSize))
-      topology.members() should have size clusterSize
+      topology.servers() should have size clusterSize
     }
 
     "correctly associate cluster members and meta data by unique address" in new Fixture {
@@ -97,7 +97,7 @@ class TopologyBuilderTest
       val metadata = memberMetaData(4, 2)
       val expected = clusterMembers.members.asScala.flatMap(m => metadata.getOpt(m.uniqueAddress).asScala).map(_.serverId).map(MemberId.of)
       val topology = topologyBuilder().buildCoreTopology(databaseId, raftId, clusterMembers, metadata)
-      topology.members().keySet() should contain theSameElementsAs expected
+      topology.servers().keySet() should contain theSameElementsAs expected
     }
 
     "equate a DatabaseIdRaw and a DatabaseId" in new Fixture {
@@ -105,7 +105,7 @@ class TopologyBuilderTest
       val clusterMembers = clusterState(clusterSize)
       val metadata = memberMetaData(clusterSize, databaseId = databaseId)
       val topology = topologyBuilder().buildCoreTopology(databaseId, raftId, clusterMembers, metadata)
-      topology.members() should have size clusterSize
+      topology.servers() should have size clusterSize
     }
   }
 

@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.core.consensus.election;
 
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.RaftMachineBuilder;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,11 +57,11 @@ public class DisconnectLeaderScenario
     private long oneIteration( long leaderStabilityMaxTimeMillis ) throws InterruptedException, TimeoutException
     {
         List<RaftMachine> rafts = fixture.rafts.stream().map( RaftMachineBuilder.RaftFixture::raftMachine ).collect( toList() );
-        MemberId oldLeader = ElectionUtil.waitForLeaderAgreement( rafts, leaderStabilityMaxTimeMillis );
+        RaftMemberId oldLeader = ElectionUtil.waitForLeaderAgreement( rafts, leaderStabilityMaxTimeMillis );
         long startTime = System.currentTimeMillis();
 
         fixture.net.disconnect( oldLeader );
-        MemberId newLeader = ElectionUtil.waitForLeaderAgreement(
+        RaftMemberId newLeader = ElectionUtil.waitForLeaderAgreement(
                 new FilteringIterable<>( rafts, raft -> !raft.memberId().equals( oldLeader ) ),
                 leaderStabilityMaxTimeMillis );
         assert !newLeader.equals( oldLeader ); // this should be guaranteed by the waitForLeaderAgreement call

@@ -20,5 +20,5 @@ public abstract class ClusteringIdentityModule extends DefaultIdentityModule imp
     @Deprecated
     public abstract MemberId memberId();
 
-    public abstract MemberId memberId( NamedDatabaseId namedDatabaseId );
+    public abstract RaftMemberId memberId( NamedDatabaseId namedDatabaseId );
 }

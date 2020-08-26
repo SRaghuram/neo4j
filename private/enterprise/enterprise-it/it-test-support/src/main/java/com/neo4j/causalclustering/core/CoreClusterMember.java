@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.OnlineBackupSettings;
@@ -208,6 +209,11 @@ public class CoreClusterMember implements ClusterMember
     public MemberId id()
     {
         return systemDatabase.getDependencyResolver().resolveDependency( ClusteringIdentityModule.class ).memberId();
+    }
+
+    public RaftMemberId raftMemberIdFor( NamedDatabaseId databaseId )
+    {
+        return systemDatabase.getDependencyResolver().resolveDependency( ClusteringIdentityModule.class ).memberId( databaseId );
     }
 
     @Override

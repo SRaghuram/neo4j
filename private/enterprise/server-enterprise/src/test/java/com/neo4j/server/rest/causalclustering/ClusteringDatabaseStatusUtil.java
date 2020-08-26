@@ -16,6 +16,7 @@ import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
 
 import java.time.Duration;
@@ -55,8 +56,8 @@ final class ClusteringDatabaseStatusUtil
     static class CoreStatusMockBuilder
     {
         private NamedDatabaseId databaseId;
-        private MemberId memberId;
-        private MemberId leaderId;
+        private RaftMemberId memberId;
+        private RaftMemberId leaderId;
         private boolean healthy;
         private boolean available;
         private Duration durationSinceLastMessage;
@@ -74,13 +75,13 @@ final class ClusteringDatabaseStatusUtil
             return this;
         }
 
-        CoreStatusMockBuilder memberId( MemberId memberId )
+        CoreStatusMockBuilder memberId( RaftMemberId memberId )
         {
             this.memberId = memberId;
             return this;
         }
 
-        CoreStatusMockBuilder leaderId( MemberId leaderId )
+        CoreStatusMockBuilder leaderId( RaftMemberId leaderId )
         {
             this.leaderId = leaderId;
             return this;
@@ -143,10 +144,10 @@ final class ClusteringDatabaseStatusUtil
             when( resolver.resolveDependency( DatabaseHealth.class ) ).thenReturn( databaseHealth );
 
             var topologyService = mock( TopologyService.class );
-            when( topologyService.memberId() ).thenReturn( memberId );
             when( resolver.resolveDependency( TopologyService.class ) ).thenReturn( topologyService );
 
             var raftMachine = mock( RaftMachine.class );
+            when( raftMachine.memberId() ).thenReturn(  memberId );
             when( raftMachine.getLeaderInfo() ).thenReturn( Optional.of( new LeaderInfo( leaderId, 1 ) ) );
             when( resolver.resolveDependency( RaftMachine.class ) ).thenReturn( raftMachine );
 

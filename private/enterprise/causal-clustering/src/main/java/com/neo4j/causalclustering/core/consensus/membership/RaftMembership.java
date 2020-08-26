@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.membership;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.Set;
 
@@ -19,12 +19,12 @@ public interface RaftMembership
     /**
      * @return members whose votes count towards consensus. The returned set should be considered immutable.
      */
-    Set<MemberId> votingMembers();
+    Set<RaftMemberId> votingMembers();
 
     /**
      * @return members to which replication should be attempted. The returned set should be considered immutable.
      */
-    Set<MemberId> replicationMembers();
+    Set<RaftMemberId> replicationMembers();
 
     /**
      * Register a membership listener.
@@ -49,13 +49,13 @@ public interface RaftMembership
     RaftMembership EMPTY = new RaftMembership()
     {
         @Override
-        public Set<MemberId> votingMembers()
+        public Set<RaftMemberId> votingMembers()
         {
             return Set.of();
         }
 
         @Override
-        public Set<MemberId> replicationMembers()
+        public Set<RaftMemberId> replicationMembers()
         {
             return Set.of();
         }

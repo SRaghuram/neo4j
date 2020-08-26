@@ -19,10 +19,10 @@ class ReplicatedLeaderInfoTest extends NeoSuite {
 
    "prefer higher term LeaderInfo values when merging" in {
      Given("High term leader info")
-     val leaderInfoHigh = new ReplicatedLeaderInfo(new LeaderInfo(IdFactory.randomMemberId(),2L))
+     val leaderInfoHigh = new ReplicatedLeaderInfo(new LeaderInfo(IdFactory.randomRaftMemberId(),2L))
 
      And("Low term leader info")
-     val leaderInfoLow = new ReplicatedLeaderInfo(new LeaderInfo(IdFactory.randomMemberId(),1L))
+     val leaderInfoLow = new ReplicatedLeaderInfo(new LeaderInfo(IdFactory.randomRaftMemberId(),1L))
 
      When("Merging low into high")
 
@@ -36,10 +36,10 @@ class ReplicatedLeaderInfoTest extends NeoSuite {
 
    "prefer stepping down LeaderInfo values when merging in the same term" in {
      Given("Stepping down leader info")
-     val steppingDownleaderInfo = new ReplicatedLeaderInfo(new LeaderInfo(IdFactory.randomMemberId(),1L).stepDown())
+     val steppingDownleaderInfo = new ReplicatedLeaderInfo(new LeaderInfo(IdFactory.randomRaftMemberId(),1L).stepDown())
 
      And("Normal leaderInfo")
-     val leaderInfo = new ReplicatedLeaderInfo(new LeaderInfo(IdFactory.randomMemberId(),1L))
+     val leaderInfo = new ReplicatedLeaderInfo(new LeaderInfo(IdFactory.randomRaftMemberId(),1L))
 
      When("Merging normal into stepping down")
 

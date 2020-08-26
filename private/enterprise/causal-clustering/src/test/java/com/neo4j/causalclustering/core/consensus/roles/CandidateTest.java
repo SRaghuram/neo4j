@@ -15,7 +15,7 @@ import com.neo4j.causalclustering.core.consensus.outcome.AppendLogEntry;
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
 import com.neo4j.causalclustering.core.consensus.outcome.OutcomeTestBuilder;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -37,14 +37,14 @@ import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
 import static com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContextBuilder.contextWithState;
 import static com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContextBuilder.contextWithStateWithPreVote;
 import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.builder;
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class CandidateTest
 {
-    private MemberId myself = member( 0 );
-    private MemberId member1 = member( 1 );
-    private MemberId member2 = member( 2 );
+    private RaftMemberId myself = raftMember( 0 );
+    private RaftMemberId member1 = raftMember( 1 );
+    private RaftMemberId member2 = raftMember( 2 );
 
     private LogProvider logProvider = NullLogProvider.getInstance();
 

@@ -6,8 +6,8 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -32,7 +32,7 @@ class ClusterBindingHandlerTest
 
     private RaftMessages.InboundRaftMessageContainer<?> heartbeat =
             RaftMessages.InboundRaftMessageContainer.of( Instant.now(), raftId,
-                                                         new RaftMessages.Heartbeat( IdFactory.randomMemberId(), 0L, 0, 0 ) );
+                                                         new RaftMessages.Heartbeat( IdFactory.randomRaftMemberId(), 0L, 0, 0 ) );
 
     @SuppressWarnings( "unchecked" )
     private LifecycleMessageHandler<RaftMessages.InboundRaftMessageContainer<?>> delegate = Mockito.mock( LifecycleMessageHandler.class );
@@ -73,7 +73,7 @@ class ClusterBindingHandlerTest
         // when
         handler.handle( RaftMessages.InboundRaftMessageContainer.of(
                 Instant.now(), IdFactory.randomRaftId(),
-                new RaftMessages.Heartbeat( IdFactory.randomMemberId(), 0L, 0, 0 )
+                new RaftMessages.Heartbeat( IdFactory.randomRaftMemberId(), 0L, 0, 0 )
         ) );
 
         // then

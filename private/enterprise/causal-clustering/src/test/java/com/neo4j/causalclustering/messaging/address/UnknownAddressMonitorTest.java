@@ -5,14 +5,14 @@
  */
 package com.neo4j.causalclustering.messaging.address;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.logging.Log;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
 
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -28,7 +28,7 @@ class UnknownAddressMonitorTest
         UnknownAddressMonitor logger = new UnknownAddressMonitor( log, testClock(), 100 );
 
         // when
-        MemberId to = member( 0 );
+        RaftMemberId to = raftMember( 0 );
         logger.logAttemptToSendToMemberWithNoKnownAddress( to );
 
         // then
@@ -47,7 +47,7 @@ class UnknownAddressMonitorTest
         Log log = mock( Log.class );
         FakeClock clock = testClock();
         UnknownAddressMonitor logger = new UnknownAddressMonitor( log, clock, 1000 );
-        MemberId to = member( 0 );
+        RaftMemberId to = raftMember( 0 );
 
         // when
         logger.logAttemptToSendToMemberWithNoKnownAddress( to );
@@ -65,7 +65,7 @@ class UnknownAddressMonitorTest
         Log log = mock( Log.class );
         FakeClock clock = testClock();
         UnknownAddressMonitor logger = new UnknownAddressMonitor( log, clock, 1000 );
-        MemberId to = member( 0 );
+        RaftMemberId to = raftMember( 0 );
 
         // when
         logger.logAttemptToSendToMemberWithNoKnownAddress( to );

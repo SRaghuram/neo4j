@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.io.IOException;
 
@@ -17,12 +17,12 @@ import org.neo4j.io.marshal.SafeChannelMarshal;
 
 public class LeaderInfoMarshal extends SafeChannelMarshal<LeaderInfo>
 {
-    private MemberId.Marshal memberIdMarshal = new MemberId.Marshal();
+    private RaftMemberId.Marshal memberIdMarshal = new RaftMemberId.Marshal();
 
     @Override
     protected LeaderInfo unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
-        MemberId memberId = memberIdMarshal.unmarshal( channel );
+        RaftMemberId memberId = memberIdMarshal.unmarshal( channel );
         long term = channel.getLong();
         return new LeaderInfo( memberId, term );
     }

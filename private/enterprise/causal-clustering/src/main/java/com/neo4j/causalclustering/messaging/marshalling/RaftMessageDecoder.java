@@ -9,8 +9,8 @@ import com.neo4j.causalclustering.catchup.Protocol;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -44,7 +44,7 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
         RaftMessages.Type[] values = RaftMessages.Type.values();
         RaftMessages.Type messageType = values[messageTypeWire];
 
-        MemberId from = retrieveMember( channel );
+        RaftMemberId from = retrieveMember( channel );
         final LazyComposer composer;
 
         composer = getLazyComposer( channel, messageType, from )
@@ -54,7 +54,7 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
         protocol.expect( ContentType.ContentType );
     }
 
-    protected Optional<LazyComposer> getLazyComposer( ReadableChannel channel, RaftMessages.Type messageType, MemberId from )
+    protected Optional<LazyComposer> getLazyComposer( ReadableChannel channel, RaftMessages.Type messageType, RaftMemberId from )
             throws IOException, EndOfStreamException
     {
         switch ( messageType )
@@ -106,7 +106,7 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
         }
     }
 
-    private LazyComposer handleCompactionInfo( ReadableChannel channel, MemberId from ) throws IOException
+    private LazyComposer handleCompactionInfo( ReadableChannel channel, RaftMemberId from ) throws IOException
     {
         long leaderTerm = channel.getLong();
         long prevIndex = channel.getLong();
@@ -114,12 +114,12 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
         return new SimpleMessageComposer( new RaftMessages.LogCompactionInfo( from, leaderTerm, prevIndex ) );
     }
 
-    private LazyComposer handleHeartbeatResponse( ReadableChannel channel, MemberId from )
+    private LazyComposer handleHeartbeatResponse( ReadableChannel channel, RaftMemberId from )
     {
         return new SimpleMessageComposer( new RaftMessages.HeartbeatResponse( from ) );
     }
 
-    private LazyComposer handleHeartbeatRequest( ReadableChannel channel, MemberId from ) throws IOException
+    private LazyComposer handleHeartbeatRequest( ReadableChannel channel, RaftMemberId from ) throws IOException
     {
         long leaderTerm = channel.getLong();
         long commitIndexTerm = channel.getLong();
@@ -128,12 +128,12 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
         return new SimpleMessageComposer( new RaftMessages.Heartbeat( from, leaderTerm, commitIndex, commitIndexTerm ) );
     }
 
-    private LazyComposer handleNewEntryRequest( ReadableChannel channel, MemberId from )
+    private LazyComposer handleNewEntryRequest( ReadableChannel channel, RaftMemberId from )
     {
         return new NewEntryRequestComposer( from );
     }
 
-    private LazyComposer handleAppendEntriesResponse( ReadableChannel channel, MemberId from ) throws IOException
+    private LazyComposer handleAppendEntriesResponse( ReadableChannel channel, RaftMemberId from ) throws IOException
     {
         long term = channel.getLong();
         boolean success = channel.get() == 1;
@@ -143,9 +143,9 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
         return new SimpleMessageComposer( new RaftMessages.AppendEntries.Response( from, term, success, matchIndex, appendIndex ) );
     }
 
-    private LazyComposer handleVoteRequest( ReadableChannel channel, MemberId from ) throws IOException, EndOfStreamException
+    private LazyComposer handleVoteRequest( ReadableChannel channel, RaftMemberId from ) throws IOException, EndOfStreamException
     {
-        MemberId candidate = retrieveMember( channel );
+        RaftMemberId candidate = retrieveMember( channel );
 
         long term = channel.getLong();
         long lastLogIndex = channel.getLong();
@@ -154,7 +154,7 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
         return new SimpleMessageComposer( new RaftMessages.Vote.Request( from, term, candidate, lastLogIndex, lastLogTerm ) );
     }
 
-    private LazyComposer handleVoteResponse( ReadableChannel channel, MemberId from ) throws IOException
+    private LazyComposer handleVoteResponse( ReadableChannel channel, RaftMemberId from ) throws IOException
     {
         long term = channel.getLong();
         boolean voteGranted = channel.get() == 1;
@@ -162,9 +162,9 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
         return new SimpleMessageComposer( new RaftMessages.Vote.Response( from, term, voteGranted ) );
     }
 
-    private LazyComposer handlePreVoteRequest( ReadableChannel channel, MemberId from ) throws IOException, EndOfStreamException
+    private LazyComposer handlePreVoteRequest( ReadableChannel channel, RaftMemberId from ) throws IOException, EndOfStreamException
     {
-        MemberId candidate = retrieveMember( channel );
+        RaftMemberId candidate = retrieveMember( channel );
 
         long term = channel.getLong();
         long lastLogIndex = channel.getLong();
@@ -173,7 +173,7 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
         return new SimpleMessageComposer( new RaftMessages.PreVote.Request( from, term, candidate, lastLogIndex, lastLogTerm ) );
     }
 
-    private LazyComposer handlePreVoteResponse( ReadableChannel channel, MemberId from ) throws IOException
+    private LazyComposer handlePreVoteResponse( ReadableChannel channel, RaftMemberId from ) throws IOException
     {
         long term = channel.getLong();
         boolean voteGranted = channel.get() == 1;
@@ -181,7 +181,7 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
         return new SimpleMessageComposer( new RaftMessages.PreVote.Response( from, term, voteGranted ) );
     }
 
-    private LazyComposer handleAppendEntriesRequest( ReadableChannel channel, MemberId from ) throws IOException
+    private LazyComposer handleAppendEntriesRequest( ReadableChannel channel, RaftMemberId from ) throws IOException
     {
         long term = channel.getLong();
         long prevLogIndex = channel.getLong();
@@ -210,9 +210,9 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
         }
     }
 
-    protected MemberId retrieveMember( ReadableChannel buffer ) throws IOException, EndOfStreamException
+    protected RaftMemberId retrieveMember( ReadableChannel buffer ) throws IOException, EndOfStreamException
     {
-        MemberId.Marshal memberIdMarshal = new MemberId.Marshal();
+        RaftMemberId.Marshal memberIdMarshal = new RaftMemberId.Marshal();
         return memberIdMarshal.unmarshal( buffer );
     }
 
@@ -246,13 +246,13 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
     public static class AppendEntriesComposer implements LazyComposer
     {
         private final int entryCount;
-        private final MemberId from;
+        private final RaftMemberId from;
         private final long term;
         private final long prevLogIndex;
         private final long prevLogTerm;
         private final long leaderCommit;
 
-        public AppendEntriesComposer( int entryCount, MemberId from, long term, long prevLogIndex, long prevLogTerm, long leaderCommit )
+        public AppendEntriesComposer( int entryCount, RaftMemberId from, long term, long prevLogIndex, long prevLogTerm, long leaderCommit )
         {
             this.entryCount = entryCount;
             this.from = from;
@@ -283,9 +283,9 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
 
     protected static class NewEntryRequestComposer implements LazyComposer
     {
-        private final MemberId from;
+        private final RaftMemberId from;
 
-        NewEntryRequestComposer( MemberId from )
+        NewEntryRequestComposer( RaftMemberId from )
         {
             this.from = from;
         }

@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import org.neo4j.dbms.database.DatabaseStartAbortedException;
 import org.neo4j.function.ThrowingAction;
@@ -62,7 +63,8 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
     private final CoreTopologyService topologyService;
     private final ClusterSystemGraphDbmsModel systemGraph;
     private final RaftBootstrapper raftBootstrapper;
-    private final MemberId myIdentity;
+    private final RaftMemberId meAsRaftMember;
+    private final MemberId meAsServer;
     private final Monitor monitor;
     private final Clock clock;
     private final ThrowingAction<InterruptedException> retryWaiter;
@@ -72,12 +74,13 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
 
     private RaftId raftId;
 
-    public RaftBinder( NamedDatabaseId namedDatabaseId, MemberId myIdentity, SimpleStorage<RaftId> raftIdStorage, CoreTopologyService topologyService,
-            ClusterSystemGraphDbmsModel systemGraph, Clock clock, ThrowingAction<InterruptedException> retryWaiter, Duration timeout,
-            RaftBootstrapper raftBootstrapper, int minCoreHosts, boolean refuseToBeLeader, Monitors monitors )
+    public RaftBinder( NamedDatabaseId namedDatabaseId, RaftMemberId meAsRaftMember, MemberId meAsServer, SimpleStorage<RaftId> raftIdStorage,
+            CoreTopologyService topologyService, ClusterSystemGraphDbmsModel systemGraph, Clock clock, ThrowingAction<InterruptedException> retryWaiter,
+            Duration timeout, RaftBootstrapper raftBootstrapper, int minCoreHosts, boolean refuseToBeLeader, Monitors monitors )
     {
         this.namedDatabaseId = namedDatabaseId;
-        this.myIdentity = myIdentity;
+        this.meAsRaftMember = meAsRaftMember;
+        this.meAsServer = meAsServer;
         this.systemGraph = systemGraph;
         this.monitor = monitors.newMonitor( Monitor.class );
         this.raftIdStorage = raftIdStorage;
@@ -102,7 +105,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
      */
     private boolean hostShouldBootstrapRaft( DatabaseCoreTopology coreTopology )
     {
-        int memberCount = coreTopology.members().size();
+        int memberCount = coreTopology.servers().size();
         if ( memberCount < minCoreHosts )
         {
             monitor.waitingForCoreMembers( namedDatabaseId, minCoreHosts );
@@ -200,7 +203,9 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
                 if ( Publisher.successfullyPublishedBy( ME, outcome ) )
                 {
                     this.raftId = raftId;
-                    snapshot = raftBootstrapper.bootstrap( topology.members().keySet() );
+                    var initialMembersIds = topology.servers().keySet();
+                    var raftMemberIds = convertToRaftMemberIds( initialMembersIds );
+                    snapshot = raftBootstrapper.bootstrap( raftMemberIds );
                     monitor.bootstrapped( snapshot, namedDatabaseId, raftId, topologyService.memberId() );
                     return new BoundState( raftId, snapshot );
                 }
@@ -228,7 +233,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
 
     private BoundState bindToRaftGroupNotPartOfInitialDatabases( BindingConditions bindingConditions, Set<MemberId> initialMemberIds ) throws Exception
     {
-        if ( !initialMemberIds.contains( myIdentity ) || refuseToBeLeader )
+        if ( !initialMemberIds.contains( meAsServer ) || refuseToBeLeader )
         {
             return awaitBootstrapByOther( bindingConditions );
         }
@@ -243,13 +248,21 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
 
             if ( Publisher.successfullyPublishedBy( ME, outcome ) )
             {
-                var snapshot = raftBootstrapper.bootstrap( initialMemberIds, storeId );
+                var raftMemberIds = convertToRaftMemberIds( initialMemberIds );
+                var snapshot = raftBootstrapper.bootstrap( raftMemberIds, storeId );
                 monitor.bootstrapped( snapshot, namedDatabaseId, raftId, topologyService.memberId() );
                 return new BoundState( raftId, snapshot );
             }
 
             return new BoundState( raftId );
         }
+    }
+
+    private Set<RaftMemberId> convertToRaftMemberIds( Set<MemberId> serverIds )
+    {
+        return serverIds.stream()
+                .map( serverId -> topologyService.resolveRaftMemberForServer( namedDatabaseId, serverId ) )
+                .collect( Collectors.toSet() );
     }
 
     private boolean isInitialDatabase()
@@ -322,7 +335,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
         {
             try
             {
-                outcome = topologyService.publishRaftId( localRaftId, myIdentity );
+                outcome = topologyService.publishRaftId( localRaftId, meAsRaftMember );
             }
             catch ( TimeoutException e )
             {

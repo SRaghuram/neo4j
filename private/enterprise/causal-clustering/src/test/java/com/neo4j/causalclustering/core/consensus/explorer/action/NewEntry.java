@@ -8,16 +8,16 @@ package com.neo4j.causalclustering.core.consensus.explorer.action;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.ReplicatedString;
 import com.neo4j.causalclustering.core.consensus.explorer.ClusterState;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.LinkedList;
 import java.util.Queue;
 
 public class NewEntry implements Action
 {
-    private final MemberId member;
+    private final RaftMemberId member;
 
-    public NewEntry( MemberId member )
+    public NewEntry( RaftMemberId member )
     {
         this.member = member;
     }

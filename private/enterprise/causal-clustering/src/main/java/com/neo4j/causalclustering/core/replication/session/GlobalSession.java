@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.replication.session;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.UUID;
 
@@ -14,9 +14,9 @@ import static java.lang.String.format;
 public class GlobalSession
 {
     private final UUID sessionId;
-    private final MemberId owner;
+    private final RaftMemberId owner;
 
-    public GlobalSession( UUID sessionId, MemberId owner )
+    public GlobalSession( UUID sessionId, RaftMemberId owner )
     {
         this.sessionId = sessionId;
         this.owner = owner;
@@ -27,7 +27,7 @@ public class GlobalSession
         return sessionId;
     }
 
-    public MemberId owner()
+    public RaftMemberId owner()
     {
         return owner;
     }

@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.core.consensus.schedule.TimeoutFactory;
 import com.neo4j.causalclustering.core.consensus.schedule.Timer;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.state.InFlightLogEntryReader;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 
 import java.io.IOException;
@@ -82,12 +82,12 @@ public class RaftLogShipper
         RESEND
     }
 
-    private final Outbound<MemberId,RaftMessages.RaftMessage> outbound;
+    private final Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound;
     private final Log log;
     private final ReadableRaftLog raftLog;
     private final Clock clock;
-    private final MemberId follower;
-    private final MemberId leader;
+    private final RaftMemberId follower;
+    private final RaftMemberId leader;
     private final long retryTimeMillis;
     private final int catchupBatchSize;
     private final int maxAllowedShippingLag;
@@ -101,9 +101,9 @@ public class RaftLogShipper
     private LeaderContext lastLeaderContext;
     private Mode mode = Mode.MISMATCH;
 
-    RaftLogShipper( Outbound<MemberId, RaftMessages.RaftMessage> outbound, LogProvider logProvider,
+    RaftLogShipper( Outbound<RaftMemberId, RaftMessages.RaftMessage> outbound, LogProvider logProvider,
                     ReadableRaftLog raftLog, Clock clock, TimerService timerService,
-                    MemberId leader, MemberId follower, long leaderTerm, long leaderCommit, long retryTimeMillis,
+                    RaftMemberId leader, RaftMemberId follower, long leaderTerm, long leaderCommit, long retryTimeMillis,
                     int catchupBatchSize, int maxAllowedShippingLag, InFlightCache inFlightCache )
     {
         this.outbound = outbound;

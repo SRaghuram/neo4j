@@ -119,7 +119,7 @@ class ServerShufflingTest
         );
 
         var leaderService = mock( LeaderService.class );
-        when( leaderService.getLeaderId( namedDatabaseId ) ).thenReturn( Optional.of( leaderId ) );
+        when( leaderService.getLeaderServer( namedDatabaseId ) ).thenReturn( Optional.of( leaderId ) );
         when( leaderService.getLeaderBoltAddress( namedDatabaseId ) ).thenReturn( Optional.of( coreMembers.get( leaderId ).boltAddress() ) );
 
         var coreTopology = new DatabaseCoreTopology( namedDatabaseId.databaseId(), RaftId.from( namedDatabaseId.databaseId() ), coreMembers );

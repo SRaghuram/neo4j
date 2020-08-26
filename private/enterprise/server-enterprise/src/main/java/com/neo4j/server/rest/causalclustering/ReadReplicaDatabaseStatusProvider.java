@@ -9,10 +9,12 @@ import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
 
 import java.time.Duration;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -42,21 +44,23 @@ class ReadReplicaDatabaseStatusProvider
 
     ClusteringDatabaseStatusResponse currentStatus()
     {
-        var votingMembers = topologyService.allCoreServers().keySet();
+        var votingServers = topologyService.allCoreServers().keySet();
         var healthy = databaseHealth.isHealthy();
-        var myId = topologyService.memberId();
-        var leaderId = findLeaderId( votingMembers );
+        var myId = RaftMemberId.from( topologyService.memberId() );
+        var leaderId = findLeaderId( votingServers );
         var lastAppliedRaftIndex = commandIndexTracker.getAppliedCommandIndex();
         var raftCommandsPerSecond = throughputMonitor.throughput().orElse( null );
+        var votingMembers = votingServers.stream().map( RaftMemberId::from ).collect( Collectors.toSet() );
 
         return new ClusteringDatabaseStatusResponse( lastAppliedRaftIndex, false, votingMembers, healthy, myId, leaderId,
                                                      MILLIS_SINCE_LAST_LEADER_MESSAGE, raftCommandsPerSecond, false, topologyService.isHealthy() );
     }
 
-    private MemberId findLeaderId( Set<MemberId> votingMembers )
+    private RaftMemberId findLeaderId( Set<MemberId> votingMembers )
     {
         return votingMembers.stream()
                             .filter( memberId -> topologyService.lookupRole( databaseId, memberId ) == RoleInfo.LEADER )
+                            .map( RaftMemberId::from )
                             .findFirst()
                             .orElse( null );
     }

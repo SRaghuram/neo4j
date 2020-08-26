@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.shipping.RaftLogShippingManager;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 
 import java.io.IOException;
@@ -32,7 +32,7 @@ class RaftOutcomeApplier
     private final Log log;
     private final Consumer<RaftMessages.StatusResponse> statusResponseConsumer;
     private final Consumer<RaftMessages.LeadershipTransfer.Rejection> rejectionConsumer;
-    private final Outbound<MemberId,RaftMessages.RaftMessage> outbound;
+    private final Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound;
     private final RaftMessageTimerResetMonitor raftMessageTimerResetMonitor;
     private final LeaderAvailabilityTimers leaderAvailabilityTimers;
     private final RaftLogShippingManager logShipping;
@@ -41,7 +41,7 @@ class RaftOutcomeApplier
     private volatile LeaderInfo leaderInfo;
     private final Collection<LeaderListener> leaderListeners = new ArrayList<>();
 
-    RaftOutcomeApplier( RaftState state, Outbound<MemberId,RaftMessages.RaftMessage> outbound, LeaderAvailabilityTimers leaderAvailabilityTimers,
+    RaftOutcomeApplier( RaftState state, Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound, LeaderAvailabilityTimers leaderAvailabilityTimers,
                         RaftMessageTimerResetMonitor raftMessageTimerResetMonitor, RaftLogShippingManager logShipping, RaftMembershipManager membershipManager,
                         LogProvider logProvider, Consumer<RaftMessages.LeadershipTransfer.Rejection> rejectionConsumer,
                         Consumer<RaftMessages.StatusResponse> statusResponseConsumer )
@@ -81,7 +81,7 @@ class RaftOutcomeApplier
         return outcome.getRole();
     }
 
-    private boolean leaderChanged( Outcome outcome, MemberId oldLeader )
+    private boolean leaderChanged( Outcome outcome, RaftMemberId oldLeader )
     {
         return !Objects.equals( oldLeader, outcome.getLeader() );
     }

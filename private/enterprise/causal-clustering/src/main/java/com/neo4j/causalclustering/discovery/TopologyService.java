@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.dbms.DatabaseStateChangedListener;
 
 import java.util.Map;
@@ -38,6 +39,8 @@ public interface TopologyService extends Lifecycle, DatabaseStateChangedListener
 
     SocketAddress lookupCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException;
 
+    SocketAddress lookupCatchupAddress( RaftMemberId upstream ) throws CatchupAddressResolutionException;
+
     LeaderInfo getLeader( NamedDatabaseId namedDatabaseId );
 
     RoleInfo lookupRole( NamedDatabaseId namedDatabaseId, MemberId memberId );
@@ -49,4 +52,8 @@ public interface TopologyService extends Lifecycle, DatabaseStateChangedListener
     Map<MemberId,DiscoveryDatabaseState> allReadReplicaStatesForDatabase( NamedDatabaseId namedDatabaseId );
 
     boolean isHealthy();
+
+    MemberId resolveServerFromRaftMember( RaftMemberId raftMemberId );
+
+    RaftMemberId resolveRaftMemberForServer( NamedDatabaseId namedDatabaseId, MemberId serverId );
 }

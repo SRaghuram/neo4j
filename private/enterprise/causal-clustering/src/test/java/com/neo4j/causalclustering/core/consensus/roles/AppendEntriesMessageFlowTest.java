@@ -13,7 +13,7 @@ import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.consensus.membership.RaftTestMembers;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.identity.RaftTestMemberSetBuilder;
 import com.neo4j.causalclustering.messaging.Outbound;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,7 +26,7 @@ import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.appendEntriesRequest;
 import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.appendEntriesResponse;
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.inOrder;
@@ -35,12 +35,12 @@ import static org.mockito.Mockito.verify;
 
 class AppendEntriesMessageFlowTest
 {
-    private MemberId myself = member( 0 );
-    private MemberId otherMember = member( 1 );
+    private RaftMemberId myself = raftMember( 0 );
+    private RaftMemberId otherMember = raftMember( 1 );
 
     private ReplicatedInteger data = ReplicatedInteger.valueOf( 1 );
 
-    private Outbound<MemberId,RaftMessages.RaftMessage> outbound = mock( Outbound.class );
+    private Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound = mock( Outbound.class );
 
     ReplicatedInteger data( int value )
     {

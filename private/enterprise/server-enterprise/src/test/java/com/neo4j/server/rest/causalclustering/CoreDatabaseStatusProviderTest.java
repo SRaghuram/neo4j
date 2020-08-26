@@ -6,6 +6,7 @@
 package com.neo4j.server.rest.causalclustering;
 
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
@@ -24,8 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CoreDatabaseStatusProviderTest
 {
-    private final MemberId memberId = MemberId.of( randomUUID() );
-    private final MemberId leaderId = MemberId.of( randomUUID() );
+    private final RaftMemberId memberId = RaftMemberId.of( randomUUID() );
+    private final RaftMemberId leaderId = RaftMemberId.of( randomUUID() );
 
     private final GraphDatabaseAPI db = coreStatusMockBuilder()
             .memberId( memberId )

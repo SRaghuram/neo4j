@@ -154,8 +154,8 @@ class AkkaCoreTopologyServiceTest
         var memberId1 = IdFactory.randomMemberId();
         var memberId2 = IdFactory.randomMemberId();
 
-        var leaderInfo1 = new LeaderInfo( memberId1, 1 );
-        var leaderInfo2 = new LeaderInfo( memberId2, 2 );
+        var leaderInfo1 = new LeaderInfo( service.topologyState().resolveRaftMemberForServer( databaseId1.databaseId(), memberId1 ), 1 );
+        var leaderInfo2 = new LeaderInfo( service.topologyState().resolveRaftMemberForServer( databaseId2.databaseId(), memberId2 ), 2 );
 
         service.setLeader( leaderInfo1, databaseId1 );
         service.setLeader( leaderInfo2, databaseId2 );
@@ -226,7 +226,7 @@ class AkkaCoreTopologyServiceTest
     {
         var databaseId = randomNamedDatabaseId();
         var leaderId = IdFactory.randomMemberId();
-        var leaderInfo = new LeaderInfo( leaderId, 1 );
+        var leaderInfo = new LeaderInfo( service.topologyState().resolveRaftMemberForServer( databaseId.databaseId(), leaderId ), 1 );
 
         service.setLeader( leaderInfo, databaseId );
         assertEquals( RoleInfo.LEADER, service.lookupRole( databaseId, leaderId ) );
@@ -344,23 +344,23 @@ class AkkaCoreTopologyServiceTest
         setupReadReplicaTopologyState( service.topologyState(), databaseId, memberId1, memberId2 );
 
         // verify core topology is not empty
-        assertEquals( Set.of( memberId1, memberId2, memberId3 ), service.coreTopologyForDatabase( databaseId ).members().keySet() );
+        assertEquals( Set.of( memberId1, memberId2, memberId3 ), service.coreTopologyForDatabase( databaseId ).servers().keySet() );
         assertEquals( Set.of( memberId1, memberId2, memberId3 ), service.allCoreServers().keySet() );
         assertTrue( service.canBootstrapRaftGroup( databaseId ) );
 
         // verify read replica topology is not empty
-        assertEquals( Set.of( memberId1, memberId2 ), service.readReplicaTopologyForDatabase( databaseId ).members().keySet() );
+        assertEquals( Set.of( memberId1, memberId2 ), service.readReplicaTopologyForDatabase( databaseId ).servers().keySet() );
         assertEquals( Set.of( memberId1, memberId2 ), service.allReadReplicas().keySet() );
 
         testAction.accept( service );
 
         // verify core topology is empty
-        assertThat( service.coreTopologyForDatabase( databaseId ).members().keySet(), is( empty() ) );
+        assertThat( service.coreTopologyForDatabase( databaseId ).servers().keySet(), is( empty() ) );
         assertThat( service.allCoreServers().keySet(), is( empty() ) );
         assertFalse( service.canBootstrapRaftGroup( databaseId ) );
 
         // verify read replica topology is empty
-        assertThat( service.readReplicaTopologyForDatabase( databaseId ).members().keySet(), is( empty() ) );
+        assertThat( service.readReplicaTopologyForDatabase( databaseId ).servers().keySet(), is( empty() ) );
         assertThat( service.allCoreServers().keySet(), is( empty() ) );
     }
 }

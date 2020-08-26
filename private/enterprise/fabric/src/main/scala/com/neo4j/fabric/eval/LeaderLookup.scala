@@ -35,7 +35,7 @@ object LeaderLookup {
       topologyService.memberId()
 
     def leaderId(databaseId: NamedDatabaseId): Option[MemberId] =
-      leaderService.getLeaderId(databaseId).asScala
+      leaderService.getLeaderServer(databaseId).asScala
 
     def leaderBoltAddress(databaseId: NamedDatabaseId): Option[SocketAddress] =
       LeaderLookup.leaderBoltAddress(topologyService, leaderId(databaseId), databaseId)
@@ -59,7 +59,7 @@ object LeaderLookup {
   private def leaderBoltAddress(topologyService: TopologyService, leaderId: Option[MemberId], databaseId: NamedDatabaseId): Option[SocketAddress] = {
     for {
       leader <- leaderId
-      members = topologyService.coreTopologyForDatabase(databaseId).members().asScala
+      members = topologyService.coreTopologyForDatabase(databaseId).servers().asScala
       leaderInfo <- members.get(leader)
       address <- getAddress(leaderInfo.connectors())
     } yield address

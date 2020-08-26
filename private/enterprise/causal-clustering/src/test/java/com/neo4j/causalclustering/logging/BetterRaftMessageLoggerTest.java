@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.logging;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -32,12 +32,12 @@ import static org.mockito.Mockito.when;
 class BetterRaftMessageLoggerTest
 {
     private final NamedDatabaseId databaseId = DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
-    private final MemberId memberId = IdFactory.randomMemberId();
+    private final RaftMemberId memberId = IdFactory.randomRaftMemberId();
     private final Path logFile = Path.of( "logs/raft-messages" );
     private final FileSystemAbstraction fs = mock( FileSystemAbstraction.class );
     private final OutputStream outputStream = mock( OutputStream.class );
 
-    private final BetterRaftMessageLogger<MemberId> logger = new BetterRaftMessageLogger<>( memberId, logFile, fs, Clock.systemUTC() );
+    private final BetterRaftMessageLogger<RaftMemberId> logger = new BetterRaftMessageLogger<>( memberId, logFile, fs, Clock.systemUTC() );
 
     @BeforeEach
     void beforeEach() throws Exception

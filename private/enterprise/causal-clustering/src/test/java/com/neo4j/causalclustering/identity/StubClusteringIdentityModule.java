@@ -5,18 +5,18 @@
  */
 package com.neo4j.causalclustering.identity;
 
-import java.util.UUID;
-
 import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 public class StubClusteringIdentityModule extends ClusteringIdentityModule
 {
     private final MemberId memberId;
+    private final RaftMemberId raftMemberId;
 
     public StubClusteringIdentityModule()
     {
         memberId = IdFactory.randomMemberId();
+        raftMemberId = RaftMemberId.from( memberId );
     }
 
     @Override
@@ -32,8 +32,8 @@ public class StubClusteringIdentityModule extends ClusteringIdentityModule
     }
 
     @Override
-    public MemberId memberId( NamedDatabaseId namedDatabaseId )
+    public RaftMemberId memberId( NamedDatabaseId namedDatabaseId )
     {
-        return memberId;
+        return raftMemberId;
     }
 }

@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
 import com.neo4j.configuration.ServerGroupsSupplier;
 import org.junit.jupiter.api.AfterEach;
@@ -36,16 +37,18 @@ import org.neo4j.time.FakeClock;
 
 import static java.util.concurrent.CompletableFuture.runAsync;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 
 class LeaderTransferServiceTest
 {
     private JobScheduler jobScheduler;
 
     private final Config config = Config.newBuilder().build();
+    private final NamedDatabaseId databaseId = randomNamedDatabaseId();
     private final ClusteringIdentityModule identityModule = new StubClusteringIdentityModule();
-    private final MemberId myself = identityModule.memberId();
+    private final RaftMemberId myself = identityModule.memberId( databaseId );
     private final ClusteringIdentityModule remoteIdentityModule = new StubClusteringIdentityModule();
-    private final MemberId core1 = remoteIdentityModule.memberId();
+    private final RaftMemberId core1 = remoteIdentityModule.memberId( databaseId );
     private final Duration leaderTransferInterval = Duration.ofSeconds( 5 );
     private final Duration leaderMemberBackoff = Duration.ofSeconds( 15 );
     private ServerGroupsSupplier serverGroupsProvider;
@@ -63,9 +66,9 @@ class LeaderTransferServiceTest
     void stopScheduler() throws Exception
     {
         var executors = jobScheduler.activeGroups()
-                                    .map( group -> (CallableExecutorService) jobScheduler.executor( group.group ) )
-                                    .map( executor -> (ExecutorService) executor.delegate() )
-                                    .collect( Collectors.toList() );
+                .map( group -> (CallableExecutorService) jobScheduler.executor( group.group ) )
+                .map( executor -> (ExecutorService) executor.delegate() )
+                .collect( Collectors.toList() );
         jobScheduler.shutdown();
         assert executors.stream().allMatch( ExecutorService::isTerminated );
         jobScheduler = null;
@@ -82,7 +85,7 @@ class LeaderTransferServiceTest
         var leaderService = new StubLeaderService( Map.of() );
         var leaderTransferService =
                 new LeaderTransferService( jobScheduler, config, leaderTransferInterval, databaseManager, messageHandler, identityModule, leaderMemberBackoff,
-                        NullLogProvider.nullLogProvider(), clock, leaderService, serverGroupsProvider );
+                        NullLogProvider.nullLogProvider(), clock, leaderService, serverGroupsProvider, MemberId::of );
 
         // when
         life.add( leaderTransferService );
@@ -108,7 +111,7 @@ class LeaderTransferServiceTest
 
         var leaderTransferService =
                 new LeaderTransferService( jobScheduler, config, leaderTransferInterval, databaseManager, messageHandler, identityModule, leaderMemberBackoff,
-                        NullLogProvider.nullLogProvider(), clock, leaderService, serverGroupsProvider );
+                        NullLogProvider.nullLogProvider(), clock, leaderService, serverGroupsProvider, MemberId::of );
 
         // when
         life.add( leaderTransferService );
@@ -122,8 +125,8 @@ class LeaderTransferServiceTest
                 .containsExactly( new RaftMessages.LeadershipTransfer.Proposal( myself, core1, Set.of() ) );
     }
 
-    private NamedDatabaseId databaseWithLeader( StubClusteredDatabaseManager databaseManager, MemberId member, String databaseName,
-                                                StubRaftMembershipResolver raftMembershipResolver )
+    private NamedDatabaseId databaseWithLeader( StubClusteredDatabaseManager databaseManager, RaftMemberId member, String databaseName,
+            StubRaftMembershipResolver raftMembershipResolver )
     {
         NamedDatabaseId dbId = DatabaseIdFactory.from( databaseName, UUID.randomUUID() );
 
@@ -132,10 +135,10 @@ class LeaderTransferServiceTest
         dependencies.satisfyDependencies( raftMembershipResolver.membersFor( dbId ) );
         var leaderLocator = new RaftLeadershipsResolverTest.StubLeaderLocator( new LeaderInfo( member, 0 ) );
         databaseManager.givenDatabaseWithConfig()
-                       .withDatabaseId( dbId )
-                       .withDependencies( dependencies )
-                       .withLeaderLocator( leaderLocator )
-                       .register();
+                .withDatabaseId( dbId )
+                .withDependencies( dependencies )
+                .withLeaderLocator( leaderLocator )
+                .register();
         return dbId;
     }
 }

@@ -6,10 +6,9 @@
 package com.neo4j.causalclustering.messaging;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.Inbound.MessageHandler;
 import com.neo4j.causalclustering.messaging.address.UnknownAddressMonitor;
 
@@ -20,22 +19,21 @@ import java.util.function.Supplier;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.time.Clocks;
 
-public class RaftOutbound implements Outbound<MemberId,RaftMessages.RaftMessage>
+public class RaftOutbound implements Outbound<RaftMemberId,RaftMessages.RaftMessage>
 {
     private final CoreTopologyService coreTopologyService;
     private final Outbound<SocketAddress,RaftMessages.OutboundRaftMessageContainer<?>> outbound;
     private final Supplier<Optional<RaftId>> boundRaftId;
     private final UnknownAddressMonitor unknownAddressMonitor;
     private final Log log;
-    private final MemberId myself;
+    private final RaftMemberId myself;
     private final Clock clock;
     private final MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> localMessageHandler;
 
     public RaftOutbound( CoreTopologyService coreTopologyService, Outbound<SocketAddress,RaftMessages.OutboundRaftMessageContainer<?>> outbound,
                          MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> localMessageHandler, Supplier<Optional<RaftId>> boundRaftId,
-                         LogProvider logProvider, long logThresholdMillis, MemberId myself, Clock clock )
+                         LogProvider logProvider, long logThresholdMillis, RaftMemberId myself, Clock clock )
     {
         this.coreTopologyService = coreTopologyService;
         this.outbound = outbound;
@@ -48,7 +46,7 @@ public class RaftOutbound implements Outbound<MemberId,RaftMessages.RaftMessage>
     }
 
     @Override
-    public void send( MemberId to, RaftMessages.RaftMessage message, boolean block )
+    public void send( RaftMemberId to, RaftMessages.RaftMessage message, boolean block )
     {
         Optional<RaftId> raftId = boundRaftId.get();
         if ( raftId.isEmpty() )
@@ -63,10 +61,10 @@ public class RaftOutbound implements Outbound<MemberId,RaftMessages.RaftMessage>
         }
         else
         {
-            CoreServerInfo targetCoreInfo = coreTopologyService.allCoreServers().get( to );
-            if ( targetCoreInfo != null )
+            var raftAddress = coreTopologyService.lookupRaftAddress( to );
+            if ( raftAddress != null )
             {
-                outbound.send( targetCoreInfo.getRaftServer(), RaftMessages.OutboundRaftMessageContainer.of( raftId.get(), message ), block );
+                outbound.send( raftAddress, RaftMessages.OutboundRaftMessageContainer.of( raftId.get(), message ), block );
             }
             else
             {

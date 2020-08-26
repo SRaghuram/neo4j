@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.core.replication.monitoring.ReplicationMonitor
 import com.neo4j.causalclustering.core.replication.session.LocalSessionPool;
 import com.neo4j.causalclustering.core.replication.session.OperationContext;
 import com.neo4j.causalclustering.core.state.StateMachineResult;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
@@ -36,8 +36,8 @@ import org.neo4j.monitoring.Monitors;
 public class RaftReplicator implements Replicator, LeaderListener
 {
     private final NamedDatabaseId namedDatabaseId;
-    private final MemberId me;
-    private final Outbound<MemberId,RaftMessage> outbound;
+    private final RaftMemberId me;
+    private final Outbound<RaftMemberId,RaftMessage> outbound;
     private final ProgressTracker progressTracker;
     private final LocalSessionPool sessionPool;
     private final TimeoutStrategy progressTimeoutStrategy;
@@ -48,7 +48,7 @@ public class RaftReplicator implements Replicator, LeaderListener
     private final LeaderProvider leaderProvider;
 
     // TODO: Get rid of dependency on database manager!
-    public RaftReplicator( NamedDatabaseId namedDatabaseId, LeaderLocator leaderLocator, MemberId me, Outbound<MemberId,RaftMessage> outbound,
+    public RaftReplicator( NamedDatabaseId namedDatabaseId, LeaderLocator leaderLocator, RaftMemberId me, Outbound<RaftMemberId,RaftMessage> outbound,
             LocalSessionPool sessionPool, ProgressTracker progressTracker, TimeoutStrategy progressTimeoutStrategy, long availabilityTimeoutMillis,
             LogProvider logProvider, DatabaseManager<ClusteredDatabaseContext> databaseManager, Monitors monitors, Duration leaderAwaitDuration )
     {
@@ -81,7 +81,7 @@ public class RaftReplicator implements Replicator, LeaderListener
         }
 
         // Awaiting the leader early allows us to avoid eating through local sessions unnecessarily.
-        MemberId leader;
+        RaftMemberId leader;
 
         try
         {
@@ -155,7 +155,8 @@ public class RaftReplicator implements Replicator, LeaderListener
      *
      * @return true if the replication was successful, otherwise false.
      */
-    private boolean tryReplicate( MemberId leader, DistributedOperation operation, Progress progress, Timeout replicationTimeout ) throws InterruptedException
+    private boolean tryReplicate( RaftMemberId leader, DistributedOperation operation, Progress progress, Timeout replicationTimeout )
+            throws InterruptedException
     {
         replicationMonitor.replicationAttempt();
 
@@ -170,8 +171,8 @@ public class RaftReplicator implements Replicator, LeaderListener
     public void onLeaderSwitch( LeaderInfo leaderInfo )
     {
         progressTracker.triggerReplicationEvent();
-        MemberId newLeader = leaderInfo.memberId();
-        MemberId oldLeader = leaderProvider.currentLeader();
+        RaftMemberId newLeader = leaderInfo.memberId();
+        RaftMemberId oldLeader = leaderProvider.currentLeader();
         if ( newLeader == null && oldLeader != null )
         {
             log.info( "Lost previous leader '%s'. Currently no available leader", oldLeader );

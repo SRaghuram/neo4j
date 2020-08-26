@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogHelper;
 import com.neo4j.causalclustering.core.consensus.roles.Leader;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -80,7 +80,7 @@ public class ClusterSafetyViolations
     public static boolean multipleLeadersInSameTerm( ClusterState state )
     {
         Set<Long> termThatHaveALeader = new HashSet<>();
-        for ( Map.Entry<MemberId, Role> entry : state.roles.entrySet() )
+        for ( Map.Entry<RaftMemberId, Role> entry : state.roles.entrySet() )
         {
             RaftMessageHandler role = entry.getValue().handler;
             if ( role instanceof Leader )

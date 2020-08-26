@@ -17,13 +17,11 @@ import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
 import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.consensus.vote.VoteState;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.configuration.ServerGroupName;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.function.Supplier;
 
 import org.neo4j.io.state.StateStorage;
 import org.neo4j.logging.Log;
@@ -31,37 +29,37 @@ import org.neo4j.logging.LogProvider;
 
 public class RaftState implements ReadableRaftState
 {
-    private final MemberId myself;
+    private final RaftMemberId myself;
     private final StateStorage<TermState> termStorage;
     private final StateStorage<VoteState> voteStorage;
     private final RaftMembership membership;
     private final Log log;
     private final RaftLog entryLog;
     private final InFlightCache inFlightCache;
-    private final ExpiringSet<MemberId> leadershipTransfers;
+    private final ExpiringSet<RaftMemberId> leadershipTransfers;
 
     private TermState termState;
     private VoteState voteState;
 
-    private MemberId leader;
+    private RaftMemberId leader;
     private LeaderInfo leaderInfo = LeaderInfo.INITIAL;
-    private Set<MemberId> votesForMe = new HashSet<>();
-    private Set<MemberId> preVotesForMe = new HashSet<>();
-    private Set<MemberId> heartbeatResponses = new HashSet<>();
-    private FollowerStates<MemberId> followerStates = new FollowerStates<>();
+    private Set<RaftMemberId> votesForMe = new HashSet<>();
+    private Set<RaftMemberId> preVotesForMe = new HashSet<>();
+    private Set<RaftMemberId> heartbeatResponses = new HashSet<>();
+    private FollowerStates<RaftMemberId> followerStates = new FollowerStates<>();
     private long leaderCommit = -1;
     private long commitIndex = -1;
     private long lastLogIndexBeforeWeBecameLeader = -1;
     private boolean isPreElection;
     private boolean timersStarted;
 
-    public RaftState( MemberId myself,
+    public RaftState( RaftMemberId myself,
                       StateStorage<TermState> termStorage,
                       RaftMembership membership,
                       RaftLog entryLog,
                       StateStorage<VoteState> voteStorage,
                       InFlightCache inFlightCache, LogProvider logProvider,
-                      ExpiringSet<MemberId> leadershipTransfers )
+                      ExpiringSet<RaftMemberId> leadershipTransfers )
     {
         this.myself = myself;
         this.termStorage = termStorage;
@@ -76,19 +74,19 @@ public class RaftState implements ReadableRaftState
     }
 
     @Override
-    public MemberId myself()
+    public RaftMemberId myself()
     {
         return myself;
     }
 
     @Override
-    public Set<MemberId> votingMembers()
+    public Set<RaftMemberId> votingMembers()
     {
         return membership.votingMembers();
     }
 
     @Override
-    public Set<MemberId> replicationMembers()
+    public Set<RaftMemberId> replicationMembers()
     {
         return membership.replicationMembers();
     }
@@ -109,7 +107,7 @@ public class RaftState implements ReadableRaftState
     }
 
     @Override
-    public MemberId leader()
+    public RaftMemberId leader()
     {
         return leader;
     }
@@ -127,7 +125,7 @@ public class RaftState implements ReadableRaftState
     }
 
     @Override
-    public MemberId votedFor()
+    public RaftMemberId votedFor()
     {
         return voteState().votedFor();
     }
@@ -142,13 +140,13 @@ public class RaftState implements ReadableRaftState
     }
 
     @Override
-    public Set<MemberId> votesForMe()
+    public Set<RaftMemberId> votesForMe()
     {
         return votesForMe;
     }
 
     @Override
-    public Set<MemberId> heartbeatResponses()
+    public Set<RaftMemberId> heartbeatResponses()
     {
         return heartbeatResponses;
     }
@@ -160,7 +158,7 @@ public class RaftState implements ReadableRaftState
     }
 
     @Override
-    public FollowerStates<MemberId> followerStates()
+    public FollowerStates<RaftMemberId> followerStates()
     {
         return followerStates;
     }
@@ -184,7 +182,7 @@ public class RaftState implements ReadableRaftState
     }
 
     @Override
-    public Set<MemberId> preVotesForMe()
+    public Set<RaftMemberId> preVotesForMe()
     {
         return preVotesForMe;
     }
@@ -247,7 +245,7 @@ public class RaftState implements ReadableRaftState
         this.timersStarted = true;
     }
 
-    private void logIfLeaderChanged( MemberId leader )
+    private void logIfLeaderChanged( RaftMemberId leader )
     {
         if ( this.leader == null )
         {
@@ -279,10 +277,10 @@ public class RaftState implements ReadableRaftState
         final long lastLogIndexBeforeWeBecameLeader;
         final long term;
 
-        final Set<MemberId> votingMembers; // returned set is never mutated
+        final Set<RaftMemberId> votingMembers; // returned set is never mutated
 
         private ReadOnlyRaftState( long leaderCommit, long commitIndex, long appendIndex,
-                long lastLogIndexBeforeWeBecameLeader, long term, Set<MemberId> votingMembers )
+                long lastLogIndexBeforeWeBecameLeader, long term, Set<RaftMemberId> votingMembers )
         {
             this.leaderCommit = leaderCommit;
             this.commitIndex = commitIndex;
@@ -323,7 +321,7 @@ public class RaftState implements ReadableRaftState
         }
 
         @Override
-        public Set<MemberId> votingMembers()
+        public Set<RaftMemberId> votingMembers()
         {
             return this.votingMembers;
         }

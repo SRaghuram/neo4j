@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.consensus.membership;
 
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.BoundedNetworkWritableChannel;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import io.netty.buffer.ByteBuf;
@@ -16,20 +16,20 @@ import org.junit.jupiter.api.Test;
 
 import org.neo4j.io.marshal.EndOfStreamException;
 
-class MemberIdMarshalTest
+class RaftMemberIdMarshalTest
 {
     @Test
     void shouldSerializeAndDeserialize() throws Exception
     {
         // given
-        MemberId.Marshal marshal = new MemberId.Marshal();
+        RaftMemberId.Marshal marshal = new RaftMemberId.Marshal();
 
-        final MemberId member = IdFactory.randomMemberId();
+        final RaftMemberId member = IdFactory.randomRaftMemberId();
 
         // when
         ByteBuf buffer = Unpooled.buffer( 1_000 );
         marshal.marshal( member, new BoundedNetworkWritableChannel( buffer ) );
-        final MemberId recovered = marshal.unmarshal( new NetworkReadableChannel( buffer ) );
+        final RaftMemberId recovered = marshal.unmarshal( new NetworkReadableChannel( buffer ) );
 
         // then
         Assertions.assertEquals( member, recovered );
@@ -40,8 +40,8 @@ class MemberIdMarshalTest
     {
         // given
         // a CoreMember and a ByteBuffer to write it to
-        MemberId.Marshal marshal = new MemberId.Marshal();
-        final MemberId aRealMember = IdFactory.randomMemberId();
+        RaftMemberId.Marshal marshal = new RaftMemberId.Marshal();
+        final RaftMemberId aRealMember = IdFactory.randomRaftMemberId();
 
         ByteBuf buffer = Unpooled.buffer( 1000 );
 

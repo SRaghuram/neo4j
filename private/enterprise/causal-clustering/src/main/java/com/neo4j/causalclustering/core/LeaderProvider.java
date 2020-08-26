@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.Optional;
 
@@ -25,7 +25,7 @@ public class LeaderProvider
         this.topologyService = topologyService;
     }
 
-    public MemberId getLeader( NamedDatabaseId databaseId )
+    public RaftMemberId getLeader( NamedDatabaseId databaseId )
     {
         LeaderInfo leadMemberFromDiscovery = topologyService.getLeader( databaseId );
         Optional<LeaderInfo> leadMemberFromLocator = leaderLocator.getLeaderInfo();

@@ -31,7 +31,7 @@ import com.neo4j.causalclustering.core.replication.SendToMyself;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.RaftCoreTopologyConnector;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshal;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
@@ -74,7 +74,7 @@ public class RaftGroup
     private final LeaderAvailabilityTimers leaderAvailabilityTimers;
 
     RaftGroup( Config config, DatabaseLogService logService, FileSystemAbstraction fileSystem, JobScheduler jobScheduler, SystemNanoClock clock,
-               MemberId myself, LifeSupport life, Monitors monitors, Dependencies dependencies, Outbound<MemberId,RaftMessages.RaftMessage> outbound,
+               RaftMemberId myself, LifeSupport life, Monitors monitors, Dependencies dependencies, Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound,
                ClusterStateLayout clusterState, CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, NamedDatabaseId namedDatabaseId,
                LeaderTransferService leaderTransferService, LeaderListener leaderListener, MemoryTracker memoryTracker,
                ServerGroupsSupplier serverGroupsSupplier, AvailabilityGuard globalAvailabilityGuard,
@@ -114,7 +114,7 @@ public class RaftGroup
                                             config.get( log_shipping_max_lag ),
                                             inFlightCache );
 
-        var leaderTransfers = new ExpiringSet<MemberId>( config.get( CausalClusteringInternalSettings.leader_transfer_timeout ), clock );
+        var leaderTransfers = new ExpiringSet<RaftMemberId>( config.get( CausalClusteringInternalSettings.leader_transfer_timeout ), clock );
 
         var state = new RaftState( myself, termState, raftMembershipManager, raftLog, voteState, inFlightCache, logProvider, leaderTransfers );
         var messageHandlingContext = new RaftMessageHandlingContext( state, config, serverGroupsSupplier, globalAvailabilityGuard::isShutdown );

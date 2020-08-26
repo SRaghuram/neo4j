@@ -20,8 +20,8 @@ import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabas
 import com.neo4j.causalclustering.discovery.akka.directory.ReplicatedLeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRefreshMessage;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.dbms.EnterpriseOperatorState;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -62,7 +62,7 @@ class BaseAkkaSerializerTest
         var randomDbId = randomDatabaseId();
         var randomRaftId = RaftId.from( randomDbId );
         return Stream.of(
-                new Object[]{new LeaderInfo( IdFactory.randomMemberId(), 37L ), new LeaderInfoSerializer()},
+                new Object[]{new LeaderInfo( IdFactory.randomRaftMemberId(), 37L ), new LeaderInfoSerializer()},
                 new Object[]{IdFactory.randomRaftId(), new RaftIdSerializer()},
                 new Object[]{new UniqueAddress( new Address( "protocol", "system" ), 398L ), new UniqueAddressSerializer()},
                 new Object[]{new UniqueAddress( new Address( "protocol", "system", "host", 79 ), 398L ),
@@ -86,7 +86,7 @@ class BaseAkkaSerializerTest
                              new ReadReplicaRemovalMessageSerializer( (ExtendedActorSystem) system )},
                 new Object[]{ReadReplicaTopologyMarshalTest.generate(), new ReadReplicaTopologySerializer()},
                 new Object[]{LeaderInfoDirectoryMessageMarshalTest.generate(), new DatabaseLeaderInfoMessageSerializer()},
-                new Object[]{new ReplicatedLeaderInfo( new LeaderInfo( IdFactory.randomMemberId(), 14L ) ), new ReplicatedLeaderInfoSerializer()},
+                new Object[]{new ReplicatedLeaderInfo( new LeaderInfo( IdFactory.randomRaftMemberId(), 14L ) ), new ReplicatedLeaderInfoSerializer()},
                 new Object[]{randomDatabaseId(), new DatabaseIdWithoutNameSerializer()},
                 new Object[]{randomDatabaseToMember(), new DatabaseToMemberSerializer()},
                 new Object[]{randomDatabaseState( randomDatabaseId() ), new DiscoveryDatabaseStateSerializer()},

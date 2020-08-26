@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.ReplicatedInteger;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.marshalling.ContentTypeProtocol;
 import com.neo4j.causalclustering.messaging.marshalling.RaftMessageDecoder;
 import com.neo4j.causalclustering.messaging.marshalling.RaftMessageEncoder;
@@ -32,7 +32,7 @@ class RaftMessageProcessingTest
     void shouldEncodeAndDecodeVoteRequest()
     {
         // given
-        MemberId member = IdFactory.randomMemberId();
+        RaftMemberId member = IdFactory.randomRaftMemberId();
         RaftMessages.Vote.Request request = new RaftMessages.Vote.Request( member, 1, member, 1, 1 );
 
         // when
@@ -48,7 +48,7 @@ class RaftMessageProcessingTest
     void shouldEncodeAndDecodeVoteResponse()
     {
         // given
-        MemberId member = IdFactory.randomMemberId();
+        RaftMemberId member = IdFactory.randomRaftMemberId();
         RaftMessages.Vote.Response response = new RaftMessages.Vote.Response( member, 1, true );
 
         // when
@@ -64,7 +64,7 @@ class RaftMessageProcessingTest
     void shouldEncodeAndDecodeAppendEntriesRequest()
     {
         // given
-        MemberId member = IdFactory.randomMemberId();
+        RaftMemberId member = IdFactory.randomRaftMemberId();
         RaftLogEntry logEntry = new RaftLogEntry( 1, ReplicatedInteger.valueOf( 1 ) );
         RaftMessages.AppendEntries.Request request =
                 new RaftMessages.AppendEntries.Request(
@@ -83,7 +83,7 @@ class RaftMessageProcessingTest
     void shouldEncodeAndDecodeAppendEntriesResponse()
     {
         // given
-        MemberId member = IdFactory.randomMemberId();
+        RaftMemberId member = IdFactory.randomRaftMemberId();
         RaftMessages.AppendEntries.Response response =
                 new RaftMessages.AppendEntries.Response( member, 1, false, -1, 0 );
 
@@ -100,7 +100,7 @@ class RaftMessageProcessingTest
     void shouldEncodeAndDecodeNewEntryRequest()
     {
         // given
-        MemberId member = IdFactory.randomMemberId();
+        RaftMemberId member = IdFactory.randomRaftMemberId();
         RaftMessages.NewEntry.Request request =
                 new RaftMessages.NewEntry.Request( member, ReplicatedInteger.valueOf( 12 ) );
 

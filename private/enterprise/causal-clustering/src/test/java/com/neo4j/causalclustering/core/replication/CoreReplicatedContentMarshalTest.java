@@ -76,8 +76,8 @@ class CoreReplicatedContentMarshalTest
     {
         ByteBuf buffer = Unpooled.buffer();
         ReplicatedContent message = new MemberIdSet( asSet(
-                IdFactory.randomMemberId(),
-                IdFactory.randomMemberId()
+                IdFactory.randomRaftMemberId(),
+                IdFactory.randomRaftMemberId()
         ) );
 
         assertMarshalingEquality( buffer, message );

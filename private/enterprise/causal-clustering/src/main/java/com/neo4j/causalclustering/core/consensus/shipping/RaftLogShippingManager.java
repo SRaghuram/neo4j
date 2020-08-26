@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.consensus.log.cache.InFlightCache;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembership;
 import com.neo4j.causalclustering.core.consensus.outcome.ShipCommand;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 
 import java.time.Clock;
@@ -27,11 +27,11 @@ import static java.lang.String.format;
 
 public class RaftLogShippingManager extends LifecycleAdapter implements RaftMembership.Listener
 {
-    private final Outbound<MemberId,RaftMessages.RaftMessage> outbound;
+    private final Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound;
     private final LogProvider logProvider;
     private final ReadableRaftLog raftLog;
     private final Clock clock;
-    private final MemberId myself;
+    private final RaftMemberId myself;
 
     private final RaftMembership membership;
     private final long retryTimeMillis;
@@ -39,16 +39,16 @@ public class RaftLogShippingManager extends LifecycleAdapter implements RaftMemb
     private final int maxAllowedShippingLag;
     private final InFlightCache inFlightCache;
 
-    private Map<MemberId,RaftLogShipper> logShippers = new HashMap<>();
+    private Map<RaftMemberId,RaftLogShipper> logShippers = new HashMap<>();
     private LeaderContext lastLeaderContext;
 
     private boolean running;
     private boolean stopped;
     private TimerService timerService;
 
-    public RaftLogShippingManager( Outbound<MemberId,RaftMessages.RaftMessage> outbound, LogProvider logProvider,
+    public RaftLogShippingManager( Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound, LogProvider logProvider,
                                    ReadableRaftLog raftLog, TimerService timerService,
-                                   Clock clock, MemberId myself, RaftMembership membership, long retryTimeMillis,
+                                   Clock clock, RaftMemberId myself, RaftMembership membership, long retryTimeMillis,
                                    int catchupBatchSize, int maxAllowedShippingLag,
                                    InFlightCache inFlightCache )
     {
@@ -89,7 +89,7 @@ public class RaftLogShippingManager extends LifecycleAdapter implements RaftMemb
 
         running = true;
 
-        for ( MemberId member : membership.replicationMembers() )
+        for ( RaftMemberId member : membership.replicationMembers() )
         {
             ensureLogShipperRunning( member, initialLeaderContext );
         }
@@ -104,7 +104,7 @@ public class RaftLogShippingManager extends LifecycleAdapter implements RaftMemb
         stopped = true;
     }
 
-    private void ensureLogShipperRunning( MemberId member, LeaderContext leaderContext )
+    private void ensureLogShipperRunning( RaftMemberId member, LeaderContext leaderContext )
     {
         RaftLogShipper logShipper = logShippers.get( member );
         if ( logShipper == null && !member.equals( myself ) )
@@ -140,10 +140,10 @@ public class RaftLogShippingManager extends LifecycleAdapter implements RaftMemb
             return;
         }
 
-        HashSet<MemberId> toBeRemoved = new HashSet<>( logShippers.keySet() );
+        HashSet<RaftMemberId> toBeRemoved = new HashSet<>( logShippers.keySet() );
         toBeRemoved.removeAll( membership.replicationMembers() );
 
-        for ( MemberId member : toBeRemoved )
+        for ( RaftMemberId member : toBeRemoved )
         {
             RaftLogShipper logShipper = logShippers.remove( member );
             if ( logShipper != null )
@@ -152,7 +152,7 @@ public class RaftLogShippingManager extends LifecycleAdapter implements RaftMemb
             }
         }
 
-        for ( MemberId replicationMember : membership.replicationMembers() )
+        for ( RaftMemberId replicationMember : membership.replicationMembers() )
         {
             ensureLogShipperRunning( replicationMember, lastLeaderContext );
         }

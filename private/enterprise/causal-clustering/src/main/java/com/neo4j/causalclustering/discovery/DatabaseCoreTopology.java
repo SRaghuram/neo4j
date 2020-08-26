@@ -7,9 +7,13 @@ package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 
 import org.neo4j.kernel.database.DatabaseId;
 
@@ -21,13 +25,13 @@ public class DatabaseCoreTopology implements Topology<CoreServerInfo>
 {
     private final DatabaseId databaseId;
     private final RaftId raftId;
-    private final Map<MemberId,CoreServerInfo> coreMembers;
+    private final Map<MemberId,CoreServerInfo> coreServers;
 
-    public DatabaseCoreTopology( DatabaseId databaseId, RaftId raftId, Map<MemberId,CoreServerInfo> coreMembers )
+    public DatabaseCoreTopology( DatabaseId databaseId, RaftId raftId, Map<MemberId,CoreServerInfo> coreServers )
     {
         this.databaseId = requireNonNull( databaseId );
         this.raftId = raftId;
-        this.coreMembers = Map.copyOf( coreMembers );
+        this.coreServers = Map.copyOf( coreServers );
     }
 
     public static DatabaseCoreTopology empty( DatabaseId databaseId )
@@ -36,9 +40,9 @@ public class DatabaseCoreTopology implements Topology<CoreServerInfo>
     }
 
     @Override
-    public Map<MemberId,CoreServerInfo> members()
+    public Map<MemberId,CoreServerInfo> servers()
     {
-        return coreMembers;
+        return coreServers;
     }
 
     @Override
@@ -50,6 +54,11 @@ public class DatabaseCoreTopology implements Topology<CoreServerInfo>
     public RaftId raftId()
     {
         return raftId;
+    }
+
+    public Set<RaftMemberId> members( BiFunction<DatabaseId,MemberId,RaftMemberId> resolver )
+    {
+        return servers().keySet().stream().map( serverId -> resolver.apply( databaseId, serverId ) ).collect( Collectors.toSet() );
     }
 
     @Override
@@ -66,18 +75,18 @@ public class DatabaseCoreTopology implements Topology<CoreServerInfo>
         var that = (DatabaseCoreTopology) o;
         return Objects.equals( databaseId, that.databaseId ) &&
                Objects.equals( raftId, that.raftId ) &&
-               Objects.equals( coreMembers, that.coreMembers );
+               Objects.equals( coreServers, that.coreServers );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( databaseId, raftId, coreMembers );
+        return Objects.hash( databaseId, raftId, coreServers );
     }
 
     @Override
     public String toString()
     {
-        return format( "DatabaseCoreTopology{%s %s}", databaseId, coreMembers.keySet() );
+        return format( "DatabaseCoreTopology{%s %s}", databaseId, coreServers.keySet() );
     }
 }

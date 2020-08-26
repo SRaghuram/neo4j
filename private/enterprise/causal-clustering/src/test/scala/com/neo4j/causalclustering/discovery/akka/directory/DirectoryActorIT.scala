@@ -73,7 +73,7 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
   class Fixture extends ReplicatedDataActorFixture[ORMap[DatabaseId,ReplicatedLeaderInfo]] {
     private val random = new Random()
     def newReplicatedLeaderInfo = {
-      new ReplicatedLeaderInfo(new LeaderInfo(IdFactory.randomMemberId(), random.nextLong()))
+      new ReplicatedLeaderInfo(new LeaderInfo(IdFactory.randomRaftMemberId(), random.nextLong()))
     }
 
     var actualLeaderPerDb = Collections.emptyMap[DatabaseId, LeaderInfo]

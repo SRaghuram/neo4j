@@ -11,9 +11,9 @@ import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.helper.scheduling.LimitingScheduler;
 import com.neo4j.causalclustering.helper.scheduling.ReoccurringJobQueue;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,7 +65,7 @@ class BatchingMessageHandlerTest
     private final LimitingScheduler jobScheduler = mock( LimitingScheduler.class );
 
     private ExecutorService executor;
-    private MemberId leader = IdFactory.randomMemberId();
+    private RaftMemberId leader = IdFactory.randomRaftMemberId();
 
     @BeforeEach
     void before()

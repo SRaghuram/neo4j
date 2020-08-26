@@ -7,6 +7,7 @@ package com.neo4j.server.rest.causalclustering;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.time.Duration;
 import java.util.Collection;
@@ -26,8 +27,8 @@ public class ClusteringDatabaseStatusResponse
     private final Double raftCommandsPerSecond;
     private final boolean isDiscoveryHealthy;
 
-    ClusteringDatabaseStatusResponse( long lastAppliedRaftIndex, boolean isParticipatingInRaftGroup, Collection<MemberId> votingMembers, boolean isHealthy,
-            MemberId memberId, MemberId leader, Duration millisSinceLastLeaderMessage, Double raftCommandsPerSecond, boolean isCore,
+    ClusteringDatabaseStatusResponse( long lastAppliedRaftIndex, boolean isParticipatingInRaftGroup, Collection<RaftMemberId> votingMembers, boolean isHealthy,
+            RaftMemberId memberId, RaftMemberId leader, Duration millisSinceLastLeaderMessage, Double raftCommandsPerSecond, boolean isCore,
             boolean isDiscoveryHealthy )
     {
         this.lastAppliedRaftIndex = lastAppliedRaftIndex;

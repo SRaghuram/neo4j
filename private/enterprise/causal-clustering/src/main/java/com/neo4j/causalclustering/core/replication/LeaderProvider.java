@@ -5,23 +5,23 @@
  */
 package com.neo4j.causalclustering.core.replication;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.time.Duration;
 
 class LeaderProvider
 {
     private final long timeoutMillis;
-    private volatile MemberId currentLeader;
+    private volatile RaftMemberId currentLeader;
 
     LeaderProvider( Duration leaderAwaitTimeout )
     {
         this.timeoutMillis = leaderAwaitTimeout.toMillis();
     }
 
-    MemberId awaitLeader() throws InterruptedException
+    RaftMemberId awaitLeader() throws InterruptedException
     {
-        MemberId leader = currentLeader;
+        RaftMemberId leader = currentLeader;
         if ( leader != null )
         {
             // fast path!
@@ -32,7 +32,7 @@ class LeaderProvider
         return leader;
     }
 
-    private synchronized MemberId waitForLeader() throws InterruptedException
+    private synchronized RaftMemberId waitForLeader() throws InterruptedException
     {
         if ( currentLeader == null )
         {
@@ -41,7 +41,7 @@ class LeaderProvider
         return currentLeader;
     }
 
-    synchronized void setLeader( MemberId leader )
+    synchronized void setLeader( RaftMemberId leader )
     {
         currentLeader = leader;
         if ( leader != null )
@@ -50,7 +50,7 @@ class LeaderProvider
         }
     }
 
-    MemberId currentLeader()
+    RaftMemberId currentLeader()
     {
         return currentLeader;
     }

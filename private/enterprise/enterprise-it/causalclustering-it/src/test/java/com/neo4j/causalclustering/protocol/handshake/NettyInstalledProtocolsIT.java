@@ -9,11 +9,11 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.protocol.RaftProtocolClientInstaller;
 import com.neo4j.causalclustering.core.consensus.protocol.RaftProtocolServerInstaller;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.messaging.marshalling.v2.SupportedMessagesV2;
 import com.neo4j.causalclustering.messaging.marshalling.DecodingDispatcher;
 import com.neo4j.causalclustering.messaging.marshalling.RaftMessageComposer;
 import com.neo4j.causalclustering.messaging.marshalling.RaftMessageDecoder;
 import com.neo4j.causalclustering.messaging.marshalling.RaftMessageEncoder;
+import com.neo4j.causalclustering.messaging.marshalling.v2.SupportedMessagesV2;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol;
@@ -102,7 +102,7 @@ class NettyInstalledProtocolsIT
         startServerAndConnect( parameters );
 
         // given
-        var heartbeat = new RaftMessages.Heartbeat( IdFactory.randomMemberId(), 1, 2, 3 );
+        var heartbeat = new RaftMessages.Heartbeat( IdFactory.randomRaftMemberId(), 1, 2, 3 );
         var networkMessage =
                 RaftMessages.OutboundRaftMessageContainer.of( randomRaftId(), heartbeat );
 

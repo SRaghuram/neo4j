@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
 import com.neo4j.dbms.EnterpriseOperatorState;
 import org.hamcrest.Description;
@@ -30,6 +31,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.dbms.DatabaseStateService;
@@ -109,6 +112,8 @@ class CoreDatabaseEndpointsTest
 
         raftMessageTimerResetMonitor = dependencyResolver.satisfyDependency( new DurationSinceLastMessageMonitor( clock ) );
         raftMachine = dependencyResolver.satisfyDependency( mock( RaftMachine.class ) );
+        when( raftMachine.memberId() ).thenReturn( RaftMemberId.from( myself ) );
+
         commandIndexTracker = dependencyResolver.satisfyDependency( new CommandIndexTracker() );
         throughputMonitor = dependencyResolver.satisfyDependency( mock( ThroughputMonitor.class ) );
 
@@ -189,7 +194,7 @@ class CoreDatabaseEndpointsTest
     {
         // given ideal normal conditions
         commandIndexTracker.setAppliedCommandIndex( 123 );
-        when( raftMachine.getLeaderInfo() ).thenReturn( Optional.of( new LeaderInfo( core2, 1 ) ) );
+        when( raftMachine.getLeaderInfo() ).thenReturn( Optional.of( new LeaderInfo( RaftMemberId.from( core2 ), 1 ) ) );
         raftMessageTimerResetMonitor.timerReset();
         when( throughputMonitor.throughput() ).thenReturn( Optional.of( 423.0 ) );
         clock.forward( Duration.ofSeconds( 1 ) );
@@ -223,7 +228,7 @@ class CoreDatabaseEndpointsTest
     {
         // given not in voting set
         topologyService.setRole( core2, RoleInfo.LEADER );
-        when( raftMembershipManager.votingMembers() ).thenReturn( new HashSet<>( Arrays.asList( core2, core3 ) ) );
+        when( raftMembershipManager.votingMembers() ).thenReturn( Stream.of( core2, core3 ).map( RaftMemberId::from ).collect( Collectors.toSet() ) );
 
         // when
         var description = endpoints.description();
@@ -289,7 +294,7 @@ class CoreDatabaseEndpointsTest
     private static RaftMembershipManager fakeRaftMembershipManager( Set<MemberId> votingMembers )
     {
         var raftMembershipManager = mock( RaftMembershipManager.class );
-        when( raftMembershipManager.votingMembers() ).thenReturn( votingMembers );
+        when( raftMembershipManager.votingMembers() ).thenReturn( votingMembers.stream().map( RaftMemberId::from ).collect( Collectors.toSet() ) );
         return raftMembershipManager;
     }
 

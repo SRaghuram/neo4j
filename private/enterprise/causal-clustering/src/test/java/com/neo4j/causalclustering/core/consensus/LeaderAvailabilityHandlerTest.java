@@ -6,9 +6,9 @@
 package com.neo4j.causalclustering.core.consensus;
 
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -32,7 +32,7 @@ class LeaderAvailabilityHandlerTest
 
     private LeaderAvailabilityHandler handler = new LeaderAvailabilityHandler( delegate, leaderAvailabilityTimers, raftMessageTimerResetMonitor, term );
 
-    private MemberId leader = IdFactory.randomMemberId();
+    private RaftMemberId leader = IdFactory.randomRaftMemberId();
     private RaftMessages.InboundRaftMessageContainer<?> heartbeat =
             RaftMessages.InboundRaftMessageContainer.of( Instant.now(), raftId, new RaftMessages.Heartbeat( leader, term.getAsLong(), 0, 0 ) );
     private RaftMessages.InboundRaftMessageContainer<?> appendEntries =

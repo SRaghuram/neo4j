@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.messaging;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.logging.RaftMessageLogger;
 
 import org.neo4j.kernel.database.DatabaseIdFactory;
@@ -15,11 +15,11 @@ import org.neo4j.kernel.database.DatabaseIdRepository;
 public class LoggingInbound implements Inbound<RaftMessages.InboundRaftMessageContainer<?>>
 {
     private final Inbound<RaftMessages.InboundRaftMessageContainer<?>> inbound;
-    private final RaftMessageLogger<MemberId> raftMessageLogger;
-    private final MemberId me;
+    private final RaftMessageLogger<RaftMemberId> raftMessageLogger;
+    private final RaftMemberId me;
     private final DatabaseIdRepository databaseIdRepository;
 
-    public LoggingInbound( Inbound<RaftMessages.InboundRaftMessageContainer<?>> inbound, RaftMessageLogger<MemberId> raftMessageLogger, MemberId me,
+    public LoggingInbound( Inbound<RaftMessages.InboundRaftMessageContainer<?>> inbound, RaftMessageLogger<RaftMemberId> raftMessageLogger, RaftMemberId me,
             DatabaseIdRepository databaseIdRepository )
     {
         this.inbound = inbound;

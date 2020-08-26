@@ -13,7 +13,6 @@ import com.neo4j.causalclustering.core.consensus.log.cache.ConsecutiveInFlightCa
 import com.neo4j.causalclustering.core.consensus.log.cache.InFlightCache;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembership;
 import com.neo4j.causalclustering.core.consensus.outcome.AppendLogEntry;
-import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
 import com.neo4j.causalclustering.core.consensus.outcome.OutcomeBuilder;
 import com.neo4j.causalclustering.core.consensus.outcome.RaftLogCommand;
 import com.neo4j.causalclustering.core.consensus.outcome.TruncateLogCommand;
@@ -22,7 +21,7 @@ import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
 import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -44,7 +43,7 @@ import static com.neo4j.causalclustering.core.consensus.outcome.OutcomeTestBuild
 import static com.neo4j.causalclustering.core.consensus.roles.Role.CANDIDATE;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.FOLLOWER;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 import static java.util.Collections.emptySet;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -59,7 +58,7 @@ class RaftStateTest
 
         //given
         InFlightCache cache = new ConsecutiveInFlightCache();
-        RaftState raftState = new RaftState( member( 0 ),
+        RaftState raftState = new RaftState( raftMember( 0 ),
                 new InMemoryStateStorage<>( new TermState() ), new FakeMembership(), new InMemoryRaftLog(),
                 new InMemoryStateStorage<>( new VoteState() ), cache, NullLogProvider.getInstance(),
                 new ExpiringSet<>( Duration.ofSeconds( 1 ), new FakeClock() ) );
@@ -96,7 +95,7 @@ class RaftStateTest
     void shouldRemoveFollowerStateAfterBecomingLeader() throws Exception
     {
         // given
-        RaftState raftState = new RaftState( member( 0 ),
+        RaftState raftState = new RaftState( raftMember( 0 ),
                 new InMemoryStateStorage<>( new TermState() ),
                 new FakeMembership(), new InMemoryRaftLog(),
                 new InMemoryStateStorage<>( new VoteState() ),
@@ -117,9 +116,9 @@ class RaftStateTest
     {
         // given
         var clock = new FakeClock();
-        var leadershipTransfers = new ExpiringSet<MemberId>( Duration.ofSeconds( 2 ), clock );
+        var leadershipTransfers = new ExpiringSet<RaftMemberId>( Duration.ofSeconds( 2 ), clock );
 
-        var raftState = new RaftState( member( 0 ),
+        var raftState = new RaftState( raftMember( 0 ),
                 new InMemoryStateStorage<>( new TermState() ),
                 new FakeMembership(), new InMemoryRaftLog(),
                 new InMemoryStateStorage<>( new VoteState() ),
@@ -127,7 +126,7 @@ class RaftStateTest
                 leadershipTransfers );
 
         // when
-        leadershipTransfers.add( member( 1 ) );
+        leadershipTransfers.add( raftMember( 1 ) );
         clock.forward( Duration.ofSeconds( 1 ) );
 
         // then
@@ -142,16 +141,16 @@ class RaftStateTest
     void shouldActivateDeactivateLeadershipTransferTimer() throws IOException
     {
         // given
-        var timer = new ExpiringSet<MemberId>( Duration.ofSeconds( 2 ), new FakeClock() );
+        var timer = new ExpiringSet<RaftMemberId>( Duration.ofSeconds( 2 ), new FakeClock() );
 
-        var raftState = new RaftState( member( 0 ),
+        var raftState = new RaftState( raftMember( 0 ),
                 new InMemoryStateStorage<>( new TermState() ),
                 new FakeMembership(), new InMemoryRaftLog(),
                 new InMemoryStateStorage<>( new VoteState() ),
                 new ConsecutiveInFlightCache(), NullLogProvider.getInstance(), timer );
 
         var outcomeA = OutcomeBuilder.builder( LEADER, raftState );
-        outcomeA.startTransferringLeadership( member( 1 ) );
+        outcomeA.startTransferringLeadership( raftMember( 1 ) );
 
         assertFalse( raftState.areTransferringLeadership() );
 
@@ -163,7 +162,7 @@ class RaftStateTest
 
         // when
         var outcomeB = OutcomeBuilder.builder( LEADER, raftState );
-        var rejection = new RaftMessages.LeadershipTransfer.Rejection( member( 1 ), 2, 1 );
+        var rejection = new RaftMessages.LeadershipTransfer.Rejection( raftMember( 1 ), 2, 1 );
         outcomeB.addLeaderTransferRejection( rejection );
         raftState.update( outcomeB.build() );
 
@@ -174,9 +173,9 @@ class RaftStateTest
     void shouldDeactivateLeadershipTransferTimerIfNoLongerLeader() throws IOException
     {
         // given
-        var timer = new ExpiringSet<MemberId>( Duration.ofSeconds( 2 ), new FakeClock() );
+        var timer = new ExpiringSet<RaftMemberId>( Duration.ofSeconds( 2 ), new FakeClock() );
 
-        var raftState = new RaftState( member( 0 ),
+        var raftState = new RaftState( raftMember( 0 ),
                 new InMemoryStateStorage<>( new TermState() ),
                 new FakeMembership(), new InMemoryRaftLog(),
                 new InMemoryStateStorage<>( new VoteState() ),
@@ -186,9 +185,9 @@ class RaftStateTest
 
         // when
         var outcomeA = OutcomeBuilder.builder( LEADER, raftState );
-        outcomeA.startTransferringLeadership( member( 1 ) );
+        outcomeA.startTransferringLeadership( raftMember( 1 ) );
         raftState.update( outcomeA.build() );
-        outcomeA.startTransferringLeadership( member( 2 ) );
+        outcomeA.startTransferringLeadership( raftMember( 2 ) );
         raftState.update( outcomeA.build() );
 
         // then
@@ -206,9 +205,9 @@ class RaftStateTest
         return new ArrayList<>();
     }
 
-    private FollowerStates<MemberId> initialFollowerStates()
+    private FollowerStates<RaftMemberId> initialFollowerStates()
     {
-        return new FollowerStates<>( new FollowerStates<>(), member( 1 ), new FollowerState() );
+        return new FollowerStates<>( new FollowerStates<>(), raftMember( 1 ), new FollowerState() );
     }
 
     private Collection<RaftLogCommand> emptyLogCommands()
@@ -219,13 +218,13 @@ class RaftStateTest
     private static class FakeMembership implements RaftMembership
     {
         @Override
-        public Set<MemberId> votingMembers()
+        public Set<RaftMemberId> votingMembers()
         {
             return emptySet();
         }
 
         @Override
-        public Set<MemberId> replicationMembers()
+        public Set<RaftMemberId> replicationMembers()
         {
             return emptySet();
         }

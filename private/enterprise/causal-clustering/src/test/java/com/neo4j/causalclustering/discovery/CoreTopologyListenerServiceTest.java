@@ -6,10 +6,13 @@
 package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.discovery.CoreTopologyService.Listener;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
+import java.util.Set;
 
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -31,51 +34,59 @@ class CoreTopologyListenerServiceTest
     @Test
     void shouldNotifyListeners()
     {
-        Listener listener1 = newListenerMock( id1 );
-        Listener listener2 = newListenerMock( id1 );
-        Listener listener3 = newListenerMock( id2 );
+        var listener1 = newListenerMock( id1 );
+        var listener2 = newListenerMock( id1 );
+        var listener3 = newListenerMock( id2 );
 
         listenerService.addCoreTopologyListener( listener1 );
         listenerService.addCoreTopologyListener( listener2 );
         listenerService.addCoreTopologyListener( listener3 );
 
-        DatabaseCoreTopology coreTopology1 = new DatabaseCoreTopology( id1.databaseId(), RaftId.from( id1.databaseId() ), Map.of() );
-        DatabaseCoreTopology coreTopology2 = new DatabaseCoreTopology( id2.databaseId(), RaftId.from( id2.databaseId() ), Map.of() );
+        var databaseRaftMembers1 = createTopologyAndGetMembers( id1 );
+        var databaseRaftMembers2 = createTopologyAndGetMembers( id2 );
 
-        listenerService.notifyListeners( coreTopology1 );
-        listenerService.notifyListeners( coreTopology2 );
+        listenerService.notifyListeners( id1.databaseId(), databaseRaftMembers1 );
+        listenerService.notifyListeners( id2.databaseId(), databaseRaftMembers2 );
 
-        verify( listener1 ).onCoreTopologyChange( coreTopology1 );
-        verify( listener2 ).onCoreTopologyChange( coreTopology1 );
-        verify( listener3, never() ).onCoreTopologyChange( coreTopology1 );
+        verify( listener1 ).onCoreTopologyChange( databaseRaftMembers1 );
+        verify( listener2 ).onCoreTopologyChange( databaseRaftMembers1 );
+        verify( listener3, never() ).onCoreTopologyChange( databaseRaftMembers1 );
 
-        verify( listener1, never() ).onCoreTopologyChange( coreTopology2 );
-        verify( listener2, never() ).onCoreTopologyChange( coreTopology2 );
-        verify( listener3 ).onCoreTopologyChange( coreTopology2 );
+        verify( listener1, never() ).onCoreTopologyChange( databaseRaftMembers2 );
+        verify( listener2, never() ).onCoreTopologyChange( databaseRaftMembers2 );
+        verify( listener3 ).onCoreTopologyChange( databaseRaftMembers2 );
     }
 
     @Test
     void shouldNotNotifyRemovedListeners()
     {
-        Listener listener1 = newListenerMock( id1 );
-        Listener listener2 = newListenerMock( id1 );
+        var listener1 = newListenerMock( id1 );
+        var listener2 = newListenerMock( id1 );
 
         listenerService.addCoreTopologyListener( listener1 );
         listenerService.addCoreTopologyListener( listener2 );
         listenerService.removeCoreTopologyListener( listener1 );
 
-        DatabaseCoreTopology coreTopology = new DatabaseCoreTopology( id1.databaseId(), RaftId.from( id1.databaseId() ), Map.of() );
+        var databaseRaftMembers = createTopologyAndGetMembers( id1 );
 
-        listenerService.notifyListeners( coreTopology );
+        listenerService.notifyListeners( id1.databaseId(), databaseRaftMembers );
 
         verify( listener1, never() ).onCoreTopologyChange( any() );
-        verify( listener2 ).onCoreTopologyChange( coreTopology );
+        verify( listener2 ).onCoreTopologyChange( databaseRaftMembers );
     }
 
     private static Listener newListenerMock( NamedDatabaseId namedDatabaseId )
     {
-        Listener listener = mock( Listener.class );
+        var listener = mock( Listener.class );
         when( listener.namedDatabaseId() ).thenReturn( namedDatabaseId );
         return listener;
     }
+
+    private static Set<RaftMemberId> createTopologyAndGetMembers( NamedDatabaseId id )
+    {
+        var coreServerInfo = TestTopology.addressesForCore( 1, false );
+        var coreTopology = new DatabaseCoreTopology( id.databaseId(), RaftId.from( id.databaseId() ), Map.of( IdFactory.randomMemberId(), coreServerInfo ) );
+        return coreTopology.members( ( databaseId, serverId ) -> RaftMemberId.from( serverId ) );
+    }
+
 }

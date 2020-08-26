@@ -48,6 +48,7 @@ class CandidateStuckIT
         cluster.start();
 
         var leader = cluster.awaitLeader();
+        var databaseId = leader.databaseId();
         var followers = cluster.coreMembers().stream().filter( member -> !member.equals( leader ) ).collect( Collectors.toList() );
         for ( int i = 0; i < 100; i++ )
         {
@@ -73,7 +74,7 @@ class CandidateStuckIT
         var lastMember = cluster.coreMembers().stream().filter( member -> !member.equals( leader ) && !member.equals( newLeader ) ).findFirst();
         assertNotNull( lastMember );
         // fake delayed preVote response to force member to become candidate and start an election
-        raftMachine.handle( new RaftMessages.PreVote.Response( followers.get( 0 ).id(), raftMachine.term(), true ) );
+        raftMachine.handle( new RaftMessages.PreVote.Response( followers.get( 0 ).raftMemberIdFor( databaseId ), raftMachine.term(), true ) );
         // ensure that previously started election fails and a new is started with bigger term
         triggerElection( leader );
         // clear HB responses

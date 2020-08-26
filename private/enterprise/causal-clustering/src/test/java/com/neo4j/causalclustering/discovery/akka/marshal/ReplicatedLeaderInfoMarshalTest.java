@@ -20,7 +20,7 @@ public class ReplicatedLeaderInfoMarshalTest extends BaseMarshalTest<ReplicatedL
     @Override
     Collection<ReplicatedLeaderInfo> originals()
     {
-        return singletonList(new ReplicatedLeaderInfo( new LeaderInfo( IdFactory.randomMemberId(), 12L ) ) );
+        return singletonList(new ReplicatedLeaderInfo( new LeaderInfo( IdFactory.randomRaftMemberId(), 12L ) ) );
     }
 
     @Override

@@ -5,17 +5,17 @@
  */
 package com.neo4j.causalclustering.core.consensus.membership;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.marshalling.ReplicatedContentHandler;
 
 import java.io.IOException;
 import java.util.Set;
 
-public class MemberIdSet implements RaftMembers<MemberId>
+public class MemberIdSet implements RaftMembers<RaftMemberId>
 {
-    private final Set<MemberId> members;
+    private final Set<RaftMemberId> members;
 
-    public MemberIdSet( Set<MemberId> members )
+    public MemberIdSet( Set<RaftMemberId> members )
     {
         this.members = members;
     }
@@ -27,7 +27,7 @@ public class MemberIdSet implements RaftMembers<MemberId>
     }
 
     @Override
-    public Set<MemberId> getMembers()
+    public Set<RaftMemberId> getMembers()
     {
         return members;
     }

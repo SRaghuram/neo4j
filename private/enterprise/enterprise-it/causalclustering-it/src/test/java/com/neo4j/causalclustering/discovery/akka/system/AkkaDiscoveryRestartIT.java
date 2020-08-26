@@ -124,7 +124,7 @@ public class AkkaDiscoveryRestartIT
     private void awaitTopology( CoreTopologyService topologyService )
     {
         assertEventually( () -> topologyService.coreTopologyForDatabase( NAMED_DATABASE_ID ),
-                topology -> topology.members().size() == CLUSTER_SIZE,
+                topology -> topology.servers().size() == CLUSTER_SIZE,
                 TIMEOUT, SECONDS );
     }
 

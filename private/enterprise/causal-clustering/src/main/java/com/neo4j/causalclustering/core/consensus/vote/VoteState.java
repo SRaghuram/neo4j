@@ -5,7 +5,8 @@
  */
 package com.neo4j.causalclustering.core.consensus.vote;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.io.IOException;
 
@@ -13,29 +14,28 @@ import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.marshal.ChannelMarshal;
 import org.neo4j.io.marshal.EndOfStreamException;
-import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 
 public class VoteState
 {
-    private MemberId votedFor;
+    private RaftMemberId votedFor;
     private long term = -1;
 
     public VoteState()
     {
     }
 
-    private VoteState( MemberId votedFor, long term )
+    private VoteState( RaftMemberId votedFor, long term )
     {
         this.term = term;
         this.votedFor = votedFor;
     }
 
-    public MemberId votedFor()
+    public RaftMemberId votedFor()
     {
         return votedFor;
     }
 
-    public boolean update( MemberId votedFor, long term )
+    public boolean update( RaftMemberId votedFor, long term )
     {
         if ( termChanged( term ) )
         {
@@ -73,11 +73,11 @@ public class VoteState
 
     public static class Marshal extends SafeStateMarshal<VoteState>
     {
-        private final ChannelMarshal<MemberId> memberMarshal;
+        private final ChannelMarshal<RaftMemberId> memberMarshal;
 
         public Marshal()
         {
-            this.memberMarshal = MemberId.Marshal.INSTANCE;
+            this.memberMarshal = RaftMemberId.Marshal.INSTANCE;
         }
 
         @Override
@@ -91,7 +91,7 @@ public class VoteState
         public VoteState unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
         {
             final long term = channel.getLong();
-            final MemberId member = memberMarshal.unmarshal( channel );
+            final RaftMemberId member = memberMarshal.unmarshal( channel );
             return new VoteState( member, term );
         }
 

@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.consensus.vote;
 
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -17,7 +17,7 @@ class VoteStateTest
     {
         // given
         VoteState voteState = new VoteState();
-        MemberId member = IdFactory.randomMemberId();
+        RaftMemberId member = IdFactory.randomRaftMemberId();
 
         // when
         voteState.update( member, 0 );
@@ -41,8 +41,8 @@ class VoteStateTest
     {
         // given
         VoteState voteState = new VoteState();
-        MemberId member1 = IdFactory.randomMemberId();
-        MemberId member2 = IdFactory.randomMemberId();
+        RaftMemberId member1 = IdFactory.randomRaftMemberId();
+        RaftMemberId member2 = IdFactory.randomRaftMemberId();
 
         // when
         voteState.update( member1, 0 );
@@ -57,7 +57,7 @@ class VoteStateTest
     {
         // given
         VoteState voteState = new VoteState();
-        MemberId member = IdFactory.randomMemberId();
+        RaftMemberId member = IdFactory.randomRaftMemberId();
 
         voteState.update( member, 0 );
 
@@ -73,8 +73,8 @@ class VoteStateTest
     {
         // given
         VoteState voteState = new VoteState();
-        MemberId member1 = IdFactory.randomMemberId();
-        MemberId member2 = IdFactory.randomMemberId();
+        RaftMemberId member1 = IdFactory.randomRaftMemberId();
+        RaftMemberId member2 = IdFactory.randomRaftMemberId();
 
         voteState.update( member1, 0 );
 
@@ -95,7 +95,7 @@ class VoteStateTest
     {
         // given
         VoteState voteState = new VoteState();
-        MemberId member = IdFactory.randomMemberId();
+        RaftMemberId member = IdFactory.randomRaftMemberId();
 
         voteState.update( member, 0 );
 
@@ -116,8 +116,8 @@ class VoteStateTest
     {
         // given
         VoteState voteState = new VoteState();
-        MemberId member1 = IdFactory.randomMemberId();
-        MemberId member2 = IdFactory.randomMemberId();
+        RaftMemberId member1 = IdFactory.randomRaftMemberId();
+        RaftMemberId member2 = IdFactory.randomRaftMemberId();
 
         // when
         Assertions.assertTrue( voteState.update( null, 0 ) );

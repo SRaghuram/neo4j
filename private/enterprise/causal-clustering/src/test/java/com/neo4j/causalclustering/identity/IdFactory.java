@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.identity;
 import java.util.UUID;
 
 import org.neo4j.dbms.identity.ServerId;
-import org.neo4j.util.VisibleForTesting;
 
 public final class IdFactory
 {
@@ -24,6 +23,11 @@ public final class IdFactory
     public static MemberId randomMemberId()
     {
         return MemberId.of( UUID.randomUUID() );
+    }
+
+    public static RaftMemberId randomRaftMemberId()
+    {
+        return RaftMemberId.of( UUID.randomUUID() );
     }
 
     public static ServerId randomServerId()

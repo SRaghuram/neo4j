@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import com.neo4j.causalclustering.helper.TemporaryDatabase;
 import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 
 import java.io.IOException;
@@ -105,16 +105,16 @@ public class RaftBootstrapper
         this.memoryTracker = memoryTracker;
     }
 
-    public CoreSnapshot bootstrap( Set<MemberId> members )
+    public CoreSnapshot bootstrap( Set<RaftMemberId> raftMembers )
     {
-        return bootstrap( members, null );
+        return bootstrap( raftMembers, null );
     }
 
-    public CoreSnapshot bootstrap( Set<MemberId> members, StoreId storeId )
+    public CoreSnapshot bootstrap( Set<RaftMemberId> raftMembers, StoreId storeId )
     {
         try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( RAFT_BOOTSTRAP_TAG ) )
         {
-            log.info( "Bootstrapping database " + bootstrapContext.databaseId().name() + " for members " + members );
+            log.info( "Bootstrapping database " + bootstrapContext.databaseId().name() + " for members " + raftMembers );
             if ( isStorePresent() )
             {
                 ensureRecoveredOrThrow( bootstrapContext, config, memoryTracker );
@@ -129,7 +129,7 @@ public class RaftBootstrapper
                 createStore( storeId, cursorTracer, bootstrapContext.databaseId().isSystemDatabase() );
             }
             appendNullTransactionLogEntryToSetRaftIndexToMinusOne( bootstrapContext, cursorTracer );
-            CoreSnapshot snapshot = buildCoreSnapshot( members );
+            CoreSnapshot snapshot = buildCoreSnapshot( raftMembers );
             log.info( "Bootstrapping of the database " + bootstrapContext.databaseId().name() + " completed " + snapshot );
             return snapshot;
         }
@@ -229,9 +229,9 @@ public class RaftBootstrapper
         }
     }
 
-    private CoreSnapshot buildCoreSnapshot( Set<MemberId> members )
+    private CoreSnapshot buildCoreSnapshot( Set<RaftMemberId> raftMembers )
     {
-        var raftCoreState = new RaftCoreState( new MembershipEntry( FIRST_INDEX, members ) );
+        var raftCoreState = new RaftCoreState( new MembershipEntry( FIRST_INDEX, raftMembers ) );
         var sessionTrackerState = new GlobalSessionTrackerState();
 
         var coreSnapshot = new CoreSnapshot( FIRST_INDEX, FIRST_TERM );

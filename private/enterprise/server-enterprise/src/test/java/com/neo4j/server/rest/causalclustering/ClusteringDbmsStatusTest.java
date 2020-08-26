@@ -8,6 +8,7 @@ package com.neo4j.server.rest.causalclustering;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -15,6 +16,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -48,8 +50,8 @@ class ClusteringDbmsStatusTest
     private final DatabaseManagementService managementService = mock( DatabaseManagementService.class );
     private final ClusteringDbmsStatus statusOutput = new ClusteringDbmsStatus( managementService );
 
-    private final MemberId coreId1 = MemberId.of( randomUUID() );
-    private final MemberId coreId2 = MemberId.of( randomUUID() );
+    private final RaftMemberId coreId1 = RaftMemberId.of( randomUUID() );
+    private final RaftMemberId coreId2 = RaftMemberId.of( randomUUID() );
     private final MemberId readReplicaId = MemberId.of( randomUUID() );
 
     private final GraphDatabaseAPI coreDb1 = coreStatusMockBuilder()
@@ -81,8 +83,8 @@ class ClusteringDbmsStatusTest
             .healthy( false )
             .available( true )
             .readReplicaId( readReplicaId )
-            .coreRole( coreId1, RoleInfo.FOLLOWER )
-            .coreRole( coreId2, RoleInfo.LEADER )
+            .coreRole( MemberId.of( coreId1 ), RoleInfo.FOLLOWER )
+            .coreRole( MemberId.of( coreId2 ), RoleInfo.LEADER )
             .appliedCommandIndex( 7 )
             .throughput( 8 )
             .build();
@@ -124,7 +126,7 @@ class ClusteringDbmsStatusTest
         verifyParticipatingInRaftGroup( status1, true );
         verifyVotingMembers( status1, coreId1, coreId2 );
         verifyHealthy( status1, true );
-        verifyMemberId( status1, coreId1 );
+        verifyMemberId( status1, coreId1.getUuid() );
         verifyLeader( status1, coreId2 );
         verifyMillisSinceLastLeaderMessage( status1, 1 );
         verifyRaftCommandsPerSecond( status1, 3.0 );
@@ -135,7 +137,7 @@ class ClusteringDbmsStatusTest
         verifyParticipatingInRaftGroup( status2, true );
         verifyVotingMembers( status2, coreId1, coreId2 );
         verifyHealthy( status2, true );
-        verifyMemberId( status2, coreId2 );
+        verifyMemberId( status2, coreId2.getUuid() );
         verifyLeader( status2, coreId1 );
         verifyMillisSinceLastLeaderMessage( status2, 4 );
         verifyRaftCommandsPerSecond( status2, 6.0 );
@@ -146,7 +148,7 @@ class ClusteringDbmsStatusTest
         verifyParticipatingInRaftGroup( status3, false );
         verifyVotingMembers( status3, coreId1, coreId2 );
         verifyHealthy( status3, false );
-        verifyMemberId( status3, readReplicaId );
+        verifyMemberId( status3, readReplicaId.getUuid() );
         verifyLeader( status3, coreId2 );
         verifyMillisSinceLastLeaderMessage( status3, null );
         verifyRaftCommandsPerSecond( status3, 8.0 );
@@ -258,7 +260,7 @@ class ClusteringDbmsStatusTest
     }
 
     @SuppressWarnings( "unchecked" )
-    private static void verifyVotingMembers( Map<String,Object> status, MemberId... expected )
+    private static void verifyVotingMembers( Map<String,Object> status, RaftMemberId... expected )
     {
         var value = status.get( "votingMembers" );
         assertThat( value, instanceOf( List.class ) );
@@ -277,14 +279,14 @@ class ClusteringDbmsStatusTest
         assertEquals( expected, value );
     }
 
-    private static void verifyMemberId( Map<String,Object> status, MemberId expected )
+    private static void verifyMemberId( Map<String,Object> status, UUID expected )
     {
         var value = status.get( "memberId" );
         assertThat( value, instanceOf( String.class ) );
-        assertEquals( expected.getUuid().toString(), value );
+        assertEquals( expected.toString(), value );
     }
 
-    private static void verifyLeader( Map<String,Object> status, MemberId expected )
+    private static void verifyLeader( Map<String,Object> status, RaftMemberId expected )
     {
         var value = status.get( "leader" );
         assertThat( value, instanceOf( String.class ) );

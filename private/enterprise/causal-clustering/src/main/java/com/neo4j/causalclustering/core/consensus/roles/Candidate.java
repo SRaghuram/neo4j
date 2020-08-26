@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
 import com.neo4j.causalclustering.core.consensus.outcome.OutcomeBuilder;
 import com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContext;
 import com.neo4j.causalclustering.core.consensus.state.ReadableRaftState;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -134,7 +134,7 @@ class Candidate implements RaftMessageHandler
                         .setRole( FOLLOWER );
                 log.info( "Moving to FOLLOWER state after receiving vote request from %s at term %d (I am at %d)",
                         req.from(), req.term(), state.term() );
-                MemberId votedFor = null;
+                RaftMemberId votedFor = null;
                 Voting.handleVoteVerdict( state, outcomeBuilder, term, req, log, votedFor );
                 return outcomeBuilder;
             }

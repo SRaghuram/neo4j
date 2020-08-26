@@ -61,7 +61,7 @@ public class ConnectRandomlyToServerGroupImpl
 
     private List<MemberId> choices( NamedDatabaseId namedDatabaseId )
     {
-        Map<MemberId,ReadReplicaInfo> replicas = topologyService.readReplicaTopologyForDatabase( namedDatabaseId ).members();
+        Map<MemberId,ReadReplicaInfo> replicas = topologyService.readReplicaTopologyForDatabase( namedDatabaseId ).servers();
 
         return groupsProvider.get()
                 .stream()

@@ -43,6 +43,7 @@ public class ClusterStatusRequestIT
 
         var leader = cluster.awaitLeader();
         var clusterStatus = leader.resolveDependency( GraphDatabaseSettings.DEFAULT_DATABASE_NAME, ClusterStatusService.class );
+        var databaseId = leader.databaseId();
         UUID requestID = UUID.randomUUID();
 
         //when execute cluster status to the leader
@@ -53,7 +54,7 @@ public class ClusterStatusRequestIT
 
         Status ok = new Status( Status.Message.OK );
         var expectedResponses =
-                cluster.coreMembers().stream().map( m -> new StatusResponse( m.id(), ok, requestID ) ).collect( Collectors.toList() );
+                cluster.coreMembers().stream().map( m -> new StatusResponse( m.raftMemberIdFor( databaseId ), ok, requestID ) ).collect( Collectors.toList() );
 
         assertEquals( response.getReplicationResult().outcome(), APPLIED );
         assertThat( response.getResponses() ).containsAll( expectedResponses );
@@ -69,6 +70,7 @@ public class ClusterStatusRequestIT
         cluster.awaitLeader();
         var follower = cluster.getMemberWithAnyRole( Role.FOLLOWER );
         var clusterStatus = follower.resolveDependency( GraphDatabaseSettings.DEFAULT_DATABASE_NAME, ClusterStatusService.class );
+        var databaseId = follower.databaseId();
         UUID requestID = UUID.randomUUID();
 
         //when execute cluster status to the follower
@@ -79,7 +81,7 @@ public class ClusterStatusRequestIT
 
         Status ok = new Status( Status.Message.OK );
         var expectedResponses =
-                cluster.coreMembers().stream().map( m -> new StatusResponse( m.id(), ok, requestID ) ).collect( Collectors.toList() );
+                cluster.coreMembers().stream().map( m -> new StatusResponse( m.raftMemberIdFor( databaseId ), ok, requestID ) ).collect( Collectors.toList() );
 
         assertEquals( response.getReplicationResult().outcome(), APPLIED );
         assertThat( response.getResponses() ).containsAll( expectedResponses );

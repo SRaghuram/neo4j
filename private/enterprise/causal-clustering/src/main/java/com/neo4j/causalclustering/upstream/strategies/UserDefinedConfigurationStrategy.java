@@ -90,7 +90,7 @@ public class UserDefinedConfigurationStrategy extends UpstreamDatabaseSelectionS
         DatabaseReadReplicaTopology readReplicaTopology = topologyService.readReplicaTopologyForDatabase( namedDatabaseId );
 
         var infoMap = Stream.of( coreTopology, readReplicaTopology )
-                .map( Topology::members )
+                .map( Topology::servers )
                 .map( Map::entrySet )
                 .flatMap( Set::stream );
 

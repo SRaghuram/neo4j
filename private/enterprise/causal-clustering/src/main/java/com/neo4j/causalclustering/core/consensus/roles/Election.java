@@ -8,10 +8,8 @@ package com.neo4j.causalclustering.core.consensus.roles;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.outcome.OutcomeBuilder;
 import com.neo4j.causalclustering.core.consensus.state.ReadableRaftState;
-import com.neo4j.causalclustering.identity.MemberId;
 
 import java.io.IOException;
-import java.util.Set;
 
 import org.neo4j.logging.Log;
 
@@ -25,7 +23,7 @@ public class Election
 
     static boolean startRealElection( ReadableRaftState state, OutcomeBuilder outcomeBuilder, Log log, long term ) throws IOException
     {
-        Set<MemberId> currentMembers = state.votingMembers();
+        var currentMembers = state.votingMembers();
         if ( currentMembers == null || !currentMembers.contains( state.myself() ) )
         {
             log.info( "Election attempted but not started, current members are %s, I am %s",
@@ -36,7 +34,7 @@ public class Election
         term++;
         outcomeBuilder.setTerm( term );
 
-        RaftMessages.Vote.Request voteForMe =
+        var voteForMe =
                 new RaftMessages.Vote.Request( state.myself(), term, state.myself(), state.entryLog()
                         .appendIndex(), state.entryLog().readEntryTerm( state.entryLog().appendIndex() ) );
 
@@ -52,7 +50,7 @@ public class Election
 
     static boolean startPreElection( ReadableRaftState state, OutcomeBuilder outcomeBuilder, Log log ) throws IOException
     {
-        Set<MemberId> currentMembers = state.votingMembers();
+        var currentMembers = state.votingMembers();
         if ( currentMembers == null || !currentMembers.contains( state.myself() ) )
         {
             log.info( "Pre-election attempted but not started, current members are %s, I am %s",
@@ -60,7 +58,7 @@ public class Election
             return false;
         }
 
-        RaftMessages.PreVote.Request preVoteForMe =
+        var preVoteForMe =
                 new RaftMessages.PreVote.Request( state.myself(), state.term(), state.myself(), state.entryLog()
                         .appendIndex(), state.entryLog().readEntryTerm( state.entryLog().appendIndex() ) );
 

@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.core.consensus.election;
 
 import com.neo4j.causalclustering.core.consensus.LeaderListener;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -26,13 +26,13 @@ public class ElectionUtil
     {
     }
 
-    public static MemberId waitForLeaderAgreement( Iterable<RaftMachine> validRafts, long maxTimeMillis ) throws
+    public static RaftMemberId waitForLeaderAgreement( Iterable<RaftMachine> validRafts, long maxTimeMillis ) throws
             InterruptedException, TimeoutException
     {
         long viewCount = Iterables.count( validRafts );
 
-        Map<MemberId, MemberId> leaderViews = new HashMap<>();
-        CompletableFuture<MemberId> futureAgreedLeader = new CompletableFuture<>();
+        Map<RaftMemberId, RaftMemberId> leaderViews = new HashMap<>();
+        CompletableFuture<RaftMemberId> futureAgreedLeader = new CompletableFuture<>();
 
         Collection<Runnable> destructors = new ArrayList<>();
         for ( RaftMachine raft : validRafts )
@@ -58,7 +58,7 @@ public class ElectionUtil
     }
 
     private static Runnable leaderViewUpdatingListener( RaftMachine raft, Iterable<RaftMachine>
-            validRafts, Map<MemberId,MemberId> leaderViews, long viewCount, CompletableFuture<MemberId>
+            validRafts, Map<RaftMemberId,RaftMemberId> leaderViews, long viewCount, CompletableFuture<RaftMemberId>
             futureAgreedLeader )
     {
         LeaderListener listener = newLeader ->

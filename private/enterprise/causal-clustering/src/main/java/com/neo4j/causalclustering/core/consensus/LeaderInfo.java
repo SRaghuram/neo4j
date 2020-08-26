@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.Objects;
 
@@ -13,16 +13,16 @@ public class LeaderInfo
 {
     public static final LeaderInfo INITIAL = new LeaderInfo( null, -1 );
 
-    private final MemberId memberId;
+    private final RaftMemberId memberId;
     private final long term;
     private final boolean isSteppingDown;
 
-    public LeaderInfo( MemberId memberId, long term )
+    public LeaderInfo( RaftMemberId memberId, long term )
     {
         this( memberId, term, false );
     }
 
-    private LeaderInfo( MemberId memberId, long term, boolean isSteppingDown )
+    private LeaderInfo( RaftMemberId memberId, long term, boolean isSteppingDown )
     {
         this.memberId = memberId;
         this.term = term;
@@ -42,7 +42,7 @@ public class LeaderInfo
         return isSteppingDown;
     }
 
-    public MemberId memberId()
+    public RaftMemberId memberId()
     {
         return memberId;
     }

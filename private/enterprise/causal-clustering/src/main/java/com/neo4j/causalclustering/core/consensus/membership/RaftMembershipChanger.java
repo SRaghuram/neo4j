@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core.consensus.membership;
 import com.neo4j.causalclustering.core.consensus.log.ReadableRaftLog;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.time.Clock;
 import java.util.HashSet;
@@ -57,7 +57,7 @@ class RaftMembershipChanger
     private final RaftMembershipManager membershipManager;
     private long catchupTimeout;
 
-    private MemberId catchingUpMember;
+    private RaftMemberId catchingUpMember;
 
     RaftMembershipChanger( ReadableRaftLog raftLog, Clock clock, long catchupLagTimeout,
             LogProvider logProvider, long catchupTimeout, RaftMembershipManager membershipManager )
@@ -100,22 +100,22 @@ class RaftMembershipChanger
         handleState( state.onRaftGroupCommitted() );
     }
 
-    void onFollowerStateChange( FollowerStates<MemberId> followerStates )
+    void onFollowerStateChange( FollowerStates<RaftMemberId> followerStates )
     {
         handleState( state.onFollowerStateChange( followerStates ) );
     }
 
-    void onMissingMember( MemberId member )
+    void onMissingMember( RaftMemberId member )
     {
         handleState( state.onMissingMember( member ) );
     }
 
-    void onSuperfluousMember( MemberId member )
+    void onSuperfluousMember( RaftMemberId member )
     {
         handleState( state.onSuperfluousMember( member ) );
     }
 
-    void onTargetChanged( Set<MemberId> targetMembers )
+    void onTargetChanged( Set<RaftMemberId> targetMembers )
     {
         handleState( state.onTargetChanged( targetMembers ) );
     }
@@ -201,15 +201,15 @@ class RaftMembershipChanger
     private class Idle extends ActiveBaseState
     {
         @Override
-        public RaftMembershipStateMachineEventHandler onMissingMember( MemberId member )
+        public RaftMembershipStateMachineEventHandler onMissingMember( RaftMemberId member )
         {
             return new CatchingUp( member );
         }
 
         @Override
-        public RaftMembershipStateMachineEventHandler onSuperfluousMember( MemberId member )
+        public RaftMembershipStateMachineEventHandler onSuperfluousMember( RaftMemberId member )
         {
-            Set<MemberId> updatedVotingMembers = new HashSet<>( membershipManager.votingMembers() );
+            Set<RaftMemberId> updatedVotingMembers = new HashSet<>( membershipManager.votingMembers() );
             updatedVotingMembers.remove( member );
             membershipManager.doConsensus( updatedVotingMembers );
 
@@ -228,7 +228,7 @@ class RaftMembershipChanger
         private final CatchupGoalTracker catchupGoalTracker;
         boolean movingToConsensus;
 
-        CatchingUp( MemberId member )
+        CatchingUp( RaftMemberId member )
         {
             this.catchupGoalTracker = new CatchupGoalTracker( raftLog, clock, catchupLagTimeout, catchupTimeout );
             catchingUpMember = member;
@@ -265,7 +265,7 @@ class RaftMembershipChanger
         }
 
         @Override
-        public RaftMembershipStateMachineEventHandler onFollowerStateChange( FollowerStates<MemberId> followerStates )
+        public RaftMembershipStateMachineEventHandler onFollowerStateChange( FollowerStates<RaftMemberId> followerStates )
         {
             catchupGoalTracker.updateProgress( followerStates.get( catchingUpMember ) );
 
@@ -273,7 +273,7 @@ class RaftMembershipChanger
             {
                 if ( catchupGoalTracker.isGoalAchieved() )
                 {
-                    Set<MemberId> updatedVotingMembers = new HashSet<>( membershipManager.votingMembers() );
+                    Set<RaftMemberId> updatedVotingMembers = new HashSet<>( membershipManager.votingMembers() );
                     updatedVotingMembers.add( catchingUpMember );
                     membershipManager.doConsensus( updatedVotingMembers );
 

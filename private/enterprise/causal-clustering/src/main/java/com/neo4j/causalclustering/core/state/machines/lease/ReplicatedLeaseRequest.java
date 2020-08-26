@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core.state.machines.lease;
 import com.neo4j.causalclustering.core.state.CommandDispatcher;
 import com.neo4j.causalclustering.core.state.StateMachineResult;
 import com.neo4j.causalclustering.core.state.machines.tx.CoreReplicatedContent;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.marshalling.ReplicatedContentHandler;
 
 import java.io.IOException;
@@ -23,7 +23,7 @@ import static org.neo4j.kernel.impl.api.LeaseService.NO_LEASE;
 
 public class ReplicatedLeaseRequest implements CoreReplicatedContent, Lease
 {
-    private final MemberId owner;
+    private final RaftMemberId owner;
     private final int leaseId;
     private final DatabaseId databaseId;
 
@@ -34,7 +34,7 @@ public class ReplicatedLeaseRequest implements CoreReplicatedContent, Lease
         this( state.owner(), state.leaseId(), namedDatabaseId.databaseId() );
     }
 
-    public ReplicatedLeaseRequest( MemberId owner, int leaseId, DatabaseId databaseId )
+    public ReplicatedLeaseRequest( RaftMemberId owner, int leaseId, DatabaseId databaseId )
     {
         this.owner = owner;
         this.leaseId = leaseId;
@@ -48,7 +48,7 @@ public class ReplicatedLeaseRequest implements CoreReplicatedContent, Lease
     }
 
     @Override
-    public MemberId owner()
+    public RaftMemberId owner()
     {
         return owner;
     }

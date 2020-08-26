@@ -7,10 +7,10 @@ package com.neo4j.causalclustering.messaging.marshalling.v3.decoding;
 
 import com.neo4j.causalclustering.catchup.Protocol;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.marshalling.ContentType;
 import com.neo4j.causalclustering.messaging.marshalling.RaftMessageDecoder;
+import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 import com.neo4j.configuration.ServerGroupName;
 
 import java.io.IOException;
@@ -28,14 +28,14 @@ public final class RaftMessageDecoderV3 extends RaftMessageDecoder
     }
 
     @Override
-    protected Optional<LazyComposer> getLazyComposer( ReadableChannel channel, RaftMessages.Type messageType, MemberId from )
+    protected Optional<LazyComposer> getLazyComposer( ReadableChannel channel, RaftMessages.Type messageType, RaftMemberId from )
             throws IOException, EndOfStreamException
     {
         return super.getLazyComposer( channel, messageType, from )
                     .or( () -> getLazyComposerForCurrentVersion( channel, messageType, from ) );
     }
 
-    public static Optional<LazyComposer> getLazyComposerForCurrentVersion( ReadableChannel channel, RaftMessages.Type messageType, MemberId from )
+    public static Optional<LazyComposer> getLazyComposerForCurrentVersion( ReadableChannel channel, RaftMessages.Type messageType, RaftMemberId from )
     {
         try
         {
@@ -59,7 +59,7 @@ public final class RaftMessageDecoderV3 extends RaftMessageDecoder
         }
     }
 
-    private static LazyComposer handleLeadershipTransferRejection( ReadableChannel channel, MemberId from ) throws IOException
+    private static LazyComposer handleLeadershipTransferRejection( ReadableChannel channel, RaftMemberId from ) throws IOException
     {
         long previousIndex = channel.getLong();
         long term = channel.getLong();
@@ -67,7 +67,7 @@ public final class RaftMessageDecoderV3 extends RaftMessageDecoder
         return new SimpleMessageComposer( new RaftMessages.LeadershipTransfer.Rejection( from, previousIndex, term ) );
     }
 
-    private static LazyComposer handleLeadershipTransferRequest( ReadableChannel channel, MemberId from ) throws IOException
+    private static LazyComposer handleLeadershipTransferRequest( ReadableChannel channel, RaftMemberId from ) throws IOException
     {
         long previousIndex = channel.getLong();
         long term = channel.getLong();

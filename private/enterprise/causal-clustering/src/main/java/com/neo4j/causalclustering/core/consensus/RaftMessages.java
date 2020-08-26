@@ -8,8 +8,8 @@ package com.neo4j.causalclustering.core.consensus;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.core.state.machines.status.Status;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.configuration.ServerGroupName;
 
 import java.time.Instant;
@@ -213,16 +213,16 @@ public interface RaftMessages
 
     class Directed
     {
-        MemberId to;
+        RaftMemberId to;
         RaftMessage message;
 
-        public Directed( MemberId to, RaftMessage message )
+        public Directed( RaftMemberId to, RaftMessage message )
         {
             this.to = to;
             this.message = message;
         }
 
-        public MemberId to()
+        public RaftMemberId to()
         {
             return to;
         }
@@ -265,11 +265,11 @@ public interface RaftMessages
         class Request extends RaftMessage
         {
             private long term;
-            private MemberId candidate;
+            private RaftMemberId candidate;
             private long lastLogIndex;
             private long lastLogTerm;
 
-            public Request( MemberId from, long term, MemberId candidate, long lastLogIndex, long lastLogTerm )
+            public Request( RaftMemberId from, long term, RaftMemberId candidate, long lastLogIndex, long lastLogTerm )
             {
                 super( from, Type.VOTE_REQUEST );
                 this.term = term;
@@ -334,7 +334,7 @@ public interface RaftMessages
                 return lastLogIndex;
             }
 
-            public MemberId candidate()
+            public RaftMemberId candidate()
             {
                 return candidate;
             }
@@ -345,7 +345,7 @@ public interface RaftMessages
             private long term;
             private boolean voteGranted;
 
-            public Response( MemberId from, long term, boolean voteGranted )
+            public Response( RaftMemberId from, long term, boolean voteGranted )
             {
                 super( from, Type.VOTE_RESPONSE );
                 this.term = term;
@@ -406,11 +406,11 @@ public interface RaftMessages
         class Request extends RaftMessage
         {
             private long term;
-            private MemberId candidate;
+            private RaftMemberId candidate;
             private long lastLogIndex;
             private long lastLogTerm;
 
-            public Request( MemberId from, long term, MemberId candidate, long lastLogIndex, long lastLogTerm )
+            public Request( RaftMemberId from, long term, RaftMemberId candidate, long lastLogIndex, long lastLogTerm )
             {
                 super( from, Type.PRE_VOTE_REQUEST );
                 this.term = term;
@@ -475,7 +475,7 @@ public interface RaftMessages
                 return lastLogIndex;
             }
 
-            public MemberId candidate()
+            public RaftMemberId candidate()
             {
                 return candidate;
             }
@@ -486,7 +486,7 @@ public interface RaftMessages
             private long term;
             private boolean voteGranted;
 
-            public Response( MemberId from, long term, boolean voteGranted )
+            public Response( RaftMemberId from, long term, boolean voteGranted )
             {
                 super( from, Type.PRE_VOTE_RESPONSE );
                 this.term = term;
@@ -552,7 +552,7 @@ public interface RaftMessages
             private RaftLogEntry[] entries;
             private long leaderCommit;
 
-            public Request( MemberId from, long leaderTerm, long prevLogIndex, long prevLogTerm, RaftLogEntry[] entries, long leaderCommit )
+            public Request( RaftMemberId from, long leaderTerm, long prevLogIndex, long prevLogTerm, RaftLogEntry[] entries, long leaderCommit )
             {
                 super( from, Type.APPEND_ENTRIES_REQUEST );
                 Objects.requireNonNull( entries );
@@ -637,7 +637,7 @@ public interface RaftMessages
             private long matchIndex;
             private long appendIndex;
 
-            public Response( MemberId from, long term, boolean success, long matchIndex, long appendIndex )
+            public Response( RaftMemberId from, long term, boolean success, long matchIndex, long appendIndex )
             {
                 super( from, Type.APPEND_ENTRIES_RESPONSE );
                 this.term = term;
@@ -715,7 +715,7 @@ public interface RaftMessages
         private long commitIndex;
         private long commitIndexTerm;
 
-        public Heartbeat( MemberId from, long leaderTerm, long commitIndex, long commitIndexTerm )
+        public Heartbeat( RaftMemberId from, long leaderTerm, long commitIndex, long commitIndexTerm )
         {
             super( from, Type.HEARTBEAT );
             this.leaderTerm = leaderTerm;
@@ -788,7 +788,7 @@ public interface RaftMessages
     class HeartbeatResponse extends RaftMessage
     {
 
-        public HeartbeatResponse( MemberId from )
+        public HeartbeatResponse( RaftMemberId from )
         {
             super( from, HEARTBEAT_RESPONSE );
         }
@@ -811,7 +811,7 @@ public interface RaftMessages
         private long leaderTerm;
         private long prevIndex;
 
-        public LogCompactionInfo( MemberId from, long leaderTerm, long prevIndex )
+        public LogCompactionInfo( RaftMemberId from, long leaderTerm, long prevIndex )
         {
             super( from, Type.LOG_COMPACTION_INFO );
             this.leaderTerm = leaderTerm;
@@ -876,7 +876,7 @@ public interface RaftMessages
     {
         class Election extends RaftMessage
         {
-            public Election( MemberId from )
+            public Election( RaftMemberId from )
             {
                 super( from, Type.ELECTION_TIMEOUT );
             }
@@ -896,7 +896,7 @@ public interface RaftMessages
 
         class Heartbeat extends RaftMessage
         {
-            public Heartbeat( MemberId from )
+            public Heartbeat( RaftMemberId from )
             {
                 super( from, Type.HEARTBEAT_TIMEOUT );
             }
@@ -921,7 +921,7 @@ public interface RaftMessages
         {
             private ReplicatedContent content;
 
-            public Request( MemberId from, ReplicatedContent content )
+            public Request( RaftMemberId from, ReplicatedContent content )
             {
                 super( from, Type.NEW_ENTRY_REQUEST );
                 this.content = content;
@@ -1169,7 +1169,7 @@ public interface RaftMessages
         private final Status status;
         private final UUID requestId;
 
-        public StatusResponse( MemberId from, Status status, UUID requestId )
+        public StatusResponse( RaftMemberId from, Status status, UUID requestId )
         {
             super( from, STATUS_RESPONSE );
             this.status = status;
@@ -1237,7 +1237,7 @@ public interface RaftMessages
             private final long term;
             private final Set<ServerGroupName> groups;
 
-            public Request( MemberId from, long previousIndex, long term, Set<ServerGroupName> groups )
+            public Request( RaftMemberId from, long previousIndex, long term, Set<ServerGroupName> groups )
             {
                 super( from, Type.LEADERSHIP_TRANSFER_REQUEST );
                 this.previousIndex = previousIndex;
@@ -1309,7 +1309,7 @@ public interface RaftMessages
             private final long previousIndex;
             private final long term;
 
-            public Rejection( MemberId from, long previousIndex, long term )
+            public Rejection( RaftMemberId from, long previousIndex, long term )
             {
                 super( from, Type.LEADERSHIP_TRANSFER_REJECTION );
                 this.previousIndex = previousIndex;
@@ -1370,17 +1370,17 @@ public interface RaftMessages
 
         class Proposal extends RaftMessage
         {
-            private final MemberId proposed;
+            private final RaftMemberId proposed;
             private final Set<ServerGroupName> priorityGroups;
 
-            public Proposal( MemberId from, MemberId proposed, Set<ServerGroupName> priorityGroups )
+            public Proposal( RaftMemberId from, RaftMemberId proposed, Set<ServerGroupName> priorityGroups )
             {
                 super( from, Type.LEADERSHIP_TRANSFER_PROPOSAL );
                 this.proposed = proposed;
                 this.priorityGroups = Set.copyOf( priorityGroups );
             }
 
-            public MemberId proposed()
+            public RaftMemberId proposed()
             {
                 return proposed;
             }
@@ -1435,16 +1435,16 @@ public interface RaftMessages
 
     abstract class RaftMessage
     {
-        protected final MemberId from;
+        protected final RaftMemberId from;
         private final Type type;
 
-        RaftMessage( MemberId from, Type type )
+        RaftMessage( RaftMemberId from, Type type )
         {
             this.from = from;
             this.type = type;
         }
 
-        public MemberId from()
+        public RaftMemberId from()
         {
             return from;
         }

@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.consensus.membership.MembershipEntry;
 import com.neo4j.causalclustering.core.consensus.shipping.RaftLogShipper;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 
@@ -23,7 +23,7 @@ import java.util.HashSet;
 import java.util.List;
 
 import static com.neo4j.causalclustering.core.consensus.ReplicatedInteger.valueOf;
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.Matchers.empty;
 
@@ -35,12 +35,12 @@ class CatchUpTest
         DirectNetworking net = new DirectNetworking();
 
         // given
-        final MemberId leader = member( 0 );
-        final MemberId[] allMembers = {leader, member( 1 ), member( 2 )};
+        final RaftMemberId leader = raftMember( 0 );
+        final RaftMemberId[] allMembers = {leader, raftMember( 1 ), raftMember( 2 )};
 
         final RaftTestFixture fixture = new RaftTestFixture( net, 3, allMembers );
         fixture.bootstrap( allMembers );
-        final MemberId leaderMember = fixture.members().withId( leader ).member();
+        final RaftMemberId leaderMember = fixture.members().withId( leader ).member();
 
         // when
         fixture.members().withId( leader ).timerService().invoke( RaftMachine.Timeouts.ELECTION );
@@ -49,7 +49,7 @@ class CatchUpTest
         net.processMessages();
 
         // then
-        for ( MemberId aMember : allMembers )
+        for ( RaftMemberId aMember : allMembers )
         {
             MatcherAssert.assertThat( fixture.messageLog(), integerValues( fixture.members().withId( aMember ).raftLog() ), hasItems( 42 ) );
         }
@@ -61,11 +61,11 @@ class CatchUpTest
         DirectNetworking net = new DirectNetworking();
 
         // given
-        final MemberId leaderId = member( 0 );
-        final MemberId sleepyId = member( 2 );
+        final RaftMemberId leaderId = raftMember( 0 );
+        final RaftMemberId sleepyId = raftMember( 2 );
 
-        final MemberId[] awakeMembers = {leaderId, member( 1 )};
-        final MemberId[] allMembers = {leaderId, member( 1 ), sleepyId};
+        final RaftMemberId[] awakeMembers = {leaderId, raftMember( 1 )};
+        final RaftMemberId[] allMembers = {leaderId, raftMember( 1 ), sleepyId};
 
         RaftTestFixture fixture = new RaftTestFixture( net, 3, allMembers );
         fixture.bootstrap( allMembers );
@@ -75,7 +75,7 @@ class CatchUpTest
         fixture.members().withId( leaderId ).timerService().invoke( RaftMachine.Timeouts.ELECTION );
         net.processMessages();
 
-        final MemberId leader = fixture.members().withId( leaderId ).member();
+        final RaftMemberId leader = fixture.members().withId( leaderId ).member();
 
         net.disconnect( sleepyId );
 
@@ -87,7 +87,7 @@ class CatchUpTest
         net.processMessages();
 
         // then
-        for ( MemberId awakeMember : awakeMembers )
+        for ( RaftMemberId awakeMember : awakeMembers )
         {
             MatcherAssert.assertThat( integerValues( fixture.members().withId( awakeMember ).raftLog() ),
                     hasItems( 10, 20, 30, 40 ) );

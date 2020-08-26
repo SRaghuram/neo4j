@@ -19,12 +19,12 @@ import static java.util.Objects.requireNonNull;
 public class DatabaseReadReplicaTopology implements Topology<ReadReplicaInfo>
 {
     private final DatabaseId databaseId;
-    private final Map<MemberId,ReadReplicaInfo> readReplicaMembers;
+    private final Map<MemberId,ReadReplicaInfo> readReplicaServers;
 
-    public DatabaseReadReplicaTopology( DatabaseId databaseId, Map<MemberId,ReadReplicaInfo> readReplicaMembers )
+    public DatabaseReadReplicaTopology( DatabaseId databaseId, Map<MemberId,ReadReplicaInfo> readReplicaServers )
     {
         this.databaseId = requireNonNull( databaseId );
-        this.readReplicaMembers = readReplicaMembers;
+        this.readReplicaServers = readReplicaServers;
     }
 
     public static DatabaseReadReplicaTopology empty( DatabaseId databaseId )
@@ -39,9 +39,9 @@ public class DatabaseReadReplicaTopology implements Topology<ReadReplicaInfo>
     }
 
     @Override
-    public Map<MemberId, ReadReplicaInfo> members()
+    public Map<MemberId, ReadReplicaInfo> servers()
     {
-        return readReplicaMembers;
+        return readReplicaServers;
     }
 
     @Override
@@ -57,18 +57,18 @@ public class DatabaseReadReplicaTopology implements Topology<ReadReplicaInfo>
         }
         var that = (DatabaseReadReplicaTopology) o;
         return Objects.equals( databaseId, that.databaseId ) &&
-               Objects.equals( readReplicaMembers, that.readReplicaMembers );
+               Objects.equals( readReplicaServers, that.readReplicaServers );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( databaseId, readReplicaMembers );
+        return Objects.hash( databaseId, readReplicaServers );
     }
 
     @Override
     public String toString()
     {
-        return format( "DatabaseReadReplicaTopology{%s %s}", databaseId, readReplicaMembers.keySet() );
+        return format( "DatabaseReadReplicaTopology{%s %s}", databaseId, readReplicaServers.keySet() );
     }
 }

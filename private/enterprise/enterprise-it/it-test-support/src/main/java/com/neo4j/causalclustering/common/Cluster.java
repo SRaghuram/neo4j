@@ -28,7 +28,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -478,12 +477,10 @@ public class Cluster
 
     public void awaitAllCoresJoinedAllRaftGroups( Set<String> databases, long timeout, TimeUnit timeUnit ) throws TimeoutException
     {
-        await( () -> coreMembers.values().stream().allMatch(
-                core -> databases.stream().allMatch(
-                        databaseName -> core.resolveDependency( databaseName, RaftMachine.class )
-                                            .votingMembers()
-                                            .containsAll( coreMembers.values().stream().map( CoreClusterMember::id ).collect( Collectors.toSet() ) ) )
-               ),
+        await( () -> coreMembers.values().stream().allMatch( core -> databases.stream().allMatch(
+               databaseName -> core.resolveDependency( databaseName, RaftMachine.class ).votingMembers().containsAll(
+                        coreMembers.values().stream().map( member -> member.raftMemberIdFor( member.databaseId( databaseName ) ) )
+                                .collect( Collectors.toSet() ) ) ) ),
                timeout,
                timeUnit
         );
@@ -524,7 +521,7 @@ public class Cluster
                           var db = coreClusterMember.database( databaseName );
                           var coreTopologyService = db.getDependencyResolver().resolveDependency( CoreTopologyService.class );
                           var databaseId = coreClusterMember.databaseId( databaseName );
-                          return topologySelector.apply( coreTopologyService, databaseId ).members().size();
+                          return topologySelector.apply( coreTopologyService, databaseId ).servers().size();
                       }
                 );
     }

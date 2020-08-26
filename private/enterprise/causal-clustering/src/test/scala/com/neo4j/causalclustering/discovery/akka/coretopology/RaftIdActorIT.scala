@@ -25,7 +25,7 @@ class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
 
     "update replicator with raft ID from this core server" in new Fixture {
       When("send raft ID locally")
-      val memberId = IdFactory.randomMemberId()
+      val memberId = IdFactory.randomRaftMemberId()
       replicatedDataActorRef ! new RaftIdSetRequest(RaftId.from(randomNamedDatabaseId.databaseId()), memberId, java.time.Duration.ofSeconds( 2 ))
 
       Then("update metadata")

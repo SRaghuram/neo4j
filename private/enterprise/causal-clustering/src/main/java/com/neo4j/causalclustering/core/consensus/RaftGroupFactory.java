@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferS
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 import com.neo4j.configuration.ServerGroupsSupplier;
 
@@ -53,7 +53,7 @@ public class RaftGroupFactory
         this.serverGroupsSupplier = serverGroupsSupplier;
     }
 
-    public RaftGroup create( NamedDatabaseId namedDatabaseId, Outbound<MemberId,RaftMessages.RaftMessage> outbound, LifeSupport life, Monitors monitors,
+    public RaftGroup create( NamedDatabaseId namedDatabaseId, Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound, LifeSupport life, Monitors monitors,
                              Dependencies dependencies, DatabaseLogService logService, Consumer<RaftMessages.StatusResponse> statusResponseConsumer )
     {
         // TODO: Consider if additional services are per raft group, e.g. config, log-service.

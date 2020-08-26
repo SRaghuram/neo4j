@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMachineBuilder;
 import com.neo4j.causalclustering.core.consensus.ReplicatedInteger;
 import com.neo4j.causalclustering.core.consensus.membership.RaftTestMembers;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.identity.RaftTestMemberSetBuilder;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,14 +21,14 @@ import org.neo4j.time.Clocks;
 import static com.neo4j.causalclustering.core.consensus.ReplicatedInteger.valueOf;
 import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.appendEntriesRequest;
 import static com.neo4j.causalclustering.core.consensus.log.RaftLogHelper.readLogEntry;
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 import static org.mockito.Mockito.mock;
 
 class RaftMachineLogTest
 {
     private RaftMachineBuilder.CommitListener commitListener = mock( RaftMachineBuilder.CommitListener.class );
 
-    private MemberId myself = member( 0 );
+    private RaftMemberId myself = raftMember( 0 );
     private ReplicatedContent content = valueOf( 1 );
     private RaftLog testEntryLog;
 

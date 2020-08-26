@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.consensus.outcome.RaftLogCommand;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
 import com.neo4j.causalclustering.core.replication.SendToMyself;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.io.IOException;
 import java.time.Clock;
@@ -40,11 +40,11 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
 {
     private RaftMembershipChanger membershipChanger;
 
-    private Set<MemberId> targetMembers;
+    private Set<RaftMemberId> targetMembers;
 
     private final SendToMyself sendToMyself;
-    private final MemberId myself;
-    private final RaftMembers.Builder<MemberId> memberSetBuilder;
+    private final RaftMemberId myself;
+    private final RaftMembers.Builder<RaftMemberId> memberSetBuilder;
     private final ReadableRaftLog raftLog;
     private final Log log;
     private final StateStorage<RaftMembershipState> storage;
@@ -54,14 +54,14 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
 
     private final int minimumConsensusGroupSize;
 
-    private volatile Set<MemberId> votingMembers = Collections.unmodifiableSet( new HashSet<>() );
+    private volatile Set<RaftMemberId> votingMembers = Collections.unmodifiableSet( new HashSet<>() );
     // votingMembers + additionalReplicationMembers
-    private volatile Set<MemberId> replicationMembers = Collections.unmodifiableSet( new HashSet<>() );
+    private volatile Set<RaftMemberId> replicationMembers = Collections.unmodifiableSet( new HashSet<>() );
 
     private Set<Listener> listeners = new HashSet<>();
-    private Set<MemberId> additionalReplicationMembers = new HashSet<>();
+    private Set<RaftMemberId> additionalReplicationMembers = new HashSet<>();
 
-    public RaftMembershipManager( SendToMyself sendToMyself, MemberId myself, RaftMembers.Builder<MemberId> memberSetBuilder,
+    public RaftMembershipManager( SendToMyself sendToMyself, RaftMemberId myself, RaftMembers.Builder<RaftMemberId> memberSetBuilder,
             ReadableRaftLog raftLog, LogProvider logProvider, int minimumConsensusGroupSize, long catchupLagTimeout,
             Clock clock, long catchupTimeout, StateStorage<RaftMembershipState> membershipStorage )
     {
@@ -101,7 +101,7 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
         updateMemberSets();
     }
 
-    public void setTargetMembershipSet( Set<MemberId> targetMembers )
+    public void setTargetMembershipSet( Set<RaftMemberId> targetMembers )
     {
         boolean targetMembershipChanged = !targetMembers.equals( this.targetMembers );
 
@@ -130,13 +130,13 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
         checkForStartCondition();
     }
 
-    private Set<MemberId> missingMembers()
+    private Set<RaftMemberId> missingMembers()
     {
         if ( targetMembers == null || votingMembers() == null )
         {
             return emptySet();
         }
-        Set<MemberId> missingMembers = new HashSet<>( targetMembers );
+        Set<RaftMemberId> missingMembers = new HashSet<>( targetMembers );
         missingMembers.removeAll( votingMembers() );
 
         return missingMembers;
@@ -149,7 +149,7 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
     {
         votingMembers = Collections.unmodifiableSet( state.getLatest() );
 
-        HashSet<MemberId> newReplicationMembers = new HashSet<>( votingMembers );
+        HashSet<RaftMemberId> newReplicationMembers = new HashSet<>( votingMembers );
         newReplicationMembers.addAll( additionalReplicationMembers );
 
         replicationMembers = Collections.unmodifiableSet( newReplicationMembers );
@@ -162,7 +162,7 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
      *
      * @param member The member which will be added to the replication group.
      */
-    void addAdditionalReplicationMember( MemberId member )
+    void addAdditionalReplicationMember( RaftMemberId member )
     {
         additionalReplicationMembers.add( member );
         updateMemberSets();
@@ -176,7 +176,7 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
      *
      * @param member The member to remove from the replication group.
      */
-    void removeAdditionalReplicationMember( MemberId member )
+    void removeAdditionalReplicationMember( RaftMemberId member )
     {
         additionalReplicationMembers.remove( member );
         updateMemberSets();
@@ -184,12 +184,12 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
 
     private boolean isSafeToRemoveMember()
     {
-        Set<MemberId> votingMembers = votingMembers();
+        Set<RaftMemberId> votingMembers = votingMembers();
         boolean safeToRemoveMember = votingMembers != null && votingMembers.size() > minimumConsensusGroupSize;
 
         if ( !safeToRemoveMember )
         {
-            Set<MemberId> membersToRemove = superfluousMembers();
+            Set<RaftMemberId> membersToRemove = superfluousMembers();
 
             log.info( "Not safe to remove %s %s because it would reduce the number of voting members below the expected " +
                             "cluster size of %d. Voting members: %s",
@@ -200,13 +200,13 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
         return safeToRemoveMember;
     }
 
-    private Set<MemberId> superfluousMembers()
+    private Set<RaftMemberId> superfluousMembers()
     {
         if ( targetMembers == null || votingMembers() == null )
         {
             return emptySet();
         }
-        Set<MemberId> superfluousMembers = new HashSet<>( votingMembers() );
+        Set<RaftMemberId> superfluousMembers = new HashSet<>( votingMembers() );
         superfluousMembers.removeAll( targetMembers );
         superfluousMembers.remove( myself );
 
@@ -230,7 +230,7 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
      *
      * @param newVotingMemberSet The new set of members.
      */
-    void doConsensus( Set<MemberId> newVotingMemberSet )
+    void doConsensus( Set<RaftMemberId> newVotingMemberSet )
     {
         log.info( "Getting consensus on new voting member set %s", newVotingMemberSet );
         sendToMyself.replicate( memberSetBuilder.build( newVotingMemberSet ) );
@@ -246,7 +246,7 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
         checkForStartCondition();
     }
 
-    public void onFollowerStateChange( FollowerStates<MemberId> followerStates )
+    public void onFollowerStateChange( FollowerStates<RaftMemberId> followerStates )
     {
         membershipChanger.onFollowerStateChange( followerStates );
     }
@@ -262,13 +262,13 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
     }
 
     @Override
-    public Set<MemberId> votingMembers()
+    public Set<RaftMemberId> votingMembers()
     {
         return votingMembers;
     }
 
     @Override
-    public Set<MemberId> replicationMembers()
+    public Set<RaftMemberId> replicationMembers()
     {
         return replicationMembers;
     }
@@ -308,7 +308,7 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
         {
             if ( entry.content() instanceof RaftMembers )
             {
-                RaftMembers<MemberId> raftMembers = (RaftMembers<MemberId>) entry.content();
+                RaftMembers<RaftMemberId> raftMembers = (RaftMembers<RaftMemberId>) entry.content();
 
                 if ( state.uncommittedMemberChangeInLog() )
                 {

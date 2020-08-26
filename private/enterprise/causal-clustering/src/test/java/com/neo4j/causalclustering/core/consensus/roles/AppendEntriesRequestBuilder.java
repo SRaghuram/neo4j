@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.core.consensus.roles;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -19,7 +19,7 @@ public class AppendEntriesRequestBuilder
     private long prevLogTerm = -1;
     private long prevLogIndex = -1;
     private long leaderTerm = -1;
-    private MemberId from;
+    private RaftMemberId from;
 
     public RaftMessages.AppendEntries.Request build()
     {
@@ -27,7 +27,7 @@ public class AppendEntriesRequestBuilder
                                                        logEntries.toArray( new RaftLogEntry[0] ), leaderCommit );
     }
 
-    public AppendEntriesRequestBuilder from( MemberId from )
+    public AppendEntriesRequestBuilder from( RaftMemberId from )
     {
         this.from = from;
         return this;

@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.membership;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -38,12 +38,12 @@ public class MemberIdSetSerializer
 
     public static void marshal( MemberIdSet memberSet, WritableChannel channel ) throws IOException
     {
-        Set<MemberId> members = memberSet.getMembers();
+        Set<RaftMemberId> members = memberSet.getMembers();
         channel.putInt( members.size() );
 
-        MemberId.Marshal memberIdMarshal = new MemberId.Marshal();
+        RaftMemberId.Marshal memberIdMarshal = new RaftMemberId.Marshal();
 
-        for ( MemberId member : members )
+        for ( RaftMemberId member : members )
         {
             memberIdMarshal.marshal( member, channel );
         }
@@ -51,10 +51,10 @@ public class MemberIdSetSerializer
 
     public static MemberIdSet unmarshal( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
-        HashSet<MemberId> members = new HashSet<>();
+        HashSet<RaftMemberId> members = new HashSet<>();
         int memberCount = channel.getInt();
 
-        MemberId.Marshal memberIdMarshal = new MemberId.Marshal();
+        RaftMemberId.Marshal memberIdMarshal = new RaftMemberId.Marshal();
 
         for ( int i = 0; i < memberCount; i++ )
         {

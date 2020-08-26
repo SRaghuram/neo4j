@@ -103,8 +103,8 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       "forward incoming leaders" in new Fixture {
         Given("new leaders")
         val newLeaders = new LeaderInfoDirectoryMessage(Map[DatabaseId,LeaderInfo](
-                    randomNamedDatabaseId().databaseId() -> new LeaderInfo(IdFactory.randomMemberId(), 1),
-                    randomNamedDatabaseId().databaseId() -> new LeaderInfo(IdFactory.randomMemberId(), 2)
+                    randomNamedDatabaseId().databaseId() -> new LeaderInfo(IdFactory.randomRaftMemberId(), 1),
+                    randomNamedDatabaseId().databaseId() -> new LeaderInfo(IdFactory.randomRaftMemberId(), 2)
                   ).asJava)
 
         When("incoming topology")

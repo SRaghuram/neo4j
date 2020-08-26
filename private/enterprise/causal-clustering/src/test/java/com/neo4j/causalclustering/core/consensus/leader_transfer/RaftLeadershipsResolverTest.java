@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.LeaderListener;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
 import org.junit.jupiter.api.Test;
 
@@ -23,20 +24,25 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class RaftLeadershipsResolverTest
 {
+    private NamedDatabaseId fooId = DatabaseIdFactory.from( "foo", UUID.randomUUID() );
+    private NamedDatabaseId barId = DatabaseIdFactory.from( "bar", UUID.randomUUID() );
+    private NamedDatabaseId bazId = DatabaseIdFactory.from( "baz", UUID.randomUUID() );
+
     @Test
     void shouldCorrectlyReturnCurrentLeadershipsForMember()
     {
         // given
         var identityModule = new StubClusteringIdentityModule();
-        var myself = identityModule.memberId();
+        var myselfForFoo = identityModule.memberId( fooId );
+        var myselfForBar = identityModule.memberId( barId );
         var remoteIdentityModule = new StubClusteringIdentityModule();
-        var core1 = remoteIdentityModule.memberId();
+        var remoteForBaz = remoteIdentityModule.memberId( bazId );
 
         var databaseManager = new StubClusteredDatabaseManager();
 
-        var db1 = databaseWithLeader( databaseManager, myself, "foo" );
-        var db2 = databaseWithLeader( databaseManager, myself, "bar" );
-        var db3 = databaseWithLeader( databaseManager, core1, "baz" );
+        databaseWithLeader( databaseManager, myselfForFoo, fooId );
+        databaseWithLeader( databaseManager, myselfForBar, barId );
+        databaseWithLeader( databaseManager, remoteForBaz, bazId );
 
         var leadershipsResolver = new RaftLeadershipsResolver( databaseManager, identityModule );
         var otherLeadershipResolver = new RaftLeadershipsResolver( databaseManager, remoteIdentityModule );
@@ -46,8 +52,8 @@ class RaftLeadershipsResolverTest
         var otherLeaderships = otherLeadershipResolver.myLeaderships();
 
         // then
-        assertThat( leaderships ).containsExactlyInAnyOrder( db1, db2 );
-        assertThat( otherLeaderships ).containsOnly( db3 );
+        assertThat( leaderships ).containsExactlyInAnyOrder( fooId, barId );
+        assertThat( otherLeaderships ).containsOnly( bazId );
     }
 
     @Test
@@ -55,11 +61,11 @@ class RaftLeadershipsResolverTest
     {
         // given
         var identityModule = new StubClusteringIdentityModule();
-        var myself = identityModule.memberId();
+        var myselfForBar = identityModule.memberId( barId );
 
         var databaseManager = new StubClusteredDatabaseManager();
 
-        var db1 = databaseWithoutLeader( databaseManager, "foo" );
+        databaseWithoutLeader( databaseManager, fooId );
 
         var leadershipsResolver = new RaftLeadershipsResolver( databaseManager, identityModule );
 
@@ -68,36 +74,31 @@ class RaftLeadershipsResolverTest
 
         // then
         assertThat( leaderships ).isEmpty();
-        assertThat( databaseManager.registeredDatabases().keySet() ).contains( db1 );
+        assertThat( databaseManager.registeredDatabases().keySet() ).contains( fooId );
 
         // when
-        var db2 = databaseWithLeader( databaseManager, myself, "bar" );
+        databaseWithLeader( databaseManager, myselfForBar, barId );
 
         leadershipsResolver = new RaftLeadershipsResolver( databaseManager, identityModule );
 
         leaderships = leadershipsResolver.myLeaderships();
 
         // then
-        assertThat( leaderships ).doesNotContain( db1 ).containsExactly( db2 );
-        assertThat( databaseManager.registeredDatabases().keySet() ).contains( db1 );
+        assertThat( leaderships ).doesNotContain( fooId ).containsExactly( barId );
+        assertThat( databaseManager.registeredDatabases().keySet() ).contains( fooId );
     }
 
-    private NamedDatabaseId databaseWithLeader( StubClusteredDatabaseManager databaseManager, MemberId member, String databaseName )
+    private NamedDatabaseId databaseWithLeader( StubClusteredDatabaseManager databaseManager, RaftMemberId member, NamedDatabaseId dbId )
     {
         var leaderLocator = new StubLeaderLocator( new LeaderInfo( member, 0 ) );
-        NamedDatabaseId dbId = DatabaseIdFactory.from( databaseName, UUID.randomUUID() );
         databaseManager.givenDatabaseWithConfig().withDatabaseId( dbId ).withLeaderLocator( leaderLocator ).register();
         return dbId;
     }
 
-    private NamedDatabaseId databaseWithoutLeader( StubClusteredDatabaseManager databaseManager, String databaseName )
+    private NamedDatabaseId databaseWithoutLeader( StubClusteredDatabaseManager databaseManager, NamedDatabaseId dbId )
     {
         var leaderLocator = new StubLeaderLocator( null );
-        NamedDatabaseId dbId = DatabaseIdFactory.from( databaseName, UUID.randomUUID() );
-        databaseManager.givenDatabaseWithConfig()
-                       .withDatabaseId( dbId )
-                       .withLeaderLocator( leaderLocator )
-                       .register();
+        databaseManager.givenDatabaseWithConfig().withDatabaseId( dbId ).withLeaderLocator( leaderLocator ).register();
         return dbId;
     }
 

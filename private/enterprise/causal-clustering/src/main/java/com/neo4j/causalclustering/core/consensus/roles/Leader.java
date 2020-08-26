@@ -16,7 +16,7 @@ import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerState;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
 import com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContext;
 import com.neo4j.causalclustering.core.consensus.state.ReadableRaftState;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.io.IOException;
 
@@ -28,17 +28,17 @@ import static org.neo4j.internal.helpers.collection.Iterables.stream;
 
 public class Leader implements RaftMessageHandler
 {
-    private static Iterable<MemberId> replicationTargets( final ReadableRaftState state )
+    private static Iterable<RaftMemberId> replicationTargets( final ReadableRaftState state )
     {
         return new FilteringIterable<>( state.replicationMembers(), member -> !member.equals( state.myself() ) );
     }
 
     static void sendHeartbeats( ReadableRaftState state, OutcomeBuilder outcomeBuilder ) throws IOException
     {
-        long commitIndex = state.commitIndex();
-        long commitIndexTerm = state.entryLog().readEntryTerm( commitIndex );
-        RaftMessages.Heartbeat heartbeat = new RaftMessages.Heartbeat( state.myself(), state.term(), commitIndex, commitIndexTerm );
-        for ( MemberId to : replicationTargets( state ) )
+        var commitIndex = state.commitIndex();
+        var commitIndexTerm = state.entryLog().readEntryTerm( commitIndex );
+        var heartbeat = new RaftMessages.Heartbeat( state.myself(), state.term(), commitIndex, commitIndexTerm );
+        for ( var to : replicationTargets( state ) )
         {
             outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( to, heartbeat ) );
         }
@@ -228,7 +228,7 @@ public class Leader implements RaftMessageHandler
                         "Moving to FOLLOWER state after receiving vote request at term %d (my term is " + "%d) from %s",
                         req.term(), state.term(), req.from() );
 
-                MemberId votedFor = null;
+                RaftMemberId votedFor = null;
                 Voting.handleVoteVerdict( state, outcomeBuilder, req.term(), req, log, votedFor );
                 return outcomeBuilder;
             }

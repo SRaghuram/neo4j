@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.messaging.address;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.time.Clock;
 import java.util.Map;
@@ -21,7 +21,7 @@ public class UnknownAddressMonitor
     private final Log log;
     private final Clock clock;
     private final long timeLimitMs;
-    private final Map<MemberId,CappedLogger> loggers = new ConcurrentHashMap<>();
+    private final Map<RaftMemberId,CappedLogger> loggers = new ConcurrentHashMap<>();
 
     public UnknownAddressMonitor( Log log, Clock clock, long timeLimitMs )
     {
@@ -30,7 +30,7 @@ public class UnknownAddressMonitor
         this.timeLimitMs = timeLimitMs;
     }
 
-    public void logAttemptToSendToMemberWithNoKnownAddress( MemberId to )
+    public void logAttemptToSendToMemberWithNoKnownAddress( RaftMemberId to )
     {
         CappedLogger cappedLogger = loggers.get( to );
         if ( cappedLogger == null )

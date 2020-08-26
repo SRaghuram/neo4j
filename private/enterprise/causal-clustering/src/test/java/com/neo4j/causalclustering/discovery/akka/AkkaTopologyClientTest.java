@@ -54,22 +54,22 @@ class AkkaTopologyClientTest
         setupReadReplicaTopologyState( topologyClient.topologyState(), databaseId, memberId1, memberId2 );
 
         // verify core topology is not empty
-        assertEquals( Set.of( memberId1, memberId2, memberId3 ), topologyClient.coreTopologyForDatabase( databaseId ).members().keySet() );
+        assertEquals( Set.of( memberId1, memberId2, memberId3 ), topologyClient.coreTopologyForDatabase( databaseId ).servers().keySet() );
         assertEquals( Set.of( memberId1, memberId2, memberId3 ), topologyClient.allCoreServers().keySet() );
 
         // verify read replica topology is not empty
-        assertEquals( Set.of( memberId1, memberId2 ), topologyClient.readReplicaTopologyForDatabase( databaseId ).members().keySet() );
+        assertEquals( Set.of( memberId1, memberId2 ), topologyClient.readReplicaTopologyForDatabase( databaseId ).servers().keySet() );
         assertEquals( Set.of( memberId1, memberId2 ), topologyClient.allReadReplicas().keySet() );
 
         topologyClient.stop();
         topologyClient.shutdown();
 
         // verify core topology is empty
-        assertThat( topologyClient.coreTopologyForDatabase( databaseId ).members().keySet(), is( empty() ) );
+        assertThat( topologyClient.coreTopologyForDatabase( databaseId ).servers().keySet(), is( empty() ) );
         assertThat( topologyClient.allCoreServers().keySet(), is( empty() ) );
 
         // verify read replica topology is empty
-        assertThat( topologyClient.readReplicaTopologyForDatabase( databaseId ).members().keySet(), is( empty() ) );
+        assertThat( topologyClient.readReplicaTopologyForDatabase( databaseId ).servers().keySet(), is( empty() ) );
         assertThat( topologyClient.allCoreServers().keySet(), is( empty() ) );
     }
 }

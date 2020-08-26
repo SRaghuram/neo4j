@@ -13,7 +13,7 @@ import com.neo4j.causalclustering.core.consensus.membership.MemberIdSet;
 import com.neo4j.causalclustering.core.consensus.membership.MembershipEntry;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.identity.RaftTestMemberSetBuilder;
 import com.neo4j.causalclustering.messaging.TestNetwork;
 
@@ -36,18 +36,18 @@ import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitiali
 
 public class Fixture
 {
-    private final Set<MemberId> members = new HashSet<>();
+    private final Set<RaftMemberId> members = new HashSet<>();
     private final Set<BootstrapWaiter> bootstrapWaiters = new HashSet<>();
     private final List<TimerService> timerServices = new ArrayList<>();
     private final JobScheduler scheduler = createInitialisedScheduler();
     final Set<RaftFixture> rafts = new HashSet<>();
     final TestNetwork net;
 
-    Fixture( Set<MemberId> memberIds, TestNetwork net, long electionTimeout, long heartbeatInterval, Clock clock )
+    Fixture( Set<RaftMemberId> memberIds, TestNetwork net, long electionTimeout, long heartbeatInterval, Clock clock )
     {
         this.net = net;
 
-        for ( MemberId member : memberIds )
+        for ( RaftMemberId member : memberIds )
         {
             TestNetwork.Inbound inbound = net.new Inbound( member );
             TestNetwork.Outbound outbound = net.new Outbound( member );

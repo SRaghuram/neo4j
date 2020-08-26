@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core.consensus.roles;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -21,7 +21,7 @@ import static com.neo4j.causalclustering.core.consensus.MessageUtils.messageFor;
 import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.voteRequest;
 import static com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContextBuilder.contextWithState;
 import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.builder;
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -31,9 +31,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class VoteRequestTest
 {
-    private MemberId myself = member( 0 );
-    private MemberId member1 = member( 1 );
-    private MemberId member2 = member( 2 );
+    private RaftMemberId myself = raftMember( 0 );
+    private RaftMemberId member1 = raftMember( 1 );
+    private RaftMemberId member2 = raftMember( 2 );
 
     @ParameterizedTest
     @EnumSource( Role.class )

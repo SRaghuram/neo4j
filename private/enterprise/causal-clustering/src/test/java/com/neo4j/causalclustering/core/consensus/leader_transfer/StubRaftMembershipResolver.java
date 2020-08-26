@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembership;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.Set;
 
@@ -14,9 +15,9 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 
 class StubRaftMembershipResolver implements RaftMembershipResolver
 {
-    private final Set<MemberId> votingMembers;
+    private final Set<RaftMemberId> votingMembers;
 
-    StubRaftMembershipResolver( MemberId... members )
+    StubRaftMembershipResolver( RaftMemberId... members )
     {
         this.votingMembers = Set.of( members );
     }
@@ -29,21 +30,21 @@ class StubRaftMembershipResolver implements RaftMembershipResolver
 
     private static class StubRaftMembership implements RaftMembership
     {
-        private final Set<MemberId> memberIds;
+        private final Set<RaftMemberId> memberIds;
 
-        StubRaftMembership( Set<MemberId> memberIds )
+        StubRaftMembership( Set<RaftMemberId> memberIds )
         {
             this.memberIds = memberIds;
         }
 
         @Override
-        public Set<MemberId> votingMembers()
+        public Set<RaftMemberId> votingMembers()
         {
             return memberIds;
         }
 
         @Override
-        public Set<MemberId> replicationMembers()
+        public Set<RaftMemberId> replicationMembers()
         {
             return memberIds;
         }

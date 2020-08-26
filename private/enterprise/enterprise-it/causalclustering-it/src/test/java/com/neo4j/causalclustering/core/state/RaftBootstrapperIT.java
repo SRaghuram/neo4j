@@ -15,7 +15,7 @@ import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
 import com.neo4j.causalclustering.helpers.ClassicNeo4jDatabase;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -94,7 +94,7 @@ class RaftBootstrapperIT
     private static final NamedDatabaseId SYSTEM_DATABASE_ID = new TestDatabaseIdRepository().getByName( SYSTEM_DATABASE_NAME ).orElseThrow();
     private final StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
 
-    private final Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
+    private final Set<RaftMemberId> raftMembers = asSet( randomMember(), randomMember(), randomMember() );
     private final StoreId storeId = new StoreId( MetaDataStore.versionStringToLong( LATEST_STORE_VERSION ) );
 
     private final LogProvider logProvider = NullLogProvider.getInstance();
@@ -129,8 +129,8 @@ class RaftBootstrapperIT
         RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory,
                 pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer, INSTANCE );
 
-        CoreSnapshot snapshot = bootstrapper.bootstrap( membership, storeId );
-        verifySnapshot( snapshot, membership, defaultConfig );
+        CoreSnapshot snapshot = bootstrapper.bootstrap( raftMembers, storeId );
+        verifySnapshot( snapshot, raftMembers, defaultConfig );
 
         assertEquals( 21, pageCacheTracer.pins() );
         assertEquals( 21, pageCacheTracer.unpins() );
@@ -150,10 +150,10 @@ class RaftBootstrapperIT
                 pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when
-        CoreSnapshot snapshot = bootstrapper.bootstrap( membership, storeId );
+        CoreSnapshot snapshot = bootstrapper.bootstrap( raftMembers, storeId );
 
         // then
-        verifySnapshot( snapshot, membership, defaultConfig );
+        verifySnapshot( snapshot, raftMembers, defaultConfig );
     }
 
     @Test
@@ -169,10 +169,10 @@ class RaftBootstrapperIT
                 pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when
-        CoreSnapshot snapshot = bootstrapper.bootstrap( membership, storeId );
+        CoreSnapshot snapshot = bootstrapper.bootstrap( raftMembers, storeId );
 
         // then
-        verifySnapshot( snapshot, membership, defaultConfig );
+        verifySnapshot( snapshot, raftMembers, defaultConfig );
     }
 
     @Test
@@ -194,10 +194,10 @@ class RaftBootstrapperIT
                 pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when
-        CoreSnapshot snapshot = bootstrapper.bootstrap( membership, storeId );
+        CoreSnapshot snapshot = bootstrapper.bootstrap( raftMembers, storeId );
 
         // then
-        verifySnapshot( snapshot, membership, defaultConfig );
+        verifySnapshot( snapshot, raftMembers, defaultConfig );
         assertFalse( fileSystem.fileExists( new File( databaseLayout.databaseDirectory().toFile(), TEMP_BOOTSTRAP_DIRECTORY_NAME ) ) );
     }
 
@@ -221,10 +221,10 @@ class RaftBootstrapperIT
                 pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when
-        CoreSnapshot snapshot = bootstrapper.bootstrap( membership, storeId );
+        CoreSnapshot snapshot = bootstrapper.bootstrap( raftMembers, storeId );
 
         // then
-        verifySnapshot( snapshot, membership, defaultConfig );
+        verifySnapshot( snapshot, raftMembers, defaultConfig );
         assertFalse( fileSystem.fileExists( new File( databaseLayout.databaseDirectory().toFile(), TEMP_BOOTSTRAP_DIRECTORY_NAME ) ) );
     }
 
@@ -254,10 +254,10 @@ class RaftBootstrapperIT
                 pageCache, fileSystem, logProvider, storageEngineFactory, config, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when
-        CoreSnapshot snapshot = bootstrapper.bootstrap( membership, storeId );
+        CoreSnapshot snapshot = bootstrapper.bootstrap( raftMembers, storeId );
 
         // then
-        verifySnapshot( snapshot, membership, config );
+        verifySnapshot( snapshot, raftMembers, config );
     }
 
     @Test
@@ -284,7 +284,7 @@ class RaftBootstrapperIT
                 pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when
-        BootstrapException exception = assertThrows( BootstrapException.class, () -> bootstrapper.bootstrap( membership, storeId ) );
+        BootstrapException exception = assertThrows( BootstrapException.class, () -> bootstrapper.bootstrap( raftMembers, storeId ) );
 
         // then
         assertThat( exception.getCause(), instanceOf( IllegalStateException.class ) );
@@ -312,8 +312,8 @@ class RaftBootstrapperIT
                 fileSystem, assertableLogProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when
-        Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
-        BootstrapException exception = assertThrows( BootstrapException.class, () -> bootstrapper.bootstrap( membership, storeId ) );
+        Set<RaftMemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
+        BootstrapException exception = assertThrows( BootstrapException.class, () -> bootstrapper.bootstrap( raftMembers, storeId ) );
         assertThat( exception.getCause(), instanceOf( IllegalStateException.class ) );
         assertThat( assertableLogProvider ).forClass( RaftBootstrapper.class ).forLevel( ERROR )
                 .containsMessages( exception.getCause().getMessage() );
@@ -347,13 +347,13 @@ class RaftBootstrapperIT
                 pageCache, fileSystem, assertableLogProvider, storageEngineFactory, config, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when
-        Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
-        BootstrapException exception = assertThrows( BootstrapException.class, () -> bootstrapper.bootstrap( membership, storeId ) );
+        Set<RaftMemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
+        BootstrapException exception = assertThrows( BootstrapException.class, () -> bootstrapper.bootstrap( raftMembers, storeId ) );
         assertThat( assertableLogProvider ).forClass( RaftBootstrapper.class ).forLevel( ERROR )
                 .containsMessages( exception.getCause().getMessage() );
     }
 
-    private void verifySnapshot( CoreSnapshot snapshot, Set<MemberId> expectedMembership, Config activeDatabaseConfig ) throws IOException
+    private void verifySnapshot( CoreSnapshot snapshot, Set<RaftMemberId> expectedMembership, Config activeDatabaseConfig ) throws IOException
     {
         assertNotNull( snapshot );
         assertEquals( 0, snapshot.prevIndex() );
@@ -408,8 +408,8 @@ class RaftBootstrapperIT
                 .build();
     }
 
-    private static MemberId randomMember()
+    private static RaftMemberId randomMember()
     {
-        return IdFactory.randomMemberId();
+        return IdFactory.randomRaftMemberId();
     }
 }

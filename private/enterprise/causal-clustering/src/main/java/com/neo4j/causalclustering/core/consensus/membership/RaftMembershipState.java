@@ -5,7 +5,8 @@
  */
 package com.neo4j.causalclustering.core.consensus.membership;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -15,7 +16,6 @@ import java.util.Set;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.marshal.EndOfStreamException;
-import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 /**
@@ -71,7 +71,7 @@ public class RaftMembershipState extends LifecycleAdapter
         this.appended = appended;
     }
 
-    public boolean append( long logIndex, Set<MemberId> members )
+    public boolean append( long logIndex, Set<RaftMemberId> members )
     {
         if ( appended != null && logIndex <= appended.logIndex() )
         {
@@ -132,7 +132,7 @@ public class RaftMembershipState extends LifecycleAdapter
         return appended != null;
     }
 
-    Set<MemberId> getLatest()
+    Set<RaftMemberId> getLatest()
     {
 
         return appended != null ? appended.members() :

@@ -25,6 +25,7 @@ import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.time.Clock;
 import java.util.Map;
@@ -173,6 +174,13 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
+    public SocketAddress lookupCatchupAddress( RaftMemberId upstream ) throws CatchupAddressResolutionException
+    {
+        var server = resolveServerFromRaftMember( upstream );
+        return lookupCatchupAddress( server );
+    }
+
+    @Override
     public RoleInfo lookupRole( NamedDatabaseId namedDatabaseId, MemberId memberId )
     {
         return globalTopologyState.role( namedDatabaseId, memberId );
@@ -214,6 +222,18 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
         return true;
     }
 
+    @Override
+    public MemberId resolveServerFromRaftMember( RaftMemberId raftMemberId )
+    {
+        return globalTopologyState.resolveServerFromRaftMember( raftMemberId );
+    }
+
+    @Override
+    public RaftMemberId resolveRaftMemberForServer( NamedDatabaseId namedDatabaseId, MemberId serverId )
+    {
+        return globalTopologyState.resolveRaftMemberForServer( namedDatabaseId.databaseId(), serverId );
+    }
+
     @VisibleForTesting
     GlobalTopologyState topologyState()
     {
@@ -222,7 +242,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
 
     private static GlobalTopologyState newGlobalTopologyState( LogProvider logProvider )
     {
-        return new GlobalTopologyState( logProvider, ignored ->
+        return new GlobalTopologyState( logProvider, ( ignored1, ignored2 ) ->
         {
         } );
     }

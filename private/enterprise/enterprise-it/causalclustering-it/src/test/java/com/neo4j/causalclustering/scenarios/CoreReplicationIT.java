@@ -79,7 +79,7 @@ class CoreReplicationIT
 
         // then
         assertEquals( 1, DataCreator.countNodes( leader ) );
-        dataMatchesEventually( leader, cluster.coreMembers() );
+        dataMatchesEventually( leader, cluster.allMembers() );
     }
 
     @Test

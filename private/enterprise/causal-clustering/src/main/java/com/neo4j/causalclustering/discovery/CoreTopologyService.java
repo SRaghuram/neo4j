@@ -5,13 +5,16 @@
  */
 package com.neo4j.causalclustering.discovery;
 
+import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
+import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 /**
@@ -20,6 +23,9 @@ import org.neo4j.kernel.database.NamedDatabaseId;
  */
 public interface CoreTopologyService extends TopologyService
 {
+
+    SocketAddress lookupRaftAddress( RaftMemberId target );
+
     void addLocalCoreTopologyListener( Listener listener );
 
     void removeLocalCoreTopologyListener( Listener listener );
@@ -35,7 +41,7 @@ public interface CoreTopologyService extends TopologyService
      * @return The outcome of this publish attempt
      * @throws TimeoutException if request retries. This means that the outcome is unknown
      */
-    PublishRaftIdOutcome publishRaftId( RaftId raftId, MemberId memberId ) throws TimeoutException;
+    PublishRaftIdOutcome publishRaftId( RaftId raftId, RaftMemberId memberId ) throws TimeoutException;
 
     /**
      * Sets or updates the leader memberId for the given database (i.e. Raft consensus group).
@@ -66,7 +72,7 @@ public interface CoreTopologyService extends TopologyService
 
     interface Listener
     {
-        void onCoreTopologyChange( DatabaseCoreTopology coreTopology );
+        void onCoreTopologyChange( Set<RaftMemberId> memberIds );
 
         NamedDatabaseId namedDatabaseId();
     }

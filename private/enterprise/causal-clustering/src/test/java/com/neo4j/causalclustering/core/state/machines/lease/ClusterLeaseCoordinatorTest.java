@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.replication.DirectReplicator;
 import com.neo4j.causalclustering.core.replication.ReplicationResult;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
@@ -22,7 +22,7 @@ import org.neo4j.kernel.impl.api.LeaseException;
 
 import static com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState.INITIAL_LEASE_STATE;
 import static com.neo4j.causalclustering.identity.RaftTestMember.leader;
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -35,8 +35,8 @@ class ClusterLeaseCoordinatorTest
 {
     private final NamedDatabaseId namedDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
 
-    private final MemberId myself = member( 0 );
-    private final MemberId other = member( 1 );
+    private final RaftMemberId myself = raftMember( 0 );
+    private final RaftMemberId other = raftMember( 1 );
     private final LeaderInfo myselfAsLeader = leader( 0, 1 );
     private final LeaderInfo otherAsLeader = leader( 1, 1 );
 

@@ -36,7 +36,7 @@ public class LeaderInfoDirectoryMessageMarshalTest extends BaseMarshalTest<Leade
     static LeaderInfoDirectoryMessage generate()
     {
         var leaders = IntStream.range( 0, 5 )
-                .mapToObj( id -> Pair.of( randomDatabaseId(), new LeaderInfo( IdFactory.randomMemberId(), id ) ) )
+                .mapToObj( id -> Pair.of( randomDatabaseId(), new LeaderInfo( IdFactory.randomRaftMemberId(), id ) ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
         return new LeaderInfoDirectoryMessage( leaders );
     }

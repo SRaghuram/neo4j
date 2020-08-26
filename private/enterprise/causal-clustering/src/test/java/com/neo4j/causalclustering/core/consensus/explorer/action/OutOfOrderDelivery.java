@@ -7,15 +7,15 @@ package com.neo4j.causalclustering.core.consensus.explorer.action;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.explorer.ClusterState;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.LinkedList;
 
 public class OutOfOrderDelivery implements Action
 {
-    private final MemberId member;
+    private final RaftMemberId member;
 
-    public OutOfOrderDelivery( MemberId member )
+    public OutOfOrderDelivery( RaftMemberId member )
     {
         this.member = member;
     }

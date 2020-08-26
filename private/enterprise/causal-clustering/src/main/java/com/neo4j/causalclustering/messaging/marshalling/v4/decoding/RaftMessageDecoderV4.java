@@ -8,11 +8,11 @@ package com.neo4j.causalclustering.messaging.marshalling.v4.decoding;
 import com.neo4j.causalclustering.catchup.Protocol;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.state.machines.status.Status;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
-import com.neo4j.causalclustering.messaging.marshalling.UUIDMarshal;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.marshalling.ContentType;
 import com.neo4j.causalclustering.messaging.marshalling.RaftMessageDecoder;
+import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
+import com.neo4j.causalclustering.messaging.marshalling.UUIDMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.v3.decoding.RaftMessageDecoderV3;
 
 import java.io.IOException;
@@ -29,7 +29,7 @@ public class RaftMessageDecoderV4 extends RaftMessageDecoder
     }
 
     @Override
-    protected Optional<LazyComposer> getLazyComposer( ReadableChannel channel, RaftMessages.Type messageType, MemberId from )
+    protected Optional<LazyComposer> getLazyComposer( ReadableChannel channel, RaftMessages.Type messageType, RaftMemberId from )
             throws IOException, EndOfStreamException
     {
         return super.getLazyComposer( channel, messageType, from )
@@ -37,7 +37,7 @@ public class RaftMessageDecoderV4 extends RaftMessageDecoder
                     .or( () -> getLazyComposerForCurrentVersion( channel, messageType, from ) );
     }
 
-    public Optional<LazyComposer> getLazyComposerForCurrentVersion( ReadableChannel channel, RaftMessages.Type messageType, MemberId from )
+    public Optional<LazyComposer> getLazyComposerForCurrentVersion( ReadableChannel channel, RaftMessages.Type messageType, RaftMemberId from )
     {
         try
         {
@@ -57,7 +57,7 @@ public class RaftMessageDecoderV4 extends RaftMessageDecoder
         }
     }
 
-    private LazyComposer handleStatusResponse( ReadableChannel channel, MemberId from ) throws IOException, EndOfStreamException
+    private LazyComposer handleStatusResponse( ReadableChannel channel, RaftMemberId from ) throws IOException, EndOfStreamException
     {
         var messageId = UUIDMarshal.INSTANCE.unmarshal( channel );
         String statusMessage = StringMarshal.unmarshal( channel );

@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.schedule.OnDemandTimerService;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.identity.RaftTestMemberSetBuilder;
 import com.neo4j.causalclustering.logging.BetterRaftMessageLogger;
 import com.neo4j.causalclustering.messaging.LoggingInbound;
@@ -48,9 +48,9 @@ public class RaftTestFixture
     private StringWriter writer = new StringWriter();
     private NamedDatabaseId namedDatabaseId = DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
-    public RaftTestFixture( DirectNetworking net, int expectedClusterSize, MemberId... ids )
+    public RaftTestFixture( DirectNetworking net, int expectedClusterSize, RaftMemberId... ids )
     {
-        for ( MemberId id : ids )
+        for ( RaftMemberId id : ids )
         {
             MemberFixture fixtureMember = new MemberFixture();
 
@@ -94,7 +94,7 @@ public class RaftTestFixture
         return members;
     }
 
-    public void bootstrap( MemberId[] members ) throws IOException
+    public void bootstrap( RaftMemberId[] members ) throws IOException
     {
         for ( MemberFixture member : members() )
         {
@@ -111,22 +111,22 @@ public class RaftTestFixture
 
     public static class Members implements Iterable<MemberFixture>
     {
-        private Map<MemberId,MemberFixture> memberMap = new HashMap<>();
+        private Map<RaftMemberId,MemberFixture> memberMap = new HashMap<>();
 
         private MemberFixture put( MemberFixture value )
         {
             return memberMap.put( value.member, value );
         }
 
-        public MemberFixture withId( MemberId id )
+        public MemberFixture withId( RaftMemberId id )
         {
             return memberMap.get( id );
         }
 
-        public Members withIds( MemberId... ids )
+        public Members withIds( RaftMemberId... ids )
         {
             Members filteredMembers = new Members();
-            for ( MemberId id : ids )
+            for ( RaftMemberId id : ids )
             {
                 if ( memberMap.containsKey( id ) )
                 {
@@ -140,7 +140,7 @@ public class RaftTestFixture
         {
             Members filteredMembers = new Members();
 
-            for ( Map.Entry<MemberId,MemberFixture> entry : memberMap.entrySet() )
+            for ( Map.Entry<RaftMemberId,MemberFixture> entry : memberMap.entrySet() )
             {
                 if ( entry.getValue().raftInstance().currentRole() == role )
                 {
@@ -150,7 +150,7 @@ public class RaftTestFixture
             return filteredMembers;
         }
 
-        public void setTargetMembershipSet( Set<MemberId> targetMembershipSet )
+        public void setTargetMembershipSet( Set<RaftMemberId> targetMembershipSet )
         {
             for ( MemberFixture memberFixture : memberMap.values() )
             {
@@ -186,12 +186,12 @@ public class RaftTestFixture
 
     public class MemberFixture
     {
-        private MemberId member;
+        private RaftMemberId member;
         private RaftMachine raftMachine;
         private OnDemandTimerService timerService;
         private RaftLog raftLog;
 
-        public MemberId member()
+        public RaftMemberId member()
         {
             return member;
         }
@@ -222,11 +222,11 @@ public class RaftTestFixture
         }
     }
 
-    private static class RaftTestFixtureLogger extends BetterRaftMessageLogger<MemberId>
+    private static class RaftTestFixtureLogger extends BetterRaftMessageLogger<RaftMemberId>
     {
         final PrintWriter printWriter;
 
-        RaftTestFixtureLogger( MemberId me, PrintWriter printWriter )
+        RaftTestFixtureLogger( RaftMemberId me, PrintWriter printWriter )
         {
             super( me, null, null, Clock.systemUTC() );
             this.printWriter = printWriter;

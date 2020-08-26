@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.replication;
 
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
 class LeaderProviderTest
 {
-    private static final MemberId MEMBER_ID = IdFactory.randomMemberId();
+    private static final RaftMemberId MEMBER_ID = IdFactory.randomRaftMemberId();
     private final ExecutorService executorService = Executors.newCachedThreadPool();
 
     @AfterAll
@@ -58,10 +58,10 @@ class LeaderProviderTest
         assertNull( leaderProvider.currentLeader() );
 
         // when
-        CompletableFuture<ArrayList<MemberId>> futures = CompletableFuture.completedFuture( new ArrayList<>() );
+        CompletableFuture<ArrayList<RaftMemberId>> futures = CompletableFuture.completedFuture( new ArrayList<>() );
         for ( int i = 0; i < threads; i++ )
         {
-            CompletableFuture<MemberId> future = CompletableFuture.supplyAsync( awaitLeader( leaderProvider ), executorService );
+            CompletableFuture<RaftMemberId> future = CompletableFuture.supplyAsync( awaitLeader( leaderProvider ), executorService );
             futures = futures.thenCombine( future, ( completableFutures, memberId ) ->
             {
                 completableFutures.add( memberId );
@@ -76,7 +76,7 @@ class LeaderProviderTest
         // when
         leaderProvider.setLeader( MEMBER_ID );
 
-        ArrayList<MemberId> memberIds = futures.get( 5, TimeUnit.SECONDS );
+        ArrayList<RaftMemberId> memberIds = futures.get( 5, TimeUnit.SECONDS );
 
         // then
         assertTrue( memberIds.stream().allMatch( memberId -> memberId.equals( MEMBER_ID ) ) );
@@ -93,7 +93,7 @@ class LeaderProviderTest
         assertNull( leaderProvider.awaitLeader() );
     }
 
-    private Supplier<MemberId> awaitLeader( LeaderProvider leaderProvider )
+    private Supplier<RaftMemberId> awaitLeader( LeaderProvider leaderProvider )
     {
         return () ->
         {

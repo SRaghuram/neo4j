@@ -6,8 +6,8 @@
 package com.neo4j.causalclustering.discovery.akka.coretopology;
 
 import akka.actor.ActorRef;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.time.Duration;
 import java.util.Objects;
@@ -18,16 +18,16 @@ import java.util.Objects;
 public class RaftIdSetRequest
 {
     private final RaftId raftId;
-    private final MemberId publisher;
+    private final RaftMemberId publisher;
     private final Duration timeout;
     private final ActorRef replyTo;
 
-    public RaftIdSetRequest( RaftId raftId, MemberId publisher, Duration timeout )
+    public RaftIdSetRequest( RaftId raftId, RaftMemberId publisher, Duration timeout )
     {
         this( raftId, publisher, timeout, ActorRef.noSender() );
     }
 
-    private RaftIdSetRequest( RaftId raftId, MemberId publisher, Duration timeout, ActorRef replyTo )
+    private RaftIdSetRequest( RaftId raftId, RaftMemberId publisher, Duration timeout, ActorRef replyTo )
     {
         this.raftId = raftId;
         this.publisher = publisher;
@@ -50,7 +50,7 @@ public class RaftIdSetRequest
         return raftId;
     }
 
-    public MemberId publisher()
+    public RaftMemberId publisher()
     {
         return publisher;
     }

@@ -15,7 +15,7 @@ import com.neo4j.causalclustering.core.replication.session.GlobalSession;
 import com.neo4j.causalclustering.core.replication.session.LocalSessionPool;
 import com.neo4j.causalclustering.core.state.StateMachineResult;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 import org.assertj.core.api.Condition;
 import org.hamcrest.Matchers;
@@ -65,8 +65,8 @@ class RaftReplicatorTest
 
     private final NamedDatabaseId namedDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
     private final LeaderLocator leaderLocator = mock( LeaderLocator.class );
-    private final MemberId myself = IdFactory.randomMemberId();
-    private final LeaderInfo leaderInfo = new LeaderInfo( IdFactory.randomMemberId(), 1 );
+    private final RaftMemberId myself = IdFactory.randomRaftMemberId();
+    private final LeaderInfo leaderInfo = new LeaderInfo( IdFactory.randomRaftMemberId(), 1 );
     private final GlobalSession session = new GlobalSession( UUID.randomUUID(), myself );
     private final LocalSessionPool sessionPool = new LocalSessionPool( session );
     private final TimeoutStrategy noWaitTimeoutStrategy = new ConstantTimeTimeoutStrategy( 0, MILLISECONDS );
@@ -295,7 +295,7 @@ class RaftReplicatorTest
         assertEquals( outbound.lastTo, lastLeader.memberId() );
 
         // update with valid new leader, sends to new leader
-        lastLeader = new LeaderInfo( IdFactory.randomMemberId(), 1 );
+        lastLeader = new LeaderInfo( IdFactory.randomRaftMemberId(), 1 );
         replicator.onLeaderSwitch( lastLeader );
         replicator.replicate( content );
         assertEquals( outbound.lastTo, lastLeader.memberId() );
@@ -420,13 +420,13 @@ class RaftReplicatorTest
         }
     }
 
-    private static class CapturingOutbound<MESSAGE> implements Outbound<MemberId,MESSAGE>
+    private static class CapturingOutbound<MESSAGE> implements Outbound<RaftMemberId,MESSAGE>
     {
-        private MemberId lastTo;
+        private RaftMemberId lastTo;
         private int count;
 
         @Override
-        public void send( MemberId to, MESSAGE message, boolean block )
+        public void send( RaftMemberId to, MESSAGE message, boolean block )
         {
             this.lastTo = to;
             this.count++;

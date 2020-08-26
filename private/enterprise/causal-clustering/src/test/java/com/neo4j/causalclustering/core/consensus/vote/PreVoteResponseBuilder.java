@@ -6,11 +6,11 @@
 package com.neo4j.causalclustering.core.consensus.vote;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 public class PreVoteResponseBuilder
 {
-    private MemberId from;
+    private RaftMemberId from;
     private long term;
     private boolean voteGranted;
 
@@ -19,7 +19,7 @@ public class PreVoteResponseBuilder
         return new RaftMessages.PreVote.Response( from, term, voteGranted );
     }
 
-    public PreVoteResponseBuilder from( MemberId from )
+    public PreVoteResponseBuilder from( RaftMemberId from )
     {
         this.from = from;
         return this;

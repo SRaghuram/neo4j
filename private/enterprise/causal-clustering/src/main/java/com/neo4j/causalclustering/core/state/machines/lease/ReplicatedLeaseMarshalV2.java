@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.state.machines.lease;
 
 import com.neo4j.causalclustering.discovery.akka.marshal.DatabaseIdWithoutNameMarshal;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.io.IOException;
 
@@ -25,14 +25,14 @@ public class ReplicatedLeaseMarshalV2
     {
         DatabaseIdWithoutNameMarshal.INSTANCE.marshal( leaseRequest.databaseId(), channel );
         channel.putInt( leaseRequest.id() );
-        new MemberId.Marshal().marshal( leaseRequest.owner(), channel );
+        new RaftMemberId.Marshal().marshal( leaseRequest.owner(), channel );
     }
 
     public static ReplicatedLeaseRequest unmarshal( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
         DatabaseId databaseId = DatabaseIdWithoutNameMarshal.INSTANCE.unmarshal( channel );
         int leaseId = channel.getInt();
-        MemberId owner = new MemberId.Marshal().unmarshal( channel );
+        RaftMemberId owner = new RaftMemberId.Marshal().unmarshal( channel );
         return new ReplicatedLeaseRequest( owner, leaseId, databaseId );
     }
 }

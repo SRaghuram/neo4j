@@ -5,21 +5,21 @@
  */
 package com.neo4j.causalclustering.core.consensus;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 public class HeartbeatBuilder
 {
     private long commitIndex = -1;
     private long leaderTerm = -1;
     private long commitIndexTerm = -1;
-    private MemberId from;
+    private RaftMemberId from;
 
     public RaftMessages.Heartbeat build()
     {
         return new RaftMessages.Heartbeat( from, leaderTerm, commitIndex, commitIndexTerm );
     }
 
-    public HeartbeatBuilder from( MemberId from )
+    public HeartbeatBuilder from( RaftMemberId from )
     {
         this.from = from;
         return this;

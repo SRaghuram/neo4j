@@ -5,7 +5,8 @@
  */
 package com.neo4j.causalclustering.core.consensus.membership;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -15,7 +16,6 @@ import java.util.Set;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.marshal.EndOfStreamException;
-import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 
 /**
  * Represents a membership entry in the RAFT log.
@@ -23,9 +23,9 @@ import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 public class MembershipEntry
 {
     private long logIndex;
-    private Set<MemberId> members;
+    private Set<RaftMemberId> members;
 
-    public MembershipEntry( long logIndex, Set<MemberId> members )
+    public MembershipEntry( long logIndex, Set<RaftMemberId> members )
     {
         this.members = members;
         this.logIndex = logIndex;
@@ -36,7 +36,7 @@ public class MembershipEntry
         return logIndex;
     }
 
-    public Set<MemberId> members()
+    public Set<RaftMemberId> members()
     {
         return members;
     }
@@ -73,7 +73,7 @@ public class MembershipEntry
 
     public static class Marshal extends SafeStateMarshal<MembershipEntry>
     {
-        MemberId.Marshal memberMarshal = new MemberId.Marshal();
+        RaftMemberId.Marshal memberMarshal = new RaftMemberId.Marshal();
 
         @Override
         public MembershipEntry startState()
@@ -102,7 +102,7 @@ public class MembershipEntry
 
             channel.putLong( entry.logIndex );
             channel.putInt( entry.members.size() );
-            for ( MemberId member : entry.members )
+            for ( RaftMemberId member : entry.members )
             {
                 memberMarshal.marshal( member, channel );
             }
@@ -118,7 +118,7 @@ public class MembershipEntry
             }
             long logIndex = channel.getLong();
             int memberCount = channel.getInt();
-            Set<MemberId> members = new HashSet<>();
+            Set<RaftMemberId> members = new HashSet<>();
             for ( int i = 0; i < memberCount; i++ )
             {
                 members.add( memberMarshal.unmarshal( channel ) );

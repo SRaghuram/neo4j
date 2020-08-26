@@ -46,6 +46,7 @@ import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 
 import java.time.Clock;
@@ -207,10 +208,22 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
+    public SocketAddress lookupRaftAddress( RaftMemberId target )
+    {
+        var server = resolveServerFromRaftMember( target );
+        var targetCoreInfo = allCoreServers().get( server );
+        if ( targetCoreInfo != null )
+        {
+            return targetCoreInfo.getRaftServer();
+        }
+        return null;
+    }
+
+    @Override
     public void addLocalCoreTopologyListener( Listener listener )
     {
         listenerService.addCoreTopologyListener( listener );
-        listener.onCoreTopologyChange( coreTopologyForDatabase( listener.namedDatabaseId() ) );
+        listener.onCoreTopologyChange( coreTopologyForDatabase( listener.namedDatabaseId() ).members( globalTopologyState::resolveRaftMemberForServer ) );
     }
 
     @Override
@@ -220,7 +233,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public PublishRaftIdOutcome publishRaftId( RaftId raftId, MemberId memberId ) throws TimeoutException
+    public PublishRaftIdOutcome publishRaftId( RaftId raftId, RaftMemberId memberId ) throws TimeoutException
     {
         var coreTopologyActor = coreTopologyActorRef;
         if ( coreTopologyActor != null )
@@ -247,6 +260,18 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
             }
         }
         return PublishRaftIdOutcome.FAILED_PUBLISH;
+    }
+
+    @Override
+    public MemberId resolveServerFromRaftMember( RaftMemberId raftMemberId )
+    {
+        return globalTopologyState.resolveServerFromRaftMember( raftMemberId );
+    }
+
+    @Override
+    public RaftMemberId resolveRaftMemberForServer( NamedDatabaseId namedDatabaseId, MemberId serverId )
+    {
+        return globalTopologyState.resolveRaftMemberForServer( namedDatabaseId.databaseId(), serverId );
     }
 
     private PublishRaftIdOutcome checkOutcome( Object response )
@@ -363,7 +388,8 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     public RoleInfo lookupRole( NamedDatabaseId namedDatabaseId, MemberId memberId )
     {
         var leaderInfo = localLeadersByDatabaseId.get( namedDatabaseId );
-        if ( leaderInfo != null && Objects.equals( memberId, leaderInfo.memberId() ) )
+        var raftMemberId = globalTopologyState.resolveRaftMemberForServer( namedDatabaseId.databaseId(), memberId );
+        if ( leaderInfo != null && Objects.equals( raftMemberId, leaderInfo.memberId() ) )
         {
             return RoleInfo.LEADER;
         }
@@ -411,6 +437,12 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         {
             throw new CatchupAddressResolutionException( upstream );
         }
+    }
+
+    @Override
+    public SocketAddress lookupCatchupAddress( RaftMemberId upstream ) throws CatchupAddressResolutionException
+    {
+        return lookupCatchupAddress( resolveServerFromRaftMember( upstream ) );
     }
 
     @Override

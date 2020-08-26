@@ -376,7 +376,7 @@ class ReadReplicaBootstrapTest
         public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId )
         {
             DatabaseCoreTopology coreTopology = topologyService.coreTopologyForDatabase( namedDatabaseId );
-            return Optional.ofNullable( coreTopology.members().keySet().iterator().next() );
+            return Optional.ofNullable( coreTopology.servers().keySet().iterator().next() );
         }
 
     }

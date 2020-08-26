@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
 import com.neo4j.causalclustering.core.consensus.state.ReadableRaftState;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -32,7 +32,7 @@ public class OutcomeBuilder
     private Role role;
 
     private long term;
-    private MemberId leader;
+    private RaftMemberId leader;
 
     private long leaderCommit;
 
@@ -42,30 +42,30 @@ public class OutcomeBuilder
     private long commitIndex;
 
     /* Follower */
-    private MemberId votedFor;
+    private RaftMemberId votedFor;
     private ElectionTimerMode electionTimerMode;
     private SnapshotRequirement snapshotRequirement;
     private boolean isPreElection;
-    private Set<MemberId> preVotesForMe;
+    private Set<RaftMemberId> preVotesForMe;
 
     /* Candidate */
-    private Set<MemberId> votesForMe;
+    private Set<RaftMemberId> votesForMe;
     private long lastLogIndexBeforeWeBecameLeader;
 
     /* Leader */
-    private FollowerStates<MemberId> followerStates;
+    private FollowerStates<RaftMemberId> followerStates;
     private Collection<ShipCommand> shipCommands = new ArrayList<>();
     private boolean electedLeader;
     private long steppingDownInTerm;
-    private Set<MemberId> heartbeatResponses;
+    private Set<RaftMemberId> heartbeatResponses;
     private RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection;
-    private MemberId transferringTo;
+    private RaftMemberId transferringTo;
     private RaftMessages.StatusResponse statusResponse;
 
     @VisibleForTesting
-    OutcomeBuilder( Role currentRole, long term, MemberId leader, long leaderCommit, MemberId votedFor, ElectionTimerMode electionTimerMode,
-            boolean isPreElection, long steppingDownInTerm, Set<MemberId> preVotesForMe, Set<MemberId> votesForMe, Set<MemberId> heartbeatResponses,
-            long lastLogIndexBeforeWeBecameLeader, FollowerStates<MemberId> followerStates, long commitIndex )
+    OutcomeBuilder( Role currentRole, long term, RaftMemberId leader, long leaderCommit, RaftMemberId votedFor, ElectionTimerMode electionTimerMode,
+            boolean isPreElection, long steppingDownInTerm, Set<RaftMemberId> preVotesForMe, Set<RaftMemberId> votesForMe, Set<RaftMemberId> heartbeatResponses,
+            long lastLogIndexBeforeWeBecameLeader, FollowerStates<RaftMemberId> followerStates, long commitIndex )
     {
         this.role = currentRole;
         this.term = term;
@@ -86,11 +86,11 @@ public class OutcomeBuilder
     public static OutcomeBuilder builder( Role currentRole, ReadableRaftState state )
     {
         var isPreElection = (currentRole == Role.FOLLOWER) && state.isPreElection();
-        Set<MemberId> preVotesForMe = isPreElection ? new HashSet<>( state.preVotesForMe() ) : emptySet();
-        Set<MemberId> votesForMe = (currentRole == Role.CANDIDATE) ? new HashSet<>( state.votesForMe() ) : emptySet();
-        Set<MemberId> heartbeatResponses = (currentRole == Role.LEADER) ? new HashSet<>( state.heartbeatResponses() ) : emptySet();
+        Set<RaftMemberId> preVotesForMe = isPreElection ? new HashSet<>( state.preVotesForMe() ) : emptySet();
+        Set<RaftMemberId> votesForMe = (currentRole == Role.CANDIDATE) ? new HashSet<>( state.votesForMe() ) : emptySet();
+        Set<RaftMemberId> heartbeatResponses = (currentRole == Role.LEADER) ? new HashSet<>( state.heartbeatResponses() ) : emptySet();
         var lastLogIndexBeforeWeBecameLeader = (currentRole == Role.LEADER) ? state.lastLogIndexBeforeWeBecameLeader() : -1;
-        FollowerStates<MemberId> followerStates = (currentRole == Role.LEADER) ? state.followerStates() : new FollowerStates<>();
+        FollowerStates<RaftMemberId> followerStates = (currentRole == Role.LEADER) ? state.followerStates() : new FollowerStates<>();
         return new OutcomeBuilder( currentRole, state.term(), state.leader(), state.leaderCommit(), state.votedFor(), null, isPreElection, -1,
                 preVotesForMe, votesForMe, heartbeatResponses, lastLogIndexBeforeWeBecameLeader, followerStates, state.commitIndex() );
     }
@@ -107,7 +107,7 @@ public class OutcomeBuilder
         return this;
     }
 
-    public OutcomeBuilder setLeader( MemberId leader )
+    public OutcomeBuilder setLeader( RaftMemberId leader )
     {
         this.leader = leader;
         return this;
@@ -131,7 +131,7 @@ public class OutcomeBuilder
         return this;
     }
 
-    public OutcomeBuilder setVotedFor( MemberId votedFor )
+    public OutcomeBuilder setVotedFor( RaftMemberId votedFor )
     {
         this.votedFor = votedFor;
         return this;
@@ -155,7 +155,7 @@ public class OutcomeBuilder
         return this;
     }
 
-    public OutcomeBuilder replaceFollowerStates( FollowerStates<MemberId> followerStates )
+    public OutcomeBuilder replaceFollowerStates( FollowerStates<RaftMemberId> followerStates )
     {
         this.followerStates = followerStates;
         return this;
@@ -187,7 +187,7 @@ public class OutcomeBuilder
         return this;
     }
 
-    public OutcomeBuilder addHeartbeatResponse( MemberId from )
+    public OutcomeBuilder addHeartbeatResponse( RaftMemberId from )
     {
         this.heartbeatResponses.add( from );
         return this;
@@ -205,13 +205,13 @@ public class OutcomeBuilder
         return this;
     }
 
-    public OutcomeBuilder setPreVotesForMe( Set<MemberId> preVotes )
+    public OutcomeBuilder setPreVotesForMe( Set<RaftMemberId> preVotes )
     {
         preVotesForMe = preVotes;
         return this;
     }
 
-    public OutcomeBuilder setVotesForMe( Set<MemberId> votes )
+    public OutcomeBuilder setVotesForMe( Set<RaftMemberId> votes )
     {
         votesForMe = votes;
         return this;
@@ -223,7 +223,7 @@ public class OutcomeBuilder
         return this;
     }
 
-    public OutcomeBuilder startTransferringLeadership( MemberId proposed )
+    public OutcomeBuilder startTransferringLeadership( RaftMemberId proposed )
     {
         this.transferringTo = proposed;
         return this;

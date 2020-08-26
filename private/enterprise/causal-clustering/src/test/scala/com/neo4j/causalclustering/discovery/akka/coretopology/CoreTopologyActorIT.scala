@@ -98,7 +98,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
           val members = new util.TreeSet[Member](Member.ordering)
           members.add(ClusterViewMessageTest.createMember(1, MemberStatus.Up))
           val clusterView = new ClusterViewMessage(false, members, Collections.emptySet() )
-          val nullRaftIdTopology = new DatabaseCoreTopology(databaseId, null, expectedCoreTopology.members())
+          val nullRaftIdTopology = new DatabaseCoreTopology(databaseId, null, expectedCoreTopology.servers())
           Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(databaseId), any(), any(), any()))
               .thenReturn(nullRaftIdTopology)
           topologyActorRef ! clusterView

@@ -8,36 +8,35 @@ package com.neo4j.causalclustering.core.consensus.state;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.log.ReadableRaftLog;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.configuration.ServerGroupName;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.Set;
 
 public interface ReadableRaftState
 {
-    MemberId myself();
+    RaftMemberId myself();
 
-    Set<MemberId> votingMembers();
+    Set<RaftMemberId> votingMembers();
 
-    Set<MemberId> replicationMembers();
+    Set<RaftMemberId> replicationMembers();
 
     long term();
 
-    MemberId leader();
+    RaftMemberId leader();
 
     LeaderInfo leaderInfo();
 
     long leaderCommit();
 
-    MemberId votedFor();
+    RaftMemberId votedFor();
 
-    Set<MemberId> votesForMe();
+    Set<RaftMemberId> votesForMe();
 
-    Set<MemberId> heartbeatResponses();
+    Set<RaftMemberId> heartbeatResponses();
 
     long lastLogIndexBeforeWeBecameLeader();
 
-    FollowerStates<MemberId> followerStates();
+    FollowerStates<RaftMemberId> followerStates();
 
     ReadableRaftLog entryLog();
 
@@ -45,7 +44,7 @@ public interface ReadableRaftState
 
     boolean isPreElection();
 
-    Set<MemberId> preVotesForMe();
+    Set<RaftMemberId> preVotesForMe();
 
     boolean areTimersStarted();
 

@@ -209,6 +209,7 @@ public final class CausalClusteringTestHelpers
         try
         {
             var leader = cluster.awaitLeader( databaseName );
+            var databaseId = leader.databaseId( databaseName );
             var raftMachine = leader.resolveDependency( databaseName, RaftMachine.class );
             var followers = cluster.coreMembers().stream().filter( member -> !member.equals( leader ) ).collect( Collectors.toList() );
             if ( desiredLeader != null )
@@ -224,7 +225,9 @@ public final class CausalClusteringTestHelpers
                 desiredLeader = followers.get( 0 ); // maybe randomize
             }
             // this here is the magic, where in the name of the current leader the desired leader is proposed as a new leader
-            raftMachine.handle( new RaftMessages.LeadershipTransfer.Proposal( leader.id(), desiredLeader.id(), Set.of() ) );
+            var raftLeader = leader.raftMemberIdFor( databaseId );
+            var raftDesiredLeader = desiredLeader.raftMemberIdFor( databaseId );
+            raftMachine.handle( new RaftMessages.LeadershipTransfer.Proposal( raftLeader, raftDesiredLeader, Set.of() ) );
             return await( () -> cluster.getMemberWithAnyRole( DEFAULT_DATABASE_NAME, Role.LEADER ), desiredLeader::equals, 15, SECONDS );
         }
         catch ( Exception e )

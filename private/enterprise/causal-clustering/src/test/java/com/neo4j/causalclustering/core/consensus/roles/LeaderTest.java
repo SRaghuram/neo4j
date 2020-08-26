@@ -25,7 +25,7 @@ import com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContex
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
 import com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder;
 import com.neo4j.causalclustering.core.consensus.state.ReadableRaftState;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -44,7 +44,7 @@ import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
 import static com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContextBuilder.contextWithState;
 import static com.neo4j.causalclustering.core.consensus.state.RaftMessageHandlingContextBuilder.contextWithStateWithPreVote;
 import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.builder;
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -55,11 +55,11 @@ import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 class LeaderTest
 {
-    private MemberId myself = member( 0 );
+    private RaftMemberId myself = raftMember( 0 );
 
     /* A few members that we use at will in tests. */
-    private MemberId member1 = member( 1 );
-    private MemberId member2 = member( 2 );
+    private RaftMemberId member1 = raftMember( 1 );
+    private RaftMemberId member2 = raftMember( 2 );
 
     private LogProvider logProvider = NullLogProvider.getInstance();
 
@@ -169,12 +169,12 @@ class LeaderTest
          * - assumes that instance 2 is at an index less than 100 -say 84 but it has already been sent up to 100
          */
         Leader leader = new Leader();
-        MemberId instance2 = member( 2 );
+        RaftMemberId instance2 = raftMember( 2 );
         FollowerState instance2State = createArtificialFollowerState( 84 );
 
         ReadableRaftState state = mock( ReadableRaftState.class );
 
-        FollowerStates<MemberId> followerState = new FollowerStates<>();
+        FollowerStates<RaftMemberId> followerState = new FollowerStates<>();
         followerState = new FollowerStates<>( followerState, instance2, instance2State );
 
         ReadableRaftLog logMock = mock( ReadableRaftLog.class );
@@ -196,7 +196,7 @@ class LeaderTest
         // The leader should not be trying to send any messages to that instance
         Assertions.assertTrue( outcome.getOutgoingMessages().isEmpty() );
         // And the follower state should be updated
-        FollowerStates<MemberId> leadersViewOfFollowerStates = outcome.getFollowerStates();
+        FollowerStates<RaftMemberId> leadersViewOfFollowerStates = outcome.getFollowerStates();
         Assertions.assertEquals( 90, leadersViewOfFollowerStates.get( instance2 ).getMatchIndex() );
     }
 
@@ -211,12 +211,12 @@ class LeaderTest
          * - assumes that instance 2 is at an index less than 100 -say 84
          */
         Leader leader = new Leader();
-        MemberId instance2 = member( 2 );
+        RaftMemberId instance2 = raftMember( 2 );
         FollowerState instance2State = createArtificialFollowerState( 84 );
 
         ReadableRaftState state = mock( ReadableRaftState.class );
 
-        FollowerStates<MemberId> followerState = new FollowerStates<>();
+        FollowerStates<RaftMemberId> followerState = new FollowerStates<>();
         followerState = new FollowerStates<>( followerState, instance2, instance2State );
 
         ReadableRaftLog logMock = mock( ReadableRaftLog.class );
@@ -238,7 +238,7 @@ class LeaderTest
         // The leader should not be trying to send any messages to that instance
         Assertions.assertTrue( outcome.getOutgoingMessages().isEmpty() );
         // And the follower state should be updated
-        FollowerStates<MemberId> updatedFollowerStates = outcome.getFollowerStates();
+        FollowerStates<RaftMemberId> updatedFollowerStates = outcome.getFollowerStates();
         Assertions.assertEquals( 100, updatedFollowerStates.get( instance2 ).getMatchIndex() );
     }
 
@@ -254,12 +254,12 @@ class LeaderTest
          * - assumes that instance 2 is at an index less than 100 -say 50
          */
         Leader leader = new Leader();
-        MemberId instance2 = member( 2 );
+        RaftMemberId instance2 = raftMember( 2 );
         FollowerState instance2State = createArtificialFollowerState( 50 );
 
         ReadableRaftState state = mock( ReadableRaftState.class );
 
-        FollowerStates<MemberId> followerState = new FollowerStates<>();
+        FollowerStates<RaftMemberId> followerState = new FollowerStates<>();
         followerState = new FollowerStates<>( followerState, instance2, instance2State );
 
         ReadableRaftLog logMock = mock( ReadableRaftLog.class );
@@ -306,13 +306,13 @@ class LeaderTest
          * - assumes that instance 2 is fully caught up
          */
         Leader leader = new Leader();
-        MemberId instance2 = member( 2 );
+        RaftMemberId instance2 = raftMember( 2 );
         int j = 100;
         FollowerState instance2State = createArtificialFollowerState( j );
 
         ReadableRaftState state = mock( ReadableRaftState.class );
 
-        FollowerStates<MemberId> followerState = new FollowerStates<>();
+        FollowerStates<RaftMemberId> followerState = new FollowerStates<>();
         followerState = new FollowerStates<>( followerState, instance2, instance2State );
 
         ReadableRaftLog logMock = mock( ReadableRaftLog.class );
@@ -338,7 +338,7 @@ class LeaderTest
         // request
         Assertions.assertTrue( outcome.getOutgoingMessages().isEmpty() );
         // The follower state should not be touched
-        FollowerStates<MemberId> updatedFollowerStates = outcome.getFollowerStates();
+        FollowerStates<RaftMemberId> updatedFollowerStates = outcome.getFollowerStates();
         Assertions.assertEquals( 100, updatedFollowerStates.get( instance2 ).getMatchIndex() );
     }
 
@@ -359,12 +359,12 @@ class LeaderTest
          * - assumes that instance 2 is fully caught up
          */
         Leader leader = new Leader();
-        MemberId instance2 = member( 2 );
+        RaftMemberId instance2 = raftMember( 2 );
         FollowerState instance2State = createArtificialFollowerState( 100 );
 
         ReadableRaftState state = mock( ReadableRaftState.class );
 
-        FollowerStates<MemberId> followerState = new FollowerStates<>();
+        FollowerStates<RaftMemberId> followerState = new FollowerStates<>();
         followerState = new FollowerStates<>( followerState, instance2, instance2State );
 
         RaftLog log = new InMemoryRaftLog();
@@ -586,7 +586,7 @@ class LeaderTest
 
         Leader leader = new Leader();
 
-        RaftMessages.NewEntry.Request newEntryRequest = new RaftMessages.NewEntry.Request( member( 9 ), CONTENT );
+        RaftMessages.NewEntry.Request newEntryRequest = new RaftMessages.NewEntry.Request( raftMember( 9 ), CONTENT );
 
         // when
         Outcome outcome = leader.handle( newEntryRequest, contextWithState( state ), log() );

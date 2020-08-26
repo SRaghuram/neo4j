@@ -7,16 +7,16 @@ package com.neo4j.causalclustering.core.consensus.explorer.action;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.explorer.ClusterState;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.LinkedList;
 import java.util.Queue;
 
 public class HeartbeatTimeout implements Action
 {
-    private final MemberId member;
+    private final RaftMemberId member;
 
-    public HeartbeatTimeout( MemberId member )
+    public HeartbeatTimeout( RaftMemberId member )
     {
         this.member = member;
     }

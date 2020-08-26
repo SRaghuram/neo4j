@@ -5,7 +5,8 @@
  */
 package com.neo4j.causalclustering.core.state.machines.lease;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -14,7 +15,6 @@ import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.marshal.ChannelMarshal;
 import org.neo4j.io.marshal.EndOfStreamException;
-import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 
 import static com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseRequest.INVALID_LEASE_REQUEST;
 
@@ -23,7 +23,7 @@ public class ReplicatedLeaseState
     public static final ReplicatedLeaseState INITIAL_LEASE_STATE = new ReplicatedLeaseState( -1, INVALID_LEASE_REQUEST );
 
     private final long ordinal;
-    private final MemberId owner;
+    private final RaftMemberId owner;
     private final int leaseId;
 
     public ReplicatedLeaseState( long ordinal, ReplicatedLeaseRequest leaseRequest )
@@ -31,7 +31,7 @@ public class ReplicatedLeaseState
         this( ordinal, leaseRequest.id(), leaseRequest.owner() );
     }
 
-    private ReplicatedLeaseState( long ordinal, int leaseId, MemberId owner )
+    private ReplicatedLeaseState( long ordinal, int leaseId, RaftMemberId owner )
     {
        this.ordinal = ordinal;
        this.leaseId = leaseId;
@@ -43,7 +43,7 @@ public class ReplicatedLeaseState
         return leaseId;
     }
 
-    public MemberId owner()
+    public RaftMemberId owner()
     {
         return owner;
     }
@@ -87,11 +87,11 @@ public class ReplicatedLeaseState
 
     public static class Marshal extends SafeStateMarshal<ReplicatedLeaseState>
     {
-        private final ChannelMarshal<MemberId> memberMarshal;
+        private final ChannelMarshal<RaftMemberId> memberMarshal;
 
         public Marshal()
         {
-            this.memberMarshal = MemberId.Marshal.INSTANCE;
+            this.memberMarshal = RaftMemberId.Marshal.INSTANCE;
         }
 
         @Override
@@ -108,7 +108,7 @@ public class ReplicatedLeaseState
         {
             long logIndex = channel.getLong();
             int leaseId = channel.getInt();
-            MemberId member = memberMarshal.unmarshal( channel );
+            RaftMemberId member = memberMarshal.unmarshal( channel );
             return new ReplicatedLeaseState( logIndex, leaseId, member );
         }
 

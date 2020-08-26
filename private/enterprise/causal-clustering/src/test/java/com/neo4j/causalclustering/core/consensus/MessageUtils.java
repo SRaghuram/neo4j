@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.consensus;
 
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.NoSuchElementException;
 import java.util.function.Predicate;
@@ -22,7 +22,7 @@ public class MessageUtils
     {
     }
 
-    public static RaftMessages.RaftMessage messageFor( Outcome outcome, final MemberId member )
+    public static RaftMessages.RaftMessage messageFor( Outcome outcome, final RaftMemberId member )
     {
         Predicate<RaftMessages.Directed> selectMember = message -> message.to() == member;
         try

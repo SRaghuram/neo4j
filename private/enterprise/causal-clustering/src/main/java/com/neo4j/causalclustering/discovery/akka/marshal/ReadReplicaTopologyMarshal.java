@@ -50,8 +50,8 @@ public class ReadReplicaTopologyMarshal extends SafeChannelMarshal<DatabaseReadR
     public void marshal( DatabaseReadReplicaTopology readReplicaTopology, WritableChannel channel ) throws IOException
     {
         DatabaseIdWithoutNameMarshal.INSTANCE.marshal( readReplicaTopology.databaseId(), channel );
-        channel.putInt( readReplicaTopology.members().size() );
-        for ( Map.Entry<MemberId,ReadReplicaInfo> entry : readReplicaTopology.members().entrySet() )
+        channel.putInt( readReplicaTopology.servers().size() );
+        for ( Map.Entry<MemberId,ReadReplicaInfo> entry : readReplicaTopology.servers().entrySet() )
         {
             MemberId memberId = entry.getKey();
             ReadReplicaInfo readReplicaInfo = entry.getValue();

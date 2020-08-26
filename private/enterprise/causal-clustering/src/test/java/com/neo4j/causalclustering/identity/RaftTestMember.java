@@ -12,7 +12,7 @@ import java.util.Map;
 
 public class RaftTestMember
 {
-    private static final Map<Integer,MemberId> testMembers = new HashMap<>();
+    private static final Map<Integer,RaftMemberId> testMembers = new HashMap<>();
 
     private RaftTestMember()
     {
@@ -20,12 +20,17 @@ public class RaftTestMember
 
     public static MemberId member( int id )
     {
-        return testMembers.computeIfAbsent( id, k -> IdFactory.randomMemberId() );
+        return MemberId.of( raftMember( id ) );
+    }
+
+    public static RaftMemberId raftMember( int id )
+    {
+        return testMembers.computeIfAbsent( id, k -> IdFactory.randomRaftMemberId() );
     }
 
     public static LeaderInfo leader( int id, long term )
     {
-        var member = testMembers.computeIfAbsent( id, k -> IdFactory.randomMemberId() );
+        var member = testMembers.computeIfAbsent( id, k -> IdFactory.randomRaftMemberId() );
         return new LeaderInfo( member, term );
     }
 }

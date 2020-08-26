@@ -32,8 +32,8 @@ import com.neo4j.causalclustering.discovery.procedures.InstalledProtocolsProcedu
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.CoreIdentityModule;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.MemberIdMigrator;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.logging.BetterRaftMessageLogger;
 import com.neo4j.causalclustering.logging.NullRaftMessageLogger;
 import com.neo4j.causalclustering.logging.RaftMessageLogger;
@@ -301,13 +301,14 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     }
 
     /* Component Factories */
-    private static RaftMessageLogger<MemberId> createRaftLogger( GlobalModule globalModule, MemberId myself )
+    private static RaftMessageLogger<RaftMemberId> createRaftLogger( GlobalModule globalModule, ClusteringIdentityModule identityModule )
     {
-        RaftMessageLogger<MemberId> raftMessageLogger;
+        RaftMessageLogger<RaftMemberId> raftMessageLogger;
         var config = globalModule.getGlobalConfig();
         if ( config.get( CausalClusteringInternalSettings.raft_messages_log_enable ) )
         {
             var logFile = config.get( CausalClusteringInternalSettings.raft_messages_log_path );
+            var myself = /*RaftMessageLogger*/ RaftMemberId.from( identityModule.myself() );
             var logger = new BetterRaftMessageLogger<>( myself, logFile, globalModule.getFileSystem(), globalModule.getGlobalClock() );
             raftMessageLogger = globalModule.getGlobalLife().add( logger );
         }
@@ -344,7 +345,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         leaderService = new DefaultLeaderService( topologyService, logProvider );
         dependencies.satisfyDependencies( leaderService );
 
-        RaftMessageLogger<MemberId> raftLogger = createRaftLogger( globalModule, identityModule.memberId() );
+        var raftLogger = createRaftLogger( globalModule, identityModule );
 
         RaftMessageDispatcher raftMessageDispatcher = new RaftMessageDispatcher( logProvider, globalModule.getGlobalClock() );
 
@@ -353,7 +354,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var leaderTransferBackoff = globalConfig.get( CausalClusteringInternalSettings.leader_transfer_member_backoff );
 
         var leaderTransferService = new LeaderTransferService( globalModule.getJobScheduler(), globalConfig, leaderTransferInterval, databaseManager,
-                raftMessageDispatcher, identityModule, leaderTransferBackoff, logProvider, globalModule.getGlobalClock(), leaderService, serverGroupsSupplier );
+                raftMessageDispatcher, identityModule, leaderTransferBackoff, logProvider, globalModule.getGlobalClock(), leaderService, serverGroupsSupplier,
+                topologyService::resolveServerFromRaftMember );
 
         RaftGroupFactory raftGroupFactory = new RaftGroupFactory( identityModule, globalModule, clusterStateLayout, topologyService, storageFactory,
                 leaderTransferService, namedDatabaseId -> ((DefaultLeaderService) leaderService).createListener( namedDatabaseId ), globalOtherTracker,
