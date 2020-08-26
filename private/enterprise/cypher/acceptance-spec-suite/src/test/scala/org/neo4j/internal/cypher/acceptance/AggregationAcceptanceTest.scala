@@ -420,4 +420,15 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
       Map("a.name" -> "a_name", "r" -> "b_name:b_prop")
     ))
   }
+
+  test("should handle WITH * followed by aggregation and order by") {
+    val query = "UNWIND [1, 2, 2, 3, 3, 3, 4, 4, 4, 4] AS n WITH *, count(n) AS c ORDER BY c RETURN n, c"
+    val result = executeWith(Configs.All, query)
+    result.toList should be(List(
+      Map("n" -> 1, "c" -> 1),
+      Map("n" -> 2, "c" -> 2),
+      Map("n" -> 3, "c" -> 3),
+      Map("n" -> 4, "c" -> 4)
+    ))
+  }
 }
