@@ -1477,4 +1477,110 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     result.toList should equal(List(Map("walker" -> "Bosse"), Map("walker" -> "Chris")))
   }
+
+  test("exists in WITH should return a syntax error at parsing") {
+
+    val query =
+      """
+        |MATCH (person:Person)
+        |WITH EXISTS {
+        | MATCH (person)-[:HAS_DOG]->(:Dog)
+        |} as foo
+        |RETURN foo
+      """.stripMargin
+
+    failWithError(Configs.All, query, Seq("The EXISTS subclause is not valid inside a WITH or RETURN clause."), Seq("SyntaxException"))
+  }
+
+  test("exists in RETURN should return a syntax error at parsing") {
+
+    val query =
+      """
+        |MATCH (person:Person)
+        |RETURN EXISTS {
+        | MATCH (person)-[:HAS_DOG]->(:Dog)
+        |}
+      """.stripMargin
+
+    failWithError(Configs.All, query, Seq("The EXISTS subclause is not valid inside a WITH or RETURN clause."), Seq("SyntaxException"))
+  }
+
+  test("exists deep in RETURN should return a syntax error at parsing") {
+
+    val query =
+      """
+        |MATCH (person:Person)
+        |RETURN person.name, false OR person.boolean = EXISTS {
+        | MATCH (person)-[:HAS_DOG]->(:Dog)
+        |}
+      """.stripMargin
+
+    failWithError(Configs.All, query, Seq("EXISTS is only valid in a WHERE clause as a standalone predicate or as part of a boolean expression (AND / OR / NOT)"), Seq("SyntaxException"))
+  }
+
+  test("exists is not valid as part of an equality check") {
+    val query =
+      """
+        |MATCH (person:Person)
+        |WHERE person.age = EXISTS {
+        | MATCH (person)-[:HAS_DOG]->(:Dog)
+        |}
+        |RETURN person
+        |""".stripMargin
+
+    failWithError(Configs.All, query, Seq("EXISTS is only valid in a WHERE clause as a standalone predicate or as part of a boolean expression (AND / OR / NOT)"), Seq("SyntaxException"))
+  }
+
+  test("not exists is not valid as part of an equality check") {
+    val query =
+      """
+        |MATCH (person:Person)
+        |WHERE person.age = (NOT EXISTS {
+        | MATCH (person)-[:HAS_DOG]->(:Dog)
+        |})
+        |RETURN person
+        |""".stripMargin
+
+    failWithError(Configs.All, query, Seq("EXISTS is only valid in a WHERE clause as a standalone predicate or as part of a boolean expression (AND / OR / NOT)"), Seq("SyntaxException"))
+  }
+
+  test("Cannot use exists subclause as a function parameter") {
+    val query =
+      """
+        |MATCH (person:Person)
+        |WHERE TOSTRING(EXISTS {
+        | MATCH (person)-[:HAS_DOG]->(:Dog)
+        |}) = "true"
+        |RETURN person
+        |""".stripMargin
+
+    failWithError(Configs.All, query, Seq("EXISTS is only valid in a WHERE clause as a standalone predicate or as part of a boolean expression (AND / OR / NOT)"), Seq("SyntaxException"))
+  }
+
+  test("Cannot set a property to the value of an exists subclause") {
+    val query =
+      """
+        |MATCH (person:Person)
+        |SET person.age = EXISTS {
+        | MATCH (person)-[:HAS_DOG]->(:Dog)
+        |}
+        |RETURN person
+        |""".stripMargin
+
+    failWithError(Configs.All, query, Seq("The EXISTS subclause is not valid inside a SET clause."), Seq("SyntaxException"))
+  }
+
+  test("Cannot use exists as part of a create") {
+    val query =
+      """
+        |CREATE (:Badger{isAlive: EXISTS {
+        | MATCH (person)-[:HAS_DOG]->(:Dog)
+        |}})
+        |RETURN person
+        |""".stripMargin
+
+    failWithError(Configs.All, query, Seq("EXISTS is only valid in a WHERE clause as a standalone predicate or as part of a boolean expression (AND / OR / NOT)"), Seq("SyntaxException"))
+  }
+
+
 }
