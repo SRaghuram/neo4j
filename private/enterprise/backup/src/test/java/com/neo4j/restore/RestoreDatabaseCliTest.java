@@ -28,10 +28,13 @@ class RestoreDatabaseCliTest
         {
             CommandLine.usage( command, new PrintStream( out ) );
         }
+
         assertThat( baos.toString().trim(), equalTo( String.format(
                 "USAGE%n" +
                 "%n" +
-                "restore [--force] [--move] [--verbose] [--database=<database>] --from=<path>%n" +
+                "restore [--force] [--move] [--verbose] [--database=<database>]%n" +
+                "        [--filter=<pattern>] --from=<path>[,<path>...]%n" +
+                "        [--neo4j-home-directory=<path>]%n" +
                 "%n" +
                 "DESCRIPTION%n" +
                 "%n" +
@@ -39,14 +42,19 @@ class RestoreDatabaseCliTest
                 "%n" +
                 "OPTIONS%n" +
                 "%n" +
-                "      --verbose       Enable verbose output.%n" +
-                "      --from=<path>   Path to backup to restore from.%n" +
+                "      --verbose            Enable verbose output.%n" +
+                "      --from=<path>[,<path>...]%n" +
+                "                           Path from where to do a backup.%n" +
                 "      --database=<database>%n" +
-                "                      Name of the database to restore.%n" +
-                "                        Default: neo4j%n" +
-                "      --force         If an existing database should be replaced.%n" +
-                "      --move          Moves the backup files to the destination, rather than%n" +
-                "                        copying."
+                "                           Name of the database to restore. Cannot be combined%n" +
+                "                             with --filter%n" +
+                "      --filter=<pattern>   Filter --from folders based on the passed pattern.%n" +
+                "                             Cannot be combined with --database%n" +
+                "      --force              If an existing database should be replaced.%n" +
+                "      --move               Moves the backup files to the destination, rather%n" +
+                "                             than copying.%n" +
+                "      --neo4j-home-directory=<path>%n" +
+                "                           Home directory of restored database."
         ) ) );
     }
 }

@@ -24,6 +24,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.format.aligned.PageAlignedV4_1;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
@@ -64,7 +65,8 @@ class ConvertNonCausalClusteringStoreIT
         for ( CoreClusterMember core : cluster.coreMembers() )
         {
             var databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-            new RestoreDatabaseCommand( testDirectory.getFileSystem(), classicNeo4jDatabase, core.config(), databaseName, true, false ).execute();
+            final var databaseLayout = Neo4jLayout.of( core.config() ).databaseLayout( databaseName );
+            new RestoreDatabaseCommand( testDirectory.getFileSystem(), classicNeo4jDatabase, databaseLayout, true, false ).execute();
         }
 
         cluster.start();

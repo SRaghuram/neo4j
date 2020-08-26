@@ -80,7 +80,8 @@ class RestoreDatabaseCommandIT
             try ( Locker storeLocker = new DatabaseLocker( fileSystem, toLayout ) )
             {
                 storeLocker.checkLock();
-                new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseName, true, false ).execute();
+                final var databaseLayout = Neo4jLayout.of( config ).databaseLayout( databaseName );
+                new RestoreDatabaseCommand( fileSystem, fromPath, databaseLayout, true, false ).execute();
             }
         } );
         assertThat( commandFailedException.getMessage() ).isEqualTo( "The database is in use. Stop database 'new' and try again." );
@@ -100,9 +101,10 @@ class RestoreDatabaseCommandIT
         createDbAt( fromPath, 0 );
         createDbAt( toLayout, 0 );
 
+        final var databaseLayout = Neo4jLayout.of( config ).databaseLayout( databaseName );
         IllegalArgumentException illegalException =
                 assertThrows( IllegalArgumentException.class,
-                              () -> new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseName, false, false ).execute() );
+                              () -> new RestoreDatabaseCommand( fileSystem, fromPath, databaseLayout, false, false ).execute() );
         assertTrue( illegalException.getMessage().contains( "Database with name [new] already exists" ), illegalException.getMessage() );
     }
 
@@ -118,9 +120,10 @@ class RestoreDatabaseCommandIT
 
         createDbAt( toLayout.databaseDirectory(), 0 );
 
+        final var databaseLayout = Neo4jLayout.of( config ).databaseLayout( databaseName );
         IllegalArgumentException illegalException =
                 assertThrows( IllegalArgumentException.class,
-                              () -> new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseName, false, false ).execute() );
+                              () -> new RestoreDatabaseCommand( fileSystem, fromPath, databaseLayout, false, false ).execute() );
         assertTrue( illegalException.getMessage().contains( "Source directory does not exist" ), illegalException.getMessage() );
     }
 
@@ -134,21 +137,23 @@ class RestoreDatabaseCommandIT
         Path fromPath = directory.homePath().resolve( "old" );
         Files.createDirectories( fromPath );
 
+        final var databaseLayout = Neo4jLayout.of( config ).databaseLayout( databaseName );
         IllegalArgumentException illegalException =
                 assertThrows( IllegalArgumentException.class,
-                              () -> new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseName, false, false ).execute() );
+                              () -> new RestoreDatabaseCommand( fileSystem, fromPath, databaseLayout, false, false ).execute() );
         assertTrue( illegalException.getMessage().contains( "Source directory is not a database backup" ), illegalException.getMessage() );
     }
 
     @Test
     void failOnInvalidDatabaseName() throws IOException
     {
-        var databaseName =  "__any_" ;
+        var databaseName = "__any_";
         Config config = configWith( neo4jLayout );
 
         Path fromPath = directory.homePath().resolve( "old" );
         Files.createDirectories( fromPath );
-        assertThrows( Exception.class, () -> new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseName, false, false ).execute() );
+        final var databaseLayout = Neo4jLayout.of( config ).databaseLayout( databaseName );
+        assertThrows( Exception.class, () -> new RestoreDatabaseCommand( fileSystem, fromPath, databaseLayout, false, false ).execute() );
     }
 
     @Test
@@ -168,7 +173,8 @@ class RestoreDatabaseCommandIT
         createDbAt( toLayout, toNodeCount );
 
         // when
-        new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), config, DEFAULT_DATABASE_NAME, true, false ).execute();
+        final var databaseLayout = Neo4jLayout.of( config ).databaseLayout( DEFAULT_DATABASE_NAME );
+        new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), databaseLayout, true, false ).execute();
 
         // then
         DatabaseManagementService managementService =
@@ -199,7 +205,8 @@ class RestoreDatabaseCommandIT
         createDbAt( fromLayout, fromNodeCount );
 
         // when
-        new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), config, DEFAULT_DATABASE_NAME, false, true ).execute();
+        final var databaseLayout = Neo4jLayout.of( config ).databaseLayout( DEFAULT_DATABASE_NAME );
+        new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), databaseLayout, false, true ).execute();
 
         // then
         assertThat( fileSystem.fileExists( fromLayout.databaseDirectory() ) ).isFalse();
@@ -244,7 +251,8 @@ class RestoreDatabaseCommandIT
         managementService.shutdown();
 
         // when
-        new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), config, DEFAULT_DATABASE_NAME, true, false ).execute();
+        final var databaseLayout = Neo4jLayout.of( config ).databaseLayout( DEFAULT_DATABASE_NAME );
+        new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), databaseLayout, true, false ).execute();
 
         LogFiles fromStoreLogFiles = logFilesBasedOnlyBuilder( fromLayout.databaseDirectory(), fileSystem )
                 .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
@@ -273,7 +281,8 @@ class RestoreDatabaseCommandIT
 
         createDbAt( fromPath, 10 );
 
-        new RestoreDatabaseCommand( fs, fromPath, config, databaseName, true, false ).execute();
+        final var databaseLayout = Neo4jLayout.of( config ).databaseLayout( databaseName );
+        new RestoreDatabaseCommand( fs, fromPath, databaseLayout, true, false ).execute();
 
         verify( fs, never() ).deleteRecursively( neo4jLayout.transactionLogsRootDirectory() );
     }
@@ -289,7 +298,8 @@ class RestoreDatabaseCommandIT
 
         createDbAt( fromPath, 10 );
 
-        new RestoreDatabaseCommand( fs, fromPath, config, databaseName, true, false ).execute();
+        final var databaseLayout = Neo4jLayout.of( config ).databaseLayout( databaseName );
+        new RestoreDatabaseCommand( fs, fromPath, databaseLayout, true, false ).execute();
 
         verify( fs ).deleteRecursively( neo4jLayout.databaseLayout( databaseName ).getTransactionLogsDirectory() );
     }
@@ -306,8 +316,10 @@ class RestoreDatabaseCommandIT
         createDbAt( fromPath, 10 );
         createRaftGroupDirectoryFor( config, databaseName );
 
+        final var databaseLayout = Neo4jLayout.of( config ).databaseLayout( databaseName );
         IllegalArgumentException illegalArgumentException = assertThrows(
-                IllegalArgumentException.class, () -> new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseName, true, false ).execute() );
+                IllegalArgumentException.class, () -> new RestoreDatabaseCommand( fileSystem, fromPath, databaseLayout, true, false )
+                        .execute() );
 
         assertThat( illegalArgumentException.getMessage() ).isEqualTo(
                 "Database with name [new] already exists locally. " +

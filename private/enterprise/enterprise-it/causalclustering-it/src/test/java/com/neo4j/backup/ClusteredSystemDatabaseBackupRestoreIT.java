@@ -21,7 +21,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -36,11 +35,11 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseContext;
-import org.neo4j.dbms.identity.IdentityModule;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -175,8 +174,8 @@ class ClusteredSystemDatabaseBackupRestoreIT
     {
         Config restoreCommandConfig = Config.newBuilder().fromConfig( memberConfig ).build();
         var databaseName = GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-        new RestoreDatabaseCommand( fs, backupLocation.resolve( databaseName ), restoreCommandConfig,
-                databaseName, true, false ).execute();
+        final var databaseLayout = Neo4jLayout.of( restoreCommandConfig ).databaseLayout( databaseName );
+        new RestoreDatabaseCommand( fs, backupLocation.resolve( databaseName ), databaseLayout, true, false ).execute();
     }
 
     private static boolean runBackupSameJvm( Path neo4jHome, String host, String databaseName )

@@ -24,6 +24,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.ConfigUtils;
 import org.neo4j.graphdb.Node;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.ProcessStreamHandler;
 import org.neo4j.test.StreamConsumer;
@@ -53,7 +54,8 @@ public final class BackupTestUtil
     {
         Config config = Config.newBuilder().fromConfig( clusterMember.config() ).build();
         ConfigUtils.disableAllConnectors( config );
-        RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( fsa, fromDatabasePath, config, databaseName, true, false );
+        final var databaseLayout = Neo4jLayout.of( config ).databaseLayout( databaseName );
+        RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( fsa, fromDatabasePath, databaseLayout, true, false );
         restoreDatabaseCommand.execute();
     }
 

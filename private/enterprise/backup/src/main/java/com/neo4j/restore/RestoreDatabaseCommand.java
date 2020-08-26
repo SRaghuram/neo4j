@@ -35,15 +35,15 @@ public class RestoreDatabaseCommand
     private final boolean forceOverwrite;
     private final boolean moveFiles;
 
-    public RestoreDatabaseCommand( FileSystemAbstraction fs, Path fromDatabasePath, Config config, String databaseName, boolean forceOverwrite,
+    public RestoreDatabaseCommand( FileSystemAbstraction fs, Path fromDatabasePath, DatabaseLayout targetDatabaseLayout, boolean forceOverwrite,
                                    boolean moveFiles )
     {
         this.fs = fs;
         this.fromDatabasePath = fromDatabasePath;
         this.forceOverwrite = forceOverwrite;
         this.moveFiles = moveFiles;
-        this.targetDatabaseLayout = buildTargetDatabaseLayout( databaseName, config );
-        this.raftGroupDirectory = getRaftGroupDirectory( databaseName, config );
+        this.targetDatabaseLayout = targetDatabaseLayout;
+        this.raftGroupDirectory = getRaftGroupDirectory( targetDatabaseLayout.getDatabaseName(), targetDatabaseLayout.getNeo4jLayout().dataDirectory() );
     }
 
     public void execute() throws IOException
@@ -165,13 +165,8 @@ public class RestoreDatabaseCommand
         }
     }
 
-    private static DatabaseLayout buildTargetDatabaseLayout( String databaseName, Config config )
+    private Path getRaftGroupDirectory( String databaseName, Path dataDirectory )
     {
-        return Neo4jLayout.of( config ).databaseLayout( databaseName );
-    }
-
-    private Path getRaftGroupDirectory( String databaseName, Config config )
-    {
-        return ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ) ).raftGroupDir( databaseName );
+        return ClusterStateLayout.of( dataDirectory ).raftGroupDir( databaseName );
     }
 }
