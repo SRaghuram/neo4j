@@ -220,7 +220,7 @@ class StoppedDatabaseRolledAwayIT
     {
         var member = cluster.randomCoreMember( true ).orElseThrow();
         var dump = testDirectory.homePath().resolve( "foo.dump" );
-        fs.deleteRecursively( dump.toFile() );
+        fs.deleteRecursively( dump );
 
         var context = getExtensionContext( member );
         var command = new DumpCommand( context, new Dumper( context.err() ) );
@@ -257,8 +257,8 @@ class StoppedDatabaseRolledAwayIT
     {
         var member = cluster.randomCoreMember( true ).orElseThrow();
         var backups = testDirectory.homePath().resolve( "backups" );
-        fs.deleteRecursively( backups.toFile() );
-        fs.mkdirs( backups.toFile() );
+        fs.deleteRecursively( backups );
+        fs.mkdirs( backups );
         var address = member.config().get( online_backup_listen_address ).toString();
 
         var neo4jHome = member.homePath();
@@ -326,7 +326,7 @@ class StoppedDatabaseRolledAwayIT
     {
         Path configFile = configDir.resolve( DEFAULT_CONFIG_FILE_NAME );
         List<String> allSettings;
-        if ( fs.fileExists( configFile.toFile() ) )
+        if ( fs.fileExists( configFile ) )
         {
             allSettings = Files.readAllLines( configFile );
         }

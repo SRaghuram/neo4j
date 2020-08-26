@@ -120,8 +120,8 @@ public abstract class AbstractPageCacheBenchmarkV2 extends BaseDatabaseBenchmark
     private void setUpForPageCache() throws IOException
     {
         FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
-        fs.mkdirs( STORE_FILE.getParent().toFile() );
-        try ( StoreChannel storeChannel = fs.write( STORE_FILE.toFile() ) )
+        fs.mkdirs( STORE_FILE.getParent() );
+        try ( StoreChannel storeChannel = fs.write( STORE_FILE ) )
         {
             long fileSize = 0;
             while ( fileSize < getFileSize() )

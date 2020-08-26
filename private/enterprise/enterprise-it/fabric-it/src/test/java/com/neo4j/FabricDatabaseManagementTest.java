@@ -59,7 +59,7 @@ class FabricDatabaseManagementTest
     @AfterEach
     void tearDown() throws IOException
     {
-        FileUtils.deletePathRecursively( databaseDir );
+        FileUtils.deleteDirectory( databaseDir );
         stopServer();
     }
 

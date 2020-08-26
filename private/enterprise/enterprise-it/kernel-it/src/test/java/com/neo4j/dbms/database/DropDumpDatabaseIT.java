@@ -70,7 +70,7 @@ public class DropDumpDatabaseIT
         dropDump( systemDb, fooDb.databaseName() );
 
         // then
-        var dumpsArr = fsa.listFiles( dumpRoots.toFile(), ( dir, name ) -> name.startsWith( dbName ) );
+        var dumpsArr = fsa.listFiles( dumpRoots, ( dir, name ) -> name.startsWith( dbName ) );
         var fooDump = Arrays.stream( dumpsArr ).findFirst().orElseThrow( AssertionError::new );
 
         // given
@@ -79,7 +79,7 @@ public class DropDumpDatabaseIT
         setupConfFile( configDir );
 
         // when
-        load( dbName, fooDump.toPath(), homeDir, configDir );
+        load( dbName, fooDump, homeDir, configDir );
         managementService.createDatabase( dbName );
         fooDb = managementService.database( dbName );
 

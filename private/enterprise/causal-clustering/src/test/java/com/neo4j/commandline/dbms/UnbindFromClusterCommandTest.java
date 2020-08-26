@@ -132,8 +132,8 @@ class UnbindFromClusterCommandTest
         command.execute();
 
         // then
-        assertFalse( fs.fileExists( clusterStateDir.toFile() ) );
-        assertFalse( fs.fileExists( serverIdStore.toFile() ) );
+        assertFalse( fs.fileExists( clusterStateDir ) );
+        assertFalse( fs.fileExists( serverIdStore ) );
     }
 
     @Test
@@ -152,14 +152,14 @@ class UnbindFromClusterCommandTest
     {
         var dataDir = neo4jLayout.homeDirectory().resolve( DEFAULT_DATA_DIR_NAME );
         var clusterStateDirectory = ClusterStateLayout.of( dataDir ).getClusterStateDirectory();
-        fs.mkdirs( clusterStateDirectory.toFile() );
+        fs.mkdirs( clusterStateDirectory );
         return clusterStateDirectory;
     }
 
     private Path createServerIdStore() throws IOException
     {
         var serverIdFile = neo4jLayout.serverIdFile();
-        try ( var channel = fs.write( serverIdFile.toFile() ) )
+        try ( var channel = fs.write( serverIdFile ) )
         {
             channel.writeAll( ByteBuffer.wrap( new byte[]{0} ) );
         }
@@ -174,7 +174,7 @@ class UnbindFromClusterCommandTest
     private FileLock createLockedFakeDbDir() throws IOException
     {
         Files.createDirectories( neo4jLayout.databasesDirectory() );
-        channel = fs.write( neo4jLayout.storeLockFile().toFile() );
+        channel = fs.write( neo4jLayout.storeLockFile() );
         var fileLock = channel.tryLock();
         assertNotNull( fileLock, "Unable to acquire a store lock" );
         return fileLock;

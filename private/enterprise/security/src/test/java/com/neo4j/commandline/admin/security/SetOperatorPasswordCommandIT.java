@@ -96,7 +96,7 @@ class SetOperatorPasswordCommandIT
     private void assertAuthIniFile( String password ) throws Throwable
     {
         Path authIniFile = getOperatorAuthFile();
-        assertTrue( fileSystem.fileExists( authIniFile.toFile() ) );
+        assertTrue( fileSystem.fileExists( authIniFile ) );
         FileUserRepository userRepository = new FileUserRepository( fileSystem, authIniFile, NullLogProvider.getInstance() );
         userRepository.start();
         User operator = userRepository.getUserByName( upgradeUsername );

@@ -33,7 +33,7 @@ class BackupRandomMember extends RepeatOnRandomMember
         Optional<Path> backupDir = backupHelper.backup( member );
         if ( backupDir.isPresent() )
         {
-            fs.deleteRecursively( backupDir.get().toFile() );
+            fs.deleteRecursively( backupDir.get() );
         }
     }
 

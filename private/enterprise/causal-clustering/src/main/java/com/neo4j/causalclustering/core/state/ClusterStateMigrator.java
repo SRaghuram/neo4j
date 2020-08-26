@@ -62,7 +62,7 @@ public class ClusterStateMigrator extends LifecycleAdapter
             // delete old cluster state files and directories except member ID
             // member ID storage is created outside of the lifecycle and can't be deleted in a lifecycle method
             // it is fine to keep member ID because it is a simple UUID and does not need to be migrated
-            var oldClusterStateFiles = fs.listFiles( clusterStateLayout.getClusterStateDirectory().toFile(),
+            var oldClusterStateFiles = fs.listFiles( clusterStateLayout.getClusterStateDirectory(),
                     ( parentDir, name ) -> isNotMemberIdStorage( parentDir.toPath(), name ) );
             if ( isNotEmpty( oldClusterStateFiles ) )
             {

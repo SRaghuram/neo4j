@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreResource;
 import com.neo4j.configuration.CausalClusteringSettings;
 import io.netty.channel.ChannelHandlerContext;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
@@ -48,11 +47,11 @@ class BareFilesHolder
     void prepareFile( String fileName, int size ) throws IOException
     {
         var file = Path.of( fileName );
-        if ( fs.fileExists( file.toFile() ) )
+        if ( fs.fileExists( file ) )
         {
-            fs.deleteFile( file.toFile() );
+            fs.deleteFile( file );
         }
-        var channel = fs.write( file.toFile() );
+        var channel = fs.write( file );
         var bytes = new byte[size];
         new Random().nextBytes( bytes );
         var buffer = ByteBuffer.wrap( bytes );
@@ -63,7 +62,7 @@ class BareFilesHolder
     void sendFile( ChannelHandlerContext ctx, String fileName )
     {
         var file = Path.of( fileName );
-        if ( !fs.fileExists( file.toFile() ) )
+        if ( !fs.fileExists( file ) )
         {
             throw new IllegalArgumentException( fileName );
         }
@@ -77,8 +76,8 @@ class BareFilesHolder
         storeFileStreamingProtocol.end( ctx, SUCCESS, lastTxId );
     }
 
-    File[] getFiles()
+    Path[] getFiles()
     {
-        return fs.listFiles( new File( "." ) );
+        return fs.listFiles( Path.of( "." ) );
     }
 }

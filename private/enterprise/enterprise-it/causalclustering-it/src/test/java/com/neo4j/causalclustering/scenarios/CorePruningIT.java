@@ -95,6 +95,6 @@ class CorePruningIT
 
     private int numberOfFiles( Path raftLogDir ) throws RuntimeException
     {
-        return fs.listFiles( raftLogDir.toFile() ).length;
+        return fs.listFiles( raftLogDir ).length;
     }
 }

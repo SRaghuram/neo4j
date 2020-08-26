@@ -9,17 +9,16 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.neo4j.configuration.connectors.BoltConnector;
-import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
@@ -368,7 +367,7 @@ public class CypherOverBoltIT
 
     private URL prepareTestImportFile( int lines ) throws IOException
     {
-        File tempFile = File.createTempFile( "testImport", ".csv" );
+        Path tempFile = Files.createTempFile( "testImport", ".csv" );
         try ( PrintWriter writer = FileUtils.newFilePrintWriter( tempFile, StandardCharsets.UTF_8 ) )
         {
             for ( int i = 0; i < lines; i++ )
@@ -376,6 +375,6 @@ public class CypherOverBoltIT
                 writer.println( i + " " + i + " " + i );
             }
         }
-        return tempFile.toURI().toURL();
+        return tempFile.toUri().toURL();
     }
 }

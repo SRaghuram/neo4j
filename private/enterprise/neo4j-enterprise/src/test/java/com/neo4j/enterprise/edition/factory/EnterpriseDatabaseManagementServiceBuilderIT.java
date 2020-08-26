@@ -54,11 +54,11 @@ class EnterpriseDatabaseManagementServiceBuilderIT
                 .build();
         try
         {
-            assertTrue( isEmptyOrNonExistingDirectory( fs, homeDir.resolve( DEFAULT_DATABASE_NAME ).toFile() ) );
-            assertTrue( isEmptyOrNonExistingDirectory( fs, homeDir.resolve( SYSTEM_DATABASE_NAME ).toFile() ) );
+            assertTrue( isEmptyOrNonExistingDirectory( fs, homeDir.resolve( DEFAULT_DATABASE_NAME ) ) );
+            assertTrue( isEmptyOrNonExistingDirectory( fs, homeDir.resolve( SYSTEM_DATABASE_NAME ) ) );
 
-            assertFalse( isEmptyOrNonExistingDirectory( fs, databasesDir.resolve( DEFAULT_DATABASE_NAME ).toFile() ) );
-            assertFalse( isEmptyOrNonExistingDirectory( fs, databasesDir.resolve( SYSTEM_DATABASE_NAME ).toFile() ) );
+            assertFalse( isEmptyOrNonExistingDirectory( fs, databasesDir.resolve( DEFAULT_DATABASE_NAME ) ) );
+            assertFalse( isEmptyOrNonExistingDirectory( fs, databasesDir.resolve( SYSTEM_DATABASE_NAME ) ) );
         }
         finally
         {
@@ -75,8 +75,8 @@ class EnterpriseDatabaseManagementServiceBuilderIT
         DatabaseManagementService managementService = createDbmsBuilder( homeDir ).build();
         try
         {
-            assertFalse( isEmptyOrNonExistingDirectory( fs, storeDir.resolve( DEFAULT_DATABASE_NAME ).toFile() ) );
-            assertFalse( isEmptyOrNonExistingDirectory( fs, storeDir.resolve( SYSTEM_DATABASE_NAME ).toFile() ) );
+            assertFalse( isEmptyOrNonExistingDirectory( fs, storeDir.resolve( DEFAULT_DATABASE_NAME ) ) );
+            assertFalse( isEmptyOrNonExistingDirectory( fs, storeDir.resolve( SYSTEM_DATABASE_NAME ) ) );
         }
         finally
         {

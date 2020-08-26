@@ -141,7 +141,7 @@ class OnlineBackupCommandTest
     private String executeBackup( String databaseName ) throws IOException
     {
         File cfg = dir.file( "neo4j.conf" );
-        try ( PrintStream ps = new PrintStream( fs.openAsOutputStream( cfg, false ) ) )
+        try ( PrintStream ps = new PrintStream( fs.openAsOutputStream( cfg.toPath(), false ) ) )
         {
             ps.printf( "%s=%s%n", db_timezone.name(), LogTimeZone.SYSTEM.name() );
         }

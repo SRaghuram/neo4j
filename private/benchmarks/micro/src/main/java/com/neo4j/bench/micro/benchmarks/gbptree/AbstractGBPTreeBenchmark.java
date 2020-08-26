@@ -161,7 +161,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
     private static PageCache createPageCache( Path indexFile ) throws IOException
     {
         FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
-        fs.mkdirs( indexFile.getParent().toFile() );
+        fs.mkdirs( indexFile.getParent() );
         Config config = Config.defaults();
         PageCacheTracer tracer = new DefaultPageCacheTracer();
         Log log = NullLog.getInstance();

@@ -19,9 +19,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
@@ -209,7 +209,7 @@ class StoreCopyCheckpointMutexIT
         }
 
         @Override
-        public StoreChannel read( File fileName ) throws IOException
+        public StoreChannel read( Path fileName ) throws IOException
         {
             return new DelegatingStoreChannel( super.read( fileName ) )
             {

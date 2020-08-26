@@ -77,7 +77,7 @@ public class ManagedStore
         {
             System.out.println( format( "Deleting store [%s] at: %s",
                                         bytesToString( storeAndConfig.store().bytes() ), storeAndConfig.store().topLevelDirectory() ) );
-            FileUtils.deleteRecursively( storeAndConfig.store().topLevelDirectory().toFile() );
+            FileUtils.deleteDirectory( storeAndConfig.store().topLevelDirectory() );
         }
     }
 

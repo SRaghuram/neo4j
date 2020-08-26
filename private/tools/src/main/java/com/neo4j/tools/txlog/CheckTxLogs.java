@@ -126,7 +126,7 @@ public class CheckTxLogs
         final MutableLongLongMap logFileSizes = new LongLongHashMap();
         for ( long i = lowestLogVersion; i <= highestLogVersion; i++ )
         {
-            logFileSizes.put( i, fs.getFileSize( logFile.getLogFileForVersion( i ).toFile() ) );
+            logFileSizes.put( i, fs.getFileSize( logFile.getLogFileForVersion( i ) ) );
         }
 
         List<CheckpointInfo> checkpointInfos = logFiles.getCheckpointFile().reachableCheckpoints();

@@ -63,7 +63,7 @@ class IndexPersistenceAcceptanceTest extends IndexingTestSupport {
     }
     finally {
       if (graph != null) managementService.shutdown()
-      FileUtils.deletePathRecursively(dbDir)
+      FileUtils.deleteDirectory(dbDir)
     }
   }
 

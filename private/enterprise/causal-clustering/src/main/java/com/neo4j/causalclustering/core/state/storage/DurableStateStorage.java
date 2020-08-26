@@ -59,7 +59,7 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
     @Override
     public boolean exists()
     {
-        return fsa.fileExists( fileA.toFile() ) && fsa.fileExists( fileB.toFile() );
+        return fsa.fileExists( fileA ) && fsa.fileExists( fileB );
     }
 
     private void create() throws IOException
@@ -70,9 +70,9 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
 
     private void ensureExists( Path path ) throws IOException
     {
-        if ( !fsa.fileExists( path.toFile() ) )
+        if ( !fsa.fileExists( path ) )
         {
-            fsa.mkdirs( path.getParent().toFile() );
+            fsa.mkdirs( path.getParent() );
             try ( FlushableChannel channel = channelForFile( path ) )
             {
                 marshal.marshal( marshal.startState(), channel );
@@ -153,12 +153,12 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
 
     private PhysicalFlushableChannel resetStoreFile( Path nextStore ) throws IOException
     {
-        fsa.truncate( nextStore.toFile(), 0 );
+        fsa.truncate( nextStore, 0 );
         return channelForFile( nextStore );
     }
 
     private PhysicalFlushableChannel channelForFile( Path path ) throws IOException
     {
-        return new PhysicalFlushableChannel( fsa.write( path.toFile() ), new HeapScopedBuffer( toIntExact( kibiBytes( 512 ) ), memoryTracker ) );
+        return new PhysicalFlushableChannel( fsa.write( path ), new HeapScopedBuffer( toIntExact( kibiBytes( 512 ) ), memoryTracker ) );
     }
 }

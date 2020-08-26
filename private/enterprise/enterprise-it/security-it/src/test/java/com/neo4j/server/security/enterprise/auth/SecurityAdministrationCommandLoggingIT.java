@@ -13,9 +13,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -431,12 +431,12 @@ class SecurityAdministrationCommandLoggingIT
         List<String> logLines = new ArrayList<>();
         // this is needed as the EphemeralFSA is broken, and creates a new file when reading a non-existent file from
         // a valid directory
-        if ( !fs.fileExists( logFilename.toFile() ) )
+        if ( !fs.fileExists( logFilename ) )
         {
-            throw new FileNotFoundException( "File does not exist." );
+            throw new NoSuchFileException( "File does not exist." );
         }
 
-        try ( var reader = fs.openAsReader( logFilename.toFile(), StandardCharsets.UTF_8 ) )
+        try ( var reader = fs.openAsReader( logFilename, StandardCharsets.UTF_8 ) )
         {
             var lineIterator = IOUtils.lineIterator( reader );
             while ( lineIterator.hasNext() )

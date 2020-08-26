@@ -120,7 +120,7 @@ public class RunReportCommand extends BaseRunReportCommand
         try
         {
             System.out.println( "Deleting: " + runReportParams.storesDir().getAbsolutePath() );
-            FileUtils.deleteRecursively( runReportParams.storesDir() );
+            FileUtils.deleteDirectory( runReportParams.storesDir().toPath() );
         }
         catch ( IOException e )
         {

@@ -61,7 +61,7 @@ class MultiDatabaseHttpIT
         String databaseName = "testDatabase";
         DatabaseLayout testDatabaseLayout = prepareEmptyDatabase( databaseName );
 
-        fileSystem.deleteRecursively( testDatabaseLayout.getTransactionLogsDirectory().toFile() );
+        fileSystem.deleteRecursively( testDatabaseLayout.getTransactionLogsDirectory() );
 
         managementService = createService();
         HTTP.Response response = POST( txCommitUri( databaseName, httpPort() ), quotedJson( "{ 'statements': [ { 'statement': 'RETURN 1' } ] }" ) );

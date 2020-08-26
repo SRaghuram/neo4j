@@ -86,13 +86,13 @@ public class ReadReplicaDatabaseManager extends ClusteredMultiDatabaseManager
         var raftIdState = clusterStateLayout.raftIdStateFile( databaseName );
         var raftIdStateDir = raftIdState.getParent();
 
-        if ( !fs.deleteFile( raftIdState.toFile() ) )
+        if ( !fs.deleteFile( raftIdState ) )
         {
             throw new IOException( format( "Unable to delete file %s when dropping database %s", raftIdState.toAbsolutePath(), databaseName ) );
         }
 
-        FileUtils.tryForceDirectory( raftIdStateDir.toFile() );
+        FileUtils.tryForceDirectory( raftIdStateDir );
 
-        fs.deleteRecursively( raftGroupDir.toFile() );
+        fs.deleteRecursively( raftGroupDir );
     }
 }

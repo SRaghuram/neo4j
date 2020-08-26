@@ -179,7 +179,7 @@ public class Stores
             try
             {
                 System.out.println( "Deleting failed store: " + topLevelStoreDir.toFile().getAbsolutePath() );
-                FileUtils.deleteRecursively( topLevelStoreDir.toFile() );
+                FileUtils.deleteDirectory( topLevelStoreDir );
             }
             catch ( IOException ioe )
             {
@@ -254,7 +254,7 @@ public class Stores
             try
             {
                 System.out.println( "Deleting: " + temporaryStore.toAbsolutePath() );
-                FileUtils.deleteRecursively( temporaryStore.toFile() );
+                FileUtils.deleteDirectory( temporaryStore );
             }
             catch ( IOException e )
             {

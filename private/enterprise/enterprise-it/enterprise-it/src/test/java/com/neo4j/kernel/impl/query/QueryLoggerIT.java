@@ -12,12 +12,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.ZoneOffset;
@@ -495,7 +494,7 @@ class QueryLoggerIT
         executeQuery( QUERY );
         databaseManagementService.shutdown();
 
-        assertFalse( fileSystem.fileExists( logFilename.toFile() ) );
+        assertFalse( fileSystem.fileExists( logFilename ) );
     }
 
     @Test
@@ -543,8 +542,7 @@ class QueryLoggerIT
 
         databaseManagementService.shutdown();
 
-        Path[] queryLogs = Arrays.stream( fileSystem.listFiles( logsDirectory.toFile(), ( dir, name ) -> name.startsWith( "query.log" ) ) ).map( File::toPath )
-                                 .toArray( Path[]::new );
+        Path[] queryLogs = fileSystem.listFiles( logsDirectory, ( dir1, name1 ) -> name1.startsWith( "query.log" ) );
         assertThat( "Expect to have more then one query log file.", queryLogs.length, greaterThanOrEqualTo( 2 ) );
 
         List<String> loggedQueries = Arrays.stream( queryLogs )
@@ -568,8 +566,7 @@ class QueryLoggerIT
 
         databaseManagementService.shutdown();
 
-        queryLogs = Arrays.stream( fileSystem.listFiles( logsDirectory.toFile(), ( dir, name ) -> name.startsWith( "query.log" ) ) ).map( File::toPath )
-                              .toArray( Path[]::new );
+        queryLogs = fileSystem.listFiles( logsDirectory, ( dir, name ) -> name.startsWith( "query.log" ) );
         assertThat( "Expect to have more then one query log file.", queryLogs.length, lessThan( 100 ) );
 
         loggedQueries = Arrays.stream( queryLogs )
@@ -706,7 +703,7 @@ class QueryLoggerIT
                 transaction.execute( QUERY ).close();
 
                 // File will not be created until query logService is enabled.
-                assertFalse( fileSystem.fileExists( logFilename.toFile() ) );
+                assertFalse( fileSystem.fileExists( logFilename ) );
 
                 transaction.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'info')" ).close();
                 transaction.execute( QUERY ).close();
@@ -810,12 +807,12 @@ class QueryLoggerIT
     {
         // this is needed as the EphemeralFSA is broken, and creates a new file when reading a non-existent file from
         // a valid directory
-        if ( !fs.fileExists( logFilename.toFile() ) )
+        if ( !fs.fileExists( logFilename ) )
         {
-            throw new FileNotFoundException( "File does not exist." );
+            throw new NoSuchFileException( "File does not exist." );
         }
 
-        try ( var reader = fs.openAsReader( logFilename.toFile(), StandardCharsets.UTF_8 ) )
+        try ( var reader = fs.openAsReader( logFilename, StandardCharsets.UTF_8 ) )
         {
             return readLines( reader );
         }

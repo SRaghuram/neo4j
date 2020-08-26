@@ -71,7 +71,7 @@ class ReplaceRandomMember extends RepeatOnRandomMember
         {
             log.info( "Restoring backup: " + backup.getFileName().toString() + " to: " + newMember );
             restoreFromBackup( backup, fs, newMember, DEFAULT_DATABASE_NAME );
-            fs.deleteRecursively( backup.toFile() );
+            fs.deleteRecursively( backup );
         }
 
         log.info( "Starting: " + newMember );

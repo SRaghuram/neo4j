@@ -68,7 +68,7 @@ class BootstrapSaverTest
         DatabaseLayout databaseLayout = layout.get( dir.homePath() );
         BootstrapSaver saver = new BootstrapSaver( fs, nullLogProvider() );
 
-        fs.mkdirs( dir.homeDir() );
+        fs.mkdirs( dir.homePath() );
 
         FakeStore store = new FakeStore( fs, databaseLayout );
         store.create();
@@ -78,24 +78,24 @@ class BootstrapSaverTest
 
         // then: should have been moved to temp-save
         store.assertMissing();
-        assertTrue( fs.fileExists( databaseLayout.databaseDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
-        assertTrue( fs.fileExists( databaseLayout.getTransactionLogsDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
+        assertTrue( fs.fileExists( databaseLayout.databaseDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertTrue( fs.fileExists( databaseLayout.getTransactionLogsDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ) ) );
 
         // when: restoring
         saver.restore( databaseLayout );
 
         // then: should be back in standard location
         store.assertExists();
-        assertFalse( fs.fileExists( databaseLayout.databaseDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
-        assertFalse( fs.fileExists( databaseLayout.getTransactionLogsDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
+        assertFalse( fs.fileExists( databaseLayout.databaseDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertFalse( fs.fileExists( databaseLayout.getTransactionLogsDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ) ) );
 
         // when: cleaning without anything to clean
         saver.clean( databaseLayout );
 
         // then: should have no effect
         store.assertExists();
-        assertFalse( fs.fileExists( databaseLayout.databaseDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
-        assertFalse( fs.fileExists( databaseLayout.getTransactionLogsDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
+        assertFalse( fs.fileExists( databaseLayout.databaseDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertFalse( fs.fileExists( databaseLayout.getTransactionLogsDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ) ) );
     }
 
     @ParameterizedTest
@@ -106,7 +106,7 @@ class BootstrapSaverTest
         DatabaseLayout databaseLayout = layout.get( dir.homePath() );
         BootstrapSaver saver = new BootstrapSaver( fs, nullLogProvider() );
 
-        fs.mkdirs( dir.homeDir() );
+        fs.mkdirs( dir.homePath() );
 
         FakeStore store = new FakeStore( fs, databaseLayout );
         store.create();
@@ -116,8 +116,8 @@ class BootstrapSaverTest
 
         // then: should have been moved
         store.assertMissing();
-        assertTrue( fs.fileExists( databaseLayout.databaseDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
-        assertTrue( fs.fileExists( databaseLayout.getTransactionLogsDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
+        assertTrue( fs.fileExists( databaseLayout.databaseDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertTrue( fs.fileExists( databaseLayout.getTransactionLogsDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ) ) );
 
         // when: simulate a store copy and clean of temp-save
         store.create();
@@ -125,16 +125,16 @@ class BootstrapSaverTest
 
         // then: store should exist but not temp-save
         store.assertExists();
-        assertFalse( fs.fileExists( databaseLayout.databaseDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
-        assertFalse( fs.fileExists( databaseLayout.getTransactionLogsDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
+        assertFalse( fs.fileExists( databaseLayout.databaseDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertFalse( fs.fileExists( databaseLayout.getTransactionLogsDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ) ) );
 
         // when: restoring - typically after a restart
         saver.restore( databaseLayout );
 
         // then: this should not change anything
         store.assertExists();
-        assertFalse( fs.fileExists( databaseLayout.databaseDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
-        assertFalse( fs.fileExists( databaseLayout.getTransactionLogsDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ).toFile() ) );
+        assertFalse( fs.fileExists( databaseLayout.databaseDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ) ) );
+        assertFalse( fs.fileExists( databaseLayout.getTransactionLogsDirectory().resolve( TEMP_SAVE_DIRECTORY_NAME ) ) );
     }
 
     private static class FakeStore
@@ -172,8 +172,8 @@ class BootstrapSaverTest
 
         void create() throws IOException
         {
-            fs.mkdirs( layout.databaseDirectory().toFile() );
-            fs.mkdirs( layout.getTransactionLogsDirectory().toFile() );
+            fs.mkdirs( layout.databaseDirectory() );
+            fs.mkdirs( layout.getTransactionLogsDirectory() );
 
             for ( FsNode fsNode : fsNodes )
             {
@@ -213,11 +213,11 @@ class BootstrapSaverTest
         {
             if ( isDirectory )
             {
-                fs.mkdirs( path.toFile() );
+                fs.mkdirs( path );
             }
             else
             {
-                fs.openAsOutputStream( path.toFile(), false ).close();
+                fs.openAsOutputStream( path, false ).close();
             }
         }
 
@@ -225,12 +225,13 @@ class BootstrapSaverTest
         {
             if ( shouldExist )
             {
-                assertTrue( fs.fileExists( path.toFile() ), "Should exist: " + path );
-                assertEquals( isDirectory, fs.isDirectory( path.toFile() ), (isDirectory ? "Should be directory: " : "Should not be directory: ") + path );
+                assertTrue( fs.fileExists( path ), "Should exist: " + path );
+                assertEquals( isDirectory,
+                        fs.isDirectory( path ), (isDirectory ? "Should be directory: " : "Should not be directory: ") + path );
             }
             else
             {
-                assertFalse( fs.fileExists( path.toFile() ), "Should not exist: " + path );
+                assertFalse( fs.fileExists( path ), "Should not exist: " + path );
             }
         }
     }

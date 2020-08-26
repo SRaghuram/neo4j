@@ -9,7 +9,6 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.Set;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -48,20 +47,17 @@ public class StoreFiles
 
     public void delete( DatabaseLayout databaseLayout, LogFiles logFiles ) throws IOException
     {
-        File databaseDirectory = databaseLayout.databaseDirectory().toFile();
-        File[] files = fs.listFiles( databaseDirectory, filenameFilter );
+        Path databaseDirectory = databaseLayout.databaseDirectory();
+        Path[] files = fs.listFiles( databaseDirectory, filenameFilter );
         if ( files != null )
         {
-            for ( File file : files )
+            for ( Path file : files )
             {
-                fs.deleteRecursively( file );
+                fs.delete( file );
             }
         }
 
-        for ( Path txLog : logFiles.logFiles() )
-        {
-            fs.deleteFile( txLog.toFile() );
-        }
+        delete( logFiles );
         fs.deleteFile( databaseDirectory );
     }
 
@@ -69,21 +65,21 @@ public class StoreFiles
     {
         for ( Path txLog : logFiles.logFiles() )
         {
-            fs.deleteFile( txLog.toFile() );
+            fs.deleteFile( txLog );
         }
     }
 
     public void moveTo( File source, DatabaseLayout target, LogFiles logFiles ) throws IOException
     {
-        fs.mkdirs( logFiles.logFilesDirectory().toFile() );
+        fs.mkdirs( logFiles.logFilesDirectory() );
 
-        Path[] files = Arrays.stream( fs.listFiles( source, filenameFilter ) ).map( File::toPath ).toArray( Path[]::new );
+        Path[] files = fs.listFiles( source.toPath(), filenameFilter );
         if ( files.length != 0 )
         {
             for ( Path file : files )
             {
-                File destination = logFiles.isLogFile( file ) ? target.getTransactionLogsDirectory().toFile() : target.databaseDirectory().toFile();
-                fs.moveToDirectory( file.toFile(), destination );
+                Path destination = logFiles.isLogFile( file ) ? target.getTransactionLogsDirectory() : target.databaseDirectory();
+                fs.moveToDirectory( file, destination );
             }
         }
     }
@@ -92,12 +88,12 @@ public class StoreFiles
     {
         Set<Path> storeFiles = databaseLayout.storeFiles();
 
-        File[] files = fs.listFiles( databaseLayout.databaseDirectory().toFile() );
+        Path[] files = fs.listFiles( databaseLayout.databaseDirectory() );
         if ( files != null )
         {
-            for ( File file : files )
+            for ( Path file : files )
             {
-                if ( storeFiles.contains( file.toPath() ) )
+                if ( storeFiles.contains( file ) )
                 {
                     return false;
                 }

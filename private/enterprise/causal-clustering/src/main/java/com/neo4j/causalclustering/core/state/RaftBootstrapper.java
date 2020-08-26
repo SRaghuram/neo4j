@@ -168,8 +168,8 @@ public class RaftBootstrapper
         {
             Path tempDefaultDatabaseDir = bootstrapRootDir.get().resolve( SYSTEM_DATABASE_NAME );
 
-            fs.copyRecursively( bootstrapContext.databaseLayout().databaseDirectory().toFile(), tempDefaultDatabaseDir.toFile() );
-            fs.copyRecursively( bootstrapContext.databaseLayout().getTransactionLogsDirectory().toFile(), tempDefaultDatabaseDir.toFile() );
+            fs.copyRecursively( bootstrapContext.databaseLayout().databaseDirectory(), tempDefaultDatabaseDir );
+            fs.copyRecursively( bootstrapContext.databaseLayout().getTransactionLogsDirectory(), tempDefaultDatabaseDir );
 
             DatabaseLayout tempDatabaseLayout = initializeStoreUsingTempDatabase( bootstrapRootDir.get(), true );
 

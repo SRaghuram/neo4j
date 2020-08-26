@@ -76,14 +76,14 @@ final class Profile implements Comparable<Profile>
 
     void delete( FileSystemAbstraction fs )
     {
-        fs.deleteFile( profileFile.toFile() );
+        fs.deleteFile( profileFile );
     }
 
     InputStream read( FileSystemAbstraction fs ) throws IOException
     {
         try
         {
-            return CompressionFormat.decompress( () -> fs.openAsInputStream( profileFile.toFile() ) );
+            return CompressionFormat.decompress( () -> fs.openAsInputStream( profileFile ) );
         }
         catch ( IOException e )
         {
@@ -93,10 +93,11 @@ final class Profile implements Comparable<Profile>
 
     OutputStream write( FileSystemAbstraction fs ) throws IOException
     {
-        fs.mkdirs( profileFile.toFile().getParentFile() ); // Create PROFILE_FOLDER if it does not exist.
+        // Create PROFILE_FOLDER if it does not exist.
+        fs.mkdirs( profileFile.toFile().getParentFile().toPath() );
         try
         {
-            return CompressionFormat.compress( () -> fs.openAsOutputStream( profileFile.toFile(), true ), CompressionFormat.GZIP );
+            return CompressionFormat.compress( () -> fs.openAsOutputStream( profileFile, true ), CompressionFormat.GZIP );
         }
         catch ( IOException e )
         {

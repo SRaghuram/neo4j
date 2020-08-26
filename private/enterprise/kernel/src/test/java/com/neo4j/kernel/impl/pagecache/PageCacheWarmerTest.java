@@ -108,7 +108,7 @@ class PageCacheWarmerTest
         cacheTracer = tracers.getPageCacheTracer();
         cfg = PageCacheConfig.config().withTracer( cacheTracer );
         file = testDirectory.homePath().resolve( "a" );
-        fs.write( file.toFile() );
+        fs.write( file );
     }
 
     @AfterEach
@@ -315,8 +315,8 @@ class PageCacheWarmerTest
     {
         Path aaFile = testDirectory.homePath().resolve( "a" ).resolve( "a" );
         Path baFile = testDirectory.homePath().resolve( "b" ).resolve( "a" );
-        fs.mkdirs( aaFile.getParent().toFile() );
-        fs.mkdirs( baFile.getParent().toFile() );
+        fs.mkdirs( aaFile.getParent() );
+        fs.mkdirs( baFile.getParent() );
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg );
               PagedFile aa = pageCache.map( aaFile, pageCache.pageSize(), immutable.of( CREATE ) );
               PagedFile ba = pageCache.map( baFile, pageCache.pageSize(), immutable.of( CREATE ) ) )
@@ -420,7 +420,7 @@ class PageCacheWarmerTest
         {
             int pageSize = pageCache.pageSize();
             Path testFile = testDirectory.createFilePath( "testfile" );
-            fs.write( testFile.toFile() ).writeAll( ByteBuffer.wrap( new byte[ numPages * pageSize] ) );
+            fs.write( testFile ).writeAll( ByteBuffer.wrap( new byte[ numPages * pageSize] ) );
 
             try ( PagedFile ignore = pageCache.map( testFile, pageCache.pageSize(), immutable.of( CREATE ) ) )
             {
@@ -450,8 +450,8 @@ class PageCacheWarmerTest
             int pageSize = pageCache.pageSize();
             Path testFile1 = testDirectory.createFilePath( "testfile1" );
             Path testFile2 = testDirectory.createFilePath( "testfile2" );
-            fs.write( testFile1.toFile() ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile1 * pageSize] ) );
-            fs.write( testFile2.toFile() ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile2 * pageSize] ) );
+            fs.write( testFile1 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile1 * pageSize] ) );
+            fs.write( testFile2 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile2 * pageSize] ) );
 
             try ( PagedFile pf1 = pageCache.map( testFile1, pageCache.pageSize(), immutable.of( READ ) );
                   PagedFile pf2 = pageCache.map( testFile2, pageCache.pageSize(), immutable.of( READ ) ) )
@@ -481,9 +481,9 @@ class PageCacheWarmerTest
             Path testFile1 = testDirectory.createFilePath( "testfile1.taken" );
             Path testFile2 = testDirectory.createFilePath( "testfile.ignored" );
             Path testFile3 = testDirectory.createFilePath( "testfile2.taken" );
-            fs.write( testFile1.toFile() ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile1 * pageSize] ) );
-            fs.write( testFile2.toFile() ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile2 * pageSize] ) );
-            fs.write( testFile3.toFile() ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile3 * pageSize] ) );
+            fs.write( testFile1 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile1 * pageSize] ) );
+            fs.write( testFile2 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile2 * pageSize] ) );
+            fs.write( testFile3 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile3 * pageSize] ) );
 
             try ( PagedFile pf1 = pageCache.map( testFile1, pageCache.pageSize() );
                   PagedFile pf2 = pageCache.map( testFile2, pageCache.pageSize() );
@@ -591,7 +591,7 @@ class PageCacheWarmerTest
     {
         for ( StoreFileMetadata fileMetadata : fileListing )
         {
-            assertTrue( fs.fileExists( fileMetadata.path().toFile() ) );
+            assertTrue( fs.fileExists( fileMetadata.path() ) );
         }
     }
 
@@ -599,7 +599,7 @@ class PageCacheWarmerTest
     {
         for ( StoreFileMetadata fileMetadata : fileListing )
         {
-            assertFalse( fs.fileExists( fileMetadata.path().toFile() ) );
+            assertFalse( fs.fileExists( fileMetadata.path() ) );
         }
     }
 

@@ -49,9 +49,9 @@ public class SetOperatorPasswordCommand extends AbstractCommand
         String username = config.get( GraphDatabaseInternalSettings.upgrade_username );
 
         Path file = EnterpriseSecurityModule.getOperatorUserRepositoryFile( config );
-        if ( fileSystem.fileExists( file.toFile() ) )
+        if ( fileSystem.fileExists( file ) )
         {
-            fileSystem.deleteFile( file.toFile() );
+            fileSystem.deleteFile( file );
         }
 
         FileUserRepository userRepository =

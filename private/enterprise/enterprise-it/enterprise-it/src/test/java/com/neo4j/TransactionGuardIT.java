@@ -11,11 +11,11 @@ import org.eclipse.collections.api.set.ImmutableSet;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.util.Collection;
@@ -459,7 +459,7 @@ class TransactionGuardIT
 
     private static URL prepareTestImportFile( int lines ) throws IOException
     {
-        File tempFile = File.createTempFile( "testImport", ".csv" );
+        Path tempFile = Files.createTempFile( "testImport", ".csv" );
         try ( PrintWriter writer = FileUtils.newFilePrintWriter( tempFile, StandardCharsets.UTF_8 ) )
         {
             for ( int i = 0; i < lines; i++ )
@@ -467,7 +467,7 @@ class TransactionGuardIT
                 writer.println( "a,b,c" );
             }
         }
-        return tempFile.toURI().toURL();
+        return tempFile.toUri().toURL();
     }
 
     private static void assertDatabaseDoesNotHaveNodes( GraphDatabaseAPI database )

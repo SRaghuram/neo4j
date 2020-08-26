@@ -59,7 +59,7 @@ abstract class SecurityGraphCompatibilityTestBase
     @BeforeEach
     void setup() throws Exception
     {
-        FileUtils.deleteRecursively( directory.homeDir() );
+        FileUtils.deleteDirectory( directory.homePath() );
 
         TestEnterpriseDatabaseManagementServiceBuilder builder =
                 new TestDBMSBuilder( directory.homePath() ).impermanent()

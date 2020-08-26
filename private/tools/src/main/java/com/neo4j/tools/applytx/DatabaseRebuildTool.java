@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -90,9 +91,9 @@ public class DatabaseRebuildTool
         Args args = Args.withFlags( "i", "overwrite-to" ).parse( arguments );
         DatabaseLayout fromLayout = getFrom( args );
         StorageEngineFactory fromStorageEngineFactory = StorageEngineFactory.selectStorageEngine();
-        File toPath = getTo( args );
-        String databaseName = toPath.getName();
-        File storeDir = toPath.getParentFile();
+        Path toPath = getTo( args );
+        String databaseName = toPath.getFileName().toString();
+        Path storeDir = toPath.getParent();
         DatabaseManagementServiceBuilder dbBuilder = newDbBuilder( storeDir, databaseName, args );
         boolean interactive = args.getBoolean( "i" );
         if ( interactive && !args.orphans().isEmpty() )
@@ -116,7 +117,7 @@ public class DatabaseRebuildTool
         }
     }
 
-    private File getTo( Args args ) throws IOException
+    private Path getTo( Args args ) throws IOException
     {
         String to = args.get( "to" );
         if ( to == null )
@@ -124,10 +125,10 @@ public class DatabaseRebuildTool
             to = "target/db-from-apply-txs";
             err.println( "Defaulting --to to " + to );
         }
-        File toPath = new File( to );
+        Path toPath = Path.of( to );
         if ( args.getBoolean( "overwrite-to" ) )
         {
-            FileUtils.deleteRecursively( toPath );
+            FileUtils.deleteDirectory( toPath );
         }
         return toPath;
     }
@@ -151,11 +152,11 @@ public class DatabaseRebuildTool
         return Neo4jLayout.of( config ).databaseLayout( sourceDirectory.getName() );
     }
 
-    private static DatabaseManagementServiceBuilder newDbBuilder( File storeDir, String databaseName, Args args )
+    private static DatabaseManagementServiceBuilder newDbBuilder( Path storeDir, String databaseName, Args args )
     {
-        DatabaseManagementServiceBuilder builder = new DatabaseManagementServiceBuilder( storeDir.toPath() )
-                .setConfig( GraphDatabaseInternalSettings.databases_root_path, storeDir.toPath() )
-                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, storeDir.toPath() )
+        DatabaseManagementServiceBuilder builder = new DatabaseManagementServiceBuilder( storeDir )
+                .setConfig( GraphDatabaseInternalSettings.databases_root_path, storeDir )
+                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, storeDir )
                 .setConfig( GraphDatabaseSettings.default_database, databaseName );
         Map<String, String> rawCfgValues = new HashMap<>();
         for ( Map.Entry<String, String> entry : args.asMap().entrySet() )

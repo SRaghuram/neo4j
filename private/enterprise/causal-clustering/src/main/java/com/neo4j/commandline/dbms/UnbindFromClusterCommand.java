@@ -55,7 +55,7 @@ public class UnbindFromClusterCommand extends AbstractCommand
             {
                 Path clusterStateDirectory = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ) ).getClusterStateDirectory();
 
-                if ( ctx.fs().fileExists( clusterStateDirectory.toFile() ) )
+                if ( ctx.fs().fileExists( clusterStateDirectory ) )
                 {
                     deleteClusterStateIn( clusterStateDirectory.toFile() );
                 }
@@ -64,7 +64,7 @@ public class UnbindFromClusterCommand extends AbstractCommand
                     ctx.err().println( "This instance was not bound. No work performed." );
                 }
 
-                ctx.fs().deleteFile( neo4jLayout.serverIdFile().toFile() );
+                ctx.fs().deleteFile( neo4jLayout.serverIdFile() );
             }
         }
         catch ( FileLockException e )
@@ -81,7 +81,7 @@ public class UnbindFromClusterCommand extends AbstractCommand
     {
         try
         {
-            ctx.fs().deleteRecursively( target );
+            ctx.fs().deleteRecursively( target.toPath() );
         }
         catch ( IOException e )
         {

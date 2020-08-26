@@ -40,8 +40,8 @@ public class DriverFactory implements Closeable
     {
         var fs = testDirectory.getFileSystem();
         var logDir = testDirectory.homePath().resolve( LOGS_DIR );
-        fs.mkdir( logDir.toFile() );
-        var outputStream = fs.openAsOutputStream( logDir.resolve( "driver-" + driverCounter.incrementAndGet() + ".log" ).toFile(), false );
+        fs.mkdir( logDir );
+        var outputStream = fs.openAsOutputStream( logDir.resolve( "driver-" + driverCounter.incrementAndGet() + ".log" ), false );
         closeableCollection.add( outputStream );
         return new Log4jLogProvider( outputStream ).getLog( getClass() );
     }

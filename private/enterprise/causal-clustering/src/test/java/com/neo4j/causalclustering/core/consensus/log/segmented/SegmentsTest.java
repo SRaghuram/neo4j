@@ -60,7 +60,7 @@ class SegmentsTest
     @BeforeEach
     void before()
     {
-        when( fsa.deleteFile( any() ) ).thenReturn( true );
+        when( fsa.deleteFile( any( Path.class ) ) ).thenReturn( true );
     }
 
     @Test
@@ -100,7 +100,7 @@ class SegmentsTest
             // When
             segments.prune( 11 );
 
-            verify( fsa, times( segmentFiles.size() ) ).deleteFile( fileNames.getForSegment( toPrune.header().segmentNumber() ).toFile() );
+            verify( fsa, times( segmentFiles.size() ) ).deleteFile( fileNames.getForSegment( toPrune.header().segmentNumber() ) );
         }
     }
 
@@ -120,7 +120,7 @@ class SegmentsTest
             segments.truncate( 20, 9, 4 );
 
             // Then
-            verify( fsa, never() ).deleteFile( any() );
+            verify( fsa, never() ).deleteFile( any( Path.class ) );
         }
     }
 
@@ -145,8 +145,7 @@ class SegmentsTest
 
             // Then
             // the truncate file is part of the deletes that happen while pruning
-            verify( fsa, times( segmentFiles.size() ) ).deleteFile(
-                    fileNames.getForSegment( toBePruned.header().segmentNumber() ).toFile() );
+            verify( fsa, times( segmentFiles.size() ) ).deleteFile( fileNames.getForSegment( toBePruned.header().segmentNumber() ) );
         }
     }
 

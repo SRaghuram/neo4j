@@ -57,7 +57,7 @@ public class DumpIndexStatisticsStore
               Lifespan life = new Lifespan() )
         {
             NullLogProvider logProvider = NullLogProvider.getInstance();
-            if ( fs.isDirectory( path.toFile() ) )
+            if ( fs.isDirectory( path ) )
             {
                 DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( path );
                 indexStatisticsStore = new IndexStatisticsStore( pageCache, databaseLayout, immediate(), true, cacheTracer );

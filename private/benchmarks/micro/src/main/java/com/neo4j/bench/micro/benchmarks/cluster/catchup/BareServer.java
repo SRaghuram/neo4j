@@ -22,7 +22,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Random;
@@ -106,7 +105,7 @@ class BareServer implements CatchupServerHandler
             {
                 fileHolder.sendFile( ctx, ATOMIC );
                 var nonAtomics =
-                        Stream.of( fileHolder.getFiles() ).filter( file -> !file.getName().equals( ATOMIC ) ).map( File::toPath ).toArray( Path[]::new );
+                        Stream.of( fileHolder.getFiles() ).filter( file -> !file.getFileName().toString().equals( ATOMIC ) ).toArray( Path[]::new );
                 respond( ctx, protocol, PREPARE_STORE_COPY_RESPONSE, PrepareStoreCopyResponse.success( nonAtomics, lastTxId ) );
             }
         };

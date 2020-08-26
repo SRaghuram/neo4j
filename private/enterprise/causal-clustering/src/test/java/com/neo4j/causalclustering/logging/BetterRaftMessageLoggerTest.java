@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.OutputStream;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -42,16 +41,16 @@ class BetterRaftMessageLoggerTest
     @BeforeEach
     void beforeEach() throws Exception
     {
-        when( fs.openAsOutputStream( logFile.toFile(), true ) ).thenReturn( outputStream );
+        when( fs.openAsOutputStream( logFile, true ) ).thenReturn( outputStream );
     }
 
     @Test
     void shouldOpenAndCloseWriter() throws Exception
     {
-        verify( fs, never() ).openAsOutputStream( any( File.class ), anyBoolean() );
+        verify( fs, never() ).openAsOutputStream( any( Path.class ), anyBoolean() );
 
         logger.start();
-        verify( fs ).openAsOutputStream( logFile.toFile(), true );
+        verify( fs ).openAsOutputStream( logFile, true );
 
         logger.stop();
         verify( outputStream ).close();

@@ -150,12 +150,12 @@ class ExistingDatabaseCreationIT
 
     private void copyDatabaseTxLogs( DatabaseLayout databaseLayout, DatabaseLayout cloneLayout ) throws IOException
     {
-        fileSystem.copyRecursively( databaseLayout.getTransactionLogsDirectory().toFile(), cloneLayout.getTransactionLogsDirectory().toFile() );
+        fileSystem.copyRecursively( databaseLayout.getTransactionLogsDirectory(), cloneLayout.getTransactionLogsDirectory() );
     }
 
     private void copyDatabaseData( DatabaseLayout databaseLayout, DatabaseLayout cloneLayout ) throws IOException
     {
-        fileSystem.copyRecursively( databaseLayout.databaseDirectory().toFile(), cloneLayout.databaseDirectory().toFile() );
+        fileSystem.copyRecursively( databaseLayout.databaseDirectory(), cloneLayout.databaseDirectory() );
     }
 
     private void createSomeNodes( GraphDatabaseService database )

@@ -11,7 +11,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
@@ -1269,7 +1268,7 @@ public class ProcedureIT
 
     private String createCsvFile( String... lines ) throws IOException
     {
-        File file = plugins.createFile( "file" );
+        java.nio.file.Path file = plugins.createFilePath( "file" );
 
         try ( PrintWriter writer = FileUtils.newFilePrintWriter( file, StandardCharsets.UTF_8 ) )
         {
@@ -1279,7 +1278,7 @@ public class ProcedureIT
             }
         }
 
-        return file.toURI().toURL().toString();
+        return file.toUri().toURL().toString();
     }
 
     @Test

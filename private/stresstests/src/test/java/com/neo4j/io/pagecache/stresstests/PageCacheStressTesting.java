@@ -58,6 +58,6 @@ class PageCacheStressTesting
                 faults, evictions, pins, unpins, flushes );
 
         // let's cleanup disk space when everything went well
-        FileUtils.deletePathRecursively( workingDirectory );
+        FileUtils.deleteDirectory( workingDirectory );
     }
 }

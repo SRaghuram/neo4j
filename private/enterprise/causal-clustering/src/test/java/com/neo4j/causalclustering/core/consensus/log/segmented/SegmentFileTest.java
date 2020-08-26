@@ -60,7 +60,7 @@ class SegmentFileTest
     void before() throws IOException
     {
         readerPool = spy( new ReaderPool( 0, logProvider, fileNames, fsa, Clocks.fakeClock() ) );
-        fsa.mkdirs( baseDir.toFile() );
+        fsa.mkdirs( baseDir );
     }
 
     @Test

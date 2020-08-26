@@ -55,7 +55,7 @@ public class BoltQueryLoggingMemoryIT
     {
         try
         {
-            FileUtils.deleteRecursively( tmpDir.toFile() );
+            FileUtils.deleteDirectory( tmpDir );
         }
         catch ( IOException e )
         {

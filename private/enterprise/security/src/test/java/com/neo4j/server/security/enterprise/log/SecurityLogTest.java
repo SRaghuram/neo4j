@@ -58,9 +58,9 @@ class SecurityLogTest
         securityLog.shutdown();
 
         File activeLogFile = config.get( SecuritySettings.security_log_filename ).toFile();
-        assertThat( fs.fileExists( activeLogFile ) ).isEqualTo( true );
-        assertThat( fs.fileExists( archive( 1 ) ) ).isEqualTo( true );
-        assertThat( fs.fileExists( archive( 2 ) ) ).isEqualTo( false );
+        assertThat( fs.fileExists( activeLogFile.toPath() ) ).isEqualTo( true );
+        assertThat( fs.fileExists( archive( 1 ).toPath() ) ).isEqualTo( true );
+        assertThat( fs.fileExists( archive( 2 ).toPath() ) ).isEqualTo( false );
 
         String[] activeLines = readLogFile( fs, activeLogFile );
         assertThat( activeLines ).allMatch( item -> item.contains( "line 2" ) );
@@ -139,7 +139,7 @@ class SecurityLogTest
 
     private String[] readLogFile( FileSystemAbstraction fs, File activeLogFile ) throws IOException
     {
-        try ( Scanner scan = new Scanner( fs.openAsInputStream( activeLogFile ) ) )
+        try ( Scanner scan = new Scanner( fs.openAsInputStream( activeLogFile.toPath() ) ) )
         {
             scan.useDelimiter( "\\Z" );
             String allLines = scan.next();

@@ -198,7 +198,7 @@ class LoadCommandIT extends AbstractCommandIT
     private void createRaftGroupDirectoryFor( Config config, String databaseName ) throws IOException
     {
         var raftGroupDir = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ) ).raftGroupDir( databaseName );
-        fs.mkdirs( raftGroupDir.toFile() );
+        fs.mkdirs( raftGroupDir );
     }
 
     private Config configWith( Neo4jLayout layout )

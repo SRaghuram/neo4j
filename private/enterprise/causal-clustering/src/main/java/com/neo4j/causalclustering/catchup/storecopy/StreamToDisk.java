@@ -25,7 +25,7 @@ public class StreamToDisk implements StoreFileStream
 
     static StreamToDisk fromFile( FileSystemAbstraction fsa, Path file ) throws IOException
     {
-        return new StreamToDisk( fsa.write( file.toFile() ) );
+        return new StreamToDisk( fsa.write( file ) );
     }
 
     private StreamToDisk( StoreChannel storeChannel, AutoCloseable... closeables )

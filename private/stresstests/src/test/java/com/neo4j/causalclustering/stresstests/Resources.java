@@ -101,8 +101,8 @@ class Resources
 
     public void cleanup() throws IOException
     {
-        FileUtils.deletePathRecursively( clusterDir );
-        FileUtils.deletePathRecursively( backupDir );
+        FileUtils.deleteDirectory( clusterDir );
+        FileUtils.deleteDirectory( backupDir );
     }
 
     public Clock clock()

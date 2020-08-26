@@ -42,7 +42,7 @@ class RecoveryProtocolTest
     @BeforeEach
     void setup() throws IOException
     {
-        fsa.mkdirs( root.toFile() );
+        fsa.mkdirs( root );
         readerPool = new ReaderPool( 0, getInstance(), fileNames, fsa, Clocks.fakeClock() );
     }
 
@@ -139,7 +139,7 @@ class RecoveryProtocolTest
         protocol.run();
 
         // then
-        Assertions.assertNotEquals( 0, fsa.getFileSize( fileNames.getForSegment( 1 ).toFile() ) );
+        Assertions.assertNotEquals( 0, fsa.getFileSize( fileNames.getForSegment( 1 ) ) );
     }
 
     @Test
@@ -272,7 +272,7 @@ class RecoveryProtocolTest
     private void createLogFile( FileSystemAbstraction fsa, long prevFileLastIndex, long fileNameVersion,
             long headerVersion, long prevIndex, long prevTerm ) throws IOException
     {
-        StoreChannel channel = fsa.write( fileNames.getForSegment( fileNameVersion ).toFile() );
+        StoreChannel channel = fsa.write( fileNames.getForSegment( fileNameVersion ) );
         PhysicalFlushableChannel writer = new PhysicalFlushableChannel( channel, INSTANCE );
         headerMarshal.marshal( new SegmentHeader( prevFileLastIndex, headerVersion, prevIndex, prevTerm ), writer );
         writer.prepareForFlush().flush();
@@ -281,7 +281,7 @@ class RecoveryProtocolTest
 
     private void createEmptyLogFile( FileSystemAbstraction fsa, long fileNameVersion ) throws IOException
     {
-        StoreChannel channel = fsa.write( fileNames.getForSegment( fileNameVersion ).toFile() );
+        StoreChannel channel = fsa.write( fileNames.getForSegment( fileNameVersion ) );
         channel.close();
     }
 }

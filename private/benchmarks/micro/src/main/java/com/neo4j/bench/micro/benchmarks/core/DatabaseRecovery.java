@@ -168,7 +168,7 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
         while ( !checkPoints.isEmpty() )
         {
             LogEntryInlinedCheckPoint checkPoint = checkPoints.pollLast();
-            try ( StoreChannel storeChannel = fileSystem.write( highestLogFile.toFile() ) )
+            try ( StoreChannel storeChannel = fileSystem.write( highestLogFile ) )
             {
                 storeChannel.truncate( checkPoint.getLogPosition().getByteOffset() );
             }

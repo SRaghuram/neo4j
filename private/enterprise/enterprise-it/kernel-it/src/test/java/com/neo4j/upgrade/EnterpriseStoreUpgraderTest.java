@@ -40,9 +40,9 @@ public class EnterpriseStoreUpgraderTest extends StoreUpgraderTest
     {
         Path resourceDirectory = findFormatStoreDirectoryForVersion( version, databaseDirectory );
         Path directory = databaseLayout.databaseDirectory();
-        fileSystem.deleteRecursively( directory.toFile() );
-        fileSystem.mkdirs( directory.toFile() );
-        fileSystem.copyRecursively( resourceDirectory.toFile(), directory.toFile() );
+        fileSystem.deleteRecursively( directory );
+        fileSystem.mkdirs( directory );
+        fileSystem.copyRecursively( resourceDirectory, directory );
     }
 
     private static Path findFormatStoreDirectoryForVersion( String version, Path databaseDirectory ) throws IOException

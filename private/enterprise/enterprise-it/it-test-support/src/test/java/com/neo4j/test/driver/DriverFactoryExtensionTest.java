@@ -57,8 +57,8 @@ class DriverFactoryExtensionTest
             }
 
             var driverLogsDir = new File( testDirectory.homeDir(), DriverFactory.LOGS_DIR );
-            assertTrue( fsa.isDirectory( driverLogsDir ) );
-            assertTrue( fsa.fileExists( new File( driverLogsDir, "driver-1.log" ) ) );
+            assertTrue( fsa.isDirectory( driverLogsDir.toPath() ) );
+            assertTrue( fsa.fileExists( new File( driverLogsDir, "driver-1.log" ).toPath() ) );
         }
         finally
         {

@@ -43,7 +43,7 @@ class SegmentedRaftLogDurabilityTest
     private final RaftLogFactory logFactory = fileSystem ->
     {
         Path directory = testDirectory.homePath();
-        fileSystem.mkdir( directory.toFile() );
+        fileSystem.mkdir( directory );
 
         long rotateAtSizeBytes = 128;
         int readerPoolSize = 8;

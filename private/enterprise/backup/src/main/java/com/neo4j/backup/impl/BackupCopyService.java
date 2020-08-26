@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.com.storecopy.FileMoveAction;
 import com.neo4j.com.storecopy.FileMoveProvider;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Iterator;
@@ -52,14 +51,12 @@ class BackupCopyService
     {
         try
         {
-            File source = oldLocation.toFile();
-            File target = newLocation.toFile();
-            Iterator<FileMoveAction> moves = fileMoveProvider.traverseForMoving( source ).iterator();
+            Iterator<FileMoveAction> moves = fileMoveProvider.traverseForMoving( oldLocation ).iterator();
             while ( moves.hasNext() )
             {
-                moves.next().move( target );
+                moves.next().move( newLocation );
             }
-            fs.deleteRecursively( oldLocation.toFile() );
+            fs.deleteRecursively( oldLocation );
         }
         catch ( IOException e )
         {
@@ -99,7 +96,7 @@ class BackupCopyService
                 log.info( "Deleting the pre-existing invalid backup because its store ID is the same as in the new successful backup %s",
                         newSuccessfulBackupStoreId );
 
-                fs.deleteRecursively( preExistingBrokenBackupDir.toFile() );
+                fs.deleteRecursively( preExistingBrokenBackupDir );
             }
             else
             {
@@ -111,7 +108,7 @@ class BackupCopyService
 
     boolean backupExists( DatabaseLayout databaseLayout )
     {
-        return fs.fileExists( databaseLayout.metadataStore().toFile() );
+        return fs.fileExists( databaseLayout.metadataStore() );
     }
 
     Path findNewBackupLocationForBrokenExisting( Path existingBackup )
@@ -133,13 +130,13 @@ class BackupCopyService
      */
     private Path findAnAvailableBackupLocation( Path file, String pattern )
     {
-        if ( isEmptyOrNonExistingDirectory( fs, file.toFile() ) )
+        if ( isEmptyOrNonExistingDirectory( fs, file ) )
         {
             return file;
         }
 
         return availableAlternativeNames( file, pattern )
-                .filter( f -> isEmptyOrNonExistingDirectory( fs, f.toFile() ) )
+                .filter( f -> isEmptyOrNonExistingDirectory( fs, f ) )
                 .findFirst()
                 .orElseThrow( noFreeBackupLocation( file ) );
     }

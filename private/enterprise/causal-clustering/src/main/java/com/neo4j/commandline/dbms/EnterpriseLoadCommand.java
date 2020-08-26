@@ -34,7 +34,7 @@ public class EnterpriseLoadCommand extends LoadCommand
         Config config = buildConfig();
         Path raftGroupDirectory = getRaftGroupDirectory( database.name(), config );
 
-        if ( fs.fileExists( raftGroupDirectory.toFile() ) )
+        if ( fs.fileExists( raftGroupDirectory ) )
         {
             throw new IllegalArgumentException( format(
                     "Database with name [%s] already exists locally. " +

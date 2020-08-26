@@ -5,7 +5,6 @@
  */
 package com.neo4j.helper;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -13,7 +12,6 @@ import org.neo4j.io.fs.FileUtils;
 
 import static java.lang.System.getenv;
 import static java.nio.file.Files.createDirectories;
-import static org.neo4j.io.fs.FileUtils.deletePathRecursively;
 
 public final class StressTestingHelper
 {
@@ -21,20 +19,9 @@ public final class StressTestingHelper
     {
     }
 
-    public static File ensureExistsAndEmpty( File directory ) throws IOException
-    {
-        FileUtils.deleteRecursively( directory );
-
-        if ( !directory.mkdirs() )
-        {
-            throw new RuntimeException( "Could not create directory: " + directory.getAbsolutePath() );
-        }
-        return directory;
-    }
-
     public static Path ensureExistsAndEmpty( Path directory ) throws IOException
     {
-        deletePathRecursively( directory );
+        FileUtils.deleteDirectory( directory );
         createDirectories( directory );
         return directory;
     }

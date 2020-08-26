@@ -33,18 +33,18 @@ class TempBootstrapDirTest
     void shouldCleanDirectoryBeforeAndAfter() throws IOException
     {
         createTempBootstrapDir();
-        assertTrue( fileSystem.fileExists( tempBootstrapDir() ) );
+        assertTrue( fileSystem.fileExists( tempBootstrapDir().toPath() ) );
 
         try ( var dir = TempBootstrapDir.cleanBeforeAndAfter( fileSystem, databaseLayout ) )
         {
-            assertFalse( fileSystem.fileExists( tempBootstrapDir() ) );
+            assertFalse( fileSystem.fileExists( tempBootstrapDir().toPath() ) );
 
             assertEquals( tempBootstrapDir(), dir.get().toFile() );
             createTempBootstrapDir();
-            assertTrue( fileSystem.fileExists( tempBootstrapDir() ) );
+            assertTrue( fileSystem.fileExists( tempBootstrapDir().toPath() ) );
         }
 
-        assertFalse( fileSystem.fileExists( tempBootstrapDir() ) );
+        assertFalse( fileSystem.fileExists( tempBootstrapDir().toPath() ) );
     }
 
     @Test
@@ -53,15 +53,15 @@ class TempBootstrapDirTest
         var dir = new TempBootstrapDir( fileSystem, databaseLayout );
 
         createTempBootstrapDir();
-        assertTrue( fileSystem.fileExists( tempBootstrapDir() ) );
+        assertTrue( fileSystem.fileExists( tempBootstrapDir().toPath() ) );
 
         dir.delete();
-        assertFalse( fileSystem.fileExists( tempBootstrapDir() ) );
+        assertFalse( fileSystem.fileExists( tempBootstrapDir().toPath() ) );
     }
 
     private void createTempBootstrapDir()
     {
-        fileSystem.mkdir( tempBootstrapDir() );
+        fileSystem.mkdir( tempBootstrapDir().toPath() );
     }
 
     private File tempBootstrapDir()

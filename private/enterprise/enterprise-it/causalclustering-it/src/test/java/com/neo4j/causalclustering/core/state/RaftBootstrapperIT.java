@@ -160,7 +160,7 @@ class RaftBootstrapperIT
     void shouldBootstrapWhenEmptyDirectoryExists() throws Exception
     {
         // given
-        fileSystem.mkdirs( databaseLayout.databaseDirectory().toFile() );
+        fileSystem.mkdirs( databaseLayout.databaseDirectory() );
         StoreFiles storeFiles = new StoreFiles( fileSystem, pageCache );
         LogFiles transactionLogs = buildLogFiles( databaseLayout );
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, databaseLayout, storeFiles, transactionLogs );
@@ -198,7 +198,7 @@ class RaftBootstrapperIT
 
         // then
         verifySnapshot( snapshot, raftMembers, defaultConfig );
-        assertFalse( fileSystem.fileExists( new File( databaseLayout.databaseDirectory().toFile(), TEMP_BOOTSTRAP_DIRECTORY_NAME ) ) );
+        assertFalse( fileSystem.fileExists( new File( databaseLayout.databaseDirectory().toFile(), TEMP_BOOTSTRAP_DIRECTORY_NAME ).toPath() ) );
     }
 
     @Test
@@ -225,7 +225,7 @@ class RaftBootstrapperIT
 
         // then
         verifySnapshot( snapshot, raftMembers, defaultConfig );
-        assertFalse( fileSystem.fileExists( new File( databaseLayout.databaseDirectory().toFile(), TEMP_BOOTSTRAP_DIRECTORY_NAME ) ) );
+        assertFalse( fileSystem.fileExists( new File( databaseLayout.databaseDirectory().toFile(), TEMP_BOOTSTRAP_DIRECTORY_NAME ).toPath() ) );
     }
 
     @Test
@@ -273,7 +273,7 @@ class RaftBootstrapperIT
 
         for ( Path idFile : database.layout().idFiles() )
         {
-            fileSystem.deleteFileOrThrow( idFile.toFile() );
+            fileSystem.deleteFileOrThrow( idFile );
         }
 
         StoreFiles storeFiles = new StoreFiles( fileSystem, pageCache );

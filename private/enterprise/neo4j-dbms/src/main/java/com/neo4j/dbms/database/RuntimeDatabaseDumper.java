@@ -48,7 +48,7 @@ class RuntimeDatabaseDumper extends LifecycleAdapter
     @Override
     public void start() throws Exception
     {
-        fsa.mkdirs( dumpsRoot.toFile() );
+        fsa.mkdirs( dumpsRoot );
         started = true;
     }
 

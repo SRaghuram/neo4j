@@ -111,11 +111,11 @@ public class CsvOutput implements Lifecycle
 
     private Path ensureDirectoryExists( Path dir ) throws IOException
     {
-        if ( !fileSystem.fileExists( dir.toFile() ) )
+        if ( !fileSystem.fileExists( dir ) )
         {
-            fileSystem.mkdirs( dir.toFile() );
+            fileSystem.mkdirs( dir );
         }
-        if ( !fileSystem.isDirectory( dir.toFile() ) )
+        if ( !fileSystem.isDirectory( dir ) )
         {
             throw new IllegalStateException(
                     "The given path for CSV files points to a file, but a directory is required: " +

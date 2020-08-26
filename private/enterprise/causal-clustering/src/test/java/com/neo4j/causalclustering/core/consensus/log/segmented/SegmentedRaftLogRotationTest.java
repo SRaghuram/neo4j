@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -51,7 +51,7 @@ class SegmentedRaftLogRotationTest
         log.append( new RaftLogEntry( 0, replicatedStringOfBytes( ROTATE_AT_SIZE_IN_BYTES ) ) );
 
         // Then
-        File[] files = fileSystem.listFiles( testDirectory.homeDir(), ( dir, name ) -> name.startsWith( "raft" ) );
+        Path[] files = fileSystem.listFiles( testDirectory.homePath(), ( dir, name ) -> name.startsWith( "raft" ) );
         assertEquals( 2, files.length );
     }
 

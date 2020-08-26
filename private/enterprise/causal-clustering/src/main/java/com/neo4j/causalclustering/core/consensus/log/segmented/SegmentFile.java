@@ -72,7 +72,7 @@ class SegmentFile implements AutoCloseable
             ChannelMarshal<ReplicatedContent> contentMarshal, LogProvider logProvider, SegmentHeader header, MemoryTracker memoryTracker )
             throws IOException
     {
-        if ( fileSystem.fileExists( path.toFile() ) )
+        if ( fileSystem.fileExists( path ) )
         {
             throw new IllegalStateException( "File was not expected to exist" );
         }
@@ -131,7 +131,7 @@ class SegmentFile implements AutoCloseable
                 throw new IOException( "Writer has been closed" );
             }
 
-            StoreChannel channel = fileSystem.write( path.toFile() );
+            StoreChannel channel = fileSystem.write( path );
             channel.position( channel.size() );
             bufferedWriter = new PhysicalFlushableChannel( channel, new NativeScopedBuffer( ByteUnit.kibiBytes( 512 ), memoryTracker ) );
         }
@@ -180,7 +180,7 @@ class SegmentFile implements AutoCloseable
 
     public boolean delete()
     {
-        return fileSystem.deleteFile( path.toFile() );
+        return fileSystem.deleteFile( path );
     }
 
     public SegmentHeader header()
@@ -190,7 +190,7 @@ class SegmentFile implements AutoCloseable
 
     public long size()
     {
-        return fileSystem.getFileSize( path.toFile() );
+        return fileSystem.getFileSize( path );
     }
 
     String getFilename()

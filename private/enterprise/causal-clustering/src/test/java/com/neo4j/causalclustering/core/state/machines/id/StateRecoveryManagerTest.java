@@ -48,13 +48,13 @@ class StateRecoveryManagerTest
     void shouldFailIfBothFilesAreEmpty() throws Exception
     {
         // given
-        fsa.mkdir( testDir.homeDir() );
+        fsa.mkdir( testDir.homePath() );
 
         Path fileA = fileA();
-        fsa.write( fileA.toFile() );
+        fsa.write( fileA );
 
         Path fileB = fileB();
-        fsa.write( fileB.toFile() );
+        fsa.write( fileB );
 
         StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal(), INSTANCE );
 
@@ -75,15 +75,15 @@ class StateRecoveryManagerTest
     void shouldReturnPreviouslyInactiveWhenOneFileFullAndOneEmpty() throws Exception
     {
         // given
-        fsa.mkdir( testDir.homeDir() );
+        fsa.mkdir( testDir.homePath() );
 
         Path fileA = fileA();
-        StoreChannel channel = fsa.write( fileA.toFile() );
+        StoreChannel channel = fsa.write( fileA );
 
         fillUpAndForce( channel );
 
         Path fileB = fileB();
-        fsa.write( fileB.toFile() );
+        fsa.write( fileB );
 
         StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal(), INSTANCE );
 
@@ -98,17 +98,17 @@ class StateRecoveryManagerTest
     void shouldReturnTheEmptyFileAsPreviouslyInactiveWhenActiveContainsCorruptEntry() throws Exception
     {
         // given
-        fsa.mkdir( testDir.homeDir() );
+        fsa.mkdir( testDir.homePath() );
 
         Path fileA = fileA();
-        StoreChannel channel = fsa.write( fileA.toFile() );
+        StoreChannel channel = fsa.write( fileA );
 
         ByteBuffer buffer = writeLong( 999 );
         channel.writeAll( buffer );
         channel.force( false );
 
         Path fileB = fileB();
-        channel = fsa.write( fileB.toFile() );
+        channel = fsa.write( fileB );
         channel.close();
 
         StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal(), INSTANCE );
@@ -126,10 +126,10 @@ class StateRecoveryManagerTest
             throws Exception
     {
         // given
-        fsa.mkdir( testDir.homeDir() );
+        fsa.mkdir( testDir.homePath() );
 
         Path fileA = fileA();
-        StoreChannel channel = fsa.write( fileA.toFile() );
+        StoreChannel channel = fsa.write( fileA );
 
         ByteBuffer buffer = writeLong( 42 );
         channel.writeAll( buffer );
@@ -142,7 +142,7 @@ class StateRecoveryManagerTest
         channel.force( false );
 
         Path fileB = fileB();
-        fsa.write( fileB.toFile() );
+        fsa.write( fileB );
 
         StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal(), INSTANCE );
 
@@ -157,7 +157,7 @@ class StateRecoveryManagerTest
     void shouldRecoverFromPartiallyWrittenEntriesInBothFiles() throws Exception
     {
         // given
-        fsa.mkdir( testDir.homeDir() );
+        fsa.mkdir( testDir.homePath() );
 
         StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal(), INSTANCE );
 
@@ -186,7 +186,7 @@ class StateRecoveryManagerTest
 
     private void writeSomeGarbage( FileSystemAbstraction fsa, Path file ) throws IOException
     {
-        final StoreChannel channel = fsa.write( file.toFile() );
+        final StoreChannel channel = fsa.write( file );
         ByteBuffer buffer = ByteBuffers.allocate( 4, INSTANCE );
         buffer.putInt( 9876 );
         buffer.flip();
@@ -197,7 +197,7 @@ class StateRecoveryManagerTest
 
     private void writeSomeLongsIn( FileSystemAbstraction fsa, Path file, long... longs ) throws IOException
     {
-        final StoreChannel channel = fsa.write( file.toFile() );
+        final StoreChannel channel = fsa.write( file );
         ByteBuffer buffer = ByteBuffers.allocate( longs.length * 8, INSTANCE );
 
         for ( long aLong : longs )

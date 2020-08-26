@@ -51,7 +51,7 @@ class SimpleStorageTest
 
         // then
         assertFalse( storage.exists() );
-        assertFalse( fs.fileExists( dir.toFile() ) );
+        assertFalse( fs.fileExists( dir ) );
         assertThrows( IOException.class, storage::readState );
     }
 }

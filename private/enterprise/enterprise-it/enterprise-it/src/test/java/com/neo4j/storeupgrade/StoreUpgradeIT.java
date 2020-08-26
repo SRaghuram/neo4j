@@ -479,7 +479,7 @@ public class StoreUpgradeIT
             managementService.shutdown();
 
             Path newTransactionLogsLocation = transactionLogsRoot.resolve( startedDatabaseName );
-            assertTrue( fileSystem.fileExists( newTransactionLogsLocation.toFile() ) );
+            assertTrue( fileSystem.fileExists( newTransactionLogsLocation ) );
             Set<String> transactionLogFilesAfterMigration = getTransactionLogFileNames( newTransactionLogsLocation, fileSystem );
             assertEquals( transactionLogFilesBeforeMigration, transactionLogFilesAfterMigration );
         }
@@ -513,7 +513,7 @@ public class StoreUpgradeIT
             managementService.shutdown();
 
             Path newTransactionLogsLocation = transactionLogsRoot.resolve( startedDatabaseName );
-            assertTrue( fileSystem.fileExists( newTransactionLogsLocation.toFile() ) );
+            assertTrue( fileSystem.fileExists( newTransactionLogsLocation ) );
             Set<String> transactionLogFilesAfterMigration = getTransactionLogFileNames( newTransactionLogsLocation, fileSystem );
             assertEquals( transactionLogFilesBeforeMigration, transactionLogFilesAfterMigration );
         }
@@ -626,7 +626,7 @@ public class StoreUpgradeIT
             assertNotNull( "Expected some log files to exist.", logs );
             for ( Path logFile : logs )
             {
-                fileSystem.deleteFile( logFile.toFile() );
+                fileSystem.deleteFile( logFile );
             }
 
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( databaseLayout );
@@ -692,7 +692,7 @@ public class StoreUpgradeIT
             assertNotNull( "Expected some log files to exist.", logs );
             for ( Path logFile : logs )
             {
-                fileSystem.deleteFile( logFile.toFile() );
+                fileSystem.deleteFile( logFile );
             }
 
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( databaseLayout );
@@ -839,7 +839,7 @@ public class StoreUpgradeIT
 
             DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
             Path databaseDir = databaseLayout.databaseDirectory();
-            testDir.getFileSystem().mkdirs( databaseDir.toFile() );
+            testDir.getFileSystem().mkdirs( databaseDir );
             Path databaseDirectory = Unzip.unzip( getClass(), dbFileName, databaseDir );
             Path debugLog = databaseDirectory.resolve( "debug.log" );
             if ( Files.exists( debugLog ) )

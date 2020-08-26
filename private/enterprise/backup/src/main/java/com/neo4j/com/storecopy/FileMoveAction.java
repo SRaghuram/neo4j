@@ -5,7 +5,6 @@
  */
 package com.neo4j.com.storecopy;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.CopyOption;
 import java.nio.file.Files;
@@ -19,49 +18,47 @@ public interface FileMoveAction
      * @param copyOptions
      * @throws IOException
      */
-    void move( File toDir, CopyOption... copyOptions ) throws IOException;
+    void move( Path toDir, CopyOption... copyOptions ) throws IOException;
 
-    File file();
+    Path file();
 
-    static FileMoveAction copyViaFileSystem( File file, File basePath )
+    static FileMoveAction copyViaFileSystem( Path file, Path basePath )
     {
-        Path base = basePath.toPath();
         return new FileMoveAction()
         {
             @Override
-            public void move( File toDir, CopyOption... copyOptions ) throws IOException
+            public void move( Path toDir, CopyOption... copyOptions ) throws IOException
             {
-                Path originalPath = file.toPath();
-                Path relativePath = base.relativize( originalPath );
-                Path resolvedPath = toDir.toPath().resolve( relativePath );
+                Path relativePath = basePath.relativize( file );
+                Path resolvedPath = toDir.resolve( relativePath );
                 if ( !Files.isSymbolicLink( resolvedPath.getParent() ) )
                 {
                     Files.createDirectories( resolvedPath.getParent() );
                 }
-                Files.copy( originalPath, resolvedPath, copyOptions );
+                Files.copy( file, resolvedPath, copyOptions );
             }
 
             @Override
-            public File file()
+            public Path file()
             {
                 return file;
             }
         };
     }
 
-    static FileMoveAction moveViaFileSystem( File sourceFile, File sourceDirectory )
+    static FileMoveAction moveViaFileSystem( Path sourceFile, Path sourceDirectory )
     {
         return new FileMoveAction()
         {
             @Override
-            public void move( File toDir, CopyOption... copyOptions ) throws IOException
+            public void move( Path toDir, CopyOption... copyOptions ) throws IOException
             {
                 copyViaFileSystem( sourceFile, sourceDirectory ).move( toDir, copyOptions );
-                Files.delete( sourceFile.toPath() );
+                Files.delete( sourceFile );
             }
 
             @Override
-            public File file()
+            public Path file()
             {
                 return sourceFile;
             }

@@ -54,7 +54,7 @@ class DurableStateStorageTest
         storage.writeState( new AtomicInteger( 99 ) );
 
         // then
-        assertEquals( 4, fileSystem.getFileSize( stateFileA() ) );
+        assertEquals( 4, fileSystem.getFileSize( stateFileA().toPath() ) );
     }
 
     @Test
@@ -75,8 +75,8 @@ class DurableStateStorageTest
         storage.writeState( new AtomicInteger( 9999 ) );
 
         // then
-        assertEquals( 4, fileSystem.getFileSize( stateFileB() ) );
-        assertEquals( numberOfEntriesBeforeRotation * 4, fileSystem.getFileSize( stateFileA() ) );
+        assertEquals( 4, fileSystem.getFileSize( stateFileB().toPath() ) );
+        assertEquals( numberOfEntriesBeforeRotation * 4, fileSystem.getFileSize( stateFileA().toPath() ) );
     }
 
     @Test
@@ -97,8 +97,8 @@ class DurableStateStorageTest
         storage.writeState( new AtomicInteger( 9999 ) );
 
         // then
-        assertEquals( 4, fileSystem.getFileSize( stateFileA() ) );
-        assertEquals( numberOfEntriesBeforeRotation * 4, fileSystem.getFileSize( stateFileB() ) );
+        assertEquals( 4, fileSystem.getFileSize( stateFileA().toPath() ) );
+        assertEquals( numberOfEntriesBeforeRotation * 4, fileSystem.getFileSize( stateFileB().toPath() ) );
     }
 
     @Test
@@ -131,7 +131,7 @@ class DurableStateStorageTest
          * should nevertheless be correct
          */
         ByteBuffer forReadingBackIn = ByteBuffers.allocate( 10_000, INSTANCE );
-        StoreChannel lastWrittenTo = fileSystem.read( stateFileA() );
+        StoreChannel lastWrittenTo = fileSystem.read( stateFileA().toPath() );
         lastWrittenTo.read( forReadingBackIn );
         forReadingBackIn.flip();
 

@@ -56,7 +56,7 @@ public class TemporaryStoreDirectory implements AutoCloseable
         if ( !keepStore )
         {
             storeFiles.delete( tempDatabaseLayout, tempLogFiles );
-            fs.deleteFile( tempHomeDir.toFile() );
+            fs.deleteFile( tempHomeDir );
         }
     }
 }

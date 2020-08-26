@@ -37,7 +37,7 @@ class RelationshipTypeDistributionStorage
     {
         // This could have been done using a writer and writing human readable text.
         // Perhaps simpler code, but this format is safe against any type of weird characters that the type may contain
-        try ( FlushableChannel channel = new PhysicalFlushableChannel( fs.write( path.toFile() ), memoryTracker ) )
+        try ( FlushableChannel channel = new PhysicalFlushableChannel( fs.write( path ), memoryTracker ) )
         {
             channel.putLong( distribution.getNodeCount() );
             channel.putLong( distribution.getPropertyCount() );
@@ -52,7 +52,8 @@ class RelationshipTypeDistributionStorage
 
     DataStatistics load() throws IOException
     {
-        try ( ReadableChannel channel = new ReadAheadChannel<>( fs.read( path.toFile() ), new NativeScopedBuffer( DEFAULT_READ_AHEAD_SIZE, memoryTracker ) ) )
+        try ( ReadableChannel channel = new ReadAheadChannel<>(
+                fs.read( path ), new NativeScopedBuffer( DEFAULT_READ_AHEAD_SIZE, memoryTracker ) ) )
         {
             long nodeCount = channel.getLong();
             long propertyCount = channel.getLong();
@@ -69,6 +70,6 @@ class RelationshipTypeDistributionStorage
 
     void remove()
     {
-        fs.deleteFile( path.toFile() );
+        fs.deleteFile( path );
     }
 }

@@ -76,8 +76,8 @@ class ClusterStateMigratorTest
     void shouldThrowWhenVersionStorageExistsButIsUnreadable() throws Exception
     {
         // create an empty file so that reading a version from it fails
-        fs.mkdirs( clusterStateLayout.clusterStateVersionFile().getParent().toFile() );
-        fs.write( clusterStateLayout.clusterStateVersionFile().toFile() ).close();
+        fs.mkdirs( clusterStateLayout.clusterStateVersionFile().getParent() );
+        fs.write( clusterStateLayout.clusterStateVersionFile() ).close();
 
         assertThrows( UncheckedIOException.class, this::runMigration );
 
@@ -109,10 +109,10 @@ class ClusterStateMigratorTest
     {
         var memberId = IdFactory.randomMemberId();
         var memberIdFile = clusterStateLayout.memberIdStateFile();
-        assertFalse( fs.fileExists( memberIdFile.toFile() ) );
+        assertFalse( fs.fileExists( memberIdFile ) );
         var memberIdStorage = new SimpleFileStorage<>( fs, memberIdFile, CORE_MEMBER_ID.marshal(), INSTANCE );
         memberIdStorage.writeState( memberId );
-        assertTrue( fs.fileExists( memberIdFile.toFile() ) );
+        assertTrue( fs.fileExists( memberIdFile ) );
 
         runMigration();
 
@@ -127,23 +127,23 @@ class ClusterStateMigratorTest
 
     private void writeRandomClusterId( Path file ) throws IOException
     {
-        assertFalse( fs.fileExists( file.toFile() ) );
+        assertFalse( fs.fileExists( file ) );
         var clusterIdStorage = new SimpleFileStorage<>( fs, file, RAFT_ID.marshal(), INSTANCE );
         clusterIdStorage.writeState( IdFactory.randomRaftId() );
-        assertTrue( fs.fileExists( file.toFile() ) );
+        assertTrue( fs.fileExists( file ) );
     }
 
     private void assertMigrationHappened() throws Exception
     {
-        assertTrue( fs.isDirectory( clusterStateLayout.getClusterStateDirectory().toFile() ) );
-        assertTrue( fs.fileExists( clusterStateLayout.clusterStateVersionFile().toFile() ) );
-        assertFalse( fs.fileExists( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_NAME ).toFile() ) );
+        assertTrue( fs.isDirectory( clusterStateLayout.getClusterStateDirectory() ) );
+        assertTrue( fs.fileExists( clusterStateLayout.clusterStateVersionFile() ) );
+        assertFalse( fs.fileExists( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_NAME ) ) );
         assertEquals( new ClusterStateVersion( 1, 0 ), clusterStateVersionStorage.readState() );
     }
 
     private void assertMigrationDidNotHappen()
     {
-        assertTrue( fs.isDirectory( clusterStateLayout.getClusterStateDirectory().toFile() ) );
-        assertTrue( fs.fileExists( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_NAME ).toFile() ) );
+        assertTrue( fs.isDirectory( clusterStateLayout.getClusterStateDirectory() ) );
+        assertTrue( fs.fileExists( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_NAME ) ) );
     }
 }

@@ -92,7 +92,7 @@ class HighLimitStoreMigrationTest
             RecordStorageMigrator migrator = new RecordStorageMigrator( fileSystem, pageCache, Config.defaults(), NullLogService.getInstance(), jobScheduler,
                     NULL, batchImporterFactory, INSTANCE );
             DatabaseLayout migrationLayout = neo4jLayout.databaseLayout( "migration" );
-            fileSystem.mkdirs( migrationLayout.databaseDirectory().toFile() );
+            fileSystem.mkdirs( migrationLayout.databaseDirectory() );
 
             prepareStoreFiles( fileSystem, databaseLayout, HighLimitV3_0_0.STORE_VERSION, pageCache );
 
@@ -100,7 +100,7 @@ class HighLimitStoreMigrationTest
 
             migrator.migrate( databaseLayout, migrationLayout, progressMonitor, HighLimitV3_0_0.STORE_VERSION, HighLimit.STORE_VERSION );
 
-            int newStoreFilesCount = fileSystem.listFiles( migrationLayout.databaseDirectory().toFile() ).length;
+            int newStoreFilesCount = fileSystem.listFiles( migrationLayout.databaseDirectory() ).length;
             assertThat( newStoreFilesCount ).as( "Store should be migrated and new store files should be created." ).isGreaterThanOrEqualTo(
                     StoreType.values().length );
         }
@@ -119,7 +119,7 @@ class HighLimitStoreMigrationTest
             RecordStorageMigrator migrator = new RecordStorageMigrator( fileSystem, pageCache, config, NullLogService.getInstance(), jobScheduler,
                     NULL, batchImporterFactory, INSTANCE );
             DatabaseLayout migrationLayout = neo4jLayout.databaseLayout( "migration" );
-            fileSystem.mkdirs( migrationLayout.databaseDirectory().toFile() );
+            fileSystem.mkdirs( migrationLayout.databaseDirectory() );
 
             prepareStoreFiles( fileSystem, databaseLayout, HighLimitV3_0_0.STORE_VERSION, pageCache );
 
@@ -141,7 +141,7 @@ class HighLimitStoreMigrationTest
     private static Path createNeoStoreFile( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout ) throws IOException
     {
         Path neoStoreFile = databaseLayout.metadataStore();
-        fileSystem.write( neoStoreFile.toFile() ).close();
+        fileSystem.write( neoStoreFile ).close();
         return neoStoreFile;
     }
 

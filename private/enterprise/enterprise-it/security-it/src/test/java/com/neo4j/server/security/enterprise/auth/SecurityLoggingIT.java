@@ -149,7 +149,7 @@ class SecurityLoggingIT
 
         void load() throws IOException
         {
-            try ( var reader = fileSystem.openAsReader( securityLog.toFile(), StandardCharsets.UTF_8 ) )
+            try ( var reader = fileSystem.openAsReader( securityLog, StandardCharsets.UTF_8 ) )
             {
                 lines = readLines( reader );
             }

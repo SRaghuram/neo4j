@@ -100,7 +100,7 @@ class StoreCopyClientIT
     private static void writeContents( FileSystemAbstraction fileSystemAbstraction, Path file, String contents )
     {
         byte[] bytes = contents.getBytes();
-        try ( StoreChannel storeChannel = fileSystemAbstraction.write( file.toFile() ) )
+        try ( StoreChannel storeChannel = fileSystemAbstraction.write( file ) )
         {
             storeChannel.writeAll( ByteBuffer.wrap( bytes ) );
         }
@@ -249,7 +249,7 @@ class StoreCopyClientIT
                         String name = file.getFileName().toString();
                         ctx.write( new FileHeader( name ) );
                         ctx.writeAndFlush( new FileSender( new StoreResource( file, name, 16, fs ), MAX_CHUNK_SIZE ) ).addListener(
-                                future -> fs.deleteFile( file.toFile() ) );
+                                future -> fs.deleteFile( file ) );
                     }
                 };
             }
@@ -291,7 +291,7 @@ class StoreCopyClientIT
         Path fileCopy = databaseDir.resolve( copyFileName );
 
         ByteBuffer buffer = ByteBuffer.wrap( new byte[finishedContent.length()] );
-        try ( StoreChannel storeChannel = fs.write( fileCopy.toFile() ) )
+        try ( StoreChannel storeChannel = fs.write( fileCopy ) )
         {
             storeChannel.read( buffer );
         }

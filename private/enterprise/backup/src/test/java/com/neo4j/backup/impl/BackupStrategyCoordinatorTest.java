@@ -57,7 +57,7 @@ class BackupStrategyCoordinatorTest
         Path reportsDir = testDirectory.directoryPath( "reports" );
         Path backupsDir = testDirectory.directoryPath( "backups" );
 
-        when( fileSystem.isDirectory( any() ) ).thenReturn( true );
+        when( fileSystem.isDirectory( any( Path.class ) ) ).thenReturn( true );
         when( onlineBackupContext.getReportDir() ).thenReturn( reportsDir );
         when( onlineBackupContext.getDatabaseBackupDir() ).thenReturn( backupsDir.resolve( DEFAULT_DATABASE_NAME ) );
         subject = new BackupStrategyCoordinator( fileSystem, consistencyCheckService, logProvider, progressMonitorFactory, firstStrategy );

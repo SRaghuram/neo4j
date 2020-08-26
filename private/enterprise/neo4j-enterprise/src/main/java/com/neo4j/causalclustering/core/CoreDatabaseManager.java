@@ -15,8 +15,8 @@ import com.neo4j.causalclustering.core.state.snapshot.StoreDownloadContext;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.dbms.database.ClusteredMultiDatabaseManager;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.neo4j.collection.Dependencies;
@@ -132,39 +132,39 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         Path raftIdStateDir = raftIdState.getParent();
         Path raftGroupDir = clusterStateLayout.raftGroupDir( databaseName );
 
-        if ( !fs.fileExists( raftGroupDir.toFile() ) )
+        if ( !fs.fileExists( raftGroupDir ) )
         {
             return;
         }
         assert raftIdStateDir.getParent().equals( raftGroupDir );
 
-        File[] files = fs.listFiles( raftGroupDir.toFile(), ( ignored, name ) -> !raftIdStateDir.getFileName().toString().equals( name ) );
+        Path[] files = fs.listFiles( raftGroupDir, ( ignored, name ) -> !raftIdStateDir.getFileName().toString().equals( name ) );
 
-        for ( File file : files )
+        for ( Path file : files )
         {
-            if ( file.isDirectory() )
+            if ( Files.isDirectory( file ) )
             {
                 fs.deleteRecursively( file );
             }
             else if ( !fs.deleteFile( file ) )
             {
-                throw new IOException( format( "Unable to delete file %s when dropping database %s", file.getAbsolutePath(), databaseName ) );
+                throw new IOException( format( "Unable to delete file %s when dropping database %s", file.toAbsolutePath(), databaseName ) );
             }
         }
 
-        FileUtils.tryForceDirectory( raftGroupDir.toFile() );
+        FileUtils.tryForceDirectory( raftGroupDir );
 
-        if ( files.length != 0 && !fs.fileExists( raftIdState.toFile() ) )
+        if ( files.length != 0 && !fs.fileExists( raftIdState ) )
         {
             log.warn( format( "The cluster state directory for %s is non-empty but does not contain a raftId. " +
                     "Cleanup has still been attempted.", databaseName ) );
         }
 
-        if ( !fs.deleteFile( raftIdState.toFile() ) )
+        if ( !fs.deleteFile( raftIdState ) )
         {
             throw new IOException( format( "Unable to delete file %s when dropping database %s", raftIdState.toAbsolutePath(), databaseName ) );
         }
 
-        fs.deleteRecursively( raftGroupDir.toFile() );
+        fs.deleteRecursively( raftGroupDir );
     }
 }

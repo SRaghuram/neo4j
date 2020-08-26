@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.core.state.LongIndexMarshal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
@@ -89,9 +88,9 @@ class DurableStateStorageIT
          * failure to create the file to rotate to. This should be recoverable.
          */
         MethodGuardedAdversary adversary = new MethodGuardedAdversary( new CountingAdversary( 20, true ),
-                FileSystemAbstraction.class.getMethod( "truncate", File.class, long.class ) );
+                FileSystemAbstraction.class.getMethod( "truncate", Path.class, long.class ) );
         AdversarialFileSystemAbstraction breakingFSA = new AdversarialFileSystemAbstraction( adversary, fs );
-        SelectiveFileSystemAbstraction combinedFSA = new SelectiveFileSystemAbstraction( dir.resolve( "dummy.a" ).toFile(), breakingFSA, fs );
+        SelectiveFileSystemAbstraction combinedFSA = new SelectiveFileSystemAbstraction( dir.resolve( "dummy.a" ), breakingFSA, fs );
 
         long lastValue = 0;
         try ( LongState persistedState = new LongState( combinedFSA, dir, 14 ) )
@@ -128,7 +127,7 @@ class DurableStateStorageIT
         MethodGuardedAdversary adversary = new MethodGuardedAdversary( new CountingAdversary( 40, true ),
                 StoreChannel.class.getMethod( "force", boolean.class ) );
         AdversarialFileSystemAbstraction breakingFSA = new AdversarialFileSystemAbstraction( adversary, fs );
-        SelectiveFileSystemAbstraction combinedFSA = new SelectiveFileSystemAbstraction( dir.resolve( "dummy.a" ).toFile(), breakingFSA, fs );
+        SelectiveFileSystemAbstraction combinedFSA = new SelectiveFileSystemAbstraction( dir.resolve( "dummy.a" ), breakingFSA, fs );
 
         long lastValue = 0;
 
@@ -169,7 +168,7 @@ class DurableStateStorageIT
 
         // We create a new state that will attempt recovery. The AFS will make it fail on open() of one of the files
         MethodGuardedAdversary adversary = new MethodGuardedAdversary( new CountingAdversary( 1, true ),
-                FileSystemAbstraction.class.getMethod( "read", File.class ) );
+                FileSystemAbstraction.class.getMethod( "read", Path.class ) );
         AdversarialFileSystemAbstraction adversarialFs = new AdversarialFileSystemAbstraction( adversary, fs );
 
         Exception error = assertThrows( Exception.class, () -> new LongState( adversarialFs, dir, 14 ) );
@@ -190,7 +189,7 @@ class DurableStateStorageIT
         MethodGuardedAdversary adversary = new MethodGuardedAdversary( new CountingAdversary( 5, true ),
                 StoreChannel.class.getMethod( "close" ) );
         AdversarialFileSystemAbstraction breakingFSA = new AdversarialFileSystemAbstraction( adversary, fs );
-        SelectiveFileSystemAbstraction combinedFSA = new SelectiveFileSystemAbstraction( dir.resolve( "dummy.a" ).toFile(), breakingFSA, fs );
+        SelectiveFileSystemAbstraction combinedFSA = new SelectiveFileSystemAbstraction( dir.resolve( "dummy.a" ), breakingFSA, fs );
 
         long lastValue = 0;
         try ( LongState persistedState = new LongState( combinedFSA, dir, 14 ) )

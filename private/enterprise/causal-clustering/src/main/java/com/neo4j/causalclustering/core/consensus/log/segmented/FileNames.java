@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -69,17 +68,17 @@ public class FileNames
     {
         SortedMap<Long,Path> versionFileMap = new TreeMap<>();
 
-        for ( File file : fileSystem.listFiles( baseDirectory.toFile() ) )
+        for ( Path file : fileSystem.listFiles( baseDirectory ) )
         {
-            Matcher matcher = logFilePattern.matcher( file.getName() );
+            Matcher matcher = logFilePattern.matcher( file.getFileName().toString() );
 
             if ( !matcher.matches() )
             {
-                log.warn( "Found out of place file: " + file.getName() );
+                log.warn( "Found out of place file: " + file.getFileName() );
                 continue;
             }
 
-            versionFileMap.put( Long.valueOf( matcher.group( 1 ) ), file.toPath() );
+            versionFileMap.put( Long.valueOf( matcher.group( 1 ) ), file );
         }
 
         return versionFileMap;

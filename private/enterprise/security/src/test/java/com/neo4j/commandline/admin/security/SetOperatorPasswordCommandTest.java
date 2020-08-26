@@ -77,7 +77,7 @@ class SetOperatorPasswordCommandTest
     void shouldSetOperatorPassword() throws Throwable
     {
         // Given
-        assertFalse( fileSystem.fileExists( authOperatorFile.toFile() ) );
+        assertFalse( fileSystem.fileExists( authOperatorFile ) );
 
         // When
         CommandLine.populateCommand( command, "123" );
@@ -91,8 +91,8 @@ class SetOperatorPasswordCommandTest
     void shouldOverwriteOperatorPasswordFileIfExists() throws Throwable
     {
         // Given
-        fileSystem.mkdirs( authOperatorFile.getParent().toFile() );
-        fileSystem.write( authOperatorFile.toFile() );
+        fileSystem.mkdirs( authOperatorFile.getParent() );
+        fileSystem.write( authOperatorFile );
 
         // When
         CommandLine.populateCommand( command, "321" );
@@ -104,7 +104,7 @@ class SetOperatorPasswordCommandTest
 
     private void assertAuthIniFile( String password ) throws Throwable
     {
-        assertTrue( fileSystem.fileExists( authOperatorFile.toFile() ) );
+        assertTrue( fileSystem.fileExists( authOperatorFile ) );
         FileUserRepository userRepository = new FileUserRepository( fileSystem, authOperatorFile,
                 NullLogProvider.getInstance() );
         userRepository.start();

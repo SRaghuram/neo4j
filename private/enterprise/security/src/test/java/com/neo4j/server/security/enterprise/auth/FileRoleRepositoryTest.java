@@ -9,7 +9,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.CopyOption;
 import java.nio.file.Path;
@@ -146,10 +145,10 @@ class FileRoleRepositoryTest
                 new DelegatingFileSystemAbstraction( fileSystem )
                 {
                     @Override
-                    public void renameFile( File oldLocation, File newLocation, CopyOption... copyOptions ) throws
+                    public void renameFile( Path oldLocation, Path newLocation, CopyOption... copyOptions ) throws
                             IOException
                     {
-                        if ( roleFile.getFileName().toString().equals( newLocation.getName() ) )
+                        if ( roleFile.getFileName().equals( newLocation.getFileName() ) )
                         {
                             throw exception;
                         }
@@ -166,8 +165,8 @@ class FileRoleRepositoryTest
         assertSame( exception, e );
 
         // Then
-        assertFalse( crashingFileSystem.fileExists( roleFile.toFile() ) );
-        assertThat( crashingFileSystem.listFiles( roleFile.getParent().toFile() ).length ).isEqualTo( 0 );
+        assertFalse( crashingFileSystem.fileExists( roleFile ) );
+        assertThat( crashingFileSystem.listFiles( roleFile.getParent() ).length ).isEqualTo( 0 );
     }
 
     @Test
@@ -203,7 +202,7 @@ class FileRoleRepositoryTest
         // Given
         AssertableLogProvider logProvider = new AssertableLogProvider();
 
-        fileSystem.mkdirs( roleFile.getParent().toFile() );
+        fileSystem.mkdirs( roleFile.getParent() );
         // First line is correctly formatted, second line has an extra field
         FileRepositorySerializer.writeToFile( fileSystem, roleFile, UTF8.encode(
                 "neo4j:admin\n" +
@@ -225,7 +224,7 @@ class FileRoleRepositoryTest
     void shouldNotAddEmptyUserToRole() throws Throwable
     {
         // Given
-        fileSystem.mkdirs( roleFile.getParent().toFile() );
+        fileSystem.mkdirs( roleFile.getParent() );
         FileRepositorySerializer.writeToFile( fileSystem, roleFile, UTF8.encode( "admin:neo4j\nreader:\n" ) );
 
         // When

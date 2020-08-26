@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.List;
@@ -52,15 +51,15 @@ class FileNamesTest
         FileNames fileNames = new FileNames( base );
         FileSystemAbstraction fsa = mock( FileSystemAbstraction.class );
         Log log = mock( Log.class );
-        List<File> filesPresent = new LinkedList<>();
+        List<Path> filesPresent = new LinkedList<>();
         int lower = 0;
         int upper = 24;
         // the files are added in reverse order, so we can verify that FileNames orders based on version
         for ( int i = upper; i >= lower; i-- )
         {
-            filesPresent.add( fileNames.getForSegment( i ).toFile() );
+            filesPresent.add( fileNames.getForSegment( i ) );
         }
-        when( fsa.listFiles( base.toFile() ) ).thenReturn( filesPresent.toArray( new File[]{} ) );
+        when( fsa.listFiles( base ) ).thenReturn( filesPresent.toArray( new Path[]{} ) );
 
         // When
         // asked for the contents of the directory
@@ -87,21 +86,21 @@ class FileNamesTest
         FileNames fileNames = new FileNames( base );
         FileSystemAbstraction fsa = mock( FileSystemAbstraction.class );
         Log log = mock( Log.class );
-        List<File> filesPresent = new LinkedList<>();
+        List<Path> filesPresent = new LinkedList<>();
 
-        filesPresent.add( fileNames.getForSegment( 0 ).toFile() ); // should be included
-        filesPresent.add( fileNames.getForSegment( 1 ).toFile() ); // should be included
-        filesPresent.add( fileNames.getForSegment( 10 ).toFile() ); // should be included
-        filesPresent.add( fileNames.getForSegment( 11 ).toFile() ); // should be included
-        filesPresent.add( base.resolve( FileNames.BASE_FILE_NAME + "01" ).toFile() ); // should be ignored
-        filesPresent.add( base.resolve( FileNames.BASE_FILE_NAME + "001" ).toFile() ); // should be ignored
-        filesPresent.add( base.resolve( FileNames.BASE_FILE_NAME ).toFile() ); // should be ignored
-        filesPresent.add( base.resolve( FileNames.BASE_FILE_NAME + "-1" ).toFile() ); // should be ignored
-        filesPresent.add( base.resolve( FileNames.BASE_FILE_NAME + "1a" ).toFile() ); // should be ignored
-        filesPresent.add( base.resolve( FileNames.BASE_FILE_NAME + "a1" ).toFile() ); // should be ignored
-        filesPresent.add( base.resolve( FileNames.BASE_FILE_NAME + "ab" ).toFile() ); // should be ignored
+        filesPresent.add( fileNames.getForSegment( 0 ) ); // should be included
+        filesPresent.add( fileNames.getForSegment( 1 ) ); // should be included
+        filesPresent.add( fileNames.getForSegment( 10 ) ); // should be included
+        filesPresent.add( fileNames.getForSegment( 11 ) ); // should be included
+        filesPresent.add( base.resolve( FileNames.BASE_FILE_NAME + "01" ) ); // should be ignored
+        filesPresent.add( base.resolve( FileNames.BASE_FILE_NAME + "001" ) ); // should be ignored
+        filesPresent.add( base.resolve( FileNames.BASE_FILE_NAME ) ); // should be ignored
+        filesPresent.add( base.resolve( FileNames.BASE_FILE_NAME + "-1" ) ); // should be ignored
+        filesPresent.add( base.resolve( FileNames.BASE_FILE_NAME + "1a" ) ); // should be ignored
+        filesPresent.add( base.resolve( FileNames.BASE_FILE_NAME + "a1" ) ); // should be ignored
+        filesPresent.add( base.resolve( FileNames.BASE_FILE_NAME + "ab" ) ); // should be ignored
 
-        when( fsa.listFiles( base.toFile() ) ).thenReturn( filesPresent.toArray( new File[]{} ) );
+        when( fsa.listFiles( base ) ).thenReturn( filesPresent.toArray( new Path[]{} ) );
 
         // When
         // asked for the contents of the directory

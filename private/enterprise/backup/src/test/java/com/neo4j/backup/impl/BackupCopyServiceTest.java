@@ -86,11 +86,11 @@ class BackupCopyServiceTest
         backupCopyService.moveBackupLocation( oldLocation, newLocation );
 
         // then file move propagator was requested with correct source and baseDirectory
-        verify( fileMoveProvider ).traverseForMoving( oldLocation.toFile() );
+        verify( fileMoveProvider ).traverseForMoving( oldLocation );
 
         // and files were moved to correct target directory
-        verify( fileOneMoveAction ).move( newLocation.toFile() );
-        verify( fileTwoMoveAction ).move( newLocation.toFile() );
+        verify( fileOneMoveAction ).move( newLocation );
+        verify( fileTwoMoveAction ).move( newLocation );
     }
 
     @Test
@@ -104,16 +104,16 @@ class BackupCopyServiceTest
         DatabaseLayout oldLayout = Neo4jLayout.of( oldDir ).databaseLayout( DEFAULT_DATABASE_NAME );
         DatabaseLayout newLayout = Neo4jLayout.of( newDir ).databaseLayout( DEFAULT_DATABASE_NAME );
 
-        fs.copyRecursively( oldLayout.databaseDirectory().toFile(), newLayout.databaseDirectory().toFile() );
+        fs.copyRecursively( oldLayout.databaseDirectory(), newLayout.databaseDirectory() );
 
-        assertTrue( fs.isDirectory( oldLayout.databaseDirectory().toFile() ) );
-        assertTrue( fs.isDirectory( newLayout.databaseDirectory().toFile() ) );
+        assertTrue( fs.isDirectory( oldLayout.databaseDirectory() ) );
+        assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
 
         backupCopyService.deletePreExistingBrokenBackupIfPossible( oldLayout.databaseDirectory(), newLayout.databaseDirectory()
                                                                                                                               );
 
-        assertFalse( fs.fileExists( oldLayout.databaseDirectory().toFile() ) );
-        assertTrue( fs.isDirectory( newLayout.databaseDirectory().toFile() ) );
+        assertFalse( fs.fileExists( oldLayout.databaseDirectory() ) );
+        assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
     }
 
     @Test
@@ -146,16 +146,16 @@ class BackupCopyServiceTest
         DatabaseLayout oldLayout = Neo4jLayout.of( oldDir ).databaseLayout( DEFAULT_DATABASE_NAME );
         DatabaseLayout newLayout = Neo4jLayout.of( newDir ).databaseLayout( DEFAULT_DATABASE_NAME );
 
-        assertTrue( fs.isDirectory( oldLayout.databaseDirectory().toFile() ) );
-        assertTrue( fs.isDirectory( newLayout.databaseDirectory().toFile() ) );
+        assertTrue( fs.isDirectory( oldLayout.databaseDirectory() ) );
+        assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
 
-        fs.deleteFileOrThrow( oldLayout.metadataStore().toFile() );
+        fs.deleteFileOrThrow( oldLayout.metadataStore() );
 
         backupCopyService.deletePreExistingBrokenBackupIfPossible( oldLayout.databaseDirectory(), newLayout.databaseDirectory()
                                                                                                                               );
 
-        assertTrue( fs.isDirectory( oldLayout.databaseDirectory().toFile() ) );
-        assertTrue( fs.isDirectory( newLayout.databaseDirectory().toFile() ) );
+        assertTrue( fs.isDirectory( oldLayout.databaseDirectory() ) );
+        assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
     }
 
     @Test
@@ -170,10 +170,10 @@ class BackupCopyServiceTest
         DatabaseLayout oldLayout = Neo4jLayout.of( oldDir ).databaseLayout( DEFAULT_DATABASE_NAME );
         DatabaseLayout newLayout = Neo4jLayout.of( newDir ).databaseLayout( DEFAULT_DATABASE_NAME );
 
-        assertTrue( fs.isDirectory( oldLayout.databaseDirectory().toFile() ) );
-        assertTrue( fs.isDirectory( newLayout.databaseDirectory().toFile() ) );
+        assertTrue( fs.isDirectory( oldLayout.databaseDirectory() ) );
+        assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
 
-        fs.deleteFileOrThrow( newLayout.metadataStore().toFile() );
+        fs.deleteFileOrThrow( newLayout.metadataStore() );
 
         IOException error = assertThrows( IOException.class,
                 () -> backupCopyService.deletePreExistingBrokenBackupIfPossible( oldLayout.databaseDirectory(),

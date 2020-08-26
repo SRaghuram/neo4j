@@ -30,7 +30,7 @@ public class StreamToDiskProvider implements StoreFileStreamProvider
     public StoreFileStream acquire( String destination, int requiredAlignment ) throws IOException
     {
         Path fileName = storeDir.resolve( destination );
-        fs.mkdirs( fileName.getParent().toFile() );
+        fs.mkdirs( fileName.getParent() );
         fileCopyMonitor.copyFile( fileName );
         return StreamToDisk.fromFile( fs, fileName );
     }

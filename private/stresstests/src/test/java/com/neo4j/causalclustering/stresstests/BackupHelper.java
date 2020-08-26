@@ -139,7 +139,7 @@ class BackupHelper
         {
             String backupSubDirName = databaseName + "-backup-" + backupNumber.getAndIncrement();
             Path backupDir = baseBackupDir.resolve( backupSubDirName );
-            fs.mkdirs( backupDir.toFile() );
+            fs.mkdirs( backupDir );
             return backupDir;
         }
         catch ( IOException e )

@@ -13,7 +13,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -651,7 +650,7 @@ class FunctionIT
 
     private String createCsvFile( String... lines ) throws IOException
     {
-        File file = plugins.createFile( "test" );
+        java.nio.file.Path file = plugins.createFilePath( "test" );
 
         try ( PrintWriter writer = FileUtils.newFilePrintWriter( file, UTF_8 ) )
         {
@@ -661,7 +660,7 @@ class FunctionIT
             }
         }
 
-        return file.toURI().toURL().toString();
+        return file.toUri().toURL().toString();
     }
 
     @Test

@@ -17,6 +17,7 @@ import com.neo4j.bench.client.QueryRetrier;
 import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.client.queries.submit.SubmitTestRun;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkConfig;
 import com.neo4j.bench.model.model.BenchmarkGroup;
@@ -31,7 +32,6 @@ import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.bench.model.model.TestRun;
 import com.neo4j.bench.model.model.TestRunReport;
 import com.neo4j.bench.model.options.Edition;
-import com.neo4j.bench.common.options.Version;
 
 import java.io.File;
 import java.io.IOException;
@@ -187,9 +187,9 @@ public class Main
         print( "csvDir = " + csvDir );
 
         final DefaultFileSystemAbstraction fs = new DefaultFileSystemAbstraction();
-        fs.mkdirs( storeDir );
-        fs.mkdirs( confDir );
-        if ( !fs.isDirectory( csvDir ) )
+        fs.mkdirs( storeDir.toPath() );
+        fs.mkdirs( confDir.toPath() );
+        if ( !fs.isDirectory( csvDir.toPath() ) )
         {
             throw new RuntimeException( "Csv directory doesn't exist, dir=" + csvDir.getAbsolutePath() );
         }

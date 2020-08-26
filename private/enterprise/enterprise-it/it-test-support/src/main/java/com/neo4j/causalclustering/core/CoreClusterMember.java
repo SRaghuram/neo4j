@@ -368,8 +368,8 @@ public class CoreClusterMember implements ClusterMember
 
     public void unbind( FileSystemAbstraction fs ) throws IOException
     {
-        fs.deleteRecursively( clusterStateLayout.getClusterStateDirectory().toFile() );
-        fs.deleteFile( neo4jLayout.serverIdFile().toFile() );
+        fs.deleteRecursively( clusterStateLayout.getClusterStateDirectory() );
+        fs.deleteFile( neo4jLayout.serverIdFile() );
     }
 
     public Optional<Cluster> getAkkaCluster()

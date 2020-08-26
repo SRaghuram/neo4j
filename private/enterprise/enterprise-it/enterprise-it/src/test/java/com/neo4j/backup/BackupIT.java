@@ -517,14 +517,14 @@ class BackupIT
 
         assertTrue( backupDatabaseLayout.databaseDirectory().toFile().mkdirs() );
         File incorrectFile = backupDatabaseLayout.file( ".jibberishfile" ).toFile();
-        fs.write( incorrectFile ).close();
+        fs.write( incorrectFile.toPath() ).close();
 
         executeBackup( db );
 
         // unexpected file was moved to an error directory
         Path incorrectExistingBackupDir = backupsDir.resolve( "neo4j.err.0" );
-        assertTrue( fs.isDirectory( incorrectExistingBackupDir.toFile() ) );
-        assertTrue( fs.fileExists( incorrectExistingBackupDir.resolve( incorrectFile.getName() ).toFile() ) );
+        assertTrue( fs.isDirectory( incorrectExistingBackupDir ) );
+        assertTrue( fs.fileExists( incorrectExistingBackupDir.resolve( incorrectFile.getName() ) ) );
 
         // no temporary directories are present, i.e. 'neo4j.temp.0'
         assertThat( backupsDir.toFile().list() ).contains( DEFAULT_DATABASE_NAME, "neo4j.err.0" );
@@ -541,17 +541,17 @@ class BackupIT
 
         File incorrectDir = backupDatabaseLayout.file( "jibberishfolder" ).toFile();
         File incorrectFile = new File( incorrectDir, "jibberishfile" );
-        fs.mkdirs( incorrectDir );
-        fs.write( incorrectFile ).close();
+        fs.mkdirs( incorrectDir.toPath() );
+        fs.write( incorrectFile.toPath() ).close();
 
         executeBackup( db );
 
         // unexpected directory was moved to an error directory
         File incorrectExistingBackupDir = new File( backupsDir.toFile(), "neo4j.err.0" );
-        assertTrue( fs.isDirectory( incorrectExistingBackupDir ) );
+        assertTrue( fs.isDirectory( incorrectExistingBackupDir.toPath() ) );
         File movedIncorrectDir = new File( incorrectExistingBackupDir, incorrectDir.getName() );
-        assertTrue( fs.isDirectory( movedIncorrectDir ) );
-        assertTrue( fs.fileExists( new File( movedIncorrectDir, incorrectFile.getName() ) ) );
+        assertTrue( fs.isDirectory( movedIncorrectDir.toPath() ) );
+        assertTrue( fs.fileExists( new File( movedIncorrectDir, incorrectFile.getName() ).toPath() ) );
 
         // no temporary directories are present, i.e. 'neo4j.temp.0'
         assertThat( backupsDir.toFile().list() ).contains( DEFAULT_DATABASE_NAME, "neo4j.err.0" );
@@ -719,7 +719,7 @@ class BackupIT
         long lastCommittedTxBefore = getLastCommittedTx( db );
 
         managementService.shutdown();
-        FileUtils.deleteFile( oldLog.toFile() );
+        FileUtils.deleteFile( oldLog );
         GraphDatabaseService dbAfterRestart = startDb( serverHomeDir );
 
         long lastCommittedTxAfter = getLastCommittedTx( dbAfterRestart );

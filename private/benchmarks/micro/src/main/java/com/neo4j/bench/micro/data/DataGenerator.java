@@ -488,7 +488,7 @@ public class DataGenerator
     {
         if ( Files.exists( reader.path() ) )
         {
-            FileUtils.deleteRecursively( reader.path().toFile() );
+            FileUtils.deleteFile( reader.path() );
         }
     }
 

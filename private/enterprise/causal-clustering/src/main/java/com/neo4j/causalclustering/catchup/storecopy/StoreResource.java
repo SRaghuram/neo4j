@@ -29,7 +29,7 @@ public class StoreResource
 
     StoreChannel open() throws IOException
     {
-        return fs.read( path.toFile() );
+        return fs.read( path );
     }
 
     public String relativePath()

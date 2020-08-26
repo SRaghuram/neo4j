@@ -202,7 +202,7 @@ class RestoreDatabaseCommandIT
         new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), config, DEFAULT_DATABASE_NAME, false, true ).execute();
 
         // then
-        assertThat( fileSystem.fileExists( fromLayout.databaseDirectory().toFile() ) ).isFalse();
+        assertThat( fileSystem.fileExists( fromLayout.databaseDirectory() ) ).isFalse();
 
         DatabaseManagementService managementService =
                 new TestDatabaseManagementServiceBuilder( toStoreLayout.homeDirectory() )
@@ -275,7 +275,7 @@ class RestoreDatabaseCommandIT
 
         new RestoreDatabaseCommand( fs, fromPath, config, databaseName, true, false ).execute();
 
-        verify( fs, never() ).deleteRecursively( neo4jLayout.transactionLogsRootDirectory().toFile() );
+        verify( fs, never() ).deleteRecursively( neo4jLayout.transactionLogsRootDirectory() );
     }
 
     @Test
@@ -291,7 +291,7 @@ class RestoreDatabaseCommandIT
 
         new RestoreDatabaseCommand( fs, fromPath, config, databaseName, true, false ).execute();
 
-        verify( fs ).deleteRecursively( neo4jLayout.databaseLayout( databaseName ).getTransactionLogsDirectory().toFile() );
+        verify( fs ).deleteRecursively( neo4jLayout.databaseLayout( databaseName ).getTransactionLogsDirectory() );
     }
 
     @Test
@@ -363,6 +363,6 @@ class RestoreDatabaseCommandIT
     private void createRaftGroupDirectoryFor( Config config, String databaseName ) throws IOException
     {
         Path raftGroupDir = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ) ).raftGroupDir( databaseName );
-        fileSystem.mkdirs( raftGroupDir.toFile() );
+        fileSystem.mkdirs( raftGroupDir );
     }
 }

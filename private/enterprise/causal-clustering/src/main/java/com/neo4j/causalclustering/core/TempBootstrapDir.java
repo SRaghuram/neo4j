@@ -31,7 +31,7 @@ public class TempBootstrapDir
 
     public void delete() throws IOException
     {
-        fs.deleteRecursively( tempBootstrapDir.toFile() );
+        fs.deleteRecursively( tempBootstrapDir );
     }
 
     public static Resource cleanBeforeAndAfter( FileSystemAbstraction fs, DatabaseLayout layout ) throws IOException
@@ -44,13 +44,13 @@ public class TempBootstrapDir
         private Resource( FileSystemAbstraction fs, DatabaseLayout layout ) throws IOException
         {
             super( fs, layout );
-            fs.deleteRecursively( get().toFile() );
+            fs.deleteRecursively( get() );
         }
 
         @Override
         public void close() throws IOException
         {
-            fs.deleteRecursively( get().toFile() );
+            fs.deleteRecursively( get() );
         }
     }
 }

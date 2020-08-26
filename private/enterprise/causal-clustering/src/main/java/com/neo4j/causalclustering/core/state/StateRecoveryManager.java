@@ -92,7 +92,7 @@ public class StateRecoveryManager<STATE>
 
     private STATE readLastEntryFrom( Path path, MemoryTracker memoryTracker ) throws IOException
     {
-        try ( ReadableChannel channel = new ReadAheadChannel<>( fileSystem.read( path.toFile() ),
+        try ( ReadableChannel channel = new ReadAheadChannel<>( fileSystem.read( path ),
                 new NativeScopedBuffer( DEFAULT_READ_AHEAD_SIZE, memoryTracker ) ) )
         {
             STATE result = null;

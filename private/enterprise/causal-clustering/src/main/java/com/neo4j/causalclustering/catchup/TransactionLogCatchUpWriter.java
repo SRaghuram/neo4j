@@ -122,7 +122,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
     {
         var logFilesHelper = new TransactionLogFilesHelper( fs, databaseLayout.getTransactionLogsDirectory() );
         var logFile = logFilesHelper.getLogFileForVersion( metaDataStore.getCurrentLogVersion() );
-        return fs.fileExists( logFile.toFile() ) ? readLogHeader( fs, logFile, memoryTracker ).getStartPosition() :
+        return fs.fileExists( logFile ) ? readLogHeader( fs, logFile, memoryTracker ).getStartPosition() :
                new LogPosition( 0, CURRENT_FORMAT_LOG_HEADER_SIZE );
     }
 

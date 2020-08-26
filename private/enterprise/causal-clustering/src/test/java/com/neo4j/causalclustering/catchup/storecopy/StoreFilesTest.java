@@ -81,7 +81,7 @@ class StoreFilesTest
 
         for ( Path file : files )
         {
-            assertFalse( fs.fileExists( file.toFile() ) );
+            assertFalse( fs.fileExists( file ) );
         }
     }
 
@@ -104,7 +104,7 @@ class StoreFilesTest
 
         for ( Path directory : directories )
         {
-            assertFalse( fs.fileExists( directory.toFile() ) );
+            assertFalse( fs.fileExists( directory ) );
         }
     }
 
@@ -123,7 +123,7 @@ class StoreFilesTest
 
         for ( Path txLogFile : txLogFiles )
         {
-            assertFalse( fs.fileExists( txLogFile.toFile() ) );
+            assertFalse( fs.fileExists( txLogFile ) );
         }
     }
 
@@ -138,9 +138,9 @@ class StoreFilesTest
 
         storeFiles.delete( databaseLayout, logFiles );
 
-        assertTrue( fs.fileExists( file1.toFile() ) );
-        assertFalse( fs.fileExists( file2.toFile() ) );
-        assertTrue( fs.fileExists( file3.toFile() ) );
+        assertTrue( fs.fileExists( file1 ) );
+        assertFalse( fs.fileExists( file2 ) );
+        assertTrue( fs.fileExists( file3 ) );
     }
 
     @Test
@@ -154,10 +154,10 @@ class StoreFilesTest
 
         storeFiles.delete( databaseLayout, logFiles );
 
-        assertTrue( fs.isDirectory( dir1.toFile() ) );
-        assertFalse( fs.isDirectory( dir2.toFile() ) );
-        assertFalse( fs.fileExists( dir2.toFile() ) );
-        assertTrue( fs.isDirectory( dir3.toFile() ) );
+        assertTrue( fs.isDirectory( dir1 ) );
+        assertFalse( fs.isDirectory( dir2 ) );
+        assertFalse( fs.fileExists( dir2 ) );
+        assertTrue( fs.isDirectory( dir3 ) );
     }
 
     @Test
@@ -171,13 +171,13 @@ class StoreFilesTest
 
         storeFiles.moveTo( databaseDir.toFile(), otherDatabaseLayout, otherLogFiles );
 
-        assertFalse( fs.fileExists( file1.toFile() ) );
-        assertFalse( fs.fileExists( file2.toFile() ) );
-        assertFalse( fs.fileExists( file3.toFile() ) );
+        assertFalse( fs.fileExists( file1 ) );
+        assertFalse( fs.fileExists( file2 ) );
+        assertFalse( fs.fileExists( file3 ) );
 
-        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownFile1" ).toFile() ) );
-        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownFile2" ).toFile() ) );
-        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownFile3" ).toFile() ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownFile1" ) ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownFile2" ) ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownFile3" ) ) );
     }
 
     @Test
@@ -195,18 +195,18 @@ class StoreFilesTest
 
         storeFiles.moveTo( databaseDir.toFile(), otherDatabaseLayout, otherLogFiles );
 
-        assertFalse( fs.fileExists( dir1.toFile() ) );
-        assertFalse( fs.fileExists( dir2.toFile() ) );
-        assertFalse( fs.fileExists( dir3.toFile() ) );
+        assertFalse( fs.fileExists( dir1 ) );
+        assertFalse( fs.fileExists( dir2 ) );
+        assertFalse( fs.fileExists( dir3 ) );
 
-        assertTrue( fs.isDirectory( otherDatabaseDir.resolve( "KnownDirectory1" ).toFile() ) );
-        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownDirectory1" ).resolve( "dummy-file-1" ).toFile() ) );
+        assertTrue( fs.isDirectory( otherDatabaseDir.resolve( "KnownDirectory1" ) ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownDirectory1" ).resolve( "dummy-file-1" ) ) );
 
-        assertTrue( fs.isDirectory( otherDatabaseDir.resolve( "KnownDirectory2" ).toFile() ) );
-        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownDirectory2" ).resolve( "dummy-file-2" ).toFile() ) );
+        assertTrue( fs.isDirectory( otherDatabaseDir.resolve( "KnownDirectory2" ) ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownDirectory2" ).resolve( "dummy-file-2" ) ) );
 
-        assertTrue( fs.isDirectory( otherDatabaseDir.resolve( "KnownDirectory3" ).toFile() ) );
-        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownDirectory3" ).resolve( "dummy-file-3" ).toFile() ) );
+        assertTrue( fs.isDirectory( otherDatabaseDir.resolve( "KnownDirectory3" ) ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownDirectory3" ).resolve( "dummy-file-3" ) ) );
     }
 
     @Test
@@ -224,9 +224,9 @@ class StoreFilesTest
 
         for ( Path txLogFile : txLogFiles )
         {
-            assertFalse( fs.fileExists( txLogFile.toFile() ) );
+            assertFalse( fs.fileExists( txLogFile ) );
             Path copiedTxLogFile = otherDatabaseDir.resolve( txLogFile.getFileName().toString() );
-            assertTrue( fs.fileExists( copiedTxLogFile.toFile() ) );
+            assertTrue( fs.fileExists( copiedTxLogFile ) );
         }
     }
 
@@ -241,13 +241,13 @@ class StoreFilesTest
 
         storeFiles.moveTo( databaseDir.toFile(), otherDatabaseLayout, otherLogFiles );
 
-        assertTrue( fs.fileExists( file1.toFile() ) );
-        assertFalse( fs.fileExists( file2.toFile() ) );
-        assertTrue( fs.fileExists( file3.toFile() ) );
+        assertTrue( fs.fileExists( file1 ) );
+        assertFalse( fs.fileExists( file2 ) );
+        assertTrue( fs.fileExists( file3 ) );
 
-        assertFalse( fs.fileExists( otherDatabaseDir.resolve( "UnknownFile1" ).toFile() ) );
-        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownFile2" ).toFile() ) );
-        assertFalse( fs.fileExists( otherDatabaseDir.resolve( "UnknownFile3" ).toFile() ) );
+        assertFalse( fs.fileExists( otherDatabaseDir.resolve( "UnknownFile1" ) ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownFile2" ) ) );
+        assertFalse( fs.fileExists( otherDatabaseDir.resolve( "UnknownFile3" ) ) );
     }
 
     @Test
@@ -265,19 +265,19 @@ class StoreFilesTest
 
         storeFiles.moveTo( databaseDir.toFile(), otherDatabaseLayout, otherLogFiles );
 
-        assertTrue( fs.isDirectory( dir1.toFile() ) );
-        assertTrue( fs.fileExists( file1.toFile() ) );
-        assertFalse( fs.isDirectory( dir2.toFile() ) );
-        assertFalse( fs.fileExists( file2.toFile() ) );
-        assertTrue( fs.isDirectory( dir3.toFile() ) );
-        assertTrue( fs.fileExists( file3.toFile() ) );
+        assertTrue( fs.isDirectory( dir1 ) );
+        assertTrue( fs.fileExists( file1 ) );
+        assertFalse( fs.isDirectory( dir2 ) );
+        assertFalse( fs.fileExists( file2 ) );
+        assertTrue( fs.isDirectory( dir3 ) );
+        assertTrue( fs.fileExists( file3 ) );
 
-        assertFalse( fs.isDirectory( otherDatabaseDir.resolve( "UnknownDirectory1" ).toFile() ) );
-        assertFalse( fs.fileExists( otherDatabaseDir.resolve( "UnknownDirectory1" ).resolve( "dummy-file-1" ).toFile() ) );
-        assertTrue( fs.isDirectory( otherDatabaseDir.resolve( "KnownDirectory2" ).toFile() ) );
-        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownDirectory2" ).resolve( "dummy-file-2" ).toFile() ) );
-        assertFalse( fs.isDirectory( otherDatabaseDir.resolve( "UnknownDirectory3" ).toFile() ) );
-        assertFalse( fs.fileExists( otherDatabaseDir.resolve( "UnknownDirectory3" ).resolve( "dummy-file-3" ).toFile() ) );
+        assertFalse( fs.isDirectory( otherDatabaseDir.resolve( "UnknownDirectory1" ) ) );
+        assertFalse( fs.fileExists( otherDatabaseDir.resolve( "UnknownDirectory1" ).resolve( "dummy-file-1" ) ) );
+        assertTrue( fs.isDirectory( otherDatabaseDir.resolve( "KnownDirectory2" ) ) );
+        assertTrue( fs.fileExists( otherDatabaseDir.resolve( "KnownDirectory2" ).resolve( "dummy-file-2" ) ) );
+        assertFalse( fs.isDirectory( otherDatabaseDir.resolve( "UnknownDirectory3" ) ) );
+        assertFalse( fs.fileExists( otherDatabaseDir.resolve( "UnknownDirectory3" ).resolve( "dummy-file-3" ) ) );
     }
 
     @Test
@@ -360,13 +360,13 @@ class StoreFilesTest
 
         Path tempCopyDir = createDirectory( databaseDir, "temp-copy" );
         Path notTempCopyDir = createDirectory( databaseDir, "not-temp-copy" );
-        assertTrue( fs.isDirectory( tempCopyDir.toFile() ) );
-        assertTrue( fs.isDirectory( notTempCopyDir.toFile() ) );
+        assertTrue( fs.isDirectory( tempCopyDir ) );
+        assertTrue( fs.isDirectory( notTempCopyDir ) );
 
         storeFiles.delete( databaseLayout, logFiles );
 
-        assertTrue( fs.isDirectory( tempCopyDir.toFile() ) );
-        assertFalse( fs.isDirectory( notTempCopyDir.toFile() ) );
+        assertTrue( fs.isDirectory( tempCopyDir ) );
+        assertFalse( fs.isDirectory( notTempCopyDir ) );
     }
 
     @Test
@@ -376,15 +376,15 @@ class StoreFilesTest
 
         Path tempCopyDir = createDirectory( databaseDir, "temp-copy" );
         Path notTempCopyDir = createDirectory( databaseDir, "not-temp-copy" );
-        assertTrue( fs.isDirectory( tempCopyDir.toFile() ) );
-        assertTrue( fs.isDirectory( notTempCopyDir.toFile() ) );
+        assertTrue( fs.isDirectory( tempCopyDir ) );
+        assertTrue( fs.isDirectory( notTempCopyDir ) );
 
         storeFiles.moveTo( databaseDir.toFile(), otherDatabaseLayout, otherLogFiles );
 
-        assertTrue( fs.isDirectory( tempCopyDir.toFile() ) );
-        assertFalse( fs.isDirectory( otherDatabaseDir.resolve( "temp-copy" ).toFile() ) );
-        assertFalse( fs.isDirectory( notTempCopyDir.toFile() ) );
-        assertTrue( fs.isDirectory( otherDatabaseDir.resolve( "not-temp-copy" ).toFile() ) );
+        assertTrue( fs.isDirectory( tempCopyDir ) );
+        assertFalse( fs.isDirectory( otherDatabaseDir.resolve( "temp-copy" ) ) );
+        assertFalse( fs.isDirectory( notTempCopyDir ) );
+        assertTrue( fs.isDirectory( otherDatabaseDir.resolve( "not-temp-copy" ) ) );
     }
 
     private Path createFile( Path parentDir, String name ) throws IOException
@@ -394,17 +394,17 @@ class StoreFilesTest
 
     private Path createFile( Path file ) throws IOException
     {
-        fs.mkdirs( file.getParent().toFile() );
-        fs.write( file.toFile() ).close();
-        assertTrue( fs.fileExists( file.toFile() ) );
+        fs.mkdirs( file.getParent() );
+        fs.write( file ).close();
+        assertTrue( fs.fileExists( file ) );
         return file;
     }
 
     private Path createDirectory( Path parentDir, String name ) throws IOException
     {
         Path dir = parentDir.resolve( name );
-        fs.mkdirs( dir.toFile() );
-        assertTrue( fs.isDirectory( dir.toFile() ) );
+        fs.mkdirs( dir );
+        assertTrue( fs.isDirectory( dir ) );
         return dir;
     }
 

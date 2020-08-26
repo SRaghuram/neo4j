@@ -145,7 +145,7 @@ class InternalClusterAuthenticationTest
     static void afterAll() throws IOException
     {
         dbms.shutdown();
-        FileUtils.deletePathRecursively( dir );
+        FileUtils.deleteDirectory( dir );
     }
 
     @Test

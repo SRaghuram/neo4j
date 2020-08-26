@@ -160,7 +160,7 @@ public class DataGeneratorTestUtil
         }
         finally
         {
-            FileUtils.deleteRecursively( NEO4J_CONFIG.toFile() );
+            FileUtils.deleteFile( NEO4J_CONFIG );
             if ( null != db )
             {
                 ManagedStore.getManagementService().shutdown();

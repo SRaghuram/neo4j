@@ -114,8 +114,8 @@ class RebuildFromLogsTest
         var rebuildLayout = neo4jLayout.databaseLayout( "rebuild" );
         long txId = populatePrototype( prototypeLayout, workLog );
 
-        FileUtils.copyRecursively( prototypeLayout.databaseDirectory().toFile(), copyLayout.databaseDirectory().toFile() );
-        FileUtils.copyRecursively( prototypeLayout.getTransactionLogsDirectory().toFile(), copyLayout.getTransactionLogsDirectory().toFile() );
+        FileUtils.copyDirectory( prototypeLayout.databaseDirectory(), copyLayout.databaseDirectory() );
+        FileUtils.copyDirectory( prototypeLayout.getTransactionLogsDirectory(), copyLayout.getTransactionLogsDirectory() );
         GraphDatabaseAPI db = db( copyLayout );
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {

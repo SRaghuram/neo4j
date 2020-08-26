@@ -176,10 +176,10 @@ public class ClassicNeo4jDatabase
 
             /* Copy live transaction logs to temporary directory. */
             Path temporaryDirectory = baseDirectoryAbsolute.resolve( "temp" );
-            fileSystem.mkdirs( temporaryDirectory.toFile() );
+            fileSystem.mkdirs( temporaryDirectory );
             for ( Path file : logFiles.logFiles() )
             {
-                fileSystem.copyFile( file.toFile(), temporaryDirectory.resolve( file.getFileName() ).toFile() );
+                fileSystem.copyFile( file, temporaryDirectory.resolve( file.getFileName() ) );
             }
             StorageEngineFactory storageEngineFactory = ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( StorageEngineFactory.class );
 
@@ -188,7 +188,7 @@ public class ClassicNeo4jDatabase
             /* Delete proper transaction logs. */
             for ( Path file : logFiles.logFiles() )
             {
-                fileSystem.deleteFileOrThrow( file.toFile() );
+                fileSystem.deleteFileOrThrow( file );
             }
 
             /* Restore the previously copied transaction logs. */
@@ -197,7 +197,7 @@ public class ClassicNeo4jDatabase
                     .build();
             for ( Path file : copyLogFiles.logFiles() )
             {
-                fileSystem.copyToDirectory( file.toFile(), logFilesDirectory.toFile() );
+                fileSystem.copyToDirectory( file, logFilesDirectory );
             }
         }
     }

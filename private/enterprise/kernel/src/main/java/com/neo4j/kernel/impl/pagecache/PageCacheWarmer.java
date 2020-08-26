@@ -5,7 +5,6 @@
  */
 package com.neo4j.kernel.impl.pagecache;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -400,10 +399,9 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
 
     private Profile[] findExistingProfiles( List<PagedFile> pagedFilesInDatabase ) throws IOException
     {
-        List<Path> allProfilePaths = fs.streamFilesRecursive( profilesDirectory.toFile() )
-                .map( FileHandle::getFile )
-                .map( File::toPath )
-                .collect( Collectors.toList() );
+        List<Path> allProfilePaths = fs.streamFilesRecursive( profilesDirectory )
+                                       .map( FileHandle::getPath )
+                                       .collect( Collectors.toList() );
         return pagedFilesInDatabase.stream()
                 .map( PagedFile::path )
                 .flatMap( pagedFilePath -> extractRelevantProfiles( allProfilePaths, pagedFilePath ) )

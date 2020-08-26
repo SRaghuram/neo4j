@@ -63,7 +63,7 @@ class CommitStateHelperTest
     void shouldNotHaveTxLogsIfDirectoryIsEmpty() throws IOException
     {
         Path txDir = databaseLayout.getTransactionLogsDirectory();
-        fsa.mkdir( txDir.toFile() );
+        fsa.mkdir( txDir );
 
         assertFalse( commitStateHelper.hasTxLogs( databaseLayout ) );
     }
@@ -72,9 +72,9 @@ class CommitStateHelperTest
     void shouldNotHaveTxLogsIfDirectoryHasFilesWithIncorrectName() throws IOException
     {
         Path txDir = databaseLayout.getTransactionLogsDirectory();
-        fsa.mkdirs( txDir.toFile() );
+        fsa.mkdirs( txDir );
 
-        fsa.write( txDir.resolve( "foo.bar" ).toFile() ).close();
+        fsa.write( txDir.resolve( "foo.bar" ) ).close();
 
         assertFalse( commitStateHelper.hasTxLogs( databaseLayout ) );
     }
@@ -83,8 +83,8 @@ class CommitStateHelperTest
     void shouldHaveTxLogsIfDirectoryHasTxFile() throws IOException
     {
         Path txDir = databaseLayout.getTransactionLogsDirectory();
-        fsa.mkdirs( txDir.toFile() );
-        fsa.write( txDir.resolve( TransactionLogFilesHelper.DEFAULT_NAME + ".0" ).toFile() ).close();
+        fsa.mkdirs( txDir );
+        fsa.write( txDir.resolve( TransactionLogFilesHelper.DEFAULT_NAME + ".0" ) ).close();
 
         assertTrue( commitStateHelper.hasTxLogs( databaseLayout ) );
     }

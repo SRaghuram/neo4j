@@ -51,6 +51,6 @@ class TransactionAppenderStressTesting
         assertEquals( new TransactionIdChecker( workingDirectory ).parseAllTxLogs(), appendedTxs );
 
         // let's cleanup disk space when everything went well
-        FileUtils.deletePathRecursively( workingDirectory );
+        FileUtils.deleteDirectory( workingDirectory );
     }
 }

@@ -153,7 +153,7 @@ class MultiDatabaseBoltIT
         var databaseApi = (GraphDatabaseAPI) managementService.database( databaseName );
         DatabaseLayout testDatabaseLayout = databaseApi.databaseLayout();
         tearDown();
-        fileSystem.deleteRecursively( testDatabaseLayout.getTransactionLogsDirectory().toFile() );
+        fileSystem.deleteRecursively( testDatabaseLayout.getTransactionLogsDirectory() );
         setup();
     }
 

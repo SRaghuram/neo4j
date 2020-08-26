@@ -96,7 +96,7 @@ abstract class AbstractCommandIT
     {
         Path configFile = configDir.resolve( DEFAULT_CONFIG_FILE_NAME );
         List<String> allSettings;
-        if ( fs.fileExists( configFile.toFile() ) )
+        if ( fs.fileExists( configFile ) )
         {
             allSettings = Files.readAllLines( configFile );
         }

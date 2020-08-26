@@ -43,7 +43,7 @@ public class QueryLoggerDiagnosticsOfflineReportProvider extends DiagnosticsOffl
         if ( classifiers.contains( "logs" ) )
         {
             Path queryLog = config.get( GraphDatabaseSettings.log_queries_filename );
-            if ( fs.fileExists( queryLog.toFile() ) )
+            if ( fs.fileExists( queryLog ) )
             {
                 return newDiagnosticsRotatingFile( "logs/query.log", fs, queryLog );
             }

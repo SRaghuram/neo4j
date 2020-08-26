@@ -375,7 +375,7 @@ class RecordFormatSelectorTest
     private Path createNeoStoreFile( DatabaseLayout databaseLayout ) throws IOException
     {
         Path neoStoreFile = databaseLayout.metadataStore();
-        fs.write( neoStoreFile.toFile() ).close();
+        fs.write( neoStoreFile ).close();
         return neoStoreFile;
     }
 

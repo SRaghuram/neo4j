@@ -192,7 +192,7 @@ public class RotatingFileOutputStreamSupplier implements Supplier<OutputStream>,
         {
             // In case output file doesn't exist, call rotate so that it gets created
             if ( rotationDelayExceeded() && rotationThresholdExceeded() ||
-                    !fileSystem.fileExists( outputFile.toFile() ) )
+                    !fileSystem.fileExists( outputFile ) )
             {
                 rotate();
             }
@@ -218,8 +218,8 @@ public class RotatingFileOutputStreamSupplier implements Supplier<OutputStream>,
 
     private boolean rotationThresholdExceeded()
     {
-        return fileSystem.fileExists( outputFile.toFile() ) && rotationThresholdBytes > 0 &&
-                fileSystem.getFileSize( outputFile.toFile() ) >= rotationThresholdBytes;
+        return fileSystem.fileExists( outputFile ) && rotationThresholdBytes > 0 &&
+                fileSystem.getFileSize( outputFile ) >= rotationThresholdBytes;
     }
 
     private boolean rotationDelayExceeded()
@@ -258,10 +258,10 @@ public class RotatingFileOutputStreamSupplier implements Supplier<OutputStream>,
 
                     try
                     {
-                        if ( fileSystem.fileExists( outputFile.toFile() ) )
+                        if ( fileSystem.fileExists( outputFile ) )
                         {
                             shiftArchivedOutputFiles();
-                            fileSystem.renameFile( outputFile.toFile(), archivedOutputFile( outputFile, 1 ).toFile() );
+                            fileSystem.renameFile( outputFile, archivedOutputFile( outputFile, 1 ) );
                         }
                     }
                     catch ( Exception e )
@@ -322,7 +322,7 @@ public class RotatingFileOutputStreamSupplier implements Supplier<OutputStream>,
 
     private OutputStream openOutputFile() throws IOException
     {
-        return createOrOpenAsOutputStream( fileSystem, outputFile.toFile(), true );
+        return createOrOpenAsOutputStream( fileSystem, outputFile, true );
     }
 
     private void shiftArchivedOutputFiles() throws IOException
@@ -332,11 +332,11 @@ public class RotatingFileOutputStreamSupplier implements Supplier<OutputStream>,
             Path archive = archivedOutputFile( outputFile, i );
             if ( i >= maxArchives )
             {
-                fileSystem.deleteFile( archive.toFile() );
+                fileSystem.deleteFile( archive );
             }
             else
             {
-                fileSystem.renameFile( archive.toFile(), archivedOutputFile( outputFile, i + 1 ).toFile() );
+                fileSystem.renameFile( archive, archivedOutputFile( outputFile, i + 1 ) );
             }
         }
     }
@@ -344,7 +344,7 @@ public class RotatingFileOutputStreamSupplier implements Supplier<OutputStream>,
     private static int lastArchivedOutputFileNumber( FileSystemAbstraction fileSystem, Path outputFile )
     {
         int i = 1;
-        while ( fileSystem.fileExists( archivedOutputFile( outputFile, i ).toFile() ) )
+        while ( fileSystem.fileExists( archivedOutputFile( outputFile, i ) ) )
         {
             i++;
         }
@@ -366,7 +366,7 @@ public class RotatingFileOutputStreamSupplier implements Supplier<OutputStream>,
         while ( true )
         {
             Path file = archivedOutputFile( outputFile, i );
-            if ( !fileSystem.fileExists( file.toFile() ) )
+            if ( !fileSystem.fileExists( file ) )
             {
                 break;
             }

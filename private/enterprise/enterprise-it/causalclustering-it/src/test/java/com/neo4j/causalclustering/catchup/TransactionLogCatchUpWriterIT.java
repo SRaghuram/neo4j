@@ -116,7 +116,7 @@ class TransactionLogCatchUpWriterIT
     {
         LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.getTransactionLogsDirectory(), fs )
                 .withLogEntryReader( logEntryReader() ).build();
-        fs.deleteRecursively( logFiles.logFilesDirectory().toFile() );
+        fs.deleteRecursively( logFiles.logFilesDirectory() );
     }
 
     @ValueSource( booleans = {false, true} )

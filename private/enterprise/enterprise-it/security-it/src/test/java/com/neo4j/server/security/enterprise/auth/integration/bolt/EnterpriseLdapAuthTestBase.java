@@ -114,7 +114,7 @@ public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
         Path logFile = workingDirectory.resolve( "logs/security.log" );
 
         boolean foundError = false;
-        try ( var reader = fileSystem.openAsReader( logFile.toFile(), UTF_8 ) )
+        try ( var reader = fileSystem.openAsReader( logFile, UTF_8 ) )
         {
             var lineReader = lineIterator( reader );
 
@@ -137,7 +137,7 @@ public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
         Path workingDirectory = testDirectory.homePath();
         Path logFile = workingDirectory.resolve( "logs/security.log" );
 
-        try ( var reader = fileSystem.openAsReader( logFile.toFile(), UTF_8 ) )
+        try ( var reader = fileSystem.openAsReader( logFile, UTF_8 ) )
         {
             LineIterator lineIterator = lineIterator( reader );
 

@@ -27,7 +27,7 @@ class ReaderTest
     void shouldCloseChannelOnClose() throws Exception
     {
         // given
-        when( fsa.read( file.toFile() ) ).thenReturn( channel );
+        when( fsa.read( file ) ).thenReturn( channel );
         Reader reader = new Reader( fsa, file, 0 );
 
         // when

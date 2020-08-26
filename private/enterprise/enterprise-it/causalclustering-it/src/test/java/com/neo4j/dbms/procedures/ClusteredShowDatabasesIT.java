@@ -113,7 +113,7 @@ class ClusteredShowDatabasesIT
             {
                 var homeDir = additionalCore.homePath();
                 cluster.removeCoreMember( additionalCore );
-                fs.deleteRecursively( homeDir.toFile() );
+                fs.deleteRecursively( homeDir );
             }
 
             var additionalRR = cluster.getReadReplicaById( additionalRRId );
@@ -121,7 +121,7 @@ class ClusteredShowDatabasesIT
             {
                 var homeDir = additionalRR.homePath();
                 cluster.removeReadReplica( additionalRR );
-                fs.deleteRecursively( homeDir.toFile() );
+                fs.deleteRecursively( homeDir );
             }
 
             // drop the additional database if it exists

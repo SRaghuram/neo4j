@@ -53,13 +53,13 @@ public class FileRoleRepository extends AbstractRoleRepository implements FileRe
     @Override
     protected ListSnapshot<RoleRecord> readPersistedRoles() throws IOException
     {
-        if ( fileSystem.fileExists( roleFile.toFile() ) )
+        if ( fileSystem.fileExists( roleFile ) )
         {
             long readTime;
             List<RoleRecord> readRoles;
             try
             {
-                readTime = fileSystem.lastModifiedTime( roleFile.toFile() );
+                readTime = fileSystem.lastModifiedTime( roleFile );
                 readRoles = serialization.loadRecordsFromFile( fileSystem, roleFile );
             }
             catch ( FormatException e )
@@ -82,7 +82,7 @@ public class FileRoleRepository extends AbstractRoleRepository implements FileRe
     @Override
     public ListSnapshot<RoleRecord> getSnapshot() throws IOException
     {
-        if ( lastLoaded.get() < fileSystem.lastModifiedTime( roleFile.toFile() ) )
+        if ( lastLoaded.get() < fileSystem.lastModifiedTime( roleFile ) )
         {
             return readPersistedRoles();
         }
@@ -98,7 +98,7 @@ public class FileRoleRepository extends AbstractRoleRepository implements FileRe
         super.purge(); // Clears all cached data
 
         // Delete the file
-        if ( !fileSystem.deleteFile( roleFile.toFile() ) )
+        if ( !fileSystem.deleteFile( roleFile ) )
         {
             throw new IOException( "Failed to delete file '" + roleFile.toAbsolutePath() + "'" );
         }
@@ -111,6 +111,7 @@ public class FileRoleRepository extends AbstractRoleRepository implements FileRe
 
         // Rename the file
         Path destinationFile = FileRepository.getMigratedFile( roleFile );
-        fileSystem.renameFile( roleFile.toFile(), destinationFile.toFile(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES );
+        fileSystem.renameFile( roleFile, destinationFile, StandardCopyOption.REPLACE_EXISTING,
+                StandardCopyOption.COPY_ATTRIBUTES );
     }
 }

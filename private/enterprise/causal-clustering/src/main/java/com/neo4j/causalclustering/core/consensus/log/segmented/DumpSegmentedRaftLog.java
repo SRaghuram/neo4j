@@ -9,10 +9,9 @@ import com.neo4j.causalclustering.core.consensus.log.EntryRecord;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshal;
 
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.neo4j.cursor.IOCursor;
@@ -110,7 +109,7 @@ class DumpSegmentedRaftLog
 
     interface Printer extends AutoCloseable
     {
-        PrintStream getFor( String file ) throws FileNotFoundException;
+        PrintStream getFor( String file ) throws IOException;
 
         @Override
         void close();
@@ -132,20 +131,20 @@ class DumpSegmentedRaftLog
 
     private static class FilePrinter implements Printer
     {
-        private File directory;
+        private Path directory;
         private PrintStream out;
 
         @Override
-        public PrintStream getFor( String file ) throws FileNotFoundException
+        public PrintStream getFor( String file ) throws IOException
         {
-            File absoluteFile = new File( file ).getAbsoluteFile();
-            File dir = absoluteFile.isDirectory() ? absoluteFile : absoluteFile.getParentFile();
+            Path absoluteFile = Path.of( file ).toAbsolutePath();
+            Path dir = Files.isDirectory( absoluteFile ) ? absoluteFile : absoluteFile.getParent();
             if ( !dir.equals( directory ) )
             {
                 close();
-                File dumpFile = new File( dir, "dump-logical-log.txt" );
-                System.out.println( "Redirecting the output to " + dumpFile.getPath() );
-                out = new PrintStream( dumpFile );
+                Path dumpFile = dir.resolve( "dump-logical-log.txt" );
+                System.out.println( "Redirecting the output to " + dumpFile );
+                out = new PrintStream( Files.newOutputStream( dumpFile ) );
                 directory = dir;
             }
             return out;

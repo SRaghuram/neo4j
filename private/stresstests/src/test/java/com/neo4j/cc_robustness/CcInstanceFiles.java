@@ -157,7 +157,7 @@ class CcInstanceFiles
             {
                 try
                 {
-                    org.neo4j.io.fs.FileUtils.deleteRecursively( file );
+                    org.neo4j.io.fs.FileUtils.deleteDirectory( file.toPath() );
                 }
                 catch ( IOException e )
                 {

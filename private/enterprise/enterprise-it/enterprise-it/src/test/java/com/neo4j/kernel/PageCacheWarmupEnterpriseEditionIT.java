@@ -66,7 +66,6 @@ import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_enabled;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_prefetch;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_profiling_interval;
-import static org.neo4j.io.fs.FileUtils.deletePathRecursively;
 import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_READ_LOCK;
 import static org.neo4j.logging.LogAssertions.assertThat;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -212,8 +211,8 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         {
             try
             {
-                fs.deleteRecursively( databaseLayout.databaseDirectory().toFile() );
-                fs.copyRecursively( backupDir.toFile(), databaseLayout.getNeo4jLayout().databasesDirectory().toFile() );
+                fs.deleteRecursively( databaseLayout.databaseDirectory() );
+                fs.copyRecursively( backupDir, databaseLayout.getNeo4jLayout().databasesDirectory() );
             }
             catch ( IOException e )
             {
@@ -261,18 +260,18 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
             Path databases = data.resolve( "databases" );
             Path graphdb = databases.resolve( "neo4j" );
             FileUtils.copyDirectory( databaseDir, graphdb );
-            deletePathRecursively( databaseDir );
+            FileUtils.deleteDirectory( databaseDir );
             Path homePath = data.getParent();
             Path dumpDir = testDirectory.cleanDirectoryPath( "dump-dir" );
 
             ExecutionContext ctx = new ExecutionContext( homePath, homePath, System.out, System.err, testDirectory.getFileSystem() );
             AdminTool.execute( ctx, "dump", "--database=" + DEFAULT_DATABASE_NAME, "--to=" + dumpDir );
-            deletePathRecursively( graphdb );
+            FileUtils.deleteDirectory( graphdb );
             cleanDirectory( logs.toFile() );
             Path dumpFile = dumpDir.resolve( "neo4j.dump" );
             AdminTool.execute( ctx, "load", "--database=" + DEFAULT_DATABASE_NAME, "--from=" + dumpFile );
             FileUtils.copyDirectory( graphdb, databaseDir );
-            deletePathRecursively( graphdb );
+            FileUtils.deleteDirectory( graphdb );
 
             Path metricsDirectory = testDirectory.cleanDirectoryPath( "metrics" );
             controller.restartDbms( db.databaseName(), builder ->

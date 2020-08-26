@@ -7,8 +7,8 @@ package com.neo4j.restore;
 
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.neo4j.cli.CommandFailedException;
@@ -48,7 +48,7 @@ public class RestoreDatabaseCommand
 
     public void execute() throws IOException
     {
-        if ( !fs.fileExists( fromDatabasePath.toFile() ) )
+        if ( !fs.fileExists( fromDatabasePath ) )
         {
             throw new IllegalArgumentException( format( "Source directory does not exist [%s]", fromDatabasePath ) );
         }
@@ -63,13 +63,13 @@ public class RestoreDatabaseCommand
                     format( "Source directory is not a database backup [%s]", fromDatabasePath ), e );
         }
 
-        if ( fs.fileExists( targetDatabaseLayout.databaseDirectory().toFile() ) && !forceOverwrite )
+        if ( fs.fileExists( targetDatabaseLayout.databaseDirectory() ) && !forceOverwrite )
         {
             throw new IllegalArgumentException( format( "Database with name [%s] already exists at %s", targetDatabaseLayout.getDatabaseName(),
                     targetDatabaseLayout.databaseDirectory().toFile() ) );
         }
 
-        if ( fs.fileExists( raftGroupDirectory.toFile() ) )
+        if ( fs.fileExists( raftGroupDirectory ) )
         {
             throw new IllegalArgumentException( format(
                     "Database with name [%s] already exists locally. " +
@@ -79,7 +79,7 @@ public class RestoreDatabaseCommand
                     targetDatabaseLayout.getDatabaseName(), targetDatabaseLayout.getDatabaseName() ) );
         }
 
-        fs.mkdirs( targetDatabaseLayout.databaseDirectory().toFile() );
+        fs.mkdirs( targetDatabaseLayout.databaseDirectory() );
 
         try ( var ignored = LockChecker.checkDatabaseLock( targetDatabaseLayout ) )
         {
@@ -98,16 +98,16 @@ public class RestoreDatabaseCommand
 
     private void cleanTargetDirectories() throws IOException
     {
-        var databaseDirectory = targetDatabaseLayout.databaseDirectory().toFile();
-        var transactionLogsDirectory = targetDatabaseLayout.getTransactionLogsDirectory().toFile();
-        var databaseLockFile = targetDatabaseLayout.databaseLockFile().toFile();
+        var databaseDirectory = targetDatabaseLayout.databaseDirectory();
+        var transactionLogsDirectory = targetDatabaseLayout.getTransactionLogsDirectory();
+        var databaseLockFile = targetDatabaseLayout.databaseLockFile();
 
-        var filesToRemove = fs.listFiles( databaseDirectory, ( dir, name ) -> !name.equals( databaseLockFile.getName() ) );
+        var filesToRemove = fs.listFiles( databaseDirectory, ( dir, name ) -> !name.equals( databaseLockFile.getFileName().toString() ) );
         if ( filesToRemove != null )
         {
             for ( var file : filesToRemove )
             {
-                fs.deleteRecursively( file );
+                fs.delete( file );
             }
         }
         if ( !isSameOrChildFile( databaseDirectory, transactionLogsDirectory ) )
@@ -118,17 +118,17 @@ public class RestoreDatabaseCommand
 
     private void restoreDatabaseFiles() throws IOException
     {
-        var databaseFiles = fs.listFiles( fromDatabasePath.toFile() );
+        var databaseFiles = fs.listFiles( fromDatabasePath );
         var transactionLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( fromDatabasePath, fs ).build();
 
         if ( databaseFiles != null )
         {
-            var databaseDirectory = targetDatabaseLayout.databaseDirectory().toFile();
-            var transactionLogsDirectory = targetDatabaseLayout.getTransactionLogsDirectory().toFile();
-            var databaseLockFile = targetDatabaseLayout.databaseLockFile().toFile();
+            var databaseDirectory = targetDatabaseLayout.databaseDirectory();
+            var transactionLogsDirectory = targetDatabaseLayout.getTransactionLogsDirectory();
+            var databaseLockFile = targetDatabaseLayout.databaseLockFile();
             for ( var file : databaseFiles )
             {
-                if ( file.isDirectory() )
+                if ( Files.isDirectory( file ) )
                 {
                     if ( moveFiles )
                     {
@@ -136,15 +136,15 @@ public class RestoreDatabaseCommand
                     }
                     else
                     {
-                        var destination = new File( databaseDirectory, file.getName() );
+                        var destination = databaseDirectory.resolve( file.getFileName() );
                         fs.mkdirs( destination );
                         fs.copyRecursively( file, destination );
                     }
                 }
                 else
                 {
-                    var targetDirectory = transactionLogFiles.isLogFile( file.toPath() ) ? transactionLogsDirectory : databaseDirectory;
-                    var targetFile = new File( targetDirectory, file.getName() );
+                    var targetDirectory = transactionLogFiles.isLogFile( file ) ? transactionLogsDirectory : databaseDirectory;
+                    var targetFile = targetDirectory.resolve( file.getFileName() );
                     if ( !databaseLockFile.equals( targetFile ) )
                     {
                         if ( moveFiles )
@@ -160,7 +160,7 @@ public class RestoreDatabaseCommand
             }
             if ( moveFiles )
             {
-                fs.deleteRecursively( fromDatabasePath.toFile() );
+                fs.deleteRecursively( fromDatabasePath );
             }
         }
     }

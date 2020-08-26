@@ -42,8 +42,8 @@ class StoreFileStreamingProtocolTest
         var protocol = new StoreFileStreamingProtocol( maxChunkSize );
         var ctx = mock( ChannelHandlerContext.class );
 
-        fs.mkdir( new File( "dirA" ) );
-        fs.mkdir( new File( "dirB" ) );
+        fs.mkdir( new File( "dirA" ).toPath() );
+        fs.mkdir( new File( "dirB" ).toPath() );
 
         String[] files = new String[]{"dirA/one", "dirA/two", "dirB/one", "dirB/two", "one", "two", "three"};
 
@@ -107,7 +107,7 @@ class StoreFileStreamingProtocolTest
 
     private StoreResource createResource( Path file, int recordSize ) throws IOException
     {
-        fs.write( file.toFile() );
+        fs.write( file );
         return new StoreResource( file, file.toAbsolutePath().toString(), recordSize, fs );
     }
 }

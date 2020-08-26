@@ -9,7 +9,7 @@ import com.neo4j.dbms.commandline.StoreCopyCommand;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -64,7 +64,7 @@ public class StoreCopyCommandWithRelationshipTypeScanStoreIT extends AbstractCom
     {
         // sanity check
         FileSystemAbstraction fs = testDirectory.getFileSystem();
-        assertHasFile( fs, databaseLayout.databaseDirectory().toFile(), databaseLayout.relationshipTypeScanStore().toFile() );
+        assertHasFile( fs, databaseLayout.databaseDirectory(), databaseLayout.relationshipTypeScanStore() );
 
         // given
         appendConfigSetting( enable_relationship_type_scan_store, true );
@@ -78,7 +78,7 @@ public class StoreCopyCommandWithRelationshipTypeScanStoreIT extends AbstractCom
 
         // then
         DatabaseLayout copyLayout = neo4jLayout.databaseLayout( copyName );
-        assertHasFile( fs, copyLayout.databaseDirectory().toFile(), copyLayout.relationshipTypeScanStore().toFile() );
+        assertHasFile( fs, copyLayout.databaseDirectory(), copyLayout.relationshipTypeScanStore() );
 
         // and
         managementService.createDatabase( copyName );
@@ -109,7 +109,7 @@ public class StoreCopyCommandWithRelationshipTypeScanStoreIT extends AbstractCom
 
         // then
         DatabaseLayout copyLayout = neo4jLayout.databaseLayout( copyName );
-        assertHasFile( fs, copyLayout.databaseDirectory().toFile(), copyLayout.countStore().toFile() );
+        assertHasFile( fs, copyLayout.databaseDirectory(), copyLayout.countStore() );
 
         // and
         managementService.createDatabase( copyName );
@@ -179,9 +179,9 @@ public class StoreCopyCommandWithRelationshipTypeScanStoreIT extends AbstractCom
         return relationships;
     }
 
-    private void assertHasFile( FileSystemAbstraction fs, File databaseDirectory, File file )
+    private void assertHasFile( FileSystemAbstraction fs, Path databaseDirectory, Path file )
     {
-        File[] files = fs.listFiles( databaseDirectory );
+        Path[] files = fs.listFiles( databaseDirectory );
         assertTrue( contains( files, file ) );
     }
 

@@ -161,7 +161,7 @@ public final class CausalClusteringTestHelpers
 
     public static String fileContent( Path file, FileSystemAbstraction fsa ) throws IOException
     {
-        try ( Reader reader = fsa.openAsReader( file.toFile(), UTF_8 ) )
+        try ( Reader reader = fsa.openAsReader( file, UTF_8 ) )
         {
             return IOUtils.toString( reader );
         }
@@ -548,7 +548,7 @@ public final class CausalClusteringTestHelpers
             return 0;
         }
         var position = checkpointInfos.get( checkpointInfos.size() - 1 ).getLogPosition();
-        fs.truncate( logFiles.getCheckpointFile().getCurrentFile().toFile(), position.getByteOffset() );
+        fs.truncate( logFiles.getCheckpointFile().getCurrentFile(), position.getByteOffset() );
         return checkpointInfos.size();
     }
 

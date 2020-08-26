@@ -20,13 +20,13 @@ import java.util.concurrent.Executors;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.io.fs.FileUtils;
 
 import static com.neo4j.helper.StressTestingHelper.ensureExistsAndEmpty;
 import static com.neo4j.helper.StressTestingHelper.fromEnv;
 import static java.lang.Integer.parseInt;
 import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static org.neo4j.io.fs.FileUtils.deletePathRecursively;
 
 class MultiDatabaseCreationStressTesting
 {
@@ -42,7 +42,7 @@ class MultiDatabaseCreationStressTesting
         int threads = parseInt( fromEnv( "MULTIDATABASE_STRESS_NUM_THREADS", DEFAULT_NUM_THREADS ) );
         Path storeDirectory = Path.of( workingDirectory, "default" );
 
-        deletePathRecursively( storeDirectory );
+        FileUtils.deleteDirectory( storeDirectory );
         ensureExistsAndEmpty( storeDirectory );
 
         DatabaseManagementService managementService = new EnterpriseDatabaseManagementServiceBuilder( storeDirectory )

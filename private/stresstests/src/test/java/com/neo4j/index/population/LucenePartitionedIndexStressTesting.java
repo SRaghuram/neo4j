@@ -83,7 +83,7 @@ class LucenePartitionedIndexStressTesting
     {
         managementService.shutdown();
         populators.shutdown();
-        FileUtils.deletePathRecursively( storeDir );
+        FileUtils.deleteDirectory( storeDir );
     }
 
     @Test
@@ -169,7 +169,7 @@ class LucenePartitionedIndexStressTesting
     private static Path prepareStoreDir() throws IOException
     {
         Path storeDirectory = Paths.get( WORK_DIRECTORY ).resolve( Paths.get( "storeDir" ) );
-        FileUtils.deletePathRecursively( storeDirectory );
+        FileUtils.deleteDirectory( storeDirectory );
         return storeDirectory;
     }
 

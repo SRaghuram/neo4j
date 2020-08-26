@@ -169,7 +169,7 @@ class RecoveryProtocol
             Path path,
             MemoryTracker memoryTracker ) throws IOException, EndOfStreamException
     {
-        try ( StoreChannel channel = fileSystem.read( path.toFile() ) )
+        try ( StoreChannel channel = fileSystem.read( path ) )
         {
             return headerMarshal.unmarshal( new ReadAheadChannel<>( channel, new HeapScopedBuffer( CURRENT_RECORD_OFFSET, memoryTracker ) ) );
         }
@@ -181,7 +181,7 @@ class RecoveryProtocol
             SegmentHeader header,
             MemoryTracker memoryTracker ) throws IOException
     {
-        try ( StoreChannel channel = fileSystem.write( file.toFile() ) )
+        try ( StoreChannel channel = fileSystem.write( file ) )
         {
             channel.position( 0 );
             try ( PhysicalFlushableChannel writer = new PhysicalFlushableChannel( channel, new HeapScopedBuffer( CURRENT_RECORD_OFFSET, memoryTracker ) ) )

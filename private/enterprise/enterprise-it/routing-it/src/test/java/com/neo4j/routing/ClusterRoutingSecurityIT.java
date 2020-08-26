@@ -354,8 +354,8 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
     private static void installKeyToInstance( Path homeDir, int keyId ) throws IOException
     {
         var baseDir = homeDir.resolve( CERTIFICATES_DIR );
-        fs.mkdirs( baseDir.resolve( "trusted" ).toFile() );
-        fs.mkdirs( baseDir.resolve( "revoked" ).toFile() );
+        fs.mkdirs( baseDir.resolve( "trusted" ) );
+        fs.mkdirs( baseDir.resolve( "revoked" ) );
 
         SslResourceBuilder.caSignedKeyId( keyId ).trustSignedByCA().install( baseDir );
     }

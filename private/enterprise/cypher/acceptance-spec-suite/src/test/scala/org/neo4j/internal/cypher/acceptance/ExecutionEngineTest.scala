@@ -5,7 +5,6 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.io.File
 import java.io.PrintWriter
 import java.lang.Boolean.TRUE
 import java.nio.file.Path
@@ -965,7 +964,7 @@ order by a.COL1""".format(a, b))
   }
 
   private def readOnlyEngine()(run: ExecutionEngine => Unit): Unit = {
-    FileUtils.deleteRecursively(new File("target/readonly"))
+    FileUtils.deleteDirectory(Path.of("target/readonly"))
     val old = new TestEnterpriseDatabaseManagementServiceBuilder(Path.of( "target/readonly" )).build()
     old.shutdown()
     val managementService = new TestEnterpriseDatabaseManagementServiceBuilder(Path.of( "target/readonly" ))

@@ -11,7 +11,6 @@ import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
 import java.io.IOException;
-import java.io.PrintStream;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -886,7 +885,7 @@ class CheckTxLogsTest
             throws IOException
     {
         ensureLogExists( log );
-        try ( StoreChannel channel = fs.write( log.toFile() );
+        try ( StoreChannel channel = fs.write( log );
               var versionedChannel = new PhysicalLogVersionedStoreChannel( channel, 0, (byte) 0, log, EMPTY_ACCESSOR );
               var writableLogChannel = new PhysicalFlushableChecksumChannel( versionedChannel, new HeapScopedBuffer( 100, INSTANCE ) ) )
         {
@@ -899,9 +898,9 @@ class CheckTxLogsTest
 
     private void ensureLogExists( Path logFile ) throws IOException
     {
-        if ( !fs.fileExists( logFile.toFile() ) )
+        if ( !fs.fileExists( logFile ) )
         {
-            try ( StoreChannel channel = fs.write( logFile.toFile() ) )
+            try ( StoreChannel channel = fs.write( logFile ) )
             {
                 writeLogHeader( channel, new LogHeader( getLogFiles().getLogFile().getLogVersion( logFile ), 0, StoreId.UNKNOWN ), INSTANCE );
             }

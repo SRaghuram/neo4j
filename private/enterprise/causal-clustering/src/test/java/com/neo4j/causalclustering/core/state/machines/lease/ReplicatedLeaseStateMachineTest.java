@@ -185,7 +185,7 @@ class ReplicatedLeaseStateMachineTest
     void shouldPersistAndRecoverState() throws Exception
     {
         // given
-        fsa.mkdir( testDir.homeDir() );
+        fsa.mkdir( testDir.homePath() );
 
         SafeStateMarshal<ReplicatedLeaseState> marshal = new ReplicatedLeaseState.Marshal();
 
@@ -225,7 +225,7 @@ class ReplicatedLeaseStateMachineTest
     void shouldBeIdempotent()
     {
         // given
-        fsa.mkdir( testDir.homeDir() );
+        fsa.mkdir( testDir.homePath() );
 
         SafeStateMarshal<ReplicatedLeaseState> marshal = new ReplicatedLeaseState.Marshal();
 

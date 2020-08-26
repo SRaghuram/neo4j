@@ -32,7 +32,7 @@ class EntryCursorTest
             new Segments( fsa, fileNames, readerPool, emptyList(), ignored -> mock( ChannelMarshal.class ), NullLogProvider.getInstance(), -1, INSTANCE );
 
     {
-        fsa.mkdir( bam.toFile() );
+        fsa.mkdir( bam );
     }
 
     @AfterEach

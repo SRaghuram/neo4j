@@ -7,7 +7,6 @@ package com.neo4j.metrics.diagnostics;
 
 import com.neo4j.configuration.MetricsSettings;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,12 +43,12 @@ public class MetricsDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
     protected List<DiagnosticsReportSource> provideSources( Set<String> classifiers )
     {
         Path metricsDirectory = config.get( MetricsSettings.csv_path );
-        if ( fs.fileExists( metricsDirectory.toFile() ) && fs.isDirectory( metricsDirectory.toFile() ) )
+        if ( fs.fileExists( metricsDirectory ) && fs.isDirectory( metricsDirectory ) )
         {
             List<DiagnosticsReportSource> files = new ArrayList<>();
-            for ( File file : fs.listFiles( metricsDirectory.toFile() ) )
+            for ( Path file : fs.listFiles( metricsDirectory ) )
             {
-                files.add( newDiagnosticsFile( "metrics/" + file.getName(), fs, file.toPath() ) );
+                files.add( newDiagnosticsFile( "metrics/" + file.getFileName(), fs, file ) );
             }
             return files;
         }

@@ -20,7 +20,7 @@ public class Reader implements Closeable
 
     Reader( FileSystemAbstraction fsa, Path path, long version ) throws IOException
     {
-        this.storeChannel = fsa.read( path.toFile() );
+        this.storeChannel = fsa.read( path );
         this.version = version;
     }
 

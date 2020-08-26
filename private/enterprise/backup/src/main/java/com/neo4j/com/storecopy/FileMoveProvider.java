@@ -5,7 +5,7 @@
  */
 package com.neo4j.com.storecopy;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -32,7 +32,7 @@ public class FileMoveProvider
      * @return a stream of the entire contents of the source location that can be applied to a target location to
      * perform a move
      */
-    public Stream<FileMoveAction> traverseForMoving( File dir )
+    public Stream<FileMoveAction> traverseForMoving( Path dir )
     {
         return traverseForMoving( dir, dir );
     }
@@ -73,16 +73,16 @@ public class FileMoveProvider
      * @param basePath this is the parent of your intended target directory.
      * @return a stream of individual move actions which can be iterated and applied whenever
      */
-    private Stream<FileMoveAction> traverseForMoving( File dir, File basePath )
+    private Stream<FileMoveAction> traverseForMoving( Path dir, Path basePath )
     {
         // Note that flatMap is an *intermediate operation* and therefor always lazy.
         // It is very important that the stream we return only *lazily* calls out to expandTraverseFiles!
         return Stream.of( dir ).flatMap( d -> expandTraverseFiles( d, basePath ) );
     }
 
-    private Stream<FileMoveAction> expandTraverseFiles( File dir, File basePath )
+    private Stream<FileMoveAction> expandTraverseFiles( Path dir, Path basePath )
     {
-        List<File> listing = listFiles( dir );
+        List<Path> listing = listFiles( dir );
         if ( listing == null )
         {
             // This happens if what we were given as 'dir' is not actually a directory, but a single specific file.
@@ -91,29 +91,29 @@ public class FileMoveProvider
             // This also means that the base path is currently the same as the file itself, which is wrong.
             // We change the base path to be the parent directory of the file, so that we can relativise the filename
             // correctly later.
-            basePath = dir.getParentFile();
+            basePath = dir.getParent();
         }
-        File base = basePath; // Capture effectively-final base path snapshot.
-        Stream<File> files = listing.stream().filter( this::isFile );
-        Stream<File> dirs = listing.stream().filter( this::isDirectory );
+        Path base = basePath; // Capture effectively-final base path snapshot.
+        Stream<Path> files = listing.stream().filter( this::isFile );
+        Stream<Path> dirs = listing.stream().filter( this::isDirectory );
         Stream<FileMoveAction> moveFiles = files.map( f -> moveViaFileSystem( f, base ) );
         Stream<FileMoveAction> traverseDirectories = dirs.flatMap( d -> traverseForMoving( d, base ) );
         return Stream.concat( moveFiles, traverseDirectories );
     }
 
-    private boolean isFile( File file )
+    private boolean isFile( Path file )
     {
         return !fs.isDirectory( file );
     }
 
-    private boolean isDirectory( File file )
+    private boolean isDirectory( Path file )
     {
         return fs.isDirectory( file );
     }
 
-    private List<File> listFiles( File dir )
+    private List<Path> listFiles( Path dir )
     {
-        File[] fsaFiles = fs.listFiles( dir );
+        Path[] fsaFiles = fs.listFiles( dir );
         if ( fsaFiles == null )
         {
             // This probably means 'dir' is actually a file, or it does not exist.

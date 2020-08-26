@@ -23,10 +23,10 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -80,7 +80,7 @@ class CustomSecurityInitializationIT
     @BeforeEach
     void setup() throws IOException
     {
-        FileUtils.deleteRecursively( directory.homeDir() );
+        FileUtils.deleteDirectory( directory.homePath() );
     }
 
     @AfterEach
@@ -249,8 +249,7 @@ class CustomSecurityInitializationIT
                         .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.valueOf( authEnabled ) )
                         .setConfig( GraphDatabaseInternalSettings.system_init_file, Path.of( INIT_FILENAME ) );
         Exception exception = assertThrows( Exception.class, () -> dbms = builder.build() );
-
-        assertTrue( isFileNotFoundException( exception ) );
+        assertTrue( isNoSuchFileException( exception ) );
     }
 
     @ParameterizedTest
@@ -417,7 +416,7 @@ class CustomSecurityInitializationIT
                                          .withNumberOfCoreMembers( 3 );
         cluster = clusterFactory.createCluster( clusterConfig );
         Exception exception = assertThrows( Exception.class, () -> cluster.start() );
-        assertTrue( isFileNotFoundException( exception ) );
+        assertTrue( isNoSuchFileException( exception ) );
     }
 
     private Path getInitFile( Path homeDir )
@@ -435,9 +434,9 @@ class CustomSecurityInitializationIT
         return homeDir.resolve( "data" ).resolve( "dbms" ).resolve( ROLES_FILENAME );
     }
 
-    private boolean isFileNotFoundException( Throwable e )
+    private boolean isNoSuchFileException( Throwable e )
     {
-        return e != null && (e instanceof FileNotFoundException || isFileNotFoundException( e.getCause() ));
+        return e != null && (e instanceof NoSuchFileException || isNoSuchFileException( e.getCause() ));
     }
 
     private void safeCreateUser( FileUserRepository userRepository, User user )

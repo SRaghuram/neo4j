@@ -132,7 +132,7 @@ public final class OnlineBackupExecutor
 
     private void checkDestination( Path path ) throws BackupExecutionException
     {
-        if ( !fs.isDirectory( path.toFile() ) )
+        if ( !fs.isDirectory( path ) )
         {
             throw new BackupExecutionException( format( "Directory '%s' does not exist.", path ) );
         }

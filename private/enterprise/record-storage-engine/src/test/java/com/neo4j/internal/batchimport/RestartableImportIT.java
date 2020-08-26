@@ -80,8 +80,8 @@ class RestartableImportIT
             int timeMeasuringImportExitCode = startImportInSeparateProcess( dbDirectory ).waitFor();
             long time = System.currentTimeMillis() - startTime;
             assertEquals( 0, timeMeasuringImportExitCode );
-            fs.deleteRecursively( neo4jLayout.homeDirectory().toFile() );
-            fs.mkdir( neo4jLayout.homeDirectory().toFile() );
+            fs.deleteRecursively( neo4jLayout.homeDirectory() );
+            fs.mkdir( neo4jLayout.homeDirectory() );
             Process process;
             int restartCount = 0;
             int exitCode;
@@ -102,19 +102,26 @@ class RestartableImportIT
 
                 zip( fs, dbDirectory, testDirectory.directoryPath( "snapshots" ).resolve( format( "killed-%02d.zip", restartCount ) ) );
 
-                if ( !completedOnItsOwn && !fs.fileExists( dbDirectory.resolve( FILE_NAME_STATE ).toFile() ) &&
-                        !fs.fileExists( dbDirectory.resolve( COMPLETED ).toFile() ) )
+                if ( !completedOnItsOwn && !fs.fileExists( dbDirectory.resolve( FILE_NAME_STATE ) ) &&
+                        !fs.fileExists( dbDirectory.resolve( COMPLETED ) ) )
                 {
                     // This is a case which is, by all means, quite the edge case. This is state where an import started, but was killed
                     // immediately afterwards... in the middle of creating the store files. There have been attempts to solve this in the
                     // restartable importer, which works, but there's always some case somewhere else that breaks. This edge case is only
                     // visible in this test and for users it's just this thing where you'll need to clear out your store manually if this happens.
-                    File[] files = fs.listFiles( dbDirectory.toFile() );
+                    Path[] files = fs.listFiles( dbDirectory );
                     if ( files != null )
                     {
-                        for ( File file : files )
+                        for ( Path file : files )
                         {
-                            fs.deleteRecursively( file );
+                            if ( fs.isDirectory( file ) )
+                            {
+                                fs.deleteRecursively( file );
+                            }
+                            else
+                            {
+                                fs.deleteFile( file );
+                            }
                         }
                     }
                 }

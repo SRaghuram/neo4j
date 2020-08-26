@@ -114,8 +114,8 @@ public class BetterRaftMessageLogger<MEMBER> extends LifecycleAdapter implements
     @VisibleForTesting
     protected PrintWriter openPrintWriter() throws IOException
     {
-        fs.mkdirs( logFile.getParent().toFile() );
-        return new PrintWriter( fs.openAsOutputStream( logFile.toFile(), true ) );
+        fs.mkdirs( logFile.getParent() );
+        return new PrintWriter( fs.openAsOutputStream( logFile, true ) );
     }
 
     private void log( String forDatabase, MEMBER first, Direction direction, MEMBER second, String type, String message )

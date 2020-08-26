@@ -15,7 +15,6 @@ import com.tagtraum.perf.gcviewer.model.GcResourceFile;
 
 import java.io.BufferedWriter;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -87,7 +86,7 @@ public class GcLog
                 .forEach( eventType -> gcLog.percentages.put( eventType, gcLog.calculatePercentageFor( eventType ) ) );
     }
 
-    private static GCModel readGcModel( Path gcLogFile ) throws FileNotFoundException, IOException
+    private static GCModel readGcModel( Path gcLogFile ) throws IOException
     {
         DataReaderFactory drf = new DataReaderFactory();
         GCResource gcResource = new GcResourceFile( gcLogFile.toFile() );

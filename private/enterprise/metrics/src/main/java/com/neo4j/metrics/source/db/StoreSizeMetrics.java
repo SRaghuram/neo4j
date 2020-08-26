@@ -8,7 +8,8 @@ package com.neo4j.metrics.source.db;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 
-import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -88,27 +89,27 @@ public class StoreSizeMetrics extends LifecycleAdapter
 
     private void updateCachedValues()
     {
-        cachedDatabaseSize = getSize( databaseLayout.databaseDirectory().toFile() );
-        cachedStoreTotalSize = cachedDatabaseSize + getSize( databaseLayout.getTransactionLogsDirectory().toFile() );
+        cachedDatabaseSize = getSize( databaseLayout.databaseDirectory() );
+        cachedStoreTotalSize = cachedDatabaseSize + getSize( databaseLayout.getTransactionLogsDirectory() );
     }
 
     //Paths may overlap
-    private long getSize( File... files )
+    private long getSize( Path... files )
     {
-        Set<File> visitedFiles = new HashSet<>();
+        Set<Path> visitedFiles = new HashSet<>();
         return Arrays.stream( files ).mapToLong( file -> getSizeInternal( file, visitedFiles ) ).sum();
     }
 
-    private long getSizeInternal( File file, Set<File> visitedFiles )
+    private long getSizeInternal( Path file, Set<Path> visitedFiles )
     {
         if ( !visitedFiles.add( file ) )
         {
             return 0L; //dont visit files twice
         }
 
-        if ( file.isDirectory() )
+        if ( Files.isDirectory( file ) )
         {
-            File[] filesInDir = fileSystem.listFiles( file );
+            Path[] filesInDir = fileSystem.listFiles( file );
             if ( filesInDir == null || filesInDir.length == 0 )
             {
                 return 0L;

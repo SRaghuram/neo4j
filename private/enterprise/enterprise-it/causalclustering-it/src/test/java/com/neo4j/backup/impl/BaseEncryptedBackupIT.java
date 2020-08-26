@@ -290,7 +290,7 @@ abstract class BaseEncryptedBackupIT
     {
         createConfigFile( neo4jHome );
         var certificatesLocation = neo4jHome.resolve( "certificates" ).resolve( BACKUP_POLICY_NAME );
-        fs.mkdirs( certificatesLocation.toFile() );
+        fs.mkdirs( certificatesLocation );
         installSsl( certificatesLocation, keyId );
     }
 
@@ -298,12 +298,12 @@ abstract class BaseEncryptedBackupIT
     {
         var config = neo4jHome.resolve( "conf" + File.separator + Config.DEFAULT_CONFIG_FILE_NAME ).toFile();
         var backupPolicyLocation = neo4jHome.resolve( "certificates" ).resolve( "backup" ).toFile();
-        fs.mkdirs( backupPolicyLocation );
+        fs.mkdirs( backupPolicyLocation.toPath() );
         var properties = new Properties();
         var backupSslConfigGroup = SslPolicyConfig.forScope( BACKUP );
         properties.setProperty( backupSslConfigGroup.enabled.name(), TRUE );
         properties.setProperty( backupSslConfigGroup.base_directory.name(), backupPolicyLocation.getAbsolutePath() );
-        fs.mkdirs( config.getParentFile() );
+        fs.mkdirs( config.getParentFile().toPath() );
 
         try ( var fileWriter = new FileWriter( config ) )
         {
@@ -313,8 +313,8 @@ abstract class BaseEncryptedBackupIT
 
     private void installSsl( Path baseDir, int keyId ) throws IOException
     {
-        fs.mkdirs( baseDir.resolve( "trusted" ).toFile() );
-        fs.mkdirs( baseDir.resolve( "revoked" ).toFile() );
+        fs.mkdirs( baseDir.resolve( "trusted" ) );
+        fs.mkdirs( baseDir.resolve( "revoked" ) );
         SslResourceBuilder.caSignedKeyId( keyId ).trustSignedByCA().install( baseDir );
     }
 
@@ -396,8 +396,8 @@ abstract class BaseEncryptedBackupIT
     private Path createPolicyDirectories( Path homeDir, String policyName ) throws IOException
     {
         var policyDir = homeDir.resolve( "certificates/" + policyName );
-        fs.mkdirs( policyDir.resolve( "revoked" ).toFile() );
-        fs.mkdirs( policyDir.resolve( "trusted" ).toFile() );
+        fs.mkdirs( policyDir.resolve( "revoked" ) );
+        fs.mkdirs( policyDir.resolve( "trusted" ) );
         return policyDir;
     }
 }

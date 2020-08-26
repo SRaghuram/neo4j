@@ -114,7 +114,7 @@ class FabricQueryLoggingTest
                 .withAdditionalSettings( additionalSettings )
                 .addMocks( driverPool )
                 .withQueryExecutionMonitor( queryExecutionMonitor )
-                .withHomeDir( testDirectory.homeDir().toPath() )
+                .withHomeDir( testDirectory.homePath() )
                 .build();
 
         clientDriver = testFabric.directClientDriver();
@@ -384,7 +384,7 @@ class FabricQueryLoggingTest
         doInTx( neo4j, AccessMode.READ, tx -> tx.run( query ).consume() );
 
         Path logFile = getQueryLog();
-        assertEventually( () -> testDirectory.getFileSystem().fileExists( logFile.toFile() ), TRUE, 1, MINUTES );
+        assertEventually( () -> testDirectory.getFileSystem().fileExists( logFile ), TRUE, 1, MINUTES );
         List<String> logLines = readAllLines( logFile );
 
         assertEquals( 2, logLines.size() );
@@ -405,7 +405,7 @@ class FabricQueryLoggingTest
         doInTx( mega, AccessMode.READ, tx -> tx.run( query ).consume() );
 
         Path logFile = getQueryLog();
-        assertEventually( () -> testDirectory.getFileSystem().fileExists( logFile.toFile() ), TRUE, 1, MINUTES );
+        assertEventually( () -> testDirectory.getFileSystem().fileExists( logFile ), TRUE, 1, MINUTES );
         List<String> logLines = readAllLines( logFile );
         assertEquals( 6, logLines.size() ); //3 queries logged, start + end of each
 
@@ -420,7 +420,7 @@ class FabricQueryLoggingTest
 
     private Path getQueryLog()
     {
-        return testDirectory.homeDir().toPath().resolve( GraphDatabaseSettings.logs_directory.defaultValue() ).resolve( "query.log" );
+        return testDirectory.homePath().resolve( GraphDatabaseSettings.logs_directory.defaultValue() ).resolve( "query.log" );
     }
 
     private Optional<String> dbName( ExecutingQuery query )

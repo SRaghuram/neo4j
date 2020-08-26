@@ -94,14 +94,14 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
     private void addDirectory( String path, Path dir, List<DiagnosticsReportSource> sources )
     {
         String currentLevel = path + File.separator + dir.getFileName();
-        if ( fs.isDirectory( dir.toFile() ) )
+        if ( fs.isDirectory( dir ) )
         {
-            File[] files = fs.listFiles( dir.toFile() );
+            Path[] files = fs.listFiles( dir );
             if ( files != null )
             {
-                for ( File file : files )
+                for ( Path file : files )
                 {
-                    addDirectory( currentLevel, file.toPath(), sources );
+                    addDirectory( currentLevel, file, sources );
                 }
             }
         }

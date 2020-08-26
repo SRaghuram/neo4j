@@ -124,6 +124,6 @@ class CheckPointingLogRotationStressTesting
         }
 
         // let's cleanup disk space when everything went well
-        FileUtils.deletePathRecursively( storeDir );
+        FileUtils.deleteDirectory( storeDir );
     }
 }

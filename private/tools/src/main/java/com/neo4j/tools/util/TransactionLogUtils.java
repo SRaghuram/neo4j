@@ -73,7 +73,7 @@ public class TransactionLogUtils
     public static PhysicalLogVersionedStoreChannel openVersionedChannel( FileSystemAbstraction fileSystem, Path path,
             ChannelNativeAccessor nativeAccessor ) throws IOException
     {
-        StoreChannel fileChannel = fileSystem.read( path.toFile() );
+        StoreChannel fileChannel = fileSystem.read( path );
         LogHeader logHeader = readLogHeader( allocate( CURRENT_FORMAT_LOG_HEADER_SIZE, INSTANCE ), fileChannel, true, path );
         requireNonNull( logHeader, "There is no log header in log file '" + path + "', so it is likely a pre-allocated empty log file." );
         return new PhysicalLogVersionedStoreChannel( fileChannel, logHeader.getLogVersion(), logHeader.getLogFormatVersion(), path, nativeAccessor );

@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -71,7 +72,7 @@ public class RsdrMain
         {
             console.printf( "Neo4j Raw Store Diagnostics Reader%n" );
 
-            if ( args.length != 1 || !fileSystem.isDirectory( new File( args[0] ) ) )
+            if ( args.length != 1 || !fileSystem.isDirectory( new File( args[0] ).toPath() ) )
             {
                 console.printf( "Usage: rsdr <store directory>%n" );
                 return;
@@ -159,11 +160,11 @@ public class RsdrMain
 
     private static void listFiles( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout )
     {
-        File databaseDirectory = databaseLayout.databaseDirectory().toFile();
-        File[] listing = fileSystem.listFiles( databaseDirectory );
-        for ( File file : listing )
+        Path databaseDirectory = databaseLayout.databaseDirectory();
+        Path[] listing = fileSystem.listFiles( databaseDirectory );
+        for ( Path file : listing )
         {
-            console.printf( "%s%n", file.getName() );
+            console.printf( "%s%n", file.getFileName() );
         }
     }
 
@@ -207,7 +208,7 @@ public class RsdrMain
             RecordStore store, long fromId, long toId, Pattern pattern ) throws IOException
     {
         toId = Math.min( toId, store.getHighId() );
-        try ( StoreChannel channel = fileSystem.read( store.getStorageFile().toFile() ) )
+        try ( StoreChannel channel = fileSystem.read( store.getStorageFile() ) )
         {
             int recordSize = store.getRecordSize();
             ByteBuffer buf = ByteBuffers.allocate( recordSize, INSTANCE );

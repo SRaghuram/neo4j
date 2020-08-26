@@ -63,7 +63,7 @@ class StreamToDiskTest
             buffer.writeBytes( DATA );
             acquire.write( buffer );
         }
-        assertTrue( fs.fileExists( file ), "Streamed file created." );
-        assertEquals( DATA.length, fs.getFileSize( file ) );
+        assertTrue( fs.fileExists( file.toPath() ), "Streamed file created." );
+        assertEquals( DATA.length, fs.getFileSize( file.toPath() ) );
     }
 }

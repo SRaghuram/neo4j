@@ -142,7 +142,7 @@ public class TestServer implements AutoCloseable
     {
         try
         {
-            FileUtils.deletePathRecursively( dir );
+            FileUtils.deleteDirectory( dir );
         }
         catch ( IOException e )
         {

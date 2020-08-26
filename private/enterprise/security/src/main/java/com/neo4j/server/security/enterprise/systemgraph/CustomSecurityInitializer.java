@@ -6,9 +6,9 @@
 package com.neo4j.server.security.enterprise.systemgraph;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -40,10 +40,12 @@ public class CustomSecurityInitializer
     private void doCustomSecurityInitialization( Transaction tx ) throws IOException
     {
         // this is first startup and custom initialization specified
-        File initFile = config.get( GraphDatabaseInternalSettings.system_init_file ).toFile();
-        BufferedReader reader = new BufferedReader( new FileReader( initFile ) );
-        String[] commands = reader.lines().filter( line -> !line.matches( "^\\s*//" ) ).collect( Collectors.joining( "\n" ) ).split( ";\\s*\n" );
-        reader.close();
+        Path initFile = config.get( GraphDatabaseInternalSettings.system_init_file );
+        String[] commands;
+        try ( BufferedReader reader = Files.newBufferedReader( initFile ) )
+        {
+            commands = reader.lines().filter( line -> !line.matches( "^\\s*//" ) ).collect( Collectors.joining( "\n" ) ).split( ";\\s*\n" );
+        }
         for ( String command : commands )
         {
             if ( commandIsValid( command ) )

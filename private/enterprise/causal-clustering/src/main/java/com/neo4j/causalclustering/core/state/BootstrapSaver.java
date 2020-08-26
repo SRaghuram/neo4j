@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.UUID;
 
@@ -48,8 +48,8 @@ public class BootstrapSaver
      */
     public void save( DatabaseLayout databaseLayout ) throws IOException
     {
-        saveFiles( databaseLayout.databaseDirectory().toFile() );
-        saveFiles( databaseLayout.getTransactionLogsDirectory().toFile() );
+        saveFiles( databaseLayout.databaseDirectory() );
+        saveFiles( databaseLayout.getTransactionLogsDirectory() );
     }
 
     /**
@@ -59,8 +59,8 @@ public class BootstrapSaver
      */
     public void restore( DatabaseLayout databaseLayout ) throws IOException
     {
-        restoreFiles( databaseLayout.databaseDirectory().toFile() );
-        restoreFiles( databaseLayout.getTransactionLogsDirectory().toFile() );
+        restoreFiles( databaseLayout.databaseDirectory() );
+        restoreFiles( databaseLayout.getTransactionLogsDirectory() );
     }
 
     /**
@@ -70,11 +70,11 @@ public class BootstrapSaver
      */
     public void clean( DatabaseLayout databaseLayout ) throws IOException
     {
-        clean( databaseLayout.databaseDirectory().toFile() );
-        clean( databaseLayout.getTransactionLogsDirectory().toFile() );
+        clean( databaseLayout.databaseDirectory() );
+        clean( databaseLayout.getTransactionLogsDirectory() );
     }
 
-    private void saveFiles( File directory ) throws IOException
+    private void saveFiles( Path directory ) throws IOException
     {
         if ( !hasFiles( directory ) )
         {
@@ -86,15 +86,15 @@ public class BootstrapSaver
         assertExistsAndEmpty( directory );
     }
 
-    private boolean hasFiles( File databaseDirectory )
+    private boolean hasFiles( Path databaseDirectory )
     {
-        File[] dbFsNodes = fileSystem.listFiles( databaseDirectory, EXCLUDE_TEMPORARY_DIRS );
+        Path[] dbFsNodes = fileSystem.listFiles( databaseDirectory, EXCLUDE_TEMPORARY_DIRS );
         return dbFsNodes != null && dbFsNodes.length > 0;
     }
 
-    private void assertExistsAndEmpty( File databaseDirectory )
+    private void assertExistsAndEmpty( Path databaseDirectory )
     {
-        File[] dbFsNodes;
+        Path[] dbFsNodes;
         dbFsNodes = fileSystem.listFiles( databaseDirectory, EXCLUDE_TEMPORARY_DIRS );
         if ( dbFsNodes == null || dbFsNodes.length != 0 )
         {
@@ -102,16 +102,16 @@ public class BootstrapSaver
         }
     }
 
-    private void saveInSelf( File baseDir ) throws IOException
+    private void saveInSelf( Path baseDir ) throws IOException
     {
-        File tempSavedDir = new File( baseDir, TEMP_SAVE_DIRECTORY_NAME );
+        Path tempSavedDir = baseDir.resolve( TEMP_SAVE_DIRECTORY_NAME );
 
         if ( fileSystem.fileExists( tempSavedDir ) )
         {
             throw new IllegalStateException( "Directory not expected to exist: " + tempSavedDir );
         }
 
-        File tempRenameDir = tempRenameDir( baseDir );
+        Path tempRenameDir = tempRenameDir( baseDir );
 
         fileSystem.renameFile( baseDir, tempRenameDir );
         if ( !fileSystem.mkdir( baseDir ) )
@@ -121,16 +121,16 @@ public class BootstrapSaver
         fileSystem.renameFile( tempRenameDir, tempSavedDir );
     }
 
-    private void restoreFiles( File directory ) throws IOException
+    private void restoreFiles( Path directory ) throws IOException
     {
-        File tempSaveDir = new File( directory, TEMP_SAVE_DIRECTORY_NAME );
+        Path tempSaveDir = directory.resolve( TEMP_SAVE_DIRECTORY_NAME );
 
         if ( !fileSystem.fileExists( tempSaveDir ) )
         {
             return;
         }
 
-        File[] dbFsNodes = fileSystem.listFiles( directory, EXCLUDE_TEMPORARY_DIRS );
+        Path[] dbFsNodes = fileSystem.listFiles( directory, EXCLUDE_TEMPORARY_DIRS );
 
         if ( dbFsNodes == null )
         {
@@ -145,13 +145,13 @@ public class BootstrapSaver
         restoreFromSelf( directory );
     }
 
-    private void restoreFromSelf( File directory ) throws IOException
+    private void restoreFromSelf( Path directory ) throws IOException
     {
-        File tempRenameDir = tempRenameDir( directory );
-        File tempSavedDir = new File( directory, TEMP_SAVE_DIRECTORY_NAME );
+        Path tempRenameDir = tempRenameDir( directory );
+        Path tempSavedDir = directory.resolve( TEMP_SAVE_DIRECTORY_NAME );
         fileSystem.renameFile( tempSavedDir, tempRenameDir );
 
-        File[] fsNodes = fileSystem.listFiles( directory, EXCLUDE_TEMPORARY_DIRS );
+        Path[] fsNodes = fileSystem.listFiles( directory, EXCLUDE_TEMPORARY_DIRS );
         if ( fsNodes == null || fsNodes.length != 0 )
         {
             throw new IllegalStateException( "Unexpected state of directory: " + Arrays.toString( fsNodes ) );
@@ -160,9 +160,9 @@ public class BootstrapSaver
         fileSystem.renameFile( tempRenameDir, directory );
     }
 
-    private File tempRenameDir( File baseDir )
+    private Path tempRenameDir( Path baseDir )
     {
-        File tempRenameDir = new File( baseDir.getPath() + "-" + UUID.randomUUID().toString().substring( 0, 8 ) );
+        Path tempRenameDir = baseDir.resolveSibling( baseDir.getFileName() + "-" + UUID.randomUUID().toString().substring( 0, 8 ) );
         if ( fileSystem.fileExists( tempRenameDir ) )
         {
             throw new IllegalStateException( "Directory conflict: " + tempRenameDir );
@@ -170,9 +170,9 @@ public class BootstrapSaver
         return tempRenameDir;
     }
 
-    private void clean( File dbDir ) throws IOException
+    private void clean( Path dbDir ) throws IOException
     {
-        File tempSavedDir = new File( dbDir, TEMP_SAVE_DIRECTORY_NAME );
+        Path tempSavedDir = dbDir.resolve( TEMP_SAVE_DIRECTORY_NAME );
         log.info( "Cleaning: " + tempSavedDir );
         fileSystem.deleteRecursively( tempSavedDir );
     }

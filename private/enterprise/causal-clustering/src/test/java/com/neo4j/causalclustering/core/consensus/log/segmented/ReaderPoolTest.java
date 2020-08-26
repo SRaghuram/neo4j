@@ -39,7 +39,7 @@ class ReaderPoolTest
     @BeforeEach
     void before() throws Exception
     {
-        fsa.mkdirs( base.toFile() );
+        fsa.mkdirs( base );
     }
 
     @AfterEach
@@ -59,7 +59,7 @@ class ReaderPoolTest
         Reader newReader = pool.acquire( 0, 0 );
 
         // then
-        verify( fsa ).write( any() );
+        verify( fsa ).write( any( Path.class ) );
         assertThat( reader, is( newReader ) );
     }
 
