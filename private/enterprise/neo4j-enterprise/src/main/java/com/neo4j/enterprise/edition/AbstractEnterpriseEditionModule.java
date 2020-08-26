@@ -82,7 +82,6 @@ public interface AbstractEnterpriseEditionModule
         var authCacheExecutor = getAuthCacheExecutor( globalModule );
         CaffeineCacheFactory cacheFactory = new ExecutorBasedCaffeineCacheFactory( authCacheExecutor );
         globalModule.getGlobalLife().add( securityLog );
-        SecurityProvider securityProvider;
         EnterpriseSecurityGraphComponent securityComponent = setupSecurityGraphInitializer( globalModule, securityLog );
         if ( config.get( GraphDatabaseSettings.auth_enabled ) )
         {
@@ -97,13 +96,9 @@ public interface AbstractEnterpriseEditionModule
             );
             securityModule.setup();
             globalModule.getGlobalLife().add( securityModule.authManager() );
-            securityProvider = securityModule;
+            return securityModule;
         }
-        else
-        {
-            securityProvider = EnterpriseNoAuthSecurityProvider.INSTANCE;
-        }
-        return securityProvider;
+        return EnterpriseNoAuthSecurityProvider.INSTANCE;
     }
 
     private Executor getAuthCacheExecutor( GlobalModule globalModule )

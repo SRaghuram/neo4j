@@ -60,7 +60,7 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
 
     boolean componentNotInVersionNode( Transaction tx )
     {
-        return getVersion( tx ) == NoEnterpriseSecurityComponentVersion.VERSION;
+        return getVersion( tx ) == UNKNOWN_VERSION;
     }
 
     boolean supportsUpdateAction( PrivilegeAction action )

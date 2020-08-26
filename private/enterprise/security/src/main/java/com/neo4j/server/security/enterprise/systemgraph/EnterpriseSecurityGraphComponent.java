@@ -43,6 +43,7 @@ import org.neo4j.server.security.systemgraph.UserSecurityGraphComponent;
 import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.ROLE_LABEL;
 import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.USER_LABEL;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
+import static org.neo4j.server.security.systemgraph.KnownSystemComponentVersion.UNKNOWN_VERSION;
 
 /***
  * This component contains roles and privileges and is an enterprise-only component.
@@ -126,7 +127,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
             log.info( "Upgrading component '%s' with version %d and status %s to latest version",
                     COMPONENT, currentVersion.version, currentVersion.getStatus() );
 
-            if ( currentVersion.version == NoEnterpriseSecurityComponentVersion.VERSION )
+            if ( currentVersion.version == UNKNOWN_VERSION )
             {
                 log.debug( "The current version does not have a security graph, doing a full initialization" );
                 initializeLatestSystemGraph( tx );
