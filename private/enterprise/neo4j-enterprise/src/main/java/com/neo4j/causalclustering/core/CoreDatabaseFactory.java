@@ -386,7 +386,7 @@ class CoreDatabaseFactory
 
         var minimumCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
         var refuseToBeLeader = config.get( CausalClusteringSettings.refuse_to_be_leader );
-        var clusterBindingTimeout = config.get( CausalClusteringInternalSettings.cluster_binding_timeout );
+        var clusterBindingTimeout = config.get( CausalClusteringSettings.cluster_binding_timeout );
         return new RaftBinder( namedDatabaseId, myIdentity, identityModule.memberId(), raftIdStorage, topologyService, systemGraph, clock, () -> sleep( 100 ),
                                clusterBindingTimeout, raftBootstrapper, minimumCoreHosts, refuseToBeLeader, monitors );
     }

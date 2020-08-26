@@ -50,11 +50,6 @@ public class CausalClusteringInternalSettings implements SettingsDeclaration
             newBuilder( "causal_clustering.leader_transfer_member_backoff", DURATION, ofSeconds( 30 ) ).build();
 
     @Internal
-    @Description( "Configures the time after which we give up trying to bind to a cluster formed of the other initial discovery members." )
-    public static final Setting<Duration> cluster_binding_timeout =
-            newBuilder( "causal_clustering.cluster_binding_timeout", DURATION, ofMinutes( 5 ) ).build();
-
-    @Internal
     @Description( "Configures the time after which we retry binding to a cluster. Only applies to Akka discovery. " +
             "A discovery type of DNS/SRV/K8S will be queried again on retry." )
     public static final Setting<Duration> cluster_binding_retry_timeout =

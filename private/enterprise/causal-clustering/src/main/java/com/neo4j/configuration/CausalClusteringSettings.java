@@ -111,6 +111,11 @@ public class CausalClusteringSettings implements SettingsDeclaration
     public static final Setting<Integer> catchup_batch_size =
             newBuilder( "causal_clustering.catchup_batch_size", INT, 64 ).build();
 
+    @Description( "The time allowed for a database on a Neo4j server to either join a cluster or form a " +
+              "new cluster with the other Neo4j Core Servers provided by `causal_clustering.initial_discovery_members`." )
+    public static final Setting<Duration> cluster_binding_timeout =
+            newBuilder( "causal_clustering.cluster_binding_timeout", DURATION, ofMinutes( 5 ) ).build();
+
     @Description( "The maximum lag allowed before log shipping pauses (in unit of entries)" )
     public static final Setting<Integer> log_shipping_max_lag =
             newBuilder( "causal_clustering.log_shipping_max_lag", INT, 256 ).build();
