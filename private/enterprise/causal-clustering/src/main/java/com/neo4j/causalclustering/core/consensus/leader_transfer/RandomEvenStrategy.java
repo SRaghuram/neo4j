@@ -85,16 +85,16 @@ public class RandomEvenStrategy implements SelectionStrategy
      *
      * @return returns a set of cluster members with *more* than one fewer leaderships than this instance
      */
-    private Set<ServerId> serversWithFewerLeaderships( Set<? extends ServerId> allMembers )
+    private Set<ServerId> serversWithFewerLeaderships( Set<ServerId> allMembers )
     {
         var databaseIds = databasesSupplier.get();
-        Map<ServerId,Long> leadershipCounts = databaseIds.stream()
+        Map<MemberId,Long> leadershipCounts = databaseIds.stream()
                    .flatMap( dbId -> leaderService.getLeaderServer( dbId ).stream() )
                    .collect( Collectors.groupingBy( identity(), Collectors.counting() ) );
 
-        allMembers.forEach( member -> leadershipCounts.putIfAbsent( member, 0L ) );
+        allMembers.forEach( member -> leadershipCounts.putIfAbsent( MemberId.of( member ), 0L ) );
 
-        var myLeadershipCount = leadershipCounts.getOrDefault( identityModule.myself(), 0L );
+        var myLeadershipCount = leadershipCounts.getOrDefault( identityModule.memberId(), 0L );
 
         return leadershipCounts.entrySet().stream()
                                .filter( e -> e.getValue() < ( myLeadershipCount - 1 ) )
