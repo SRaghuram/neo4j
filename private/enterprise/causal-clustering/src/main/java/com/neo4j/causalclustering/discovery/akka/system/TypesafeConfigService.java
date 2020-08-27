@@ -46,6 +46,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
@@ -131,11 +132,18 @@ public final class TypesafeConfigService
         configMap.put( "akka.remote.artery.canonical.hostname", hostname( advertisedAddress ) );
         configMap.put( "akka.remote.artery.canonical.port", advertisedAddress.getPort() );
 
+        if ( config.get( CausalClusteringInternalSettings.middleware_akka_down_unreachable_on_new_joiner ) )
+        {
+            configMap.put( "akka.remote.artery.advanced.instruments", List.of( JoinMessageSpy.class.getCanonicalName() ) );
+        }
+
         configMap.put( "akka.remote.artery.bind.hostname", hostname( listenAddress ) );
         configMap.put( "akka.remote.artery.bind.port", listenAddress.getPort() );
 
         Duration bindTimeout = config.get( CausalClusteringInternalSettings.akka_bind_timeout );
         configMap.put( "akka.remote.artery.bind.bind-timeout", bindTimeout.toMillis() + "ms" );
+
+        // TODO: "akka.remote.artery.advanced.stop-idle-outbound-after"
 
         Duration connectionTimeout = config.get( CausalClusteringInternalSettings.akka_connection_timeout );
         configMap.put( "akka.remote.artery.advanced.connection-timeout", connectionTimeout.toMillis() + "ms" );

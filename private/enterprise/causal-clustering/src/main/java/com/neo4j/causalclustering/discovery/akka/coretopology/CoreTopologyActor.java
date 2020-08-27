@@ -20,6 +20,7 @@ import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.util.Collection;
@@ -97,7 +98,7 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
 
         // Children, who will be sending messages to us
         metadataActor = getContext().actorOf( MetadataActor.props( myself, cluster, replicator, getSelf(), config, replicatedDataMonitor ) );
-        ActorRef downingActor = getContext().actorOf( ClusterDowningActor.props( cluster ) );
+        ActorRef downingActor = getContext().actorOf( ClusterDowningActor.props( cluster, config ) );
         getContext().actorOf( ClusterStateActor.props( cluster, getSelf(), downingActor, metadataActor, config, clusterSizeMonitor ) );
         raftIdActor = getContext().actorOf( RaftIdActor.props( cluster, replicator, getSelf(), replicatedDataMonitor, minCoreHostsAtRuntime ) );
     }
