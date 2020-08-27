@@ -40,7 +40,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 
 @Neo4jLayoutExtension
 @ExtendWith( RandomExtension.class )
-class StandardToHighLimitMigrationIT
+class FormatFamilyMigrationIT
 {
     private static final Label[] labels = new Label[]{
             Label.label( "label1" ),
@@ -71,7 +71,7 @@ class StandardToHighLimitMigrationIT
 
     @ParameterizedTest
     @CsvSource( {"standard,high_limit", "standard,aligned", "aligned,high_limit"} )
-    void shouldUpgradeFromStandardToHighLimitFormat( String fromFormat, String toFormat )
+    void shouldUpgradeToHigherFormatFamily( String fromFormat, String toFormat )
     {
         DbRepresentation expected;
 
