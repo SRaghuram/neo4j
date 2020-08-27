@@ -63,7 +63,7 @@ import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnt
 import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_40;
 import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41;
 import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41D1;
-import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_42D3;
+import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_42D4;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -221,7 +221,7 @@ class SystemGraphComponentsTest
                 Arguments.arguments( VERSION_40, REQUIRES_UPGRADE ),
                 Arguments.arguments( VERSION_41D1, REQUIRES_UPGRADE ),
                 Arguments.arguments( VERSION_41, REQUIRES_UPGRADE ),
-                Arguments.arguments( VERSION_42D3, CURRENT )
+                Arguments.arguments( VERSION_42D4, CURRENT )
         );
     }
 

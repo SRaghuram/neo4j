@@ -526,6 +526,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute(s"REVOKE ACCESS ON DEFAULT DATABASE FROM ${PredefinedRoles.PUBLIC}")
     execute(s"REVOKE EXECUTE PROCEDURES * ON DBMS FROM ${PredefinedRoles.PUBLIC}")
+    execute("SHOW ROLE PUBLIC PRIVILEGES").toList should be(empty)
   }
 
   def createRoleWithOnlyAdminPrivilege(name: String = "adminOnly"): Unit = {

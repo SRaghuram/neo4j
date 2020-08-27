@@ -20,14 +20,14 @@ import org.neo4j.logging.Log;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent.LATEST_VERSION;
 
-public class EnterpriseVersion_5_42d3 extends SupportedEnterpriseVersion
+public class EnterpriseVersion_5_42d4 extends SupportedEnterpriseVersion
 {
     private final KnownEnterpriseSecurityComponentVersion previous;
     private Node procedurePriv;
 
-    public EnterpriseVersion_5_42d3( Log log, KnownEnterpriseSecurityComponentVersion previous )
+    public EnterpriseVersion_5_42d4( Log log, KnownEnterpriseSecurityComponentVersion previous )
     {
-        super( LATEST_VERSION, VERSION_42D3, log, true );
+        super( LATEST_VERSION, VERSION_42D4, log, true );
         this.previous = previous;
     }
 

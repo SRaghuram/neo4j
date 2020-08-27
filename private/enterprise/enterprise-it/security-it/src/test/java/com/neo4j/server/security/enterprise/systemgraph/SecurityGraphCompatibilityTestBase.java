@@ -147,8 +147,8 @@ abstract class SecurityGraphCompatibilityTestBase
         }
     }
 
-    private static String[] GRANT_REVOKE = {"GRANT", "REVOKE"};
-    private static String[] GRANT_DENY_REVOKE = {"GRANT", "DENY", "REVOKE"};
+    private static final String[] GRANT_REVOKE = {"GRANT", "REVOKE"};
+    private static final String[] GRANT_DENY_REVOKE = {"GRANT", "DENY", "REVOKE"};
 
     static Set<PrivilegeCommand> PRIVILEGES_ADDED_IN_40 = Set.of(
             // role management
@@ -177,6 +177,7 @@ abstract class SecurityGraphCompatibilityTestBase
             new PrivilegeCommand( "CREATE NEW TYPE ON DATABASE *", GRANT_DENY_REVOKE ),
             new PrivilegeCommand( "CREATE NEW PROPERTY NAME ON DATABASE *", GRANT_DENY_REVOKE ),
             new PrivilegeCommand( "NAME MANAGEMENT ON DATABASE *", GRANT_DENY_REVOKE ),
+
             new PrivilegeCommand( "ALL ON DATABASE *", GRANT_DENY_REVOKE ),
 
             // graph privileges
@@ -238,7 +239,7 @@ abstract class SecurityGraphCompatibilityTestBase
             new PrivilegeCommand( "MERGE {*} ON GRAPH *", GRANT_REVOKE )
     );
 
-    static Set<PrivilegeCommand> PRIVILEGES_ADDED_IN_42D3 = Set.of(
+    static Set<PrivilegeCommand> PRIVILEGES_ADDED_IN_42D4 = Set.of(
             new PrivilegeCommand( "EXECUTE PROCEDURE * ON DBMS", GRANT_DENY_REVOKE )
     );
 
@@ -249,7 +250,7 @@ abstract class SecurityGraphCompatibilityTestBase
         ALL_PRIVILEGES.addAll( PRIVILEGES_ADDED_IN_40 );
         ALL_PRIVILEGES.addAll( PRIVILEGES_ADDED_IN_41D1 );
         ALL_PRIVILEGES.addAll( PRIVILEGES_ADDED_IN_41 );
-        ALL_PRIVILEGES.addAll( PRIVILEGES_ADDED_IN_42D3 );
+        ALL_PRIVILEGES.addAll( PRIVILEGES_ADDED_IN_42D4 );
     }
 
     static class PrivilegeCommand

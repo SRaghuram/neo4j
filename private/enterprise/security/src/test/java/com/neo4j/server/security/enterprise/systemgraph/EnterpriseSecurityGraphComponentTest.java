@@ -48,7 +48,7 @@ import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnt
 import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_40;
 import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41;
 import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41D1;
-import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_42D3;
+import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_42D4;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
@@ -146,7 +146,7 @@ class EnterpriseSecurityGraphComponentTest
                 Arguments.of( VERSION_40, List.of( ADMIN, ARCHITECT, PUBLISHER, EDITOR, READER ), REQUIRES_UPGRADE ),
                 Arguments.of( VERSION_41D1, PredefinedRoles.roles, REQUIRES_UPGRADE ),
                 Arguments.of( VERSION_41, PredefinedRoles.roles, REQUIRES_UPGRADE ),
-                Arguments.of( VERSION_42D3, PredefinedRoles.roles, CURRENT )
+                Arguments.of( VERSION_42D4, PredefinedRoles.roles, CURRENT )
         );
     }
 
