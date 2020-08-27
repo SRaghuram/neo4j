@@ -6,6 +6,7 @@
 package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.security.AuthorizationViolationException
 
@@ -23,18 +24,19 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
         withClue(s"$command: \n") {
           // WHEN
           execute(s"GRANT $command * ON DBMS TO custom")
-          execute(s"GRANT $command test.proc, math.* ON DBMS TO custom")
+          execute(s"GRANT $command test.proc, math.*, apoc.*.math.co? ON DBMS TO custom")
 
           // THEN
           execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
             granted(action).procedure("*").role("custom").map,
             granted(action).procedure("test.proc").role("custom").map,
-            granted(action).procedure("math.*").role("custom").map
+            granted(action).procedure("math.*").role("custom").map,
+            granted(action).procedure("apoc.*.math.co?").role("custom").map
           ))
 
           // WHEN
           execute(s"REVOKE GRANT $command * ON DBMS FROM custom")
-          execute(s"REVOKE GRANT $command test.proc, math.* ON DBMS FROM custom")
+          execute(s"REVOKE GRANT $command test.proc, math.*, apoc.*.math.co? ON DBMS FROM custom")
 
           // THEN
           execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
@@ -51,18 +53,19 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
         withClue(s"$command: \n") {
           // WHEN
           execute(s"DENY $command * ON DBMS TO custom")
-          execute(s"DENY $command test.proc, math.* ON DBMS TO custom")
+          execute(s"DENY $command test.proc, math.*, apoc.*.math.co? ON DBMS TO custom")
 
           // THEN
           execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
             denied(action).procedure("*").role("custom").map,
             denied(action).procedure("test.proc").role("custom").map,
-            denied(action).procedure("math.*").role("custom").map
+            denied(action).procedure("math.*").role("custom").map,
+            denied(action).procedure("apoc.*.math.co?").role("custom").map
           ))
 
           // WHEN
           execute(s"REVOKE DENY $command * ON DBMS FROM custom")
-          execute(s"REVOKE DENY $command test.proc, math.* ON DBMS FROM custom")
+          execute(s"REVOKE DENY $command test.proc, math.*, apoc.*.math.co? ON DBMS FROM custom")
 
           // THEN
           execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
@@ -83,7 +86,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
         |CREATE (:B)
         |""".stripMargin)
 
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
   }
 
   test("should execute procedure with execute procedure *") {
@@ -110,6 +113,29 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     // THEN
     executeOnDefault("foo", "bar", "CALL dbms.showCurrentUser()", resultHandler = (row, _) => {
       row.get("username") should equal("foo")
+    }) should be(1)
+  }
+
+  test("should execute procedures when granted execution through globbing") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT EXECUTE PROCEDURE dbms.show* ON DBMS TO custom")
+
+    // THEN
+    executeOnDefault("foo", "bar", "CALL dbms.showCurrentUser()", resultHandler = (row, _) => {
+      row.get("username") should equal("foo")
+    }) should be(1)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+    execute("GRANT EXECUTE PROCEDURE d?.l?bels ON DBMS TO custom")
+
+    // THEN
+    executeOnDefault("foo", "bar", "CALL db.labels", resultHandler = (row, _) => {
+      row.get("label") should equal("A")
     }) should be(1)
   }
 
