@@ -5,8 +5,9 @@
  */
 package com.neo4j.storeupgrade;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -62,20 +63,21 @@ class StandardToHighLimitMigrationIT
             "prop4",
             "prop5"
     };
-    private List<Long> nodes = new ArrayList<>();
+    private final List<Long> nodes = new ArrayList<>();
     @Inject
     private Neo4jLayout neo4jLayout;
     @Inject
     private RandomRule randomRule;
 
-    @Test
-    void shouldUpgradeFromStandardToHighLimitFormat()
+    @ParameterizedTest
+    @CsvSource( {"standard,high_limit", "standard,aligned", "aligned,high_limit"} )
+    void shouldUpgradeFromStandardToHighLimitFormat( String fromFormat, String toFormat )
     {
         DbRepresentation expected;
 
         // Create standard store
         DatabaseManagementService dbms = new TestDatabaseManagementServiceBuilder( neo4jLayout )
-                .setConfig( GraphDatabaseSettings.record_format, "standard" )
+                .setConfig( GraphDatabaseSettings.record_format, fromFormat )
                 .build();
         try
         {
@@ -95,7 +97,7 @@ class StandardToHighLimitMigrationIT
 
         dbms = new TestDatabaseManagementServiceBuilder( neo4jLayout )
                 .setConfig( GraphDatabaseSettings.allow_upgrade, true )
-                .setConfig( GraphDatabaseSettings.record_format, "high_limit" )
+                .setConfig( GraphDatabaseSettings.record_format, toFormat )
                 .build();
 
         try
