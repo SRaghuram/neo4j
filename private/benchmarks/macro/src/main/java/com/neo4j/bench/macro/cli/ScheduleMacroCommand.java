@@ -28,6 +28,10 @@ import com.neo4j.bench.infra.ResultStoreCredentials;
 import com.neo4j.bench.infra.URIHelper;
 import com.neo4j.bench.infra.Workspace;
 import com.neo4j.bench.infra.macro.MacroToolRunner;
+import com.neo4j.bench.infra.resources.Infrastructure;
+import com.neo4j.bench.infra.resources.InfrastructureCapabilities;
+import com.neo4j.bench.infra.resources.InfrastructureMatcher;
+import com.neo4j.bench.infra.resources.InfrastructureResources;
 import com.neo4j.bench.infra.scheduler.BenchmarkJobScheduler;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
@@ -51,6 +55,8 @@ import java.util.concurrent.ExecutionException;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_ERROR_POLICY;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
 @Command( name = "schedule" )
 public class ScheduleMacroCommand extends BaseRunWorkloadCommand
@@ -61,14 +67,14 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
             name = InfraParams.CMD_JOB_QUEUE,
             title = "AWS Batch Job Queue Name",
             description = "job queue name in CloudFormation stack" )
-    private String jobQueue = "macro-benchmark-run-queue";
+    private String jobQueue;
 
     // job definition in CloudFormation stack
     @Option( type = OptionType.COMMAND,
             name = InfraParams.CMD_JOB_DEFINITION,
             title = "AWS Batch Job Definition Name",
             description = "job definition in CloudFormation stack" )
-    private String jobDefinition = "macro-benchmark-job-definition";
+    private String jobDefinition;
 
     // name of stack in CloudFormation
     @Option( type = OptionType.COMMAND,
@@ -143,6 +149,15 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
     @Required
     private URI artifactBaseUri;
 
+    private static final String CMD_INFRASTRUCTURE_CAPABILITIES = "--infrastructure-capabilities";
+    @Option( type = OptionType.COMMAND,
+             name = CMD_INFRASTRUCTURE_CAPABILITIES,
+             description = "set of required infrastructure capabilities to run benchmark " +
+                           "(e.g., hardware:totalMemory=16384,hardware:availableCores=8,jdk=oracle-8 " +
+                           "or AWS:instanceType=m5d.xlarge,jdk=oracle-8)",
+             title = "Infrastructure capabilities" )
+    private String infrastructureCapabilities;
+
     private static String getJobName( String tool, String benchmark, String version, String triggered )
     {
         return format( "%s-%s-%s-%s", tool, benchmark, version, triggered );
@@ -153,6 +168,10 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
     {
         try
         {
+            AWSCredentials awsCredentials = new AWSCredentials( awsKey, awsSecret, awsRegion );
+
+            Infrastructure infrastructure = matchInfrastructure( awsCredentials );
+
             // first start preparing the workspace
             Path workspacePath = workspaceDir.toPath();
 
@@ -170,8 +189,11 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                 workspace = Workspace.defaultMacroEmbeddedWorkspace( workspacePath );
             }
 
-            AWSCredentials awsCredentials = new AWSCredentials( awsKey, awsSecret, awsRegion );
-            BenchmarkJobScheduler benchmarkJobScheduler = BenchmarkJobScheduler.create( jobQueue, jobDefinition, batchStack, awsCredentials );
+            BenchmarkJobScheduler benchmarkJobScheduler =
+                    BenchmarkJobScheduler.create( infrastructure.jobQueue(),
+                                                  infrastructure.jobDefinition(),
+                                                  batchStack,
+                                                  awsCredentials );
             URI artifactBaseWorkloadURI = artifactBaseUri.resolve( URIHelper.toURIPart( runMacroWorkloadParams.triggeredBy() ) )
                                                          .resolve( URIHelper.toURIPart( runMacroWorkloadParams.teamcityBuild().toString() ) )
                                                          .resolve( URIHelper.toURIPart( runMacroWorkloadParams.workloadName() ) );
@@ -236,5 +258,28 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
         {
             throw new RuntimeException( "failed to schedule benchmarking job", e );
         }
+    }
+
+    private Infrastructure matchInfrastructure( AWSCredentials awsCredentials )
+    {
+        Infrastructure infrastructure;
+        if ( isNotEmpty( jobDefinition ) && isNotEmpty( jobQueue ) && isEmpty( infrastructureCapabilities ) )
+        {
+            infrastructure = new Infrastructure( jobQueue, jobDefinition );
+        }
+        else if ( isEmpty( jobDefinition ) && isEmpty( jobQueue ) && isNotEmpty( infrastructureCapabilities ) )
+        {
+            InfrastructureCapabilities capabilities = InfrastructureCapabilities.fromArgs( infrastructureCapabilities );
+            InfrastructureMatcher infrastructureMatcher = new InfrastructureMatcher( InfrastructureResources.create( awsCredentials ) );
+            infrastructure = infrastructureMatcher.findInfrastructure( batchStack, capabilities );
+        }
+        else
+        {
+            throw new IllegalArgumentException( format( "either provide %s or (%s and %s) command line arguments",
+                                                        CMD_INFRASTRUCTURE_CAPABILITIES,
+                                                        InfraParams.CMD_JOB_DEFINITION,
+                                                        InfraParams.CMD_JOB_QUEUE ) );
+        }
+        return infrastructure;
     }
 }

@@ -23,8 +23,8 @@ public class BatchJobCommandParameters
         return JsonPath.parse(
                 new File( "../src/main/stack/aws-batch-formation.json" ))
                 .limit( 1 )
-                // in CloudFormation template find first JobDefinition and extract command
-                .read( "$.Resources.*[?(@.Type == 'AWS::Batch::JobDefinition')].Properties.ContainerProperties.Command", JSONArray.class )
+                // in CloudFormation template find first JobDefinitionResource and extract command
+                .read( "$.Resources.*[?(@.Type == 'AWS::Batch::JobDefinitionResource')].Properties.ContainerProperties.Command", JSONArray.class )
                 .stream()
                 .findFirst()
                 .map( JSONArray.class::cast )

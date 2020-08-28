@@ -130,7 +130,9 @@ public class AWSBatchJobScheduler implements JobScheduler
                                                               .withCredentials( credentialsProvider )
                                                               .withRegion( region )
                                                               .build(),
-                                         getJobQueueCustomName( jobQueue, credentialsProvider, region, stack ),
+                                         // TODO this would only work when jobQueue is from CLI, not discovered from InfrastructureMatcher
+                                         //getJobQueueCustomName( jobQueue, credentialsProvider, region, stack ),
+                                         jobQueue,
                                          jobDefinition );
     }
 
