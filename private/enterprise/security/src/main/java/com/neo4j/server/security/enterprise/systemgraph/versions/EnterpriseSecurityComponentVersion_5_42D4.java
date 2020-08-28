@@ -20,27 +20,19 @@ import org.neo4j.logging.Log;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent.LATEST_VERSION;
 
-public class EnterpriseVersion_5_42d4 extends SupportedEnterpriseSecurityComponentVersion
+/***
+ * This is the EnterpriseSecurityComponent version for Neo4j 4.2-drop4.
+ * Compared with the previous version, the support for execute procedure privileges has been added.
+ */
+public class EnterpriseSecurityComponentVersion_5_42D4 extends SupportedEnterpriseSecurityComponentVersion
 {
     private final KnownEnterpriseSecurityComponentVersion previous;
     private Node procedurePriv;
 
-    public EnterpriseVersion_5_42d4( Log log, KnownEnterpriseSecurityComponentVersion previous )
+    public EnterpriseSecurityComponentVersion_5_42D4( Log log, KnownEnterpriseSecurityComponentVersion previous )
     {
         super( LATEST_VERSION, VERSION_42D4, log );
         this.previous = previous;
-    }
-
-    @Override
-    public boolean migrationSupported()
-    {
-        return true;
-    }
-
-    @Override
-    public boolean runtimeSupported()
-    {
-        return true;
     }
 
     @Override

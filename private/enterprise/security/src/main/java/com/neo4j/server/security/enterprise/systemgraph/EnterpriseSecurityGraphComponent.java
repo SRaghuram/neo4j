@@ -15,7 +15,7 @@ import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecur
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_2_40;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_3_41D1;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_4_41;
-import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersion_5_42d4;
+import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_5_42D4;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_Future;
 import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion;
 import com.neo4j.server.security.enterprise.systemgraph.versions.NoEnterpriseSecurityComponentVersion;
@@ -55,9 +55,9 @@ import static org.neo4j.server.security.systemgraph.KnownSystemComponentVersion.
  */
 public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphComponent
 {
-    public static final int LATEST_VERSION = 4;
-    public static final List<Integer> VERSIONS_MIGRATION_SUPPORTED = Arrays.asList(0, 1, 2, 3, 4);
-    public static final List<Integer> VERSIONS_RUNTIME_SUPPORTED = Arrays.asList(2, 3, 4);
+    public static final int LATEST_VERSION = 5;
+    public static final List<Integer> VERSIONS_MIGRATION_SUPPORTED = Arrays.asList(0, 1, 2, 3, 4, 5);
+    public static final List<Integer> VERSIONS_RUNTIME_SUPPORTED = Arrays.asList(2, 3, 4, 5);
 
     private final UserRepository defaultAdminRepository;
     private final KnownSystemComponentVersions<KnownEnterpriseSecurityComponentVersion> knownSecurityComponentVersions =
@@ -76,7 +76,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         EnterpriseSecurityComponentVersion_2_40 version2 = new EnterpriseSecurityComponentVersion_2_40( log );
         EnterpriseSecurityComponentVersion_3_41D1 version3 = new EnterpriseSecurityComponentVersion_3_41D1( log, version2 );
         EnterpriseSecurityComponentVersion_4_41 version4 = new EnterpriseSecurityComponentVersion_4_41( log, version3 );
-        EnterpriseVersion_5_42d4 version5 = new EnterpriseVersion_5_42d4( log, version4 );
+        EnterpriseSecurityComponentVersion_5_42D4 version5 = new EnterpriseSecurityComponentVersion_5_42D4( log, version4 );
 
         knownSecurityComponentVersions.add( new EnterpriseSecurityComponentVersion_0_35( log, migrationRoleRepository, customSecurityInitializer ) );
         knownSecurityComponentVersions.add( new EnterpriseSecurityComponentVersion_1_36( log, config ) );
