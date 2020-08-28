@@ -20,7 +20,7 @@ import org.neo4j.logging.Log;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent.LATEST_VERSION;
 
-/***
+/**
  * This is the EnterpriseSecurityComponent version for Neo4j 4.2-drop4.
  * Compared with the previous version, the support for execute procedure privileges has been added.
  */

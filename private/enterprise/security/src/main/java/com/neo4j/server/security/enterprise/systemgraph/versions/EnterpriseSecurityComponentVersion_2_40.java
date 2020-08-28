@@ -24,6 +24,7 @@ import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.ProcedureSegment;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.logging.Log;
+import org.neo4j.util.Preconditions;
 
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
@@ -32,9 +33,10 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent.LATEST_VERSION;
+import static java.lang.String.format;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
 
-/***
+/**
  * This is the EnterpriseSecurityComponent version for Neo4j 4.0
  * Compared with the previous version (for Neo4j 3.6) it has a whole new schema,
  * so all roles and users must be re-added and the default privileges created.
@@ -185,7 +187,7 @@ public class EnterpriseSecurityComponentVersion_2_40 extends SupportedEnterprise
     @Override
     public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest )
     {
-        assert latest.version == LATEST_VERSION;
+        Preconditions.checkState( latest.version == LATEST_VERSION, format("Latest version should be %s but was %s", LATEST_VERSION, latest.version ));
         log.info( String.format( "Upgrading security model from %s by restructuring privileges", this.description ) );
         // Upgrade from 4.0.x to 4.1.x, which means add the Version node, change global writes,split schema into index and constraint and add the public role
         setVersionProperty( tx, latest.version );

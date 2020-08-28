@@ -23,8 +23,10 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.auth.ListSnapshot;
+import org.neo4j.util.Preconditions;
 
 import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent.LATEST_VERSION;
+import static java.lang.String.format;
 
 public class EnterpriseSecurityComponentVersion_0_35 extends KnownEnterpriseSecurityComponentVersion
 {
@@ -81,7 +83,7 @@ public class EnterpriseSecurityComponentVersion_0_35 extends KnownEnterpriseSecu
     @Override
     public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest ) throws Exception
     {
-        assert latest.version == LATEST_VERSION;
+        Preconditions.checkState( latest.version == LATEST_VERSION, format("Latest version should be %s but was %s", LATEST_VERSION, latest.version ));
         roleRepository.start();
         log.info( String.format( "Upgrading security model from %s roles file with %d roles", this.description, roleRepository.numberOfRoles() ) );
         if ( roleRepository.getRoleByName( PredefinedRoles.PUBLIC ) != null )

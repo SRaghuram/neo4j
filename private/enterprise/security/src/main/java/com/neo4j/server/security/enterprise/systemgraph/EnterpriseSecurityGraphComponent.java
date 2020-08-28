@@ -45,7 +45,7 @@ import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnt
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
 import static org.neo4j.server.security.systemgraph.KnownSystemComponentVersion.UNKNOWN_VERSION;
 
-/***
+/**
  * This component contains roles and privileges and is an enterprise-only component.
  * Each role is represented by a node with label :Role that is connected to zero or more users from the {@link UserSecurityGraphComponent}.
  * A privilege is represented of a relationship of type :GRANTED or :DENIED from a role node to a node with label (:Privilege),

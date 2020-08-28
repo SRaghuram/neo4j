@@ -26,10 +26,12 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.logging.Log;
+import org.neo4j.util.Preconditions;
 
 import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent.LATEST_VERSION;
+import static java.lang.String.format;
 
-/***
+/**
  * This component version is for the system database in Neo4j 3.6 which had its own schema for users and roles.
  * Note that the system database was enterprise-only in 3.6.
  */
@@ -96,7 +98,7 @@ public class EnterpriseSecurityComponentVersion_1_36 extends KnownEnterpriseSecu
     @Override
     public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest ) throws Exception
     {
-        assert latest.version == LATEST_VERSION;
+        Preconditions.checkState( latest.version == LATEST_VERSION, format("Latest version should be %s but was %s", LATEST_VERSION, latest.version ));
         createPublicRoleFromUpgrade( tx );
         setVersionProperty( tx, latest.version );
         List<Node> roles = tx.findNodes( ROLE_LABEL ).stream().collect( Collectors.toList() );

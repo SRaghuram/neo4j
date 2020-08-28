@@ -9,7 +9,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DefaultSystemGraphComponent;
 import org.neo4j.graphdb.Node;
 
-/***
+/**
  * This is an enterprise component for databases.
  * It is building on {@link DefaultSystemGraphComponent}, with the only difference being that
  * the old default database is not stopped when a new default database is chosen.

@@ -12,7 +12,7 @@ import org.neo4j.dbms.database.DefaultSystemGraphComponent;
 import org.neo4j.fabric.FabricDatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 
-/***
+/**
  * This is an enterprise component for databases.
  * It is building on {@link DefaultSystemGraphComponent}, with the only differences being that:
  * 1. The old default database is not stopped when a new default database is chosen.
