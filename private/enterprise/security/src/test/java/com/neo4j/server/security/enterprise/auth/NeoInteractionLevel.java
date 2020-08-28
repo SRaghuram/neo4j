@@ -22,7 +22,7 @@ public interface NeoInteractionLevel<S>
 
     GraphDatabaseFacade getSystemGraph();
 
-    default void clearPublicRole()
+    default void removeAccessFromPublicRole()
     {
         try ( Transaction tx = getSystemGraph().beginTx() )
         {

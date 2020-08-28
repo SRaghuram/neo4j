@@ -26,6 +26,7 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CREATE_ELEM
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DBMS_ACTIONS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DELETE_ELEMENT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE_ADMIN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE_BOOSTED;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.GRAPH_ACTIONS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.MATCH;
@@ -72,6 +73,7 @@ class StandardAccessModeTest
         when( lookup.getProcedureIds( "math.proc4" ) ).thenReturn( new int[]{PROC4} );
         when( lookup.getProcedureIds( "*" ) ).thenReturn( new int[]{PROC1, PROC2, PROC3, PROC4} );
         when( lookup.getProcedureIds( "*math*" ) ).thenReturn( new int[]{PROC3, PROC4} );
+        when( lookup.getAdminProcedureIds() ).thenReturn( new int[]{PROC1, PROC3} );
 
         builder = new StandardAccessModeBuilder( true, false, Collections.emptySet(), lookup, DEFAULT_DATABASE_NAME, DEFAULT_DATABASE_NAME );
     }
@@ -2327,9 +2329,15 @@ class StandardAccessModeTest
 
         // EXECUTE PROCEDURES
         assertThat( mode.allowsExecuteProcedure( PROC1 ) ).isTrue();
-        assertThat( mode.allowsExecuteProcedure( PROC2 ) ).isTrue();
+        assertThat( mode.allowsExecuteProcedure( PROC2 ) ).isFalse();
         assertThat( mode.allowsExecuteProcedure( PROC3 ) ).isTrue();
-        assertThat( mode.allowsExecuteProcedure( PROC4 ) ).isTrue();
+        assertThat( mode.allowsExecuteProcedure( PROC4 ) ).isFalse();
+
+        // BOOST
+        assertThat( mode.shouldBoostProcedure( PROC1 ) ).isTrue();
+        assertThat( mode.shouldBoostProcedure( PROC2 ) ).isFalse();
+        assertThat( mode.shouldBoostProcedure( PROC3 ) ).isTrue();
+        assertThat( mode.shouldBoostProcedure( PROC4 ) ).isFalse();
     }
 
     // EXECUTE PROCEDURE
@@ -2512,6 +2520,138 @@ class StandardAccessModeTest
         // EXECUTE
         assertThat( mode.allowsExecuteProcedure( PROC1 ) ).isTrue();
         assertThat( mode.allowsExecuteProcedure( PROC2 ) ).isTrue();
+        assertThat( mode.allowsExecuteProcedure( PROC3 ) ).isTrue();
+        assertThat( mode.allowsExecuteProcedure( PROC4 ) ).isTrue();
+
+        // BOOST
+        assertThat( mode.shouldBoostProcedure( PROC1 ) ).isFalse();
+        assertThat( mode.shouldBoostProcedure( PROC2 ) ).isFalse();
+        assertThat( mode.shouldBoostProcedure( PROC3 ) ).isFalse();
+        assertThat( mode.shouldBoostProcedure( PROC4 ) ).isFalse();
+    }
+
+    @Test
+    void grantExecuteAdminProcedure()  throws Exception
+    {
+        var privilege = new ResourcePrivilege( GRANT, EXECUTE_ADMIN, new Resource.DatabaseResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
+
+        var mode = builder.addPrivilege( privilege ).build();
+
+        // EXECUTE
+        assertThat( mode.allowsExecuteProcedure( PROC1 ) ).isTrue();
+        assertThat( mode.allowsExecuteProcedure( PROC2 ) ).isFalse();
+        assertThat( mode.allowsExecuteProcedure( PROC3 ) ).isTrue();
+        assertThat( mode.allowsExecuteProcedure( PROC4 ) ).isFalse();
+
+        // BOOST
+        assertThat( mode.shouldBoostProcedure( PROC1 ) ).isTrue();
+        assertThat( mode.shouldBoostProcedure( PROC2 ) ).isFalse();
+        assertThat( mode.shouldBoostProcedure( PROC3 ) ).isTrue();
+        assertThat( mode.shouldBoostProcedure( PROC4 ) ).isFalse();
+    }
+
+    @Test
+    void grantExecuteAdminAndDenyBoostedProcedure()  throws Exception
+    {
+        var privilege1 = new ResourcePrivilege( GRANT, EXECUTE_ADMIN, new Resource.DatabaseResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 =
+                new ResourcePrivilege( DENY, EXECUTE_BOOSTED, new Resource.DatabaseResource(), new ProcedureSegment( "math.proc3" ), DEFAULT_DATABASE_NAME );
+
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+
+        // EXECUTE
+        assertThat( mode.allowsExecuteProcedure( PROC1 ) ).isTrue();
+        assertThat( mode.allowsExecuteProcedure( PROC2 ) ).isFalse();
+        assertThat( mode.allowsExecuteProcedure( PROC3 ) ).isFalse();
+        assertThat( mode.allowsExecuteProcedure( PROC4 ) ).isFalse();
+
+        // BOOST
+        assertThat( mode.shouldBoostProcedure( PROC1 ) ).isTrue();
+        assertThat( mode.shouldBoostProcedure( PROC2 ) ).isFalse();
+        assertThat( mode.shouldBoostProcedure( PROC3 ) ).isFalse();
+        assertThat( mode.shouldBoostProcedure( PROC4 ) ).isFalse();
+    }
+
+    @Test
+    void grantExecuteAdminAndDenyBoostedAndGrantExecuteProcedure()  throws Exception
+    {
+        var privilege1 = new ResourcePrivilege( GRANT, EXECUTE_ADMIN, new Resource.DatabaseResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 =
+                new ResourcePrivilege( DENY, EXECUTE_BOOSTED, new Resource.DatabaseResource(), new ProcedureSegment( "math.proc3" ), DEFAULT_DATABASE_NAME );
+        var privilege3 =
+                new ResourcePrivilege( GRANT, EXECUTE, new Resource.DatabaseResource(), new ProcedureSegment( "math.proc3" ), DEFAULT_DATABASE_NAME );
+
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).addPrivilege( privilege3 ).build();
+
+        // EXECUTE
+        assertThat( mode.allowsExecuteProcedure( PROC1 ) ).isTrue();
+        assertThat( mode.allowsExecuteProcedure( PROC2 ) ).isFalse();
+        assertThat( mode.allowsExecuteProcedure( PROC3 ) ).isTrue();
+        assertThat( mode.allowsExecuteProcedure( PROC4 ) ).isFalse();
+
+        // BOOST
+        assertThat( mode.shouldBoostProcedure( PROC1 ) ).isTrue();
+        assertThat( mode.shouldBoostProcedure( PROC2 ) ).isFalse();
+        assertThat( mode.shouldBoostProcedure( PROC3 ) ).isFalse();
+        assertThat( mode.shouldBoostProcedure( PROC4 ) ).isFalse();
+    }
+
+    @Test
+    void grantExecuteAdminAndDenyExecuteProcedure()  throws Exception
+    {
+        var privilege1 = new ResourcePrivilege( GRANT, EXECUTE_ADMIN, new Resource.DatabaseResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 =
+                new ResourcePrivilege( DENY, EXECUTE, new Resource.DatabaseResource(), new ProcedureSegment( "math.proc3" ), DEFAULT_DATABASE_NAME );
+
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+
+        // EXECUTE
+        assertThat( mode.allowsExecuteProcedure( PROC1 ) ).isTrue();
+        assertThat( mode.allowsExecuteProcedure( PROC2 ) ).isFalse();
+        assertThat( mode.allowsExecuteProcedure( PROC3 ) ).isFalse();
+        assertThat( mode.allowsExecuteProcedure( PROC4 ) ).isFalse();
+
+        // BOOST
+        assertThat( mode.shouldBoostProcedure( PROC1 ) ).isTrue();
+        assertThat( mode.shouldBoostProcedure( PROC2 ) ).isFalse();
+        assertThat( mode.shouldBoostProcedure( PROC3 ) ).isTrue();
+        assertThat( mode.shouldBoostProcedure( PROC4 ) ).isFalse();
+    }
+
+    @Test
+    void grantExecuteBoostedAndDenyAdminProcedure()  throws Exception
+    {
+        var privilege1 = new ResourcePrivilege( DENY, EXECUTE_ADMIN, new Resource.DatabaseResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 =
+                new ResourcePrivilege( GRANT, EXECUTE_BOOSTED, new Resource.DatabaseResource(), new ProcedureSegment( "*math*" ), DEFAULT_DATABASE_NAME );
+
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+
+        // EXECUTE
+        assertThat( mode.allowsExecuteProcedure( PROC1 ) ).isFalse();
+        assertThat( mode.allowsExecuteProcedure( PROC2 ) ).isFalse();
+        assertThat( mode.allowsExecuteProcedure( PROC3 ) ).isFalse();
+        assertThat( mode.allowsExecuteProcedure( PROC4 ) ).isTrue();
+
+        // BOOST
+        assertThat( mode.shouldBoostProcedure( PROC1 ) ).isFalse();
+        assertThat( mode.shouldBoostProcedure( PROC2 ) ).isFalse();
+        assertThat( mode.shouldBoostProcedure( PROC3 ) ).isFalse();
+        assertThat( mode.shouldBoostProcedure( PROC4 ) ).isTrue();
+    }
+
+    @Test
+    void grantExecuteAndDenyAdminProcedure()  throws Exception
+    {
+        var privilege1 = new ResourcePrivilege( DENY, EXECUTE_ADMIN, new Resource.DatabaseResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 =
+                new ResourcePrivilege( GRANT, EXECUTE, new Resource.DatabaseResource(), new ProcedureSegment( "*math*" ), DEFAULT_DATABASE_NAME );
+
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+
+        // EXECUTE
+        assertThat( mode.allowsExecuteProcedure( PROC1 ) ).isFalse();
+        assertThat( mode.allowsExecuteProcedure( PROC2 ) ).isFalse();
         assertThat( mode.allowsExecuteProcedure( PROC3 ) ).isTrue();
         assertThat( mode.allowsExecuteProcedure( PROC4 ) ).isTrue();
 

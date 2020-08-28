@@ -305,9 +305,10 @@ class ErrorsEndToEndTest
         driverUtils.doInTx( clientDriver, tx ->
         {
             var openTransactions = tx.run( "CALL dbms.listTransactions() YIELD transactionId, currentQuery,status" ).list();
-            if ( !openTransactions.isEmpty() )
+            // We should only see this transaction
+            if ( openTransactions.size() > 1 )
             {
-                fail( "There are some transactions open in Fabric DB: " + openTransactions );
+                fail( "There are transactions open in Fabric DB: " + openTransactions );
             }
         } );
     }

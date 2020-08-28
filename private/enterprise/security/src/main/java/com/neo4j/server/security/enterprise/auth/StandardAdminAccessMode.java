@@ -5,12 +5,11 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.kernel.enterprise.api.security.AdminAccessMode;
-
 import java.util.HashSet;
 
-import org.neo4j.internal.kernel.api.security.PrivilegeAction;
+import org.neo4j.internal.kernel.api.security.AdminAccessMode;
 import org.neo4j.internal.kernel.api.security.AdminActionOnResource;
+import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.Segment;
 
 public class StandardAdminAccessMode implements AdminAccessMode

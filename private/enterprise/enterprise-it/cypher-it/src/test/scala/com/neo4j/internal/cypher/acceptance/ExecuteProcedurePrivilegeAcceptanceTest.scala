@@ -41,6 +41,22 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
           execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
         }
     }
+
+    withClue(s"EXECUTE ADMIN PROCEDURES: \n") {
+      // WHEN
+      execute(s"GRANT EXECUTE ADMIN PROCEDURES ON DBMS TO custom")
+
+      // THEN
+      execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+        granted(adminAction("execute_admin")).role("custom").map
+      ))
+
+      // WHEN
+      execute(s"REVOKE GRANT EXECUTE ADMIN PROCEDURES ON DBMS FROM custom")
+
+      // THEN
+      execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
+    }
   }
 
   test("should deny execute procedure privileges") {
@@ -70,6 +86,23 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
           execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
         }
     }
+
+    withClue(s"EXECUTE ADMIN PROCEDURES: \n") {
+      // WHEN
+      execute(s"DENY EXECUTE ADMIN PROCEDURES ON DBMS TO custom")
+
+      // THEN
+      execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+        denied(adminAction("execute_admin")).role("custom").map
+      ))
+
+      // WHEN
+      execute(s"REVOKE DENY EXECUTE ADMIN PROCEDURES ON DBMS FROM custom")
+
+      // THEN
+      execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
+    }
+
   }
 
   // Enforcement tests
@@ -268,7 +301,133 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 
-  // EXECUTE admin procedures
+  // EXECUTE ADMIN PROCEDURES
+
+  test("should execute admin procedure with EXECUTE ADMIN PROCEDURES") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT EXECUTE ADMIN PROCEDURES ON DBMS TO custom")
+
+    // THEN
+    executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')") should be(1)
+  }
+
+  test("should fail execute admin procedure with EXECUTE ADMIN PROCEDURES and DENIED BOOSTED specific") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT EXECUTE ADMIN PROCEDURES ON DBMS TO custom")
+    execute("DENY EXECUTE BOOSTED PROCEDURE dbms.listConfig ON DBMS TO custom")
+
+    // THEN
+    (the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
+    }).getMessage should include(FAIL_EXECUTE_PROC)
+  }
+
+  test("should fail execute admin procedure with EXECUTE ADMIN PROCEDURES and DENIED EXECUTE specific") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT EXECUTE ADMIN PROCEDURES ON DBMS TO custom")
+    execute("DENY EXECUTE PROCEDURE dbms.listConfig ON DBMS TO custom")
+
+    // THEN
+    (the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
+    }).getMessage should include(FAIL_EXECUTE_PROC)
+  }
+
+  test("should fail execute admin procedure with EXECUTE ADMIN PROCEDURES and DENIED BOOSTED specific and GRANT EXECUTE") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT EXECUTE ADMIN PROCEDURES ON DBMS TO custom")
+    execute("DENY EXECUTE BOOSTED PROCEDURE dbms.listConfig ON DBMS TO custom")
+    execute("GRANT EXECUTE PROCEDURE dbms.listConfig ON DBMS TO custom")
+
+    // THEN
+    (the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
+    }).getMessage should include(FAIL_EXECUTE_ADMIN_PROC)
+  }
+
+  test("should fail execute admin procedure with EXECUTE BOOSTED specific and DENIED ADMIN PROCEDURES") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT EXECUTE BOOSTED PROCEDURE dbms.listConfig ON DBMS TO custom")
+    execute("DENY EXECUTE ADMIN PROCEDURES ON DBMS TO custom")
+
+    // THEN
+    (the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
+    }).getMessage should include(FAIL_EXECUTE_PROC)
+  }
+
+  test("should fail execute admin procedure with EXECUTE BOOSTED specific and DENIED ADMIN PROCEDURES and GRANT EXECUTE") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT EXECUTE BOOSTED PROCEDURE dbms.listConfig ON DBMS TO custom")
+    execute("DENY EXECUTE ADMIN PROCEDURES ON DBMS TO custom")
+    execute("GRANT EXECUTE PROCEDURE dbms.listConfig ON DBMS TO custom")
+
+    // THEN
+    (the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
+    }).getMessage should include(FAIL_EXECUTE_ADMIN_PROC)
+  }
+
+  test("should execute security procedure with EXECUTE ADMIN PROCEDURES") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT EXECUTE ADMIN PROCEDURES ON DBMS TO custom")
+
+    // THEN
+    executeOnSystem("foo", "bar", "CALL dbms.security.listUsersForRole('PUBLIC')") should be(2)
+  }
+
+  test("should execute list users for roles procedure with EXECUTE ADMIN PROCEDURES even if DENIED SHOW ROLES") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT EXECUTE ADMIN PROCEDURES ON DBMS TO custom")
+    execute("DENY SHOW ROLE ON DBMS TO custom")
+
+    // THEN
+    executeOnSystem("foo", "bar", "CALL dbms.security.listUsersForRole('PUBLIC')") should be(2)
+  }
+
+  test("should fail execute non-admin procedure with only EXECUTE ADMIN PROCEDURES") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT EXECUTE ADMIN PROCEDURES ON DBMS TO custom")
+
+    // THEN
+    (the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("foo", "bar", "CALL db.labels")
+    }).getMessage should include(FAIL_EXECUTE_PROC)
+
+    // THEN
+    (the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "CALL db.labels")
+    }).getMessage should include(FAIL_EXECUTE_PROC)
+  }
+
+  // EXECUTE @Admin procedures
 
   test("should execute admin procedure with ALL ON DBMS") {
     // GIVEN

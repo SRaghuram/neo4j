@@ -322,7 +322,8 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     "ASSIGN PRIVILEGE" -> adminAction("assign_privilege"),
     "REMOVE PRIVILEGE" -> adminAction("remove_privilege"),
     "PRIVILEGE MANAGEMENT" -> adminAction("privilege_management"),
-    "ALL DBMS PRIVILEGES" -> adminAction("dbms_actions")
+    "ALL DBMS PRIVILEGES" -> adminAction("dbms_actions"),
+    "EXECUTE ADMIN PROCEDURES" -> adminAction("execute_admin")
   )
   val dbmsCommands: Iterable[String] = dbmsPrivileges.keys
 

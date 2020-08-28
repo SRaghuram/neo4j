@@ -26,10 +26,9 @@ import static com.neo4j.server.security.enterprise.auth.Resource.Type.PROPERTY;
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.DENY;
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
-import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN_PROCEDURE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CONSTRAINT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DATABASE_ACTIONS;
-import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DBMS_ACTIONS;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE_ADMIN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.INDEX;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_LABEL;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_LABEL;
@@ -47,55 +46,55 @@ class StandardAccessModeBuilder
     private final String database;
     private final String defaultDbName;
 
-    private Map<ResourcePrivilege.GrantOrDeny,Boolean> anyAccess = new HashMap<>();  // track any access rights
-    private Map<ResourcePrivilege.GrantOrDeny,Boolean> anyWrite = new HashMap<>(); // track any writes
+    private final Map<ResourcePrivilege.GrantOrDeny,Boolean> anyAccess = new HashMap<>();  // track any access rights
+    private final Map<ResourcePrivilege.GrantOrDeny,Boolean> anyWrite = new HashMap<>(); // track any writes
     private boolean token;  // TODO - still to support GRANT/DENY
     private boolean schema; // TODO - still to support GRANT/DENY
 
-    private Map<ResourcePrivilege.GrantOrDeny,Boolean> traverseAllLabels = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,Boolean> traverseAllRelTypes = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> traverseLabels = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> traverseRelTypes = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,Boolean> traverseAllLabels = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,Boolean> traverseAllRelTypes = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> traverseLabels = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> traverseRelTypes = new HashMap<>();
 
-    private Map<ResourcePrivilege.GrantOrDeny,Boolean> setAllLabels = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> settableLabels = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,Boolean> removeAllLabels = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> removableLabels = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,Boolean> setAllLabels = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> settableLabels = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,Boolean> removeAllLabels = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> removableLabels = new HashMap<>();
 
-    private Map<ResourcePrivilege.GrantOrDeny,Boolean> createNodeWithAnyLabel = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> createNodeWithLabels = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,Boolean> deleteNodeWithAnyLabel = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> deleteNodeWithLabels = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,Boolean> createNodeWithAnyLabel = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> createNodeWithLabels = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,Boolean> deleteNodeWithAnyLabel = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> deleteNodeWithLabels = new HashMap<>();
 
-    private Map<ResourcePrivilege.GrantOrDeny,Boolean> createRelationshipWithAnyType = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> createRelationshipWithTypes = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,Boolean> deleteRelationshipWithAnyType = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> deleteRelationshipWithTypes = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,Boolean> createRelationshipWithAnyType = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> createRelationshipWithTypes = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,Boolean> deleteRelationshipWithAnyType = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> deleteRelationshipWithTypes = new HashMap<>();
 
-    private Map<ResourcePrivilege.GrantOrDeny,Boolean> readAllPropertiesAllLabels = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,Boolean> readAllPropertiesAllRelTypes = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> nodeSegmentForAllProperties = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> relationshipSegmentForAllProperties = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> nodeProperties = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> relationshipProperties = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,MutableIntObjectMap<IntSet>> nodeSegmentForProperty = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,MutableIntObjectMap<IntSet>> relationshipSegmentForProperty = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,Boolean> readAllPropertiesAllLabels = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,Boolean> readAllPropertiesAllRelTypes = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> nodeSegmentForAllProperties = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> relationshipSegmentForAllProperties = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> nodeProperties = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> relationshipProperties = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntObjectMap<IntSet>> nodeSegmentForProperty = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntObjectMap<IntSet>> relationshipSegmentForProperty = new HashMap<>();
 
-    private Map<ResourcePrivilege.GrantOrDeny,Boolean> writeAllPropertiesAllLabels = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,Boolean> writeAllPropertiesAllRelTypes = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> writeNodeSegmentForAllProperties = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> writeRelationshipSegmentForAllProperties = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> writeNodeProperties = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> writeRelationshipProperties = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,MutableIntObjectMap<IntSet>> writeNodeSegmentForProperty = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,MutableIntObjectMap<IntSet>> writeRelationshipSegmentForProperty = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,Boolean> writeAllPropertiesAllLabels = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,Boolean> writeAllPropertiesAllRelTypes = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> writeNodeSegmentForAllProperties = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> writeRelationshipSegmentForAllProperties = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> writeNodeProperties = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> writeRelationshipProperties = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntObjectMap<IntSet>> writeNodeSegmentForProperty = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntObjectMap<IntSet>> writeRelationshipSegmentForProperty = new HashMap<>();
 
-    private Map<ResourcePrivilege.GrantOrDeny,Boolean> executeAllProcedures = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> executeProcedures = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,Boolean> executeBoostedAllProcedures = new HashMap<>();
-    private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> executeBoostedProcedures = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,Boolean> executeAllProcedures = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> executeProcedures = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,Boolean> executeBoostedAllProcedures = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> executeBoostedProcedures = new HashMap<>();
 
-    private StandardAdminAccessMode.Builder adminModeBuilder = new StandardAdminAccessMode.Builder();
+    private final StandardAdminAccessMode.Builder adminModeBuilder = new StandardAdminAccessMode.Builder();
 
     StandardAccessModeBuilder( boolean isAuthenticated, boolean passwordChangeRequired, Set<String> roles, LoginContext.IdLookup resolver, String database,
                                String defaultDbName )
@@ -330,9 +329,12 @@ class StandardAccessModeBuilder
                 addPrivilegeAction( privilege );
             }
 
-            if ( action == DBMS_ACTIONS || action == ADMIN_PROCEDURE || action == ADMIN )
+            if ( action.satisfies( EXECUTE_ADMIN ) )
             {
-                executeBoostedAllProcedures.put( privilegeType, true );
+                for ( int procId : resolver.getAdminProcedureIds() )
+                {
+                    executeBoostedProcedures.get( privilegeType ).add( procId );
+                }
             }
         }
         return this;

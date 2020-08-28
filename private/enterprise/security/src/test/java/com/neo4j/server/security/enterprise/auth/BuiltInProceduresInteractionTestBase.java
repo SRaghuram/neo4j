@@ -110,6 +110,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     private final String SUBJECT = "role1Subject";
     private final String PASSWORD = "abc";
 
+    @SuppressWarnings( "rawtypes" )
     @Override
     Set<Class> defaultProcedures()
     {
@@ -436,6 +437,79 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
+    void listAllTransactionsWhenRunningWithBoost() throws Throwable
+    {
+        newUser( "boostedSubject", "abc", false );
+        createRoleWithAccess( "custom", "boostedSubject" );
+        assertDDLCommandSuccess( adminSubject, "GRANT EXECUTE BOOSTED PROCEDURE dbms.listTransactions ON DBMS TO custom" );
+        S boostedSubject = neo.login( "boostedSubject", "abc" );
+
+        DoubleLatch latch = new DoubleLatch( 3, true );
+        OffsetDateTime startTime = getStartTime();
+
+        ThreadedTransaction<S> read1 = new ThreadedTransaction<>( neo, latch );
+        ThreadedTransaction<S> read2 = new ThreadedTransaction<>( neo, latch );
+
+        String q1 = read1.execute( threading, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
+        String q2 = read2.execute( threading, writeSubject, "UNWIND [4,5,6] AS y RETURN y" );
+        latch.startAndWaitForAllToStart();
+
+        String query = "CALL dbms.listTransactions()";
+        assertSuccess( boostedSubject, query, r ->
+        {
+            List<Map<String,Object>> maps = collectResults( r );
+
+            Matcher<Map<String,Object>> thisTransaction = listedTransactionOfInteractionLevel( startTime, "boostedSubject", query );
+            Matcher<Map<String,Object>> matcher1 = listedTransaction( startTime, "readSubject", q1 );
+            Matcher<Map<String,Object>> matcher2 = listedTransaction( startTime, "writeSubject", q2 );
+
+            assertThat( maps, matchesOneToOneInAnyOrder( matcher1, matcher2, thisTransaction ) );
+        } );
+
+        latch.finishAndWaitForAllToFinish();
+
+        read1.closeAndAssertSuccess();
+        read2.closeAndAssertSuccess();
+    }
+
+    @Test
+    void listAllTransactionsWhenRunningWithBoostAndDeny() throws Throwable
+    {
+        newUser( "boostedSubject", "abc", false );
+        createRoleWithAccess( "custom", "boostedSubject" );
+        assertDDLCommandSuccess( adminSubject, "GRANT EXECUTE BOOSTED PROCEDURE dbms.listTransactions ON DBMS TO custom" );
+        assertDDLCommandSuccess( adminSubject, "DENY SHOW TRANSACTIONS ON DATABASE * TO custom" );
+        S boostedSubject = neo.login( "boostedSubject", "abc" );
+
+        DoubleLatch latch = new DoubleLatch( 3, true );
+        OffsetDateTime startTime = getStartTime();
+
+        ThreadedTransaction<S> read1 = new ThreadedTransaction<>( neo, latch );
+        ThreadedTransaction<S> read2 = new ThreadedTransaction<>( neo, latch );
+
+        String q1 = read1.execute( threading, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
+        String q2 = read2.execute( threading, writeSubject, "UNWIND [4,5,6] AS y RETURN y" );
+        latch.startAndWaitForAllToStart();
+
+        String query = "CALL dbms.listTransactions()";
+        assertSuccess( boostedSubject, query, r ->
+        {
+            List<Map<String,Object>> maps = collectResults( r );
+
+            Matcher<Map<String,Object>> thisTransaction = listedTransactionOfInteractionLevel( startTime, "boostedSubject", query );
+            Matcher<Map<String,Object>> matcher1 = listedTransaction( startTime, "readSubject", q1 );
+            Matcher<Map<String,Object>> matcher2 = listedTransaction( startTime, "writeSubject", q2 );
+
+            assertThat( maps, matchesOneToOneInAnyOrder( matcher1, matcher2, thisTransaction ) );
+        } );
+
+        latch.finishAndWaitForAllToFinish();
+
+        read1.closeAndAssertSuccess();
+        read2.closeAndAssertSuccess();
+    }
+
+    @Test
     void listAllowedTransactions() throws Throwable
     {
         authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
@@ -483,6 +557,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         authDisabledAdminstrationCommand( "CREATE ROLE custom AS COPY OF admin" );
         authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
         authDisabledAdminstrationCommand( "DENY SHOW TRANSACTION (editorSubject) ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "DENY EXECUTE BOOSTED PROCEDURE dbms.* ON DBMS TO custom" );
         S subject = neo.login( "alice", "foo" );
 
         DoubleLatch latch = new DoubleLatch( 4, true );
@@ -1002,6 +1077,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         authDisabledAdminstrationCommand( "CREATE ROLE custom AS COPY OF admin" );
         authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
         authDisabledAdminstrationCommand( "DENY TERMINATE TRANSACTION (writeSubject) ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "DENY EXECUTE BOOSTED PROCEDURE dbms.* ON DBMS TO custom" );
         S subject = neo.login( "alice", "foo" );
 
         DoubleLatch latch = new DoubleLatch( 3, true );
@@ -1253,6 +1329,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         authDisabledAdminstrationCommand( "CREATE ROLE custom AS COPY OF admin" );
         authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
         authDisabledAdminstrationCommand( "DENY SHOW TRANSACTION (writeSubject) ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "DENY EXECUTE BOOSTED PROCEDURE dbms.* ON DBMS TO custom" );
         S subject = neo.login( "alice", "foo" );
 
         DoubleLatch latch = new DoubleLatch( 4, true );
@@ -1693,6 +1770,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         authDisabledAdminstrationCommand( "CREATE ROLE custom AS COPY OF admin" );
         authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
         authDisabledAdminstrationCommand( "DENY TERMINATE TRANSACTION (writeSubject) ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "DENY EXECUTE BOOSTED PROCEDURE dbms.* ON DBMS TO custom" );
         S subject = neo.login( "alice", "foo" );
         executeTwoQueriesAndKillTheFirst( readSubject, writeSubject, subject );
         executeQueryAndFailToKill( writeSubject, subject );

@@ -100,10 +100,14 @@ class EnterpriseLoginContextTest
         when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN ) ) ).thenReturn( new HashSet<>(
                 Arrays.asList( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenPrivilege, indexPrivilege,
                         constraintPrivilege, adminPrivilege ) ) );
+
+        var adminToken = mock( LoginContext.IdLookup.class );
+        when( adminToken.getAdminProcedureIds() ).thenReturn( new int[]{42} );
+
         EnterpriseLoginContext loginContext = login();
 
         // When
-        SecurityContext securityContext = loginContext.authorize( token, DEFAULT_DATABASE_NAME );
+        SecurityContext securityContext = loginContext.authorize( adminToken, DEFAULT_DATABASE_NAME );
 
         // Then
         assertTrue( securityContext.mode().allowsWrites() );

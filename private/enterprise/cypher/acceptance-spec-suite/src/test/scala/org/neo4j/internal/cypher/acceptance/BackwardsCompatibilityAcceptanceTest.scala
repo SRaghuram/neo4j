@@ -377,6 +377,18 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     exception.getMessage should include("EXECUTE BOOSTED PROCEDURE is not supported in this Cypher version.")
   }
 
+  test("EXECUTE ADMIN PROCEDURES should not work with CYPHER 4.1") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.1 REVOKE EXECUTE ADMIN PROCEDURES ON DBMS FROM custom")
+    }
+    exception.getMessage should include("EXECUTE ADMIN PROCEDURES is not supported in this Cypher version.")
+  }
+
   test("create index with OR REPLACE and/or IF NOT EXISTS syntax should not work with CYPHER 3.5-4.1") {
     // CREATE OR REPLACE INDEX name FOR ...
     // WHEN

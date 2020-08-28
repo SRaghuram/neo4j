@@ -181,7 +181,7 @@ public abstract class ProcedureInteractionTestBase<S>
         grantRoleToUser( EDITOR, "editorSubject" );
         grantRoleToUser( READER, "readSubject" );
 
-        neo.clearPublicRole();
+        neo.removeAccessFromPublicRole();
 
         noneSubject = neo.login( "noneSubject", "abc" );
         pwdSubject = neo.login( "pwdSubject", "abc" );
@@ -194,7 +194,7 @@ public abstract class ProcedureInteractionTestBase<S>
         setupTokensAndNodes();
     }
 
-    private void newUser( String username, String password, boolean pwdChangeRequired )
+    void newUser( String username, String password, boolean pwdChangeRequired )
     {
         String query;
 
@@ -510,7 +510,8 @@ public abstract class ProcedureInteractionTestBase<S>
 
     void assertDDLCommandSuccess( S subject, String query )
     {
-        neo.executeQuery( subject, SYSTEM_DATABASE_NAME, query, null, result -> assertFalse( result.hasNext() ) );
+        String err = neo.executeQuery( subject, SYSTEM_DATABASE_NAME, query, null, result -> assertFalse( result.hasNext() ) );
+        assertThat( err ).isEqualTo( "" );
     }
 
     void assertSystemCommandSuccess( S subject, String call, Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
