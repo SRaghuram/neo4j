@@ -222,7 +222,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldNotAllowNonAdminCreateUser()
     {
-        testFailCreateUser( pwdSubject, CHANGE_PWD_ERR_MSG );
+        testFailCreateUser( pwdSubject, FAIL_EXECUTE_ADMIN_PROC );
         testFailCreateUser( readSubject, FAIL_EXECUTE_ADMIN_PROC );
         testFailCreateUser( writeSubject, FAIL_EXECUTE_ADMIN_PROC );
         testFailCreateUser( schemaSubject, FAIL_EXECUTE_ADMIN_PROC );
@@ -247,7 +247,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldNotDeleteUserIfNotAdmin()
     {
-        testFailDeleteUser( pwdSubject, "readSubject", CHANGE_PWD_ERR_MSG );
+        testFailDeleteUser( pwdSubject, "readSubject", FAIL_EXECUTE_ADMIN_PROC );
         testFailDeleteUser( readSubject, "readSubject", FAIL_EXECUTE_ADMIN_PROC );
         testFailDeleteUser( writeSubject, "readSubject", FAIL_EXECUTE_ADMIN_PROC );
 
@@ -406,7 +406,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldFailToAddRoleToUserIfNotAdmin()
     {
-        testFailAddRoleToUser( pwdSubject, PUBLISHER, "readSubject", CHANGE_PWD_ERR_MSG );
+        testFailAddRoleToUser( pwdSubject, PUBLISHER, "readSubject", FAIL_EXECUTE_ADMIN_PROC );
         testFailAddRoleToUser( readSubject, PUBLISHER, "readSubject", FAIL_EXECUTE_ADMIN_PROC );
         testFailAddRoleToUser( writeSubject, PUBLISHER, "readSubject", FAIL_EXECUTE_ADMIN_PROC );
 
@@ -435,7 +435,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldFailToRemoveRoleFromUserIfNotAdmin()
     {
-        testFailRemoveRoleFromUser( pwdSubject, PUBLISHER, "readSubject", CHANGE_PWD_ERR_MSG );
+        testFailRemoveRoleFromUser( pwdSubject, PUBLISHER, "readSubject", FAIL_EXECUTE_ADMIN_PROC );
         testFailRemoveRoleFromUser( readSubject, PUBLISHER, "readSubject", FAIL_EXECUTE_ADMIN_PROC );
         testFailRemoveRoleFromUser( writeSubject, PUBLISHER, "readSubject", FAIL_EXECUTE_ADMIN_PROC );
 
@@ -493,7 +493,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldNotAllowNonAdminCreateRole()
     {
-        testFailCreateRole( pwdSubject, CHANGE_PWD_ERR_MSG );
+        testFailCreateRole( pwdSubject, FAIL_EXECUTE_ADMIN_PROC );
         testFailCreateRole( readSubject, FAIL_EXECUTE_ADMIN_PROC );
         testFailCreateRole( writeSubject, FAIL_EXECUTE_ADMIN_PROC );
         testFailCreateRole( schemaSubject, FAIL_EXECUTE_ADMIN_PROC );
@@ -653,7 +653,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldNotAllowNonAdminListUsers()
     {
-        testFailListUsers( pwdSubject, CHANGE_PWD_ERR_MSG );
+        testFailListUsers( pwdSubject, FAIL_EXECUTE_ADMIN_PROC );
         testFailListUsers( readSubject, FAIL_EXECUTE_ADMIN_PROC );
         testFailListUsers( writeSubject, FAIL_EXECUTE_ADMIN_PROC );
         testFailListUsers( schemaSubject, FAIL_EXECUTE_ADMIN_PROC );
@@ -688,7 +688,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldNotAllowNonAdminListRoles()
     {
-        testFailListRoles( pwdSubject, CHANGE_PWD_ERR_MSG );
+        testFailListRoles( pwdSubject, FAIL_EXECUTE_ADMIN_PROC );
         testFailListRoles( readSubject, FAIL_EXECUTE_ADMIN_PROC );
         testFailListRoles( writeSubject, FAIL_EXECUTE_ADMIN_PROC );
         testFailListRoles( schemaSubject, FAIL_EXECUTE_ADMIN_PROC );
@@ -760,7 +760,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldNotListUsersForRoleIfNotAdmin()
     {
-        testFailListRoleUsers( pwdSubject, ADMIN, CHANGE_PWD_ERR_MSG );
+        testFailListRoleUsers( pwdSubject, ADMIN, FAIL_EXECUTE_ADMIN_PROC );
         testFailListRoleUsers( readSubject, ADMIN, FAIL_EXECUTE_ADMIN_PROC );
         testFailListRoleUsers( writeSubject, ADMIN, FAIL_EXECUTE_ADMIN_PROC );
         testFailListRoleUsers( schemaSubject, ADMIN, FAIL_EXECUTE_ADMIN_PROC );
