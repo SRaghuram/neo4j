@@ -22,8 +22,8 @@ import com.neo4j.causalclustering.diagnostics.GlobalTopologyStateDiagnosticProvi
 import com.neo4j.causalclustering.diagnostics.RaftMonitor;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DefaultDiscoveryFirstStartupDetector;
-import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.DiscoveryFirstStartupDetector;
+import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.member.DefaultDiscoveryMemberFactory;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
 import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
@@ -354,8 +354,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var leaderTransferBackoff = globalConfig.get( CausalClusteringInternalSettings.leader_transfer_member_backoff );
 
         var leaderTransferService = new LeaderTransferService( globalModule.getJobScheduler(), globalConfig, leaderTransferInterval, databaseManager,
-                raftMessageDispatcher, identityModule, leaderTransferBackoff, logProvider, globalModule.getGlobalClock(), leaderService, serverGroupsSupplier,
-                topologyService::resolveServerFromRaftMember );
+                raftMessageDispatcher, identityModule, leaderTransferBackoff, logProvider, globalModule.getGlobalClock(), leaderService, serverGroupsSupplier );
 
         RaftGroupFactory raftGroupFactory = new RaftGroupFactory( identityModule, globalModule, clusterStateLayout, topologyService, storageFactory,
                 leaderTransferService, namedDatabaseId -> ((DefaultLeaderService) leaderService).createListener( namedDatabaseId ), globalOtherTracker,

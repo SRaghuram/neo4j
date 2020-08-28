@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
 import com.neo4j.causalclustering.messaging.Inbound;
@@ -46,7 +45,7 @@ class TransferLeaderJobTest
     private final TrackingMessageHandler messageHandler = new TrackingMessageHandler();
     private final DatabasePenalties databasePenalties = new DatabasePenalties( Duration.ofMillis( 1 ), fakeClock() );
     private final LeadershipTransferor leadershipTransferor =
-            new LeadershipTransferor( messageHandler, identityModule, databasePenalties, raftMembershipResolver, fakeClock(), MemberId::of );
+            new LeadershipTransferor( messageHandler, identityModule, databasePenalties, raftMembershipResolver, fakeClock() );
 
     @Test
     void shouldChooseToTransferIfIAmNotInPriority()

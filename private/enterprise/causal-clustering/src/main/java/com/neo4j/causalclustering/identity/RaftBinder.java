@@ -63,8 +63,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
     private final CoreTopologyService topologyService;
     private final ClusterSystemGraphDbmsModel systemGraph;
     private final RaftBootstrapper raftBootstrapper;
-    private final RaftMemberId meAsRaftMember;
-    private final MemberId meAsServer;
+    private final RaftMemberId myself;
     private final Monitor monitor;
     private final Clock clock;
     private final ThrowingAction<InterruptedException> retryWaiter;
@@ -74,13 +73,12 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
 
     private RaftId raftId;
 
-    public RaftBinder( NamedDatabaseId namedDatabaseId, RaftMemberId meAsRaftMember, MemberId meAsServer, SimpleStorage<RaftId> raftIdStorage,
+    public RaftBinder( NamedDatabaseId namedDatabaseId, RaftMemberId myself, SimpleStorage<RaftId> raftIdStorage,
             CoreTopologyService topologyService, ClusterSystemGraphDbmsModel systemGraph, Clock clock, ThrowingAction<InterruptedException> retryWaiter,
             Duration timeout, RaftBootstrapper raftBootstrapper, int minCoreHosts, boolean refuseToBeLeader, Monitors monitors )
     {
         this.namedDatabaseId = namedDatabaseId;
-        this.meAsRaftMember = meAsRaftMember;
-        this.meAsServer = meAsServer;
+        this.myself = myself;
         this.systemGraph = systemGraph;
         this.monitor = monitors.newMonitor( Monitor.class );
         this.raftIdStorage = raftIdStorage;
@@ -233,7 +231,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
 
     private BoundState bindToRaftGroupNotPartOfInitialDatabases( BindingConditions bindingConditions, Set<MemberId> initialMemberIds ) throws Exception
     {
-        if ( !initialMemberIds.contains( meAsServer ) || refuseToBeLeader )
+        if ( !initialMemberIds.contains( myself.serverId() ) || refuseToBeLeader )
         {
             return awaitBootstrapByOther( bindingConditions );
         }
@@ -335,7 +333,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
         {
             try
             {
-                outcome = topologyService.publishRaftId( localRaftId, meAsRaftMember );
+                outcome = topologyService.publishRaftId( localRaftId, myself );
             }
             catch ( TimeoutException e )
             {

@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
 import org.junit.jupiter.api.Test;
@@ -58,7 +57,7 @@ public class RandomEvenStrategyTest
 
         var leaderService = new StubLeaderService( dbToLeaderMap );
 
-        var strategy = new RandomEvenStrategy( () -> allDatabases, leaderService, identityModule, MemberId::of );
+        var strategy = new RandomEvenStrategy( () -> allDatabases, leaderService, identityModule );
         var validTopologies = allDatabases.stream()
                 .map( db -> new TransferCandidates( db, Set.of( member1, member2, member3, member4 ) ) )
                 .collect( Collectors.toList() );
@@ -98,7 +97,7 @@ public class RandomEvenStrategyTest
 
         var leaderService = new StubLeaderService( dbToLeaderMap );
 
-        var strategy = new RandomEvenStrategy( () -> allDatabases, leaderService, identityModule, MemberId::of );
+        var strategy = new RandomEvenStrategy( () -> allDatabases, leaderService, identityModule );
         var validTopologies = allDatabases.stream()
                 .map( db -> new TransferCandidates( db, Set.of( member1, member3, member4 ) ) )
                 .collect( Collectors.toList() );

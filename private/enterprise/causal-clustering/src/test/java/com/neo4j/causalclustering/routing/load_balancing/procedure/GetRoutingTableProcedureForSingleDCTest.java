@@ -675,7 +675,7 @@ class GetRoutingTableProcedureForSingleDCTest
         @Override
         public Optional<MemberId> getLeaderServer( NamedDatabaseId namedDatabaseId )
         {
-            return getLeaderId( namedDatabaseId ).map( MemberId::of );
+            return getLeaderId( namedDatabaseId ).map( RaftMemberId::serverId );
         }
 
         @Override
@@ -684,7 +684,7 @@ class GetRoutingTableProcedureForSingleDCTest
             var leader = leaders.get( namedDatabaseId );
             if ( leader != null )
             {
-                return Optional.ofNullable( coreTopologyService.allCoreServers().get( MemberId.of( leader ) ) )
+                return Optional.ofNullable( coreTopologyService.allCoreServers().get( leader.serverId() ) )
                         .map( coreInfo -> coreInfo.connectors().clientBoltAddress() );
             }
             return Optional.empty();

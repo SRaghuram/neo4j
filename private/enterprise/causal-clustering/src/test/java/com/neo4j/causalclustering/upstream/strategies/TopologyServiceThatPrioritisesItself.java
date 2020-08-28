@@ -96,12 +96,6 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public SocketAddress lookupCatchupAddress( RaftMemberId upstream )
-    {
-        throw new RuntimeException( "Unimplemented" );
-    }
-
-    @Override
     public RoleInfo lookupRole( NamedDatabaseId namedDatabaseId, MemberId memberId )
     {
         return RoleInfo.UNKNOWN;
@@ -117,12 +111,6 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     public MemberId memberId()
     {
         return memberId;
-    }
-
-    @Override
-    public MemberId resolveServerFromRaftMember( RaftMemberId raftMemberId )
-    {
-        return MemberId.of( raftMemberId );
     }
 
     @Override

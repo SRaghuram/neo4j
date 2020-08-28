@@ -20,7 +20,7 @@ public class RaftTestMember
 
     public static MemberId member( int id )
     {
-        return MemberId.of( raftMember( id ) );
+        return raftMember( id ).serverId();
     }
 
     public static RaftMemberId raftMember( int id )

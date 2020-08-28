@@ -20,14 +20,22 @@ public final class RaftMemberId
 {
     private final Id id;
 
-    RaftMemberId( UUID uuid )
+    private final MemberId serverId;
+
+    RaftMemberId( UUID uuid, MemberId serverId )
     {
         this.id = new Id( uuid );
+        this.serverId = serverId;
     }
 
     public static RaftMemberId of( UUID id )
     {
-        return new RaftMemberId( id );
+        return new RaftMemberId( id, MemberId.of( id ) );
+    }
+
+    public MemberId serverId()
+    {
+        return serverId;
     }
 
     /**
@@ -36,7 +44,7 @@ public final class RaftMemberId
     @Deprecated
     public static RaftMemberId from( ServerId memberId )
     {
-        return new RaftMemberId( memberId.getUuid() );
+        return new RaftMemberId( memberId.getUuid(), MemberId.of( memberId ) );
     }
 
     @Override
@@ -107,9 +115,10 @@ public final class RaftMemberId
             }
             else
             {
-                long mostSigBits = channel.getLong();
-                long leastSigBits = channel.getLong();
-                return new RaftMemberId( new UUID( mostSigBits, leastSigBits ) );
+                var mostSigBits = channel.getLong();
+                var leastSigBits = channel.getLong();
+                var uuid = new UUID( mostSigBits, leastSigBits );
+                return new RaftMemberId( uuid, MemberId.of( uuid ) );
             }
         }
 

@@ -73,7 +73,6 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.causalclustering.upstream.strategies.TypicallyConnectToRandomReadReplicaStrategy;
-import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
@@ -387,7 +386,7 @@ class CoreDatabaseFactory
         var minimumCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
         var refuseToBeLeader = config.get( CausalClusteringSettings.refuse_to_be_leader );
         var clusterBindingTimeout = config.get( CausalClusteringSettings.cluster_binding_timeout );
-        return new RaftBinder( namedDatabaseId, myIdentity, identityModule.memberId(), raftIdStorage, topologyService, systemGraph, clock, () -> sleep( 100 ),
+        return new RaftBinder( namedDatabaseId, myIdentity, raftIdStorage, topologyService, systemGraph, clock, () -> sleep( 100 ),
                                clusterBindingTimeout, raftBootstrapper, minimumCoreHosts, refuseToBeLeader, monitors );
     }
 

@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.Inbound;
@@ -21,7 +20,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferTarget.NO_TARGET;
@@ -35,18 +33,15 @@ class LeadershipTransferor
     private final DatabasePenalties databasePenalties;
     private final RaftMembershipResolver membershipResolver;
     private final Clock clock;
-    private final Function<RaftMemberId,ServerId> serverIdResolver;
 
     LeadershipTransferor( Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler,
-            ClusteringIdentityModule identityModule,DatabasePenalties databasePenalties, RaftMembershipResolver membershipResolver, Clock clock,
-            Function<RaftMemberId,ServerId> serverIdResolver )
+            ClusteringIdentityModule identityModule,DatabasePenalties databasePenalties, RaftMembershipResolver membershipResolver, Clock clock )
     {
         this.messageHandler = messageHandler;
         this.identityModule = identityModule;
         this.databasePenalties = databasePenalties;
         this.membershipResolver = membershipResolver;
         this.clock = clock;
-        this.serverIdResolver = serverIdResolver;
     }
 
     boolean toPrioritisedGroup( Collection<NamedDatabaseId> undesiredLeaders, SelectionStrategy selectionStrategy,
@@ -96,7 +91,7 @@ class LeadershipTransferor
         var votingMembers = raftMembership.votingMembers();
         Predicate<RaftMemberId> notSuspendedOrMe = member ->
                 !Objects.equals( member, identityModule.memberId( namedDatabaseId ) ) &&
-                databasePenalties.notSuspended( namedDatabaseId.databaseId(), serverIdResolver.apply( member ) );
+                databasePenalties.notSuspended( namedDatabaseId.databaseId(), member.serverId() );
 
         var validMembers = votingMembers.stream()
                 .filter( notSuspendedOrMe )

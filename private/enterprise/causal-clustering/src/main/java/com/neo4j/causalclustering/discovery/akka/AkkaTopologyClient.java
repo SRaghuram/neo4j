@@ -174,13 +174,6 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public SocketAddress lookupCatchupAddress( RaftMemberId upstream ) throws CatchupAddressResolutionException
-    {
-        var server = resolveServerFromRaftMember( upstream );
-        return lookupCatchupAddress( server );
-    }
-
-    @Override
     public RoleInfo lookupRole( NamedDatabaseId namedDatabaseId, MemberId memberId )
     {
         return globalTopologyState.role( namedDatabaseId, memberId );
@@ -220,12 +213,6 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     public boolean isHealthy()
     {
         return true;
-    }
-
-    @Override
-    public MemberId resolveServerFromRaftMember( RaftMemberId raftMemberId )
-    {
-        return globalTopologyState.resolveServerFromRaftMember( raftMemberId );
     }
 
     @Override

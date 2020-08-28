@@ -39,8 +39,6 @@ public interface TopologyService extends Lifecycle, DatabaseStateChangedListener
 
     SocketAddress lookupCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException;
 
-    SocketAddress lookupCatchupAddress( RaftMemberId upstream ) throws CatchupAddressResolutionException;
-
     LeaderInfo getLeader( NamedDatabaseId namedDatabaseId );
 
     RoleInfo lookupRole( NamedDatabaseId namedDatabaseId, MemberId memberId );
@@ -52,8 +50,6 @@ public interface TopologyService extends Lifecycle, DatabaseStateChangedListener
     Map<MemberId,DiscoveryDatabaseState> allReadReplicaStatesForDatabase( NamedDatabaseId namedDatabaseId );
 
     boolean isHealthy();
-
-    MemberId resolveServerFromRaftMember( RaftMemberId raftMemberId );
 
     RaftMemberId resolveRaftMemberForServer( NamedDatabaseId namedDatabaseId, MemberId serverId );
 }

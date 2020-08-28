@@ -11,8 +11,6 @@ import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -20,12 +18,6 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 class StubLeaderService implements LeaderService
 {
     Map<NamedDatabaseId,RaftMemberId> dbToLeaderMap;
-
-    static StubLeaderService formServers( Map<NamedDatabaseId,MemberId> dbToLeaderMap )
-    {
-        return new StubLeaderService(
-                dbToLeaderMap.keySet().stream().collect( Collectors.toMap( Function.identity(), key -> RaftMemberId.from( dbToLeaderMap.get( key ) ) ) ) );
-    }
 
     StubLeaderService( Map<NamedDatabaseId,RaftMemberId> dbToLeaderMap )
     {
@@ -35,7 +27,7 @@ class StubLeaderService implements LeaderService
     @Override
     public Optional<MemberId> getLeaderServer( NamedDatabaseId namedDatabaseId )
     {
-        return getLeaderId( namedDatabaseId ).map( MemberId::of );
+        return getLeaderId( namedDatabaseId ).map( RaftMemberId::serverId );
     }
 
     @Override

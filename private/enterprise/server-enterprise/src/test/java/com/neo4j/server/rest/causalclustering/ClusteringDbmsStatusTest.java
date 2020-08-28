@@ -7,6 +7,7 @@ package com.neo4j.server.rest.causalclustering;
 
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.discovery.RoleInfo;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,7 +33,6 @@ import static com.neo4j.server.rest.causalclustering.ClusteringDatabaseStatusUti
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.Duration.ofMillis;
 import static java.util.Comparator.naturalOrder;
-import static java.util.UUID.randomUUID;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -50,9 +50,9 @@ class ClusteringDbmsStatusTest
     private final DatabaseManagementService managementService = mock( DatabaseManagementService.class );
     private final ClusteringDbmsStatus statusOutput = new ClusteringDbmsStatus( managementService );
 
-    private final RaftMemberId coreId1 = RaftMemberId.of( randomUUID() );
-    private final RaftMemberId coreId2 = RaftMemberId.of( randomUUID() );
-    private final MemberId readReplicaId = MemberId.of( randomUUID() );
+    private final RaftMemberId coreId1 = IdFactory.randomRaftMemberId();
+    private final RaftMemberId coreId2 = IdFactory.randomRaftMemberId();
+    private final MemberId readReplicaId = IdFactory.randomMemberId();
 
     private final GraphDatabaseAPI coreDb1 = coreStatusMockBuilder()
             .databaseId( databaseIdRepository.getRaw( "foo" ) )
@@ -83,8 +83,8 @@ class ClusteringDbmsStatusTest
             .healthy( false )
             .available( true )
             .readReplicaId( readReplicaId )
-            .coreRole( MemberId.of( coreId1 ), RoleInfo.FOLLOWER )
-            .coreRole( MemberId.of( coreId2 ), RoleInfo.LEADER )
+            .coreRole( coreId1.serverId(), RoleInfo.FOLLOWER )
+            .coreRole( coreId2.serverId(), RoleInfo.LEADER )
             .appliedCommandIndex( 7 )
             .throughput( 8 )
             .build();

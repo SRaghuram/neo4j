@@ -75,8 +75,7 @@ class RaftBinderTest
 
     private final Config config = Config.defaults();
     private final int minCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
-    private final RaftMemberId meAsRaftMember = IdFactory.randomRaftMemberId();
-    private final MemberId meAsServer = MemberId.of( meAsRaftMember );
+    private final RaftMemberId me = IdFactory.randomRaftMemberId();
 
     private Set<UUID> extractMemberUUIDs( Map<MemberId,CoreServerInfo> members )
     {
@@ -101,14 +100,14 @@ class RaftBinderTest
     private RaftBinder raftBinder( SimpleStorage<RaftId> raftIdStorage, CoreTopologyService topologyService )
     {
         ClusterSystemGraphDbmsModel systemGraph = systemGraphFor( SOME_NAMED_DATABASE_ID, emptySet() );
-        return new RaftBinder( SOME_NAMED_DATABASE_ID, meAsRaftMember, meAsServer,raftIdStorage, topologyService, systemGraph, clock,
+        return new RaftBinder( SOME_NAMED_DATABASE_ID, me, raftIdStorage, topologyService, systemGraph, clock,
                 () -> clock.forward( 1, TimeUnit.SECONDS ), Duration.ofSeconds( 10 ), raftBootstrapper, minCoreHosts, false, new Monitors() );
     }
 
     private RaftBinder raftBinder( SimpleStorage<RaftId> raftIdStorage, CoreTopologyService topologyService, NamedDatabaseId namedDatabaseId,
             ClusterSystemGraphDbmsModel systemGraph )
     {
-        return new RaftBinder( namedDatabaseId, meAsRaftMember, meAsServer, raftIdStorage, topologyService, systemGraph, clock,
+        return new RaftBinder( namedDatabaseId, me, raftIdStorage, topologyService, systemGraph, clock,
                 () -> clock.forward( 1, TimeUnit.SECONDS ), Duration.ofSeconds( 10 ), raftBootstrapper, minCoreHosts, false, new Monitors() );
     }
 
@@ -181,7 +180,7 @@ class RaftBinderTest
         Optional<RaftId> raftId = binder.get();
         assertTrue( raftId.isPresent() );
         assertEquals( publishedRaftId, raftId.get() );
-        verify( topologyService, never() ).publishRaftId( publishedRaftId, meAsRaftMember );
+        verify( topologyService, never() ).publishRaftId( publishedRaftId, me );
         verify( topologyService, atLeast( 2 ) ).coreTopologyForDatabase( SOME_NAMED_DATABASE_ID );
     }
 
@@ -192,7 +191,7 @@ class RaftBinderTest
         RaftId previouslyBoundRaftId = RaftId.from( SOME_NAMED_DATABASE_ID.databaseId() );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
-        when( topologyService.publishRaftId( previouslyBoundRaftId, meAsRaftMember ) ).thenReturn( PublishRaftIdOutcome.SUCCESSFUL_PUBLISH_BY_ME );
+        when( topologyService.publishRaftId( previouslyBoundRaftId, me ) ).thenReturn( PublishRaftIdOutcome.SUCCESSFUL_PUBLISH_BY_ME );
 
         InMemorySimpleStorage<RaftId> raftIdStorage = new InMemorySimpleStorage<>();
         raftIdStorage.writeState( previouslyBoundRaftId );
@@ -204,7 +203,7 @@ class RaftBinderTest
 
         // then
         assertNoSnapshot( boundState );
-        verify( topologyService ).publishRaftId( previouslyBoundRaftId, meAsRaftMember );
+        verify( topologyService ).publishRaftId( previouslyBoundRaftId, me );
         Optional<RaftId> raftId = binder.get();
         assertTrue( raftId.isPresent() );
         assertEquals( previouslyBoundRaftId, raftId.get() );
@@ -217,7 +216,7 @@ class RaftBinderTest
         RaftId previouslyBoundRaftId = RaftId.from( SOME_NAMED_DATABASE_ID.databaseId() );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
-        when( topologyService.publishRaftId( previouslyBoundRaftId, meAsRaftMember ) )
+        when( topologyService.publishRaftId( previouslyBoundRaftId, me ) )
                 .thenReturn( PublishRaftIdOutcome.FAILED_PUBLISH )
                 .thenReturn( PublishRaftIdOutcome.SUCCESSFUL_PUBLISH_BY_ME );
 
@@ -231,7 +230,7 @@ class RaftBinderTest
 
         // then
         assertNoSnapshot( boundState );
-        verify( topologyService, atLeast( 2 ) ).publishRaftId( previouslyBoundRaftId, meAsRaftMember );
+        verify( topologyService, atLeast( 2 ) ).publishRaftId( previouslyBoundRaftId, me );
     }
 
     @Test
@@ -241,7 +240,7 @@ class RaftBinderTest
         RaftId previouslyBoundRaftId = RaftId.from( SOME_NAMED_DATABASE_ID.databaseId() );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
-        when( topologyService.publishRaftId( previouslyBoundRaftId, meAsRaftMember ) )
+        when( topologyService.publishRaftId( previouslyBoundRaftId, me ) )
                 .thenReturn( PublishRaftIdOutcome.SUCCESSFUL_PUBLISH_BY_OTHER );
 
         InMemorySimpleStorage<RaftId> raftIdStorage = new InMemorySimpleStorage<>();
@@ -254,7 +253,7 @@ class RaftBinderTest
 
         // then
         assertNoSnapshot( boundState );
-        verify( topologyService, times( 1 ) ).publishRaftId( previouslyBoundRaftId, meAsRaftMember );
+        verify( topologyService, times( 1 ) ).publishRaftId( previouslyBoundRaftId, me );
     }
 
     @Test
@@ -286,7 +285,7 @@ class RaftBinderTest
         binder.bindToRaft( neverAbort() );
 
         // then
-        verify( topologyService, atLeast( 3 ) ).publishRaftId( RaftId.from( namedDatabaseId.databaseId() ), meAsRaftMember );
+        verify( topologyService, atLeast( 3 ) ).publishRaftId( RaftId.from( namedDatabaseId.databaseId() ), me );
     }
 
     @Test
@@ -313,7 +312,7 @@ class RaftBinderTest
 
         // when / then
         assertThrows( TimeoutException.class, () -> binder.bindToRaft( neverAbort() ) );
-        verify( topologyService, atLeast( 1 ) ).publishRaftId( RaftId.from( namedDatabaseId.databaseId() ), meAsRaftMember );
+        verify( topologyService, atLeast( 1 ) ).publishRaftId( RaftId.from( namedDatabaseId.databaseId() ), me );
     }
 
     static Stream<Arguments> initialDatabases()
@@ -358,7 +357,7 @@ class RaftBinderTest
         Optional<RaftId> raftId = binder.get();
         assertTrue( raftId.isPresent() );
         assertEquals( raftId.get().uuid(), namedDatabaseId.databaseId().uuid() );
-        verify( topologyService ).publishRaftId( raftId.get(), meAsRaftMember );
+        verify( topologyService ).publishRaftId( raftId.get(), me );
         assertHasSnapshot( boundState );
         assertEquals( snapshot, boundState.snapshot().get() );
     }
@@ -375,7 +374,7 @@ class RaftBinderTest
         var members = IntStream.range( 0, minCoreHosts - 1 )
                 .mapToObj( i -> Pair.of( IdFactory.randomMemberId(), addressesForCore( i, false ) ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
-        members.put( meAsServer, addressesForCore( minCoreHosts, false ) );
+        members.put( me.serverId(), addressesForCore( minCoreHosts, false ) );
         var raftMembers = members.keySet().stream().map( RaftMemberId::from ).collect( Collectors.toSet() );
 
         DatabaseCoreTopology topology = new DatabaseCoreTopology( SOME_NAMED_DATABASE_ID.databaseId(), null, members );
@@ -401,7 +400,7 @@ class RaftBinderTest
         Optional<RaftId> raftId = binder.get();
         assertTrue( raftId.isPresent() );
         assertEquals( raftId.get().uuid(), SOME_NAMED_DATABASE_ID.databaseId().uuid() );
-        verify( topologyService ).publishRaftId( raftId.get(), meAsRaftMember );
+        verify( topologyService ).publishRaftId( raftId.get(), me );
         assertHasSnapshot( boundState );
         assertEquals( snapshot, boundState.snapshot().get() );
     }

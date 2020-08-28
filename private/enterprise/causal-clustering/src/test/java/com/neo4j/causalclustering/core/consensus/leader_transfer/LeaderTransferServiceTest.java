@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
 import com.neo4j.configuration.ServerGroupsSupplier;
@@ -85,7 +84,7 @@ class LeaderTransferServiceTest
         var leaderService = new StubLeaderService( Map.of() );
         var leaderTransferService =
                 new LeaderTransferService( jobScheduler, config, leaderTransferInterval, databaseManager, messageHandler, identityModule, leaderMemberBackoff,
-                        NullLogProvider.nullLogProvider(), clock, leaderService, serverGroupsProvider, MemberId::of );
+                        NullLogProvider.nullLogProvider(), clock, leaderService, serverGroupsProvider );
 
         // when
         life.add( leaderTransferService );
@@ -111,7 +110,7 @@ class LeaderTransferServiceTest
 
         var leaderTransferService =
                 new LeaderTransferService( jobScheduler, config, leaderTransferInterval, databaseManager, messageHandler, identityModule, leaderMemberBackoff,
-                        NullLogProvider.nullLogProvider(), clock, leaderService, serverGroupsProvider, MemberId::of );
+                        NullLogProvider.nullLogProvider(), clock, leaderService, serverGroupsProvider );
 
         // when
         life.add( leaderTransferService );

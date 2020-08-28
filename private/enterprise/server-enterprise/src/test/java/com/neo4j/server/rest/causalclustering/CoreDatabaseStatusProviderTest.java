@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.rest.causalclustering;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.Test;
 
@@ -17,7 +17,6 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
 import static com.neo4j.server.rest.causalclustering.ClusteringDatabaseStatusUtil.coreStatusMockBuilder;
 import static java.time.Duration.ofMillis;
-import static java.util.UUID.randomUUID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -25,8 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CoreDatabaseStatusProviderTest
 {
-    private final RaftMemberId memberId = RaftMemberId.of( randomUUID() );
-    private final RaftMemberId leaderId = RaftMemberId.of( randomUUID() );
+    private final RaftMemberId memberId = IdFactory.randomRaftMemberId();
+    private final RaftMemberId leaderId = IdFactory.randomRaftMemberId();
 
     private final GraphDatabaseAPI db = coreStatusMockBuilder()
             .memberId( memberId )

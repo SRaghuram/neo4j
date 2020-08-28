@@ -228,11 +228,6 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         }
     }
 
-    public MemberId resolveServerFromRaftMember( RaftMemberId raftMemberId )
-    {
-        return MemberId.of( raftMemberId );
-    }
-
     public RaftMemberId resolveRaftMemberForServer( DatabaseId databaseId, ServerId serverId )
     {
         return RaftMemberId.from( serverId );

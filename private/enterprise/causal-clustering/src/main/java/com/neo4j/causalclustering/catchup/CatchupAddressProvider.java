@@ -119,7 +119,7 @@ public interface CatchupAddressProvider
             {
                 throw new CatchupAddressResolutionException( new IllegalStateException( "No Leader Found" ) );
             }
-            return topologyService.lookupCatchupAddress( leadMember );
+            return topologyService.lookupCatchupAddress( leadMember.serverId() );
         }
 
         @Override

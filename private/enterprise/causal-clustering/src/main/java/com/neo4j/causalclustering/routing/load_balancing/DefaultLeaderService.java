@@ -44,7 +44,7 @@ public class DefaultLeaderService implements LeaderService, GlobalLeaderListener
     public Optional<MemberId> getLeaderServer( NamedDatabaseId namedDatabaseId )
     {
         return currentLeaderAccordingToRaft( namedDatabaseId ).or( () -> leaderFromTopology( namedDatabaseId ) )
-                .map( topologyService::resolveServerFromRaftMember );
+                .map( RaftMemberId::serverId );
     }
 
     private Optional<RaftMemberId> leaderFromTopology( NamedDatabaseId namedDatabaseId )

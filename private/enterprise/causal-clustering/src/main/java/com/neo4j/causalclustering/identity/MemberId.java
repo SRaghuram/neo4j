@@ -44,15 +44,6 @@ public interface MemberId extends ServerId
         return new ClusteringServerId( id );
     }
 
-    /**
-     * This conversion should be only temporary, until RaftMemberId contains it ServerId
-     */
-    @Deprecated
-    static MemberId of( RaftMemberId raftMemberId )
-    {
-        return new ClusteringServerId( raftMemberId.getUuid() );
-    }
-
     @Deprecated
     static MemberId of( ServerId id )
     {

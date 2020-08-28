@@ -216,12 +216,6 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     }
 
     @Override
-    public SocketAddress lookupCatchupAddress( RaftMemberId upstream ) throws CatchupAddressResolutionException
-    {
-        return lookupCatchupAddress( resolveServerFromRaftMember( upstream ) );
-    }
-
-    @Override
     public RoleInfo lookupRole( NamedDatabaseId ignored, MemberId memberId )
     {
         var role = coreRoles.get( memberId );
@@ -240,12 +234,6 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
                         .filter( entry -> entry.getValue() == RoleInfo.LEADER )
                         .map( entry -> new LeaderInfo( RaftMemberId.from( entry.getKey() ), 1 ) )
                         .findFirst().orElse( null );
-    }
-
-    @Override
-    public MemberId resolveServerFromRaftMember( RaftMemberId raftMemberId )
-    {
-        return MemberId.of( raftMemberId );
     }
 
     @Override

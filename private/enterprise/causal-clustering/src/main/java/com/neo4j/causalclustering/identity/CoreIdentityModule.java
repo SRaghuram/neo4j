@@ -42,7 +42,7 @@ public class CoreIdentityModule extends ClusteringIdentityModule
     private CoreIdentityModule( MemberId memberId )
     {
         this.myself = memberId;
-        this.tempRaftMemberId = new RaftMemberId( memberId.getUuid() );
+        this.tempRaftMemberId = new RaftMemberId( memberId.getUuid(), memberId );
     }
 
     @Override

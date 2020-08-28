@@ -212,8 +212,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     @Override
     public SocketAddress lookupRaftAddress( RaftMemberId target )
     {
-        var server = resolveServerFromRaftMember( target );
-        var targetCoreInfo = allCoreServers().get( server );
+        var targetCoreInfo = allCoreServers().get( target.serverId() );
         if ( targetCoreInfo != null )
         {
             return targetCoreInfo.getRaftServer();
@@ -262,12 +261,6 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
             }
         }
         return PublishRaftIdOutcome.FAILED_PUBLISH;
-    }
-
-    @Override
-    public MemberId resolveServerFromRaftMember( RaftMemberId raftMemberId )
-    {
-        return globalTopologyState.resolveServerFromRaftMember( raftMemberId );
     }
 
     @Override
@@ -439,12 +432,6 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         {
             throw new CatchupAddressResolutionException( upstream );
         }
-    }
-
-    @Override
-    public SocketAddress lookupCatchupAddress( RaftMemberId upstream ) throws CatchupAddressResolutionException
-    {
-        return lookupCatchupAddress( resolveServerFromRaftMember( upstream ) );
     }
 
     @Override
