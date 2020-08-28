@@ -9,6 +9,7 @@ import akka.cluster.Cluster
 import akka.cluster.ClusterEvent.ClusterShuttingDown
 import akka.event.EventStream
 import akka.remote.ThisActorSystemQuarantinedEvent
+import com.neo4j.causalclustering.discovery.akka.AkkaActorSystemRestartStrategy.NeverRestart
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import org.mockito.Mockito.verify
 
@@ -82,6 +83,6 @@ class RestartNeededListeningActorIT extends BaseAkkaIT("Quarantine") {
     }
     val quarantine = ThisActorSystemQuarantinedEvent(null, null)
 
-    val actorRef = system.actorOf(RestartNeededListeningActor.props(restart, eventStream, cluster))
+    val actorRef = system.actorOf(RestartNeededListeningActor.props(restart, eventStream, cluster, new NeverRestart()))
   }
 }

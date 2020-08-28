@@ -5,44 +5,55 @@
  */
 package com.neo4j.causalclustering.discovery.akka.coretopology;
 
-import akka.actor.AbstractLoggingActor;
 import akka.actor.Props;
 import akka.cluster.Cluster;
 import akka.cluster.ClusterEvent;
 import akka.event.EventStream;
 import akka.japi.pf.ReceiveBuilder;
 import akka.remote.ThisActorSystemQuarantinedEvent;
+import com.neo4j.causalclustering.discovery.akka.AbstractActorWithTimersAndLogging;
+import com.neo4j.causalclustering.discovery.akka.AkkaActorSystemRestartStrategy;
 
-public class RestartNeededListeningActor extends AbstractLoggingActor
+import java.time.Duration;
+
+public class RestartNeededListeningActor extends AbstractActorWithTimersAndLogging
 {
     public static final String NAME = "cc-core-restart-needed-listener";
+    public static final String TIMER_KEY = "cc-core-restart-needed-listener-timer";
 
-    public static Props props( Runnable restart, EventStream eventStream, Cluster cluster )
+    public static Props props( Runnable restart, EventStream eventStream, Cluster cluster,
+                               AkkaActorSystemRestartStrategy actorSystemRestartStrategy )
     {
-        return Props.create( RestartNeededListeningActor.class, () -> new RestartNeededListeningActor( restart, eventStream, cluster ) );
+        return Props.create( RestartNeededListeningActor.class,
+                             () -> new RestartNeededListeningActor( restart, eventStream, cluster, actorSystemRestartStrategy ) );
     }
 
-    private RestartNeededListeningActor( Runnable restart, EventStream eventStream, Cluster cluster )
+    private RestartNeededListeningActor( Runnable restart, EventStream eventStream, Cluster cluster,
+                                         AkkaActorSystemRestartStrategy actorSystemRestartStrategy )
     {
         this.restart = restart;
         this.eventStream = eventStream;
         this.cluster = cluster;
+        this.actorSystemRestartStrategy = actorSystemRestartStrategy;
     }
 
     private final Runnable restart;
     private final EventStream eventStream;
     private final Cluster cluster;
+    private final AkkaActorSystemRestartStrategy actorSystemRestartStrategy;
 
     @Override
     public void preStart()
     {
         eventStream.subscribe( getSelf(), ThisActorSystemQuarantinedEvent.class );
         cluster.subscribe( getSelf(), ClusterEvent.ClusterShuttingDown$.class );
+        timers().startPeriodicTimer( TIMER_KEY, new Tick(), Duration.ofSeconds(5) );
     }
 
     @Override
     public void postStop()
     {
+        timers().cancelAll();
         unsubscribe();
     }
 
@@ -56,10 +67,19 @@ public class RestartNeededListeningActor extends AbstractLoggingActor
     public Receive createReceive()
     {
         return ReceiveBuilder.create()
-                .match( ThisActorSystemQuarantinedEvent.class,   this::doRestart )
-                .match( ClusterEvent.ClusterShuttingDown$.class, this::doRestart )
-                .match( ClusterEvent.CurrentClusterState.class,  ignore -> {} )
-                .build();
+                             .match( ThisActorSystemQuarantinedEvent.class,   this::doRestart )
+                             .match( ClusterEvent.ClusterShuttingDown$.class, this::doRestart )
+                             .match( Tick.class, this::considerRestart )
+                             .match( ClusterEvent.CurrentClusterState.class,  ignore -> {} )
+                             .build();
+    }
+
+    private void considerRestart( Object event )
+    {
+        if ( actorSystemRestartStrategy.restartRequired( cluster ) )
+        {
+            doRestart( event );
+        }
     }
 
     private void doRestart( Object event )
@@ -82,5 +102,12 @@ public class RestartNeededListeningActor extends AbstractLoggingActor
     private void ignore( Object event )
     {
         log().debug( "Ignoring as restart has been triggered: {}", event );
+    }
+
+    /*
+     * No-op class for timer messages
+     */
+    public static class Tick
+    {
     }
 }
