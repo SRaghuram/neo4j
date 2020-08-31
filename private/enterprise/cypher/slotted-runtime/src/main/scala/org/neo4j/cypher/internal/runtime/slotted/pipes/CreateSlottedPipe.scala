@@ -141,8 +141,15 @@ case class MergeCreateNodeSlottedPipe(source: Pipe,
     }
   }
 
-  override protected def handleNoValue(key: String): Unit =
-    throw new InvalidSemanticsException(s"Cannot merge node using null property value for $key")
+  override protected def handleNoValue(key: String): Unit = {
+    val labels = command.labels.map(l => l.name).mkString(":")
+    val colon = if (labels.length > 0) {
+      ":"
+    } else {
+      ""
+    }
+    throw new InvalidSemanticsException(s"Cannot merge the following node because of null property value for '$key': ($colon$labels {$key: null})")
+  }
 }
 
 /**
@@ -161,6 +168,24 @@ case class MergeCreateRelationshipSlottedPipe(source: Pipe,
     }
   }
 
-  override protected def handleNoValue(key: String): Unit =
-    throw new InvalidSemanticsException(s"Cannot merge relationship using null property value for $key")
+  override protected def handleNoValue(key: String): Unit = {
+    val startVariableName = command.startName
+    val endVariableName = command.endName
+    // " UNNAMED X" -> Auto generated variable names, do not expose
+    val startVarPart =
+      if (startVariableName.startsWith(" ")) {
+        ""
+      } else {
+        startVariableName
+      }
+    val endVarPart =
+      if (endVariableName.startsWith(" ")) {
+        ""
+      } else {
+        endVariableName
+      }
+    val relType = command.relType.name // this is always available
+    throw new InvalidSemanticsException(
+      s"Cannot merge the following relationship because of null property value for '$key': ($startVarPart)-[:$relType {$key: null}]->($endVarPart)")
+  }
 }

@@ -36,7 +36,7 @@ class LoadCsvFailureAcceptanceTest extends ExecutionEngineFunSuite
            | MERGE (x:Order {OrderId:o.otherOrderId})
            | RETURN o, x""".stripMargin
       val e = intercept[LoadCsvStatusWrapCypherException](execute(query))
-      e.getMessage should include regex """Cannot merge node using null property value for OrderId.+csv' on line 2.+"""
+      e.getMessage should include regex """Cannot merge the following node because of null property value for 'OrderId': \((x)?:Order\s\{OrderId: null\}\).+csv' on line 2.+"""
     }
 
     test(s"correct error message for previous version with file name and line number on MERGE with $runtime") {
@@ -56,7 +56,7 @@ class LoadCsvFailureAcceptanceTest extends ExecutionEngineFunSuite
            | MERGE (x:Order {OrderId:o.otherOrderId})
            | RETURN o, x""".stripMargin
       val e = intercept[LoadCsvStatusWrapCypherException](execute(query))
-      e.getMessage should include regex """Cannot merge node using null property value for OrderId.+csv' on line 2.+"""
+      e.getMessage should include regex """Cannot merge the following node because of null property value for 'OrderId': \((x)?:Order\s\{OrderId: null\}\).+csv' on line 2.+"""
     }
 
     test(s"correct error message with file name and line number on / by 0 with $runtime") {

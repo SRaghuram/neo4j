@@ -77,6 +77,47 @@ class MergeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     result.toList should equal(List(Map("sameEdge" -> false, "name" -> null)))
   }
 
+  test(s"correct error message on null MERGE") {
+    failWithError(Configs.InterpretedAndSlotted, "MERGE (x:Order {OrderId:null})",
+      Seq("Cannot merge the following node because of null property value for 'OrderId': (x:Order {OrderId: null})",
+        "Cannot merge the following node because of null property value for 'OrderId': (:Order {OrderId: null})"))
+    // we accept with and without variable names because interpreted knows the variable, while slotted does not
+  }
+
+  test(s"correct error message on null MERGE should not expose internally generated variable names") {
+    failWithError(Configs.InterpretedAndSlotted, "MERGE (:Order {OrderId:null})",
+      Seq("Cannot merge the following node because of null property value for 'OrderId': (:Order {OrderId: null})"))
+  }
+
+  test(s"correct error message on null MERGE with any amout of labels should work") {
+    failWithError(Configs.InterpretedAndSlotted, "MERGE (:Order:Priority {OrderId:null})",
+      Seq("Cannot merge the following node because of null property value for 'OrderId': (:Order:Priority {OrderId: null})"))
+    failWithError(Configs.InterpretedAndSlotted, "MERGE ({OrderId:null})",
+      Seq("Cannot merge the following node because of null property value for 'OrderId': ( {OrderId: null})"))
+  }
+
+  test(s"correct error message on null MERGE on relationship") {
+    failWithError(Configs.InterpretedAndSlotted, "MERGE (y:Order)-[x:ORDERED_BY {date:null}]->(z:Customer)",
+      Seq("Cannot merge the following relationship because of null property value for 'date': (y)-[x:ORDERED_BY {date: null}]->(z)",
+        "Cannot merge the following relationship because of null property value for 'date': (y)-[:ORDERED_BY {date: null}]->(z)"))
+      // we accept with and without variable name because interpreted knows the variable, while slotted does not
+  }
+
+  test(s"correct error message on null MERGE on relationship should not expose internally generated variable names") {
+    failWithError(Configs.InterpretedAndSlotted, "MERGE (:Order)-[:ORDERED_BY {date:null}]->(:Customer)",
+      Seq("Cannot merge the following relationship because of null property value for 'date': ()-[:ORDERED_BY {date: null}]->()"))
+    failWithError(Configs.InterpretedAndSlotted, "MERGE (x:Order)-[:ORDERED_BY {date:null}]->(y:Customer)",
+      Seq("Cannot merge the following relationship because of null property value for 'date': (x)-[:ORDERED_BY {date: null}]->(y)"))
+    failWithError(Configs.InterpretedAndSlotted, "MERGE (x:Order)-[:ORDERED_BY {date:null}]->(:Customer)",
+      Seq("Cannot merge the following relationship because of null property value for 'date': (x)-[:ORDERED_BY {date: null}]->()"))
+    failWithError(Configs.InterpretedAndSlotted, "MERGE (:Order)-[:ORDERED_BY {date:null}]->(z:Customer)",
+      Seq("Cannot merge the following relationship because of null property value for 'date': ()-[:ORDERED_BY {date: null}]->(z)"))
+    failWithError(Configs.InterpretedAndSlotted, "MERGE (:Order)-[x:ORDERED_BY {date:null}]->(:Customer)",
+      Seq("Cannot merge the following relationship because of null property value for 'date': ()-[x:ORDERED_BY {date: null}]->()",
+        "Cannot merge the following relationship because of null property value for 'date': ()-[:ORDERED_BY {date: null}]->()"))
+    // we accept with and without variable name because interpreted knows the variable, while slotted does not
+  }
+
   test("should give sensible error message on add relationship to null node") {
     val query =
       """OPTIONAL MATCH (a)
