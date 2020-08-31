@@ -90,8 +90,9 @@ public class EmbeddedDatabase implements Database
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PrintStream out = new PrintStream( baos );
 
-        StoreInfoCommand storeInfoCommand = new StoreInfoCommand( new ExecutionContext( Path.of( "" ), Path.of( "" ), out, System.err,
-                                                                                        new DefaultFileSystemAbstraction() ) );
+        StoreInfoCommand storeInfoCommand =
+                new StoreInfoCommand( new ExecutionContext( Path.of( "" ).toAbsolutePath(), Path.of( "" ).toAbsolutePath(), out, System.err,
+                        new DefaultFileSystemAbstraction() ) );
         CommandLine.populateCommand( storeInfoCommand, store.graphDbDirectory().toAbsolutePath().toString() );
         storeInfoCommand.execute();
         out.flush();

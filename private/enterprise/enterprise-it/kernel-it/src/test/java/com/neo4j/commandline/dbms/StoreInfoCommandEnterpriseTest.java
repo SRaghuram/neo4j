@@ -64,9 +64,13 @@ class StoreInfoCommandEnterpriseTest
 
         command.execute();
 
-        verify( out ).println( "Store format version:         vE.H.4" );
-        verify( out ).println( "Store format introduced in:   3.4.0" );
-        verify( out ).println( "Store format superseded in:   4.0.0" );
+        verify( out ).print( "Database name:                foo" + System.lineSeparator() +
+                             "Database in use:              false" + System.lineSeparator() +
+                             "Store format version:         vE.H.4" + System.lineSeparator() +
+                             "Store format introduced in:   3.4.0" + System.lineSeparator() +
+                             "Store format superseded in:   4.0.0" + System.lineSeparator() +
+                             "Last committed transaction id:-1" + System.lineSeparator() +
+                             "Store needs recovery:         true" );
         verifyNoMoreInteractions( out );
     }
 
