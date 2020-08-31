@@ -118,6 +118,24 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 2.3, 4.5))))
   }
 
+  test("point function should work with map represented as node") {
+    createNode(Map("latitude" -> 12.78, "longitude" -> 56.7))
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) RETURN point(n) as point",
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
+
+    result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 56.7, 12.78))))
+  }
+
+  test("point function should work with map represented as relationship") {
+    executeSingle("CREATE ()-[:REL {x:1, y:2, z:3, crs: 'cartesian-3D'}]->()")
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH ()-[r:REL]->() RETURN point(r) as point",
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
+
+    result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian_3D, 1, 2, 3))))
+  }
+
   test("point function should work with node with only valid properties") {
     val result = executeWith(Configs.InterpretedAndSlotted, "CREATE (n {latitude: 12.78, longitude: 56.7}) RETURN point(n) as point",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
