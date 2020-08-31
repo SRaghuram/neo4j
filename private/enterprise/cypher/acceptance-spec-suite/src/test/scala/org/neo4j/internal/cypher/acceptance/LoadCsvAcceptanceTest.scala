@@ -843,6 +843,68 @@ class LoadCsvAcceptanceTest
     }
   }
 
+  test("periodic commit and distinct") {
+
+    val urls = csvUrls({
+      writer =>
+       writer.println("foo")
+       writer.println("bar")
+       writer.println("baz")
+    })
+    for (url <- urls) {
+      val query = s"USING PERIODIC COMMIT 2 LOAD CSV FROM '$url' AS row UNWIND [1, 2, 3, 1] AS i WITH DISTINCT i CREATE () RETURN i"
+
+      executeSingle(query, Map.empty).toList should equal(List(Map("i" -> 1), Map("i" -> 2), Map("i" -> 3)))
+
+      resourceMonitor.assertClosedAndClear(1)
+
+      //empty database
+      executeSingle("MATCH (n) DETACH DELETE n", Map.empty)
+    }
+  }
+
+  test("periodic commit and top") {
+    val urls = csvUrls({
+      writer =>
+        writer.println("foo")
+        writer.println("bar")
+        writer.println("baz")
+    })
+    for (url <- urls) {
+      val query = s"USING PERIODIC COMMIT 2 LOAD CSV FROM '$url' AS row UNWIND [4, 2, 3, 1] AS i WITH i ORDER BY i LIMIT 9 CREATE () RETURN i"
+
+      executeSingle(query, Map.empty).toList should equal(List(
+        Map("i" -> 1), Map("i" -> 1), Map("i" -> 1),
+        Map("i" -> 2), Map("i" -> 2), Map("i" -> 2),
+        Map("i" -> 3), Map("i" -> 3), Map("i" -> 3)
+      ))
+
+      resourceMonitor.assertClosedAndClear(1)
+      //empty database
+      executeSingle("MATCH (n) DETACH DELETE n", Map.empty)
+    }
+  }
+
+  test("periodic commit and grouped aggregation") {
+    val urls = csvUrls({
+      writer =>
+        writer.println("foo")
+        writer.println("bar")
+        writer.println("baz")
+    })
+    for (url <- urls) {
+      val query = s"USING PERIODIC COMMIT 2 LOAD CSV FROM '$url' AS row UNWIND [1, 2, 3] AS i CREATE () RETURN i, count(i)"
+
+      executeSingle(query, Map.empty).toList should equal(List(
+        Map("i" -> 1, "count(i)" -> 3), Map("i" -> 2, "count(i)" -> 3), Map("i" -> 3, "count(i)" -> 3)))
+
+      resourceMonitor.assertClosedAndClear(1)
+
+      //empty database
+      executeSingle("MATCH (n) DETACH DELETE n", Map.empty)
+    }
+  }
+
   private def ensureNoIllegalCharsInWindowsFilePath(filename: String) = {
     // isWindows?
     if ('\\' == File.separatorChar) {

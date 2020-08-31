@@ -95,6 +95,34 @@ public class CypherOverBoltIT
         }
     }
 
+    //This CSV was loaded during soak run and triggered a bug, this test is here so that hopefully in the future
+    //we can catch those kinds of bugs earlier.
+    @Test
+    public void shouldHandleComplexLoadCSV()
+    {
+        String file = CypherOverBoltIT.class.getResource( "/csv/eroads.csv" ).toString();
+        String query =
+                String.format( "USING PERIODIC COMMIT 1000 LOAD CSV WITH HEADERS FROM '%s' AS row " +
+                               "WITH row, toInteger(row.distance) AS distance, " +
+                               "CASE row.watercrossing WHEN 'true' THEN true ELSE false END AS watercrossing " +
+                               "MERGE (origin:ReferencePlace {name: row.origin_reference_place, country_code: row.origin_country_code}) " +
+                               "ON CREATE SET origin.location = point({ longitude: toFloat(row.origin_lon), latitude: toFloat(row.origin_lat) }) " +
+                               "MERGE (destination:ReferencePlace {name: row.destination_reference_place, country_code: row.destination_country_code}) " +
+                               "ON CREATE SET destination.location = " +
+                               "point({ longitude: toFloat(row.destination_lon), latitude: toFloat(row.destination_lat) }) " +
+                               "CREATE (origin)-[:EROAD {road_number: row.road_number, distance: distance, watercrossing: watercrossing}]->(destination) " +
+                               "WITH origin, destination UNWIND [origin, destination] AS referencePlace " +
+                               "RETURN id(referencePlace) AS referencePlaceId," +
+                               " referencePlace.location.latitude as latitude, referencePlace.location.longitude as longitude", file );
+
+        try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
+              Session session = driver.session() )
+        {
+            Result result = session.run( query );
+            assertEquals( result.list().size(), 2500 );
+        }
+    }
+
     @Test
     public void explainingPeriodicCommitInOpenTransactionShouldNotFail()
     {
