@@ -86,7 +86,7 @@ public class InstalledProtocolsProcedureIT
                 .map( member -> new ProtocolInfo( OUTBOUND, localhost( member.raftListenAddress() ), RAFT.canonicalName(), "4.0", modifiers ) )
                 .toArray( ProtocolInfo[]::new );
 
-        assertEventually( "should see outbound installed protocols on core " + leader.serverId(),
+        assertEventually( "should see outbound installed protocols on core " + leader.index(),
                 () -> installedProtocols( leader.defaultDatabase(), OUTBOUND ),
                 new HamcrestCondition<>( hasItems( expectedProtocolInfos ) ),
                 60, SECONDS );
@@ -95,7 +95,7 @@ public class InstalledProtocolsProcedureIT
     @Test
     void shouldSeeInboundInstalledProtocolsOnLeader()
     {
-        assertEventually( "should see inbound installed protocols on core " + leader.serverId(),
+        assertEventually( "should see inbound installed protocols on core " + leader.index(),
                 () -> installedProtocols( leader.defaultDatabase(), INBOUND ),
                 new HamcrestCondition<>( hasSize( greaterThanOrEqualTo( cluster.coreMembers().size() - 1 ) ) ),
                 60, SECONDS );

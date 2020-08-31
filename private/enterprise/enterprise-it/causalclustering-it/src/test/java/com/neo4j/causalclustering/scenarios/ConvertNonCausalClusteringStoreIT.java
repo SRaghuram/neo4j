@@ -79,7 +79,7 @@ class ConvertNonCausalClusteringStoreIT
             tx.commit();
         } );
 
-        cluster.addReadReplicaWithIdAndRecordFormat( 4, recordFormat ).start();
+        cluster.addReadReplicaWithIndexAndRecordFormat( 4, recordFormat ).start();
 
         // then
         for ( final CoreClusterMember server : cluster.coreMembers() )

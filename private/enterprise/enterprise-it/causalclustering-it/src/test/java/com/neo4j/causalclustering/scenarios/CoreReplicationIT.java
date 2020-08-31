@@ -189,10 +189,10 @@ class CoreReplicationIT
     void shouldReplicateTransactionToCoreMemberAddedAfterInitialStartUp() throws Exception
     {
         // given
-        cluster.getCoreMemberById( 0 ).shutdown();
+        cluster.getCoreMemberByIndex( 0 ).shutdown();
 
         cluster.newCoreMember().start();
-        cluster.getCoreMemberById( 0 ).start();
+        cluster.getCoreMemberByIndex( 0 ).start();
 
         cluster.coreTx( ( db, tx ) ->
         {
@@ -276,8 +276,8 @@ class CoreReplicationIT
             tx.commit();
         } );
 
-        cluster.removeCoreMemberWithServerId( 0 );
-        CoreClusterMember replacement = cluster.addCoreMemberWithId( 0 );
+        cluster.removeCoreMemberWithIndex( 0 );
+        CoreClusterMember replacement = cluster.addCoreMemberWithIndex( 0 );
         replacement.start();
 
         CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->

@@ -92,8 +92,8 @@ public class Cluster
 
     private final Map<Integer,CoreClusterMember> coreMembers = new ConcurrentHashMap<>();
     private final Map<Integer,ReadReplica> readReplicas = new ConcurrentHashMap<>();
-    private int highestCoreServerId;
-    private int highestReplicaServerId;
+    private int highestCoreIndex;
+    private int highestReplicaIndex;
 
     public Cluster( Path parentDir, int noOfCoreMembers, int noOfReadReplicas, DiscoveryServiceFactory discoveryServiceFactory,
             Map<String,String> coreParams,
@@ -136,41 +136,41 @@ public class Cluster
                 .collect( Collectors.toSet() );
     }
 
-    public CoreClusterMember getCoreMemberById( int memberId )
+    public CoreClusterMember getCoreMemberByIndex( int index )
     {
-        return coreMembers.get( memberId );
+        return coreMembers.get( index );
     }
 
-    public ReadReplica getReadReplicaById( int memberId )
+    public ReadReplica getReadReplicaByIndex( int index )
     {
-        return readReplicas.get( memberId );
+        return readReplicas.get( index );
     }
 
-    public CoreClusterMember addCoreMemberWithId( int memberId )
+    public CoreClusterMember addCoreMemberWithIndex( int index )
     {
-        return addCoreMemberWithId( memberId, coreParams, instanceCoreParams, recordFormat );
+        return addCoreMemberWithIndex( index, coreParams, instanceCoreParams, recordFormat );
     }
 
     public CoreClusterMember newCoreMember()
     {
-        int newCoreServerId = ++highestCoreServerId;
-        return addCoreMemberWithId( newCoreServerId );
+        var newCoreServerIndex = ++highestCoreIndex;
+        return addCoreMemberWithIndex( newCoreServerIndex );
     }
 
     public ReadReplica newReadReplica()
     {
-        int newReplicaServerId = ++highestReplicaServerId;
-        return addReadReplicaWithId( newReplicaServerId );
+        var newReplicaServerIndex = ++highestReplicaIndex;
+        return addReadReplicaWithIndex( newReplicaServerIndex );
     }
 
-    private CoreClusterMember addCoreMemberWithId( int memberId, Map<String,String> extraParams, Map<String,IntFunction<String>> instanceExtraParams,
+    private CoreClusterMember addCoreMemberWithIndex( int index, Map<String,String> extraParams, Map<String,IntFunction<String>> instanceExtraParams,
             String recordFormat )
     {
         List<SocketAddress> initialHosts = extractInitialHosts( coreMembers );
-        CoreClusterMember coreClusterMember = createCoreClusterMember( memberId, PortAuthority.allocatePort(), DEFAULT_CLUSTER_SIZE, initialHosts, recordFormat,
+        CoreClusterMember coreClusterMember = createCoreClusterMember( index, PortAuthority.allocatePort(), DEFAULT_CLUSTER_SIZE, initialHosts, recordFormat,
                 extraParams, instanceExtraParams );
 
-        coreMembers.put( memberId, coreClusterMember );
+        coreMembers.put( index, coreClusterMember );
         return coreClusterMember;
     }
 
@@ -188,27 +188,27 @@ public class Cluster
         } ) ).get();
     }
 
-    public ReadReplica addReadReplicaWithIdAndRecordFormat( int memberId, String recordFormat )
+    public ReadReplica addReadReplicaWithIndexAndRecordFormat( int index, String recordFormat )
     {
-        return addReadReplica( memberId, recordFormat, new Monitors() );
+        return addReadReplica( index, recordFormat, new Monitors() );
     }
 
-    public ReadReplica addReadReplicaWithId( int memberId )
+    public ReadReplica addReadReplicaWithIndex( int index )
     {
-        return addReadReplicaWithIdAndRecordFormat( memberId, recordFormat );
+        return addReadReplicaWithIndexAndRecordFormat( index, recordFormat );
     }
 
-    public ReadReplica addReadReplicaWithIdAndMonitors( @SuppressWarnings( "SameParameterValue" ) int memberId, Monitors monitors )
+    public ReadReplica addReadReplicaWithIndexAndMonitors( @SuppressWarnings( "SameParameterValue" ) int index, Monitors monitors )
     {
-        return addReadReplica( memberId, recordFormat, monitors );
+        return addReadReplica( index, recordFormat, monitors );
     }
 
-    private ReadReplica addReadReplica( int memberId, String recordFormat, Monitors monitors )
+    private ReadReplica addReadReplica( int index, String recordFormat, Monitors monitors )
     {
         List<SocketAddress> initialHosts = extractInitialHosts( coreMembers );
-        ReadReplica member = createReadReplica( memberId, initialHosts, readReplicaParams, instanceReadReplicaParams, recordFormat, monitors );
+        ReadReplica member = createReadReplica( index, initialHosts, readReplicaParams, instanceReadReplicaParams, recordFormat, monitors );
 
-        readReplicas.put( memberId, member );
+        readReplicas.put( index, member );
         return member;
     }
 
@@ -281,9 +281,9 @@ public class Cluster
         readReplicas.values().removeAll( readReplicasToRemove );
     }
 
-    public void removeCoreMemberWithServerId( int serverId )
+    public void removeCoreMemberWithIndex( int index )
     {
-        CoreClusterMember memberToRemove = getCoreMemberById( serverId );
+        CoreClusterMember memberToRemove = getCoreMemberByIndex( index );
 
         if ( memberToRemove != null )
         {
@@ -292,7 +292,7 @@ public class Cluster
         }
         else
         {
-            throw new RuntimeException( "Could not remove core member with id " + serverId );
+            throw new RuntimeException( "Could not remove core member with index " + index );
         }
     }
 
@@ -302,9 +302,9 @@ public class Cluster
         coreMembers.values().remove( memberToRemove );
     }
 
-    public void removeReadReplicaWithMemberId( int memberId )
+    public void removeReadReplicaWithIndex( int index )
     {
-        ReadReplica memberToRemove = getReadReplicaById( memberId );
+        ReadReplica memberToRemove = getReadReplicaByIndex( index );
 
         if ( memberToRemove != null )
         {
@@ -312,7 +312,7 @@ public class Cluster
         }
         else
         {
-            throw new RuntimeException( "Could not remove core member with member id " + memberId );
+            throw new RuntimeException( "Could not remove core member with member index " + index );
         }
     }
 
@@ -630,10 +630,10 @@ public class Cluster
             );
             coreMembers.put( i, coreClusterMember );
         }
-        highestCoreServerId = noOfCoreMembers - 1;
+        highestCoreIndex = noOfCoreMembers - 1;
     }
 
-    private CoreClusterMember createCoreClusterMember( int serverId,
+    private CoreClusterMember createCoreClusterMember( int index,
             int discoveryPort,
             int clusterSize,
             List<SocketAddress> initialHosts,
@@ -649,7 +649,7 @@ public class Cluster
         int backupPort = PortAuthority.allocatePort();
 
         return new CoreClusterMember(
-                serverId,
+                index,
                 discoveryPort,
                 txPort,
                 raftPort,
@@ -669,7 +669,7 @@ public class Cluster
         );
     }
 
-    private ReadReplica createReadReplica( int serverId,
+    private ReadReplica createReadReplica( int index,
             List<SocketAddress> initialHosts,
             Map<String,String> extraParams,
             Map<String,IntFunction<String>> instanceExtraParams,
@@ -685,7 +685,7 @@ public class Cluster
 
         return new ReadReplica(
                 parentDir,
-                serverId,
+                index,
                 boltPort,
                 intraClusterBoltPort,
                 httpPort,
@@ -734,7 +734,7 @@ public class Cluster
 
             readReplicas.put( i, readReplica );
         }
-        highestReplicaServerId = noOfReadReplicas - 1;
+        highestReplicaIndex = noOfReadReplicas - 1;
     }
 
     public Optional<ClusterMember> randomMember( boolean mustBeStarted )

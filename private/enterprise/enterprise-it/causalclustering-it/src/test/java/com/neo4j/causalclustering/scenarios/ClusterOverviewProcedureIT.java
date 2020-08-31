@@ -239,7 +239,7 @@ class ClusterOverviewProcedureIT
         List<String> expectedMemberIds()
         {
             return sortedClusterMembers()
-                    .map( member -> member.id().getUuid().toString() )
+                    .map( member -> member.serverId().getUuid().toString() )
                     .collect( toList() );
         }
 
@@ -283,11 +283,11 @@ class ClusterOverviewProcedureIT
         {
             if ( isCore( member ) )
             {
-                return List.of( CORE_GROUP, EU_GROUP_PREFIX + member.serverId() );
+                return List.of( CORE_GROUP, EU_GROUP_PREFIX + member.index() );
             }
             if ( isReadReplica( member ) )
             {
-                return List.of( READ_REPLICA_GROUP, US_GROUP_PREFIX + member.serverId() );
+                return List.of( READ_REPLICA_GROUP, US_GROUP_PREFIX + member.index() );
             }
             throw new IllegalArgumentException( "Unable to find groups for " + member );
         }
@@ -296,7 +296,7 @@ class ClusterOverviewProcedureIT
         {
             return cluster.allMembers()
                     .stream()
-                    .sorted( comparing( member -> member.id().getUuid() ) );
+                    .sorted( comparing( member -> member.serverId().getUuid() ) );
         }
 
         RoleInfo expectedRole( ClusterMember member, String databaseName )

@@ -14,7 +14,6 @@ import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
@@ -39,6 +38,7 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
@@ -78,7 +78,7 @@ public class CoreClusterMember implements ClusterMember
     private final DatabaseLayout defaultDatabaseLayout;
     private final ClusterStateLayout clusterStateLayout;
     private final Config.Builder config = Config.newBuilder();
-    private final int serverId;
+    private final int index;
     private final String boltSocketAddress;
     private final String intraClusterBoltSocketAddress;
     private final int discoveryPort;
@@ -94,7 +94,7 @@ public class CoreClusterMember implements ClusterMember
                     new TestCoreGraphDatabase( config, dependencies, discoveryServiceFactory, this::coreEditionModuleSupplier );
     private DatabaseIdRepository databaseIdRepository;
 
-    public CoreClusterMember( int serverId,
+    public CoreClusterMember( int index,
                               int discoveryPort,
                               int txPort,
                               int raftPort,
@@ -112,7 +112,7 @@ public class CoreClusterMember implements ClusterMember
                               String listenAddress,
                               String advertisedAddress )
     {
-        this.serverId = serverId;
+        this.index = index;
 
         this.discoveryPort = discoveryPort;
 
@@ -156,12 +156,12 @@ public class CoreClusterMember implements ClusterMember
         config.setRaw( extraParams );
 
         Map<String,String> instanceExtras = new HashMap<>();
-        instanceExtraParams.forEach( ( setting, function ) -> instanceExtras.put( setting, function.apply( serverId ) ) );
+        instanceExtraParams.forEach( ( setting, function ) -> instanceExtras.put( setting, function.apply( index ) ) );
         config.setRaw( instanceExtras );
 
-        this.neo4jHome = parentDir.resolve( "server-core-" + serverId );
+        this.neo4jHome = parentDir.resolve( "server-core-" + index );
         config.set( GraphDatabaseSettings.neo4j_home, neo4jHome.toAbsolutePath() );
-        config.set( GraphDatabaseSettings.transaction_logs_root_path, neo4jHome.resolve( "core-tx-logs-" + serverId ).toAbsolutePath() );
+        config.set( GraphDatabaseSettings.transaction_logs_root_path, neo4jHome.resolve( "core-tx-logs-" + index ).toAbsolutePath() );
         memberConfig = config.build();
 
         this.discoveryServiceFactory = discoveryServiceFactory;
@@ -206,9 +206,9 @@ public class CoreClusterMember implements ClusterMember
     }
 
     @Override
-    public MemberId id()
+    public ServerId serverId()
     {
-        return systemDatabase.getDependencyResolver().resolveDependency( ClusteringIdentityModule.class ).memberId();
+        return systemDatabase.getDependencyResolver().resolveDependency( ClusteringIdentityModule.class ).myself();
     }
 
     public RaftMemberId raftMemberIdFor( NamedDatabaseId databaseId )
@@ -288,13 +288,13 @@ public class CoreClusterMember implements ClusterMember
     @Override
     public final String toString()
     {
-        return "CoreClusterMember{serverId=" + serverId + ", memberId=" + (coreGraphDatabase == null ? null : id()) + "}";
+        return "CoreClusterMember{index=" + index + ", serverId=" + (systemDatabase == null ? null : serverId()) + "}";
     }
 
     @Override
-    public int serverId()
+    public int index()
     {
-        return serverId;
+        return index;
     }
 
     public NamedDatabaseId databaseId()

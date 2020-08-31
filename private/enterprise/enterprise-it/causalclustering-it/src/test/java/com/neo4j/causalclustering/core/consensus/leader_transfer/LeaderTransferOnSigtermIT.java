@@ -233,7 +233,7 @@ class LeaderTransferOnSigtermIT
                                            .filter( p -> p.other() != null )
                                            .collect( Collectors.toMap( Pair::first, Pair::other ) );
 
-                if ( leaderPerDb.values().stream().noneMatch( c -> c.id().equals( oldLeader.id() ) ) )
+                if ( leaderPerDb.values().stream().noneMatch( c -> c.serverId().equals( oldLeader.serverId() ) ) )
                 {
                     return leaderPerDb;
                 }

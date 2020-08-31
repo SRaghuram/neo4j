@@ -73,8 +73,8 @@ class RestartIT
         cluster = startCluster( 3, 0 );
 
         // when
-        cluster.removeCoreMemberWithServerId( 0 );
-        cluster.addCoreMemberWithId( 0 ).start();
+        cluster.removeCoreMemberWithIndex( 0 );
+        cluster.addCoreMemberWithIndex( 0 ).start();
     }
 
     @Test
@@ -84,8 +84,8 @@ class RestartIT
         cluster = startCluster( 3, 0 );
 
         // when
-        cluster.removeCoreMemberWithServerId( 1 );
-        cluster.addCoreMemberWithId( 1 ).start();
+        cluster.removeCoreMemberWithIndex( 1 );
+        cluster.addCoreMemberWithIndex( 1 ).start();
     }
 
     @Test
@@ -112,9 +112,9 @@ class RestartIT
 
         assertTrue( someTransactionsCommitted.await( 1, MINUTES ) );
 
-        int followerId = cluster.getMemberWithAnyRole( Role.FOLLOWER ).serverId();
-        cluster.removeCoreMemberWithServerId( followerId );
-        cluster.addCoreMemberWithId( followerId ).start();
+        int followerId = cluster.getMemberWithAnyRole( Role.FOLLOWER ).index();
+        cluster.removeCoreMemberWithIndex( followerId );
+        cluster.addCoreMemberWithIndex( followerId ).start();
 
         // then
         assertEventually( () -> cluster.healthyCoreMembers(), new HamcrestCondition<>( hasSize( 3 ) ), 1, MINUTES );
@@ -152,7 +152,7 @@ class RestartIT
         // when
         CoreClusterMember last = cluster.coreTx( this::createNode );
 
-        cluster.addCoreMemberWithId( 2 ).start();
+        cluster.addCoreMemberWithIndex( 2 ).start();
         dataMatchesEventually( last, cluster.coreMembers() );
         dataMatchesEventually( last, cluster.readReplicas() );
 

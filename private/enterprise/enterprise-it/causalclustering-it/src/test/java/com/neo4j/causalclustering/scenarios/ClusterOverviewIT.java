@@ -217,7 +217,7 @@ class ClusterOverviewIT
                     ClusterOverviewHelper.containsRole( FOLLOWER, DB, coreMembers - 1 ),
                     ClusterOverviewHelper.containsRole( READ_REPLICA, DB, readReplicas ) ) ) );
 
-            cluster.removeCoreMemberWithServerId( getRunningCoreId( cluster ) );
+            cluster.removeCoreMemberWithIndex( getRunningCoreIndex( cluster ) );
 
             ClusterOverviewHelper.assertAllEventualOverviews( cluster, new HamcrestCondition<>( Matchers.allOf(
                     ClusterOverviewHelper.containsRole( LEADER, DB, 1 ),
@@ -274,8 +274,8 @@ class ClusterOverviewIT
         }
     }
 
-    private static int getRunningCoreId( Cluster cluster )
+    private static int getRunningCoreIndex( Cluster cluster )
     {
-        return cluster.coreMembers().stream().findFirst().orElseThrow( () -> new IllegalStateException( "Unable to find a running core" ) ).serverId();
+        return cluster.coreMembers().stream().findFirst().orElseThrow( () -> new IllegalStateException( "Unable to find a running core" ) ).index();
     }
 }

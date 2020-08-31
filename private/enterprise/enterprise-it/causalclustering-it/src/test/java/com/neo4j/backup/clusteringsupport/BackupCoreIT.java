@@ -12,7 +12,6 @@ import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import com.neo4j.test.driver.DriverExtension;
 import com.neo4j.test.driver.DriverFactory;
-import com.neo4j.test.driver.DriverTestHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -78,7 +77,7 @@ class BackupCoreIT
             // Run backup
             updateStore( clusteredDriver, dbDriver );
             DbRepresentation beforeChange = DbRepresentation.of( db.defaultDatabase() );
-            Path coreBackupDir = testDirectory.directory( "backups", "core-" + db.serverId() + "-backup" ).toPath();
+            Path coreBackupDir = testDirectory.directory( "backups", "core-" + db.index() + "-backup" ).toPath();
             String databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
             Path coreDefaultDbBackupDir = coreBackupDir.resolve( databaseName );
             String[] args = backupArguments( backupAddress( db.defaultDatabase() ), coreBackupDir, databaseName );

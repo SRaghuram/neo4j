@@ -86,7 +86,7 @@ class NewMemberSeedingIT
         intermediateLoad.start( cluster );
 
         // when
-        var newCoreClusterMember = cluster.addCoreMemberWithId( 3 );
+        var newCoreClusterMember = cluster.addCoreMemberWithIndex( 3 );
         if ( backupsOpt.isPresent() )
         {
             var backups = backupsOpt.get();

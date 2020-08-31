@@ -496,6 +496,6 @@ class ClusterDatabaseManagementIT
 
     private static Set<ClusterMember> oneCoreAndOneReadReplica( Cluster cluster )
     {
-        return asSet( cluster.getCoreMemberById( 0 ), cluster.getReadReplicaById( 0 ) );
+        return asSet( cluster.getCoreMemberByIndex( 0 ), cluster.getReadReplicaByIndex( 0 ) );
     }
 }

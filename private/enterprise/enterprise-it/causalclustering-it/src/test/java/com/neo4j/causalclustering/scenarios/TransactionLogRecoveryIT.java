@@ -65,7 +65,7 @@ class TransactionLogRecoveryIT
         dataMatchesEventually( DataCreator.createEmptyNodes( cluster, 10 ), cluster.coreMembers() );
 
         // when: shutting down a core
-        CoreClusterMember core = cluster.getCoreMemberById( 0 );
+        CoreClusterMember core = cluster.getCoreMemberByIndex( 0 );
         core.shutdown();
 
         // and making sure there will be something new to pull
@@ -88,7 +88,7 @@ class TransactionLogRecoveryIT
         dataMatchesEventually( DataCreator.createEmptyNodes( cluster, 10 ), cluster.coreMembers() );
 
         // when: shutting down a core
-        CoreClusterMember core = cluster.getCoreMemberById( 0 );
+        CoreClusterMember core = cluster.getCoreMemberByIndex( 0 );
         core.shutdown();
 
         // and making sure there will be something new to pull
@@ -115,7 +115,7 @@ class TransactionLogRecoveryIT
         dataMatchesEventually( DataCreator.createEmptyNodes( cluster, 10 ), cluster.readReplicas() );
 
         // when: shutting down a read replica
-        ReadReplica readReplica = cluster.getReadReplicaById( 0 );
+        ReadReplica readReplica = cluster.getReadReplicaByIndex( 0 );
         readReplica.shutdown();
 
         // and making sure there will be something new to pull

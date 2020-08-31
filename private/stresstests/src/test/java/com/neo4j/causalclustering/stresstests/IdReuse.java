@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.stresstests;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.helper.Workload;
 import org.assertj.core.api.Condition;
 
@@ -18,6 +17,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Relationship;
@@ -32,7 +32,6 @@ import org.neo4j.storageengine.api.TransactionIdStore;
 import static com.neo4j.causalclustering.stresstests.TxHelp.isInterrupted;
 import static com.neo4j.causalclustering.stresstests.TxHelp.isTransient;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -78,11 +77,11 @@ class IdReuse
                 }, "Last tx id condition." ), 1, MINUTES );
             }
 
-            Map<MemberId,Long> usedIdsPerMember = new HashMap<>();
+            Map<ServerId,Long> usedIdsPerMember = new HashMap<>();
 
-            for ( ClusterMember member: members )
+            for ( ClusterMember member : members )
             {
-                usedIdsPerMember.put( member.id(), member
+                usedIdsPerMember.put( member.serverId(), member
                         .defaultDatabase()
                         .getDependencyResolver()
                         .resolveDependency( IdGeneratorFactory.class )

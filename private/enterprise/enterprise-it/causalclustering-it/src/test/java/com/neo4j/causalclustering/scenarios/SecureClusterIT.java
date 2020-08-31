@@ -79,17 +79,17 @@ class SecureClusterIT
         // install the cryptographic objects for each core
         for ( var core : cluster.coreMembers() )
         {
-            var keyId = core.serverId();
-            var homeDir = cluster.getCoreMemberById( core.serverId() ).homePath();
-            installKeyToInstance( homeDir, keyId );
+            var index = core.index();
+            var homeDir = cluster.getCoreMemberByIndex( core.index() ).homePath();
+            installKeyToInstance( homeDir, index );
         }
 
         // install the cryptographic objects for each read replica
         for ( var replica : cluster.readReplicas() )
         {
-            var keyId = replica.serverId() + cluster.coreMembers().size();
-            var homeDir = cluster.getReadReplicaById( replica.serverId() ).homePath();
-            installKeyToInstance( homeDir, keyId );
+            var index = replica.index() + cluster.coreMembers().size();
+            var homeDir = cluster.getReadReplicaByIndex( replica.index() ).homePath();
+            installKeyToInstance( homeDir, index );
         }
 
         // when
@@ -107,12 +107,12 @@ class SecureClusterIT
         dataMatchesEventually( leader, cluster.readReplicas() );
     }
 
-    private void installKeyToInstance( Path homeDir, int keyId ) throws IOException
+    private void installKeyToInstance( Path homeDir, int index ) throws IOException
     {
         var baseDir = homeDir.resolve( CERTIFICATES_DIR );
         fs.mkdirs( baseDir.resolve( "trusted" ) );
         fs.mkdirs( baseDir.resolve( "revoked" ) );
 
-        SslResourceBuilder.caSignedKeyId( keyId ).trustSignedByCA().install( baseDir );
+        SslResourceBuilder.caSignedKeyId( index ).trustSignedByCA().install( baseDir );
     }
 }

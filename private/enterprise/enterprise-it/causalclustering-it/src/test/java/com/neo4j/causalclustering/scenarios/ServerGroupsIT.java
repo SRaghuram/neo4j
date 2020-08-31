@@ -63,8 +63,8 @@ class ServerGroupsIT
         var expected = new ArrayList<List<String>>();
         for ( var core : cluster.coreMembers() )
         {
-            expected.add( makeCoreGroups( suffix.get(), core.serverId() ) );
-            expected.add( makeReplicaGroups( suffix.get(), core.serverId() ) );
+            expected.add( makeCoreGroups( suffix.get(), core.index() ) );
+            expected.add( makeReplicaGroups( suffix.get(), core.index() ) );
         }
 
         for ( var core : cluster.coreMembers() )
@@ -76,12 +76,12 @@ class ServerGroupsIT
         // when
         expected.remove( makeCoreGroups( suffix.get(), 1 ) );
         expected.remove( makeReplicaGroups( suffix.get(), 2 ) );
-        cluster.getCoreMemberById( 1 ).shutdown();
-        cluster.getReadReplicaById( 2 ).shutdown();
+        cluster.getCoreMemberByIndex( 1 ).shutdown();
+        cluster.getReadReplicaByIndex( 2 ).shutdown();
 
         suffix.set( "after" ); // should update groups of restarted servers
-        cluster.addCoreMemberWithId( 1 ).start();
-        cluster.addReadReplicaWithId( 2 ).start();
+        cluster.addCoreMemberWithIndex( 1 ).start();
+        cluster.addReadReplicaWithIndex( 2 ).start();
         expected.add( makeCoreGroups( suffix.get(), 1 ) );
         expected.add( makeReplicaGroups( suffix.get(), 2 ) );
 

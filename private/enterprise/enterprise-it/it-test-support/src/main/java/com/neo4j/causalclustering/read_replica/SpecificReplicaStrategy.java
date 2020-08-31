@@ -35,7 +35,7 @@ public class SpecificReplicaStrategy extends UpstreamDatabaseSelectionStrategy
         }
         else
         {
-            return Optional.of( current.id() );
+            return Optional.of( MemberId.of( current.serverId() ) );
         }
     }
 

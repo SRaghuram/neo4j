@@ -264,7 +264,7 @@ abstract class BaseEncryptedBackupIT
         {
             selectedNode = cluster.awaitLeader();
         }
-        var serverId = clusterUniqueServerId( selectedNode );
+        var serverId = clusterUniqueIndex( selectedNode );
         var selectedNodeAddress = selectedNode.settingValue( addressSetting ).toString();
         if ( baseSslKeyId.isPresent() )
         {
@@ -372,18 +372,18 @@ abstract class BaseEncryptedBackupIT
     {
         for ( var clusterMember : cluster.allMembers() )
         {
-            prepareCoreToHaveKeys( clusterMember, baseKey + clusterUniqueServerId( clusterMember ), policyName );
+            prepareCoreToHaveKeys( clusterMember, baseKey + clusterUniqueIndex( clusterMember ), policyName );
         }
     }
 
-    private static int clusterUniqueServerId( ClusterMember clusterMember )
+    private static int clusterUniqueIndex( ClusterMember clusterMember )
     {
         if ( clusterMember instanceof CoreClusterMember )
         {
-            return clusterMember.serverId();
+            return clusterMember.index();
         }
         var numberOfCores = 3;
-        return clusterMember.serverId() + numberOfCores;
+        return clusterMember.index() + numberOfCores;
     }
 
     private void prepareCoreToHaveKeys( ClusterMember member, int keyId, String policyName ) throws IOException

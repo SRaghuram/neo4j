@@ -14,8 +14,6 @@ import java.time.Instant;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.logging.Log;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -46,13 +44,13 @@ class StartStopLeader extends RepeatOnLeader
         var shutdownFuture = runAsync( leader::shutdown );
         var oldLeader = leader;
 
-        while ( oldLeader.serverId() == leader.serverId() )
+        while ( oldLeader.index() == leader.index() )
         {
             leader = this.cluster.awaitLeader( databaseName );
         }
 
         var timeTaken = Duration.between( startTime, Instant.now() );
-        log.info( "New leader for database {} is server {}", databaseName, leader.serverId() );
+        log.info( "New leader for database {} is server {}", databaseName, leader.index() );
 
         if ( timeTaken.toMillis() < leaderFailureDetectionWindow.getMin().toMillis() )
         {
@@ -63,10 +61,10 @@ class StartStopLeader extends RepeatOnLeader
         log.info( "Leader transfer completed in %s (failure timeout %s)", timeTaken, leaderFailureDetectionWindow );
 
         Thread.sleep( 1000 );
-        log.info( "Restarting server: {}", oldLeader.serverId() );
+        log.info( "Restarting server: {}", oldLeader.index() );
         oldLeader.start();
         cluster.awaitAllCoresJoinedAllRaftGroups( Set.of( databaseName ), 2, TimeUnit.MINUTES );
-        log.info( "Server {} rejoined the cluster successfully.", oldLeader.serverId() );
+        log.info( "Server {} rejoined the cluster successfully.", oldLeader.index() );
     }
 
     @Override

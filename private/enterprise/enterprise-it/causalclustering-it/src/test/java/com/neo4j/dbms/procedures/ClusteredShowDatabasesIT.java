@@ -74,8 +74,8 @@ class ClusteredShowDatabasesIT
     private final Set<String> defaultDatabases = Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME );
     private final Set<String> databasesWithAdditional = Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME, ADDITIONAL_DATABASE_NAME );
 
-    private final int additionalRRId = 127;
-    private final int additionalCoreId = 128;
+    private final int additionalRRIndex = 127;
+    private final int additionalCoreIndex = 128;
 
     private final int numCores = 3;
     private final int numRRs = 2;
@@ -108,7 +108,7 @@ class ClusteredShowDatabasesIT
         void resetCluster() throws Exception
         {
             // check if additional cores/rrs exist first then remove them
-            var additionalCore = cluster.getCoreMemberById( additionalCoreId );
+            var additionalCore = cluster.getCoreMemberByIndex( additionalCoreIndex );
             if ( additionalCore != null )
             {
                 var homeDir = additionalCore.homePath();
@@ -116,7 +116,7 @@ class ClusteredShowDatabasesIT
                 fs.deleteRecursively( homeDir );
             }
 
-            var additionalRR = cluster.getReadReplicaById( additionalRRId );
+            var additionalRR = cluster.getReadReplicaByIndex( additionalRRIndex );
             if ( additionalRR != null )
             {
                 var homeDir = additionalRR.homePath();
@@ -165,7 +165,7 @@ class ClusteredShowDatabasesIT
                     .satisfies( containsRole( "read_replica", defaultDatabases, 2 ) );
 
             // when
-            var newCore = cluster.addCoreMemberWithId( additionalCoreId );
+            var newCore = cluster.addCoreMemberWithIndex( additionalCoreIndex );
             newCore.start();
             var newAddress = newCore.boltAdvertisedAddress();
 
@@ -203,7 +203,7 @@ class ClusteredShowDatabasesIT
 
             // when
 
-            var newReplica = cluster.addReadReplicaWithId( additionalRRId );
+            var newReplica = cluster.addReadReplicaWithIndex( additionalRRIndex );
             newReplica.start();
             var newAddress = newReplica.boltAdvertisedAddress();
 
@@ -229,7 +229,7 @@ class ClusteredShowDatabasesIT
         {
             // given
             var initialAddresses = cluster.allMembers().stream().map( ClusterMember::boltAdvertisedAddress ).collect( Collectors.toSet() );
-            var newCore = cluster.addCoreMemberWithId( additionalCoreId );
+            var newCore = cluster.addCoreMemberWithIndex( additionalCoreIndex );
             newCore.start();
             var newAddress = newCore.boltAdvertisedAddress();
             var clusterAddresses = new HashSet<>( initialAddresses );
@@ -249,7 +249,7 @@ class ClusteredShowDatabasesIT
                               SECONDS );
 
             // when
-            cluster.removeCoreMemberWithServerId( additionalCoreId );
+            cluster.removeCoreMemberWithIndex( additionalCoreIndex );
 
             // then
             var newClusterSize = initialClusterSize - 1;
@@ -270,7 +270,7 @@ class ClusteredShowDatabasesIT
         {
             // given
             var initialAddresses = cluster.allMembers().stream().map( ClusterMember::boltAdvertisedAddress ).collect( Collectors.toSet() );
-            var newReplica = cluster.addReadReplicaWithId( additionalRRId );
+            var newReplica = cluster.addReadReplicaWithIndex( additionalRRIndex );
             newReplica.start();
             var newAddress = newReplica.boltAdvertisedAddress();
             var clusterAddresses = new HashSet<>( initialAddresses );
@@ -291,7 +291,7 @@ class ClusteredShowDatabasesIT
                               SECONDS );
 
             // when
-            cluster.removeReadReplicaWithMemberId( additionalRRId );
+            cluster.removeReadReplicaWithIndex( additionalRRIndex );
 
             // then
             var newClusterSize = initialClusterSize - 1;
@@ -453,10 +453,10 @@ class ClusteredShowDatabasesIT
 
             // one follower which refuses to be leader configured with a max # databases of 2
             // one rr configured with a max # databases of 2
-            var misConfiguredCore = cluster.addCoreMemberWithId( additionalCoreId );
+            var misConfiguredCore = cluster.addCoreMemberWithIndex( additionalCoreIndex );
             misConfiguredCore.updateConfig( EnterpriseEditionSettings.max_number_of_databases, 2L );
             misConfiguredCore.updateConfig( CausalClusteringSettings.refuse_to_be_leader, true );
-            var misConfiguredRR = cluster.addReadReplicaWithId( additionalRRId );
+            var misConfiguredRR = cluster.addReadReplicaWithIndex( additionalRRIndex );
             misConfiguredRR.updateConfig( EnterpriseEditionSettings.max_number_of_databases, 2L );
 
             misConfiguredCore.start();

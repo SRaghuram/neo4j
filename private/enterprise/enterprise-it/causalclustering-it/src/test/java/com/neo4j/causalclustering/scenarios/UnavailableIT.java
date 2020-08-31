@@ -45,7 +45,7 @@ class UnavailableIT
     void shouldReturnUnavailableStatusWhenDoingLongOperation()
     {
         // given
-        ClusterMember member = cluster.getCoreMemberById( 1 );
+        ClusterMember member = cluster.getCoreMemberByIndex( 1 );
 
         // when
         member.defaultDatabase().getDependencyResolver().resolveDependency( DatabaseAvailabilityGuard.class )
@@ -66,7 +66,7 @@ class UnavailableIT
     void shouldReturnUnavailableStatusWhenShutdown()
     {
         // given
-        ClusterMember member = cluster.getCoreMemberById( 1 );
+        ClusterMember member = cluster.getCoreMemberByIndex( 1 );
 
         // when
         GraphDatabaseAPI db = member.defaultDatabase();

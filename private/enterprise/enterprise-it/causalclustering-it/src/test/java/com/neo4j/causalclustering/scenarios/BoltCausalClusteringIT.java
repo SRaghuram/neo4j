@@ -338,7 +338,7 @@ class BoltCausalClusteringIT
         void shouldUseBookmarkFromAWriteSessionInAReadSession() throws Throwable
         {
             // given
-            ReadReplica readReplica = cluster.getReadReplicaById( 0 );
+            ReadReplica readReplica = cluster.getReadReplicaByIndex( 0 );
 
             CatchupProcessManager catchupProcessManager = readReplica.resolveDependency( DEFAULT_DATABASE_NAME, CatchupProcessManager.class );
             catchupProcessManager.stop();
@@ -466,7 +466,7 @@ class BoltCausalClusteringIT
 
                 for ( int i = 10; i <= 13; i++ )
                 {
-                    ReadReplica newReadReplica = cluster.addReadReplicaWithId( i );
+                    ReadReplica newReadReplica = cluster.addReadReplicaWithIndex( i );
                     readReplicas.add( newReadReplica.boltAdvertisedAddress() );
                     newReadReplica.start();
                 }

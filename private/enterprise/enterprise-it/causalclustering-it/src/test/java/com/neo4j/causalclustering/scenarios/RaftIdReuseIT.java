@@ -112,11 +112,11 @@ class RaftIdReuseIT
         assertEquals( 2, creationLeaderIdGenerator.getDefragCount() );
 
         // Force leader switch
-        cluster.removeCoreMemberWithServerId( creationLeader.serverId() );
+        cluster.removeCoreMemberWithIndex( creationLeader.index() );
 
         // waiting for new leader
         CoreClusterMember newLeader = cluster.awaitLeader();
-        assertNotSame( creationLeader.serverId(), newLeader.serverId() );
+        assertNotSame( creationLeader.index(), newLeader.index() );
         idMaintenanceOnLeader( newLeader );
 
         // The new leader should still have 2 defragged ids
@@ -152,14 +152,14 @@ class RaftIdReuseIT
         assertEquals( 2, creationLeaderIdGenerator.getDefragCount() );
 
         // Restart and re-elect first leader
-        cluster.removeCoreMemberWithServerId( creationLeader.serverId() );
-        cluster.addCoreMemberWithId( creationLeader.serverId() ).start();
+        cluster.removeCoreMemberWithIndex( creationLeader.index() );
+        cluster.addCoreMemberWithIndex( creationLeader.index() ).start();
 
         CoreClusterMember leader = cluster.awaitLeader();
-        while ( leader.serverId() != creationLeader.serverId() )
+        while ( leader.index() != creationLeader.index() )
         {
-            cluster.removeCoreMemberWithServerId( leader.serverId() );
-            cluster.addCoreMemberWithId( leader.serverId() ).start();
+            cluster.removeCoreMemberWithIndex( leader.index() );
+            cluster.addCoreMemberWithIndex( leader.index() ).start();
             leader = cluster.awaitLeader();
         }
 

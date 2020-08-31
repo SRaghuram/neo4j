@@ -115,23 +115,23 @@ class ServerPoliciesLoadBalancingIT
         // should use the first rule: only cores for reading
         assertGetServersEventuallyMatchesOnAllCores( new CountsMatcher( 5, 1, 4, 0 ) );
 
-        cluster.getCoreMemberById( 3 ).shutdown();
+        cluster.getCoreMemberByIndex( 3 ).shutdown();
         // one core reader is gone, but we are still fulfilling min(3)
         assertGetServersEventuallyMatchesOnAllCores( new CountsMatcher( 4, 1, 3, 0 ) );
 
-        cluster.getCoreMemberById( 0 ).shutdown();
+        cluster.getCoreMemberByIndex( 0 ).shutdown();
         // should now fall over to the second rule: use replica1 and replica2
         assertGetServersEventuallyMatchesOnAllCores( new CountsMatcher( 3, 1, 0, 2 ) );
 
-        cluster.getReadReplicaById( 0 ).shutdown();
+        cluster.getReadReplicaByIndex( 0 ).shutdown();
         // this does not affect replica1 and replica2
         assertGetServersEventuallyMatchesOnAllCores( new CountsMatcher( 3, 1, 0, 2 ) );
 
-        cluster.getReadReplicaById( 1 ).shutdown();
+        cluster.getReadReplicaByIndex( 1 ).shutdown();
         // should now fall over to use the last rule: all
         assertGetServersEventuallyMatchesOnAllCores( new CountsMatcher( 3, 1, 2, 3 ) );
 
-        cluster.addCoreMemberWithId( 3 ).start();
+        cluster.addCoreMemberWithIndex( 3 ).start();
         // should now go back to first rule
         assertGetServersEventuallyMatchesOnAllCores( new CountsMatcher( 4, 1, 3, 0 ) );
     }
@@ -390,7 +390,7 @@ class ServerPoliciesLoadBalancingIT
             Set<SocketAddress> returnedReaders = new HashSet<>( result.readEndpoints() );
 
             Set<SocketAddress> expectedBolts = cluster.readReplicas().stream()
-                    .filter( r -> replicaIds.contains( r.serverId() ) )
+                    .filter( r -> replicaIds.contains( r.index() ) )
                     .map( r -> r.clientConnectorAddresses().clientBoltAddress() )
                     .collect( Collectors.toSet() );
 
@@ -424,7 +424,7 @@ class ServerPoliciesLoadBalancingIT
             List<SocketAddress> returnedRouters = new ArrayList<>( result.routeEndpoints() );
 
             Map<Integer,SocketAddress> allBoltsById = cluster.coreMembers().stream()
-                    .collect( Collectors.toMap( CoreClusterMember::serverId, c -> c.clientConnectorAddresses().clientBoltAddress() ) );
+                    .collect( Collectors.toMap( CoreClusterMember::index, c -> c.clientConnectorAddresses().clientBoltAddress() ) );
 
             Function<Set<Integer>,Set<SocketAddress>> lookupBoltSubsets =
                     s -> s.stream().map( i -> getAddressOrThrow( allBoltsById, i ) ).collect( Collectors.toSet() );

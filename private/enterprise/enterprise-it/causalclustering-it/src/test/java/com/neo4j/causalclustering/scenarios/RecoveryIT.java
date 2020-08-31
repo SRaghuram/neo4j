@@ -81,9 +81,9 @@ class RecoveryIT
         // when
         for ( var i = 0; i < CORE_COUNT; i++ )
         {
-            cluster.removeCoreMemberWithServerId( i );
+            cluster.removeCoreMemberWithIndex( i );
             fireSomeLoadAtTheCluster( cluster );
-            cluster.addCoreMemberWithId( i ).start();
+            cluster.addCoreMemberWithIndex( i ).start();
         }
 
         // then

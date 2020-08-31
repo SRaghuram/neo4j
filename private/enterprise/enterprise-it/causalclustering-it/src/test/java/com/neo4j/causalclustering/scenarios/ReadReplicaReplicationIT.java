@@ -156,7 +156,7 @@ class ReadReplicaReplicationIT
 
         var labelScanStoreCorrectlyPlaced = new AtomicBoolean( false );
         var monitors = new Monitors();
-        var readReplica = cluster.addReadReplicaWithIdAndMonitors( 0, monitors );
+        var readReplica = cluster.addReadReplicaWithIndexAndMonitors( 0, monitors );
         monitors.addMonitorListener( (FileCopyMonitor) file ->
         {
             if ( labelScanStoreFiles.contains( file.getFileName() ) )
@@ -214,7 +214,7 @@ class ReadReplicaReplicationIT
         assertNotNull( cluster.getMemberWithAnyRole( Role.FOLLOWER ) );
 
         // Get a read replica and make sure that it is operational
-        var readReplica = cluster.addReadReplicaWithId( 4 );
+        var readReplica = cluster.addReadReplicaWithIndex( 4 );
         readReplica.start();
         readReplica.defaultDatabase().beginTx().close();
 
@@ -234,18 +234,18 @@ class ReadReplicaReplicationIT
 
         createDataInOneTransaction( cluster, 10 );
 
-        cluster.addReadReplicaWithId( readReplicaId ).start();
+        cluster.addReadReplicaWithIndex( readReplicaId ).start();
 
         // let's spend some time by adding more data
         createDataInOneTransaction( cluster, 10 );
 
         assertReadReplicasEventuallyUpToDateWithLeader( cluster );
-        cluster.removeReadReplicaWithMemberId( readReplicaId );
+        cluster.removeReadReplicaWithIndex( readReplicaId );
 
         // let's spend some time by adding more data
         var lastMember = createDataInOneTransaction( cluster, 10 );
 
-        cluster.addReadReplicaWithId( readReplicaId ).start();
+        cluster.addReadReplicaWithIndex( readReplicaId ).start();
 
         assertReadReplicasEventuallyUpToDateWithLeader( cluster );
 
@@ -286,7 +286,7 @@ class ReadReplicaReplicationIT
 
         assertReadReplicasEventuallyUpToDateWithLeader( cluster );
 
-        var readReplica = cluster.getReadReplicaById( 0 );
+        var readReplica = cluster.getReadReplicaByIndex( 0 );
         var highestReadReplicaLogVersion = physicalLogFiles( readReplica ).getLogFile().getHighestLogVersion();
 
         // when
@@ -323,7 +323,7 @@ class ReadReplicaReplicationIT
 
         assertReadReplicasEventuallyUpToDateWithLeader( cluster );
 
-        var readReplica = cluster.getReadReplicaById( 0 );
+        var readReplica = cluster.getReadReplicaByIndex( 0 );
         var highestReadReplicaLogVersion = physicalLogFiles( readReplica ).getLogFile().getHighestLogVersion();
 
         readReplica.shutdown();
@@ -440,7 +440,7 @@ class ReadReplicaReplicationIT
         createDataInOneTransaction( cluster, 10 );
 
         var format = Standard.LATEST_NAME;
-        var readReplica = cluster.addReadReplicaWithIdAndRecordFormat( 0, format );
+        var readReplica = cluster.addReadReplicaWithIndexAndRecordFormat( 0, format );
         readReplica.start();
         assertFailedToStart( readReplica, DEFAULT_DATABASE_NAME );
     }
@@ -491,7 +491,7 @@ class ReadReplicaReplicationIT
         assertEventually( "pruning happened", () -> versionBy( raftLogDir, Math::min ), v -> v > baseVersion, 30, SECONDS );
 
         // when
-        cluster.addReadReplicaWithIdAndRecordFormat( 4, HighLimit.NAME ).start();
+        cluster.addReadReplicaWithIndexAndRecordFormat( 4, HighLimit.NAME ).start();
 
         // then
         for ( var readReplica : cluster.readReplicas() )

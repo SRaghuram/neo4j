@@ -24,7 +24,6 @@ import org.neo4j.driver.Bookmark;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
-import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Value;
@@ -130,13 +129,13 @@ public abstract class ClusterTestSupport
     {
         var fooLeader = cluster.awaitLeader( "foo" );
         var fooFollower = getFollower( cluster, fooLeader );
-        return coreDrivers.get( fooFollower.serverId() );
+        return coreDrivers.get( fooFollower.index() );
     }
 
     protected Driver getFooLeaderDriver() throws TimeoutException
     {
         var fooLeader = cluster.awaitLeader( "foo" );
-        return coreDrivers.get( fooLeader.serverId() );
+        return coreDrivers.get( fooLeader.index() );
     }
 
     protected static void awaitDbAvailable( Cluster cluster, String databaseName )
@@ -186,7 +185,7 @@ public abstract class ClusterTestSupport
     static CoreClusterMember getFollower( Cluster cluster, CoreClusterMember leader )
     {
         return cluster.coreMembers().stream()
-                      .filter( member -> member.serverId() != leader.serverId() )
+                      .filter( member -> member.index() != leader.index() )
                       .findAny()
                       .get();
     }

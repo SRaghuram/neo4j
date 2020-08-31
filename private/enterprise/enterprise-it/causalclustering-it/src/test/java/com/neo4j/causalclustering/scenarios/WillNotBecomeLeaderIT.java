@@ -17,7 +17,6 @@ import java.util.concurrent.TimeoutException;
 import org.neo4j.graphdb.Node;
 import org.neo4j.test.extension.Inject;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
@@ -39,11 +38,11 @@ class WillNotBecomeLeaderIT
     void clusterShouldNotElectNewLeader() throws Exception
     {
         // given
-        int leaderId = 0;
+        int leaderIndex = 0;
 
         clusterConfig.withInstanceCoreParam( CausalClusteringSettings.refuse_to_be_leader, x ->
         {
-            if ( x == leaderId )
+            if ( x == leaderIndex )
             {
                 return "false";
             }
@@ -52,7 +51,7 @@ class WillNotBecomeLeaderIT
 
         Cluster cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
-        assertEquals( leaderId, cluster.awaitLeader().serverId() );
+        assertEquals( leaderIndex, cluster.awaitLeader().index() );
 
         cluster.coreTx( ( db, tx ) ->
         {
@@ -62,7 +61,7 @@ class WillNotBecomeLeaderIT
         } );
 
         // When
-        cluster.removeCoreMemberWithServerId( leaderId );
+        cluster.removeCoreMemberWithIndex( leaderIndex );
 
         // Then
         assertThrows( TimeoutException.class, cluster::awaitLeader );

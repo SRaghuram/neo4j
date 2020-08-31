@@ -74,7 +74,7 @@ class ReadReplicaToReadReplicaCatchupIT
         DataCreator.createLabelledNodesWithProperty( cluster, numberOfNodesToCreate, label( "Foo" ),
                 () -> Pair.of( "foobar", String.format( "baz_bat%s", UUID.randomUUID() ) ) );
 
-        ReadReplica firstReadReplica = cluster.addReadReplicaWithIdAndMonitors( 101, new Monitors() );
+        ReadReplica firstReadReplica = cluster.addReadReplicaWithIndexAndMonitors( 101, new Monitors() );
 
         firstReadReplica.start();
 
@@ -87,7 +87,7 @@ class ReadReplicaToReadReplicaCatchupIT
 
         // when
         upstreamFactory.setCurrent( firstReadReplica );
-        ReadReplica secondReadReplica = cluster.addReadReplicaWithId( 202 );
+        ReadReplica secondReadReplica = cluster.addReadReplicaWithIndex( 202 );
         secondReadReplica.setUpstreamDatabaseSelectionStrategy( "specific" );
 
         secondReadReplica.start();
@@ -102,7 +102,7 @@ class ReadReplicaToReadReplicaCatchupIT
     {
         // given
         int numberOfNodes = 1;
-        int firstReadReplicaLocalMemberId = 101;
+        int firstReadReplicaLocalIndex = 101;
 
         cluster.coreTx( ( db, tx ) ->
         {
@@ -114,7 +114,7 @@ class ReadReplicaToReadReplicaCatchupIT
                 () -> Pair.of( "foobar", String.format( "baz_bat%s", UUID.randomUUID() ) ) );
 
         ReadReplica firstReadReplica =
-                cluster.addReadReplicaWithIdAndMonitors( firstReadReplicaLocalMemberId, new Monitors() );
+                cluster.addReadReplicaWithIndexAndMonitors( firstReadReplicaLocalIndex, new Monitors() );
 
         firstReadReplica.start();
 
@@ -122,7 +122,7 @@ class ReadReplicaToReadReplicaCatchupIT
 
         upstreamFactory.setCurrent( firstReadReplica );
 
-        ReadReplica secondReadReplica = cluster.addReadReplicaWithId( 202 );
+        ReadReplica secondReadReplica = cluster.addReadReplicaWithIndex( 202 );
         secondReadReplica.setUpstreamDatabaseSelectionStrategy( "specific" );
 
         secondReadReplica.start();
@@ -132,7 +132,7 @@ class ReadReplicaToReadReplicaCatchupIT
         firstReadReplica.shutdown();
         upstreamFactory.reset();
 
-        cluster.removeReadReplicaWithMemberId( firstReadReplicaLocalMemberId );
+        cluster.removeReadReplicaWithIndex( firstReadReplicaLocalIndex );
 
         // when
         // More transactions into core

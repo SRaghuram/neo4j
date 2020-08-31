@@ -119,13 +119,13 @@ class ClusterBindingIT
         // GIVEN
         DataCreator.createDataInOneTransaction( cluster, 1 );
 
-        var databaseLayout = cluster.getCoreMemberById( 0 ).databaseLayout();
+        var databaseLayout = cluster.getCoreMemberByIndex( 0 ).databaseLayout();
 
-        cluster.removeCoreMemberWithServerId( 0 );
+        cluster.removeCoreMemberWithIndex( 0 );
         changeStoreId( databaseLayout );
 
         // WHEN / THEN
-        var error = assertThrows( RuntimeException.class, () -> cluster.addCoreMemberWithId( 0 ).start(), "Should not have joined the cluster" );
+        var error = assertThrows( RuntimeException.class, () -> cluster.addCoreMemberWithIndex( 0 ).start(), "Should not have joined the cluster" );
         assertThat( error.getCause(), instanceOf( LifecycleException.class ) );
     }
 
@@ -136,7 +136,7 @@ class ClusterBindingIT
         DataCreator.createDataInOneTransaction( cluster, 1 );
 
         //TODO: Work out if/why this won't potentially remove a leader?
-        cluster.removeCoreMemberWithServerId( 0 );
+        cluster.removeCoreMemberWithIndex( 0 );
 
         DataCreator.createDataInMultipleTransactions( cluster, 100 );
 
@@ -146,7 +146,7 @@ class ClusterBindingIT
         }
 
         // WHEN
-        cluster.addCoreMemberWithId( 0 ).start();
+        cluster.addCoreMemberWithIndex( 0 ).start();
 
         cluster.awaitLeader();
 
@@ -165,8 +165,8 @@ class ClusterBindingIT
         // GIVEN
         DataCreator.createDataInOneTransaction( cluster, 1 );
 
-        var coreMember = cluster.getCoreMemberById( 0 );
-        cluster.removeCoreMemberWithServerId( 0 );
+        var coreMember = cluster.getCoreMemberByIndex( 0 );
+        cluster.removeCoreMemberWithIndex( 0 );
         changeRaftId( coreMember, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
 
         DataCreator.createDataInMultipleTransactions( cluster, 100 );
@@ -177,7 +177,7 @@ class ClusterBindingIT
         }
 
         // WHEN / THEN
-        var error = assertThrows( RuntimeException.class, () -> cluster.addCoreMemberWithId( 0 ).start(), "Should not have joined the cluster" );
+        var error = assertThrows( RuntimeException.class, () -> cluster.addCoreMemberWithIndex( 0 ).start(), "Should not have joined the cluster" );
         assertThat( error.getCause(), instanceOf( UnableToStartDatabaseException.class ) );
     }
 
@@ -193,7 +193,7 @@ class ClusterBindingIT
         }
 
         // WHEN
-        cluster.addCoreMemberWithId( 4 ).start();
+        cluster.addCoreMemberWithIndex( 4 ).start();
 
         cluster.awaitLeader();
 

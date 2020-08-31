@@ -113,7 +113,7 @@ class CoreFallBehindIT
 
         // then create a database of which that follower should be unaware
         createDatabase( "foo", cluster );
-        Set<CoreClusterMember> remaining = cluster.coreMembers().stream().filter( m -> !m.id().equals( staleFollower.id() ) ).collect( toSet() );
+        Set<CoreClusterMember> remaining = cluster.coreMembers().stream().filter( m -> !m.serverId().equals( staleFollower.serverId() ) ).collect( toSet() );
         assertDatabaseEventuallyStarted( "foo", remaining );
 
         // next make sure it cannot catchup from the others through catching up on Raft log entries, forcing an eventual store copy

@@ -167,7 +167,7 @@ public class VmPauseDuringBecomingLeader extends Workload
                     var databaseName = previousState.databaseId().name();
                     var monitors = core.resolveDependency( databaseName, RaftMonitors.class );
                     monitors.addMonitorListener( new VmPauseSimulatorMonitor( core, databaseName ) );
-                    log.debug( "Monitor installed on %s %s", core.id(), databaseName );
+                    log.debug( "Monitor installed on %s %s", core.serverId(), databaseName );
                 }
             }
             catch ( Exception t )
@@ -200,7 +200,7 @@ public class VmPauseDuringBecomingLeader extends Workload
                     // The first time the raft machine calls RaftMessageTimerResetMonitor when moving from CANDIDATE we pause for a bit, allowing to the main
                     // thread to trigger an election, if would we wait long enough this would happen eventually too, but this allows to be more certain of it.
                     leaderToBeReTriggered = core;
-                    log.debug( "Simulating VM Pause on %s %s", core.id(), databaseName );
+                    log.debug( "Simulating VM Pause on %s %s", core.serverId(), databaseName );
                     SECONDS.sleep( 2 );
                     first = false;
                 }

@@ -125,9 +125,9 @@ class CoreToCoreCopySnapshotIT
         cluster.removeCoreMember( leader ); // to force a change of leader
         leader = cluster.awaitLeader();
 
-        int newDbId = 3;
-        cluster.addCoreMemberWithId( newDbId ).start();
-        GraphDatabaseFacade newDb = cluster.getCoreMemberById( newDbId ).defaultDatabase();
+        int newDbIndex = 3;
+        cluster.addCoreMemberWithIndex( newDbIndex ).start();
+        GraphDatabaseFacade newDb = cluster.getCoreMemberByIndex( newDbIndex ).defaultDatabase();
 
         // then
         assertEquals( DbRepresentation.of( leader.defaultDatabase() ), DbRepresentation.of( newDb ) );

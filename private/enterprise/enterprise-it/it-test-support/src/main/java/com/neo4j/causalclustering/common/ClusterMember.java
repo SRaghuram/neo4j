@@ -6,12 +6,12 @@
 package com.neo4j.causalclustering.common;
 
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
-import com.neo4j.causalclustering.identity.MemberId;
 
 import java.nio.file.Path;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
@@ -23,7 +23,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 
 public interface ClusterMember
 {
-    MemberId id();
+    ServerId serverId();
 
     void start();
 
@@ -74,7 +74,7 @@ public interface ClusterMember
 
     Neo4jLayout neo4jLayout();
 
-    int serverId();
+    int index();
 
     String boltAdvertisedAddress();
 

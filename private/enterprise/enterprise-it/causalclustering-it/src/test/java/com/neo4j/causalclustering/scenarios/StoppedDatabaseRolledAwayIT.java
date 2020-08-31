@@ -168,10 +168,10 @@ class StoppedDatabaseRolledAwayIT
         for ( var i = 0; i < count; i++ )
         {
             // add a new member, add some data, check it is available on all nodes
-            var newMember = cluster.addCoreMemberWithId( i + 3 );
+            var newMember = cluster.addCoreMemberWithIndex( i + 3 );
             newMember.start();
             // remove an old member
-            cluster.removeCoreMemberWithServerId( i );
+            cluster.removeCoreMemberWithIndex( i );
             cluster.awaitLeader( SYSTEM_DATABASE_NAME );
             cluster.awaitLeader();
         }

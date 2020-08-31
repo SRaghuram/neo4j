@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.OnlineBackupSettings;
@@ -28,6 +27,7 @@ import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -55,7 +55,7 @@ public class ReadReplica implements ClusterMember
     private final Path neo4jHome;
     private final Neo4jLayout neo4jLayout;
     private final DatabaseLayout defaultDatabaseLayout;
-    private final int serverId;
+    private final int index;
     private final String boltSocketAddress;
     private final String intraClusterBoltSocketAddress;
     private final Config memberConfig;
@@ -66,13 +66,13 @@ public class ReadReplica implements ClusterMember
     private ReadReplicaGraphDatabase readReplicaGraphDatabase;
     private GraphDatabaseFacade systemDatabase;
 
-    public ReadReplica( Path parentDir, int serverId, int boltPort, int intraClusterBoltPort, int httpPort,
+    public ReadReplica( Path parentDir, int index, int boltPort, int intraClusterBoltPort, int httpPort,
             int txPort, int backupPort, int discoveryPort, DiscoveryServiceFactory discoveryServiceFactory,
             List<SocketAddress> coreMemberDiscoveryAddresses, Map<String,String> extraParams,
             Map<String,IntFunction<String>> instanceExtraParams, String recordFormat, Monitors monitors,
             String advertisedAddress, String listenAddress, ReadReplicaGraphDatabaseFactory dbFactory )
     {
-        this.serverId = serverId;
+        this.index = index;
 
         boltSocketAddress = format( advertisedAddress, boltPort );
         intraClusterBoltSocketAddress = format( advertisedAddress, intraClusterBoltPort);
@@ -90,7 +90,7 @@ public class ReadReplica implements ClusterMember
         config.setRaw( extraParams );
 
         Map<String,String> instanceExtras = new HashMap<>();
-        instanceExtraParams.forEach( ( setting, function ) -> instanceExtras.put( setting, function.apply( serverId ) ) );
+        instanceExtraParams.forEach( ( setting, function ) -> instanceExtras.put( setting, function.apply( index ) ) );
         config.setRaw( instanceExtras );
 
         config.set( BoltConnector.enabled, TRUE );
@@ -103,14 +103,14 @@ public class ReadReplica implements ClusterMember
         config.set( HttpConnector.listen_address, new SocketAddress( listenAddress, httpPort ) );
         config.set( HttpConnector.advertised_address, new SocketAddress( advertisedAddress, httpPort ) );
 
-        this.neo4jHome = parentDir.resolve( "read-replica-" + serverId );
+        this.neo4jHome = parentDir.resolve( "read-replica-" + index );
         config.set( GraphDatabaseSettings.neo4j_home, neo4jHome.toAbsolutePath() );
 
         config.set( CausalClusteringSettings.transaction_listen_address, new SocketAddress( listenAddress, txPort ) );
         config.set( CausalClusteringSettings.transaction_advertised_address, new SocketAddress( txPort ) );
         config.set( CausalClusteringSettings.cluster_topology_refresh, TOPOLOGY_REFRESH_INTERVAL );
         config.set( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( listenAddress, backupPort ) );
-        config.set( GraphDatabaseSettings.transaction_logs_root_path, neo4jHome.resolve( "replica-tx-logs-" + serverId ).toAbsolutePath() );
+        config.set( GraphDatabaseSettings.transaction_logs_root_path, neo4jHome.resolve( "replica-tx-logs-" + index ).toAbsolutePath() );
         memberConfig = config.build();
 
         this.discoveryServiceFactory = discoveryServiceFactory;
@@ -134,9 +134,9 @@ public class ReadReplica implements ClusterMember
     }
 
     @Override
-    public MemberId id()
+    public ServerId serverId()
     {
-        return systemDatabase.getDependencyResolver().resolveDependency( ClusteringIdentityModule.class ).memberId();
+        return systemDatabase.getDependencyResolver().resolveDependency( ClusteringIdentityModule.class ).myself();
     }
 
     @Override
@@ -210,7 +210,7 @@ public class ReadReplica implements ClusterMember
     @Override
     public final String toString()
     {
-        return "ReadReplica{serverId=" + serverId + ", memberId=" + (readReplicaGraphDatabase == null ? null : id()) + "}";
+        return "ReadReplica{index=" + index + ", serverId=" + (systemDatabase == null ? null : serverId()) + "}";
     }
 
     public String directURI()
@@ -236,9 +236,9 @@ public class ReadReplica implements ClusterMember
     }
 
     @Override
-    public int serverId()
+    public int index()
     {
-        return serverId;
+        return index;
     }
 
     @Override

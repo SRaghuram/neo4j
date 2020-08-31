@@ -94,7 +94,7 @@ class PreElectionIT
         // then
         CoreClusterMember newLeader = cluster.awaitLeader();
 
-        assertThat( newLeader.serverId(), not( equalTo( oldLeader.serverId() ) ) );
+        assertThat( newLeader.index(), not( equalTo( oldLeader.index() ) ) );
     }
 
     @Test
@@ -106,19 +106,19 @@ class PreElectionIT
                 .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE ) );
 
         CoreClusterMember oldLeader = cluster.awaitLeader();
-        assertNotEquals( oldLeader.serverId(), 0 );
+        assertNotEquals( oldLeader.index(), 0 );
 
-        int expectedNextLeaderId = oldLeader.serverId() == 1 ? 2 : 1;
-        assertEventually( () -> getAppendIndex( cluster.getCoreMemberById( expectedNextLeaderId ) ), i -> i == getAppendIndex( oldLeader ), 1, MINUTES );
+        int expectedNextLeaderId = oldLeader.index() == 1 ? 2 : 1;
+        assertEventually( () -> getAppendIndex( cluster.getCoreMemberByIndex( expectedNextLeaderId ) ), i -> i == getAppendIndex( oldLeader ), 1, MINUTES );
 
         // when
         cluster.removeCoreMember( oldLeader );
 
         // then
         CoreClusterMember newLeader = cluster.awaitLeader();
-        assertEquals( newLeader.serverId(), expectedNextLeaderId );
+        assertEquals( newLeader.index(), expectedNextLeaderId );
 
-        assertThat( newLeader.serverId(), not( equalTo( oldLeader.serverId() ) ) );
+        assertThat( newLeader.index(), not( equalTo( oldLeader.index() ) ) );
     }
 
     private long getAppendIndex( CoreClusterMember oldLeader )

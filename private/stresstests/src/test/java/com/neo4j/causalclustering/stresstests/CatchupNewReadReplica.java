@@ -45,8 +45,8 @@ class CatchupNewReadReplica extends Workload
     @Override
     protected void doWork() throws IOException
     {
-        int newMemberId = cluster.readReplicas().size();
-        final ReadReplica readReplica = cluster.addReadReplicaWithId( newMemberId );
+        int newMemberIndex = cluster.readReplicas().size();
+        final ReadReplica readReplica = cluster.addReadReplicaWithIndex( newMemberIndex );
 
         log.info( "Adding " + readReplica );
         readReplica.start();
@@ -80,7 +80,7 @@ class CatchupNewReadReplica extends Workload
         }
 
         log.info( "Caught up" );
-        cluster.removeReadReplicaWithMemberId( newMemberId );
+        cluster.removeReadReplicaWithIndex( newMemberIndex );
 
         if ( deleteStore )
         {

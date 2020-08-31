@@ -176,7 +176,7 @@ class CausalClusterMetricIT
                 () -> readLongGaugeValue( raftMetricsFile( coreMember, "core.last_leader_message" ) ),
                 value -> isMemberLeader( coreMember ) ? (value == 0) : (value > 0), TIMEOUT, SECONDS );
 
-        var readReplica = cluster.getReadReplicaById( 0 );
+        var readReplica = cluster.getReadReplicaByIndex( 0 );
 
         assertEventually( "pull update request registered",
                 () -> readLongCounterValue( raftMetricsFile( readReplica, "read_replica.pull_updates" ) ), value -> value > 0L, TIMEOUT, SECONDS );

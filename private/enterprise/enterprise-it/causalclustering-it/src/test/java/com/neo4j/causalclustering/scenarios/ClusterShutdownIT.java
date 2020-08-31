@@ -57,7 +57,7 @@ class ClusterShutdownIT
     void shouldShutdownEvenThoughWaitingForLock( Collection<Integer> shutdownOrder ) throws Exception
     {
         CoreClusterMember leader = cluster.awaitLeader();
-        shouldShutdownEvenThoughWaitingForLock0( cluster, leader.serverId(), shutdownOrder );
+        shouldShutdownEvenThoughWaitingForLock0( cluster, leader.index(), shutdownOrder );
     }
 
     private void createANode( AtomicReference<Node> node ) throws Exception
@@ -87,9 +87,9 @@ class ClusterShutdownIT
 
         // set shutdown order
         CompletableFuture<Void> afterShutdown = preShutdown;
-        for ( Integer id : shutdownOrder )
+        for ( var index : shutdownOrder )
         {
-            afterShutdown = afterShutdown.thenRunAsync( () -> cluster.getCoreMemberById( id ).shutdown(), shutdownExecutor );
+            afterShutdown = afterShutdown.thenRunAsync( () -> cluster.getCoreMemberByIndex( index ).shutdown(), shutdownExecutor );
         }
 
         createANode( node );
@@ -97,7 +97,7 @@ class ClusterShutdownIT
         try
         {
             // when - blocking on lock acquiring
-            final GraphDatabaseService leader = cluster.getCoreMemberById( victimId ).defaultDatabase();
+            final GraphDatabaseService leader = cluster.getCoreMemberByIndex( victimId ).defaultDatabase();
 
             for ( int i = 0; i < NUMBER_OF_LOCK_ACQUIRERS; i++ )
             {

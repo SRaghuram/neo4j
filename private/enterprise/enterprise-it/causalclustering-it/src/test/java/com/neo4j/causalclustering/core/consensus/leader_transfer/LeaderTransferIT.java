@@ -82,7 +82,7 @@ class LeaderTransferIT
     {
         var cluster = setUpCluster();
         cluster.awaitLeader();
-        var additionalCore = cluster.addCoreMemberWithId( 3 );
+        var additionalCore = cluster.addCoreMemberWithIndex( 3 );
         additionalCore.config().set( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "prio" ) );
 
         additionalCore.start();
@@ -101,8 +101,8 @@ class LeaderTransferIT
         assertDatabaseEventuallyStarted( databaseFoo, cluster );
         assertDatabaseEventuallyStarted( databaseBar, cluster );
 
-        assertLeaderIsOnCorrectMember( cluster, databaseBar, cluster.getCoreMemberById( BAR_MEMBER_ID ) );
-        assertLeaderIsOnCorrectMember( cluster, databaseFoo, cluster.getCoreMemberById( FOO_MEMBER_ID ) );
+        assertLeaderIsOnCorrectMember( cluster, databaseBar, cluster.getCoreMemberByIndex( BAR_MEMBER_ID ) );
+        assertLeaderIsOnCorrectMember( cluster, databaseFoo, cluster.getCoreMemberByIndex( FOO_MEMBER_ID ) );
     }
 
     @Test
@@ -134,7 +134,7 @@ class LeaderTransferIT
         }
 
         // when
-        var newMember = cluster.addCoreMemberWithId( 3 );
+        var newMember = cluster.addCoreMemberWithIndex( 3 );
         newMember.start();
 
         Predicate<Boolean> identity = bool -> bool;
@@ -146,7 +146,7 @@ class LeaderTransferIT
     private static void assertLeaderIsOnCorrectMember( Cluster cluster, String database, CoreClusterMember desiredLeader )
     {
         assertEventually( "leader is on correct member " + desiredLeader, () -> cluster.awaitLeader( database ),
-                coreClusterMember -> coreClusterMember.id().equals( desiredLeader.id() ), 1, TimeUnit.MINUTES );
+                coreClusterMember -> coreClusterMember.serverId().equals( desiredLeader.serverId() ), 1, TimeUnit.MINUTES );
     }
 
     private static boolean hasAnyLeaderships( Cluster cluster, CoreClusterMember member, List<String> dbNames )

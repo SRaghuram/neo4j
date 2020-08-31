@@ -55,7 +55,7 @@ public final class ClusterOverviewHelper
     {
         for ( CoreClusterMember core : cluster.coreMembers() )
         {
-            if ( !excludedCores.contains( core.serverId() ) )
+            if ( !excludedCores.contains( core.index() ) )
             {
                 assertEventualOverview( expected, core, "core" );
             }
@@ -64,7 +64,7 @@ public final class ClusterOverviewHelper
 
         for ( ReadReplica rr : cluster.readReplicas() )
         {
-            if ( !excludedRRs.contains( rr.serverId() ) )
+            if ( !excludedRRs.contains( rr.index() ) )
             {
                 assertEventualOverview( expected, rr, "rr" );
             }
@@ -86,7 +86,7 @@ public final class ClusterOverviewHelper
         Function<List<MemberInfo>, String> printableMemberInfos =
                 memberInfos -> memberInfos.stream().map( MemberInfo::toString ).collect( Collectors.joining( ", " ) );
 
-        String message = String.format( "should have overview from %s %s, but view was ", role, member.serverId() );
+        String message = String.format( "should have overview from %s %s, but view was ", role, member.index() );
         assertEventually( memberInfos -> message + printableMemberInfos.apply( memberInfos ),
                 () -> clusterOverview( member.defaultDatabase() ), expected, 90, SECONDS );
     }

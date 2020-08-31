@@ -80,10 +80,10 @@ class ClusterRoutingIT extends ClusterTestSupport
 
         readReplicaDriver = getReadReplicaDriver( cluster );
 
-        cluster.coreMembers().forEach( core -> coreDrivers.put( core.serverId(), driver( core.directURI() ) ) );
+        cluster.coreMembers().forEach( core -> coreDrivers.put( core.index(), driver( core.directURI() ) ) );
 
         var systemLeader = cluster.awaitLeader( "system" );
-        Driver systemLeaderDriver = coreDrivers.get( systemLeader.serverId() );
+        Driver systemLeaderDriver = coreDrivers.get( systemLeader.index() );
 
         try ( var session = systemLeaderDriver.session( SessionConfig.builder().withDatabase( "system" ).build() ) )
         {

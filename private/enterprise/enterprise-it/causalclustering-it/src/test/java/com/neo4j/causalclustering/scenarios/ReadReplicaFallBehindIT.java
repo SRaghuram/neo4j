@@ -61,7 +61,7 @@ class ReadReplicaFallBehindIT
     @Test
     void shouldReconcileCopiedStore() throws Exception
     {
-        ReadReplica readReplica = cluster.getReadReplicaById( 0 );
+        ReadReplica readReplica = cluster.getReadReplicaByIndex( 0 );
         assertDatabaseEventuallyStarted( SYSTEM_DATABASE_NAME, Set.of( readReplica ) );
 
         CatchupProcessManager catchupProcessManager = readReplica.resolveDependency( SYSTEM_DATABASE_NAME, CatchupProcessManager.class );

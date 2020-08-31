@@ -139,18 +139,18 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
         // install the cryptographic objects for each core
         for ( var core : cluster.coreMembers() )
         {
-            var keyId = core.serverId();
-            var homeDir = cluster.getCoreMemberById( core.serverId() ).homePath();
-            installKeyToInstance( homeDir, keyId );
+            var index = core.index();
+            var homeDir = cluster.getCoreMemberByIndex( core.index() ).homePath();
+            installKeyToInstance( homeDir, index );
             addUpgradeUser( homeDir );
         }
 
         // install the cryptographic objects for each read replica
         for ( var replica : cluster.readReplicas() )
         {
-            var keyId = replica.serverId() + cluster.coreMembers().size();
-            var homeDir = cluster.getReadReplicaById( replica.serverId() ).homePath();
-            installKeyToInstance( homeDir, keyId );
+            var index = replica.index() + cluster.coreMembers().size();
+            var homeDir = cluster.getReadReplicaByIndex( replica.index() ).homePath();
+            installKeyToInstance( homeDir, index );
             addUpgradeUser( homeDir );
         }
 
@@ -170,10 +170,10 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
         var readReplica = cluster.findAnyReadReplica();
         readReplicaDriver = driver( readReplica.directURI() );
 
-        cluster.coreMembers().forEach( core -> coreDrivers.put( core.serverId(), driver( core.directURI() ) ) );
+        cluster.coreMembers().forEach( core -> coreDrivers.put( core.index(), driver( core.directURI() ) ) );
 
         var fooFollower = getFollower( cluster, fooLeader );
-        fooFollowerDriver = coreDrivers.get( fooFollower.serverId() );
+        fooFollowerDriver = coreDrivers.get( fooFollower.index() );
 
         readReplicaUpgradeDriver = driver( readReplica.directURI(), GraphDatabaseInternalSettings.upgrade_username.defaultValue(), "foo" );
 
@@ -381,13 +381,13 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
         }
     }
 
-    private static void installKeyToInstance( Path homeDir, int keyId ) throws IOException
+    private static void installKeyToInstance( Path homeDir, int index ) throws IOException
     {
         var baseDir = homeDir.resolve( CERTIFICATES_DIR );
         fs.mkdirs( baseDir.resolve( "trusted" ) );
         fs.mkdirs( baseDir.resolve( "revoked" ) );
 
-        SslResourceBuilder.caSignedKeyId( keyId ).trustSignedByCA().install( baseDir );
+        SslResourceBuilder.caSignedKeyId( index ).trustSignedByCA().install( baseDir );
     }
 
     private static void addUpgradeUser( Path homeDir )

@@ -67,9 +67,9 @@ class ReadReplicaHierarchicalCatchupIT
                 () -> Pair.of( "foobar", String.format( "baz_bat%s", UUID.randomUUID() ) ) );
 
         // 3, 4 are other DCs
-        ReadReplica east3 = cluster.addReadReplicaWithId( 3 );
+        ReadReplica east3 = cluster.addReadReplicaWithIndex( 3 );
         east3.start();
-        ReadReplica west4 = cluster.addReadReplicaWithId( 4 );
+        ReadReplica west4 = cluster.addReadReplicaWithIndex( 4 );
         west4.start();
 
         ReadReplicaToReadReplicaCatchupIT.checkDataHasReplicatedToReadReplicas( cluster, numberOfNodesToCreate );
@@ -80,10 +80,10 @@ class ReadReplicaHierarchicalCatchupIT
         }
 
         // 5, 6 are other DCs
-        ReadReplica east5 = cluster.addReadReplicaWithId( 5 );
+        ReadReplica east5 = cluster.addReadReplicaWithIndex( 5 );
         east5.setUpstreamDatabaseSelectionStrategy( "connect-randomly-within-server-group" );
         east5.start();
-        ReadReplica west6 = cluster.addReadReplicaWithId( 6 );
+        ReadReplica west6 = cluster.addReadReplicaWithIndex( 6 );
         west6.setUpstreamDatabaseSelectionStrategy( "connect-randomly-within-server-group" );
         west6.start();
 

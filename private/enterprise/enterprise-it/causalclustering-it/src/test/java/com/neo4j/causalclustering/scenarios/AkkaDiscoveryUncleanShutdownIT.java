@@ -90,7 +90,7 @@ class AkkaDiscoveryUncleanShutdownIT
         cluster.start();
 
         runningCores = IntStream.range( 0, CORES )
-                                .mapToObj( cluster::getCoreMemberById )
+                                .mapToObj( cluster::getCoreMemberByIndex )
                                 .collect( toList() );
         removedCoreIds = new HashSet<>();
 
@@ -103,7 +103,7 @@ class AkkaDiscoveryUncleanShutdownIT
     {
         newCore.start();
         runningCores.add( newCore );
-        removedCoreIds.remove( newCore.serverId() );
+        removedCoreIds.remove( newCore.index() );
 
         assertOverviews();
     }
@@ -131,12 +131,12 @@ class AkkaDiscoveryUncleanShutdownIT
         return member;
     }
 
-    private CoreClusterMember shutdownCore( int memberId )
+    private CoreClusterMember shutdownCore( int index )
     {
-        CoreClusterMember core = cluster.getCoreMemberById( memberId );
+        CoreClusterMember core = cluster.getCoreMemberByIndex( index );
         core.shutdown();
         runningCores.remove( core );
-        removedCoreIds.add( memberId );
+        removedCoreIds.add( index );
 
         assertOverviews();
 

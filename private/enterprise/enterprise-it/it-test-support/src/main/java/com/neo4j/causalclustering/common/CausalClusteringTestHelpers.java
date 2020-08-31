@@ -556,7 +556,7 @@ public final class CausalClusteringTestHelpers
     {
         CoreClusterMember[] members = cluster.coreMembers()
                 .stream()
-                .filter( member -> !member.id().equals( except.id() ) )
+                .filter( member -> !member.serverId().equals( except.serverId() ) )
                 .toArray( CoreClusterMember[]::new );
 
         return members[ThreadLocalRandom.current().nextInt( members.length )];

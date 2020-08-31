@@ -87,7 +87,7 @@ class PanicIT
         @TestFactory
         Stream<DynamicTest> tests()
         {
-            return DynamicTest.stream( contexts( cluster ).iterator(), context -> context.getClass().getSimpleName() + ": " + context.instanceNr,
+            return DynamicTest.stream( contexts( cluster ).iterator(), context -> context.getClass().getSimpleName() + ": " + context.index,
                     this::shouldShutdownOnPanic );
         }
 
@@ -170,9 +170,9 @@ class PanicIT
 
     private static class CoreContext extends Context
     {
-        CoreContext( int instanceNr, Cluster cluster )
+        CoreContext( int index, Cluster cluster )
         {
-            super( instanceNr, cluster.coreMembers().size(), cluster );
+            super( index, cluster.coreMembers().size(), cluster );
         }
 
         @Override
@@ -184,21 +184,21 @@ class PanicIT
         @Override
         int expectedMembersBeforePanic()
         {
-            return INITIAL_CORE_MEMBERS - instanceNr;
+            return INITIAL_CORE_MEMBERS - index;
         }
 
         @Override
         ClusterMember member()
         {
-            return cluster.getCoreMemberById( instanceNr );
+            return cluster.getCoreMemberByIndex( index );
         }
     }
 
     private static class ReadReplicaContext extends Context
     {
-        ReadReplicaContext( int instanceNr, Cluster cluster )
+        ReadReplicaContext( int index, Cluster cluster )
         {
-            super( instanceNr, cluster.readReplicas().size(), cluster );
+            super( index, cluster.readReplicas().size(), cluster );
         }
 
         @Override
@@ -210,25 +210,25 @@ class PanicIT
         @Override
         int expectedMembersBeforePanic()
         {
-            return INITIAL_READ_REPLICAS - instanceNr;
+            return INITIAL_READ_REPLICAS - index;
         }
 
         @Override
         ClusterMember member()
         {
-            return cluster.getReadReplicaById( instanceNr );
+            return cluster.getReadReplicaByIndex( index );
         }
     }
 
     private abstract static class Context
     {
-        final int instanceNr;
+        final int index;
         final int initialInstanceCount;
         final Cluster cluster;
 
-        Context( int instanceNr, int initialInstanceCount, Cluster cluster )
+        Context( int index, int initialInstanceCount, Cluster cluster )
         {
-            this.instanceNr = instanceNr;
+            this.index = index;
             this.initialInstanceCount = initialInstanceCount;
             this.cluster = cluster;
         }
