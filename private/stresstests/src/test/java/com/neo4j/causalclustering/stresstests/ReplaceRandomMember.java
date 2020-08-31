@@ -92,9 +92,9 @@ class ReplaceRandomMember extends RepeatOnRandomMember
         for ( String databaseName : databaseNames )
         {
             log.info( format( "Waiting for membership of '%s'", databaseName ) );
-            RaftMachine raft = core.resolveDependency( databaseName, RaftMachine.class );
-            assertEventually(  members -> format( "Voting members %s do not contain %s", members, core.id() ),
-                    raft::votingMembers, new Condition<>( memberIds -> memberIds.contains( core.id() ), "Contains core id." ), 10, MINUTES );
+            var raft = core.resolveDependency( databaseName, RaftMachine.class );
+            assertEventually(  members -> format( "Voting members %s do not contain %s", members, raft.memberId() ),
+                    raft::votingMembers, new Condition<>( memberIds -> memberIds.contains( raft.memberId() ), "Contains core id." ), 10, MINUTES );
         }
     }
 
