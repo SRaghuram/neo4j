@@ -5,6 +5,9 @@
  */
 package com.neo4j.bench.model.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -18,16 +21,8 @@ public class Benchmarks
     private final Benchmark parentBenchmark;
     private final List<Benchmark> childBenchmarks;
 
-    /**
-     * WARNING: Never call this explicitly.
-     * No-params constructor is only used for JSON (de)serialization.
-     */
-    public Benchmarks()
-    {
-        this( new Benchmark() );
-    }
-
-    public Benchmarks( Benchmark parentBenchmark )
+    @JsonCreator
+    public Benchmarks( @JsonProperty( "parentBenchmark" ) Benchmark parentBenchmark )
     {
         this.parentBenchmark = parentBenchmark;
         this.childBenchmarks = new ArrayList<>();

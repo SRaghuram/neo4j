@@ -5,6 +5,9 @@
  */
 package com.neo4j.bench.model.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.Objects;
 
 public class BenchmarkPlan
@@ -13,12 +16,10 @@ public class BenchmarkPlan
     private final Benchmark benchmark;
     private final Plan plan;
 
-    public BenchmarkPlan()
-    {
-        this( new BenchmarkGroup(), new Benchmark(), new Plan() );
-    }
-
-    public BenchmarkPlan( BenchmarkGroup benchmarkGroup, Benchmark benchmark, Plan plan )
+    @JsonCreator
+    public BenchmarkPlan( @JsonProperty( "benchmarkGroup" ) BenchmarkGroup benchmarkGroup,
+                          @JsonProperty( "benchmark" ) Benchmark benchmark,
+                          @JsonProperty( "plan" ) Plan plan )
     {
         this.benchmarkGroup = benchmarkGroup;
         this.benchmark = benchmark;

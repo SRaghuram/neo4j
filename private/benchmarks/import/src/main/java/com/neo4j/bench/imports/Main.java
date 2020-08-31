@@ -334,18 +334,16 @@ public class Main
             TestRun testRun = new TestRun( id, time, start, build, parentBuild, "import-benchmark" );
 
             InstanceDiscovery instanceDiscovery = InstanceDiscovery.create();
-            Instance instance = instanceDiscovery.currentInstance( System.getenv() );
-
-            TestRunReport report =
-                    new TestRunReport( testRun,
-                                       new BenchmarkConfig(),
-                                       Sets.newHashSet( neo4j ),
-                                       neo4jConfig,
-                                       Environment.from( instance ),
-                                       metrics,
-                                       tool,
-                                       java,
-                                       Lists.newArrayList() );
+            Instance instance = instanceDiscovery.currentInstance( System.getenv() );            TestRunReport report = new TestRunReport( testRun,
+                                                      new BenchmarkConfig(),
+                                                      Sets.newHashSet( neo4j ),
+                                                      neo4jConfig,
+                                                      Environment.from( instance ),
+                                                      metrics,
+                                                      tool,
+                                                      java,
+                                                      Lists.newArrayList(),
+                                                      Lists.newArrayList() );
             SubmitTestRun submitTestRun = new SubmitTestRun( report );
             LOG.debug( "Test run reported: " + report );
 

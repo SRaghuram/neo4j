@@ -6,6 +6,7 @@
 package com.neo4j.bench.model.model;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
@@ -24,6 +25,7 @@ public class BenchmarkGroupBenchmarkPlans
 {
     public static class BenchmarkPlans
     {
+        @JsonSerialize( keyUsing = Benchmark.BenchmarkKeySerializer.class )
         @JsonDeserialize( keyUsing = Benchmark.BenchmarkKeyDeserializer.class )
         private final Map<Benchmark,Plan> inner = new HashMap<>();
 
@@ -65,6 +67,7 @@ public class BenchmarkGroupBenchmarkPlans
         }
     }
 
+    @JsonSerialize( keyUsing = BenchmarkGroup.BenchmarkGroupKeySerializer.class )
     @JsonDeserialize( keyUsing = BenchmarkGroup.BenchmarkGroupKeyDeserializer.class )
     private final Map<BenchmarkGroup,BenchmarkPlans> inner = new HashMap<>();
 

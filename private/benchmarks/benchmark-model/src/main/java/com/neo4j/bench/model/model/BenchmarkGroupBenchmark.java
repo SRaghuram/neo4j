@@ -5,6 +5,9 @@
  */
 package com.neo4j.bench.model.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.Objects;
 
 import static java.lang.String.format;
@@ -14,16 +17,9 @@ public class BenchmarkGroupBenchmark
     private final BenchmarkGroup benchmarkGroup;
     private final Benchmark benchmark;
 
-    /**
-     * WARNING: Never call this explicitly.
-     * No-params constructor is only used for JSON (de)serialization.
-     */
-    public BenchmarkGroupBenchmark()
-    {
-        this( new BenchmarkGroup(), new Benchmark() );
-    }
-
-    public BenchmarkGroupBenchmark( BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+    @JsonCreator
+    public BenchmarkGroupBenchmark( @JsonProperty( "benchmarkGroup" ) BenchmarkGroup benchmarkGroup,
+                                    @JsonProperty( "benchmark" ) Benchmark benchmark )
     {
         this.benchmarkGroup = benchmarkGroup;
         this.benchmark = benchmark;

@@ -5,15 +5,20 @@
  */
 package com.neo4j.bench.model.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.KeyDeserializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.neo4j.bench.model.util.JsonUtil;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-import static com.neo4j.bench.model.model.Benchmark.Mode.LATENCY;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
@@ -25,6 +30,15 @@ public class Benchmark
         public Object deserializeKey( String key, DeserializationContext ctxt )
         {
             return JsonUtil.deserializeJson( key, Benchmark.class );
+        }
+    }
+
+    public static class BenchmarkKeySerializer extends JsonSerializer<Benchmark>
+    {
+        @Override
+        public void serialize( Benchmark value, JsonGenerator gen, SerializerProvider serializers ) throws IOException
+        {
+            gen.writeFieldName( JsonUtil.serializeJson( value ) );
         }
     }
 
@@ -83,16 +97,12 @@ public class Benchmark
     private final Mode mode;
     private final Parameters parameters;
 
-    /**
-     * WARNING: Never call this explicitly.
-     * No-params constructor is only used for JSON (de)serialization.
-     */
-    Benchmark()
-    {
-        this( "11", "1", "1", LATENCY, Parameters.NONE, "" );
-    }
-
-    private Benchmark( String name, String simpleName, String description, Mode mode, Parameters parameters )
+    @JsonCreator
+    private Benchmark( @JsonProperty( "name" ) String name,
+                       @JsonProperty( "simpleName" ) String simpleName,
+                       @JsonProperty( "description" ) String description,
+                       @JsonProperty( "mode" ) Mode mode,
+                       @JsonProperty( "parameters" ) Parameters parameters )
     {
         this( name, simpleName, description, mode, parameters, null );
     }

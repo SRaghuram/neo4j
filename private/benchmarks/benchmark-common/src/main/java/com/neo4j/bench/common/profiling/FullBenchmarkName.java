@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.common.profiling;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkGroup;
@@ -29,6 +30,7 @@ public class FullBenchmarkName
     private final BenchmarkGroup benchmarkGroup;
     private final Benchmark benchmark;
 
+    @JsonCreator
     private FullBenchmarkName( @JsonProperty( "benchmarkGroup" ) BenchmarkGroup benchmarkGroup,
                                @JsonProperty( "benchmark" ) Benchmark benchmark )
     {

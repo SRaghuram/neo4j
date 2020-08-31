@@ -5,7 +5,10 @@
  */
 package com.neo4j.bench.common.results;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.neo4j.bench.common.profiling.RecordingDescriptor;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.ErrorReporter;
@@ -338,16 +341,13 @@ public class ForkDirectory
     private static class ForkDescription
     {
         private String name;
+
+        @JsonSerialize( keyUsing = RecordingDescriptor.RecordingDescriptorKeySerializer.class )
         @JsonDeserialize( keyUsing = RecordingDescriptor.RecordingDescriptorKeyDeserializer.class )
         private Map<RecordingDescriptor,Path> recordings;
 
-        private ForkDescription()
-        {
-            this.name = "INVALID_NAME";
-            this.recordings = null;
-        }
-
-        private ForkDescription( String name )
+        @JsonCreator
+        private ForkDescription( @JsonProperty( "name" ) String name )
         {
             this.name = name;
             this.recordings = new HashMap<>();
@@ -355,10 +355,6 @@ public class ForkDirectory
 
         private String name()
         {
-            if ( "INVALID_NAME".equals( name ) )
-            {
-                throw new RuntimeException( "Object was deserialized incorrectly" );
-            }
             return name;
         }
 

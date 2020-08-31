@@ -5,11 +5,9 @@
  */
 package com.neo4j.bench.model.model;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -27,60 +25,18 @@ public class TestRunReport
     private final List<BenchmarkPlan> benchmarkPlans;
     private final List<TestRunError> errors;
 
-    /**
-     * WARNING: Never call this explicitly.
-     * No-params constructor is only used for JSON (de)serialization.
-     */
-    public TestRunReport()
-    {
-        this(
-                new TestRun(),
-                new BenchmarkConfig(),
-                Sets.newHashSet( new Project() ),
-                Neo4jConfig.empty(),
-                new Environment( Collections.emptyMap() ),
-                new BenchmarkGroupBenchmarkMetrics(),
-                new BenchmarkTool(),
-                new Java(),
-                Lists.newArrayList( new BenchmarkPlan() ),
-                Lists.newArrayList() );
-    }
-
+    @JsonCreator
     public TestRunReport(
-            TestRun testRun,
-            BenchmarkConfig benchmarkConfig,
-            Set<Project> projects,
-            Neo4jConfig baseNeo4jConfig,
-            Environment environment,
-            BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics,
-            BenchmarkTool benchmarkTool,
-            Java java,
-            List<BenchmarkPlan> benchmarkPlans )
-    {
-        this(
-                testRun,
-                benchmarkConfig,
-                projects,
-                baseNeo4jConfig,
-                environment,
-                benchmarkGroupBenchmarkMetrics,
-                benchmarkTool,
-                java,
-                benchmarkPlans,
-                new ArrayList<>() );
-    }
-
-    public TestRunReport(
-            TestRun testRun,
-            BenchmarkConfig benchmarkConfig,
-            Set<Project> projects,
-            Neo4jConfig baseNeo4jConfig,
-            Environment environment,
-            BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics,
-            BenchmarkTool benchmarkTool,
-            Java java,
-            List<BenchmarkPlan> benchmarkPlans,
-            List<TestRunError> errors )
+            @JsonProperty( "testRun" ) TestRun testRun,
+            @JsonProperty( "benchmarkConfig" ) BenchmarkConfig benchmarkConfig,
+            @JsonProperty( "projects" ) Set<Project> projects,
+            @JsonProperty( "baseNeo4jConfig" ) Neo4jConfig baseNeo4jConfig,
+            @JsonProperty( "environment" ) Environment environment,
+            @JsonProperty( "benchmarkGroupBenchmarkMetrics" ) BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics,
+            @JsonProperty( "benchmarkTool" ) BenchmarkTool benchmarkTool,
+            @JsonProperty( "java" ) Java java,
+            @JsonProperty( "benchmarkPlans" ) List<BenchmarkPlan> benchmarkPlans,
+            @JsonProperty( "errors" ) List<TestRunError> errors )
     {
         this.testRun = testRun;
         this.benchmarkConfig = benchmarkConfig;

@@ -5,10 +5,16 @@
  */
 package com.neo4j.bench.model.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.KeyDeserializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.neo4j.bench.model.util.JsonUtil;
 
+import java.io.IOException;
 import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
@@ -24,20 +30,21 @@ public class BenchmarkGroup
         }
     }
 
+    public static class BenchmarkGroupKeySerializer extends JsonSerializer<BenchmarkGroup>
+    {
+        @Override
+        public void serialize( BenchmarkGroup value, JsonGenerator gen, SerializerProvider serializers ) throws IOException
+        {
+            gen.writeFieldName( JsonUtil.serializeJson( value ) );
+        }
+    }
+
     public static final String NAME = "name";
 
     private final String name;
 
-    /**
-     * WARNING: Never call this explicitly.
-     * No-params constructor is only used for JSON (de)serialization.
-     */
-    public BenchmarkGroup()
-    {
-        this( "-1" );
-    }
-
-    public BenchmarkGroup( String name )
+    @JsonCreator
+    public BenchmarkGroup( @JsonProperty( "name" ) String name )
     {
         this.name = requireNonNull( name );
     }

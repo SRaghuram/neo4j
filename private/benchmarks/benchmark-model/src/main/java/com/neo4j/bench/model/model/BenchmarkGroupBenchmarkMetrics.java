@@ -6,6 +6,7 @@
 package com.neo4j.bench.model.model;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.model.profiling.ProfilerRecordings;
 import org.apache.commons.lang3.builder.EqualsBuilder;
@@ -27,6 +28,7 @@ public class BenchmarkGroupBenchmarkMetrics
 {
     public static class BenchmarkMetrics
     {
+        @JsonSerialize( keyUsing = Benchmark.BenchmarkKeySerializer.class )
         @JsonDeserialize( keyUsing = Benchmark.BenchmarkKeyDeserializer.class )
         private final Map<Benchmark,AnnotatedMetrics> inner = new HashMap<>();
 
@@ -63,6 +65,7 @@ public class BenchmarkGroupBenchmarkMetrics
         }
     }
 
+    @JsonSerialize( keyUsing = BenchmarkGroup.BenchmarkGroupKeySerializer.class )
     @JsonDeserialize( keyUsing = BenchmarkGroup.BenchmarkGroupKeyDeserializer.class )
     private final Map<BenchmarkGroup,BenchmarkMetrics> inner = new HashMap<>();
 
@@ -188,7 +191,7 @@ public class BenchmarkGroupBenchmarkMetrics
             this( new Metrics(), new AuxiliaryMetrics(), Neo4jConfig.empty() );
         }
 
-        AnnotatedMetrics( Metrics metrics, AuxiliaryMetrics auxiliaryMetrics, Neo4jConfig neo4jConfig )
+        public AnnotatedMetrics( Metrics metrics, AuxiliaryMetrics auxiliaryMetrics, Neo4jConfig neo4jConfig )
         {
             this.metrics = metrics;
             this.auxiliaryMetrics = auxiliaryMetrics;

@@ -977,6 +977,7 @@ public class RunReportCommand implements Runnable
                 workloadMetrics,
                 tool,
                 java,
+                new ArrayList<>(),
                 new ArrayList<>() );
     }
 

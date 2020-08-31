@@ -7,14 +7,20 @@ package com.neo4j.bench.common.profiling;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.KeyDeserializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.neo4j.bench.common.results.RunPhase;
+import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.model.util.JsonUtil;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+
+import java.io.IOException;
 
 import static com.neo4j.bench.common.util.BenchmarkUtil.sanitize;
 
@@ -26,6 +32,15 @@ public class RecordingDescriptor
         public Object deserializeKey( String key, DeserializationContext ctxt )
         {
             return JsonUtil.deserializeJson( key, RecordingDescriptor.class );
+        }
+    }
+
+    public static class RecordingDescriptorKeySerializer extends JsonSerializer<RecordingDescriptor>
+    {
+        @Override
+        public void serialize( RecordingDescriptor value, JsonGenerator gen, SerializerProvider serializers ) throws IOException
+        {
+            gen.writeFieldName( JsonUtil.serializeJson( value ) );
         }
     }
 

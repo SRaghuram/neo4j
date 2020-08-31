@@ -18,6 +18,7 @@ import com.neo4j.bench.model.model.BenchmarkConfig;
 import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.model.model.BenchmarkGroupBenchmark;
 import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
+import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics.AnnotatedMetrics;
 import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkPlans;
 import com.neo4j.bench.model.model.BenchmarkMetrics;
 import com.neo4j.bench.model.model.BenchmarkPlan;
@@ -293,6 +294,23 @@ public class SerializationTest
         Neo4jConfig neo4jConfig = new Neo4jConfig( params );
         BenchmarkGroupBenchmarkMetrics before = new BenchmarkGroupBenchmarkMetrics();
         before.add( benchmarkGroup, benchmark, metrics, auxiliaryMetrics, neo4jConfig );
+        // then
+        shouldSerializeAndDeserialize( before );
+    }
+
+    @Test
+    public void shouldSerializeAnnotatedMetrics() throws IOException
+    {
+        // given
+        Metrics metrics = getMetrics();
+        AuxiliaryMetrics auxiliaryMetrics = getAuxiliaryMetrics();
+        Map<String,String> params = new HashMap<>();
+        params.put( "key", "value" );
+        Neo4jConfig neo4jConfig = new Neo4jConfig( params );
+
+        // when
+        AnnotatedMetrics before = new AnnotatedMetrics( metrics, auxiliaryMetrics, neo4jConfig );
+
         // then
         shouldSerializeAndDeserialize( before );
     }
