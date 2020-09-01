@@ -171,14 +171,12 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
   test("point function should not work with literal map and incorrect cartesian CRS") {
     failWithError(Configs.InterpretedAndSlottedAndPipelined,
-      "RETURN point({x: 2.3, y: 4.5, crs: 'cart'}) as point", List("'cart' is not a supported coordinate reference system for points",
-        "Unknown coordinate reference system: cart"))
+      "RETURN point({x: 2.3, y: 4.5, crs: 'cart'}) as point", List("Unknown coordinate reference system: cart"))
   }
 
   test("point function should not work with literal map of 2 coordinates and incorrect cartesian-3D crs") {
-    failWithError(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({x: 2.3, y: 4.5, crs: 'cartesian-3D'}) as point", List(
-      "'cartesian-3D' is not a supported coordinate reference system for points",
-      "Cannot create point with 3D coordinate reference system and 2 coordinates. Please consider using equivalent 2D coordinate reference system"))
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({x: 2.3, y: 4.5, crs: 'cartesian-3D'}) as point",
+      List("Cannot create point with 3D coordinate reference system and 2 coordinates. Please consider using equivalent 2D coordinate reference system"))
   }
 
   test("point function should not work with literal map of 3 coordinates and incorrect cartesian crs") {
@@ -189,13 +187,12 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
   test("point function should not work with literal map and incorrect geographic CRS") {
     failWithError(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({x: 2.3, y: 4.5, crs: 'WGS84'}) as point",
-      List("'WGS84' is not a supported coordinate reference system for points", "Unknown coordinate reference system: WGS84"))
+      List("Unknown coordinate reference system: WGS84"))
   }
 
   test("point function should not work with literal map of 2 coordinates and incorrect WGS84-3D crs") {
-    failWithError(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({x: 2.3, y: 4.5, crs: 'WGS-84-3D'}) as point", List(
-      "'WGS-84-3D' is not a supported coordinate reference system for points",
-      "Cannot create point with 3D coordinate reference system and 2 coordinates. Please consider using equivalent 2D coordinate reference system"))
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({x: 2.3, y: 4.5, crs: 'WGS-84-3D'}) as point",
+      List("Cannot create point with 3D coordinate reference system and 2 coordinates. Please consider using equivalent 2D coordinate reference system"))
   }
 
   test("point function should not work with literal map of 3 coordinates and incorrect WGS84 crs") {
@@ -218,28 +215,25 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
   test("should fail properly if missing cartesian coordinates") {
     failWithError(Configs.InterpretedAndSlottedAndPipelined, "RETURN point($params) as point",
-      List("A cartesian point must contain 'x' and 'y'",
-        "A point must contain either 'x' and 'y' or 'latitude' and 'longitude'" /* in version < 3.4 */),
+      List("A cartesian point must contain 'x' and 'y'"),
       params = Map("params" -> Map("y" -> 1.0, "crs" -> "cartesian")))
   }
 
   test("should fail properly if missing geographic longitude") {
     failWithError(Configs.InterpretedAndSlottedAndPipelined, "RETURN point($params) as point",
-      List("A wgs-84 point must contain 'latitude' and 'longitude'",
-        "A point must contain either 'x' and 'y' or 'latitude' and 'longitude'" /* in version < 3.4 */),
+      List("A wgs-84 point must contain 'latitude' and 'longitude'"),
       params = Map("params" -> Map("latitude" -> 1.0, "crs" -> "WGS-84")))
   }
 
   test("should fail properly if missing geographic latitude") {
     failWithError(Configs.InterpretedAndSlottedAndPipelined, "RETURN point($params) as point",
-      List("A wgs-84 point must contain 'latitude' and 'longitude'",
-        "A point must contain either 'x' and 'y' or 'latitude' and 'longitude'" /* in version < 3.4 */),
+      List("A wgs-84 point must contain 'latitude' and 'longitude'"),
       params = Map("params" -> Map("longitude" -> 1.0, "crs" -> "WGS-84")))
   }
 
   test("should fail properly if unknown coordinate system") {
-    failWithError(Configs.InterpretedAndSlottedAndPipelined, "RETURN point($params) as point", List("'WGS-1337' is not a supported coordinate reference system for points",
-      "Unknown coordinate reference system: WGS-1337"),
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, "RETURN point($params) as point",
+      List("Unknown coordinate reference system: WGS-1337"),
       params = Map("params" -> Map("x" -> 1, "y" -> 2, "crs" -> "WGS-1337")))
   }
 
@@ -252,12 +246,12 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
   test("point function with invalid coordinate types should give reasonable error") {
     failWithError(Configs.InterpretedAndSlottedAndPipelined,
-      "return point({x: 'apa', y: 0, crs: 'cartesian'})", List("String is not a valid coordinate type.", "Cannot assign"))
+      "return point({x: 'apa', y: 0, crs: 'cartesian'})", List("Cannot assign"))
   }
 
   test("point function with invalid crs types should give reasonable error") {
     failWithError(Configs.InterpretedAndSlottedAndPipelined,
-      "return point({x: 0, y: 0, crs: 5})", List("java.lang.Long cannot be cast to", "java.lang.Long incompatible with", "Cannot assign"))
+      "return point({x: 0, y: 0, crs: 5})", List("Cannot assign"))
   }
 
   test("should default to WGS84 if missing geographic CRS") {
@@ -276,8 +270,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
   test("should not allow Cartesian CRS with latitude/longitude coordinates") {
     failWithError(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({longitude: 2.3, latitude: 4.5, crs: 'cartesian'}) as point",
-      List("'cartesian' is not a supported coordinate reference system for geographic points",
-        "Geographic points does not support coordinate reference system: cartesian"))
+      List("Geographic points does not support coordinate reference system: cartesian"))
   }
 
   test("point function should work with previous map") {
