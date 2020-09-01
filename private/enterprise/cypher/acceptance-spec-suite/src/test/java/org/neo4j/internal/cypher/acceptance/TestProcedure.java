@@ -16,6 +16,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphalgo.BasicEvaluationContext;
 import org.neo4j.graphalgo.GraphAlgoFactory;
 import org.neo4j.graphalgo.PathFinder;
@@ -58,6 +59,10 @@ public class TestProcedure
     public Transaction transaction;
     @Context
     public GraphDatabaseService db;
+
+    // TODO: how to fix?
+    public static DatabaseManagementService managementService;
+
 
     @Procedure( "org.neo4j.time" )
     @Description( "org.neo4j.time" )
@@ -209,6 +214,18 @@ public class TestProcedure
             n = tx.getNodeById( id );
             tx.commit();
         }
+        return n;
+    }
+
+    // Only used for testing that query fails if procedure returns an entity from another database
+    @UserFunction( name = "org.neo4j.findByIdInDatabase" )
+    public Node findByIdInDatabase( @Name( "id" ) Long id, @Name("databaseName") String dbName )
+    {
+        GraphDatabaseService db = managementService.database( dbName );
+        Transaction tx = db.beginTx();
+        Node n = tx.getNodeById( id );
+        tx.commit();
+
         return n;
     }
 

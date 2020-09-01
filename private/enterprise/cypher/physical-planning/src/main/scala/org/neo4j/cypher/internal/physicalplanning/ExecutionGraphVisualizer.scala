@@ -29,6 +29,7 @@ import org.neo4j.graphdb.Label
 import org.neo4j.graphdb.Node
 import org.neo4j.graphdb.Relationship
 import org.neo4j.graphdb.RelationshipType
+import org.neo4j.graphdb.Transaction
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.memory.OptionalMemoryTracker
@@ -297,6 +298,7 @@ object ExecutionGraphVisualizer {
     override def getPropertyKeys: java.lang.Iterable[String] = null
     override def getProperties(keys: String*): java.util.Map[String, AnyRef] = null
     override def toString: String = s"VirtualNodeHack[$id]"
+    override def getTransaction: Transaction = null
   }
 
   private object VirtualRelationshipHack {
@@ -323,5 +325,6 @@ object ExecutionGraphVisualizer {
     override def getPropertyKeys: java.lang.Iterable[String] = null
     override def getProperties(keys: String*): util.Map[String, AnyRef] = null
     override def toString: String = s"VirtualRelationshipHack[$id]"
+    override def getTransaction: Transaction = null
   }
 }

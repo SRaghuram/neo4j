@@ -7,6 +7,9 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.QueryStatisticsTestSupport
+import org.neo4j.graphdb.Label
+import org.neo4j.graphdb.NotInTransactionException
+import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
@@ -78,6 +81,88 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
     val result = executeWith(Configs.All, "MATCH (b) WHERE b = $param RETURN b", params = Map("param" -> node))
     result.toList should equal(List(Map("b" -> node)))
+  }
+
+  test("should be able to pass in parameter from same transaction") {
+    // given
+    val tx = graph.getGraphDatabaseService.beginTx()
+    val node = tx.createNode()
+
+    // when
+    val result = tx.execute("MATCH (b) WHERE b = $param RETURN b", java.util.Map.of("param", node)).next()
+
+    // then
+    result should equal(java.util.Map.of("b", node))
+
+    tx.close()
+  }
+
+  test("should be able to pass in parameter from another open transaction state if same database") {
+    // given
+    val tx1 = graph.getGraphDatabaseService.beginTx()
+    val tx2 = graph.getGraphDatabaseService.beginTx()
+    tx1.createNode()
+    val node2 = tx2.createNode()
+
+    // when node2 does not exist yet, since tx2 has not been commited
+    val result = tx1.execute("MATCH (b) WHERE b = $param RETURN b", java.util.Map.of("param", node2))
+
+    // then
+    result.hasNext shouldBe false
+
+    tx1.close()
+    tx2.close()
+  }
+
+  test("should be able to pass in parameter from another tx if same database, but cannot access node created in tx") {
+    // given
+    val tx1 = graph.getGraphDatabaseService.beginTx()
+
+    //create and commit node
+    val tx2 = graph.getGraphDatabaseService.beginTx()
+    tx2.createNode()
+    tx2.commit()
+
+    // new transaction
+    val tx3 = graph.getGraphDatabaseService.beginTx()
+    val node3 = tx3.getAllNodes().iterator().next()
+
+    // when
+    val result = tx1.execute("MATCH (b) WHERE b = $param RETURN b", java.util.Map.of("param", node3))
+
+    // then
+    result.hasNext shouldBe true
+
+    tx1.close()
+  }
+
+  test("should not be able to pass in parameter from another transaction state with same database if transaction is closed") {
+    // given
+    val tx1 = graph.getGraphDatabaseService.beginTx()
+    val tx2 = graph.getGraphDatabaseService.beginTx()
+    tx1.createNode()
+    val node2 = tx2.createNode()
+    tx2.commit()
+
+    // then
+    assertThrows[NotInTransactionException](tx1.execute("MATCH (b) WHERE b = $param RETURN labels(b)", java.util.Map.of("param", node2)).next())
+
+    tx1.close()
+  }
+
+  test("should not be able to pass in parameter from another transaction state with different database") {
+    // given
+    val tx1 = graph.getGraphDatabaseService.beginTx()
+    managementService.createDatabase("other")
+    val tx2 = managementService.database("other").beginTx()
+    tx1.createNode(Label.label("FOO"))
+    val node2 = tx2.createNode(Label.label("BOO"))
+
+    // then
+    assertThrows[QueryExecutionException](tx1.execute("MATCH (b) WHERE b = $param RETURN labels(b)", java.util.Map.of("param", node2)).next())
+
+    tx1.close()
+    tx2.close()
   }
 
   test("should be able to send in relationship via parameter") {

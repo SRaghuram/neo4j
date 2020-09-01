@@ -220,6 +220,53 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
       message = Seq("NotInTransactionException"))
   }
 
+  test("should find entities returned from another tx, if tx is open") {
+    registerTestProcedures()
+
+    val (n, _) = createNodeAndRelationship()
+
+    executeWith(Configs.ProcedureCallRead,
+      """WITH org.neo4j.findByIdInTx($nodeId) AS n
+        |RETURN n
+        |""".stripMargin,
+      params = Map("nodeId" -> n.getId)).toList shouldEqual(List(Map("n" -> n)))
+  }
+
+  test("should not be able to use entities returned from another closed tx") {
+    registerTestProcedures()
+    val tx1 = graphOps.beginTx()
+    val node = tx1.createNode().getId
+    tx1.commit()
+
+    TestProcedure.managementService = managementService
+    failWithError(Configs.ProcedureCallRead,
+      """WITH org.neo4j.findByIdInDatabase($nodeId, $dbOther) AS n
+        | RETURN n
+        |""".stripMargin,
+      params = Map("nodeId" -> node, "dbOther" -> graphOps.databaseName()),
+      errorType = Seq("QueryExecutionKernelException"))
+  }
+
+  test("should not be able to use entities returned from a different database") {
+    registerTestProcedures()
+    managementService.createDatabase("test123")
+    val dbOther = managementService.database("test123")
+    val tx1 = dbOther.beginTx()
+    val node = tx1.createNode().getId
+    tx1.commit()
+    val tx2 = dbOther.beginTx()
+
+    TestProcedure.managementService = managementService
+    failWithError(Configs.ProcedureCallRead,
+      """WITH org.neo4j.findByIdInDatabase($nodeId, $dbOther) AS n
+        | RETURN n
+        |""".stripMargin,
+      params = Map("nodeId" -> node, "dbOther" -> "test123"),
+      errorType = Seq("QueryExecutionKernelException"))
+
+    tx2.close()
+  }
+
   private def registerTestProcedures(): Unit = {
     val procedures = graph.getDependencyResolver.resolveDependency(classOf[GlobalProcedures])
     procedures.registerProcedure(classOf[TestProcedure])
