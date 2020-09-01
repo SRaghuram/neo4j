@@ -118,24 +118,6 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 2.3, 4.5))))
   }
 
-  test("point function should work with map represented as node") {
-    createNode(Map("latitude" -> 12.78, "longitude" -> 56.7))
-
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) RETURN point(n) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
-
-    result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 56.7, 12.78))))
-  }
-
-  test("point function should work with map represented as relationship") {
-    executeSingle("CREATE ()-[:REL {x:1, y:2, z:3, crs: 'cartesian-3D'}]->()")
-
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH ()-[r:REL]->() RETURN point(r) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
-
-    result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian_3D, 1, 2, 3))))
-  }
-
   test("point function should work with node with only valid properties") {
     val result = executeWith(Configs.InterpretedAndSlotted, "CREATE (n {latitude: 12.78, longitude: 56.7}) RETURN point(n) as point",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
@@ -144,10 +126,40 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
   }
 
   test("point function should work with node with some invalid properties") {
-    val result = executeWith(Configs.InterpretedAndSlotted, "CREATE (n {latitude: 12.78, longitude: 56.7, banana: 'yes', some: 1.2, andAlso: [1,2]}) RETURN point(n) as point",
+    val result = executeWith(Configs.InterpretedAndSlotted,
+      "CREATE (n {latitude: 12.78, longitude: 56.7, banana: 'yes', some: 1.2, andAlso: [1,2]}) RETURN point(n) as point",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 56.7, 12.78))))
+  }
+
+  test("point function should fail gracefully with node with missing properties") {
+   failWithError(Configs.InterpretedAndSlotted, "CREATE (n {latitude: 12.78, y: 2}) RETURN point(n) as point",
+     List("A point must contain either 'x' and 'y' or 'latitude' and 'longitude'"))
+  }
+
+  test("point function should work with relationship with only valid properties") {
+    executeSingle("CREATE ()-[:REL {x: 1, y: 2, z: 3, crs: 'cartesian-3D'}]->()")
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH ()-[r:REL]->() RETURN point(r) as point",
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
+
+    result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian_3D, 1, 2, 3))))
+  }
+
+  test("point function should work with relationship with some invalid properties") {
+    executeSingle("CREATE ()-[:REL {x: 1, a: 2, y: 3, z: 4, prop: 'junk', crs: 'cartesian-3D'}]->()")
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH ()-[r:REL]->() RETURN point(r) as point",
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
+
+    result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian_3D, 1, 3, 4))))
+  }
+
+  test("point function should fail gracefully with relationship with missing properties") {
+    executeSingle("CREATE ()-[:REL {x: 1, a: 2, z: 3, crs: 'cartesian-3D'}]->()")
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, "MATCH ()-[r:REL]->() RETURN point(r) as point",
+      List("A cartesian-3d point must contain 'x', 'y' and 'z'"))
   }
 
   test("point function should not work with NaN or infinity") {
