@@ -24,20 +24,14 @@ class StubLeaderService implements LeaderService
         this.dbToLeaderMap = dbToLeaderMap;
     }
 
-    @Override
-    public Optional<MemberId> getLeaderServer( NamedDatabaseId namedDatabaseId )
+    public Optional<MemberId> getLeaderId( NamedDatabaseId namedDatabaseId )
     {
-        return getLeaderId( namedDatabaseId ).map( RaftMemberId::serverId );
+        return Optional.ofNullable( dbToLeaderMap.get( namedDatabaseId ) ).map( RaftMemberId::serverId );
     }
 
     @Override
     public Optional<SocketAddress> getLeaderBoltAddress( NamedDatabaseId namedDatabaseId )
     {
-        return getLeaderId( namedDatabaseId ).map( leader -> new SocketAddress( namedDatabaseId.name(), 7687 ) );
-    }
-
-    private Optional<RaftMemberId> getLeaderId( NamedDatabaseId namedDatabaseId )
-    {
-        return Optional.ofNullable( dbToLeaderMap.get( namedDatabaseId ) );
+        return Optional.ofNullable( dbToLeaderMap.get( namedDatabaseId ) ).map( leader -> new SocketAddress( namedDatabaseId.name(), 7687 ) );
     }
 }

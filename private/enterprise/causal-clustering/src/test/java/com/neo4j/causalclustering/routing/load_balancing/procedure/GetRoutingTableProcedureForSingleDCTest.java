@@ -672,10 +672,9 @@ class GetRoutingTableProcedureForSingleDCTest
             this.coreTopologyService = coreTopologyService;
         }
 
-        @Override
-        public Optional<MemberId> getLeaderServer( NamedDatabaseId namedDatabaseId )
+        public Optional<MemberId> getLeaderId( NamedDatabaseId namedDatabaseId )
         {
-            return getLeaderId( namedDatabaseId ).map( RaftMemberId::serverId );
+            return Optional.ofNullable( leaders.get( namedDatabaseId ) ).map( RaftMemberId::serverId );
         }
 
         @Override
@@ -688,11 +687,6 @@ class GetRoutingTableProcedureForSingleDCTest
                         .map( coreInfo -> coreInfo.connectors().clientBoltAddress() );
             }
             return Optional.empty();
-        }
-
-        private Optional<RaftMemberId> getLeaderId( NamedDatabaseId namedDatabaseId )
-        {
-            return Optional.ofNullable( leaders.get( namedDatabaseId ) );
         }
 
         void setLeader( RaftMemberId leader )

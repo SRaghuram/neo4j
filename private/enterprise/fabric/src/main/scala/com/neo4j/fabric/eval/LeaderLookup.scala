@@ -35,7 +35,7 @@ object LeaderLookup {
       topologyService.memberId()
 
     def leaderId(databaseId: NamedDatabaseId): Option[MemberId] =
-      leaderService.getLeaderServer(databaseId).asScala
+      leaderService.getLeaderId(databaseId).asScala
 
     def leaderBoltAddress(databaseId: NamedDatabaseId): Option[SocketAddress] =
       LeaderLookup.leaderBoltAddress(topologyService, leaderId(databaseId), databaseId)

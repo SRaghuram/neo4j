@@ -84,7 +84,7 @@ public class RandomEvenStrategy implements SelectionStrategy
     {
         var databaseIds = databasesSupplier.get();
         Map<ServerId,Long> leadershipCounts = databaseIds.stream()
-                   .flatMap( dbId -> leaderService.getLeaderServer( dbId ).stream() )
+                   .flatMap( dbId -> leaderService.getLeaderId( dbId ).stream() )
                    .collect( Collectors.groupingBy( Function.<ServerId>identity(), Collectors.counting() ) );
 
         allServers.forEach( serverId -> leadershipCounts.putIfAbsent( serverId, 0L ) );

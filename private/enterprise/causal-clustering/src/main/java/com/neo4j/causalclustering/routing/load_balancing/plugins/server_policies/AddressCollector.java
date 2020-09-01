@@ -56,7 +56,7 @@ public class AddressCollector
     {
         var coreTopology = topologyService.coreTopologyForDatabase( namedDatabaseId );
         var rrTopology = topologyService.readReplicaTopologyForDatabase( namedDatabaseId );
-        var optionalLeaderId = leaderService.getLeaderServer( namedDatabaseId );
+        var optionalLeaderId = leaderService.getLeaderId( namedDatabaseId );
 
         var timeToLive = config.get( GraphDatabaseSettings.routing_ttl ).toMillis();
         var shouldShuffle = config.get( CausalClusteringSettings.load_balancing_shuffle );

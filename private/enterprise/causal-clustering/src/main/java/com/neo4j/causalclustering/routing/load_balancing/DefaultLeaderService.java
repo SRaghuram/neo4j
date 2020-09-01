@@ -41,7 +41,7 @@ public class DefaultLeaderService implements LeaderService, GlobalLeaderListener
     }
 
     @Override
-    public Optional<MemberId> getLeaderServer( NamedDatabaseId namedDatabaseId )
+    public Optional<MemberId> getLeaderId( NamedDatabaseId namedDatabaseId )
     {
         return currentLeaderAccordingToRaft( namedDatabaseId ).or( () -> leaderFromTopology( namedDatabaseId ) )
                 .map( RaftMemberId::serverId );
@@ -71,7 +71,7 @@ public class DefaultLeaderService implements LeaderService, GlobalLeaderListener
     @Override
     public Optional<SocketAddress> getLeaderBoltAddress( NamedDatabaseId namedDatabaseId )
     {
-        var leaderBoltAddress = getLeaderServer( namedDatabaseId ).flatMap( this::resolveBoltAddress );
+        var leaderBoltAddress = getLeaderId( namedDatabaseId ).flatMap( this::resolveBoltAddress );
         log.debug( "Leader for database %s has Bolt address %s", namedDatabaseId, leaderBoltAddress );
         return leaderBoltAddress;
     }
