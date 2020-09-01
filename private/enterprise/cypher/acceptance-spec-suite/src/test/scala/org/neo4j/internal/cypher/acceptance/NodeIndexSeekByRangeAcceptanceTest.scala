@@ -1358,14 +1358,16 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
   private def createTestModelBigEnoughToConsiderPickingIndexSeek: Int = {
     val size = 400
 
-    graph.createIndex("Label", "prop")
-
     (1 to size).foreach { i =>
       // Half of unlabeled nodes has prop = 0 (for even i:s prop = 0, for odd i:s prop = i)
       val a = createNode(Map("prop" -> (i & 1) * i))
       val b = createLabeledNode(Map("prop" -> i), "Label")
       relate(a, b)
     }
+
+    // Create index _after_ nodes, so that when it comes online it is fully populated.
+    graph.createIndex("Label", "prop")
+
     size
   }
 }
