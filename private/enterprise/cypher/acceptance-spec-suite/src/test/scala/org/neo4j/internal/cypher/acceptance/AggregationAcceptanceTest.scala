@@ -421,7 +421,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     ))
   }
 
-  test("should handle WITH * followed by aggregation and order by") {
+  test("should handle WITH * followed by aggregation and order by I") {
     val query = "UNWIND [1, 2, 2, 3, 3, 3, 4, 4, 4, 4] AS n WITH *, count(n) AS c ORDER BY c RETURN n, c"
     val result = executeWith(Configs.All, query)
     result.toList should be(List(
@@ -429,6 +429,28 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
       Map("n" -> 2, "c" -> 2),
       Map("n" -> 3, "c" -> 3),
       Map("n" -> 4, "c" -> 4)
+    ))
+  }
+
+  test("should handle WITH * followed by aggregation and order by II") {
+    val query = "UNWIND [1, 2, 2, 3, 3, 3, 4, 4, 4, 4] AS n WITH *, count(n) AS c ORDER BY c RETURN n, c"
+    val result = executeWith(Configs.All, query)
+    result.toList should be(List(
+      Map("n" -> 1, "c" -> 1),
+      Map("n" -> 2, "c" -> 2),
+      Map("n" -> 3, "c" -> 3),
+      Map("n" -> 4, "c" -> 4)
+    ))
+  }
+
+  test("should handle WITH * followed by aggregation and order by III") {
+    val query = "UNWIND [1, 2, 2, 3, 3, 3, 4, 4, 4, 4] AS n WITH *, count(n) AS c ORDER BY c RETURN c"
+    val result = executeSingle(s"CYPHER 3.5 $query")
+    result.toList should be(List(
+      Map("c" -> 1),
+      Map("c" -> 2),
+      Map("c" -> 3),
+      Map("c" -> 4)
     ))
   }
 }
