@@ -193,6 +193,10 @@
                                 </transformer>
                                 <transformer
                                         implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                <!-- workaround for https://issues.apache.org/jira/browse/LOG4J2-673 -->
+                                <transformer
+                                        implementation="com.github.edwgiz.maven_shade_plugin.log4j2_cache_transformer.PluginsCacheFileTransformer">
+                                </transformer>
                             </transformers>
                             <filters>
                                 <filter>
@@ -205,6 +209,13 @@
                                 </filter>
                             </filters>
                         </configuration>
+                        <dependencies>
+                            <dependency>
+                                <groupId>com.github.edwgiz</groupId>
+                                <artifactId>maven-shade-plugin.log4j2-cachefile-transformer</artifactId>
+                                <version>${log4j.version}</version>
+                            </dependency>
+                        </dependencies>
                     </plugin>
                     <!-- assembly benchmarks into single directory -->
                     <plugin>
