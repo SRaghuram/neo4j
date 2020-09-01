@@ -56,10 +56,10 @@ object MemoryMeasurementTestBase {
   val DEFAULT_FRACTION_TOLERANCE: Double = 0.15
 
   // Enables printing debug info like heap dump file paths etc.
-  val DEBUG_PRINT = true
+  val DEBUG_PRINT = false
 
   // Enables printing a csv summary in afterAll
-  val SUMMARY_PRINT = true
+  val SUMMARY_PRINT = false
 
   // Delete heap dump files when done with them
   val DELETE_HEAP_DUMPS = true
