@@ -40,7 +40,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    void shouldTerminateLongRunningProcedureThatChecksTheGuardRegularlyOnTimeout( TestInfo testInfo ) throws Throwable
+    void shouldAllowExecuteWithWildcardConfig( TestInfo testInfo ) throws Throwable
     {
         configuredSetup( Map.of( GraphDatabaseSettings.procedure_roles, "test.*:tester" ), testInfo );
 
@@ -50,7 +50,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    void shouldSetAllMatchingWildcardRoleConfigs( TestInfo testInfo ) throws Throwable
+    void shouldAllowExecuteAllMatchingWildcardConfigs( TestInfo testInfo ) throws Throwable
     {
         configuredSetup( Map.of( GraphDatabaseSettings.procedure_roles, "test.*:tester;test.create*:other" ), testInfo );
 
@@ -64,7 +64,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    void shouldSetAllMatchingWildcardRoleConfigsWithDefaultForUDFs( TestInfo testInfo ) throws Throwable
+    void shouldAllowExecuteAllMatchingWildcardRoleConfigsWithDefaultForUDFs( TestInfo testInfo ) throws Throwable
     {
         configuredSetup( Map.of( GraphDatabaseSettings.procedure_roles, "test.*:tester;test.create*:other",
                 GraphDatabaseSettings.default_allowed, "default" ), testInfo );

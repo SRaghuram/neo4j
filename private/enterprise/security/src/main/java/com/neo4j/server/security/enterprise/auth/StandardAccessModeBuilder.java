@@ -561,7 +561,7 @@ class StandardAccessModeBuilder
             else
             {
                 var procQualifier = (ProcedureSegment) qualifier;
-                for ( int procId : resolver.getProcedureIds( procQualifier.getProcedures() ) )
+                for ( int procId : resolver.getProcedureIds( procQualifier.getProcedure() ) )
                 {
                     procedures.get( privilegeType ).add( procId );
                 }

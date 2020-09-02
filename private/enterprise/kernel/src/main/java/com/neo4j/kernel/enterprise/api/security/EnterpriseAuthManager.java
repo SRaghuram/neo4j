@@ -5,6 +5,8 @@
  */
 package com.neo4j.kernel.enterprise.api.security;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import org.neo4j.internal.kernel.api.security.SecurityContext;
@@ -18,6 +20,8 @@ public abstract class EnterpriseAuthManager extends AuthManager
 
     @Override
     public abstract EnterpriseLoginContext login( Map<String,Object> authToken ) throws InvalidAuthTokenException;
+
+    public abstract List<Map<String,String>> getTemporaryPrivileges();
 
     /**
      * Implementation that does no authentication.
@@ -39,6 +43,12 @@ public abstract class EnterpriseAuthManager extends AuthManager
         @Override
         public void log( String message, SecurityContext securityContext )
         {
+        }
+
+        @Override
+        public List<Map<String,String>> getTemporaryPrivileges()
+        {
+            return Collections.emptyList();
         }
     };
 }

@@ -5,15 +5,34 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
+import java.lang.Boolean.TRUE
+
+import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
+import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
+
+import scala.collection.mutable
 
 class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
-  override protected def onNewGraphDatabase(): Unit = clearPublicRole()
+  override protected def onNewGraphDatabase(): Unit = {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute(s"REVOKE ACCESS ON DEFAULT DATABASE FROM ${PredefinedRoles.PUBLIC}")
+    execute(s"REVOKE EXECUTE PROCEDURES * ON DBMS FROM ${PredefinedRoles.PUBLIC}")
+    execute("SHOW ROLE PUBLIC PRIVILEGES").toList should be(List(granted(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("PUBLIC").map))
+  }
+
+  //noinspection ScalaDeprecation
+  override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(
+    GraphDatabaseSettings.auth_enabled -> TRUE,
+    GraphDatabaseSettings.procedure_roles -> "db.labels:procRole,default;db.property*:procRole;dbms.security.listUsers:PUBLIC",
+    GraphDatabaseSettings.default_allowed -> "default"
+  )
 
   // Privilege tests
+
   test("should grant execute procedure privileges") {
     // GIVEN
     execute("CREATE ROLE custom")
@@ -105,20 +124,164 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
   }
 
-  // Enforcement tests
+  test("should show execute boosted privileges for roles from config settings") {
+    // GIVEN
+    execute("CREATE ROLE procRole")
+    execute("CREATE ROLE default")
 
-  def setupUserAndGraph( username: String = "joe", password: String = "soap" ): Unit = {
-    super.setupUserWithCustomRole( username, password )
-
-    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
-    execute(
-      """
-        |CREATE (:A)
-        |CREATE (:B)
-        |""".stripMargin)
-
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    // THEN
+    execute("SHOW ROLE procRole, default PRIVILEGES").toSet should be(Set(
+      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").map,
+      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("default").map,
+      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").map,
+      granted(adminAction("execute_boosted_temp")).procedure("*").role("default").map,
+      denied(adminAction("execute_boosted_temp")).procedure("db.property*").role("default").map,
+      denied(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("default").map
+    ))
   }
+
+  test("should show execute boosted privileges for user from config settings") {
+    // GIVEN
+    setupUserWithCustomRole(rolename = "procRole")
+
+    // THEN
+    execute("SHOW USER joe PRIVILEGES").toSet should be(Set(
+      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").user("joe").map,
+      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").user("joe").map,
+      granted(access).role("procRole").user("joe").map,
+
+      granted(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("PUBLIC").user("joe").map
+    ))
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT EXECUTE PROCEDURE dbms.* ON DBMS TO procRole")
+    execute("DENY EXECUTE BOOSTED PROCEDURE apoc.* ON DBMS TO procRole")
+
+    // THEN
+    execute("SHOW USER joe PRIVILEGES").toSet should be(Set(
+      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").user("joe").map,
+      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").user("joe").map,
+      granted(access).role("procRole").user("joe").map,
+      granted(executeProcedure).procedure("dbms.*").role("procRole").user("joe").map,
+      denied(executeBoosted).procedure("apoc.*").role("procRole").user("joe").map,
+
+      granted(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("PUBLIC").user("joe").map
+    ))
+  }
+
+  test("should show execute boosted privileges for multiple users from config settings") {
+    // GIVEN
+    setupUserWithCustomRole(rolename = "procRole")
+    setupUserWithCustomRole("alice", rolename = "default", access = false)
+    setupUserWithCustomRole("bob")
+
+    execute("CREATE USER charlie SET PASSWORD 'abc123'")
+    execute("GRANT ROLE procRole, default TO charlie")
+
+    // THEN
+    execute("SHOW USER joe, $user, bob, charlie PRIVILEGES", Map("user" -> "alice")).toSet should be(Set(
+      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").user("joe").map,
+      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").user("joe").map,
+      granted(access).role("procRole").user("joe").map,
+      granted(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("PUBLIC").user("joe").map,
+
+      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("default").user("alice").map,
+      granted(adminAction("execute_boosted_temp")).procedure("*").role("default").user("alice").map,
+      denied(adminAction("execute_boosted_temp")).procedure("db.property*").role("default").user("alice").map,
+      denied(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("default").user("alice").map,
+      granted(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("PUBLIC").user("alice").map,
+
+      granted(access).role("custom").user("bob").map,
+      granted(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("PUBLIC").user("bob").map,
+
+      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").user("charlie").map,
+      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").user("charlie").map,
+      granted(access).role("procRole").user("charlie").map,
+      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("default").user("charlie").map,
+      granted(adminAction("execute_boosted_temp")).procedure("*").role("default").user("charlie").map,
+      denied(adminAction("execute_boosted_temp")).procedure("db.property*").role("default").user("charlie").map,
+      denied(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("default").user("charlie").map,
+      granted(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("PUBLIC").user("charlie").map
+    ))
+  }
+
+  test("should show execute boosted privileges for current user from config settings") {
+    // GIVEN
+    setupUserWithCustomRole(rolename = "procRole")
+
+    val expected = Set(
+      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").user("joe").map,
+      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").user("joe").map,
+      granted(access).role("procRole").user("joe").map,
+      granted(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("PUBLIC").user("joe").map
+    )
+
+    val result = new mutable.HashSet[Map[String, AnyRef]]
+    executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES", resultHandler = (row, _) => {
+      result.add(asPrivilegesResult(row))
+    })
+    result should be(expected)
+  }
+
+  test("should show all privileges including from config settings") {
+    // GIVEN
+    setupUserWithCustomRole(rolename = "procRole")
+    setupUserWithCustomRole("alice", rolename = "default", access = false)
+
+    // THEN
+    execute("SHOW ALL PRIVILEGES WHERE role IN ['procRole', 'default', 'custom']").toSet should be(Set(
+      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").map,
+      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").map,
+      granted(access).role("procRole").map,
+
+      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("default").map,
+      granted(adminAction("execute_boosted_temp")).procedure("*").role("default").map,
+      denied(adminAction("execute_boosted_temp")).procedure("db.property*").role("default").map,
+      denied(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("default").map
+    ))
+
+    // WHEN restore PUBLIC role
+    execute("GRANT EXECUTE PROCEDURE * ON DBMS TO PUBLIC")
+    execute("GRANT ACCESS ON DEFAULT DATABASE TO PUBLIC")
+
+    // THEN
+    execute("SHOW ALL PRIVILEGES").toSet should be(defaultRolePrivileges ++ Set(
+      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").map,
+      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").map,
+      granted(access).role("procRole").map,
+
+      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("default").map,
+      granted(adminAction("execute_boosted_temp")).procedure("*").role("default").map,
+      denied(adminAction("execute_boosted_temp")).procedure("db.property*").role("default").map,
+      denied(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("default").map,
+
+      granted(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("PUBLIC").map
+    ))
+  }
+
+  test("should filter privileges from config settings") {
+    // GIVEN
+    setupUserWithCustomRole(rolename = "procRole")
+    setupUserWithCustomRole("alice", rolename = "default", access = false)
+    setupUserWithCustomRole("bob")
+
+    // THEN
+    execute("SHOW ALL PRIVILEGES YIELD segment, action, role, access WHERE role IN ['procRole', 'default', 'custom']").toSet should be(Set(
+      Map("segment" -> "PROCEDURE(db.labels)", "action" -> "execute_boosted_temp", "role" -> "procRole", "access" -> "GRANTED"),
+      Map("segment" -> "PROCEDURE(db.property*)", "action" -> "execute_boosted_temp", "role" -> "procRole", "access" -> "GRANTED"),
+      Map("segment" -> "database", "action" -> "access", "role" -> "procRole", "access" -> "GRANTED"),
+
+      Map("segment" -> "PROCEDURE(db.labels)", "action" -> "execute_boosted_temp", "role" -> "default", "access" -> "GRANTED"),
+      Map("segment" -> "PROCEDURE(*)", "action" -> "execute_boosted_temp", "role" -> "default", "access" -> "GRANTED"),
+      Map("segment" -> "PROCEDURE(db.property*)", "action" -> "execute_boosted_temp", "role" -> "default", "access" -> "DENIED"),
+      Map("segment" -> "PROCEDURE(dbms.security.listUsers)", "action" -> "execute_boosted_temp", "role" -> "default", "access" -> "DENIED"),
+
+      Map("segment" -> "database", "action" -> "access", "role" -> "custom", "access" -> "GRANTED")
+    ))
+  }
+
+  // Enforcement tests
 
   // EXECUTE PROCEDURE
 
@@ -427,7 +590,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 
-  // EXECUTE @Admin procedures
+  // Executing @Admin procedures
 
   test("should execute admin procedure with ALL ON DBMS") {
     // GIVEN
@@ -476,5 +639,143 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     (the[AuthorizationViolationException] thrownBy {
       executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
     }).getMessage should include(FAIL_EXECUTE_PROC)
+  }
+
+  // EXECUTE BOOSTED PROCEDURE from config settings
+
+  test("executing procedure with boosted privileges from procedure_roles config") {
+    // GIVEN
+    setupUserAndGraph(rolename = "procRole")
+
+    // THEN
+    val expected = Seq("A", "B")
+
+    executeOnDefault("joe", "soap", "CALL db.labels() YIELD label RETURN label ORDER BY label ASC", resultHandler = (row, idx) => {
+      row.get("label") should equal(expected(idx))
+    }) should be(2)
+  }
+
+  test("should not be boosted when not matching procedure_roles config") {
+    // GIVEN
+    setupUserAndGraph(rolename = "procRole")
+
+    // THEN
+    withClue("Without EXECUTE privilege") {
+      (the[AuthorizationViolationException] thrownBy {
+        executeOnDefault("joe", "soap", "CALL db.relationshipTypes()")
+      }).getMessage should include(FAIL_EXECUTE_PROC)
+    }
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT EXECUTE PROCEDURE * ON DBMS TO procRole")
+
+    // THEN
+    withClue("With EXECUTE privilege") {
+      executeOnDefault("joe", "soap", "CALL db.relationshipTypes()") should be(0)
+    }
+  }
+
+  test("executing procedure with boosted privileges from procedure_roles and default_allowed config") {
+    // GIVEN
+    setupUserAndGraph(rolename = "default")
+
+    // THEN
+    val expected = Seq("A", "B")
+
+    executeOnDefault("joe", "soap", "CALL db.labels() YIELD label RETURN label ORDER BY label ASC", resultHandler = (row, idx) => {
+      row.get("label") should equal(expected(idx))
+    }) should be(2)
+  }
+
+  test("executing procedure with boosted privileges from default_allowed config") {
+    // GIVEN
+    setupUserAndGraph(rolename = "default")
+
+    // THEN
+    executeOnDefault("joe", "soap", "CALL db.relationshipTypes()", resultHandler = (row, _) => {
+      row.get("relationshipType") should equal("REL")
+    }) should be(1)
+  }
+
+  test("should not be boosted for default_allowed when procedure matching procedure_roles config") {
+    // GIVEN
+    setupUserAndGraph(rolename = "default")
+
+    // THEN
+    withClue("Without EXECUTE privilege") {
+      (the[AuthorizationViolationException] thrownBy {
+        executeOnDefault("joe", "soap", "CALL db.propertyKeys()")
+      }).getMessage should include(FAIL_EXECUTE_PROC)
+    }
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT EXECUTE PROCEDURE * ON DBMS TO default")
+
+    // THEN
+    withClue("With EXECUTE privilege") {
+      executeOnDefault("joe", "soap", "CALL db.propertyKeys()") should be(0)
+    }
+  }
+
+  test("should respect combined privileges from config and system graph") {
+    // GIVEN
+    setupUserAndGraph(rolename = "procRole")
+    execute("DENY EXECUTE PROCEDURE * ON DBMS TO procRole")
+
+    // THEN
+    withClue("With DENY EXECUTE privilege") {
+      (the[AuthorizationViolationException] thrownBy {
+        executeOnDefault("joe", "soap", "CALL db.propertyKeys()")
+      }).getMessage should include(FAIL_EXECUTE_PROC)
+    }
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("REVOKE DENY EXECUTE PROCEDURE * ON DBMS FROM procRole")
+    execute("DENY EXECUTE BOOSTED PROCEDURE * ON DBMS TO procRole")
+
+    // THEN
+    withClue("With DENY EXECUTE BOOSTED privilege") {
+      (the[AuthorizationViolationException] thrownBy {
+        executeOnDefault("joe", "soap", "CALL db.propertyKeys()")
+      }).getMessage should include(FAIL_EXECUTE_PROC)
+    }
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT EXECUTE PROCEDURE * ON DBMS TO procRole")
+
+    // THEN
+    withClue("With GRANT EXECUTE and DENY EXECUTE BOOSTED privilege") {
+      executeOnDefault("joe", "soap", "CALL db.propertyKeys()") should be(0)
+    }
+  }
+
+  test("should get privilege for PUBLIC from config") {
+    // GIVEN
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+
+    val expected = Seq("joe", "neo4j")
+
+    // WHEN
+    executeOnSystem("joe", "soap", "CALL dbms.security.listUsers() YIELD username RETURN username ORDER BY username", resultHandler = (row, idx) => {
+      row.get("username") should be(expected(idx))
+    }) should be(2)
+  }
+
+  // Helper methods
+
+  def setupUserAndGraph( username: String = "joe", password: String = "soap", rolename: String = "custom" ): Unit = {
+    super.setupUserWithCustomRole( username, password, rolename )
+
+    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+    execute(
+      """
+        |CREATE (:A)-[:REL]->(:B {a: 1})
+        |""".stripMargin)
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
   }
 }

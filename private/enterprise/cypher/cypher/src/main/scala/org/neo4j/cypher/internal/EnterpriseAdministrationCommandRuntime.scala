@@ -131,7 +131,9 @@ import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.MapValue
 import org.neo4j.values.virtual.VirtualValues
 
+import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.collection.JavaConverters.asScalaSetConverter
+import scala.collection.JavaConverters.mapAsScalaMapConverter
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -140,6 +142,7 @@ import scala.util.Try
  * This runtime takes on queries that work on the system database, such as multidatabase and security administration commands.
  * The planning requirements for these are much simpler than normal Cypher commands, and as such the runtime stack is also different.
  */
+//noinspection DuplicatedCode
 case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: ExecutionEngine, resolver: DependencyResolver) extends AdministrationCommandRuntime {
   private val communityCommandRuntime: CommunityAdministrationCommandRuntime = CommunityAdministrationCommandRuntime(normalExecutionEngine, resolver, logicalToExecutable)
   private val config: Config = resolver.resolveDependency(classOf[Config])
@@ -477,9 +480,13 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
            |coalesce(d.name, '*') AS graph, segment, r.name AS role
         """.stripMargin
 
+      val temporaryPrivileges = VirtualValues.list(authManager.getTemporaryPrivileges.asScala.map(m => VirtualValues.map(m.asScala.keys.toArray, m.asScala.values.map(Values.of).toArray)): _*)
+      val temporaryPrivilegesKey = internalKey("temporaryPrivileges")
+
       val filtering = AdministrationShowCommandUtils.generateWhereClause(where)
       val returnClause = AdministrationShowCommandUtils.generateReturnClause(symbols, yields, returns, Seq("user", "role", "graph", "segment", "resource", "action", "access"))
 
+      //noinspection ScalaUnnecessaryParentheses
       val (nameKeys: List[String], grantees: List[Value], converter: ((Transaction, MapValue) => MapValue), query) = scope match {
         case ShowRolesPrivileges(names) =>
           val nameFields = names.zipWithIndex.map { case (name, index) => getNameFields(s"role$index", name) }
@@ -499,6 +506,12 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
                |$privilegeMatch
                |WITH g, p, res, d, $segmentColumn AS segment, r
                |$projection
+               |$filtering
+               |$returnClause
+               |UNION
+               |UNWIND $$$temporaryPrivilegesKey AS temporary
+               |WITH temporary.role AS role, temporary.graph AS graph, temporary.segment AS segment, temporary.resource AS resource, temporary.action AS action, temporary.access AS access
+               |WHERE role IN [$$`${nameKeys.mkString("`, $`")}`]
                |$filtering
                |$returnClause
           """.stripMargin
@@ -528,10 +541,16 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           }
           (List(userNameFields.nameKey), List(userNameFields.nameValue), rolesMapper,
             s"""
-               |OPTIONAL MATCH (r:Role) WHERE r.name in $$`$rolesKey` WITH r
+               |OPTIONAL MATCH (r:Role) WHERE r.name IN $$`$rolesKey` WITH r
                |$privilegeMatch
                |WITH g, p, res, d, $segmentColumn AS segment, r ORDER BY d.name, r.name, segment
                |$projection, $$`${userNameFields.nameKey}` AS user
+               |$filtering
+               |$returnClause
+               |UNION
+               |UNWIND $$$temporaryPrivilegesKey AS temporary
+               |WITH temporary.role AS role, temporary.graph AS graph, temporary.segment AS segment, temporary.resource AS resource, temporary.action AS action, temporary.access AS access, $$`${userNameFields.nameKey}` AS user
+               |WHERE role IN $$`$rolesKey`
                |$filtering
                |$returnClause
           """.stripMargin
@@ -585,11 +604,20 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           }
           (nameKeys, nameFields.map(_.nameValue), converter,
             s"""
-               |OPTIONAL MATCH (r:Role) WHERE r.name in $$`$rolesKey` WITH r
+               |OPTIONAL MATCH (r:Role) WHERE r.name IN $$`$rolesKey` WITH r
                |MATCH (u:User) WHERE u.name IN [$$`${nameKeys.mkString("`, $`")}`] AND (r.name = 'PUBLIC' OR (u)-[:HAS_ROLE]->(r)) WITH r, u
                |$privilegeMatch
                |WITH g, p, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, r.name, u.name, segment
                |$projection, u.name AS user
+               |$filtering
+               |$returnClause
+               |UNION
+               |OPTIONAL MATCH (r:Role) WHERE r.name IN $$`$rolesKey` WITH r
+               |MATCH (u:User) WHERE u.name IN [$$`${nameKeys.mkString("`, $`")}`] AND (r.name = 'PUBLIC' OR (u)-[:HAS_ROLE]->(r)) WITH r, u
+               |UNWIND $$$temporaryPrivilegesKey AS temporary
+               |WITH r, u, temporary
+               |WHERE temporary.role = r.name
+               |WITH temporary.role AS role, temporary.graph AS graph, temporary.segment AS segment, temporary.resource AS resource, temporary.action AS action, temporary.access AS access, u.name as user
                |$filtering
                |$returnClause
           """.stripMargin
@@ -597,10 +625,16 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         case ShowUserPrivileges(None) =>
           (List("grantee"), List(Values.NO_VALUE), IdentityConverter, // will generate correct parameter name later and don't want to risk clash
             s"""
-               |OPTIONAL MATCH (r:Role) WHERE r.name in $$`$currentUserRolesKey` WITH r
+               |OPTIONAL MATCH (r:Role) WHERE r.name IN $$`$currentUserRolesKey` WITH r
                |$privilegeMatch
                |WITH g, p, res, d, $segmentColumn AS segment, r ORDER BY d.name, r.name, segment
                |$projection, $$`$currentUserKey` AS user
+               |$filtering
+               |$returnClause
+               |UNION
+               |UNWIND $$$temporaryPrivilegesKey AS temporary
+               |WITH temporary.role AS role, temporary.graph AS graph, temporary.segment AS segment, temporary.resource AS resource, temporary.action AS action, temporary.access AS access, $$`$currentUserKey` AS user
+               |WHERE role IN $$`$currentUserRolesKey`
                |$filtering
                |$returnClause
           """.stripMargin
@@ -613,11 +647,16 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
              |$projection
              |$filtering
              |$returnClause
+             |UNION
+             |UNWIND $$$temporaryPrivilegesKey AS temporary
+             |WITH temporary.role AS role, temporary.graph AS graph, temporary.segment AS segment, temporary.resource AS resource, temporary.action AS action, temporary.access AS access
+             |$filtering
+             |$returnClause
           """.stripMargin
         )
         case _ => throw new IllegalStateException(s"Invalid show privilege scope '$scope'")
       }
-      SystemCommandExecutionPlan("ShowPrivileges", normalExecutionEngine, query, VirtualValues.map(nameKeys.toArray, grantees.toArray),
+      SystemCommandExecutionPlan("ShowPrivileges", normalExecutionEngine, query, VirtualValues.map(nameKeys.toArray :+ temporaryPrivilegesKey, grantees.toArray :+ temporaryPrivileges),
         source = source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping)),
         parameterGenerator = (_, securityContext) => VirtualValues.map(
           Array(currentUserKey, currentUserRolesKey),

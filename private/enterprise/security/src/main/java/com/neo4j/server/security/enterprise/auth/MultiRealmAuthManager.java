@@ -324,4 +324,10 @@ public class MultiRealmAuthManager extends EnterpriseAuthManager
     {
         return privilegeResolver.getPrivileges( roles, username );
     }
+
+    @Override
+    public List<Map<String,String>> getTemporaryPrivileges()
+    {
+        return privilegeResolver.getTemporaryPrivileges();
+    }
 }

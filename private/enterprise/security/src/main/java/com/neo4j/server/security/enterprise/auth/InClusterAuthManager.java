@@ -122,4 +122,10 @@ public class InClusterAuthManager extends EnterpriseAuthManager
 
         return result;
     }
+
+    @Override
+    public List<Map<String,String>> getTemporaryPrivileges()
+    {
+        return privilegeResolver.getTemporaryPrivileges();
+    }
 }

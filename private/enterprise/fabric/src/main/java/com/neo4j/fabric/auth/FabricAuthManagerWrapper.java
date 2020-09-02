@@ -10,6 +10,7 @@ import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.neo4j.internal.kernel.api.security.AuthSubject;
@@ -81,4 +82,9 @@ public class FabricAuthManagerWrapper extends EnterpriseAuthManager
         wrappedAuthManager.log( message, securityContext );
     }
 
+    @Override
+    public List<Map<String,String>> getTemporaryPrivileges()
+    {
+        return wrappedAuthManager.getTemporaryPrivileges();
+    }
 }
