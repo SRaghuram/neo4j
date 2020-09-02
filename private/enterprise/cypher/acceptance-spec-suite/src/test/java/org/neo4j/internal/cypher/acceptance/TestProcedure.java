@@ -12,10 +12,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphalgo.BasicEvaluationContext;
 import org.neo4j.graphalgo.GraphAlgoFactory;
@@ -59,9 +61,8 @@ public class TestProcedure
     public Transaction transaction;
     @Context
     public GraphDatabaseService db;
-
-    // TODO: how to fix?
-    public static DatabaseManagementService managementService;
+    @Context
+    public DependencyResolver dependencyResolver;
 
 
     @Procedure( "org.neo4j.time" )
@@ -217,16 +218,39 @@ public class TestProcedure
         return n;
     }
 
+    @UserFunction( name = "org.neo4j.findById" )
+    public Node findById( @Name( "id" ) Long id)
+    {
+        return transaction.getNodeById( id );
+    }
+
     // Only used for testing that query fails if procedure returns an entity from another database
     @UserFunction( name = "org.neo4j.findByIdInDatabase" )
-    public Node findByIdInDatabase( @Name( "id" ) Long id, @Name("databaseName") String dbName )
+    public Node findByIdInDatabase( @Name( "id" ) Long id, @Name("databaseName") String dbName, @Name("shouldCloseTransaction") Boolean shouldCloseTransaction )
     {
-        GraphDatabaseService db = managementService.database( dbName );
-        Transaction tx = db.beginTx();
+        GraphDatabaseService db = dependencyResolver.resolveDependency( DatabaseManagementService.class )
+                                                    .database( dbName );
+        Transaction tx = db.beginTx(2l, TimeUnit.SECONDS);
         Node n = tx.getNodeById( id );
-        tx.commit();
+        if (shouldCloseTransaction) {
+            tx.commit();
+        }
 
         return n;
+    }
+
+    // Only used for testing that query fails if procedure returns an entity from another database
+    @UserFunction( name = "org.neo4j.findPropertyInDatabase" )
+    public Object findPropertyInDatabase( @Name( "id" ) Long id, @Name("databaseName") String dbName, @Name("property") String property )
+    {
+        GraphDatabaseService db = dependencyResolver.resolveDependency( DatabaseManagementService.class )
+                                                    .database( dbName );
+        Transaction tx = db.beginTx();
+        Node n = tx.getNodeById( id );
+        Object prop = n.getProperty( property );
+        tx.commit();
+
+        return prop;
     }
 
     public static class EntityResult

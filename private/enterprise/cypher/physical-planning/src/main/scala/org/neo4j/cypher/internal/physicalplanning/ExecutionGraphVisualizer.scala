@@ -298,7 +298,6 @@ object ExecutionGraphVisualizer {
     override def getPropertyKeys: java.lang.Iterable[String] = null
     override def getProperties(keys: String*): java.util.Map[String, AnyRef] = null
     override def toString: String = s"VirtualNodeHack[$id]"
-    override def getTransaction: Transaction = null
   }
 
   private object VirtualRelationshipHack {
@@ -325,6 +324,5 @@ object ExecutionGraphVisualizer {
     override def getPropertyKeys: java.lang.Iterable[String] = null
     override def getProperties(keys: String*): util.Map[String, AnyRef] = null
     override def toString: String = s"VirtualRelationshipHack[$id]"
-    override def getTransaction: Transaction = null
   }
 }

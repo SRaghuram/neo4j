@@ -5,15 +5,25 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import java.util
+
+import org.neo4j.configuration.GraphDatabaseSettings.procedure_unrestricted
 import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.RelationshipType
+import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.internal.kernel.api.security.LoginContext
 import org.neo4j.kernel.api.KernelTransaction
 import org.neo4j.kernel.api.procedure.GlobalProcedures
 
+import scala.collection.JavaConverters.asScalaIteratorConverter
+
 class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
+
+  override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig()
+    .updated(procedure_unrestricted, util.List.of("org.neo4j.findById", "org.neo4j.findByIdInTx", "org.neo4j.findByIdInDatabase", "org.neo4j.findPropertyInDatabase"))
 
   test("should return result") {
     registerTestProcedures()
@@ -220,34 +230,54 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
       message = Seq("NotInTransactionException"))
   }
 
-  test("should find entities returned from another tx, if tx is open") {
+  test("should be able to pass entities returned from another transaction, if transaction is open") {
+    // given
     registerTestProcedures()
-
     val (n, _) = createNodeAndRelationship()
+    val tx = graphOps.beginTx()
 
-    executeWith(Configs.ProcedureCallRead,
-      """WITH org.neo4j.findByIdInTx($nodeId) AS n
-        |RETURN n
-        |""".stripMargin,
-      params = Map("nodeId" -> n.getId)).toList shouldEqual(List(Map("n" -> n)))
+    // when
+    // findById uses an open injected transaction
+    val result = tx.execute("WITH org.neo4j.findById($nodeId) AS n RETURN n", util.Map.of("nodeId", n.getId.asInstanceOf[Object]))
+      .asScala
+      .toList
+
+    //then
+    result shouldEqual(List(util.Map.of("n", n)))
+
+    tx.commit()
   }
 
-  test("should not be able to use entities returned from another closed tx") {
+  test("should not be able to pass entities returned from another transaction, if transaction is closed") {
+    // given
     registerTestProcedures()
-    val tx1 = graphOps.beginTx()
-    val node = tx1.createNode().getId
+    val (n, _) = createNodeAndRelationship()
+    val tx = graphOps.beginTx()
+
+    // then
+    // findByIdInTx closes the transaction that is used to find the node
+    assertThrows[QueryExecutionException](tx.execute("WITH org.neo4j.findByIdInTx($nodeId) AS n RETURN n", util.Map.of("nodeId", n.getId.asInstanceOf[Object])).asScala.toList)
+
+    tx.commit()
+  }
+
+  test("should be able to use properties of entities returned from a different database") {
+    registerTestProcedures()
+    managementService.createDatabase("test123")
+    val dbOther = managementService.database("test123")
+    val tx1 = dbOther.beginTx()
+    val node = tx1.createNode()
+    node.setProperty("prop", "123prop")
     tx1.commit()
 
-    TestProcedure.managementService = managementService
-    failWithError(Configs.ProcedureCallRead,
-      """WITH org.neo4j.findByIdInDatabase($nodeId, $dbOther) AS n
-        | RETURN n
+    executeWith(Configs.ProcedureCallRead,
+      """WITH org.neo4j.findPropertyInDatabase($nodeId, $dbOther, $property) AS nProp
+        | RETURN nProp
         |""".stripMargin,
-      params = Map("nodeId" -> node, "dbOther" -> graphOps.databaseName()),
-      errorType = Seq("QueryExecutionKernelException"))
+      params = Map("nodeId" -> node.getId, "dbOther" -> "test123", "property" -> "prop")).toList shouldEqual (List(Map("nProp" -> "123prop")))
   }
 
-  test("should not be able to use entities returned from a different database") {
+  test("should not be able to pass entities returned from a different database") {
     registerTestProcedures()
     managementService.createDatabase("test123")
     val dbOther = managementService.database("test123")
@@ -256,13 +286,12 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     tx1.commit()
     val tx2 = dbOther.beginTx()
 
-    TestProcedure.managementService = managementService
     failWithError(Configs.ProcedureCallRead,
-      """WITH org.neo4j.findByIdInDatabase($nodeId, $dbOther) AS n
+      """WITH org.neo4j.findByIdInDatabase($nodeId, $dbOther, false) AS n
         | RETURN n
         |""".stripMargin,
       params = Map("nodeId" -> node, "dbOther" -> "test123"),
-      errorType = Seq("QueryExecutionKernelException"))
+      errorType = Seq("CypherExecutionException"))
 
     tx2.close()
   }
