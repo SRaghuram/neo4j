@@ -395,4 +395,4 @@ class ParallelRuntimeProfileNoTimeTest extends ProfileNoTimeTestBase(FUSING, PAR
     queryProfile.operatorProfile(Id.INVALID_ID.x) should be(NO_PROFILE)
   }
 }
-class ParallelRuntimeProfileNoFusingDbHitsTest extends PipelinedDbHitsTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeProfileNoFusingDbHitsTest extends PipelinedDbHitsTestBase(NO_FUSING, PARALLEL, SIZE_HINT, canFuseOverPipelines = false) with ParallelRuntimeSpecSuite

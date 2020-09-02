@@ -36,6 +36,8 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
     () => cursorFactory.allocateNodeValueIndexCursor(pageCursorTracer, memoryTracker))
   val nodeLabelIndexCursorPool: CursorPool[NodeLabelIndexCursor] = CursorPool[NodeLabelIndexCursor](
     () => cursorFactory.allocateNodeLabelIndexCursor(pageCursorTracer))
+  val propertyCursorPool: CursorPool[PropertyCursor] = CursorPool[PropertyCursor](
+    () => cursorFactory.allocatePropertyCursor(pageCursorTracer, memoryTracker))
 
   def setKernelTracer(tracer: KernelReadTracer): Unit = {
     nodeCursorPool.setKernelTracer(tracer)
@@ -43,6 +45,7 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
     relationshipScanCursorPool.setKernelTracer(tracer)
     nodeValueIndexCursorPool.setKernelTracer(tracer)
     nodeLabelIndexCursorPool.setKernelTracer(tracer)
+    propertyCursorPool.setKernelTracer(tracer)
   }
 
   override def close(): Unit = {
@@ -50,7 +53,8 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
       relationshipTraversalCursorPool,
       relationshipScanCursorPool,
       nodeValueIndexCursorPool,
-      nodeLabelIndexCursorPool)
+      nodeLabelIndexCursorPool,
+      propertyCursorPool)
   }
 
   def collectLiveCounts(liveCounts: LiveCounts): Unit = {
@@ -59,6 +63,7 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
     liveCounts.relationshipScanCursorPool += relationshipScanCursorPool.getLiveCount
     liveCounts.nodeValueIndexCursorPool += nodeValueIndexCursorPool.getLiveCount
     liveCounts.nodeLabelIndexCursorPool += nodeLabelIndexCursorPool.getLiveCount
+    liveCounts.propertyCursorPool += propertyCursorPool.getLiveCount
   }
 
   override def allocateNodeCursor(cursorTracer: PageCursorTracer): NodeCursor = nodeCursorPool.allocate()
@@ -91,7 +96,8 @@ class LiveCounts(var nodeCursorPool: Long = 0,
                  var relationshipTraversalCursorPool: Long = 0,
                  var relationshipScanCursorPool: Long = 0,
                  var nodeValueIndexCursorPool: Long = 0,
-                 var nodeLabelIndexCursorPool: Long = 0) {
+                 var nodeLabelIndexCursorPool: Long = 0,
+                 var propertyCursorPool: Long = 0) {
 
   def assertAllReleased(): Unit = {
     def reportLeak(liveCount: Long, poolName: String): Option[String] = {
@@ -106,6 +112,7 @@ class LiveCounts(var nodeCursorPool: Long = 0,
       reportLeak(relationshipTraversalCursorPool, "relationshipTraversalCursorPool"),
       reportLeak(relationshipScanCursorPool, "relationshipScanCursorPool"),
       reportLeak(nodeValueIndexCursorPool, "nodeValueIndexCursorPool"),
+      reportLeak(propertyCursorPool, "propertyCursorPool"),
       reportLeak(nodeLabelIndexCursorPool, "nodeLabelIndexCursorPool")).flatten
 
     if (resourceLeaks.nonEmpty) {

@@ -162,7 +162,7 @@ class SlottedProvidedOrderTest extends ProvidedOrderTestBase(ENTERPRISE.DEFAULT,
                                with CartesianProductProvidedOrderTestBase[EnterpriseRuntimeContext]
 class SlottedProfileRowsTest extends ProfileRowsTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT, 1)
                              with NonParallelProfileRowsTestBase[EnterpriseRuntimeContext]
-class SlottedProfileDbHitsTest extends LegacyDbHitsTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedProfileDbHitsTest extends LegacyDbHitsTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT, createsRelValueInExpand = false)
                                with ProcedureCallDbHitsTestBase[EnterpriseRuntimeContext]
                                with NestedPlanDbHitsTestBase[EnterpriseRuntimeContext]
 class SlottedProfilePageCacheStatsTest extends ProfilePageCacheStatsTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)

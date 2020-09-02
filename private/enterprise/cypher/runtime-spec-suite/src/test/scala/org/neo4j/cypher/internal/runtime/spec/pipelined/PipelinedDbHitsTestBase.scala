@@ -13,7 +13,8 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ProfileDbHitsTestBase
 
 abstract class PipelinedDbHitsTestBase[CONTEXT <: RuntimeContext](edition: Edition[CONTEXT],
                                                                   runtime: CypherRuntime[CONTEXT],
-                                                                  sizeHint: Int)
+                                                                  sizeHint: Int,
+                                                                  canFuseOverPipelines: Boolean)
   extends ProfileDbHitsTestBase(edition,
                                 runtime,
                                 sizeHint,
@@ -24,4 +25,6 @@ abstract class PipelinedDbHitsTestBase[CONTEXT <: RuntimeContext](edition: Editi
                                 costOfExpandGetRelCursor = 1,
                                 costOfExpandOneRel = 1,
                                 costOfRelationshipTypeLookup = 0,
-                                cartesianProductChunkSize = ENTERPRISE.MORSEL_SIZE)
+                                cartesianProductChunkSize = ENTERPRISE.MORSEL_SIZE,
+                                canFuseOverPipelines = canFuseOverPipelines,
+                                createsRelValueInExpand = false)

@@ -470,16 +470,14 @@ class PipelinedProfileNoTimeTest extends ProfileNoTimeTestBase(FUSING, PIPELINED
     queryProfile.operatorProfile(Id.INVALID_ID.x) should be(NO_PROFILE)
   }
 }
-class PipelinedProfileDbHitsNoFusingTest extends PipelinedDbHitsTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+class PipelinedProfileDbHitsNoFusingTest extends PipelinedDbHitsTestBase(NO_FUSING, PIPELINED, SIZE_HINT, canFuseOverPipelines = false)
                                          with ProcedureCallDbHitsTestBase[EnterpriseRuntimeContext]
                                          with NestedPlanDbHitsTestBase[EnterpriseRuntimeContext]
                                          with PipelinedSpecSuite
-class PipelinedProfileDbHitsTest extends PipelinedDbHitsTestBase(FUSING, PIPELINED, SIZE_HINT)
+class PipelinedProfileDbHitsTest extends PipelinedDbHitsTestBase(FUSING, PIPELINED, SIZE_HINT, canFuseOverPipelines = true)
                                  with ProcedureCallDbHitsTestBase[EnterpriseRuntimeContext]
-                                 with PipelinedSpecSuite {
+                                 with PipelinedSpecSuite
 
-  override protected def canFuseOverPipelines: Boolean = true
-}
 class PipelinedProfileMemoryNoFusingTest extends ProfileMemoryTestBase(NO_FUSING, PIPELINED)
                                          with ProfilePipelinedNoFusingMemoryTestBase
 class PipelinedProfileMemoryTest extends ProfileMemoryTestBase(FUSING, PIPELINED)

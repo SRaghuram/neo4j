@@ -260,7 +260,7 @@ class ResultSummaryEndToEndTest
         expectedPlan.assertPlan( profiledPlan );
 
         var expectedStats =
-                stats( 1, false,
+                stats( 1, true,
                         stats( 1, true,
                                 stats( 2, true )
                         )

@@ -220,7 +220,7 @@ class ClusterRoutingIT extends ClusterTestSupport
 
         var expectedStats =
                 stats( 1, false,
-                        stats( 1, false,
+                        stats( 1, true,
                                 stats( 1, true,
                                         stats( 1, true )
                                 )

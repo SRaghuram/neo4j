@@ -40,9 +40,7 @@ class QueryResources(cursorFactory: CursorFactory,
   }
 
   def setKernelTracer(tracer: KernelReadTracer): Unit = {
-    expressionCursors.nodeCursor.setTracer(tracer)
-    expressionCursors.relationshipScanCursor.setTracer(tracer)
-    expressionCursors.propertyCursor.setTracer(tracer)
+    expressionCursors.setKernelTracer(tracer)
     cursorPools.setKernelTracer(tracer)
   }
 

@@ -123,6 +123,10 @@ object OperatorCodeGenHelperTemplates {
     override def name: String = "relationshipScanCursorPool"
   }
 
+  case object PropertyCursorPool extends CursorPoolsType {
+    override def name: String = "propertyCursorPool"
+  }
+
   val UNINITIALIZED_LONG_SLOT_VALUE: IntermediateRepresentation = constant(-2L)
   val UNINITIALIZED_REF_SLOT_VALUE: IntermediateRepresentation = constant(null)
 
@@ -198,6 +202,7 @@ object OperatorCodeGenHelperTemplates {
   val ALLOCATE_GROUP_CURSOR: IntermediateRepresentation = allocateCursor(GroupCursorPool)
   val ALLOCATE_TRAVERSAL_CURSOR: IntermediateRepresentation = allocateCursor(TraversalCursorPool)
   val ALLOCATE_REL_SCAN_CURSOR: IntermediateRepresentation = allocateCursor(RelScanCursorPool)
+  val ALLOCATE_PROPERTY_CURSOR: IntermediateRepresentation = allocateCursor(PropertyCursorPool)
 
   val INPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(INPUT_CURSOR, method[MorselReadCursor, Boolean]("onValidRow"))
   val NEXT: Method = method[MorselCursor, Boolean]("next")
