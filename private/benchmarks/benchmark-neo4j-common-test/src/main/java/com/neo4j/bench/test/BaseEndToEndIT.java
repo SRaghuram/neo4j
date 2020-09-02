@@ -19,7 +19,6 @@ import com.neo4j.bench.common.util.Resources;
 import com.neo4j.harness.junit.extension.EnterpriseNeo4jExtension;
 import io.findify.s3mock.S3Mock;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.Tailer;
 import org.apache.commons.io.input.TailerListenerAdapter;
 import org.junit.jupiter.api.AfterEach;
@@ -56,6 +55,7 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.SessionConfig;
+import org.neo4j.driver.Value;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.junit.extension.Neo4jExtension;
@@ -400,14 +400,12 @@ public abstract class BaseEndToEndIT
                 List<Record> results = session.run( query ).list();
                 for ( Record record : results )
                 {
-                    Map<String,Object> profiles = record.get( "profiles" ).asMap();
-                    profiles.values().forEach(
-                            storePath ->
-                            {
-                                assertThat( "File not found: " + recordingsBasePath.resolve( storePath.toString() ).toAbsolutePath().toFile() +
-                                            "Found some other files " + fileList,
-                                            recordingsBasePath.resolve( storePath.toString() ).toFile(), anExistingFile() );
-                            } );
+                    Map<String,String> profiles = record.get( "profiles" ).asMap( Value::asString );
+                    for ( String storePath : profiles.values() )
+                    {
+                        Path s3ProfilerRecordingPath = recordingsBasePath.resolve( storePath );
+                        assertTrue( Files.exists( s3ProfilerRecordingPath ), () -> format( "Expected to find '%s'", s3ProfilerRecordingPath.toString() ) );
+                    }
                 }
             }
             return null;

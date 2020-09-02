@@ -23,13 +23,11 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.net.URI;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
-import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 import static org.apache.commons.lang3.StringUtils.appendIfMissing;
 import static org.apache.commons.lang3.StringUtils.removeStart;
@@ -55,7 +53,6 @@ public class ResultsReporter
     }
 
     public void reportAndUpload( TestRunReport testRunReport,
-                                 Path profilesDir,
                                  String s3Bucket,
                                  File workDir,
                                  String awsEndpointURL,
@@ -69,30 +66,27 @@ public class ResultsReporter
             JsonUtil.serializeJson( testRunReportFile, testRunReport );
 
             String testRunId = testRunReport.testRun().id();
-            System.out.println( format( "Reporting test run with id %s", testRunId ) );
+            System.out.printf( "Reporting test run with id %s%n", testRunId );
 
-            String archiveName = profilesDir.getFileName() + ".tar.gz";
+            Path tempRecordingsDir = Files.createTempDirectory( workDir.toPath(), null );
+            URI s3ProfilerRecordingsFolderUri = constructS3Uri( awsEndpointURL, s3Bucket, tempRecordingsDir );
+
+            extractProfilerRecordings( testRunReport, tempRecordingsDir, s3ProfilerRecordingsFolderUri, workDir );
+
+            String archiveName = tempRecordingsDir.getFileName() + ".tar.gz";
             String s3ArchivePath = s3Bucket + archiveName;
             Path testRunArchive = workDir.toPath().resolve( archiveName );
-
-            extractProfilerRecordings( testRunReport, profilesDir, s3Bucket, workDir );
-
-            System.out.println( format( "creating .tar.gz archive '%s' of profiles directory '%s'", testRunArchive, profilesDir ) );
-            TarGzArchive.compress( testRunArchive, profilesDir );
+            System.out.printf( "creating .tar.gz archive '%s' of profiles directory '%s'%n", testRunArchive, tempRecordingsDir );
+            TarGzArchive.compress( testRunArchive, tempRecordingsDir );
 
             try ( AmazonS3Upload amazonS3Upload = AmazonS3Upload.create( awsRegion, awsEndpointURL ) )
             {
-                URI s3BucketURI = URI.create( StringUtils.prependIfMissing( s3Bucket, "s3://" ) );
-                String bucketName = s3BucketURI.getAuthority();
+                System.out.printf( "uploading profiler recording directory '%s' to '%s'%n", tempRecordingsDir, s3ProfilerRecordingsFolderUri );
+                amazonS3Upload.uploadFolder( tempRecordingsDir, s3ProfilerRecordingsFolderUri );
 
-                String keyPrefix = appendIfMissing( removeStart( s3BucketURI.getPath(), "/" ), "/" );
-                System.out.println( format( "uploading profilers directory '%s' to '%s/%s'", profilesDir, bucketName, keyPrefix ) );
-
-                UploadDirectoryToS3.execute( amazonS3Upload, bucketName, keyPrefix, profilesDir.toFile() );
-                System.out
-                        .println( format( "uploading profilers archive '%s' directory '%s' to '%s/%s'", testRunArchive, profilesDir, bucketName, keyPrefix ) );
-
-                UploadFileToS3.execute( amazonS3Upload, bucketName, keyPrefix, testRunArchive );
+                URI testRunArchiveS3Uri = constructS3Uri( awsEndpointURL, s3Bucket, testRunArchive );
+                System.out.printf( "uploading profiler recordings archive '%s' to '%s'%n", testRunArchive, testRunArchiveS3Uri );
+                amazonS3Upload.uploadFile( testRunArchive, testRunArchiveS3Uri );
                 testRunReport.testRun().setArchive( s3ArchivePath );
             }
 
@@ -101,6 +95,21 @@ public class ResultsReporter
         catch ( Exception e )
         {
             throw new RuntimeException( "Error submitting benchmark results to " + resultsStoreUri, e );
+        }
+    }
+
+    private URI constructS3Uri( String awsEndpointURL, String s3Bucket, Path tempRecordingsDir )
+    {
+        try ( AmazonS3Upload amazonS3Upload = AmazonS3Upload.create( awsRegion, awsEndpointURL ) )
+        {
+            URI s3BucketUri = URI.create( StringUtils.prependIfMissing( s3Bucket, "s3://" ) );
+            String bucketName = s3BucketUri.getAuthority();
+            String recordingsKeyPrefix = s3BucketUri.getPath();
+            return amazonS3Upload.constructS3Uri( bucketName, recordingsKeyPrefix, tempRecordingsDir );
+        }
+        catch ( Exception e )
+        {
+            throw new RuntimeException( "Failed to construct S3 Folder URI", e );
         }
     }
 
@@ -143,12 +152,12 @@ public class ResultsReporter
      *  <ol>
      *   <li>Discovers profiler recordings in `workDir`</li>
      *   <li>Attach each discovered recording to the provided {@link TestRunReport}</li>
-     *   <li>Copies each discovered recording to `tempProfilerRecordingsDir`</li>
+     *   <li>Copy each discovered recording to `tempProfilerRecordingsDir`</li>
      * </ol>
      */
-    private void extractProfilerRecordings( TestRunReport testRunReport, Path tempProfilerRecordingsDir, String s3Bucket, File workDir )
+    private void extractProfilerRecordings( TestRunReport testRunReport, Path tempProfilerRecordingsDir, URI s3FolderUri, File workDir )
     {
-        Map<BenchmarkGroupBenchmark,ProfilerRecordings> benchmarkProfiles = new HashMap<>();
+        String s3Folder = appendIfMissing( removeStart( s3FolderUri.toString(), "s3://" ), "/" );
         Set<RecordingType> ignoredRecordingTypes = Sets.newHashSet( RecordingType.NONE,
                                                                     RecordingType.HEAP_DUMP,
                                                                     RecordingType.TRACE_STRACE,
@@ -164,40 +173,34 @@ public class ResultsReporter
                 BenchmarkGroupBenchmark benchmarkGroupBenchmark = new BenchmarkGroupBenchmark( benchmarkGroupDirectory.benchmarkGroup(),
                                                                                                benchmarksDirectory.benchmark() );
                 // Only process successful benchmarks
-                if ( !testRunReport.benchmarkGroupBenchmarks().contains( benchmarkGroupBenchmark ) )
+                if ( testRunReport.benchmarkGroupBenchmarks().contains( benchmarkGroupBenchmark ) )
                 {
-                    continue;
-                }
-
-                ProfilerRecordings profilerRecordings = new ProfilerRecordings();
-                for ( ForkDirectory forkDirectory : benchmarksDirectory.forks() )
-                {
-                    forkDirectory.copyProfilerRecordings( tempProfilerRecordingsDir,
-                                                          // only copy valid recordings for upload
-                                                          recordingDescriptor -> !ignoredRecordingTypes.contains( recordingDescriptor.recordingType() ),
-                                                          // attached valid/copied recordings to test run report
-                                                          ( recordingDescriptor, recording ) ->
+                    ProfilerRecordings profilerRecordings = new ProfilerRecordings();
+                    for ( ForkDirectory forkDirectory : benchmarksDirectory.forks() )
+                    {
+                        forkDirectory.copyProfilerRecordings( tempProfilerRecordingsDir,
+                                                              // only copy valid recordings for upload
+                                                              recordingDescriptor -> !ignoredRecordingTypes.contains( recordingDescriptor.recordingType() ),
+                                                              // attached valid/copied recordings to test run report
+                                                              ( recordingDescriptor, recording ) ->
+                                                              {
+                                                                  System.out.println( " --->>> " + s3Folder + recording.getFileName().toString() );
                                                                   profilerRecordings.with( recordingDescriptor.recordingType(),
                                                                                            recordingDescriptor.additionalParams(),
-                                                                                           s3Bucket + recording.getFileName().toString() ) );
-                }
-                if ( !profilerRecordings.toMap().isEmpty() )
-                {
-                    // TODO once we have parameterized profilers we should assert that every expected recording exists
-                    benchmarkProfiles.put( benchmarkGroupBenchmark, profilerRecordings );
+                                                                                           s3Folder + recording.getFileName().toString() );
+                                                              } );
+                    }
+                    if ( !profilerRecordings.toMap().isEmpty() )
+                    {
+                        // TODO once we have parameterized profilers we should assert that every expected recording exists
 
-                    // TODO do this instead?
-//                    testRunReport.benchmarkGroupBenchmarkMetrics()
-//                                 .attachProfilerRecording( benchmarkGroupBenchmark.benchmarkGroup(),
-//                                                           benchmarkGroupBenchmark.benchmark(),
-//                                                           profilerRecordings );
+                        testRunReport.benchmarkGroupBenchmarkMetrics()
+                                     .attachProfilerRecording( benchmarkGroupBenchmark.benchmarkGroup(),
+                                                               benchmarkGroupBenchmark.benchmark(),
+                                                               profilerRecordings );
+                    }
                 }
             }
         }
-
-        benchmarkProfiles.forEach( ( benchmark, profiles ) -> testRunReport.benchmarkGroupBenchmarkMetrics()
-                                                                           .attachProfilerRecording( benchmark.benchmarkGroup(),
-                                                                                                     benchmark.benchmark(),
-                                                                                                     profiles ) );
     }
 }

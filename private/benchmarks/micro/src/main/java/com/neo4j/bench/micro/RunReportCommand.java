@@ -40,7 +40,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
-import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -114,12 +113,10 @@ public class RunReportCommand extends BaseRunReportCommand
     public void doRun( RunReportParams runReportParams )
     {
         TestRunReport testRunReport = run( runReportParams );
-        Path tempProfilerRecordingsOutputDir = runReportParams.workDir().toPath().resolve( "profiler_recordings_temp" );
         ResultsReporter resultsReporter = new ResultsReporter( resultsStoreUsername,
                                                                resultsStorePassword,
                                                                resultsStoreUri );
         resultsReporter.reportAndUpload( testRunReport,
-                                         tempProfilerRecordingsOutputDir,
                                          s3Bucket,
                                          runReportParams.workDir(),
                                          awsEndpointURL,

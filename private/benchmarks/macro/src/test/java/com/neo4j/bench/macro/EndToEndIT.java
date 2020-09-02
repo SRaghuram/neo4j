@@ -54,7 +54,7 @@ class EndToEndIT extends BaseEndToEndIT
     private static final String READ_WORKLOAD = "zero";
 
     @Test
-    public void runZeroWorkloadEmbedded() throws Exception
+    public void runReadWorkloadEmbedded() throws Exception
     {
 
         List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC, ProfilerType.GC );

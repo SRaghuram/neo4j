@@ -124,7 +124,6 @@
         <module>benchmark-neo4j-common-test</module>
         <module>benchmark-results-client-tests</module>
         <module>benchmark-model</module>
-        <module>benchmark-results-reporter</module>
     </modules>
 
     <profiles>

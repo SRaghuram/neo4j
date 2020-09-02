@@ -68,7 +68,6 @@ import com.neo4j.bench.model.model.Repository;
 import com.neo4j.bench.model.model.TestRun;
 import com.neo4j.bench.model.model.TestRunReport;
 import com.neo4j.bench.model.process.JvmArgs;
-import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.model.util.JsonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,7 +82,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static com.ldbc.driver.control.ConsoleAndFileDriverConfiguration.fromParamsMap;
@@ -102,7 +100,6 @@ import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.toBenchmarkGroupName;
 import static com.neo4j.bench.model.options.Edition.ENTERPRISE;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
 
 @Command(
         name = "run-export",
@@ -389,15 +386,6 @@ public class RunReportCommand implements Runnable
              title = "Run with various monitoring tools" )
     private boolean doTrace;
 
-    // TODO remove
-    private static final String CMD_PROFILES_DIR = "--profiles-dir";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_PROFILES_DIR},
-             description = "Top level output directory for profiled forks",
-             title = "Profiling output directory" )
-    @Required
-    private File profilesDir;
-
     @Option(
             type = OptionType.COMMAND,
             name = {"--aws-endpoint-url"},
@@ -514,7 +502,6 @@ public class RunReportCommand implements Runnable
                     CMD_WORKING_DIR + " : " + ((null == workingDir) ? null : workingDir.getAbsolutePath()) + "\n" +
                     CMD_PROFILERS + " : " + additionalProfilers + "\n" +
                     CMD_TRACE + " : " + doTrace + "\n" +
-                    CMD_PROFILES_DIR + " : " + ((null == profilesDir) ? null : profilesDir.getAbsolutePath()) + "\n" +
                     "==============================================================\n"
             );
 
@@ -624,11 +611,10 @@ public class RunReportCommand implements Runnable
             LOG.debug( "Export results to: " + jsonOutput.getAbsolutePath() );
             JsonUtil.serializeJson( jsonOutput.toPath(), testRunReport );
 
-            Path profilerRecordingsOutputDir = workingDir.toPath().resolve( "profiler_recordings_temp" );
             ResultsReporter resultsReporter = new ResultsReporter( resultsStoreUsername,
                                                                    resultsStorePassword,
                                                                    resultsStoreUri );
-            resultsReporter.reportAndUpload( testRunReport, profilerRecordingsOutputDir, s3Bucket, workingDir, awsEndpointURL, REPORT_THEN_FAIL );
+            resultsReporter.reportAndUpload( testRunReport, s3Bucket, workingDir, awsEndpointURL, REPORT_THEN_FAIL );
         }
         catch ( Exception e )
         {
@@ -685,21 +671,6 @@ public class RunReportCommand implements Runnable
                         cliPrefix,
                         baseProfilers );
                 resultsDirectories.add( ResultsDirectory.fromDirectory( Paths.get( forkDir.toAbsolutePath() ).toFile() ) );
-            }
-
-            // TODO update this block. maybe remove this block completely, but ResultReporter needs to then be used
-            if ( null != profilesDir )
-            {
-                BenchmarkUtil.tryMkDir( profilesDir.toPath() );
-                // base profilers are run on every fork, we would get duplicate recordings if we copied them all into one folder
-                // also they are not interesting to upload to results store, it is enough that we have them in TeamCity artifacts
-                Set<RecordingType> excludedRecordingTypes = baseProfilers.stream()
-                                                                         .map( ParameterizedProfiler::profilerType )
-                                                                         .map( ProfilerType::allRecordingTypes )
-                                                                         .flatMap( List::stream )
-                                                                         .collect( toSet() );
-                // TODO changes stuff here
-//                groupDir.copyProfilerRecordings( profilesDir.toPath(), excludedRecordingTypes );
             }
         }
         catch ( Exception e )
@@ -857,7 +828,6 @@ public class RunReportCommand implements Runnable
                                                             forkDirectory,
                                                             getProfilerRecordingDescriptor( benchmarkGroup, summaryBenchmark, profiler ),
                                                             resources );
-//                JvmArgs profilerJvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, summaryBenchmark, Parameters.NONE, resources );
                 jvmArgs = jvmArgs.merge( profilerJvmArgs );
             }
             File outputLog = forkDirectory.create( "ldbc-output.txt" ).toFile();
@@ -865,7 +835,6 @@ public class RunReportCommand implements Runnable
             List<String> jvmInvokeArgs = new ArrayList<>();
             for ( ExternalProfiler profiler : profilers )
             {
-//                List<String> profilerJvmInvokeArgs = profiler.invokeArgs( forkDirectory, benchmarkGroup, summaryBenchmark, Parameters.NONE );
                 List<String> profilerJvmInvokeArgs = profiler.invokeArgs( forkDirectory,
                                                                           getProfilerRecordingDescriptor( benchmarkGroup, summaryBenchmark, profiler ));
                 jvmInvokeArgs.addAll( profilerJvmInvokeArgs );

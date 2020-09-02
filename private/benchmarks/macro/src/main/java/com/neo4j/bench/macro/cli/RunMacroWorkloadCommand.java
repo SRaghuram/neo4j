@@ -167,12 +167,11 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                                                  neo4jConfigFile,
                                                  errorPolicy,
                                                  testRunId );
-        Path profilerRecordingsOutputDir = workDir.toPath().resolve( "profiler_recordings_temp" );
         ResultsReporter resultsReporter = new ResultsReporter( resultsStoreUsername,
                                                                resultsStorePassword,
                                                                resultsStoreUri );
 
-        resultsReporter.reportAndUpload( testRunReport, profilerRecordingsOutputDir, s3Bucket, workDir, awsEndpointURL, REPORT_THEN_FAIL );
+        resultsReporter.reportAndUpload( testRunReport, s3Bucket, workDir, awsEndpointURL, REPORT_THEN_FAIL );
     }
 
     public static TestRunReport runReport( RunMacroWorkloadParams params,

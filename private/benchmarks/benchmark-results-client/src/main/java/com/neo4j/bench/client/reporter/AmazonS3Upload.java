@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,6 +30,7 @@ import java.nio.file.Paths;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.removeEnd;
 import static org.apache.commons.lang3.StringUtils.removeStart;
 
 public class AmazonS3Upload implements AutoCloseable
@@ -100,6 +102,21 @@ public class AmazonS3Upload implements AutoCloseable
         ObjectMetadata objectMetadata = new ObjectMetadata();
         objectMetadata.setContentLength( Files.size( source ) );
         amazonS3.putObject( putObjectRequest.withMetadata( objectMetadata ) );
+    }
+
+    public URI constructS3Uri( String bucketName, String keyPrefix, Path source )
+    {
+        try
+        {
+            return new URI( format( "s3://%s/%s/%s",
+                                    bucketName,
+                                    removeEnd( removeStart( keyPrefix, "/" ), "/" ),
+                                    source.getFileName() ) );
+        }
+        catch ( URISyntaxException e )
+        {
+            throw new RuntimeException( e );
+        }
     }
 
     public void uploadFolder( Path source, URI destination )

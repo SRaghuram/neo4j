@@ -24,6 +24,7 @@ import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
+import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashMap;
@@ -156,7 +157,8 @@ public class ForkDirectory
                              doCopyPredicate.test( validRecordings.get( recording ) );
             if ( doCopy )
             {
-                onCopyConsumer.accept( validRecordings.get( recording ), recording );
+                Path deSanitizedRecording = Paths.get( deSanitizedName( recording ) );
+                onCopyConsumer.accept( validRecordings.get( recording ), deSanitizedRecording );
             }
             return doCopy;
         }
