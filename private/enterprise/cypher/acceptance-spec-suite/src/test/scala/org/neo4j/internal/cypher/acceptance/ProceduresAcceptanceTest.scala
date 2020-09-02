@@ -10,6 +10,7 @@ import java.util
 import org.neo4j.configuration.GraphDatabaseSettings.procedure_unrestricted
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.graphdb.QueryExecutionException
+import org.neo4j.graphdb.Relationship
 import org.neo4j.graphdb.RelationshipType
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
@@ -23,7 +24,15 @@ import scala.collection.JavaConverters.asScalaIteratorConverter
 class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
   override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig()
-    .updated(procedure_unrestricted, util.List.of("org.neo4j.findById", "org.neo4j.findByIdInTx", "org.neo4j.findByIdInDatabase", "org.neo4j.findPropertyInDatabase"))
+    .updated(procedure_unrestricted,
+      util.List.of(
+        "org.neo4j.findById",
+        "org.neo4j.findByIdInTx",
+        "org.neo4j.findByIdInDatabase",
+        "org.neo4j.findPropertyInDatabase",
+        "org.neo4j.findRelationshipByIdInDatabase",
+        "org.neo4j.findRelationshipById"
+      ))
 
   test("should return result") {
     registerTestProcedures()
@@ -291,6 +300,43 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
         | RETURN n
         |""".stripMargin,
       params = Map("nodeId" -> node, "dbOther" -> "test123"),
+      errorType = Seq("CypherExecutionException"))
+
+    tx2.close()
+  }
+
+  test("should be able to pass relationship entity returned from another transaction, if transaction is open") {
+    // given
+    registerTestProcedures()
+    val (_, r) = createNodeAndRelationship()
+    val tx = graphOps.beginTx()
+
+    // when
+    // findById uses an open injected transaction
+    val result = tx.execute("WITH org.neo4j.findRelationshipById($relId) AS r RETURN r", util.Map.of("relId", r.getId.asInstanceOf[Object]))
+      .asScala
+      .toList
+
+    //then
+    result shouldEqual(List(util.Map.of("r", r)))
+
+    tx.commit()
+  }
+
+  test("should not be able to pass relationship entity returned from a different database") {
+    registerTestProcedures()
+    managementService.createDatabase("test123")
+    val dbOther = managementService.database("test123")
+    val tx1 = dbOther.beginTx()
+    val relationship = tx1.execute("CREATE (a)-[r: Rel]->(b) return r").next().get("r").asInstanceOf[Relationship]
+    tx1.commit()
+    val tx2 = dbOther.beginTx()
+
+    failWithError(Configs.ProcedureCallRead,
+      """WITH org.neo4j.findRelationshipByIdInDatabase($relId, $dbOther, false) AS n
+        | RETURN n
+        |""".stripMargin,
+      params = Map("relId" -> relationship.getId, "dbOther" -> "test123"),
       errorType = Seq("CypherExecutionException"))
 
     tx2.close()

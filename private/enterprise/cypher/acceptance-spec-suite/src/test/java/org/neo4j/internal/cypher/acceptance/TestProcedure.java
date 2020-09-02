@@ -224,6 +224,12 @@ public class TestProcedure
         return transaction.getNodeById( id );
     }
 
+    @UserFunction( name = "org.neo4j.findRelationshipById" )
+    public Relationship findRelationshipById( @Name( "id" ) Long id)
+    {
+        return transaction.getRelationshipById( id );
+    }
+
     // Only used for testing that query fails if procedure returns an entity from another database
     @UserFunction( name = "org.neo4j.findByIdInDatabase" )
     public Node findByIdInDatabase( @Name( "id" ) Long id, @Name("databaseName") String dbName, @Name("shouldCloseTransaction") Boolean shouldCloseTransaction )
@@ -237,6 +243,21 @@ public class TestProcedure
         }
 
         return n;
+    }
+
+    // Only used for testing that query fails if procedure returns an entity from another database
+    @UserFunction( name = "org.neo4j.findRelationshipByIdInDatabase" )
+    public Relationship findRelationshipByIdInDatabase( @Name( "id" ) Long id, @Name("databaseName") String dbName, @Name("shouldCloseTransaction") Boolean shouldCloseTransaction )
+    {
+        GraphDatabaseService db = dependencyResolver.resolveDependency( DatabaseManagementService.class )
+                                                    .database( dbName );
+        Transaction tx = db.beginTx(2l, TimeUnit.SECONDS);
+        Relationship r = tx.getRelationshipById( id );
+        if (shouldCloseTransaction) {
+            tx.commit();
+        }
+
+        return r;
     }
 
     // Only used for testing that query fails if procedure returns an entity from another database
