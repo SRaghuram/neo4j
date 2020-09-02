@@ -20,16 +20,17 @@ import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.ProcedureSegment;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.logging.Log;
+import org.neo4j.server.security.systemgraph.ComponentVersion;
 import org.neo4j.util.Preconditions;
 
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
-import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent.LATEST_VERSION;
 import static java.lang.String.format;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION;
 
 /**
- * Version 4 of the security model is identical to version 3, but with the Version node now existing and containing the correct version information.
+ * This is the EnterpriseSecurityComponent version for Neo4j 4.1.
  */
 public class EnterpriseSecurityComponentVersion_4_41 extends SupportedEnterpriseSecurityComponentVersion
 {
@@ -37,7 +38,7 @@ public class EnterpriseSecurityComponentVersion_4_41 extends SupportedEnterprise
 
     public EnterpriseSecurityComponentVersion_4_41( Log log, KnownEnterpriseSecurityComponentVersion previous )
     {
-        super( 4, VERSION_41, log );
+        super( ComponentVersion.ENTERPRISE_SECURITY_41, log );
         this.previous = previous;
     }
 
@@ -57,7 +58,8 @@ public class EnterpriseSecurityComponentVersion_4_41 extends SupportedEnterprise
     @Override
     public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest )
     {
-        Preconditions.checkState( latest.version == LATEST_VERSION, format("Latest version should be %s but was %s", LATEST_VERSION, latest.version ));
+        Preconditions.checkState( latest.version == LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION,
+                format("Latest version should be %s but was %s", LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION, latest.version ));
         setVersionProperty( tx, latest.version );
         Node publicRole = tx.findNode( ROLE_LABEL, "name", PUBLIC );
         grantExecutePrivilegeTo( tx, publicRole );

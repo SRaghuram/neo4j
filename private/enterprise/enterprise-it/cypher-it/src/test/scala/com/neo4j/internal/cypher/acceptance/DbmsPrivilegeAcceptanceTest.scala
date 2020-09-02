@@ -5,10 +5,10 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_40
-import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41D1
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.graphdb.security.AuthorizationViolationException
+import org.neo4j.server.security.systemgraph.KnownSystemComponentVersion.VERSION_40
+import org.neo4j.server.security.systemgraph.KnownSystemComponentVersion.VERSION_41D1
 
 class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase with EnterpriseComponentVersionTestSupport {
 

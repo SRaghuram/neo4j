@@ -6,18 +6,18 @@
 package com.neo4j.server.security.enterprise.systemgraph.versions;
 
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
-import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent;
 
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.logging.NullLog;
+import org.neo4j.server.security.systemgraph.ComponentVersion;
 
 public class NoEnterpriseSecurityComponentVersion extends KnownEnterpriseSecurityComponentVersion
 {
     public NoEnterpriseSecurityComponentVersion()
     {
-        super( UNKNOWN_VERSION, String.format( "no '%s' graph found", EnterpriseSecurityGraphComponent.COMPONENT ), NullLog.getInstance() );
+        super( ComponentVersion.ENTERPRISE_SECURITY_UNKNOWN_VERSION, NullLog.getInstance() );
     }
 
     @Override

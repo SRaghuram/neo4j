@@ -26,14 +26,14 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.logging.Log;
+import org.neo4j.server.security.systemgraph.ComponentVersion;
 import org.neo4j.util.Preconditions;
 
-import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent.LATEST_VERSION;
 import static java.lang.String.format;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION;
 
 /**
- * This component version is for the system database in Neo4j 3.6 which had its own schema for users and roles.
- * Note that the system database was enterprise-only in 3.6.
+ * This is the EnterpriseSecurityComponent version for Neo4j 3.6
  */
 public class EnterpriseSecurityComponentVersion_1_36 extends KnownEnterpriseSecurityComponentVersion
 {
@@ -46,7 +46,7 @@ public class EnterpriseSecurityComponentVersion_1_36 extends KnownEnterpriseSecu
 
     public EnterpriseSecurityComponentVersion_1_36( Log log, Config config )
     {
-        super( 1, VERSION_36, log );
+        super( ComponentVersion.ENTERPRISE_SECURITY_36, log );
         this.config = config;
     }
 
@@ -98,7 +98,8 @@ public class EnterpriseSecurityComponentVersion_1_36 extends KnownEnterpriseSecu
     @Override
     public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest ) throws Exception
     {
-        Preconditions.checkState( latest.version == LATEST_VERSION, format("Latest version should be %s but was %s", LATEST_VERSION, latest.version ));
+        Preconditions.checkState( latest.version == LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION,
+                format("Latest version should be %s but was %s", LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION, latest.version ));
         createPublicRoleFromUpgrade( tx );
         setVersionProperty( tx, latest.version );
         List<Node> roles = tx.findNodes( ROLE_LABEL ).stream().collect( Collectors.toList() );

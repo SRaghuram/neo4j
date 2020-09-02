@@ -12,10 +12,6 @@ import com.neo4j.dbms.EnterpriseSystemGraphComponent
 import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent
-import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_40
-import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41
-import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41D1
-import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_42D4
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import org.neo4j.collection.Dependencies
 import org.neo4j.configuration.Config
@@ -25,6 +21,10 @@ import org.neo4j.dbms.database.SystemGraphComponent
 import org.neo4j.dbms.database.SystemGraphComponents
 import org.neo4j.logging.Log
 import org.neo4j.server.security.auth.InMemoryUserRepository
+import org.neo4j.server.security.systemgraph.KnownSystemComponentVersion.VERSION_40
+import org.neo4j.server.security.systemgraph.KnownSystemComponentVersion.VERSION_41
+import org.neo4j.server.security.systemgraph.KnownSystemComponentVersion.VERSION_41D1
+import org.neo4j.server.security.systemgraph.KnownSystemComponentVersion.VERSION_42D4
 import org.neo4j.server.security.systemgraph.UserSecurityGraphComponent
 import org.neo4j.test.TestDatabaseManagementServiceBuilder
 import org.scalactic.source

@@ -12,6 +12,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.logging.Log;
+import org.neo4j.server.security.systemgraph.ComponentVersion;
 
 /**
  * This class represents all unrecognised future versions of the security model. This can occur in a clustered environment when
@@ -24,7 +25,7 @@ public class EnterpriseSecurityComponentVersion_Future extends KnownEnterpriseSe
 
     public EnterpriseSecurityComponentVersion_Future( Log log, KnownEnterpriseSecurityComponentVersion latestKnownVersion )
     {
-        super( Integer.MIN_VALUE, "Unrecognized future version", log );
+        super( ComponentVersion.ENTERPRISE_SECURITY_FUTURE_VERSION, log );
         this.latestVersion = latestKnownVersion;
         this.getStatus();
     }

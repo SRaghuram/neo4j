@@ -8,7 +8,6 @@ package com.neo4j.server.security.enterprise.systemgraph.versions;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
-import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,18 +24,13 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.logging.Log;
+import org.neo4j.server.security.systemgraph.ComponentVersion;
 import org.neo4j.server.security.systemgraph.KnownSystemComponentVersion;
 
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 
 public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSystemComponentVersion
 {
-    public static final String VERSION_36 = "Neo4j 3.6";
-    public static final String VERSION_40 = "Neo4j 4.0";
-    public static final String VERSION_41D1 = "Neo4j 4.1.0-Drop01";
-    public static final String VERSION_41 = "Neo4j 4.1";
-    public static final String VERSION_42D4 = "Neo4j 4.2.0-Drop04";
-
     static final Label DATABASE_ALL_LABEL = Label.label( "DatabaseAll" );
     static final Label DATABASE_DEFAULT_LABEL = Label.label( "DatabaseDefault" );
 
@@ -53,9 +47,9 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
 
     private List<Node> roleNodes = new ArrayList<>();
 
-    KnownEnterpriseSecurityComponentVersion( int version, String description, Log log )
+    KnownEnterpriseSecurityComponentVersion( ComponentVersion componentVersion, Log log )
     {
-        super( EnterpriseSecurityGraphComponent.COMPONENT, version, description, log );
+        super( componentVersion, log );
     }
 
     boolean componentNotInVersionNode( Transaction tx )
@@ -82,24 +76,6 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
     public Set<ResourcePrivilege> getPrivilegeForRoles( Transaction tx, List<String> roleNames, Cache<String,Set<ResourcePrivilege>> privilegeCache )
     {
         throw unsupported();
-    }
-
-    @Override
-    public boolean isCurrent()
-    {
-        return version == EnterpriseSecurityGraphComponent.LATEST_VERSION;
-    }
-
-    @Override
-    public boolean migrationSupported()
-    {
-        return EnterpriseSecurityGraphComponent.VERSIONS_MIGRATION_SUPPORTED.contains( version );
-    }
-
-    @Override
-    public boolean runtimeSupported()
-    {
-        return EnterpriseSecurityGraphComponent.VERSIONS_RUNTIME_SUPPORTED.contains( version );
     }
 
     public boolean isEmpty()

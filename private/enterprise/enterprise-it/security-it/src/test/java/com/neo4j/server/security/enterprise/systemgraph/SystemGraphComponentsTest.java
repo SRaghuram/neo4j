@@ -47,6 +47,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
 import org.neo4j.server.security.auth.InMemoryUserRepository;
 import org.neo4j.server.security.auth.UserRepository;
+import org.neo4j.server.security.systemgraph.ComponentVersion;
 import org.neo4j.server.security.systemgraph.UserSecurityGraphComponent;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -317,7 +318,7 @@ class SystemGraphComponentsTest
     {
         EnterpriseSecurityComponentVersionFake( Log log )
         {
-            super( Integer.MAX_VALUE, "Neo4j 8.8.88", log );
+            super( ComponentVersion.ENTERPRISE_SECURITY_FAKE_VERSION, log );
         }
 
         @Override

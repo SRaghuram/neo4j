@@ -20,20 +20,17 @@ import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.ProcedureSegment;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.logging.Log;
+import org.neo4j.server.security.systemgraph.ComponentVersion;
 import org.neo4j.util.Preconditions;
 
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
-import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent.LATEST_VERSION;
 import static java.lang.String.format;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION;
 
 /**
  * This is the EnterpriseSecurityComponent version for Neo4j 4.1-drop1.
- * Compared with the previous version,
- *      - the global write privilege is connected to a GraphResource instead of an AllPropertiesResource
- *      - the schema privilege has been split into separate index and constraint privileges
- *      - the public role has been added
  */
 public class EnterpriseSecurityComponentVersion_3_41D1 extends SupportedEnterpriseSecurityComponentVersion
 {
@@ -41,7 +38,7 @@ public class EnterpriseSecurityComponentVersion_3_41D1 extends SupportedEnterpri
 
     public EnterpriseSecurityComponentVersion_3_41D1( Log log, KnownEnterpriseSecurityComponentVersion previous )
     {
-        super( 3, VERSION_41D1, log );
+        super( ComponentVersion.ENTERPRISE_SECURITY_41D1, log );
         this.previous = previous;
     }
 
@@ -72,7 +69,8 @@ public class EnterpriseSecurityComponentVersion_3_41D1 extends SupportedEnterpri
     @Override
     public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest )
     {
-        Preconditions.checkState( latest.version == LATEST_VERSION, format("Latest version should be %s but was %s", LATEST_VERSION, latest.version ));
+        Preconditions.checkState( latest.version == LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION,
+                format("Latest version should be %s but was %s", LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION, latest.version ));
         log.info( String.format( "Upgrading security model from %s by adding version information", this.description ) );
         // Upgrade from 4.1.0-Drop01 to 4.1.x, which means add the Version node
         setVersionProperty( tx, latest.version );

@@ -20,7 +20,6 @@ import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecur
 import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion;
 import com.neo4j.server.security.enterprise.systemgraph.versions.NoEnterpriseSecurityComponentVersion;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -49,22 +48,17 @@ import static org.neo4j.server.security.systemgraph.KnownSystemComponentVersion.
  * This component contains roles and privileges and is an enterprise-only component.
  * Each role is represented by a node with label :Role that is connected to zero or more users from the {@link UserSecurityGraphComponent}.
  * A privilege is represented of a relationship of type :GRANTED or :DENIED from a role node to a node with label (:Privilege),
- * which in turn is connected as below (where the database node is part of the @link{DefaultSystemGraphComponent}).
+ * which in turn is connected as below (where the database node is part of the DefaultSystemGraphComponent).
  *
  * (:Privilege)-[:SCOPE]->(s:Segment)-[:APPLIES_TO]->(:Resource), (s)-[:FOR]->(database), (s)-[:Qualified]->(qualifier)
  */
 public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphComponent
 {
-    public static final int LATEST_VERSION = 5;
-    public static final List<Integer> VERSIONS_MIGRATION_SUPPORTED = Arrays.asList(0, 1, 2, 3, 4, 5);
-    public static final List<Integer> VERSIONS_RUNTIME_SUPPORTED = Arrays.asList(2, 3, 4, 5);
-
     private final UserRepository defaultAdminRepository;
     private final KnownSystemComponentVersions<KnownEnterpriseSecurityComponentVersion> knownSecurityComponentVersions =
             new KnownSystemComponentVersions<>( new NoEnterpriseSecurityComponentVersion() );
     private final CustomSecurityInitializer customSecurityInitializer;
     private final Log log;
-    public static final String COMPONENT = "security-privileges";
 
     public EnterpriseSecurityGraphComponent( Log log, RoleRepository migrationRoleRepository, UserRepository defaultAdminRepository, Config config )
     {
@@ -90,7 +84,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
     @Override
     public String component()
     {
-        return COMPONENT;
+        return SECURITY_PRIVILEGE_COMPONENT;
     }
 
     @Override
@@ -104,11 +98,11 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
     {
         final KnownEnterpriseSecurityComponentVersion componentBeforeInit = knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx );
         log.info( "Initializing system graph model for component '%s' with version %d and status %s",
-                COMPONENT, componentBeforeInit.version, componentBeforeInit.getStatus() );
+                SECURITY_PRIVILEGE_COMPONENT, componentBeforeInit.version, componentBeforeInit.getStatus() );
         initializeLatestSystemGraph( tx );
         KnownEnterpriseSecurityComponentVersion componentAfterInit = knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx );
         log.info( "After initialization of system graph model component '%s' have version %d and status %s",
-                COMPONENT, componentAfterInit.version, componentAfterInit.getStatus() );
+                SECURITY_PRIVILEGE_COMPONENT, componentAfterInit.version, componentAfterInit.getStatus() );
 
     }
 
@@ -125,7 +119,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         {
             KnownEnterpriseSecurityComponentVersion currentVersion = knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx );
             log.info( "Upgrading component '%s' with version %d and status %s to latest version",
-                    COMPONENT, currentVersion.version, currentVersion.getStatus() );
+                    SECURITY_PRIVILEGE_COMPONENT, currentVersion.version, currentVersion.getStatus() );
 
             if ( currentVersion.version == UNKNOWN_VERSION )
             {
