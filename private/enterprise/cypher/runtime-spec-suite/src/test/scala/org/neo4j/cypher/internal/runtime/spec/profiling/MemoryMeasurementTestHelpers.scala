@@ -5,10 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.profiling
 
-import java.nio.file.Files
 import java.nio.file.Path
 
-import org.github.jamm.MemoryMeter
 import org.neo4j.cypher.internal.LogicalQuery
 import org.neo4j.cypher.internal.RuntimeContext
 import org.neo4j.cypher.internal.runtime.HighWaterScopedMemoryTracker
@@ -21,7 +19,6 @@ import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
 import org.neo4j.cypher.internal.runtime.spec.tests.InputStreams
 import org.neo4j.cypher.internal.runtime.spec.util.HeapDumpReader
 import org.neo4j.cypher.internal.util.test_helpers.TestName
-import org.neo4j.cypher.result.QueryProfile
 import org.neo4j.cypher.result.RuntimeResult
 import org.neo4j.graphdb.QueryStatistics
 import org.neo4j.io.ByteUnit
@@ -30,13 +27,13 @@ import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.memory.HeapDumper
 import org.neo4j.memory.HeapDumpingMemoryTracker
 import org.neo4j.memory.MemoryTracker
+import org.neo4j.test.rule.TestDirectory
 import org.neo4j.values.AnyValue
 import org.scalactic.TripleEqualsSupport.Spread
 import org.scalatest.Args
 import org.scalatest.Assertion
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.Status
-import org.scalatest.matchers.BeMatcher
 import org.scalatest.matchers.MatchResult
 import org.scalatest.matchers.Matcher
 
@@ -77,16 +74,23 @@ trait MemoryMeasurementTestHelpers[CONTEXT <: RuntimeContext] extends BeforeAndA
   protected def summaryPrint: Boolean
   protected def deleteHeapDumps: Boolean
 
+  private val testDir = TestDirectory.testDirectory(getClass)
+  testDir.prepareDirectory(getClass, null)
+
   private def debug(msg: => String): Unit = if (debugPrint)
     println(msg)
 
   private val measurementRecords =
     collection.mutable.ArrayBuffer.empty[Record]
 
-  override protected def afterAll(): Unit = if (summaryPrint)
-    (Seq(Record.header) ++ measurementRecords.map(_.fields))
-      .map(row => row.mkString(";"))
-      .foreach(println)
+  override protected def afterAll(): Unit = {
+    if (summaryPrint)
+      (Seq(Record.header) ++ measurementRecords.map(_.fields))
+        .map(row => row.mkString(";"))
+        .foreach(println)
+    if (deleteHeapDumps)
+      testDir.complete(true)
+  }
 
   abstract override def run(testName: Option[String], args: Args): Status =
     super.run(testName, args)
@@ -380,7 +384,6 @@ trait MemoryMeasurementTestHelpers[CONTEXT <: RuntimeContext] extends BeforeAndA
 
   trait HeapDumpRecorder {
     private val heapDumper = new HeapDumper
-    private val dir = Files.createTempDirectory("HeapDumpRecorder")
     private val random = new Random()
     private var _heapDumps = List.empty[Path]
     def heapDumps: List[Path] = _heapDumps
@@ -390,7 +393,7 @@ trait MemoryMeasurementTestHelpers[CONTEXT <: RuntimeContext] extends BeforeAndA
 
     protected def filePath(name: String): Path = {
       val id = name + "-" + random.alphanumeric.take(10).mkString
-      dir.resolve(id + ".hprof")
+      testDir.filePath(id + ".hprof")
     }
 
     protected def takeDump(name: String): Path = {
@@ -402,7 +405,6 @@ trait MemoryMeasurementTestHelpers[CONTEXT <: RuntimeContext] extends BeforeAndA
 
     def cleanUp(): Unit = {
       _heapDumps.foreach(_.toFile.delete())
-      dir.toFile.delete()
     }
   }
 
