@@ -172,7 +172,9 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
   }
 
   test("should handle a procedure call followed by has-label check") {
-    val labeledNode = createLabeledNode("Label")
+    val labeledNodeId = createLabeledNode("Label").getId
+    val transaction = graphOps.beginTx()
+    val labeledNode = transaction.getNodeById(labeledNodeId)
 
     registerProcedure("getNode") { builder =>
       builder.out("node", Neo4jTypes.NTNode)
@@ -193,5 +195,7 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
 
     val res = execute(q)
     res.toList shouldBe List(Map("node" -> labeledNode))
+
+    transaction.close()
   }
 }

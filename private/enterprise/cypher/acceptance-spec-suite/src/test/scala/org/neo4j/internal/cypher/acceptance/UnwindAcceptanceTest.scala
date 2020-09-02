@@ -63,9 +63,10 @@ class UnwindAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
   }
 
   test("should unwind nodes from literal list") {
-    val n = createNode("prop" -> 42)
+    val nId = createNode("prop" -> 42).getId
 
     graph.withTx( tx => {
+      val n = tx.getNodeById(nId)
       val query = "UNWIND [$node] AS n WITH n WHERE n.prop = 42 RETURN n"
       val result = makeRewinadable(tx.execute(query, MapUtil.map("node", n)))
       result.toList should equal(List(Map("n" -> n)))
@@ -91,9 +92,10 @@ class UnwindAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
   test("should unwind relationships") {
     val a = createNode()
     val b = createNode()
-    val r = relate(a, b, "prop" -> 42)
+    val rId = relate(a, b, "prop" -> 42).getId
 
     graph.withTx( tx => {
+      val r = tx.getRelationshipById(rId)
       val query = "UNWIND $relationships AS r WITH r WHERE r.prop = 42 RETURN r"
       val result = makeRewinadable(tx.execute(query, MapUtil.map("relationships", util.Arrays.asList(r))))
       result.toList should equal(List(Map("r" -> r)))
@@ -103,9 +105,10 @@ class UnwindAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
   test("should unwind relationships from literal list") {
     val a = createNode()
     val b = createNode()
-    val r = relate(a, b, "prop" -> 42)
+    val rId = relate(a, b, "prop" -> 42).getId
 
     graph.withTx( tx => {
+      val r = tx.getRelationshipById(rId)
       val query = "UNWIND [$relationship] AS r WITH r WHERE r.prop = 42 RETURN r"
       val result = makeRewinadable(tx.execute(query, MapUtil.map("relationship", r)))
       result.toList should equal(List(Map("r" -> r)))

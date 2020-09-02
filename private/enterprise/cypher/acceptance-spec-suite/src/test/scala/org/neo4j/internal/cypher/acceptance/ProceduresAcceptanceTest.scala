@@ -312,7 +312,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     val tx = graphOps.beginTx()
 
     // when
-    // findById uses an open injected transaction
+    // findRelationshipById uses an open injected transaction
     val result = tx.execute("WITH org.neo4j.findRelationshipById($relId) AS r RETURN r", util.Map.of("relId", r.getId.asInstanceOf[Object]))
       .asScala
       .toList

@@ -64,7 +64,6 @@ public class TestProcedure
     @Context
     public DependencyResolver dependencyResolver;
 
-
     @Procedure( "org.neo4j.time" )
     @Description( "org.neo4j.time" )
     public void time( @Name( value = "time" ) LocalTime statementTime )
@@ -219,26 +218,28 @@ public class TestProcedure
     }
 
     @UserFunction( name = "org.neo4j.findById" )
-    public Node findById( @Name( "id" ) Long id)
+    public Node findById( @Name( "id" ) Long id )
     {
         return transaction.getNodeById( id );
     }
 
     @UserFunction( name = "org.neo4j.findRelationshipById" )
-    public Relationship findRelationshipById( @Name( "id" ) Long id)
+    public Relationship findRelationshipById( @Name( "id" ) Long id )
     {
         return transaction.getRelationshipById( id );
     }
 
     // Only used for testing that query fails if procedure returns an entity from another database
     @UserFunction( name = "org.neo4j.findByIdInDatabase" )
-    public Node findByIdInDatabase( @Name( "id" ) Long id, @Name("databaseName") String dbName, @Name("shouldCloseTransaction") Boolean shouldCloseTransaction )
+    public Node findByIdInDatabase( @Name( "id" ) Long id, @Name( "databaseName" ) String dbName,
+                                    @Name( "shouldCloseTransaction" ) Boolean shouldCloseTransaction )
     {
         GraphDatabaseService db = dependencyResolver.resolveDependency( DatabaseManagementService.class )
                                                     .database( dbName );
-        Transaction tx = db.beginTx(2l, TimeUnit.SECONDS);
+        Transaction tx = db.beginTx( 2L, TimeUnit.SECONDS );
         Node n = tx.getNodeById( id );
-        if (shouldCloseTransaction) {
+        if ( shouldCloseTransaction )
+        {
             tx.commit();
         }
 
@@ -247,22 +248,23 @@ public class TestProcedure
 
     // Only used for testing that query fails if procedure returns an entity from another database
     @UserFunction( name = "org.neo4j.findRelationshipByIdInDatabase" )
-    public Relationship findRelationshipByIdInDatabase( @Name( "id" ) Long id, @Name("databaseName") String dbName, @Name("shouldCloseTransaction") Boolean shouldCloseTransaction )
+    public Relationship findRelationshipByIdInDatabase( @Name( "id" ) Long id, @Name( "databaseName" ) String dbName,
+                                                        @Name( "shouldCloseTransaction" ) Boolean shouldCloseTransaction )
     {
         GraphDatabaseService db = dependencyResolver.resolveDependency( DatabaseManagementService.class )
                                                     .database( dbName );
-        Transaction tx = db.beginTx(2l, TimeUnit.SECONDS);
+        Transaction tx = db.beginTx( 2L, TimeUnit.SECONDS );
         Relationship r = tx.getRelationshipById( id );
-        if (shouldCloseTransaction) {
+        if ( shouldCloseTransaction )
+        {
             tx.commit();
         }
 
         return r;
     }
 
-    // Only used for testing that query fails if procedure returns an entity from another database
     @UserFunction( name = "org.neo4j.findPropertyInDatabase" )
-    public Object findPropertyInDatabase( @Name( "id" ) Long id, @Name("databaseName") String dbName, @Name("property") String property )
+    public Object findPropertyInDatabase( @Name( "id" ) Long id, @Name( "databaseName" ) String dbName, @Name( "property" ) String property )
     {
         GraphDatabaseService db = dependencyResolver.resolveDependency( DatabaseManagementService.class )
                                                     .database( dbName );
