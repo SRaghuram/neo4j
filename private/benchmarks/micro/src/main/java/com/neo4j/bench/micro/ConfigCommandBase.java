@@ -18,11 +18,11 @@ import static java.lang.String.format;
 
 abstract class ConfigCommandBase implements Runnable
 {
+    @Required
     @Option( type = OptionType.COMMAND,
             name = {"--path"},
             description = "Path to export the generated benchmark configuration file to",
             title = "Configuration Path" )
-    @Required
     protected File benchConfigFile;
 
     @Option( type = OptionType.COMMAND,
@@ -47,7 +47,7 @@ abstract class ConfigCommandBase implements Runnable
                        withDisabled );
     }
 
-    protected SuiteDescription allBenchmarks()
+    public static SuiteDescription allBenchmarks()
     {
         Validation validation = new Validation();
         BenchmarksFinder benchmarksFinder = new BenchmarksFinder( BenchmarksRunner.class.getPackage().getName() );

@@ -8,6 +8,8 @@ package com.neo4j.bench.jmh.api.config;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.model.model.BenchmarkConfig;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -102,6 +104,18 @@ public class SuiteDescription
         return benchmarkDescriptions.containsKey( benchmarkClassName );
     }
 
+    @Override
+    public boolean equals( Object that )
+    {
+        return EqualsBuilder.reflectionEquals( this, that );
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return HashCodeBuilder.reflectionHashCode( this );
+    }
+
     public BenchmarkDescription getBenchmark( String benchmarkClassName )
     {
         assertBenchmarkExists( benchmarkClassName );
@@ -175,16 +189,25 @@ public class SuiteDescription
         List<BenchmarkDescription> enabledExplodedBenchmarks = explodeEnabledBenchmarks();
         int maxPartitions = Math.min( numberOfPartitions, enabledExplodedBenchmarks.size() );
 
-        int benchmarksPerPartition = (int) Math.ceil( enabledExplodedBenchmarks.size() / (double) maxPartitions );
+        // The size of every normal partition
+        int benchmarksPerPartition = enabledExplodedBenchmarks.size() / maxPartitions;
+        // Some partitions need to be large to make sure we fit all benchmarks
+        // Here we calculate the count of these benchmarks
+        int largerPartitions = enabledExplodedBenchmarks.size() % maxPartitions;
 
         List<SuiteDescription> partitions = new ArrayList<>( maxPartitions );
-
+        int partitionIndex = 0;
         for ( int partition = 0; partition < maxPartitions; partition++ )
         {
-            int startIndex = partition * benchmarksPerPartition;
-            int endIndex = Math.min( startIndex + benchmarksPerPartition, enabledExplodedBenchmarks.size() );
-
-            List<BenchmarkDescription> rawBenchmarkDescriptionPartition = enabledExplodedBenchmarks.subList( startIndex, endIndex );
+            int partitionEndIndex = Math.min( partitionIndex + benchmarksPerPartition, enabledExplodedBenchmarks.size() );
+            //If this is a partition that should be larger we will update EndIndex
+            if ( partition < largerPartitions )
+            {
+                partitionEndIndex++;
+            }
+            List<BenchmarkDescription> rawBenchmarkDescriptionPartition = enabledExplodedBenchmarks.subList( partitionIndex, partitionEndIndex );
+            //new start index should be same as this EndIndex
+            partitionIndex = partitionEndIndex;
 
             List<BenchmarkDescription> condensedBenchmarkDescriptionPartition =
                     BenchmarkDescription.implode( new HashSet<>( rawBenchmarkDescriptionPartition ) );

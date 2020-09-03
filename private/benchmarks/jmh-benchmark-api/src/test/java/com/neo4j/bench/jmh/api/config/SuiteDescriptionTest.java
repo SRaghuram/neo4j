@@ -113,14 +113,28 @@ class SuiteDescriptionTest extends BenchmarksFinderFixture
     {
         SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getValidBenchmarksFinder(), new Validation() );
 
+        int size = suiteDescription.explodeEnabledBenchmarks().size();
+        for ( int i = 2; i < size; i++ )
+        {
+            List<SuiteDescription> partitions = suiteDescription.partition( i );
+            assertEquals( i, partitions.size() );
+            assertEquals(
+                    new HashSet<>( suiteDescription.explodeEnabledBenchmarks() ),
+                    new HashSet<>( partitions.stream().flatMap( partition -> partition.explodeEnabledBenchmarks().stream() ).collect( toList() ) )
+            );
+        }
+    }
+
+    @Test
+    public void shouldAlwaysPartitionTheSameWay()
+    {
+        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getValidBenchmarksFinder(), new Validation() );
         List<SuiteDescription> partitions = suiteDescription.partition( 3 );
 
-        assertEquals( 3, partitions.size() );
-
-        assertEquals(
-                new HashSet<>( suiteDescription.explodeEnabledBenchmarks() ),
-                new HashSet<>( partitions.stream().flatMap( partition -> partition.explodeEnabledBenchmarks().stream() ).collect( toList() ) )
-        );
+        for ( int i = 0; i < 10000; i++ )
+        {
+            assertEquals( partitions, suiteDescription.partition( 3 ) );
+        }
     }
 
     @Test

@@ -48,8 +48,8 @@ public class Main
                .withCommands(
                        ConfigDefaultCommand.class,
                        ConfigGroupCommand.class,
-                       ConfigBenchmarksCommand.class );
-
+                       ConfigBenchmarksCommand.class,
+                       PartitionConfigCommand.class );
         builder.build()
                .parse( args )
                .run();
