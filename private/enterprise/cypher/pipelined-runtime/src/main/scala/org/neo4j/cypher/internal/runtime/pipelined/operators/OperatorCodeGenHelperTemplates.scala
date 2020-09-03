@@ -48,6 +48,7 @@ import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation
@@ -237,6 +238,10 @@ object OperatorCodeGenHelperTemplates {
   def setMemoryTracker(memoryTrackerField: InstanceField, operatorId: Int): IntermediateRepresentation =
     setField(memoryTrackerField, getMemoryTracker(operatorId))
 
+  def getArgument(argumentStateMapId: ArgumentStateMapId): IntermediateRepresentation =
+    invoke(INPUT_CURSOR, method[CypherRow, Long, Int]("getLongAt"),
+      loadField(field[Int](argumentSlotOffsetFieldName(argumentStateMapId))))
+
   def argumentStateMap[STATE <: ArgumentState](argumentStateMapId: ArgumentStateMapId
                                              )(implicit to: Manifest[STATE]): IntermediateRepresentation = {
     cast[ArgumentStateMap[STATE]](
@@ -262,6 +267,16 @@ object OperatorCodeGenHelperTemplates {
                             argumentRowId: IntermediateRepresentation = constant(TopLevelArgument.VALUE)
                            )(implicit to: Manifest[STATE]): IntermediateRepresentation =
     peekState[STATE](argumentStateMap[STATE](argumentStateMapId), argumentRowId)
+
+  def fetchState(argumentStateMaps: IntermediateRepresentation,
+                 argumentStateMapId: ArgumentStateMapId) : IntermediateRepresentation =
+      invoke(
+        cast[ArgumentStateMap[_ <: ArgumentState]](
+          invoke(argumentStateMaps,
+            method[ArgumentStateMaps, ArgumentStateMap[_ <: ArgumentState], Int]("applyByIntId"),
+            constant(argumentStateMapId.x))),
+        method[ArgumentStateMap[_ <: ArgumentState], ArgumentState, Long]("peek"),
+        load(argumentVarName(argumentStateMapId)))
 
   def argumentSlotOffsetFieldName(argumentStateMapId: ArgumentStateMapId): String =
     "argumentSlotOffset_asm" + argumentStateMapId.x

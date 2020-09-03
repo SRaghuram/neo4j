@@ -8,17 +8,24 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import java.util.concurrent.ConcurrentHashMap
 
 import org.neo4j.codegen.api.Field
+import org.neo4j.codegen.api.InstanceField
 import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
 import org.neo4j.codegen.api.IntermediateRepresentation.cast
 import org.neo4j.codegen.api.IntermediateRepresentation.condition
+import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
+import org.neo4j.codegen.api.IntermediateRepresentation.equal
 import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
+import org.neo4j.codegen.api.IntermediateRepresentation.isNotNull
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.not
 import org.neo4j.codegen.api.IntermediateRepresentation.or
+import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.collection.trackable.HeapTrackingCollections
@@ -43,12 +50,21 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctSinglePrimi
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctSinglePrimitiveOperator.DistinctSinglePrimitiveState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctSinglePrimitiveOperator.DistinctSinglePrimitiveStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctSinglePrimitiveOperator.StandardDistinctSinglePrimitiveState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.argumentSlotOffsetFieldName
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.argumentVarName
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.fetchState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.getArgument
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.getArgumentSlotOffset
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.peekState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.setMemoryTracker
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDistinctSinglePrimitiveOperatorTaskTemplate.computeProjection
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDistinctSinglePrimitiveOperatorTaskTemplate.seen
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -193,18 +209,7 @@ class SerialTopLevelDistinctSinglePrimitiveOperatorTaskTemplate(val inner: Opera
       expression = generateExpression()
     }
     val keyVar = codeGen.namer.nextVariableName("groupingKey")
-    val project = toSlot match {
-      case LongSlot(offset, _, CTNode) =>
-        codeGen.setLongAt(offset, invoke(cast[VirtualNodeValue](nullCheckIfRequired(expression)),
-          method[VirtualNodeValue, Long]("id")))
-      case LongSlot(offset, _, CTRelationship) =>
-        codeGen.setLongAt(offset, invoke(cast[VirtualRelationshipValue](nullCheckIfRequired(expression)),
-          method[VirtualRelationshipValue, Long]("id")))
-      case RefSlot(offset, _, _) =>
-        codeGen.setRefAt(offset, nullCheckIfRequired(expression))
-      case slot =>
-        throw new InternalException(s"Do not know how to make setter for slot $slot")
-    }
+    val project = computeProjection(toSlot, codeGen, expression)
     /**
      * val key = context.getLongAt(offset)
      * if (innerCanContinue || distinctState.seen(key)) {
@@ -214,9 +219,7 @@ class SerialTopLevelDistinctSinglePrimitiveOperatorTaskTemplate(val inner: Opera
      */
     block(
       declareAndAssign(typeRefOf[Long], keyVar, codeGen.getLongAt(offset)),
-      condition(or(innerCanContinue,
-        invoke(loadField(distinctStateField),
-          method[DistinctSinglePrimitiveState, Boolean, Long]("seen"), load(keyVar)))) {
+      condition(or(innerCanContinue, seen(loadField(distinctStateField), load(keyVar)))) {
         block(
           project,
           inner.genOperateWithExpressions,
@@ -259,4 +262,108 @@ object SerialTopLevelDistinctSinglePrimitiveOperatorTaskTemplate {
 
     }
   }
+
+  def computeProjection(toSlot: Slot, codeGen: OperatorExpressionCompiler, expression: IntermediateExpression): IntermediateRepresentation = {
+    toSlot match {
+      case LongSlot(offset, _, CTNode) =>
+        codeGen.setLongAt(offset, invoke(cast[VirtualNodeValue](nullCheckIfRequired(expression)),
+          method[VirtualNodeValue, Long]("id")))
+      case LongSlot(offset, _, CTRelationship) =>
+        codeGen.setLongAt(offset, invoke(cast[VirtualRelationshipValue](nullCheckIfRequired(expression)),
+          method[VirtualRelationshipValue, Long]("id")))
+      case RefSlot(offset, _, _) =>
+        codeGen.setRefAt(offset, nullCheckIfRequired(expression))
+      case slot =>
+        throw new InternalException(s"Do not know how to make setter for slot $slot")
+    }
+  }
+
+  def seen(state: IntermediateRepresentation, key: IntermediateRepresentation): IntermediateRepresentation =
+    invoke(state, method[DistinctSinglePrimitiveState, Boolean, Long]("seen"), key)
 }
+
+class SerialDistinctOnRhsOfApplySinglePrimitiveOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
+                                                                    override val id: Id,
+                                                                    argumentStateMapId: ArgumentStateMapId,
+                                                                    toSlot: Slot,
+                                                                    offset: Int,
+                                                                    generateExpression: () => IntermediateExpression)
+                                                                   (val codeGen: OperatorExpressionCompiler)
+  extends OperatorTaskTemplate {
+  private val argumentMaps: InstanceField = field[ArgumentStateMaps](codeGen.namer.nextVariableName("stateMaps"),
+    load(ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name))
+  private val localArgument = codeGen.namer.nextVariableName("argument")
+  private var expression: IntermediateExpression = _
+  private val distinctStateField = field[DistinctSinglePrimitiveState](codeGen.namer.nextVariableName("distinctState"),
+    constant(null))
+  private val memoryTrackerField = field[MemoryTracker](codeGen.namer.nextVariableName("memoryTracker"))
+
+  override def genInit: IntermediateRepresentation = inner.genInit
+
+  override def genExpressions: Seq[IntermediateExpression] = Seq(expression)
+
+  override def genFields: Seq[Field] = Seq(argumentMaps, memoryTrackerField, distinctStateField, field[Int](argumentSlotOffsetFieldName(argumentStateMapId), getArgumentSlotOffset(argumentStateMapId)))
+
+  override def genOperateEnter: IntermediateRepresentation = {
+    block(
+      declareAndAssign(typeRefOf[Long], localArgument, constant(-1L)),
+      inner.genOperateEnter
+    )
+  }
+
+  /**
+   * {{{
+   *   val key = context.getLongAt(offset)
+   *   if (localArgument != inputCursor.getLongAt(argSlot)) {
+   *     localArgument = inputCursor.getLongAt(argSlot)
+   *     this.distinctState = [get new state from ArgumentStateMap]
+   *   }
+   *   if (distinctState.seen(key)) {
+   *     context.setLongAt(outOffset, ((VirtualNodeValue) expression).id());
+   *     <<inner.generate>>
+   *   }
+   * }}}
+   */
+  override def genOperate: IntermediateRepresentation = {
+    if (expression == null) {
+      expression = generateExpression()
+    }
+    val keyVar = codeGen.namer.nextVariableName("groupingKey")
+    val project = computeProjection(toSlot, codeGen, expression)
+    block(
+      declareAndAssign(typeRefOf[Long], argumentVarName(argumentStateMapId), getArgument(argumentStateMapId)),
+      declareAndAssign(typeRefOf[Long], keyVar, codeGen.getLongAt(offset)),
+      condition(not(equal(load(argumentVarName(argumentStateMapId)), load(localArgument)))) {
+        block(
+          assign(localArgument, load(argumentVarName(argumentStateMapId))),
+            setField(distinctStateField, cast[DistinctSinglePrimitiveState](fetchState(loadField(argumentMaps), argumentStateMapId))),
+            invoke(loadField(distinctStateField),
+              method[DistinctSinglePrimitiveState, Unit, MemoryTracker]("setMemoryTracker"),
+              loadField(memoryTrackerField))
+        )
+      },
+      condition(or(innerCanContinue, seen(loadField(distinctStateField), load(keyVar)))) {
+        block(
+          project,
+          inner.genOperateWithExpressions,
+          doIfInnerCantContinue(profileRow(id))
+        )
+      })
+  }
+
+  override def genOperateExit: IntermediateRepresentation = {
+    block(
+      condition(isNotNull(loadField(distinctStateField))) {
+        IntermediateRepresentation.noop()
+      },
+      inner.genOperateExit)
+  }
+
+  override def genLocalVariables: Seq[LocalVariable] = Seq.empty
+  override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
+  override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
+  override def genCreateState: IntermediateRepresentation = block(
+    setMemoryTracker(memoryTrackerField, id.x),
+    inner.genCreateState)
+  }
