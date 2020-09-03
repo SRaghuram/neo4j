@@ -49,7 +49,7 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
 
   test("Show databases with clauses") {
     // When
-    val plan = execute("EXPLAIN SHOW DATABASES YIELD name ORDER BY name SKIP 1 LIMIT 1 WHERE name='neo4j'").executionPlanString()
+    val plan = execute("EXPLAIN SHOW DATABASES YIELD name ORDER BY name SKIP 1 LIMIT 1 WHERE name='neo4j' RETURN name").executionPlanString()
 
     // Then
     plan should include(managementPlan("ShowDatabases", Seq(details("name = \"neo4j\""))).toString)

@@ -76,11 +76,18 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     result.toSet should be(Set(admin, public))
   }
 
-  test("should not accept exists subclause in show commands") {
+  test("should not accept EXISTS subclause in show commands") {
     val exception = the[SyntaxException] thrownBy {
       execute("SHOW ROLES WHERE true AND EXISTS { MATCH (n) }")
     }
     exception.getMessage should startWith("The EXISTS clause is not valid on SHOW commands. (line 1, column 27 (offset: 26))")
+  }
+
+  test("should not accept EXISTS subclause in show commands with RETURN") {
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW ROLES YIELD role RETURN role, EXISTS { MATCH (n) }")
+    }
+    exception.getMessage should startWith("The EXISTS subclause is not valid inside a WITH or RETURN clause. (line 1, column 36 (offset: 35))")
   }
 
   test("should create and show roles") {
@@ -146,7 +153,35 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val result = execute("SHOW ALL ROLES WITH USERS YIELD role, member ORDER BY role SKIP 1 LIMIT 2")
 
     // THEN
+    // sort is A-Za-z so we skip PUBLIC and start at admin
     result.toList should be(List(Map("role" -> "admin", "member" -> "neo4j"), Map("role" -> "architect", "member" -> null)))
+  }
+
+  test("should show all default roles with users with order by limit / skip in return") {
+    // WHEN
+    val result = execute("SHOW ALL ROLES WITH USERS YIELD role, member WHERE true RETURN role, member ORDER BY role SKIP 1 LIMIT 2")
+
+    // THEN
+    // sort is A-Za-z so we skip PUBLIC and start at admin
+    result.toList should be(List(Map("role" -> "admin", "member" -> "neo4j"), Map("role" -> "architect", "member" -> null)))
+  }
+
+  test("should count roles using aggregation and alias") {
+    // WHEN
+    // Roles are PUBLIC, admin, architect, editor, publisher, reader
+    val result = execute("SHOW ALL ROLES WITH USERS YIELD role RETURN count(role) as rolecount")
+
+    // THEN
+    result.toList should be(List(Map("rolecount" -> 6)))
+  }
+
+  test("should count roles using aggregation and no alias") {
+    // WHEN
+    // Roles are PUBLIC, admin, architect, editor, publisher, reader
+    val result = execute("SHOW ALL ROLES WITH USERS YIELD role RETURN count(role)")
+
+    // THEN
+    result.toList should be(List(Map("count(role)" -> 6)))
   }
 
   test("should show populated roles with users") {
@@ -179,6 +214,28 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     ) ++ publicRole("neo4j", "Bar", "Baz"))
   }
 
+  test("should show populated roles with users with YIELD with aliases") {
+    // GIVEN
+    execute("CREATE ROLE foo")
+
+    // WHEN
+    val result = execute("SHOW POPULATED ROLES WITH USERS YIELD role as foo WHERE foo = 'admin' RETURN foo")
+
+    // THEN
+    result.toSet should be(Set(Map("foo" -> "admin")))
+  }
+
+  test("should show populated roles with users with YIELD and RETURN with aliases") {
+    // GIVEN
+    execute("CREATE ROLE foo")
+
+    // WHEN
+    val result = execute("SHOW POPULATED ROLES WITH USERS YIELD role WHERE role = 'admin' RETURN role as foo")
+
+    // THEN
+    result.toSet should be(Set(Map("foo" -> "admin")))
+  }
+
   test("should not show role with invalid yield") {
     // GIVEN
     setup()
@@ -192,6 +249,60 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     exception.getMessage should startWith("Variable `foo` not defined")
     exception.getMessage should include("(line 1, column 22 (offset: 21))")
 
+  }
+
+  test("should not show role with return without yield") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW ALL ROLES RETURN role")
+    }
+
+    // THEN
+    exception.getMessage should startWith("The RETURN clause is not valid without a YIELD")
+    exception.getMessage should include("(line 1, column 16 (offset: 15))")
+  }
+
+  test("should not show role with return with where without yield") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW ALL ROLES WHERE role='PUBLIC' RETURN role")
+    }
+
+    // THEN
+    exception.getMessage should startWith("The RETURN clause is not valid without a YIELD")
+    exception.getMessage should include("(line 1, column 36 (offset: 35))")
+  }
+
+  test("should not show role with invalid return") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW ALL ROLES YIELD role RETURN foo")
+    }
+
+    // THEN
+    exception.getMessage should startWith("Variable `foo` not defined")
+    exception.getMessage should include("(line 1, column 34 (offset: 33))")
+
+  }
+
+  test("should not count roles using invalid aggregation") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW ALL ROLES YIELD role RETURN count(foo)")
+    }
+
+    // THEN
+    exception.getMessage should startWith("Variable `foo` not defined")
+    exception.getMessage should include("(line 1, column 40 (offset: 39))")
   }
 
   test("should not show role with invalid where") {

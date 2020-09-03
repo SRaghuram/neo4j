@@ -122,7 +122,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
   }
 
-  test("should show privileges with YIELD role, action, access ORDER BY action, role, access") {
+  test("should show privileges with YIELD role, action, access ORDER BY action, role, access WHERE access = 'GRANTED'") {
 
     val expected = defaultRolePrivileges.toList
       .sortBy(row => Seq("action", "access", "role").map(row).mkString(","))
@@ -142,6 +142,16 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("SHOW PRIVILEGES YIELD role, action, access WHERE access = 'GRANTED' ").toList should be(expected)
   }
 
+  test("should show privileges with YIELD role, action, access WHERE access = 'GRANTED' RETURN * using default ordering") {
+
+    val expected = defaultRolePrivileges.toList
+      .sortBy(row => Seq("role", "action", "access").map(row).mkString(","))
+      .map(_.filterKeys(Set("role", "action", "access").contains))
+
+    // WHEN
+    execute("SHOW PRIVILEGES YIELD role, action, access WHERE access = 'GRANTED' RETURN *").toList should be(expected)
+  }
+
   test("should show privileges with YIELD role, action, access SKIP 5 LIMIT 5 ORDER BY action, role, access") {
 
     val expected = defaultRolePrivileges.toList
@@ -151,6 +161,56 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
     // WHEN
     execute("SHOW PRIVILEGES YIELD role, action, access ORDER BY action, role, access SKIP 5 LIMIT 5 ").toList should be(expected)
+  }
+
+  test("should show privileges with YIELD role RETURN DISTINCT role") {
+
+    val expected = Set(Map("role" -> "PUBLIC"), Map("role" -> "admin"), Map("role" -> "architect"), Map("role" -> "editor"), Map("role" -> "publisher"),
+      Map("role" -> "reader"))
+
+    // WHEN
+    execute("SHOW PRIVILEGES YIELD role RETURN DISTINCT role").toSet should be(expected)
+  }
+
+    test("should show privileges with RETURN role, count(*) AS count ORDER BY role") {
+
+      val expected = defaultRolePrivileges.toList
+        .groupBy(_.apply("role"))
+        .map{ case (role, privs) => Map("role" -> role, "count" -> privs.length)}.toList
+        .sortBy(_.apply("role").asInstanceOf[String])
+
+      // WHEN
+      execute("SHOW PRIVILEGES YIELD role RETURN role, count(*) AS count ORDER BY role").toList should be(expected)
+    }
+
+    test("should show privileges with RETURN role, count(*) ORDER BY role with no aliasing") {
+
+      val expected = defaultRolePrivileges.toList
+        .groupBy(_.apply("role"))
+        .map{ case (role, privs) => Map("role" -> role, "count(*)" -> privs.length)}.toList
+        .sortBy(_.apply("role").asInstanceOf[String])
+
+      // WHEN
+      execute("SHOW PRIVILEGES YIELD role RETURN role, count(*) ORDER BY role").toList should be(expected)
+    }
+
+  test("should show user privileges with RETURN user, collect(role) as roles") {
+
+     // WHEN
+    execute("SHOW USER neo4j PRIVILEGES YIELD * RETURN user, collect(role) as roles").toSet should be(
+      Set(Map("user" -> "neo4j", "roles" -> List("PUBLIC", "PUBLIC", "admin", "admin", "admin", "admin", "admin", "admin", "admin", "admin", "admin")))
+    )
+  }
+
+  test("should not show privileges with RETURN role, count(missing) AS count") {
+
+    val theException = the[SyntaxException] thrownBy {
+      // WHEN
+      execute("SHOW PRIVILEGES YIELD role, missing RETURN role, count(missing) AS count")
+    }
+
+    theException.getMessage should startWith("Variable `missing` not defined")
+    theException.getMessage should include("(line 1, column 29 (offset: 28))")
   }
 
 
@@ -271,6 +331,16 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
   }
 
+  test("should show role privileges with YIELD, WHERE and RETURN") {
+    // GIVEN
+    execute("CREATE ROLE custom")
+    execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES YIELD * WHERE access = 'GRANTED' RETURN *").toSet should
+      be(Set(Map("role" -> "custom", "segment" -> "NODE(*)", "resource" -> "graph", "graph" -> "*", "action" -> "traverse", "access" -> "GRANTED")))
+  }
+
   test("should show privileges for specific user") {
     // WHEN
     val result = execute("SHOW USER neo4j PRIVILEGES")
@@ -325,6 +395,36 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
   }
 
+  test("should show privileges for specific user with aliased items in YIELD") {
+
+    val expected = List(Map("foo" -> "GRANTED", "bar" -> "PUBLIC"))
+    execute("SHOW USER neo4j PRIVILEGES YIELD segment, access as foo, resource as blah, role as bar where bar = 'PUBLIC' AND segment = 'database' RETURN foo, bar")
+      .toList should be (expected)
+  }
+
+  test("should show privileges for specific user with aliased items in YIELD and ORDER BY in return") {
+
+    val expected = List(Map("res" -> "all_properties", "bar" -> "admin"), Map("res" -> "all_properties", "bar" -> "admin"), Map("res" -> "database", "bar" -> "admin"),
+      Map("res" -> "database", "bar" -> "admin"), Map("res" -> "database", "bar" -> "admin"))
+    execute("SHOW USER neo4j PRIVILEGES YIELD access as foo, resource as res, role as bar WHERE bar = 'admin' RETURN res, bar ORDER BY res LIMIT 5")
+      .toList should be(expected)
+  }
+
+  test("should show privileges for specific user with aliased items in RETURN") {
+
+    val expected = List(Map("foo" -> "GRANTED", "bar" -> "PUBLIC"))
+    execute("SHOW USER neo4j PRIVILEGES YIELD access, resource, role, segment where role = 'PUBLIC' AND segment = 'database' RETURN access as foo, role as bar")
+      .toList should be (expected)
+  }
+
+  test("should not show privileges for specific user with clashing aliases in YIELD") {
+
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW USER neo4j PRIVILEGES YIELD access as foo, resource as foo where bar = 'PUBLIC' RETURN foo, bar")
+    }
+    exception.getMessage should startWith("Multiple result columns with the same name are not supported (line 1, column 34 (offset: 33))")
+  }
+
   test("should show privileges for specific user YIELD access, resource, role, segment WHERE role = 'PUBLIC'") {
 
     val expected = defaultUserPrivileges.toList
@@ -333,7 +433,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
     // WHEN
     execute("SHOW USER neo4j PRIVILEGES YIELD access, resource, role, segment WHERE role = 'PUBLIC'")
-      .toList should be (expected)
+      .toList should be(expected)
   }
 
   test("should not show privileges when WHERE references column omitted from YIELD") {
@@ -363,15 +463,72 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     exception.getMessage should startWith("Variable `foo` not defined (line 1, column 34 (offset: 33))")
   }
 
-  test("should not show privileges for specific user with aliased items in YIELD") {
+    test("should show privileges for specific user RETURN user, count(access) AS count") {
+      val expected = Set(Map("user" -> "neo4j", "count" -> 11))
+
+      // WHEN
+      execute("SHOW USER neo4j PRIVILEGES YIELD user, access RETURN user, count(access) AS count")
+        .toSet should be (expected)
+    }
+
+    test("should show privileges for specific user RETURN count(access) AS count") {
+      val expected = Set(Map("count" -> 11))
+
+      // WHEN
+      execute("SHOW USER neo4j PRIVILEGES YIELD access RETURN count(access) AS count")
+        .toSet should be (expected)
+    }
+
+  test("should show privileges for specific user RETURN user ORDER BY graph") {
+    // WHEN
+    execute("SHOW USER neo4j PRIVILEGES YIELD user, access, graph RETURN user ORDER BY graph")
+      .toList should be (List.fill(11)(Map("user" -> "neo4j")))
+  }
+
+  test("should show privileges for current user RETURN user ORDER BY graph") {
+    //GIVEN
+    setupUserWithCustomRole()
 
     // WHEN
-    val exception = the[SyntaxException] thrownBy {
-      execute("SHOW USER neo4j PRIVILEGES YIELD access as foo, resource, role as bar where bar = 'public'").toList
-    }
-    exception.getMessage should startWith("Invalid input 'a': expected whitespace, comment, ',', ORDER, SKIP, LIMIT, WHERE, ';' or end of input (line 1, column 41 (offset: 40))")
-
+    executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES YIELD user, access, graph RETURN user ", resultHandler = (row, index) => {
+      // THEN
+      row.get("user") should be("joe")
+    })
   }
+
+
+  test("should not show privileges for specific user RETURN user, count(access) AS count ORDER BY graph") {
+    // WHEN
+    val theException = the[SyntaxException] thrownBy execute("SHOW USER neo4j PRIVILEGES YIELD user, access, graph RETURN user, count(access) AS count ORDER BY graph")
+
+    // THEN
+    theException.getMessage should startWith(
+      "In a WITH/RETURN with DISTINCT or an aggregation, it is not possible to access variables declared before the WITH/RETURN: graph")
+    theException.getMessage should include("(line 1, column 99 (offset: 98))")
+  }
+
+  test("should show privileges for current user with aliasing") {
+    //GIVEN
+    setupUserWithCustomRole()
+
+    // WHEN
+    executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES YIELD user as person RETURN person as user", resultHandler = (row, _) => {
+      // THEN
+      row.get("user") should be("joe")
+    })
+  }
+
+  test("should show privileges for current user with aliasing in return") {
+    //GIVEN
+    setupUserWithCustomRole()
+
+    // WHEN
+    executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES YIELD user RETURN user as person", resultHandler = (row, _) => {
+      // THEN
+      row.get("person") should be("joe")
+    })
+  }
+
 
   test("should show user privileges for current user as non admin") {
     // GIVEN

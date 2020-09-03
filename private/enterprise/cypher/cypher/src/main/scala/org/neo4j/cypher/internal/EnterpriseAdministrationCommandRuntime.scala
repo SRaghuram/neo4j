@@ -209,22 +209,23 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         case (false, _) =>
           "MATCH (r:Role)<-[:HAS_ROLE]-(u:User)"
       }
+      val whereClause = AdministrationShowCommandUtils.generateWhereClause(where)
+      val returnClause = AdministrationShowCommandUtils.generateReturnClause(symbols, yields, returns, Seq("role"))
       SystemCommandExecutionPlan("ShowRoles", normalExecutionEngine,
         s"""
            |CALL {
            |$roleMatch
-           |
            |WITH DISTINCT r.name as role $userWithColumns
-           |${AdministrationShowCommandUtils.generateWhereClause(where)}
            |RETURN role $userReturnColumns
            |UNION
            |MATCH (r:Role) WHERE r.name = 'PUBLIC'
            |$maybeMatchUsers
            |WITH DISTINCT r.name as role $userWithColumns
-           |${AdministrationShowCommandUtils.generateWhereClause(where)}
            |RETURN role $userReturnColumns
            |}
-           |${AdministrationShowCommandUtils.generateReturnClause(symbols, yields, returns, Seq("role"))}
+           |WITH *
+           |$whereClause
+           |$returnClause
         """.stripMargin,
         VirtualValues.EMPTY_MAP,
         source = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))

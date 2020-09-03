@@ -83,7 +83,23 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val result = execute("SHOW USERS YIELD user, suspended")
 
     // THEN
-    result.toSet should be(Set(Map("user"->"neo4j", "suspended"-> false)))
+    result.toSet should be(Set(Map("user"->"neo4j", "suspended" -> false)))
+  }
+
+  test("should show users with yield and return") {
+    // WHEN
+    val result = execute("SHOW USERS YIELD user, suspended RETURN user, suspended")
+
+    // THEN
+    result.toSet should be(Set(Map("user"->"neo4j", "suspended" -> false)))
+  }
+
+  test("should count users with yield and return") {
+    // WHEN
+    val result = execute("SHOW USERS YIELD user, suspended RETURN count(user) as suspended_count, suspended")
+
+    // THEN
+    result.toSet should be(Set(Map("suspended_count" -> 1, "suspended" -> false)))
   }
 
   test("should show users where not suspended") {
@@ -147,6 +163,20 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     result.toList should be(List(Map("user" -> "neo4j"), Map("user" -> "zoo")))
   }
 
+  test("should show users with yield, return and skip") {
+    // GIVEN
+    setup()
+    execute("CREATE USER foo SET PASSWORD 'password'")
+    execute("CREATE USER bar SET PASSWORD 'password'")
+    execute("CREATE USER zoo SET PASSWORD 'password'")
+
+    // WHEN
+    val result = execute("SHOW USERS YIELD * RETURN user ORDER BY user SKIP 2")
+
+    // THEN
+    result.toList should be(List(Map("user" -> "neo4j"), Map("user" -> "zoo")))
+  }
+
   test("should show users with yield and limit") {
     // GIVEN
     setup()
@@ -155,6 +185,19 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // WHEN
     val result = execute("SHOW USERS YIELD user ORDER BY user LIMIT 1")
+
+    // THEN
+    result.toList should be(List(Map("user" -> "bar")))
+  }
+
+  test("should show users with yield, return and limit") {
+    // GIVEN
+    setup()
+    execute("CREATE USER foo SET PASSWORD 'password'")
+    execute("CREATE USER bar SET PASSWORD 'password'")
+
+    // WHEN
+    val result = execute("SHOW USERS YIELD * RETURN user ORDER BY user LIMIT 1")
 
     // THEN
     result.toList should be(List(Map("user" -> "bar")))
@@ -184,6 +227,32 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     result.toList should be(List(Map("user" -> "neo4j"),Map("user" -> "foo"),Map("user" -> "bar")))
+  }
+
+  test("should show users with yield and aliasing") {
+    // GIVEN
+    setup()
+    execute("CREATE USER foo SET PASSWORD 'password'")
+    execute("CREATE USER bar SET PASSWORD 'password'")
+
+    // WHEN
+    val result = execute("SHOW USERS YIELD user AS foo WHERE foo = 'foo' RETURN foo")
+
+    // THEN
+    result.toList should be(List(Map("foo" -> "foo")))
+  }
+
+  test("should show users with yield and return with aliasing") {
+    // GIVEN
+    setup()
+    execute("CREATE USER foo SET PASSWORD 'password'")
+    execute("CREATE USER bar SET PASSWORD 'password'")
+
+    // WHEN
+    val result = execute("SHOW USERS YIELD user WHERE user = 'foo' RETURN user as foo")
+
+    // THEN
+    result.toList should be(List(Map("foo" -> "foo")))
   }
 
   test("should not show users with invalid yield") {

@@ -337,6 +337,69 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     result.toList should be(List(Map("name" -> "system"),Map("name" -> "neo4j"),Map("name" -> "baz"),Map("name" -> "bar")))
   }
 
+  test("should show database with yield and return order by desc") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE baz")
+    execute("CREATE DATABASE bar")
+
+    // WHEN
+    val result = execute("SHOW DATABASES YIELD name RETURN name ORDER BY name DESC")
+
+    // THEN
+    result.toList should be(List(Map("name" -> "system"),Map("name" -> "neo4j"),Map("name" -> "baz"),Map("name" -> "bar")))
+  }
+
+  test("should show database with yield and return with skip and limit") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE baz")
+    execute("CREATE DATABASE bar")
+
+    // WHEN
+    val result = execute("SHOW DATABASES YIELD name RETURN name ORDER BY name DESC SKIP 1 LIMIT 2")
+
+    // THEN
+    result.toList should be(List(Map("name" -> "neo4j"),Map("name" -> "baz")))
+  }
+
+  test("should count database with yield and return") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE baz")
+    execute("CREATE DATABASE bar")
+
+    // WHEN
+    val result = execute("SHOW DATABASES YIELD * RETURN count(*)")
+
+    // THEN
+    result.toList should be(List(Map("count(*)" -> 4)))
+  }
+
+  test("should show default database with YIELD and aliases") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val result = execute("SHOW DEFAULT DATABASE YIELD name as foo WHERE foo = 'neo4j' RETURN foo").toList
+
+    // THEN
+    result.size shouldBe 1
+    result.head("foo") shouldBe "neo4j"
+  }
+
+  test("should show database neo4j with YIELD and aliases") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val result = execute("SHOW DATABASE neo4j YIELD name WHERE name = 'neo4j' RETURN name as foo").toList
+
+    // THEN
+    result.size shouldBe 1
+    result.head("foo") shouldBe "neo4j"
+  }
+
   test("should show default database using where clause") {
     // GIVEN
     setup()
@@ -421,6 +484,34 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     exception.getMessage should include("(line 1, column 47 (offset: 46))")
   }
 
+  test("should not show database with yield and return and invalid skip") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW DATABASES YIELD name ORDER BY name RETURN name SKIP -1")
+    }
+
+    // THEN
+    exception.getMessage should startWith("Invalid input. '-1' is not a valid value. Must be a non-negative integer")
+    exception.getMessage should include("(line 1, column 58 (offset: 57))")
+  }
+
+  test("should not show database with yield and return and invalid limit") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW DATABASES YIELD name ORDER BY name RETURN name LIMIT -1")
+    }
+
+    // THEN
+    exception.getMessage should startWith("Invalid input. '-1' is not a valid value. Must be a non-negative integer")
+    exception.getMessage should include("(line 1, column 59 (offset: 58))")
+  }
+
   test("should not show database with invalid order by") {
     // GIVEN
     setup()
@@ -433,6 +524,20 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     // THEN
     exception.getMessage should startWith("Variable `bar` not defined")
     exception.getMessage should include("(line 1, column 43 (offset: 42))")
+  }
+
+  test("should not show database with aliasing and invalid return / aggregation") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("SHOW DEFAULT DATABASE YIELD name as nm, role, currentStatus as cs RETURN count(cs), nm ORDER BY role")
+    }
+
+    // THEN
+    exception.getMessage should startWith("In a WITH/RETURN with DISTINCT or an aggregation, it is not possible to access variables declared before the WITH/RETURN: role")
+    exception.getMessage should include("(line 1, column 97 (offset: 96))")
   }
 
   test("Should always show system even without access") {
