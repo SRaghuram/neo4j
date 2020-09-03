@@ -23,6 +23,7 @@ import org.neo4j.cypher.internal.util.Eagerly
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.cypher.internal.util.test_helpers.CypherTestSupport
 import org.neo4j.graphdb.Result
+import org.neo4j.graphdb.Transaction
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.query.QueryExecution
@@ -34,6 +35,7 @@ import org.neo4j.monitoring.Monitors
 import org.neo4j.values.virtual.MapValue
 
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
+import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.JavaConverters.mapAsScalaMapConverter
 import scala.util.Failure
 import scala.util.Success
@@ -142,36 +144,51 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
                               query: String,
                               message: Seq[String] = Seq.empty,
                               errorType: Seq[String] = Seq.empty,
-                              params: Map[String, Any] = Map.empty): Unit = {
+                              params: Map[String, Any] = Map.empty): Unit =
+    validateError(expectedSpecificFailureFrom, innerExecuteTransactionally(_, params), query, message, errorType)
+
+  protected def failWithErrorOnTx(expectedSpecificFailureFrom: TestConfiguration,
+                              transaction: Transaction,
+                              query: String,
+                              message: Seq[String] = Seq.empty,
+                              errorType: Seq[String] = Seq.empty,
+                              params: Map[String, Any] = Map.empty): Unit =
+    validateError(expectedSpecificFailureFrom, transaction.execute(_, params.mapValues(_.asInstanceOf[Object]).asJava), query, message, errorType)
+
+  private def validateError[R](expectedSpecificFailureFrom: TestConfiguration,
+                               executeQuery: String => R,
+                               query: String,
+                               message: Seq[String] = Seq.empty,
+                               errorType: Seq[String] = Seq.empty): Unit = {
     val explicitlyRequestedExperimentalScenarios = expectedSpecificFailureFrom.scenarios intersect Configs.Experimental.scenarios
     val scenariosToExecute = Configs.All.scenarios ++ Configs.Experimental.scenarios
     for (thisScenario <- scenariosToExecute) {
       val expectedToFailWithSpecificMessage = expectedSpecificFailureFrom.containsScenario(thisScenario)
       val silentUnexpectedSuccess = shouldSilenceUnexpectedSuccess(thisScenario, explicitlyRequestedExperimentalScenarios)
-      val tryResult: Try[RewindableExecutionResult] = Try(innerExecuteTransactionally(s"CYPHER ${thisScenario.preparserOptions} $query", params))
-      tryResult match {
-        case Success(_) =>
-          if (expectedToFailWithSpecificMessage) {
-            fail("Unexpectedly Succeeded in " + thisScenario.name)
+      val tryResult = Try(executeQuery(s"CYPHER ${thisScenario.preparserOptions} $query"))
+    tryResult match {
+      case Success(_) =>
+        if (expectedToFailWithSpecificMessage) {
+          fail("Unexpectedly Succeeded in " + thisScenario.name)
+        }
+      // It was not expected to fail with the specified error message, do nothing
+      case Failure(e: Throwable) =>
+        val actualErrorType = e.toString
+        if (expectedToFailWithSpecificMessage) {
+          if (!correctError(actualErrorType, errorType)) {
+            fail("Correctly failed in " + thisScenario.name + " but instead of one the given error types, the error was '" + actualErrorType + "'", e)
           }
-        // It was not expected to fail with the specified error message, do nothing
-        case Failure(e: Throwable) =>
-          val actualErrorType = e.toString
-          if (expectedToFailWithSpecificMessage) {
-            if (!correctError(actualErrorType, errorType)) {
-              fail("Correctly failed in " + thisScenario.name + " but instead of one the given error types, the error was '" + actualErrorType + "'", e)
-            }
-            if (!correctError(e.getMessage, message)) {
-              fail("Correctly failed in " + thisScenario.name + " but instead of one of the given messages, the error message was '" + e.getMessage + "'", e)
-            }
-          } else {
-            if (correctError(e.getMessage, message) && correctError(actualErrorType, errorType)) {
-              if (!silentUnexpectedSuccess) {
-                fail("Unexpectedly (but correctly!) failed in " + thisScenario.name + " with the correct error. Did you forget to add this config?", e)
-              }
+          if (!correctError(e.getMessage, message)) {
+            fail("Correctly failed in " + thisScenario.name + " but instead of one of the given messages, the error message was '" + e.getMessage + "'", e)
+          }
+        } else {
+          if (correctError(e.getMessage, message) && correctError(actualErrorType, errorType)) {
+            if (!silentUnexpectedSuccess) {
+              fail("Unexpectedly (but correctly!) failed in " + thisScenario.name + " with the correct error. Did you forget to add this config?", e)
             }
           }
-      }
+        }
+    }
     }
   }
 

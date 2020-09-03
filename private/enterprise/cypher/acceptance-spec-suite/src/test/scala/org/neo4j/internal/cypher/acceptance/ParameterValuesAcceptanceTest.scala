@@ -8,10 +8,9 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.graphdb.Label
-import org.neo4j.graphdb.NotInTransactionException
-import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+import org.neo4j.kernel.impl.coreapi.InternalTransaction
 
 import scala.Array.emptyBooleanArray
 import scala.Array.emptyByteArray
@@ -145,7 +144,8 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
     tx2.commit()
 
     // then
-    assertThrows[NotInTransactionException](tx1.execute("MATCH (b) WHERE b = $param RETURN labels(b)", java.util.Map.of("param", node2)).next())
+    failWithErrorOnTx(Configs.All, tx1, "MATCH (b) WHERE b = $param RETURN labels(b)",
+      Seq(s"The transaction of entity ${node2.getId} has been closed."), params = Map("param" -> node2))
 
     tx1.close()
   }
@@ -154,12 +154,15 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
     // given
     val tx1 = graph.getGraphDatabaseService.beginTx()
     managementService.createDatabase("other")
-    val tx2 = managementService.database("other").beginTx()
+    val dbOther = managementService.database("other")
+    val tx2 = dbOther.beginTx()
     tx1.createNode(Label.label("FOO"))
     val node2 = tx2.createNode(Label.label("BOO"))
 
     // then
-    assertThrows[QueryExecutionException](tx1.execute("MATCH (b) WHERE b = $param RETURN labels(b)", java.util.Map.of("param", node2)).next())
+    failWithErrorOnTx(Configs.All, tx1, "MATCH (b) WHERE b = $param RETURN labels(b)",
+      Seq(s"Can not use an entity from another database. Entity id: ${node2.getId}, entity database: ${tx2.asInstanceOf[InternalTransaction].getDatabaseId}, " +
+        s"expected database: ${tx1.asInstanceOf[InternalTransaction].getDatabaseId}."), params = Map("param" -> node2))
 
     tx1.close()
     tx2.close()
