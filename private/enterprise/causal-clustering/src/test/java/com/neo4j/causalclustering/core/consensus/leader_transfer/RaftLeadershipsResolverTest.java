@@ -9,9 +9,8 @@ import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.LeaderListener;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.causalclustering.identity.RaftMemberId;
-import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
@@ -32,11 +31,11 @@ class RaftLeadershipsResolverTest
     void shouldCorrectlyReturnCurrentLeadershipsForMember()
     {
         // given
-        var identityModule = new StubClusteringIdentityModule();
-        var myselfForFoo = identityModule.memberId( fooId );
-        var myselfForBar = identityModule.memberId( barId );
-        var remoteIdentityModule = new StubClusteringIdentityModule();
-        var remoteForBaz = remoteIdentityModule.memberId( bazId );
+        var identityModule = new InMemoryCoreServerIdentity();
+        var myselfForFoo = identityModule.raftMemberId( fooId );
+        var myselfForBar = identityModule.raftMemberId( barId );
+        var remoteIdentityModule = new InMemoryCoreServerIdentity();
+        var remoteForBaz = remoteIdentityModule.raftMemberId( bazId );
 
         var databaseManager = new StubClusteredDatabaseManager();
 
@@ -60,8 +59,8 @@ class RaftLeadershipsResolverTest
     void shouldHandleNoLeaderSituation()
     {
         // given
-        var identityModule = new StubClusteringIdentityModule();
-        var myselfForBar = identityModule.memberId( barId );
+        var identityModule = new InMemoryCoreServerIdentity();
+        var myselfForBar = identityModule.raftMemberId( barId );
 
         var databaseManager = new StubClusteredDatabaseManager();
 

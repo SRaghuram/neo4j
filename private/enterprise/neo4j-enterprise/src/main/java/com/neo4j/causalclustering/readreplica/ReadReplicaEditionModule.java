@@ -20,7 +20,6 @@ import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import com.neo4j.causalclustering.discovery.procedures.ReadReplicaRoleProcedure;
 import com.neo4j.causalclustering.discovery.procedures.ReadReplicaToggleProcedure;
 import com.neo4j.causalclustering.error_handling.PanicService;
-import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitorService;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.configuration.CausalClusteringSettings;
@@ -91,7 +90,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     private final Config globalConfig;
     private final GlobalModule globalModule;
 
-    private final ClusteringIdentityModule identityModule;
+    private final ReadReplicaIdentityModule identityModule;
     private final JobScheduler jobScheduler;
     private final PanicService panicService;
     private final CatchupComponentsProvider catchupComponentsProvider;
@@ -143,9 +142,9 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
                 globalModule.getOtherMemoryPool().getPoolMemoryTracker() );
 
         final MemoryTracker memoryTracker = globalModule.getOtherMemoryPool().getPoolMemoryTracker();
-        identityModule = ReadReplicaClusteringIdentityModule.create( logProvider );
+        identityModule = ReadReplicaIdentityModule.create( logProvider );
         globalDependencies.satisfyDependency( identityModule );
-        jobScheduler.setTopLevelGroupName( "ReadReplica " + identityModule.myself() );
+        jobScheduler.setTopLevelGroupName( "ReadReplica " + identityModule.serverId() );
 
         addThroughputMonitorService();
 
@@ -184,7 +183,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         globalProcedures.register( new QuarantineProcedure( quarantineOperator,
                 globalModule.getGlobalClock(), globalConfig.get( GraphDatabaseSettings.db_timezone ).getZoneId() ) );
         globalProcedures.register(
-                WaitProcedure.clustered( topologyService, identityModule.myself(), globalModule.getGlobalClock(),
+                WaitProcedure.clustered( topologyService, identityModule.serverId(), globalModule.getGlobalClock(),
                         catchupComponentsProvider.catchupClientFactory(), globalModule.getLogService().getInternalLogProvider(),
                         new InfoProvider( databaseManager, reconcilerModule.databaseStateService() ) ) );
     }
@@ -262,7 +261,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
 
         // TODO: Health should be created per-db in the factory. What about other things here?
         readReplicaDatabaseFactory = new ReadReplicaDatabaseFactory( globalConfig, globalModule.getGlobalClock(), jobScheduler,
-                topologyService, identityModule.memberId(), catchupComponentsRepository, catchupClientFactory, databaseEventService, storageFactory,
+                topologyService, identityModule.serverId(), catchupComponentsRepository, catchupClientFactory, databaseEventService, storageFactory,
                 panicService, databaseStartAborter, globalModule.getTracers().getPageCacheTracer() );
     }
 
@@ -298,7 +297,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     {
         var hostnameResolver = ResolutionResolverFactory.chooseResolver( globalConfig, logService );
         return discoveryServiceFactory.readReplicaTopologyService( globalConfig, logProvider, jobScheduler, identityModule,
-                                                                   hostnameResolver, sslPolicyLoader, DefaultDiscoveryMember::factory,
+                                                                   hostnameResolver, sslPolicyLoader, DefaultDiscoveryMember::rrFactory,
                                                                    globalModule.getGlobalClock(), databaseStateService );
     }
 

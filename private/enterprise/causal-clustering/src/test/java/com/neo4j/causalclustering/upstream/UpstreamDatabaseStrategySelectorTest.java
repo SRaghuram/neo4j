@@ -9,8 +9,7 @@ import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategy;
 import org.junit.jupiter.api.Test;
 
@@ -21,6 +20,7 @@ import java.util.Optional;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -45,19 +45,19 @@ public class UpstreamDatabaseStrategySelectorTest
         var badOne = new DummyUpstreamDatabaseSelectionStrategy();
         var anotherBadOne = new DummyUpstreamDatabaseSelectionStrategy();
         var goodOne = new DummyUpstreamDatabaseSelectionStrategy();
-        MemberId theMemberId = IdFactory.randomMemberId();
-        goodOne.setMemberId( theMemberId );
+        ServerId theServerId = IdFactory.randomServerId();
+        goodOne.setServerId( theServerId );
 
         UpstreamDatabaseStrategySelector selector =
                 new UpstreamDatabaseStrategySelector( badOne, iterable( goodOne, anotherBadOne ), NullLogProvider.getInstance() );
 
         // when
-        MemberId result = selector.bestUpstreamMemberForDatabase( NAMED_DATABASE_ID );
-        Collection<MemberId> results = selector.bestUpstreamMembersForDatabase( NAMED_DATABASE_ID );
+        ServerId result = selector.bestUpstreamServerForDatabase( NAMED_DATABASE_ID );
+        Collection<ServerId> results = selector.bestUpstreamServersForDatabase( NAMED_DATABASE_ID );
 
         // then
-        assertEquals( List.of( theMemberId ), results );
-        assertEquals( theMemberId, result );
+        assertEquals( List.of( theServerId ), results );
+        assertEquals( theServerId, result );
     }
 
     @Test
@@ -65,9 +65,9 @@ public class UpstreamDatabaseStrategySelectorTest
     {
         // given
         TopologyService topologyService = mock( TopologyService.class );
-        MemberId memberId = IdFactory.randomMemberId();
+        ServerId serverId = IdFactory.randomServerId();
         when( topologyService.coreTopologyForDatabase( NAMED_DATABASE_ID ) )
-                .thenReturn( new DatabaseCoreTopology( DATABASE_ID, RaftId.from( DATABASE_ID ), Map.of( memberId, mock( CoreServerInfo.class ) ) ) );
+                .thenReturn( new DatabaseCoreTopology( DATABASE_ID, RaftGroupId.from( DATABASE_ID ), Map.of( serverId, mock( CoreServerInfo.class ) ) ) );
 
         ConnectToRandomCoreServerStrategy defaultStrategy = new ConnectToRandomCoreServerStrategy();
         defaultStrategy.inject( topologyService, Config.defaults(), NullLogProvider.getInstance(), null );
@@ -75,12 +75,12 @@ public class UpstreamDatabaseStrategySelectorTest
         UpstreamDatabaseStrategySelector selector = new UpstreamDatabaseStrategySelector( defaultStrategy );
 
         // when
-        MemberId instance = selector.bestUpstreamMemberForDatabase( NAMED_DATABASE_ID );
-        Collection<MemberId> instances = selector.bestUpstreamMembersForDatabase( NAMED_DATABASE_ID );
+        ServerId instance = selector.bestUpstreamServerForDatabase( NAMED_DATABASE_ID );
+        Collection<ServerId> instances = selector.bestUpstreamServersForDatabase( NAMED_DATABASE_ID );
 
         // then
-        assertEquals( memberId, instance );
-        assertEquals( List.of( memberId ), instances );
+        assertEquals( serverId, instance );
+        assertEquals( List.of( serverId ), instances );
     }
 
     @Test
@@ -88,9 +88,9 @@ public class UpstreamDatabaseStrategySelectorTest
     {
         // given
         TopologyService topologyService = mock( TopologyService.class );
-        MemberId memberId = IdFactory.randomMemberId();
+        ServerId serverId = IdFactory.randomServerId();
         when( topologyService.coreTopologyForDatabase( NAMED_DATABASE_ID ) ).thenReturn(
-                new DatabaseCoreTopology( DATABASE_ID, RaftId.from( DATABASE_ID ), Map.of( memberId, mock( CoreServerInfo.class ) ) ) );
+                new DatabaseCoreTopology( DATABASE_ID, RaftGroupId.from( DATABASE_ID ), Map.of( serverId, mock( CoreServerInfo.class ) ) ) );
 
         var shouldNotUse = spy( new AnotherDummyUpstreamDatabaseSelectionStrategy() );
         var shouldUse = spy( new AnotherDummyUpstreamDatabaseSelectionStrategy() );
@@ -98,8 +98,8 @@ public class UpstreamDatabaseStrategySelectorTest
         var selector = new UpstreamDatabaseStrategySelector( shouldNotUse, iterable( shouldUse ), NullLogProvider.getInstance() );
 
         // when
-        selector.bestUpstreamMemberForDatabase( NAMED_DATABASE_ID );
-        selector.bestUpstreamMembersForDatabase( NAMED_DATABASE_ID );
+        selector.bestUpstreamServerForDatabase( NAMED_DATABASE_ID );
+        selector.bestUpstreamServersForDatabase( NAMED_DATABASE_ID );
 
         // then
         verifyNoInteractions( shouldNotUse );
@@ -108,7 +108,7 @@ public class UpstreamDatabaseStrategySelectorTest
     @ServiceProvider
     public static class DummyUpstreamDatabaseSelectionStrategy extends UpstreamDatabaseSelectionStrategy
     {
-        private MemberId memberId;
+        private ServerId serverId;
 
         public DummyUpstreamDatabaseSelectionStrategy()
         {
@@ -116,24 +116,24 @@ public class UpstreamDatabaseStrategySelectorTest
         }
 
         @Override
-        public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId )
+        public Optional<ServerId> upstreamServerForDatabase( NamedDatabaseId namedDatabaseId )
         {
-            return Optional.ofNullable( memberId );
+            return Optional.ofNullable( serverId );
         }
 
         @Override
-        public Collection<MemberId> upstreamMembersForDatabase( NamedDatabaseId namedDatabaseId )
+        public Collection<ServerId> upstreamServersForDatabase( NamedDatabaseId namedDatabaseId )
         {
-            if ( memberId != null )
+            if ( serverId != null )
             {
-                return List.of( memberId );
+                return List.of( serverId );
             }
             return List.of();
         }
 
-        public void setMemberId( MemberId memberId )
+        public void setServerId( ServerId serverId )
         {
-            this.memberId = memberId;
+            this.serverId = serverId;
         }
     }
 
@@ -146,15 +146,15 @@ public class UpstreamDatabaseStrategySelectorTest
         }
 
         @Override
-        public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId )
+        public Optional<ServerId> upstreamServerForDatabase( NamedDatabaseId namedDatabaseId )
         {
-            return Optional.of( IdFactory.randomMemberId() );
+            return Optional.of( IdFactory.randomServerId() );
         }
 
         @Override
-        public Collection<MemberId> upstreamMembersForDatabase( NamedDatabaseId namedDatabaseId )
+        public Collection<ServerId> upstreamServersForDatabase( NamedDatabaseId namedDatabaseId )
         {
-            return List.of( IdFactory.randomMemberId() );
+            return List.of( IdFactory.randomServerId() );
         }
     }
 
@@ -167,15 +167,15 @@ public class UpstreamDatabaseStrategySelectorTest
         }
 
         @Override
-        public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId )
+        public Optional<ServerId> upstreamServerForDatabase( NamedDatabaseId namedDatabaseId )
         {
-            return Optional.of( IdFactory.randomMemberId() );
+            return Optional.of( IdFactory.randomServerId() );
         }
 
         @Override
-        public Collection<MemberId> upstreamMembersForDatabase( NamedDatabaseId namedDatabaseId )
+        public Collection<ServerId> upstreamServersForDatabase( NamedDatabaseId namedDatabaseId )
         {
-            return List.of( IdFactory.randomMemberId() );
+            return List.of( IdFactory.randomServerId() );
         }
     }
 }

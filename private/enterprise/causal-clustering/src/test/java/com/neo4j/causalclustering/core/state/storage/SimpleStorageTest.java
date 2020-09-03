@@ -12,6 +12,7 @@ import java.io.IOException;
 
 import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.io.state.SimpleFileStorage;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -20,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @TestDirectoryExtension
 class SimpleStorageTest
@@ -34,7 +34,7 @@ class SimpleStorageTest
         // given
         var dir = testDirectory.homePath();
         var fs = testDirectory.getFileSystem();
-        var storage = new SimpleFileStorage<>( fs, dir, new ServerId.Marshal(), INSTANCE );
+        var storage = new SimpleFileStorage<>( fs, dir, ServerId.Marshal.INSTANCE, EmptyMemoryTracker.INSTANCE );
 
         // when
         var idA = IdFactory.randomServerId();
@@ -43,7 +43,7 @@ class SimpleStorageTest
 
         // then
         assertTrue( storage.exists() );
-        assertEquals( idA.getUuid(), idB.getUuid() );
+        assertEquals( idA.uuid(), idB.uuid() );
         assertEquals( idA, idB );
 
         // when

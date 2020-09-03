@@ -9,14 +9,22 @@ import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.UUID;
 
+import org.neo4j.function.Suppliers.Lazy;
+
 import static java.lang.String.format;
+import static org.neo4j.function.Suppliers.lazySingleton;
 
 public class GlobalSession
 {
     private final UUID sessionId;
-    private final RaftMemberId owner;
+    private final Lazy<RaftMemberId> owner;
 
     public GlobalSession( UUID sessionId, RaftMemberId owner )
+    {
+        this( sessionId, lazySingleton( () -> owner ) );
+    }
+
+    public GlobalSession( UUID sessionId, Lazy<RaftMemberId> owner )
     {
         this.sessionId = sessionId;
         this.owner = owner;
@@ -29,7 +37,7 @@ public class GlobalSession
 
     public RaftMemberId owner()
     {
-        return owner;
+        return owner.get();
     }
 
     @Override
@@ -50,20 +58,20 @@ public class GlobalSession
         {
             return false;
         }
-        return owner.equals( that.owner );
+        return owner.get().equals( that.owner.get() );
     }
 
     @Override
     public int hashCode()
     {
         int result = sessionId.hashCode();
-        result = 31 * result + owner.hashCode();
+        result = 31 * result + owner.get().hashCode();
         return result;
     }
 
     @Override
     public String toString()
     {
-        return format( "GlobalSession{sessionId=%s, owner=%s}", sessionId, owner );
+        return format( "GlobalSession{sessionId=%s, owner=%s}", sessionId, owner.get() );
     }
 }

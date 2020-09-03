@@ -46,7 +46,7 @@ class ClusterCatalogManager(
 
   private def determineLeader(databaseName: NormalizedDatabaseName): LeaderStatus = {
     val dbId = databaseId(databaseName)
-    val myId = leaderLookup.memberId
+    val myId = leaderLookup.serverId
     leaderLookup.leaderId(dbId) match {
       case Some(`myId`) => LeaderIsLocal
       case Some(_)      => LeaderIsRemote(leaderBoltAddress(dbId))

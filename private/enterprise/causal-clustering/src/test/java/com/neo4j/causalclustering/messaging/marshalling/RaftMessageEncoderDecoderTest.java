@@ -156,7 +156,7 @@ class RaftMessageEncoderDecoderTest
             inbound.writeInbound( o );
         }
         var message = handler.getRaftMessage();
-        assertEquals( raftId, message.raftId() );
+        assertEquals( raftId, message.raftGroupId() );
         raftMessageEquals( raftMessage, message.message() );
         assertNull( inbound.readInbound() );
         release( handler.msg );

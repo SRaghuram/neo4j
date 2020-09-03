@@ -6,14 +6,14 @@
 package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.core.state.storage.InMemorySimpleStorage;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 
-class RaftIdCheckTest
+class RaftGroupIdCheckTest
 {
     @Test
     void shouldFailToStartOnRaftIdDatabaseIdMismatch()
@@ -22,7 +22,7 @@ class RaftIdCheckTest
         var databaseId = randomNamedDatabaseId();
         var raftId = IdFactory.randomRaftId();
 
-        var raftIdStorage = new InMemorySimpleStorage<RaftId>();
+        var raftIdStorage = new InMemorySimpleStorage<RaftGroupId>();
         raftIdStorage.writeState( raftId );
 
         RaftIdCheck idCheck = new RaftIdCheck( raftIdStorage, databaseId );

@@ -7,12 +7,12 @@ package com.neo4j.dbms.procedures;
 
 import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Map;
 import java.util.stream.Stream;
 
 import org.neo4j.collection.RawIterator;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.dbms.procedures.DatabaseStateProcedure;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.api.ResourceTracker;
@@ -50,20 +50,20 @@ public class ClusteredDatabaseStateProcedure extends DatabaseStateProcedure
         return RawIterator.wrap( Stream.concat( coreResultRows, rrResultRows ).iterator() );
     }
 
-    private Stream<AnyValue[]> resultRowsForExistingMembers( Map<MemberId,? extends DiscoveryServerInfo> serverInfos,
-            MemberId memberId, NamedDatabaseId namedDatabaseId )
+    private Stream<AnyValue[]> resultRowsForExistingMembers( Map<ServerId,? extends DiscoveryServerInfo> serverInfos,
+            ServerId serverId, NamedDatabaseId namedDatabaseId )
     {
-        return Stream.ofNullable( serverInfos.get( memberId ) )
-                .map( discoveryInfo -> resultRowFactory( namedDatabaseId, memberId, discoveryInfo ) );
+        return Stream.ofNullable( serverInfos.get( serverId ) )
+                .map( discoveryInfo -> resultRowFactory( namedDatabaseId, serverId, discoveryInfo ) );
     }
 
-    private AnyValue[] resultRowFactory( NamedDatabaseId namedDatabaseId, MemberId memberId, DiscoveryServerInfo serverInfo )
+    private AnyValue[] resultRowFactory( NamedDatabaseId namedDatabaseId, ServerId serverId, DiscoveryServerInfo serverInfo )
     {
-        var role = topologyService.lookupRole( namedDatabaseId, memberId );
+        var role = topologyService.lookupRole( namedDatabaseId, serverId );
         var roleString = role.name().toLowerCase();
         var address = serverInfo.boltAddress().toString();
-        var status = topologyService.lookupDatabaseState( namedDatabaseId, memberId ).operatorState();
-        var error = topologyService.lookupDatabaseState( namedDatabaseId, memberId ).failure().map( Throwable::getMessage );
+        var status = topologyService.lookupDatabaseState( namedDatabaseId, serverId ).operatorState();
+        var error = topologyService.lookupDatabaseState( namedDatabaseId, serverId ).failure().map( Throwable::getMessage );
 
         return resultRowFactory( status, error, roleString, address );
     }

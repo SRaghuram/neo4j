@@ -10,33 +10,28 @@ import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabas
 import org.junit.jupiter.api.Test;
 
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.neo4j.collection.RawIterator;
-import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.Context;
-import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.StringValue;
 
-import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberId;
+import static com.neo4j.causalclustering.discovery.FakeTopologyService.serverId;
 import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static java.util.function.Function.identity;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.neo4j.values.storable.Values.stringValue;
 
 class ClusteredDatabaseStateProcedureTest
@@ -47,10 +42,10 @@ class ClusteredDatabaseStateProcedureTest
         // given
         var idRepository = new TestDatabaseIdRepository();
         var namedDatabaseId = idRepository.defaultDatabase();
-        var cores = FakeTopologyService.memberIds( 0, 3 );
-        var replicas = FakeTopologyService.memberIds( 3, 5 );
+        var cores = FakeTopologyService.serverIds( 0, 3 );
+        var replicas = FakeTopologyService.serverIds( 3, 5 );
 
-        var topologyService = new FakeTopologyService( cores, replicas, memberId( 0 ), Set.of( namedDatabaseId ) );
+        var topologyService = new FakeTopologyService( cores, replicas, serverId( 0 ), Set.of( namedDatabaseId ) );
 
         var successfulState = new DiscoveryDatabaseState( namedDatabaseId.databaseId(), STARTED );
         var failureMessage = "Too many databases";
@@ -58,7 +53,7 @@ class ClusteredDatabaseStateProcedureTest
 
         topologyService.setState( cores, successfulState );
         topologyService.setState( replicas, successfulState );
-        topologyService.setState( Set.of( memberId( 2 ) ), failedState );
+        topologyService.setState( Set.of( serverId( 2 ) ), failedState );
 
         var procedure = new ClusteredDatabaseStateProcedure( idRepository, topologyService );
         // when
@@ -82,10 +77,10 @@ class ClusteredDatabaseStateProcedureTest
         // given
         var idRepository = new TestDatabaseIdRepository();
         var namedDatabaseId = idRepository.defaultDatabase();
-        var cores = FakeTopologyService.memberIds( 0, 3 );
-        var replicas = FakeTopologyService.memberIds( 3, 5 );
+        var cores = FakeTopologyService.serverIds( 0, 3 );
+        var replicas = FakeTopologyService.serverIds( 3, 5 );
 
-        var topologyService = new FakeTopologyService( cores, replicas, memberId( 0 ), Set.of( namedDatabaseId ) );
+        var topologyService = new FakeTopologyService( cores, replicas, serverId( 0 ), Set.of( namedDatabaseId ) );
         var successfulState = new DiscoveryDatabaseState( namedDatabaseId.databaseId(), STARTED );
 
         topologyService.setState( cores, successfulState );
@@ -110,10 +105,10 @@ class ClusteredDatabaseStateProcedureTest
         // given
         var idRepository = new TestDatabaseIdRepository();
         var defaultNamedDatabaseId = idRepository.defaultDatabase();
-        var cores = FakeTopologyService.memberIds( 0, 3 );
-        var replicas = FakeTopologyService.memberIds( 3, 5 );
+        var cores = FakeTopologyService.serverIds( 0, 3 );
+        var replicas = FakeTopologyService.serverIds( 3, 5 );
 
-        var topologyService = new FakeTopologyService( cores, replicas, memberId( 0 ), Set.of( defaultNamedDatabaseId ) );
+        var topologyService = new FakeTopologyService( cores, replicas, serverId( 0 ), Set.of( defaultNamedDatabaseId ) );
 
         var coreOnlyNamedDatabaseId = idRepository.getRaw( "coreOnly" );
         topologyService.setDatabases( cores, Set.of( defaultNamedDatabaseId.databaseId(), coreOnlyNamedDatabaseId.databaseId() ) );

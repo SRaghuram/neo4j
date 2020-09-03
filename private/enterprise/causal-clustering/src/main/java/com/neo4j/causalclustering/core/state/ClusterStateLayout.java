@@ -5,15 +5,19 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import com.neo4j.configuration.CausalClusteringSettings;
-
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static com.neo4j.causalclustering.core.state.CoreStateFiles.Scope.DATABASE;
 import static com.neo4j.causalclustering.core.state.CoreStateFiles.Scope.GLOBAL;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.neo4j.util.Preconditions.checkArgument;
 
@@ -26,7 +30,7 @@ import static org.neo4j.util.Preconditions.checkArgument;
  *    root state        $NEO4J_HOME/data/cluster-state
  *    database state    $NEO4J_HOME/data/cluster-state/db/neo4j
  *
- *  Where $NEO4J_HOME/data/cluster-state is configurable with 'causal_clustering.cluster_state_directory'
+ * Where $NEO4J_HOME/data/cluster-state is configurable with 'causal_clustering.cluster_state_directory'
  * </pre>
  */
 public class ClusterStateLayout
@@ -56,9 +60,9 @@ public class ClusterStateLayout
         return globalClusterStateFile( CoreStateFiles.VERSION );
     }
 
-    public Path raftIdStateFile( String databaseName )
+    public Path raftGroupIdFile( String databaseName )
     {
-        return databaseClusterStateFile( CoreStateFiles.RAFT_ID, databaseName );
+        return databaseClusterStateFile( CoreStateFiles.RAFT_GROUP_ID, databaseName );
     }
 
     public Path quarantineMarkerStateFile( String databaseName )
@@ -66,9 +70,14 @@ public class ClusterStateLayout
         return databaseClusterStateFile( CoreStateFiles.QUARANTINE_MARKER, databaseName );
     }
 
-    public Path memberIdStateFile()
+    public Path oldMemberIdStateFile()
     {
-        return globalClusterStateFile( CoreStateFiles.CORE_MEMBER_ID );
+        return globalClusterStateFile( CoreStateFiles.OLD_CORE_MEMBER_ID );
+    }
+
+    public Path raftMemberIdStateFile( String databaseName )
+    {
+        return databaseClusterStateFile( CoreStateFiles.RAFT_MEMBER_ID, databaseName );
     }
 
     public Path leaseStateDirectory( String databaseName )
@@ -173,5 +182,21 @@ public class ClusterStateLayout
     private static void checkScope( CoreStateFiles<?> coreStateFiles, CoreStateFiles.Scope scope )
     {
         checkArgument( coreStateFiles.scope() == scope, "Illegal scope: " + coreStateFiles.scope() );
+    }
+
+    public List<String> allRaftGroups()
+    {
+        try ( Stream<Path> list = Files.list( dbDirectory() ) )
+        {
+            return list.filter( Files::isDirectory ).map( c -> c.getFileName().toString() ).collect( toList() );
+        }
+        catch ( NoSuchFileException e )
+        {
+            return List.of();
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
     }
 }

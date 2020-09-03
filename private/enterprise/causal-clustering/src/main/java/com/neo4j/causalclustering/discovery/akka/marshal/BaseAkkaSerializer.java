@@ -29,7 +29,7 @@ public abstract class BaseAkkaSerializer<T> extends JSerializer
     static final int UNIQUE_ADDRESS = 1002;
     static final int CORE_SERVER_INFO_FOR_MEMBER_ID = 1003;
     static final int READ_REPLICA_INFO_FOR_MEMBER_ID = 1004;
-    static final int MEMBER_ID = 1005;
+    static final int RAFT_MEMBER_ID = 1005;
     static final int READ_REPLICA_INFO = 1006;
     static final int CORE_TOPOLOGY = 1007;
     static final int READ_REPLICA_REMOVAL = 1008;
@@ -38,8 +38,9 @@ public abstract class BaseAkkaSerializer<T> extends JSerializer
     static final int REPLICATED_LEADER_INFO = 1011;
     static final int DATABASE_ID = 1012;
     static final int REPLICATED_DATABASE_STATE = 1013;
-    static final int DATABASE_TO_MEMBER = 1014;
+    static final int DATABASE_SERVER = 1014;
     static final int DATABASE_STATE = 1015;
+    static final int REPLICATED_RAFT_MAPPING = 1016;
 
     private final ChannelMarshal<T> marshal;
     private final int id;

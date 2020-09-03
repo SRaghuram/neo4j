@@ -6,8 +6,8 @@
 package com.neo4j.causalclustering.discovery.member;
 
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
-import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
-import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
+import com.neo4j.causalclustering.identity.CoreServerIdentity;
+import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.dbms.EnterpriseDatabaseState;
 import org.junit.jupiter.api.Test;
 
@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class DefaultDiscoveryMemberTest
 {
     private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    private final ClusteringIdentityModule identityModule = new StubClusteringIdentityModule();
+    private final CoreServerIdentity identityModule = new InMemoryCoreServerIdentity();
     private final NamedDatabaseId databaseId1 = databaseIdRepository.getRaw( "one" );
     private final NamedDatabaseId databaseId2 = databaseIdRepository.getRaw( "two" );
     private final NamedDatabaseId databaseId3 = databaseIdRepository.getRaw( "three" );
@@ -46,7 +46,7 @@ class DefaultDiscoveryMemberTest
         );
 
         var databaseStates = new StubDatabaseStateService( states, EnterpriseDatabaseState::unknown );
-        var discoveryMember = DefaultDiscoveryMember.factory( identityModule, databaseStates, Map.of() );
+        var discoveryMember = DefaultDiscoveryMember.coreFactory( identityModule, databaseStates, Map.of() );
 
         assertEquals( Set.of( databaseId1.databaseId(), databaseId3.databaseId() ), discoveryMember.databasesInState( STARTED ) );
     }
@@ -62,7 +62,7 @@ class DefaultDiscoveryMemberTest
         );
 
         var databaseStates = new StubDatabaseStateService( states, EnterpriseDatabaseState::unknown );
-        var discoveryMember = DefaultDiscoveryMember.factory( identityModule, databaseStates, Map.of() );
+        var discoveryMember = DefaultDiscoveryMember.coreFactory( identityModule, databaseStates, Map.of() );
 
         assertEquals( Set.of( databaseId2.databaseId(), databaseId3.databaseId() ), discoveryMember.databasesInState( STARTED ) );
     }
@@ -71,14 +71,14 @@ class DefaultDiscoveryMemberTest
     void discoveryMemberContentsShouldBeUnmodifiable()
     {
         var databaseStates = new StubDatabaseStateService( EnterpriseDatabaseState::unknown );
-        var discoveryMember = DefaultDiscoveryMember.factory( identityModule, databaseStates, Map.of() );
+        var discoveryMember = DefaultDiscoveryMember.coreFactory( identityModule, databaseStates, Map.of() );
 
         assertSame( discoveryMember.databaseStates(), discoveryMember.databaseStates() );
         assertThat( discoveryMember.databaseStates() ).isEmpty();
         assertThrows( UnsupportedOperationException.class,
                       () -> discoveryMember.databaseLeaderships().put( databaseId2.databaseId(), LeaderInfo.INITIAL ) );
         assertThrows( UnsupportedOperationException.class,
-                      () -> discoveryMember.databaseMemberships().put( databaseId2.databaseId(), identityModule.memberId( databaseId2 ) ) );
+                      () -> discoveryMember.databaseMemberships().put( databaseId2.databaseId(), identityModule.raftMemberId( databaseId2.databaseId() ) ) );
         assertThrows( UnsupportedOperationException.class,
                       () -> discoveryMember.databaseStates().put( databaseId2.databaseId(), new EnterpriseDatabaseState( databaseId2, STARTED ) ) );
         assertThrows( UnsupportedOperationException.class,

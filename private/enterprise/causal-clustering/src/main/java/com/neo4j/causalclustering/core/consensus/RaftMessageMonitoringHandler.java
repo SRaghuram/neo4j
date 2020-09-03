@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus;
 
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.messaging.ComposableMessageHandler;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 
@@ -65,9 +65,9 @@ public class RaftMessageMonitoringHandler implements LifecycleMessageHandler<Raf
     }
 
     @Override
-    public void start( RaftId raftId ) throws Exception
+    public void start( RaftGroupId raftGroupId ) throws Exception
     {
-        raftMessageHandler.start( raftId );
+        raftMessageHandler.start( raftGroupId );
     }
 
     @Override

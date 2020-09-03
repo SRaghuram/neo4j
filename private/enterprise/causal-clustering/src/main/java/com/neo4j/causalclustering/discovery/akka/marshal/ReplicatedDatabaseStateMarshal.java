@@ -7,13 +7,13 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.marshalling.BooleanMarshal;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.marshal.EndOfStreamException;
@@ -34,10 +34,10 @@ public class ReplicatedDatabaseStateMarshal extends SafeChannelMarshal<Replicate
         var containsCoreMembers = BooleanMarshal.unmarshal( channel );
         var memberCount = channel.getInt();
 
-        HashMap<MemberId,DiscoveryDatabaseState> memberStates = new HashMap<>();
+        HashMap<ServerId,DiscoveryDatabaseState> memberStates = new HashMap<>();
         for ( int i = 0; i < memberCount; i++ )
         {
-            var memberId = MemberId.Marshal.INSTANCE.unmarshal( channel );
+            var memberId = ServerId.Marshal.INSTANCE.unmarshal( channel );
             var databaseState = DiscoveryDatabaseStateMarshal.INSTANCE.unmarshal( channel );
             memberStates.put( memberId, databaseState );
         }
@@ -57,11 +57,11 @@ public class ReplicatedDatabaseStateMarshal extends SafeChannelMarshal<Replicate
         var memberStates = Map.copyOf( clusteredDatabaseState.memberStates() );
         channel.putInt( memberStates.size() );
 
-        for ( Map.Entry<MemberId,DiscoveryDatabaseState> entry : memberStates.entrySet() )
+        for ( Map.Entry<ServerId,DiscoveryDatabaseState> entry : memberStates.entrySet() )
         {
-            var memberId = entry.getKey();
+            var serverId = entry.getKey();
             var databaseState = entry.getValue();
-            MemberId.Marshal.INSTANCE.marshal( memberId, channel );
+            ServerId.Marshal.INSTANCE.marshal( serverId, channel );
             DiscoveryDatabaseStateMarshal.INSTANCE.marshal( databaseState, channel );
         }
     }

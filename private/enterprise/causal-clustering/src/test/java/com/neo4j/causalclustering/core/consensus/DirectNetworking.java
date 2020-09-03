@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus;
 
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.time.Instant;
@@ -25,7 +25,7 @@ public class DirectNetworking
             new HashMap<>();
     private final Map<RaftMemberId,Queue<RaftMessages.InboundRaftMessageContainer<?>>> messageQueues = new HashMap<>();
     private final Set<RaftMemberId> disconnectedMembers = Collections.newSetFromMap( new ConcurrentHashMap<>() );
-    private final RaftId raftId = RaftId.from( DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID.databaseId() );
+    private final RaftGroupId raftGroupId = RaftGroupId.from( DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID.databaseId() );
 
     public void processMessages()
     {
@@ -80,7 +80,7 @@ public class DirectNetworking
         {
             if ( canDeliver( to ) )
             {
-                messageQueues.get( to ).add( RaftMessages.InboundRaftMessageContainer.of( Instant.now(), raftId, message ) );
+                messageQueues.get( to ).add( RaftMessages.InboundRaftMessageContainer.of( Instant.now(), raftGroupId, message ) );
             }
         }
 

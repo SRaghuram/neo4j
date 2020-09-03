@@ -22,7 +22,7 @@ class RaftMemberIdMarshalTest
     void shouldSerializeAndDeserialize() throws Exception
     {
         // given
-        RaftMemberId.Marshal marshal = new RaftMemberId.Marshal();
+        RaftMemberId.Marshal marshal = RaftMemberId.Marshal.INSTANCE;
 
         final RaftMemberId member = IdFactory.randomRaftMemberId();
 
@@ -40,7 +40,7 @@ class RaftMemberIdMarshalTest
     {
         // given
         // a CoreMember and a ByteBuffer to write it to
-        RaftMemberId.Marshal marshal = new RaftMemberId.Marshal();
+        RaftMemberId.Marshal marshal = RaftMemberId.Marshal.INSTANCE;
         final RaftMemberId aRealMember = IdFactory.randomRaftMemberId();
 
         ByteBuf buffer = Unpooled.buffer( 1000 );

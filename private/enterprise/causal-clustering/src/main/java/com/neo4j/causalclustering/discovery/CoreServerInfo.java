@@ -24,8 +24,8 @@ public class CoreServerInfo implements DiscoveryServerInfo
     private final Set<DatabaseId> startedDatabaseIds;
     private final boolean refuseToBeLeader;
 
-    public CoreServerInfo( SocketAddress raftServer, SocketAddress catchupServer,
-                           ConnectorAddresses connectorAddresses, Set<ServerGroupName> groups, Set<DatabaseId> startedDatabaseIds, boolean refuseToBeLeader )
+    public CoreServerInfo( SocketAddress raftServer, SocketAddress catchupServer, ConnectorAddresses connectorAddresses, Set<ServerGroupName> groups,
+            Set<DatabaseId> startedDatabaseIds, boolean refuseToBeLeader )
     {
         this.raftServer = raftServer;
         this.catchupServer = catchupServer;

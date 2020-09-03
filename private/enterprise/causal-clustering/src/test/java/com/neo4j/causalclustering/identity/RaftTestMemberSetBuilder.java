@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.consensus.membership.RaftTestMembers;
 
 import java.util.Set;
 
-public class RaftTestMemberSetBuilder implements RaftMembers.Builder
+public class RaftTestMemberSetBuilder implements RaftMembers.Builder<RaftMemberId>
 {
     public static final RaftTestMemberSetBuilder INSTANCE = new RaftTestMemberSetBuilder();
 
@@ -19,7 +19,7 @@ public class RaftTestMemberSetBuilder implements RaftMembers.Builder
     }
 
     @Override
-    public RaftMembers build( Set members )
+    public RaftMembers<RaftMemberId> build( Set<RaftMemberId> members )
     {
         return new RaftTestMembers( members );
     }

@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.messaging.marshalling;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
 import io.netty.buffer.ByteBuf;
@@ -19,12 +19,12 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
     public void encode( ChannelHandlerContext ctx, RaftMessages.OutboundRaftMessageContainer decoratedMessage, ByteBuf out ) throws Exception
     {
         RaftMessages.RaftMessage message = decoratedMessage.message();
-        RaftId raftId = decoratedMessage.raftId();
-        RaftMemberId.Marshal memberMarshal = new RaftMemberId.Marshal();
+        RaftGroupId raftGroupId = decoratedMessage.raftGroupId();
+        RaftMemberId.Marshal memberMarshal = RaftMemberId.Marshal.INSTANCE;
 
         NetworkWritableChannel channel = new NetworkWritableChannel( out );
         channel.put( ContentType.Message.get() );
-        RaftId.Marshal.INSTANCE.marshal( raftId, channel );
+        RaftGroupId.Marshal.INSTANCE.marshal( raftGroupId, channel );
         channel.putInt( message.type().ordinal() );
         memberMarshal.marshal( message.from(), channel );
 

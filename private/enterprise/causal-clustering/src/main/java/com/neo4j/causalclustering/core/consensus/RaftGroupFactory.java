@@ -8,8 +8,6 @@ package com.neo4j.causalclustering.core.consensus;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferService;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
-import com.neo4j.causalclustering.discovery.CoreTopologyService;
-import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 import com.neo4j.configuration.ServerGroupsSupplier;
@@ -19,6 +17,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.neo4j.collection.Dependencies;
+import org.neo4j.function.Suppliers.Lazy;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -28,10 +27,8 @@ import org.neo4j.monitoring.Monitors;
 
 public class RaftGroupFactory
 {
-    private final ClusteringIdentityModule identityModule;
     private final GlobalModule globalModule;
     private final ClusterStateLayout clusterState;
-    private final CoreTopologyService topologyService;
     private final ClusterStateStorageFactory storageFactory;
     private final LeaderTransferService leaderTransferService;
     private final Function<NamedDatabaseId,LeaderListener> listenerFactory;
@@ -39,15 +36,12 @@ public class RaftGroupFactory
     private final ServerGroupsSupplier serverGroupsSupplier;
     private final DbmsLogEntryWriterProvider dbmsLogEntryWriterProvider;
 
-    public RaftGroupFactory( ClusteringIdentityModule identityModule, GlobalModule globalModule, ClusterStateLayout clusterState,
-            CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, LeaderTransferService leaderTransferService,
-            Function<NamedDatabaseId,LeaderListener> listenerFactory, MemoryTracker memoryTracker,
+    public RaftGroupFactory( GlobalModule globalModule, ClusterStateLayout clusterState, ClusterStateStorageFactory storageFactory,
+            LeaderTransferService leaderTransferService, Function<NamedDatabaseId,LeaderListener> listenerFactory, MemoryTracker memoryTracker,
             ServerGroupsSupplier serverGroupsSupplier, DbmsLogEntryWriterProvider dbmsLogEntryWriterProvider )
     {
-        this.identityModule = identityModule;
         this.globalModule = globalModule;
         this.clusterState = clusterState;
-        this.topologyService = topologyService;
         this.storageFactory = storageFactory;
         this.leaderTransferService = leaderTransferService;
         this.listenerFactory = listenerFactory;
@@ -56,13 +50,14 @@ public class RaftGroupFactory
         this.dbmsLogEntryWriterProvider = dbmsLogEntryWriterProvider;
     }
 
-    public RaftGroup create( NamedDatabaseId namedDatabaseId, Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound, LifeSupport life, Monitors monitors,
-                             Dependencies dependencies, DatabaseLogService logService, Consumer<RaftMessages.StatusResponse> statusResponseConsumer )
+    public RaftGroup create( NamedDatabaseId namedDatabaseId, Lazy<RaftMemberId> raftMemberId,
+            Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound, LifeSupport life, Monitors monitors, Dependencies dependencies,
+            DatabaseLogService logService, Consumer<RaftMessages.StatusResponse> statusResponseConsumer )
     {
         // TODO: Consider if additional services are per raft group, e.g. config, log-service.
         return new RaftGroup( globalModule.getGlobalConfig(), logService, globalModule.getFileSystem(), globalModule.getJobScheduler(),
-                              globalModule.getGlobalClock(), identityModule.memberId( namedDatabaseId ), life, monitors, dependencies, outbound, clusterState,
-                              topologyService, storageFactory, namedDatabaseId, leaderTransferService, listenerFactory.apply( namedDatabaseId ), memoryTracker,
+                              globalModule.getGlobalClock(), raftMemberId, life, monitors, dependencies, outbound, clusterState,
+                              storageFactory, namedDatabaseId, leaderTransferService, listenerFactory.apply( namedDatabaseId ), memoryTracker,
                               serverGroupsSupplier, globalModule.getGlobalAvailabilityGuard(), statusResponseConsumer,
                               dbmsLogEntryWriterProvider.getEntryWriterFactory( namedDatabaseId ) );
     }

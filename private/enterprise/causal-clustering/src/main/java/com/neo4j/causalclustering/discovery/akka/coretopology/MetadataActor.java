@@ -31,23 +31,25 @@ import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 
 public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,CoreServerInfoForServerId>>
 {
-    static Props props( Cluster cluster, ActorRef replicator, ActorRef topologyActor,
+    static Props props( Cluster cluster, ActorRef replicator, ActorRef topologyActor, ActorRef raftMappingActor,
             Config config, ReplicatedDataMonitor monitor, ServerId myself )
     {
-        return Props.create( MetadataActor.class, () -> new MetadataActor( cluster, replicator, topologyActor,
+        return Props.create( MetadataActor.class, () -> new MetadataActor( cluster, replicator, topologyActor, raftMappingActor,
                                                                            config, monitor, myself ) );
     }
 
     private final ActorRef topologyActor;
+    private final ActorRef raftMappingActor;
     private final Config config;
     private final ServerId myself;
     private final Set<DatabaseId> startedDatabases = new HashSet<>();
 
-    private MetadataActor( Cluster cluster, ActorRef replicator, ActorRef topologyActor,
+    private MetadataActor( Cluster cluster, ActorRef replicator, ActorRef topologyActor, ActorRef raftMappingActor,
             Config config, ReplicatedDataMonitor monitor, ServerId myself )
     {
         super( cluster, replicator, LWWMapKey::create, LWWMap::empty, METADATA, monitor );
         this.topologyActor = topologyActor;
+        this.raftMappingActor = raftMappingActor;
         this.config = config;
         this.myself = myself;
     }
@@ -89,7 +91,12 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
 
     private void removeDataFromReplicator( CleanupMessage message )
     {
+        var coreServerInfo = data.getEntries().get( message.uniqueAddress() );
         modifyReplicatedData( key, map -> map.remove( cluster, message.uniqueAddress() ) );
+        if ( coreServerInfo != null )
+        {
+            raftMappingActor.tell( new RaftMemberMappingActor.CleanupMessage( coreServerInfo.serverId() ), getSelf() );
+        }
     }
 
     @Override

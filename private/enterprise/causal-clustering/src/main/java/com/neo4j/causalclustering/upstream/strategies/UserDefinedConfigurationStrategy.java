@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
 import com.neo4j.causalclustering.discovery.Topology;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.routing.load_balancing.filters.Filter;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.FilterConfigParser;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.InvalidFilterSpecification;
@@ -26,6 +25,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.annotations.service.ServiceProvider;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 @ServiceProvider
@@ -62,7 +62,7 @@ public class UserDefinedConfigurationStrategy extends UpstreamDatabaseSelectionS
     }
 
     @Override
-    public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId )
+    public Optional<ServerId> upstreamServerForDatabase( NamedDatabaseId namedDatabaseId )
     {
         return filters
                 .flatMap( filters -> choices( namedDatabaseId, filters )
@@ -70,18 +70,18 @@ public class UserDefinedConfigurationStrategy extends UpstreamDatabaseSelectionS
     }
 
     @Override
-    public Collection<MemberId> upstreamMembersForDatabase( NamedDatabaseId namedDatabaseId )
+    public Collection<ServerId> upstreamServersForDatabase( NamedDatabaseId namedDatabaseId )
     {
         return filters.stream()
                 .flatMap( filters -> choices( namedDatabaseId, filters ) )
                 .collect( Collectors.toList() );
     }
 
-    private Stream<MemberId> choices( NamedDatabaseId namedDatabaseId, Filter<ServerInfo> filter )
+    private Stream<ServerId> choices( NamedDatabaseId namedDatabaseId, Filter<ServerInfo> filter )
     {
         Set<ServerInfo> possibleServers = possibleServers( namedDatabaseId );
 
-        return filter.apply( possibleServers ).stream().map( ServerInfo::memberId ).filter( memberId -> !Objects.equals( myself, memberId ) );
+        return filter.apply( possibleServers ).stream().map( ServerInfo::serverId ).filter( memberId -> !Objects.equals( myself, memberId ) );
     }
 
     private Set<ServerInfo> possibleServers( NamedDatabaseId namedDatabaseId )
@@ -97,10 +97,10 @@ public class UserDefinedConfigurationStrategy extends UpstreamDatabaseSelectionS
         return infoMap.map( this::toServerInfo ).collect( Collectors.toSet() );
     }
 
-    private <T extends DiscoveryServerInfo> ServerInfo toServerInfo( Map.Entry<MemberId,T> entry )
+    private <T extends DiscoveryServerInfo> ServerInfo toServerInfo( Map.Entry<ServerId,T> entry )
     {
         T server = entry.getValue();
-        MemberId memberId = entry.getKey();
-        return new ServerInfo( server.connectors().clientBoltAddress(), memberId, server.groups() );
+        ServerId serverId = entry.getKey();
+        return new ServerInfo( server.connectors().clientBoltAddress(), serverId, server.groups() );
     }
 }

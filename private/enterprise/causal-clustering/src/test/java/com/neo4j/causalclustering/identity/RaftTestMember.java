@@ -10,27 +10,30 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.neo4j.dbms.identity.ServerId;
+
 public class RaftTestMember
 {
-    private static final Map<Integer,RaftMemberId> testMembers = new HashMap<>();
+    private static final Map<Integer,RaftMemberId> raftMemberIds = new HashMap<>();
+    private static final Map<Integer,ServerId> serverIds = new HashMap<>();
 
     private RaftTestMember()
     {
     }
 
-    public static MemberId member( int id )
+    public static ServerId server( int id )
     {
-        return raftMember( id ).serverId();
+        return serverIds.computeIfAbsent( id, k -> IdFactory.randomServerId() );
     }
 
     public static RaftMemberId raftMember( int id )
     {
-        return testMembers.computeIfAbsent( id, k -> IdFactory.randomRaftMemberId() );
+        return raftMemberIds.computeIfAbsent( id, k -> IdFactory.randomRaftMemberId() );
     }
 
     public static LeaderInfo leader( int id, long term )
     {
-        var member = testMembers.computeIfAbsent( id, k -> IdFactory.randomRaftMemberId() );
+        var member = raftMemberIds.computeIfAbsent( id, k -> IdFactory.randomRaftMemberId() );
         return new LeaderInfo( member, term );
     }
 }

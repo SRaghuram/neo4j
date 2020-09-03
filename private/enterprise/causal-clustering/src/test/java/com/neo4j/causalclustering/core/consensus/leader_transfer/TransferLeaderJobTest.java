@@ -6,9 +6,8 @@
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
-import com.neo4j.causalclustering.identity.RaftMemberId;
-import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
+import com.neo4j.causalclustering.identity.CoreServerIdentity;
+import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.ServerGroupName;
@@ -24,11 +23,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.configuration.ServerGroupsSupplier.listen;
-import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -38,17 +35,17 @@ import static org.neo4j.time.Clocks.fakeClock;
 
 class TransferLeaderJobTest
 {
-    private final ClusteringIdentityModule identityModule = new StubClusteringIdentityModule();
-    private final ClusteringIdentityModule remoteIdentityModule = new StubClusteringIdentityModule();
+    private final CoreServerIdentity myIdentity = new InMemoryCoreServerIdentity( 0 );
+    private final CoreServerIdentity remoteIdentity = new InMemoryCoreServerIdentity( 1 );
     private final NamedDatabaseId databaseId1 = randomNamedDatabaseId();
     private final NamedDatabaseId databaseId2 = randomNamedDatabaseId();
-    private final RaftMemberId myself = identityModule.memberId( databaseId1 );
-    private final RaftMemberId remote = remoteIdentityModule.memberId( databaseId2 );
-    private final RaftMembershipResolver raftMembershipResolver = new StubRaftMembershipResolver( myself, remote );
+    private final RaftMembershipResolver raftMembershipResolver = new StubRaftMembershipResolver()
+            .add( databaseId1, myIdentity, remoteIdentity )
+            .add( databaseId2, myIdentity, remoteIdentity );
     private final TrackingMessageHandler messageHandler = new TrackingMessageHandler();
     private final DatabasePenalties databasePenalties = new DatabasePenalties( Duration.ofMillis( 1 ), fakeClock() );
     private final LeadershipTransferor leadershipTransferor =
-            new LeadershipTransferor( messageHandler, identityModule, databasePenalties, raftMembershipResolver, fakeClock() );
+            new LeadershipTransferor( messageHandler, myIdentity, databasePenalties, raftMembershipResolver, fakeClock() );
 
     @Test
     void shouldChooseToTransferIfIAmNotInPriority()
@@ -68,8 +65,8 @@ class TransferLeaderJobTest
         // then
         assertEquals( messageHandler.proposals.size(), 1 );
         var propose = messageHandler.proposals.get( 0 );
-        assertEquals( propose.raftId().uuid(), databaseId1.databaseId().uuid() );
-        assertEquals( propose.message().proposed(), remote );
+        assertEquals( propose.raftGroupId().uuid(), databaseId1.databaseId().uuid() );
+        assertEquals( propose.message().proposed(), remoteIdentity.raftMemberId( databaseId1 ) );
         assertEquals( propose.message().priorityGroups(), Set.of( new ServerGroupName( "prio" ) ) );
     }
 
@@ -140,13 +137,12 @@ class TransferLeaderJobTest
                 .set( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "prio" ) ).build();
         var serverGroupsSupplier = listen( config );
 
-        var transferee = remote;
         var selectionStrategyInputs = new ArrayList<TransferCandidates>();
         SelectionStrategy mockSelectionStrategy = validTopologies ->
         {
             selectionStrategyInputs.addAll( validTopologies );
             var transferCandidates = validTopologies.get( 0 );
-            return new LeaderTransferTarget( transferCandidates.databaseId(), transferee );
+            return new LeaderTransferTarget( transferCandidates.databaseId(), remoteIdentity.serverId() );
         };
 
         var myLeaderships = List.of( databaseId1, databaseId2 );
@@ -155,21 +151,22 @@ class TransferLeaderJobTest
         transferLeaderJob.run();
 
         // then
-        assertThat( selectionStrategyInputs ).contains( new TransferCandidates( databaseId2, Set.of( transferee ) ) );
-        assertThat( messageHandler.proposals.get( 0 ).message() ).isEqualTo( new RaftMessages.LeadershipTransfer.Proposal( myself, transferee, Set.of() ) );
+        assertThat( selectionStrategyInputs ).contains( new TransferCandidates( databaseId2, Set.of( remoteIdentity.serverId() ) ) );
+        assertThat( messageHandler.proposals.get( 0 ).message() ).isEqualTo(
+                new RaftMessages.LeadershipTransfer.Proposal( myIdentity.raftMemberId( databaseId2 ), remoteIdentity.raftMemberId( databaseId2 ), Set.of() ) );
     }
 
     @Test
     void shouldNotDoNormalLoadBalancingForSystemDatabase()
     {
         // given
-        var transferee = remote;
+        var transferee = remoteIdentity;
         var selectionStrategyInputs = new ArrayList<TransferCandidates>();
         SelectionStrategy mockSelectionStrategy = validTopologies ->
         {
             selectionStrategyInputs.addAll( validTopologies );
             var transferCandidates = validTopologies.get( 0 );
-            return new LeaderTransferTarget( transferCandidates.databaseId(), transferee );
+            return new LeaderTransferTarget( transferCandidates.databaseId(), transferee.serverId() );
         };
         var nonSystemLeaderships = List.of( databaseId1 );
 
@@ -181,7 +178,7 @@ class TransferLeaderJobTest
         transferLeaderJob.run();
 
         // then
-        assertThat( selectionStrategyInputs ).contains( new TransferCandidates( databaseId1, Set.of( transferee ) ) );
+        assertThat( selectionStrategyInputs ).contains( new TransferCandidates( databaseId1, Set.of( transferee.serverId() ) ) );
 
         // given
         selectionStrategyInputs.clear();
@@ -198,14 +195,15 @@ class TransferLeaderJobTest
     @Test
     void shouldHandleMoreThanOneDatabaseInPrio()
     {
-        var databaseOne = DatabaseIdFactory.from( "one", randomUUID() );
-        var databaseIds = Set.of( databaseOne, DatabaseIdFactory.from( "two", randomUUID() ) );
+        var groupOne = databaseId1.name();
+        var groupTwo = databaseId2.name();
+        var databaseIds = Set.of( databaseId1, databaseId2 );
         // Priority groups exist ...
         var builder = Config.newBuilder();
         databaseIds.forEach(
-                dbid -> builder.setRaw( Map.of( new LeadershipPriorityGroupSetting( dbid.name() ).leadership_priority_group.name(), dbid.name() ) ).build() );
+                dbId -> builder.setRaw( Map.of( new LeadershipPriorityGroupSetting( dbId.name() ).leadership_priority_group.name(), dbId.name() ) ).build() );
         // ...and I am in one of them
-        builder.set( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "two" ) );
+        builder.set( CausalClusteringSettings.server_groups, ServerGroupName.listOf( groupTwo ) );
         var config = builder.build();
         var serverGroupsSupplier = listen( config );
 
@@ -215,12 +213,12 @@ class TransferLeaderJobTest
         // when
         transferLeaderJob.run();
 
-        // then we should propose new leader for 'one'
+        // then we should propose new leader for groupOne
         assertEquals( messageHandler.proposals.size(), 1 );
         var propose = messageHandler.proposals.get( 0 );
-        assertEquals( propose.raftId().uuid(), databaseOne.databaseId().uuid() );
-        assertEquals( propose.message().proposed(), remote );
-        assertEquals( propose.message().priorityGroups(), ServerGroupName.setOf( "one" ) );
+        assertEquals( propose.raftGroupId().uuid(), databaseId1.databaseId().uuid() );
+        assertEquals( propose.message().proposed(), remoteIdentity.raftMemberId( databaseId1 ) );
+        assertEquals( propose.message().priorityGroups(), ServerGroupName.setOf( groupOne ) );
     }
 
     @Test
@@ -247,7 +245,8 @@ class TransferLeaderJobTest
 
         // then I should try and pass on leadership
         assertThat( messageHandler.proposals.get( 0 ).message() ).isEqualTo(
-                new RaftMessages.LeadershipTransfer.Proposal( myself, remote, Set.of( new ServerGroupName( "prio" ) ) ) );
+                new RaftMessages.LeadershipTransfer.Proposal( myIdentity.raftMemberId( databaseId1 ), remoteIdentity.raftMemberId( databaseId1 ),
+                        Set.of( new ServerGroupName( "prio" ) ) ) );
     }
 
     @Test
@@ -267,8 +266,8 @@ class TransferLeaderJobTest
         // then
         assertEquals( messageHandler.proposals.size(), 1 );
         var propose = messageHandler.proposals.get( 0 );
-        assertEquals( propose.raftId().uuid(), databaseId1.databaseId().uuid() );
-        assertEquals( propose.message().proposed(), remote );
+        assertEquals( propose.raftGroupId().uuid(), databaseId1.databaseId().uuid() );
+        assertEquals( propose.message().proposed(), remoteIdentity.raftMemberId( databaseId1 ) );
         assertEquals( propose.message().priorityGroups(), Set.of( new ServerGroupName( "prio" ) ) );
     }
 
@@ -324,8 +323,8 @@ class TransferLeaderJobTest
         // then
         assertEquals( messageHandler.proposals.size(), 1 );
         var propose = messageHandler.proposals.get( 0 );
-        assertEquals( propose.raftId().uuid(), databaseId1.databaseId().uuid() );
-        assertEquals( propose.message().proposed(), remote );
+        assertEquals( propose.raftGroupId().uuid(), databaseId1.databaseId().uuid() );
+        assertEquals( propose.message().proposed(), remoteIdentity.raftMemberId( databaseId1 ) );
         assertEquals( propose.message().priorityGroups(), Set.of( new ServerGroupName( "explicit_prio" ) ) );
     }
 

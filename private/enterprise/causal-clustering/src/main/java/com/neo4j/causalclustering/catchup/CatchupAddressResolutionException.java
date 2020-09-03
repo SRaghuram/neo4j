@@ -6,13 +6,14 @@
 package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.core.state.snapshot.TopologyLookupException;
-import com.neo4j.causalclustering.identity.MemberId;
+
+import org.neo4j.dbms.identity.ServerId;
 
 public class CatchupAddressResolutionException extends TopologyLookupException
 {
-    public CatchupAddressResolutionException( MemberId memberId )
+    public CatchupAddressResolutionException( ServerId serverId )
     {
-        super( memberId );
+        super( serverId );
     }
 
     CatchupAddressResolutionException( Exception e )

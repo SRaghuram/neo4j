@@ -48,14 +48,21 @@ class ClusterStateLayoutTest
     @Test
     void shouldExposeMemberIdStateFile()
     {
-        assertEquals( clusterStateDir.resolve( "core-member-id-state" ).resolve( "core-member-id" ), layout.memberIdStateFile() );
+        assertEquals( clusterStateDir.resolve( "core-member-id-state" ).resolve( "core-member-id" ), layout.oldMemberIdStateFile() );
+    }
+
+    @Test
+    void shouldExposeRaftMemberIdStateFile()
+    {
+        assertEquals( clusterStateDir.resolve( "db" ).resolve( DATABASE_NAME ).resolve( "raft-member-id-state" ).resolve( "raft-member-id" ),
+                layout.raftMemberIdStateFile( DATABASE_NAME ) );
     }
 
     @Test
     void shouldExposeRaftIdStateFile()
     {
         assertEquals( clusterStateDir.resolve( "db" ).resolve( DATABASE_NAME ).resolve( "raft-id-state" ).resolve( "raft-id" ),
-                layout.raftIdStateFile( DATABASE_NAME ) );
+                layout.raftGroupIdFile( DATABASE_NAME ) );
     }
 
     @Test
@@ -118,15 +125,17 @@ class ClusterStateLayoutTest
     void shouldListGlobalAndDatabaseEntriesEntries()
     {
         Set<CoreStateFiles<?>> types = set(
-                CoreStateFiles.RAFT_ID,
+                CoreStateFiles.RAFT_MEMBER_ID,
+                CoreStateFiles.RAFT_GROUP_ID,
                 CoreStateFiles.QUARANTINE_MARKER,
-                CoreStateFiles.CORE_MEMBER_ID,
+                CoreStateFiles.OLD_CORE_MEMBER_ID,
                 CoreStateFiles.SESSION_TRACKER,
                 CoreStateFiles.RAFT_TERM,
                 CoreStateFiles.RAFT_LOG );
 
         Set<Path> expected = set(
                 clusterStateDir.resolve( "core-member-id-state" ),
+                clusterStateDir.resolve( "db" ).resolve( DATABASE_NAME ).resolve( "raft-member-id-state" ),
                 clusterStateDir.resolve( "db" ).resolve( DATABASE_NAME ).resolve( "raft-id-state" ),
                 clusterStateDir.resolve( "db" ).resolve( DATABASE_NAME ).resolve( "quarantine-marker-state" ),
                 clusterStateDir.resolve( "db" ).resolve( DATABASE_NAME ).resolve( "session-tracker-state" ),
@@ -148,9 +157,9 @@ class ClusterStateLayoutTest
 
         assertEquals( clusterStateDir.resolve( "version-state" ).resolve( "version" ), layout.clusterStateVersionFile() );
         assertEquals( clusterStateDir.resolve( "db" ).resolve( DATABASE_NAME ).resolve( "raft-id-state" ).resolve( "raft-id" ),
-                layout.raftIdStateFile( DATABASE_NAME ) );
+                layout.raftGroupIdFile( DATABASE_NAME ) );
 
         assertNotEquals( layout.clusterStateVersionFile(), this.layout.clusterStateVersionFile() );
-        assertNotEquals( layout.raftIdStateFile( DATABASE_NAME ), this.layout.raftIdStateFile( DATABASE_NAME ) );
+        assertNotEquals( layout.raftGroupIdFile( DATABASE_NAME ), this.layout.raftGroupIdFile( DATABASE_NAME ) );
     }
 }

@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.core.consensus.schedule.Timer;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
 import com.neo4j.causalclustering.discovery.Topology;
-import com.neo4j.causalclustering.identity.MemberId;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -30,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -92,16 +92,16 @@ public class TopologyLogger
                                                             Topology<?> newTopology,
                                                             Topology<?> oldTopology )
     {
-        var currentMembers = Collections.unmodifiableSet( newTopology.servers().keySet() );
+        var currentServers = Collections.unmodifiableSet( newTopology.servers().keySet() );
 
-        var lostMembers = new HashSet<>( oldTopology.servers().keySet() );
-        lostMembers.removeAll( currentMembers );
+        var lostServers = new HashSet<>( oldTopology.servers().keySet() );
+        lostServers.removeAll( currentServers );
 
-        var newMembers = new HashMap<>( newTopology.servers() );
-        newMembers.keySet().removeAll( oldTopology.servers().keySet() );
+        var newServers = new HashMap<>( newTopology.servers() );
+        newServers.keySet().removeAll( oldTopology.servers().keySet() );
 
-        return !newMembers.isEmpty() || !lostMembers.isEmpty() ?
-               Optional.of( new TopologyChange( topologyDescription, currentMembers, lostMembers, newMembers ) ) :
+        return !newServers.isEmpty() || !lostServers.isEmpty() ?
+               Optional.of( new TopologyChange( topologyDescription, currentServers, lostServers, newServers ) ) :
                Optional.empty();
     }
 
@@ -139,34 +139,34 @@ public class TopologyLogger
         if ( dbs.size() == 1 )
         {
             logLine.append( format( "%s for database %s is now: %s", tc.topologyDescription, dbsToReadableString( dbs ),
-                                    tc.currentMembers.isEmpty() ? "empty" : membersToStableString( tc.currentMembers ) ) );
+                                    tc.currentMembers.isEmpty() ? "empty" : serversToStableString( tc.currentMembers ) ) );
         }
         else if ( allDatabases.size() == dbs.size() )
         {
             logLine.append( format( "%s for all databases is now: %s", tc.topologyDescription,
-                                    tc.currentMembers.isEmpty() ? "empty" : membersToStableString( tc.currentMembers ) ) );
+                                    tc.currentMembers.isEmpty() ? "empty" : serversToStableString( tc.currentMembers ) ) );
         }
         else if ( allDatabases.size() - dbs.size() <= 5 && allDatabases.size() < ( 2 * dbs.size() ) )
         {
             var unaffectedDatabases = allDatabases.stream().filter( db -> !dbs.contains( db ) ).collect( Collectors.toList() );
             logLine.append( format( "%s for all databases except for %s is now: %s", tc.topologyDescription, dbsToReadableString( unaffectedDatabases ),
-                                    tc.currentMembers.isEmpty() ? "empty" : membersToStableString( tc.currentMembers ) ) );
+                                    tc.currentMembers.isEmpty() ? "empty" : serversToStableString( tc.currentMembers ) ) );
         }
         else if ( dbs.size() <= 5 )
         {
             logLine.append( format( "%s for databases %s is now: %s", tc.topologyDescription, dbsToReadableString( dbs ),
-                                    tc.currentMembers.isEmpty() ? "empty" : membersToStableString( tc.currentMembers ) ) );
+                                    tc.currentMembers.isEmpty() ? "empty" : serversToStableString( tc.currentMembers ) ) );
         }
         else
         {
             logLine.append( format( "%s for %d databases is now: %s", tc.topologyDescription, dbs.size(),
-                                    tc.currentMembers.isEmpty() ? "empty" : membersToStableString( tc.currentMembers ) ) );
+                                    tc.currentMembers.isEmpty() ? "empty" : serversToStableString( tc.currentMembers ) ) );
         }
         logLine.append( lineSeparator() )
-               .append( tc.lostMembers.isEmpty() ? "No members where lost" : format( "Lost members :%s", membersToStableString( tc.lostMembers ) ) )
+               .append( tc.lostMembers.isEmpty() ? "No servers where lost" : format( "Lost servers :%s", serversToStableString( tc.lostMembers ) ) )
                .append( lineSeparator() )
-               .append( tc.newMembers.isEmpty() ? "No new members" :
-                        format( "New members: %s%s", newPaddedLine(), memberInfosToStableString( tc.newMembers ) ) );
+               .append( tc.newMembers.isEmpty() ? "No new servers" :
+                        format( "New servers: %s%s", newPaddedLine(), serverInfosToStableString( tc.newMembers ) ) );
         log.info( logLine.toString() );
     }
 
@@ -196,17 +196,17 @@ public class TopologyLogger
         return "";
     }
 
-    private static <V extends DiscoveryServerInfo> String memberInfosToStableString( Map<MemberId,V> memberInfos )
+    private static <V extends DiscoveryServerInfo> String serverInfosToStableString( Map<ServerId,V> serverInfos )
     {
-        var sortedMap = new TreeMap<MemberId,V>( Comparator.comparing( MemberId::getUuid ) );
-        sortedMap.putAll( memberInfos );
+        var sortedMap = new TreeMap<ServerId,V>( Comparator.comparing( ServerId::uuid ) );
+        sortedMap.putAll( serverInfos );
         return printMap( sortedMap, newPaddedLine() );
     }
 
-    private static String membersToStableString( Set<MemberId> members )
+    private static String serversToStableString( Set<ServerId> servers )
     {
-        var sortedSet = new TreeSet<>( Comparator.comparing( MemberId::getUuid ) );
-        sortedSet.addAll( members );
+        var sortedSet = new TreeSet<>( Comparator.comparing( ServerId::uuid ) );
+        sortedSet.addAll( servers );
         return sortedSet.toString();
     }
 
@@ -215,14 +215,14 @@ public class TopologyLogger
         static final TopologyChange EMPTY = new TopologyChange( "", Set.of(), Set.of(), Map.of() );
 
         String topologyDescription;
-        Set<MemberId> currentMembers;
-        Set<MemberId> lostMembers;
-        Map<MemberId,? extends DiscoveryServerInfo> newMembers;
+        Set<ServerId> currentMembers;
+        Set<ServerId> lostMembers;
+        Map<ServerId,? extends DiscoveryServerInfo> newMembers;
 
         TopologyChange( String topologyDescription,
-                        Set<MemberId> currentMembers,
-                        Set<MemberId> lostMembers,
-                        Map<MemberId,? extends DiscoveryServerInfo> newMembers )
+                        Set<ServerId> currentMembers,
+                        Set<ServerId> lostMembers,
+                        Map<ServerId,? extends DiscoveryServerInfo> newMembers )
         {
             this.topologyDescription = topologyDescription;
             this.currentMembers = currentMembers;

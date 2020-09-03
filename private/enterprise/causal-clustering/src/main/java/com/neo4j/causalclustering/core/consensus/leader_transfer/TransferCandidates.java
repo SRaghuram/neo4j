@@ -5,27 +5,26 @@
  */
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
-import com.neo4j.causalclustering.identity.RaftMemberId;
-
 import java.util.Objects;
 import java.util.Set;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 class TransferCandidates
 {
     private final NamedDatabaseId namedDatabaseId;
-    private final Set<RaftMemberId> members;
+    private final Set<ServerId> servers;
 
-    TransferCandidates( NamedDatabaseId namedDatabaseId, Set<RaftMemberId> members )
+    TransferCandidates( NamedDatabaseId namedDatabaseId, Set<ServerId> servers )
     {
         this.namedDatabaseId = namedDatabaseId;
-        this.members = members;
+        this.servers = servers;
     }
 
-    public Set<RaftMemberId> members()
+    public Set<ServerId> members()
     {
-        return members;
+        return servers;
     }
 
     public NamedDatabaseId databaseId()
@@ -46,13 +45,13 @@ class TransferCandidates
         }
         TransferCandidates that = (TransferCandidates) o;
         return Objects.equals( namedDatabaseId, that.namedDatabaseId ) &&
-               Objects.equals( members, that.members );
+               Objects.equals( servers, that.servers );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( namedDatabaseId, members );
+        return Objects.hash( namedDatabaseId, servers );
     }
 
     @Override
@@ -60,7 +59,7 @@ class TransferCandidates
     {
         return "TransferCandidates{" +
                "namedDatabaseId=" + namedDatabaseId +
-               ", members=" + members +
+               ", servers=" + servers +
                '}';
     }
 }

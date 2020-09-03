@@ -27,7 +27,7 @@ class ServerRequestTest
     {
         var log = mock( Log.class );
         var exception = new Exception();
-        var serverId = ServerId.of( UUID.randomUUID() );
+        var serverId = new ServerId( UUID.randomUUID() );
         var databaseId = DatabaseIdFactory.from( "foo", UUID.randomUUID() );
         ServerRequest serverRequest = new ServerRequest( 1, serverId, new SocketAddress( 1 ), databaseId, log )
         {
@@ -48,7 +48,7 @@ class ServerRequestTest
     void shouldProvideCaughtUpFailure()
     {
         var log = mock( Log.class );
-        var serverId = ServerId.of( UUID.randomUUID() );
+        var serverId = new ServerId( UUID.randomUUID() );
         var databaseId = DatabaseIdFactory.from( "foo", UUID.randomUUID() );
         var address = new SocketAddress( 1 );
         ServerRequest serverRequest = new ServerRequest( 1, serverId, address, databaseId, log )
@@ -72,7 +72,7 @@ class ServerRequestTest
     void shouldProvideNotCaughtUpFailure()
     {
         var log = mock( Log.class );
-        var serverId = ServerId.of( UUID.randomUUID() );
+        var serverId = new ServerId( UUID.randomUUID() );
         var databaseId = DatabaseIdFactory.from( "foo", UUID.randomUUID() );
         var address = new SocketAddress( 1 );
         ServerRequest serverRequest = new ServerRequest( 1, serverId, address, databaseId, log )
@@ -96,7 +96,7 @@ class ServerRequestTest
     void shouldReturnNullOnNotCaughtUp()
     {
         var log = mock( Log.class );
-        var serverId = ServerId.of( UUID.randomUUID() );
+        var serverId = new ServerId( UUID.randomUUID() );
         var databaseId = DatabaseIdFactory.from( "foo", UUID.randomUUID() );
         var address = new SocketAddress( 1 );
         ServerRequest serverRequest = new ServerRequest( 1, serverId, address, databaseId, log )
@@ -116,7 +116,7 @@ class ServerRequestTest
     void shouldProvideCaughtUp()
     {
         var log = mock( Log.class );
-        var serverId = ServerId.of( UUID.randomUUID() );
+        var serverId = new ServerId( UUID.randomUUID() );
         var databaseId = DatabaseIdFactory.from( "foo", UUID.randomUUID() );
         var address = new SocketAddress( 1 );
         ServerRequest serverRequest = new ServerRequest( 1, serverId, address, databaseId, log )

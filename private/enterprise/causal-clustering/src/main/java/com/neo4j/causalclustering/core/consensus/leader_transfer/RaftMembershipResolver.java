@@ -5,12 +5,18 @@
  */
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
-import com.neo4j.causalclustering.core.consensus.membership.RaftMembership;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
+import java.util.Set;
+
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
-@FunctionalInterface
 interface RaftMembershipResolver
 {
-    RaftMembership membersFor( NamedDatabaseId namedDatabaseId );
+    Set<ServerId> votingServers( NamedDatabaseId databaseId );
+
+    RaftMemberId resolveRaftMemberForServer( NamedDatabaseId databaseId, ServerId to );
+
+    ServerId resolveServerForRaftMember( RaftMemberId memberId );
 }

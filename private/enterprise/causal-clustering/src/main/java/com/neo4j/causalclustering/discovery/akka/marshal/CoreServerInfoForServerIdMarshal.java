@@ -19,7 +19,7 @@ import org.neo4j.io.marshal.SafeChannelMarshal;
 
 public class CoreServerInfoForServerIdMarshal extends SafeChannelMarshal<CoreServerInfoForServerId>
 {
-    private final ChannelMarshal<ServerId> serverIdMarshal = new ServerId.Marshal();
+    private final ChannelMarshal<ServerId> serverIdMarshal = ServerId.Marshal.INSTANCE;
     private final ChannelMarshal<CoreServerInfo> coreServerInfoMarshal = new CoreServerInfoMarshal();
 
     @Override

@@ -23,12 +23,12 @@ import com.neo4j.causalclustering.core.state.machines.tx.CoreReplicatedContent;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
+import com.neo4j.causalclustering.identity.IdFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.UUID;
 
@@ -66,7 +66,7 @@ class CommandApplicationProcessTest
     private final SessionTracker sessionTracker = new SessionTracker(
             new InMemoryStateStorage<>( new GlobalSessionTrackerState() ) );
 
-    private final GlobalSession globalSession = new GlobalSession( UUID.randomUUID(), null );
+    private final GlobalSession globalSession = new GlobalSession( UUID.randomUUID(), IdFactory.randomRaftMemberId() );
     private final int flushEvery = 10;
     private final int batchSize = 16;
 

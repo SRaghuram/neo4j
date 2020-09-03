@@ -10,13 +10,11 @@ import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
 import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
-import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
+import com.neo4j.causalclustering.discovery.TestCoreDiscoveryMember;
 import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
-import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
+import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.dbms.EnterpriseDatabaseState;
-import com.neo4j.dbms.EnterpriseOperatorState;
 
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -43,7 +41,6 @@ import static java.util.Collections.singletonList;
 import static java.util.function.Function.identity;
 import static org.neo4j.configuration.GraphDatabaseSettings.SERVER_DEFAULTS;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_level;
-import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 
 public class AkkaDiscoverySystemHelper
@@ -72,7 +69,7 @@ public class AkkaDiscoverySystemHelper
                            .set( store_internal_log_level, Level.DEBUG )
                            .set( middleware_logging_level, Level.DEBUG )
                            .build();
-        var identityModule = new StubClusteringIdentityModule();
+        var identityModule = new InMemoryCoreServerIdentity();
         var logProvider = NullLogProvider.getInstance();
         var membersResolver = new InitialDiscoveryMembersResolver( new NoOpHostnameResolver(), config );
         var monitors = new Monitors();
@@ -83,7 +80,7 @@ public class AkkaDiscoverySystemHelper
         var databaseStates = startedDatabases.stream().collect( Collectors.toMap( identity(), asStarted ) );
         var databaseStateService = new StubDatabaseStateService( databaseStates, EnterpriseDatabaseState::unknown );
         return discoveryServiceFactory.coreTopologyService( config, identityModule, createInitialisedScheduler(), logProvider,
-                                                            logProvider, membersResolver, retryStrategy, sslPolicyLoader, TestDiscoveryMember::factory,
+                                                            logProvider, membersResolver, retryStrategy, sslPolicyLoader, TestCoreDiscoveryMember::factory,
                                                             firstStartupDetector, monitors, Clocks.systemClock(), databaseStateService );
     }
 }

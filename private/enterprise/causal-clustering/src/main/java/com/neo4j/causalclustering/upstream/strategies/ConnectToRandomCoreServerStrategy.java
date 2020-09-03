@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.upstream.strategies;
 
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 
@@ -18,6 +17,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.annotations.service.ServiceProvider;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 @ServiceProvider
@@ -31,18 +31,18 @@ public class ConnectToRandomCoreServerStrategy extends UpstreamDatabaseSelection
     }
 
     @Override
-    public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
+    public Optional<ServerId> upstreamServerForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
     {
         return choices( namedDatabaseId ).findFirst();
     }
 
     @Override
-    public Collection<MemberId> upstreamMembersForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
+    public Collection<ServerId> upstreamServersForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
     {
         return choices( namedDatabaseId ).collect( Collectors.toList() );
     }
 
-    private Stream<MemberId> choices( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
+    private Stream<ServerId> choices( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
     {
         final DatabaseCoreTopology coreTopology = topologyService.coreTopologyForDatabase( namedDatabaseId );
 
@@ -51,8 +51,8 @@ public class ConnectToRandomCoreServerStrategy extends UpstreamDatabaseSelection
             throw new UpstreamDatabaseSelectionException( "No core servers available" );
         }
 
-        var members = new ArrayList<>( coreTopology.servers().keySet() );
-        Collections.shuffle( members );
-        return members.stream();
+        var servers = new ArrayList<>( coreTopology.servers().keySet() );
+        Collections.shuffle( servers );
+        return servers.stream();
     }
 }

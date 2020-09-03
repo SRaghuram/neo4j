@@ -8,8 +8,8 @@ package com.neo4j.causalclustering.read_replica;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
-import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
+import com.neo4j.causalclustering.readreplica.ReadReplicaIdentityModule;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.OnlineBackupSettings;
@@ -138,7 +138,7 @@ public class ReadReplica implements ClusterMember
     @Override
     public ServerId serverId()
     {
-        return systemDatabase.getDependencyResolver().resolveDependency( ClusteringIdentityModule.class ).myself();
+        return systemDatabase.getDependencyResolver().resolveDependency( ReadReplicaIdentityModule.class ).serverId();
     }
 
     @Override

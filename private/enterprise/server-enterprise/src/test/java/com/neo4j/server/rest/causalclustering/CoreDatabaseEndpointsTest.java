@@ -13,7 +13,6 @@ import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.discovery.RoleInfo;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
 import com.neo4j.dbms.EnterpriseDatabaseState;
@@ -36,10 +35,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.collection.Dependencies;
-import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.StubDatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.kernel.database.NamedDatabaseId;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -52,7 +50,7 @@ import org.neo4j.server.rest.repr.OutputFormat;
 import org.neo4j.server.rest.repr.formats.JsonFormat;
 import org.neo4j.time.FakeClock;
 
-import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberId;
+import static com.neo4j.causalclustering.discovery.FakeTopologyService.serverId;
 import static com.neo4j.server.rest.causalclustering.ReadReplicaDatabaseEndpointsTest.responseAsMap;
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
@@ -61,7 +59,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -85,10 +82,10 @@ class CoreDatabaseEndpointsTest
     private CommandIndexTracker commandIndexTracker;
     private ThroughputMonitor throughputMonitor;
 
-    private final MemberId myself = memberId( 0 );
-    private final MemberId core2 = memberId( 1 );
-    private final MemberId core3 = memberId( 2 );
-    private final MemberId replica = memberId( 3 );
+    private final ServerId myself = serverId( 0 );
+    private final ServerId core2 = serverId( 1 );
+    private final ServerId core3 = serverId( 2 );
+    private final ServerId replica = serverId( 3 );
 
     @BeforeEach
     void beforeEach() throws Exception
@@ -114,7 +111,7 @@ class CoreDatabaseEndpointsTest
 
         raftMessageTimerResetMonitor = dependencyResolver.satisfyDependency( new DurationSinceLastMessageMonitor( clock ) );
         raftMachine = dependencyResolver.satisfyDependency( mock( RaftMachine.class ) );
-        when( raftMachine.memberId() ).thenReturn( RaftMemberId.from( myself ) );
+        when( raftMachine.memberId() ).thenReturn( new RaftMemberId( myself.uuid() ) );
 
         commandIndexTracker = dependencyResolver.satisfyDependency( new CommandIndexTracker() );
         throughputMonitor = dependencyResolver.satisfyDependency( mock( ThroughputMonitor.class ) );
@@ -195,7 +192,7 @@ class CoreDatabaseEndpointsTest
     {
         // given ideal normal conditions
         commandIndexTracker.setAppliedCommandIndex( 123 );
-        when( raftMachine.getLeaderInfo() ).thenReturn( Optional.of( new LeaderInfo( RaftMemberId.from( core2 ), 1 ) ) );
+        when( raftMachine.getLeaderInfo() ).thenReturn( Optional.of( new LeaderInfo( new RaftMemberId( core2.uuid() ), 1 ) ) );
         raftMessageTimerResetMonitor.timerReset();
         when( throughputMonitor.throughput() ).thenReturn( Optional.of( 423.0 ) );
         clock.forward( Duration.ofSeconds( 1 ) );
@@ -203,7 +200,7 @@ class CoreDatabaseEndpointsTest
         // and helpers
         var votingMembers = raftMembershipManager.votingMembers()
                 .stream()
-                .map( memberId -> memberId.getUuid().toString() )
+                .map( memberId -> memberId.uuid().toString() )
                 .sorted()
                 .collect( toList() );
 
@@ -217,8 +214,8 @@ class CoreDatabaseEndpointsTest
         assertThat( response, containsAndEquals( "participatingInRaftGroup", true ) );
         assertThat( response, containsAndEquals( "votingMembers", votingMembers ) );
         assertThat( response, containsAndEquals( "healthy", true ) );
-        assertThat( response, containsAndEquals( "memberId", myself.getUuid().toString() ) );
-        assertThat( response, containsAndEquals( "leader", core2.getUuid().toString() ) );
+        assertThat( response, containsAndEquals( "memberId", myself.uuid().toString() ) );
+        assertThat( response, containsAndEquals( "leader", core2.uuid().toString() ) );
         assertThat( response, containsAndEquals( "raftCommandsPerSecond", 423.0 ) );
         assertThat( response.toString(), Long.parseLong( response.get( "millisSinceLastLeaderMessage" ).toString() ), greaterThan( 0L ) );
         assertThat( response, containsAndEquals( "discoveryHealthy", true ) );
@@ -229,7 +226,10 @@ class CoreDatabaseEndpointsTest
     {
         // given not in voting set
         topologyService.setRole( core2, RoleInfo.LEADER );
-        when( raftMembershipManager.votingMembers() ).thenReturn( Stream.of( core2, core3 ).map( RaftMemberId::from ).collect( Collectors.toSet() ) );
+        when( raftMembershipManager.votingMembers() ).thenReturn( Stream
+                .of( core2, core3 )
+                .map( sId -> new RaftMemberId( sId.uuid() ) )
+                .collect( Collectors.toSet() ) );
 
         // when
         var description = endpoints.description();
@@ -292,10 +292,11 @@ class CoreDatabaseEndpointsTest
         assertNull( response.get( "raftCommandsPerSecond" ) );
     }
 
-    private static RaftMembershipManager fakeRaftMembershipManager( Set<MemberId> votingMembers )
+    private static RaftMembershipManager fakeRaftMembershipManager( Set<ServerId> votingMembers )
     {
         var raftMembershipManager = mock( RaftMembershipManager.class );
-        when( raftMembershipManager.votingMembers() ).thenReturn( votingMembers.stream().map( RaftMemberId::from ).collect( Collectors.toSet() ) );
+        when( raftMembershipManager.votingMembers() ).thenReturn(
+                votingMembers.stream().map( sId -> new RaftMemberId( sId.uuid() ) ).collect( Collectors.toSet() ) );
         return raftMembershipManager;
     }
 

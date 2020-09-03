@@ -21,9 +21,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import org.neo4j.dbms.database.DatabaseStartAbortedException;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.function.ThrowingAction;
 import org.neo4j.io.state.SimpleStorage;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -35,7 +35,7 @@ import static com.neo4j.causalclustering.identity.RaftBinder.Publisher.ME;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toSet;
 
-public class RaftBinder implements Supplier<Optional<RaftId>>
+public class RaftBinder implements Supplier<Optional<RaftGroupId>>
 {
     public interface Monitor
     {
@@ -43,27 +43,27 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
 
         void waitingForBootstrap( NamedDatabaseId namedDatabaseId );
 
-        void bootstrapped( CoreSnapshot snapshot, NamedDatabaseId namedDatabaseId, RaftId raftId, MemberId myself );
+        void bootstrapped( CoreSnapshot snapshot, NamedDatabaseId namedDatabaseId, RaftMemberId raftMemberId );
 
-        void boundToRaftFromDisk( NamedDatabaseId namedDatabaseId, RaftId raftId, MemberId myself );
+        void boundToRaftFromDisk( NamedDatabaseId namedDatabaseId, RaftMemberId raftMemberId );
 
-        void boundToRaftThroughTopology( NamedDatabaseId namedDatabaseId, RaftId raftId, MemberId myself );
+        void boundToRaftThroughTopology( NamedDatabaseId namedDatabaseId, RaftMemberId raftMemberId );
 
-        void retryPublishRaftId( NamedDatabaseId namedDatabaseId, RaftId raftId );
+        void retryPublishRaftId( NamedDatabaseId namedDatabaseId, RaftGroupId raftGroupId );
 
         void logSaveSystemDatabase();
 
-        void logBootstrapAttemptWithDiscoveryService();
+        void bootstrapAttemptUsingDiscovery( NamedDatabaseId namedDatabaseId );
 
-        void logBootstrapWithInitialMembersAndStoreID( Set<MemberId> initialMembers, StoreId storeId );
+        void bootstrapAttempt( Set<ServerId> initialServers, StoreId storeId );
     }
 
     private final NamedDatabaseId namedDatabaseId;
-    private final SimpleStorage<RaftId> raftIdStorage;
+    private final SimpleStorage<RaftGroupId> raftGroupIdStorage;
     private final CoreTopologyService topologyService;
     private final ClusterSystemGraphDbmsModel systemGraph;
     private final RaftBootstrapper raftBootstrapper;
-    private final RaftMemberId myself;
+    private final CoreServerIdentity myIdentity;
     private final Monitor monitor;
     private final Clock clock;
     private final ThrowingAction<InterruptedException> retryWaiter;
@@ -71,17 +71,17 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
     private final int minCoreHosts;
     private final boolean refuseToBeLeader;
 
-    private RaftId raftId;
+    private RaftGroupId raftGroupId;
 
-    public RaftBinder( NamedDatabaseId namedDatabaseId, RaftMemberId myself, SimpleStorage<RaftId> raftIdStorage,
+    public RaftBinder( NamedDatabaseId namedDatabaseId, CoreServerIdentity myIdentity, SimpleStorage<RaftGroupId> raftGroupIdStorage,
             CoreTopologyService topologyService, ClusterSystemGraphDbmsModel systemGraph, Clock clock, ThrowingAction<InterruptedException> retryWaiter,
             Duration timeout, RaftBootstrapper raftBootstrapper, int minCoreHosts, boolean refuseToBeLeader, Monitors monitors )
     {
         this.namedDatabaseId = namedDatabaseId;
-        this.myself = myself;
+        this.myIdentity = myIdentity;
         this.systemGraph = systemGraph;
         this.monitor = monitors.newMonitor( Monitor.class );
-        this.raftIdStorage = raftIdStorage;
+        this.raftGroupIdStorage = raftGroupIdStorage;
         this.topologyService = topologyService;
         this.raftBootstrapper = raftBootstrapper;
         this.clock = clock;
@@ -103,8 +103,8 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
      */
     private boolean hostShouldBootstrapRaft( DatabaseCoreTopology coreTopology )
     {
-        int memberCount = coreTopology.servers().size();
-        if ( memberCount < minCoreHosts )
+        var serverCount = coreTopology.servers().size();
+        if ( serverCount < minCoreHosts )
         {
             monitor.waitingForCoreMembers( namedDatabaseId, minCoreHosts );
             return false;
@@ -114,10 +114,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
             monitor.waitingForBootstrap( namedDatabaseId );
             return false;
         }
-        else
-        {
-            return true;
-        }
+        return true;
     }
 
     /**
@@ -133,52 +130,59 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
     {
         var bindingConditions = new BindingConditions( databaseStartAborter, clock, timeout );
 
-        if ( raftIdStorage.exists() )
+        if ( raftGroupIdStorage.exists() )
         {
-            return bindToRaftIdFromDisk( bindingConditions );
+            return bindToExistingRaft( bindingConditions );
         }
         else
         {
-            return getBoundState( bindingConditions );
+            return bindToNewRaft( bindingConditions );
         }
     }
 
-    private BoundState getBoundState( BindingConditions bindingConditions ) throws Exception
+    private BoundState bindToNewRaft( BindingConditions bindingConditions ) throws Exception
     {
+        /* The binding protocol towards other servers has to be re-written if we are to support random RaftMemberIDs. */
+        var raftMemberId = new RaftMemberId( myIdentity.serverId().uuid() );
+        myIdentity.createMemberId( namedDatabaseId, raftMemberId );
+        topologyService.onRaftMemberKnown( namedDatabaseId );
+
         if ( isInitialDatabase() )
         {
-            return bindToInitialRaftGroup( bindingConditions );
+            return bindToInitialRaftGroup( bindingConditions, raftMemberId );
         }
         else
         {
-            var initialMemberIds = systemGraph.getInitialMembers( namedDatabaseId ).stream().map( MemberId::of ).collect( toSet() );
-            return bindToRaftGroupNotPartOfInitialDatabases( bindingConditions, initialMemberIds );
+            var initialServers = systemGraph.getInitialServers( namedDatabaseId ).stream().map( ServerId::new ).collect( toSet() );
+            return bindToRaftGroupNotPartOfInitialDatabases( bindingConditions, initialServers, raftMemberId );
         }
     }
 
-    private BoundState bindToRaftIdFromDisk( BindingConditions bindingConditions ) throws Exception
+    private BoundState bindToExistingRaft( BindingConditions bindingConditions ) throws Exception
     {
         // If raft id state exists, read it and verify that it corresponds to the database being started
-        raftId = raftIdStorage.readState();
-        validateRaftId( raftId, namedDatabaseId );
+        raftGroupId = raftGroupIdStorage.readState();
+        validateRaftId( raftGroupId, namedDatabaseId );
 
-        awaitPublishRaftId( namedDatabaseId, bindingConditions, raftId );
+        var memberId = myIdentity.loadMemberId( namedDatabaseId );
+        topologyService.onRaftMemberKnown( namedDatabaseId );
+        awaitPublishRaftId( bindingConditions, raftGroupId, memberId );
 
-        monitor.boundToRaftFromDisk( namedDatabaseId, raftId, topologyService.memberId() );
-        return new BoundState( raftId );
+        monitor.boundToRaftFromDisk( namedDatabaseId, myIdentity.raftMemberId( namedDatabaseId ) );
+        return new BoundState( raftGroupId );
     }
 
-    private static void validateRaftId( RaftId raftId, NamedDatabaseId namedDatabaseId )
+    private static void validateRaftId( RaftGroupId raftGroupId, NamedDatabaseId namedDatabaseId )
     {
-        if ( !Objects.equals( raftId.uuid(), namedDatabaseId.databaseId().uuid() ) )
+        if ( !Objects.equals( raftGroupId.uuid(), namedDatabaseId.databaseId().uuid() ) )
         {
             throw new IllegalStateException( format( "Pre-existing cluster state found with an unexpected id %s. The id for this database is %s. " +
                             "This may indicate a previous DROP operation for %s did not complete.",
-                    raftId.uuid(), namedDatabaseId.databaseId().uuid(), namedDatabaseId ) );
+                    raftGroupId.uuid(), namedDatabaseId.databaseId().uuid(), namedDatabaseId ) );
         }
     }
 
-    private BoundState bindToInitialRaftGroup( BindingConditions bindingConditions ) throws Exception
+    private BoundState bindToInitialRaftGroup( BindingConditions bindingConditions, RaftMemberId raftMemberId ) throws Exception
     {
         DatabaseCoreTopology topology;
         CoreSnapshot snapshot;
@@ -188,32 +192,37 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
             topology = topologyService.coreTopologyForDatabase( namedDatabaseId );
             if ( bootstrappedByOther( topology ) )
             {
-                validateRaftId( topology.raftId(), namedDatabaseId );
+                validateRaftId( topology.raftGroupId(), namedDatabaseId );
                 // Someone else bootstrapped, we're done!
-                return handleBootstrapByOther( topology );
+                return handleBootstrapByOther( topology, raftMemberId );
             }
             if ( hostShouldBootstrapRaft( topology ) )
             {
-                var raftId = RaftId.from( namedDatabaseId.databaseId() );
-                monitor.logBootstrapAttemptWithDiscoveryService();
-                var outcome = publishRaftId( raftId, bindingConditions );
+                var raftGroupId = RaftGroupId.from( namedDatabaseId.databaseId() );
 
+                monitor.bootstrapAttemptUsingDiscovery( namedDatabaseId );
+
+                var outcome = publishRaftId( raftGroupId, raftMemberId, bindingConditions );
                 if ( Publisher.successfullyPublishedBy( ME, outcome ) )
                 {
-                    this.raftId = raftId;
-                    var initialMembersIds = topology.servers().keySet();
-                    var raftMemberIds = convertToRaftMemberIds( initialMembersIds );
-                    snapshot = raftBootstrapper.bootstrap( raftMemberIds );
-                    monitor.bootstrapped( snapshot, namedDatabaseId, raftId, topologyService.memberId() );
-                    return new BoundState( raftId, snapshot );
+                    this.raftGroupId = raftGroupId;
+                    Set<RaftMemberId> initialMemberIds = topology.servers()
+                                                                 .keySet()
+                                                                 .stream()
+                                                                 .map( serverId -> new RaftMemberId( serverId.uuid() ) )
+                                                                 .collect( toSet() );
+
+                    snapshot = raftBootstrapper.bootstrap( initialMemberIds );
+                    monitor.bootstrapped( snapshot, namedDatabaseId, myIdentity.raftMemberId( namedDatabaseId ) );
+                    return new BoundState( raftGroupId, snapshot );
                 }
             }
-            bindingConditions.allowContinueBinding( namedDatabaseId, topology );
+            bindingConditions.allowContinueBindingWaitForCores( namedDatabaseId, topology );
             retryWaiter.apply();
         }
     }
 
-    private BoundState awaitBootstrapByOther( BindingConditions bindingConditions ) throws IOException, TimeoutException, DatabaseStartAbortedException
+    private BoundState awaitBootstrapByOther( BindingConditions bindingConditions, RaftMemberId raftMemberId ) throws Exception
     {
         DatabaseCoreTopology topology;
         while ( true )
@@ -221,64 +230,53 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
             topology = topologyService.coreTopologyForDatabase( namedDatabaseId );
             if ( bootstrappedByOther( topology ) )
             {
-                validateRaftId( topology.raftId(), namedDatabaseId );
+                validateRaftId( topology.raftGroupId(), namedDatabaseId );
                 // Someone else bootstrapped, we're done!
-                return handleBootstrapByOther( topology );
+                return handleBootstrapByOther( topology, raftMemberId );
             }
-            bindingConditions.allowContinueBinding( namedDatabaseId, topology );
+            bindingConditions.allowContinueBindingWaitForOthers( namedDatabaseId, topology );
         }
     }
 
-    private BoundState bindToRaftGroupNotPartOfInitialDatabases( BindingConditions bindingConditions, Set<MemberId> initialMemberIds ) throws Exception
+    private BoundState bindToRaftGroupNotPartOfInitialDatabases( BindingConditions bindingConditions, Set<ServerId> initialServers, RaftMemberId raftMemberId )
+            throws Exception
     {
-        if ( !initialMemberIds.contains( myself.serverId() ) || refuseToBeLeader )
+        if ( !initialServers.contains( myIdentity.serverId() ) || refuseToBeLeader )
         {
-            return awaitBootstrapByOther( bindingConditions );
+            return awaitBootstrapByOther( bindingConditions, raftMemberId );
         }
         else
         {
             // Used for databases created during runtime in response to operator commands.
             StoreId storeId = systemGraph.getStoreId( namedDatabaseId );
-            var raftId = RaftId.from( namedDatabaseId.databaseId() );
-            monitor.logBootstrapWithInitialMembersAndStoreID( initialMemberIds, storeId );
-            var outcome = awaitPublishRaftId( namedDatabaseId, bindingConditions, raftId );
-            this.raftId = raftId;
+            var raftGroupId = RaftGroupId.from( namedDatabaseId.databaseId() );
+            monitor.bootstrapAttempt( initialServers, storeId );
+            awaitPublishRaftId( bindingConditions, raftGroupId, raftMemberId );
+            this.raftGroupId = raftGroupId;
 
-            if ( Publisher.successfullyPublishedBy( ME, outcome ) )
-            {
-                var raftMemberIds = convertToRaftMemberIds( initialMemberIds );
-                var snapshot = raftBootstrapper.bootstrap( raftMemberIds, storeId );
-                monitor.bootstrapped( snapshot, namedDatabaseId, raftId, topologyService.memberId() );
-                return new BoundState( raftId, snapshot );
-            }
-
-            return new BoundState( raftId );
+            var initialMemberIds = initialServers.stream().map( serverId -> new RaftMemberId( serverId.uuid() ) ).collect( toSet() );
+            var snapshot = raftBootstrapper.bootstrap( initialMemberIds, storeId );
+            monitor.bootstrapped( snapshot, namedDatabaseId, myIdentity.raftMemberId( namedDatabaseId ) );
+            return new BoundState( raftGroupId, snapshot );
         }
-    }
-
-    private Set<RaftMemberId> convertToRaftMemberIds( Set<MemberId> serverIds )
-    {
-        return serverIds.stream()
-                .map( serverId -> topologyService.resolveRaftMemberForServer( namedDatabaseId, serverId ) )
-                .collect( Collectors.toSet() );
     }
 
     private boolean isInitialDatabase()
     {
-        return namedDatabaseId.isSystemDatabase() || systemGraph.getInitialMembers( namedDatabaseId ).isEmpty();
+        return namedDatabaseId.isSystemDatabase() || systemGraph.getInitialServers( namedDatabaseId ).isEmpty();
     }
 
     private boolean bootstrappedByOther( DatabaseCoreTopology topology )
     {
-        return topology.raftId() != null && !topologyService.didBootstrapDatabase( namedDatabaseId );
+        return topology.raftGroupId() != null && !topologyService.didBootstrapDatabase( namedDatabaseId );
     }
 
-    private BoundState handleBootstrapByOther( DatabaseCoreTopology topology ) throws IOException
+    private BoundState handleBootstrapByOther( DatabaseCoreTopology topology, RaftMemberId raftMemberId ) throws IOException
     {
         saveSystemDatabase();
-        monitor.boundToRaftThroughTopology( namedDatabaseId, raftId, topologyService.memberId() );
-        raftId = topology.raftId();
-        return new BoundState( raftId );
+        monitor.boundToRaftThroughTopology( namedDatabaseId, raftMemberId );
+        raftGroupId = topology.raftGroupId();
+        return new BoundState( raftGroupId );
     }
 
     /**
@@ -296,44 +294,41 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
     }
 
     @Override
-    public Optional<RaftId> get()
+    public Optional<RaftGroupId> get()
     {
-        return Optional.ofNullable( raftId );
+        return Optional.ofNullable( raftGroupId );
     }
 
-    private PublishRaftIdOutcome awaitPublishRaftId( NamedDatabaseId namedDatabaseId, BindingConditions bindingConditions, RaftId raftId )
-            throws BindingException, InterruptedException, TimeoutException, DatabaseStartAbortedException
+    private void awaitPublishRaftId( BindingConditions bindingConditions, RaftGroupId raftGroupId, RaftMemberId memberId ) throws Exception
     {
         while ( true )
         {
-            var outcome = publishRaftId( raftId, bindingConditions );
+            var outcome = publishRaftId( raftGroupId, memberId, bindingConditions );
             if ( outcome != MAYBE_PUBLISHED )
             {
-                return outcome;
+                return;
             }
-            monitor.retryPublishRaftId( namedDatabaseId, raftId );
+            monitor.retryPublishRaftId( namedDatabaseId, raftGroupId );
             retryWaiter.apply();
             bindingConditions.allowContinuePublishing( namedDatabaseId );
         }
     }
 
     /**
-     * Publish the raft Id for the database being started to the discovery service, as a signal to other members that this database has been bootstrapped.
+     * Publish the raft group ID for the database being started to the discovery service, as a signal to other members that this database has been bootstrapped.
      *
-     * @param localRaftId the raftId to be published
+     * @param localRaftGroupId the raft group ID to be published
      * @param bindingConditions determines if the publish step is allowed to retry on {@link TimeoutException}
      * @return the outcome of the publish attempt (i.e. whether successfully published by us, other or not at all)
-     * @throws BindingException in the event of a non-retryable error.
      */
-    private PublishRaftIdOutcome publishRaftId( RaftId localRaftId, BindingConditions bindingConditions )
-            throws BindingException, TimeoutException, DatabaseStartAbortedException
+    private PublishRaftIdOutcome publishRaftId( RaftGroupId localRaftGroupId, RaftMemberId memberId, BindingConditions bindingConditions ) throws Exception
     {
         PublishRaftIdOutcome outcome;
         do
         {
             try
             {
-                outcome = topologyService.publishRaftId( localRaftId, myself );
+                outcome = topologyService.publishRaftId( localRaftGroupId, memberId );
             }
             catch ( TimeoutException e )
             {
@@ -341,7 +336,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
             }
             catch ( Throwable t )
             {
-                throw new BindingException( format( "Failed to publish raftId %s", localRaftId ), t );
+                throw new BindingException( format( "Failed to publish raftId %s", localRaftGroupId ), t );
             }
         }
         while ( outcome == null && bindingConditions.allowContinuePublishing( namedDatabaseId ) );
@@ -388,20 +383,33 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
             this.endTime = clock.millis() + timeout.toMillis();
         }
 
-        boolean allowContinueBinding( NamedDatabaseId namedDatabaseId, DatabaseCoreTopology topology ) throws TimeoutException, DatabaseStartAbortedException
+        void allowContinueBindingWaitForCores( NamedDatabaseId namedDatabaseId, DatabaseCoreTopology topology )
+                throws TimeoutException, DatabaseStartAbortedException
         {
-            var message = format( "Failed to join or bootstrap a raft group with id %s and members %s in time. " +
-                                  "Please restart the cluster.", RaftId.from( namedDatabaseId.databaseId() ), topology );
+            Supplier<String> message = () -> format( "Failed to join or bootstrap a raft group with id %s and members %s in time. " +
+                                                     "Please restart the cluster. Clue: not enough cores found",
+                                                     RaftGroupId.from( namedDatabaseId.databaseId() ), topology );
+            allowContinue( namedDatabaseId, message );
+        }
+
+        void allowContinueBindingWaitForOthers( NamedDatabaseId namedDatabaseId, DatabaseCoreTopology topology )
+                throws TimeoutException, DatabaseStartAbortedException
+        {
+            Supplier<String> message = () -> format( "Failed to join or bootstrap a raft group with id %s and members %s in time. " +
+                                                     "Please restart the cluster. Clue: member is not part of initial set, other have not bootstrapped",
+                                                     RaftGroupId.from( namedDatabaseId.databaseId() ), topology );
+            allowContinue( namedDatabaseId, message );
+        }
+
+        boolean allowContinuePublishing( NamedDatabaseId namedDatabaseId )
+                throws TimeoutException, DatabaseStartAbortedException
+        {
+            Supplier<String> message = () -> format( "Failed to publish raftId %s in time. Please restart the cluster.",
+                                                     RaftGroupId.from( namedDatabaseId.databaseId() ) );
             return allowContinue( namedDatabaseId, message );
         }
 
-        boolean allowContinuePublishing( NamedDatabaseId namedDatabaseId ) throws TimeoutException, DatabaseStartAbortedException
-        {
-            var message = format( "Failed to publish raftId %s in time. Please restart the cluster.", RaftId.from( namedDatabaseId.databaseId() ) );
-            return allowContinue( namedDatabaseId, message );
-        }
-
-        private boolean allowContinue( NamedDatabaseId namedDatabaseId, String timeoutMessage ) throws TimeoutException, DatabaseStartAbortedException
+        private boolean allowContinue( NamedDatabaseId namedDatabaseId, Supplier<String> timeoutMessage ) throws TimeoutException, DatabaseStartAbortedException
         {
             var shouldAbort = startAborter.shouldAbort( namedDatabaseId );
             var timedOut = endTime < clock.millis();
@@ -412,7 +420,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
             }
             else if ( timedOut )
             {
-                throw new TimeoutException( timeoutMessage );
+                throw new TimeoutException( timeoutMessage.get() );
             }
             return true;
         }

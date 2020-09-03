@@ -14,6 +14,7 @@ import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.ReplicatedRaftMapping;
 import com.neo4j.causalclustering.discovery.akka.database.state.AllReplicatedDatabaseStates;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaViewActor.Tick;
@@ -28,6 +29,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 
 import static java.util.stream.Collectors.toSet;
@@ -41,6 +43,7 @@ public class ReadReplicaTopologyActor extends AbstractLoggingActor
     private final Map<DatabaseId,DatabaseReadReplicaTopology> readReplicaTopologies = new HashMap<>();
     private Map<DatabaseId,ReplicatedDatabaseState> coreMemberDbStates = new HashMap<>();
     private Map<DatabaseId,ReplicatedDatabaseState> rrMemberDbStates = new HashMap<>();
+    private Map<ServerId,ReplicatedRaftMapping> raftMemberMappings = new HashMap<>();
     private LeaderInfoDirectoryMessage databaseLeaderInfo = LeaderInfoDirectoryMessage.EMPTY;
 
     private Set<ActorRef> myClusterClients = new HashSet<>();
@@ -76,9 +79,10 @@ public class ReadReplicaTopologyActor extends AbstractLoggingActor
                 .match( AllReplicatedDatabaseStates.class,  this::updateCoreDatabaseStates )
                 .match( ClusterClientViewMessage.class,     this::handleClusterClientView )
                 .match( ReadReplicaViewMessage.class,       this::handleReadReplicaView )
-                .match( Tick.class,      this::sendTopologiesToClients )
+                .match( Tick.class,                         this::sendTopologiesToClients )
                 .match( DatabaseCoreTopology.class,         this::addCoreTopology )
                 .match( LeaderInfoDirectoryMessage.class,   this::setDatabaseLeaderInfo )
+                .match( ReplicatedRaftMapping.class,        this::updateMappingData )
                 .build();
     }
 
@@ -113,12 +117,14 @@ public class ReadReplicaTopologyActor extends AbstractLoggingActor
         log().debug( "Sending database leader info to clients: {}", databaseLeaderInfo );
         log().debug( "Sending cores' database states to clients: {}", coreMemberDbStates );
         log().debug( "Sending read replicas' database states to clients: {}", rrMemberDbStates );
+        log().debug( "Sending raft member id mappings: {}", raftMemberMappings );
 
         knownTopologyClients().forEach( client -> {
             sendReadReplicaTopologiesTo( client );
             sendCoreTopologiesTo( client );
             client.tell( databaseLeaderInfo, getSelf() );
             sendDatabaseStatesTo( client );
+            sendRaftMapping( client );
         } );
     }
 
@@ -151,6 +157,14 @@ public class ReadReplicaTopologyActor extends AbstractLoggingActor
         }
     }
 
+    private void sendRaftMapping( ActorRef client )
+    {
+        for ( ReplicatedRaftMapping mapping : raftMemberMappings.values() )
+        {
+            client.tell( mapping, getSelf() );
+        }
+    }
+
     private void addCoreTopology( DatabaseCoreTopology coreTopology )
     {
         coreTopologies.put( coreTopology.databaseId(), coreTopology );
@@ -159,6 +173,11 @@ public class ReadReplicaTopologyActor extends AbstractLoggingActor
     private void setDatabaseLeaderInfo( LeaderInfoDirectoryMessage leaderInfo )
     {
         this.databaseLeaderInfo = leaderInfo;
+    }
+
+    private void updateMappingData( ReplicatedRaftMapping mapping )
+    {
+        raftMemberMappings.put( mapping.serverId(), mapping );
     }
 
     private void buildTopologies()

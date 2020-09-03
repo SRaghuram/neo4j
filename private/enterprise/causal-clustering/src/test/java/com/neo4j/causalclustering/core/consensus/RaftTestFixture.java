@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.schedule.OnDemandTimerService;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
+import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.identity.RaftTestMemberSetBuilder;
 import com.neo4j.causalclustering.logging.BetterRaftMessageLogger;
@@ -32,6 +33,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.neo4j.configuration.helpers.NormalizedDatabaseName;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -75,7 +77,8 @@ public class RaftTestFixture
                     return Optional.of( namedDatabaseId );
                 }
             };
-            var inbound = new LoggingInbound( net.new Inbound( fixtureMember.member ), raftMessageLogger, fixtureMember.member, fakeDatabaseIdRepository );
+
+            var inbound = new LoggingInbound( net.new Inbound( fixtureMember.member ), raftMessageLogger, coreIdentity( id ), fakeDatabaseIdRepository );
             var outbound = new LoggingOutbound<>( net.new Outbound( id ), namedDatabaseId, fixtureMember.member, raftMessageLogger );
 
             fixtureMember.raftMachine = new RaftMachineBuilder( fixtureMember.member, expectedClusterSize, RaftTestMemberSetBuilder.INSTANCE, clock )
@@ -87,6 +90,42 @@ public class RaftTestFixture
 
             members.put( fixtureMember );
         }
+    }
+
+    private CoreServerIdentity coreIdentity( RaftMemberId id )
+    {
+        return new CoreServerIdentity()
+        {
+            @Override
+            public RaftMemberId raftMemberId( DatabaseId databaseId )
+            {
+                return id;
+            }
+
+            @Override
+            public RaftMemberId raftMemberId( NamedDatabaseId namedDatabaseId )
+            {
+                return id;
+            }
+
+            @Override
+            public void createMemberId( NamedDatabaseId databaseId, RaftMemberId raftMemberId )
+            {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public RaftMemberId loadMemberId( NamedDatabaseId databaseId )
+            {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public ServerId serverId()
+            {
+                throw new UnsupportedOperationException();
+            }
+        };
     }
 
     public Members members()
@@ -228,7 +267,7 @@ public class RaftTestFixture
 
         RaftTestFixtureLogger( RaftMemberId me, PrintWriter printWriter )
         {
-            super( me, null, null, Clock.systemUTC() );
+            super( null, null, Clock.systemUTC() );
             this.printWriter = printWriter;
 
             try

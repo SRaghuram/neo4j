@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
-import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
+import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
 import java.util.List;
@@ -20,12 +20,12 @@ import static java.util.stream.Collectors.toList;
 class RaftLeadershipsResolver implements Supplier<List<NamedDatabaseId>>
 {
     private final DatabaseManager<ClusteredDatabaseContext> databaseManager;
-    private ClusteringIdentityModule identityModule;
+    private CoreServerIdentity myIdentity;
 
-    RaftLeadershipsResolver( DatabaseManager<ClusteredDatabaseContext> databaseManager, ClusteringIdentityModule identityModule )
+    RaftLeadershipsResolver( DatabaseManager<ClusteredDatabaseContext> databaseManager, CoreServerIdentity myIdentity )
     {
         this.databaseManager = databaseManager;
-        this.identityModule = identityModule;
+        this.myIdentity = myIdentity;
     }
 
     List<NamedDatabaseId> myLeaderships()
@@ -44,11 +44,10 @@ class RaftLeadershipsResolver implements Supplier<List<NamedDatabaseId>>
 
     private boolean amLeader( ClusteredDatabaseContext context )
     {
-        var myself = identityModule.memberId( context.databaseId() );
         return context.leaderLocator()
                       .flatMap( leaderLocator -> leaderLocator.getLeaderInfo()
                               .map( LeaderInfo::memberId )
-                              .map( leaderId -> leaderId.equals( myself ) ) )
+                              .map( leaderId -> leaderId.equals( myIdentity.raftMemberId( context.databaseId() ) ) ) )
                       .orElse( false );
     }
 }

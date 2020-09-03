@@ -87,7 +87,7 @@ public class ClusterStateMigrator extends LifecycleAdapter
         // member ID file is located at cluster-state/core-member-id-state/core-member-id
         // thus this filter needs to return false for core-member-id-state directory
         var clusterStateDir = clusterStateLayout.getClusterStateDirectory();
-        var memberIdDir = clusterStateLayout.memberIdStateFile().getParent().getFileName().toString();
+        var memberIdDir = clusterStateLayout.oldMemberIdStateFile().getParent().getFileName().toString();
         return !(parentDir.equals( clusterStateDir ) && name.equals( memberIdDir ));
     }
 

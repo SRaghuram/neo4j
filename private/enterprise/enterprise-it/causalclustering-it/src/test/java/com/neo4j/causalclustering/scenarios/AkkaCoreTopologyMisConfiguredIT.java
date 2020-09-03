@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
-import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
+import com.neo4j.causalclustering.discovery.TestCoreDiscoveryMember;
 import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
@@ -15,7 +15,7 @@ import com.neo4j.causalclustering.discovery.akka.Restarter;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.akka.system.JoinMessageFactory;
-import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
+import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.EnterpriseDatabaseState;
 import org.assertj.core.api.HamcrestCondition;
@@ -93,13 +93,13 @@ class AkkaCoreTopologyMisConfiguredIT
         var databaseStateService = new StubDatabaseStateService( states, EnterpriseDatabaseState::unknown );
         var service = new AkkaCoreTopologyService(
                 config,
-                new StubClusteringIdentityModule(),
+                new InMemoryCoreServerIdentity(),
                 actorSystemLifecycle,
                 logProvider,
                 logProvider,
                 new NoRetriesStrategy(),
                 new Restarter( new ConstantTimeTimeoutStrategy( 1, MILLISECONDS ), 2 ),
-                TestDiscoveryMember::new,
+                TestCoreDiscoveryMember::factory,
                 jobScheduler,
                 Clocks.systemClock(),
                 new Monitors(),

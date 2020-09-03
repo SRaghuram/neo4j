@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages.InboundRaftMessageContainer;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.messaging.Inbound.MessageHandler;
 
 import java.time.Clock;
@@ -19,7 +19,7 @@ import org.neo4j.logging.internal.CappedLogger;
 
 public class RaftMessageDispatcher implements MessageHandler<InboundRaftMessageContainer<?>>
 {
-    private final Map<RaftId,MessageHandler<InboundRaftMessageContainer<?>>> handlersById = new ConcurrentHashMap<>();
+    private final Map<RaftGroupId,MessageHandler<InboundRaftMessageContainer<?>>> handlersById = new ConcurrentHashMap<>();
     private final CappedLogger log;
 
     RaftMessageDispatcher( LogProvider logProvider, Clock clock )
@@ -30,7 +30,7 @@ public class RaftMessageDispatcher implements MessageHandler<InboundRaftMessageC
     @Override
     public void handle( InboundRaftMessageContainer<?> message )
     {
-        RaftId id = message.raftId();
+        RaftGroupId id = message.raftGroupId();
         MessageHandler<InboundRaftMessageContainer<?>> head = handlersById.get( id );
         if ( head == null )
         {
@@ -42,7 +42,7 @@ public class RaftMessageDispatcher implements MessageHandler<InboundRaftMessageC
         }
     }
 
-    void registerHandlerChain( RaftId id, MessageHandler<InboundRaftMessageContainer<?>> head )
+    void registerHandlerChain( RaftGroupId id, MessageHandler<InboundRaftMessageContainer<?>> head )
     {
         MessageHandler<InboundRaftMessageContainer<?>> existingHead = handlersById.putIfAbsent( id, head );
         if ( existingHead != null )
@@ -51,7 +51,7 @@ public class RaftMessageDispatcher implements MessageHandler<InboundRaftMessageC
         }
     }
 
-    void deregisterHandlerChain( RaftId id )
+    void deregisterHandlerChain( RaftGroupId id )
     {
         handlersById.remove( id );
     }

@@ -7,65 +7,91 @@ package com.neo4j.causalclustering.identity;
 
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 
+import java.io.IOException;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
+import org.neo4j.dbms.identity.AbstractIdentityModule;
 import org.neo4j.dbms.identity.ServerId;
-import org.neo4j.dbms.identity.StandaloneIdentityModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.Neo4jLayout;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
+import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.memory.MemoryTracker;
 
-public class CoreIdentityModule extends ClusteringIdentityModule
+public class CoreIdentityModule extends AbstractIdentityModule implements CoreServerIdentity
 {
-    /**
-     * This fields type should be changed to ServerId over time
-     */
-    private final MemberId myself;
+    private final Log log;
+    private final Map<DatabaseId,RaftMemberId> raftMemberIds = new ConcurrentHashMap<>();
+    private final ClusterStateStorageFactory storageFactory;
+    private final ServerId serverId;
 
-    /**
-     * This field needs to be removed, a Map is needed here keyed by NamedDatabaseId or DatabaseId or UUID
-     */
-    // TODO: This field needs to be removed, a Map is needed here keyed by NamedDatabaseId or DatabaseId or UUID
-    private final RaftMemberId tempRaftMemberId;
-
-    public static CoreIdentityModule create( LogProvider logProvider, FileSystemAbstraction fs, Neo4jLayout layout, MemoryTracker memoryTracker,
+    public CoreIdentityModule( LogProvider logProvider, FileSystemAbstraction fs, Neo4jLayout layout, MemoryTracker memoryTracker,
             ClusterStateStorageFactory storageFactory )
     {
-        var log = logProvider.getLog( StandaloneIdentityModule.class );
+        this.log = logProvider.getLog( getClass() );
+        this.storageFactory = storageFactory;
+
         var serverIdStorage = createServerIdStorage( fs, layout.serverIdFile(), memoryTracker );
-        var serverId = readOrGenerate( serverIdStorage, log, ServerId.class, ServerId::of, UUID::randomUUID );
-        return new CoreIdentityModule( new ClusteringServerId( serverId.getUuid() ) );
-    }
-
-    private CoreIdentityModule( MemberId memberId )
-    {
-        this.myself = memberId;
-        this.tempRaftMemberId = new RaftMemberId( memberId.getUuid(), memberId );
+        this.serverId = readOrGenerate( serverIdStorage, log, ServerId.class, ServerId::new, UUID::randomUUID );
     }
 
     @Override
-    public ServerId myself()
+    public ServerId serverId()
     {
-        return myself;
-    }
-
-    /**
-     * This method is here for the time MemberId -> ServerId conversion is done.
-     * It serves the purpose not to be forced to change everything at once
-     * Either "myself" and with that "ServerId" is to be used, or "memberId( NamedDatabaseId )" when the call is in raft and a database context is present
-     */
-    @Deprecated
-    @Override
-    public MemberId memberId()
-    {
-        return myself;
+        return serverId;
     }
 
     @Override
-    public RaftMemberId memberId( NamedDatabaseId namedDatabaseId )
+    public RaftMemberId raftMemberId( DatabaseId databaseId )
     {
-        return tempRaftMemberId;
+        RaftMemberId raftMemberId = raftMemberIds.get( databaseId );
+        if ( raftMemberId == null )
+        {
+            throw new IllegalStateException( "Could not find RaftMemberID for " + databaseId );
+        }
+        return raftMemberId;
+    }
+
+    @Override
+    public RaftMemberId raftMemberId( NamedDatabaseId databaseId )
+    {
+        return raftMemberId( databaseId.databaseId() );
+    }
+
+    @Override
+    public void createMemberId( NamedDatabaseId databaseId, RaftMemberId raftMemberId )
+    {
+        var storage = storageFactory.createRaftMemberIdStorage( databaseId.name() );
+
+        try
+        {
+            storage.writeState( raftMemberId );
+            log.info( "Created %s for %s", raftMemberId, databaseId );
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( e );
+        }
+        raftMemberIds.put( databaseId.databaseId(), raftMemberId );
+    }
+
+    @Override
+    public RaftMemberId loadMemberId( NamedDatabaseId databaseId )
+    {
+        var storage = storageFactory.createRaftMemberIdStorage( databaseId.name() );
+        try
+        {
+            RaftMemberId memberId = storage.readState();
+            raftMemberIds.put( databaseId.databaseId(), memberId );
+            return memberId;
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( e );
+        }
     }
 }

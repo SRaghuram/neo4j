@@ -11,23 +11,23 @@ import java.util.Optional;
 
 public class BoundState
 {
-    private final RaftId raftId;
+    private final RaftGroupId raftGroupId;
     private final CoreSnapshot coreSnapshot;
 
-    public BoundState( RaftId raftId )
+    public BoundState( RaftGroupId raftGroupId )
     {
-        this( raftId, null );
+        this( raftGroupId, null );
     }
 
-    BoundState( RaftId raftId, CoreSnapshot coreSnapshot )
+    BoundState( RaftGroupId raftGroupId, CoreSnapshot coreSnapshot )
     {
-        this.raftId = raftId;
+        this.raftGroupId = raftGroupId;
         this.coreSnapshot = coreSnapshot;
     }
 
-    public RaftId raftId()
+    public RaftGroupId raftGroupId()
     {
-        return raftId;
+        return raftGroupId;
     }
 
     public Optional<CoreSnapshot> snapshot()

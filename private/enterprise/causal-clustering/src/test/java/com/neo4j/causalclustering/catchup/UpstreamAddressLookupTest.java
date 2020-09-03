@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
@@ -23,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
@@ -37,9 +37,9 @@ import static org.mockito.Mockito.when;
 class UpstreamAddressLookupTest
 {
     private final NamedDatabaseId namedDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
-    private final MemberId defaultMember = IdFactory.randomMemberId();
-    private final MemberId firstMember = IdFactory.randomMemberId();
-    private final MemberId secondMember = IdFactory.randomMemberId();
+    private final ServerId defaultServer = IdFactory.randomServerId();
+    private final ServerId firstServer = IdFactory.randomServerId();
+    private final ServerId secondServer = IdFactory.randomServerId();
     private final SocketAddress defaultAddress = new SocketAddress( "Default", 123 );
     private final SocketAddress firstAddress = new SocketAddress( "First", 456 );
     private final SocketAddress secondAddress = new SocketAddress( "Second", 789 );
@@ -48,9 +48,9 @@ class UpstreamAddressLookupTest
     @BeforeEach
     void setup() throws CatchupAddressResolutionException
     {
-        when( topologyService.lookupCatchupAddress( eq( defaultMember ) ) ).thenReturn( defaultAddress );
-        when( topologyService.lookupCatchupAddress( eq( firstMember ) ) ).thenReturn( firstAddress );
-        when( topologyService.lookupCatchupAddress( eq( secondMember ) ) ).thenReturn( secondAddress );
+        when( topologyService.lookupCatchupAddress( eq( defaultServer ) ) ).thenReturn( defaultAddress );
+        when( topologyService.lookupCatchupAddress( eq( firstServer ) ) ).thenReturn( firstAddress );
+        when( topologyService.lookupCatchupAddress( eq( secondServer ) ) ).thenReturn( secondAddress );
     }
 
     @Test
@@ -58,8 +58,8 @@ class UpstreamAddressLookupTest
     {
         // given various strategies with different priorities
         UpstreamDatabaseStrategySelector upstreamDatabaseStrategySelector =
-                new UpstreamDatabaseStrategySelector( new CountedSelectionStrategy( defaultMember, 5 ),
-                        Arrays.asList( new CountedSelectionStrategy( firstMember, 1 ), new CountedSelectionStrategy( secondMember, 1 ) ),
+                new UpstreamDatabaseStrategySelector( new CountedSelectionStrategy( defaultServer, 5 ),
+                        Arrays.asList( new CountedSelectionStrategy( firstServer, 1 ), new CountedSelectionStrategy( secondServer, 1 ) ),
                         NullLogProvider.getInstance() );
 
         // and
@@ -82,7 +82,7 @@ class UpstreamAddressLookupTest
     {
         // given a guaranteed fail strategy
         UpstreamDatabaseStrategySelector upstreamDatabaseStrategySelector =
-                new UpstreamDatabaseStrategySelector( new CountedSelectionStrategy( defaultMember, 0 ) );
+                new UpstreamDatabaseStrategySelector( new CountedSelectionStrategy( defaultServer, 0 ) );
 
         // and
         UpstreamAddressLookup upstreamAddressLookup =
@@ -97,8 +97,8 @@ class UpstreamAddressLookupTest
     {
         // given
         var strategySelector = new UpstreamDatabaseStrategySelector(
-                new RandomCountedSelectionStrategy( 1, secondMember, defaultMember ),
-                List.of( new RandomCountedSelectionStrategy( 1, firstMember, secondMember ) ), NullLogProvider.getInstance() );
+                new RandomCountedSelectionStrategy( 1, secondServer, defaultServer ),
+                List.of( new RandomCountedSelectionStrategy( 1, firstServer, secondServer ) ), NullLogProvider.getInstance() );
 
         var upstreamAddressLookup = new UpstreamAddressLookup( strategySelector, topologyService );
 
@@ -115,10 +115,10 @@ class UpstreamAddressLookupTest
 
     private static class CountedSelectionStrategy extends UpstreamDatabaseSelectionStrategy
     {
-        private final MemberId upstreamDatabase;
+        private final ServerId upstreamDatabase;
         private int numberOfIterations;
 
-        CountedSelectionStrategy( MemberId upstreamDatabase, int numberOfIterations )
+        CountedSelectionStrategy( ServerId upstreamDatabase, int numberOfIterations )
         {
             super( CountedSelectionStrategy.class.getName() );
             this.upstreamDatabase = upstreamDatabase;
@@ -126,7 +126,7 @@ class UpstreamAddressLookupTest
         }
 
         @Override
-        public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId )
+        public Optional<ServerId> upstreamServerForDatabase( NamedDatabaseId namedDatabaseId )
         {
             if ( numberOfIterations <= 0 )
             {
@@ -139,13 +139,13 @@ class UpstreamAddressLookupTest
 
     private static class RandomCountedSelectionStrategy extends UpstreamDatabaseSelectionStrategy
     {
-        private final List<MemberId> members;
+        private final List<ServerId> servers;
         private int numberOfIterations;
 
-        RandomCountedSelectionStrategy( int numberOfIterations, MemberId... members )
+        RandomCountedSelectionStrategy( int numberOfIterations, ServerId... servers )
         {
             super( "RandomSelectionStrategy" );
-            this.members = List.of( members );
+            this.servers = List.of( servers );
             this.numberOfIterations = numberOfIterations;
         }
 
@@ -155,27 +155,27 @@ class UpstreamAddressLookupTest
         }
 
         @Override
-        public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
+        public Optional<ServerId> upstreamServerForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
         {
             if ( iterationsReached() )
             {
                 return Optional.empty();
             }
 
-            var choices = new ArrayList<>( members );
+            var choices = new ArrayList<>( servers );
             Collections.shuffle( choices );
             return choices.stream().findFirst();
         }
 
         @Override
-        public Collection<MemberId> upstreamMembersForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
+        public Collection<ServerId> upstreamServersForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
         {
             if ( iterationsReached() )
             {
                 return List.of();
             }
 
-            var choices = new ArrayList<>( members );
+            var choices = new ArrayList<>( servers );
             Collections.shuffle( choices );
             return choices;
         }

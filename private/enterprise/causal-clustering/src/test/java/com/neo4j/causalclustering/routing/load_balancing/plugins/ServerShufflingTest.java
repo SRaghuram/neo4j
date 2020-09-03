@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingPlugin;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.ServerPoliciesPlugin;
@@ -30,7 +30,7 @@ import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.virtual.MapValue;
 
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.server;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.toList;
@@ -109,20 +109,20 @@ class ServerShufflingTest
         var namedDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
         var coreTopologyService = mock( CoreTopologyService.class );
 
-        var leaderId = member( 0 );
+        var leaderId = server( 0 );
         var coreMembers = Map.of(
                 leaderId, addressesForCore( 0, false ),
-                member( 1 ), addressesForCore( 1, false ),
-                member( 2 ), addressesForCore( 2, false ),
-                member( 3 ), addressesForCore( 3, false ),
-                member( 4 ), addressesForCore( 4, false )
+                server( 1 ), addressesForCore( 1, false ),
+                server( 2 ), addressesForCore( 2, false ),
+                server( 3 ), addressesForCore( 3, false ),
+                server( 4 ), addressesForCore( 4, false )
         );
 
         var leaderService = mock( LeaderService.class );
         when( leaderService.getLeaderId( namedDatabaseId ) ).thenReturn( Optional.of( leaderId ) );
         when( leaderService.getLeaderBoltAddress( namedDatabaseId ) ).thenReturn( Optional.of( coreMembers.get( leaderId ).boltAddress() ) );
 
-        var coreTopology = new DatabaseCoreTopology( namedDatabaseId.databaseId(), RaftId.from( namedDatabaseId.databaseId() ), coreMembers );
+        var coreTopology = new DatabaseCoreTopology( namedDatabaseId.databaseId(), RaftGroupId.from( namedDatabaseId.databaseId() ), coreMembers );
         when( coreTopologyService.coreTopologyForDatabase( namedDatabaseId ) ).thenReturn( coreTopology );
         when( coreTopologyService.readReplicaTopologyForDatabase( namedDatabaseId ) )
                 .thenReturn( new DatabaseReadReplicaTopology( namedDatabaseId.databaseId(), emptyMap() ) );

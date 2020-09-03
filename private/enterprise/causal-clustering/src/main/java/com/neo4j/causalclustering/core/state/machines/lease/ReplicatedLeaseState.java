@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.core.state.machines.lease;
 
-import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.io.IOException;
@@ -15,6 +14,7 @@ import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.marshal.ChannelMarshal;
 import org.neo4j.io.marshal.EndOfStreamException;
+import org.neo4j.io.marshal.SafeStateMarshal;
 
 import static com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseRequest.INVALID_LEASE_REQUEST;
 

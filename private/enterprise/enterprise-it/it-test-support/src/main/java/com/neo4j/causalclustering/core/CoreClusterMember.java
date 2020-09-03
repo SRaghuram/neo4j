@@ -13,7 +13,7 @@ import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
-import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
+import com.neo4j.causalclustering.identity.CoreIdentityModule;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
@@ -207,12 +207,12 @@ public class CoreClusterMember implements ClusterMember
     @Override
     public ServerId serverId()
     {
-        return systemDatabase.getDependencyResolver().resolveDependency( ClusteringIdentityModule.class ).myself();
+        return systemDatabase.getDependencyResolver().resolveDependency( CoreIdentityModule.class ).serverId();
     }
 
     public RaftMemberId raftMemberIdFor( NamedDatabaseId databaseId )
     {
-        return systemDatabase.getDependencyResolver().resolveDependency( ClusteringIdentityModule.class ).memberId( databaseId );
+        return systemDatabase.getDependencyResolver().resolveDependency( CoreIdentityModule.class ).raftMemberId( databaseId );
     }
 
     @Override

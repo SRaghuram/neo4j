@@ -11,7 +11,7 @@ import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -146,21 +146,21 @@ class PruningStateSinkTest
     private static DatabaseCoreTopology randomCoreTopology()
     {
         var databaseId = randomNamedDatabaseId().databaseId();
-        var raftId = RaftId.from( databaseId );
+        var raftGroupId = RaftGroupId.from( databaseId );
         var coreMembers = Map.of(
-                IdFactory.randomMemberId(), addressesForCore( 0, false ),
-                IdFactory.randomMemberId(), addressesForCore( 1, false ),
-                IdFactory.randomMemberId(), addressesForCore( 2, false ) );
+                IdFactory.randomServerId(), addressesForCore( 0, false ),
+                IdFactory.randomServerId(), addressesForCore( 1, false ),
+                IdFactory.randomServerId(), addressesForCore( 2, false ) );
 
-        return new DatabaseCoreTopology( databaseId, raftId, coreMembers );
+        return new DatabaseCoreTopology( databaseId, raftGroupId, coreMembers );
     }
 
     private static DatabaseReadReplicaTopology randomReadReplicaTopology()
     {
         var databaseId = randomNamedDatabaseId().databaseId();
         var readReplicas = Map.of(
-                IdFactory.randomMemberId(), addressesForReadReplica( 0 ),
-                IdFactory.randomMemberId(), addressesForReadReplica( 1 ) );
+                IdFactory.randomServerId(), addressesForReadReplica( 0 ),
+                IdFactory.randomServerId(), addressesForReadReplica( 1 ) );
 
         return new DatabaseReadReplicaTopology( databaseId, readReplicas );
     }
@@ -169,9 +169,9 @@ class PruningStateSinkTest
     {
         var databaseId = randomDatabaseId();
         var states = Map.of(
-                IdFactory.randomMemberId(), new DiscoveryDatabaseState( databaseId, STARTED ),
-                IdFactory.randomMemberId(), new DiscoveryDatabaseState( databaseId, STARTED ),
-                IdFactory.randomMemberId(), new DiscoveryDatabaseState( databaseId, STARTED ) );
+                IdFactory.randomServerId(), new DiscoveryDatabaseState( databaseId, STARTED ),
+                IdFactory.randomServerId(), new DiscoveryDatabaseState( databaseId, STARTED ),
+                IdFactory.randomServerId(), new DiscoveryDatabaseState( databaseId, STARTED ) );
         return ReplicatedDatabaseState.ofCores( databaseId, states );
     }
 

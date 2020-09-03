@@ -6,8 +6,7 @@
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.RaftMemberId;
-import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
+import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
@@ -19,45 +18,44 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferTarget.NO_TARGET;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 
 public class RandomEvenStrategyTest
 {
     @Test
-    void onlySelectMembersWithTwoFewerLeaderships()
+    void onlySelectServersWithTwoFewerLeaderships()
     {
         // given
-        var identityModule = new StubClusteringIdentityModule();
-        var databaseId = randomNamedDatabaseId();
-        var member1 = IdFactory.randomRaftMemberId();
-        var member2 = IdFactory.randomRaftMemberId();
-        var member3 = identityModule.memberId( databaseId );
-        var member4 = IdFactory.randomRaftMemberId();
+        var myIdentity = new InMemoryCoreServerIdentity();
+        var member1 = IdFactory.randomServerId();
+        var member2 = IdFactory.randomServerId();
+        var member3 = myIdentity.serverId();
+        var member4 = IdFactory.randomServerId();
 
-        var memberLeaderMap = Map.of(
+        var serverLeaderMap = Map.of(
                 member1, databaseIds( 0 ).limit( 4 ).collect( Collectors.toList() ),
                 member2, databaseIds( 4 ).limit( 3 ).collect( Collectors.toList() ),
                 member3, databaseIds( 7 ).limit( 5 ).collect( Collectors.toList() ),
                 member4, databaseIds( 12 ).limit( 9 ).collect( Collectors.toList() ) );
 
-        var dbToLeaderMap = memberLeaderMap.entrySet()
+        var dbToLeaderMap = serverLeaderMap.entrySet()
                 .stream()
                 .flatMap( this::getDbToMemberEntries )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
 
-        var allDatabases = memberLeaderMap.values().stream()
+        var allDatabases = serverLeaderMap.values().stream()
                 .flatMap( Collection::stream )
                 .collect( Collectors.toSet() );
 
         var leaderService = new StubLeaderService( dbToLeaderMap );
 
-        var strategy = new RandomEvenStrategy( () -> allDatabases, leaderService, identityModule );
+        var strategy = new RandomEvenStrategy( () -> allDatabases, leaderService, myIdentity );
         var validTopologies = allDatabases.stream()
                 .map( db -> new TransferCandidates( db, Set.of( member1, member2, member3, member4 ) ) )
                 .collect( Collectors.toList() );
@@ -73,12 +71,11 @@ public class RandomEvenStrategyTest
     void returnNoTargetIfTopologiesAndLowLeadershipMembersDontIntersect()
     {
         // given
-        var identityModule = new StubClusteringIdentityModule();
-        var databaseId = randomNamedDatabaseId();
-        var member1 = IdFactory.randomRaftMemberId();
-        var member2 = IdFactory.randomRaftMemberId();
-        var member3 = identityModule.memberId( databaseId );
-        var member4 = IdFactory.randomRaftMemberId();
+        var identityModule = new InMemoryCoreServerIdentity();
+        var member1 = IdFactory.randomServerId();
+        var member2 = IdFactory.randomServerId();
+        var member3 = IdFactory.randomServerId();
+        var member4 = IdFactory.randomServerId();
 
         var memberLeaderMap = Map.of(
                 member1, databaseIds( 0 ).limit( 4 ).collect( Collectors.toList() ),
@@ -116,7 +113,7 @@ public class RandomEvenStrategyTest
                 .map( name -> DatabaseIdFactory.from( name, UUID.randomUUID() ) );
     }
 
-    Stream<Pair<NamedDatabaseId,RaftMemberId>> getDbToMemberEntries( Map.Entry<RaftMemberId,List<NamedDatabaseId>> entry )
+    Stream<Pair<NamedDatabaseId,ServerId>> getDbToMemberEntries( Map.Entry<ServerId,List<NamedDatabaseId>> entry )
     {
         var member = entry.getKey();
         var dbs = entry.getValue();

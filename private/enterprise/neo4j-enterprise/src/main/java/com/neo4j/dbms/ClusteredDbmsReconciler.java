@@ -6,7 +6,7 @@
 package com.neo4j.dbms;
 
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.dbms.database.ClusteredMultiDatabaseManager;
 
 import java.io.IOException;
@@ -64,10 +64,10 @@ public class ClusteredDbmsReconciler extends DbmsReconciler
         return EnterpriseDatabaseState.initial( namedDatabaseId );
     }
 
-    private Optional<RaftId> readRaftIdForDatabase( NamedDatabaseId namedDatabaseId, DatabaseLogProvider logProvider )
+    private Optional<RaftGroupId> readRaftIdForDatabase( NamedDatabaseId namedDatabaseId, DatabaseLogProvider logProvider )
     {
         var databaseName = namedDatabaseId.name();
-        var raftIdStorage = stateStorageFactory.createRaftIdStorage( databaseName, logProvider );
+        var raftIdStorage = stateStorageFactory.createRaftGroupIdStorage( databaseName, logProvider );
 
         if ( !raftIdStorage.exists() )
         {

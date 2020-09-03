@@ -5,9 +5,9 @@
  */
 package com.neo4j.server.rest.causalclustering;
 
-import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
@@ -16,7 +16,7 @@ import static com.neo4j.causalclustering.discovery.RoleInfo.LEADER;
 import static com.neo4j.server.rest.causalclustering.ClusteringDatabaseStatusUtil.readReplicaStatusMockBuilder;
 import static java.util.UUID.randomUUID;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.empty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -25,9 +25,9 @@ import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedData
 
 class ReadReplicaStatusProviderTest
 {
-    private final MemberId coreId1 = MemberId.of( randomUUID() );
-    private final MemberId coreId2 = MemberId.of( randomUUID() );
-    private final MemberId readReplicaId = MemberId.of( randomUUID() );
+    private final ServerId coreId1 = new ServerId( randomUUID() );
+    private final ServerId coreId2 = new ServerId( randomUUID() );
+    private final ServerId readReplicaId = new ServerId( randomUUID() );
 
     private final NamedDatabaseId databaseId = randomNamedDatabaseId();
 
@@ -50,10 +50,10 @@ class ReadReplicaStatusProviderTest
 
         assertEquals( 42L, status.getLastAppliedRaftIndex() );
         assertFalse( status.isParticipatingInRaftGroup() );
-        assertThat( status.getVotingMembers(), containsInAnyOrder( coreId1.getUuid().toString(), coreId2.getUuid().toString() ) );
+        assertThat( status.getVotingMembers(), empty() );// containsInAnyOrder( coreId1.uuid().toString(), coreId2.uuid().toString() ) );
         assertTrue( status.isHealthy() );
-        assertEquals( readReplicaId.getUuid().toString(), status.getMemberId() );
-        assertEquals( coreId2.getUuid().toString(), status.getLeader() );
+        assertEquals( readReplicaId.uuid().toString(), status.getMemberId() );
+        assertEquals( coreId2.uuid().toString(), status.getLeader() );
         assertNull( status.getMillisSinceLastLeaderMessage() );
         assertEquals( 42.0, status.getRaftCommandsPerSecond() );
         assertFalse( status.isCore() );

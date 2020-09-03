@@ -63,7 +63,6 @@ class ClusterStateIT
     {
         for ( CoreClusterMember core : cluster.coreMembers() )
         {
-            Path clusterStateDirectory = core.clusterStateDirectory();
             Path databaseStateDir = core.clusterStateDirectory().resolve( "db" );
             Path defaultDatabaseStateDir = databaseStateDir.resolve( DEFAULT_DATABASE_NAME );
 
@@ -71,6 +70,7 @@ class ClusterStateIT
             Path serverId = core.neo4jLayout().serverIdFile();
 
             // database specific durable storage (a/b)
+            Path raftMemberIdDir = defaultDatabaseStateDir.resolve( "raft-member-id-state" );
             Path raftIdStateDir = defaultDatabaseStateDir.resolve( "raft-id-state" );
             Path lastFlushedStateDir = defaultDatabaseStateDir.resolve( "last-flushed-state" );
             Path membershipStateDir = defaultDatabaseStateDir.resolve( "membership-state" );
@@ -82,6 +82,7 @@ class ClusterStateIT
             // database specific raft log
             Path raftLogDir = defaultDatabaseStateDir.resolve( "raft-log" );
 
+            assertTrue( isDirectory( raftMemberIdDir ) );
             assertTrue( isDirectory( raftIdStateDir ) );
             assertTrue( isDirectory( lastFlushedStateDir ) );
             assertTrue( isDirectory( membershipStateDir ) );
@@ -92,6 +93,7 @@ class ClusterStateIT
             assertTrue( isDirectory( leaseStateDir ) );
 
             assertTrue( isRegularFile( serverId ) );
+            assertTrue( isRegularFile( raftMemberIdDir.resolve( "raft-member-id" ) ) );
             assertTrue( isRegularFile( raftIdStateDir.resolve( "raft-id" ) ) );
 
             assertTrue( isRegularFile( lastFlushedStateDir.resolve( "last-flushed.a" ) ) );

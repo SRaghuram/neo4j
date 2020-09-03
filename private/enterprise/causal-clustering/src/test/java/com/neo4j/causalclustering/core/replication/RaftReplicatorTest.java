@@ -54,6 +54,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.neo4j.function.Suppliers.lazySingleton;
 import static org.neo4j.monitoring.PanicEventGenerator.NO_OP;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -328,8 +329,8 @@ class RaftReplicatorTest
 
     private RaftReplicator getReplicator( CapturingOutbound<RaftMessages.RaftMessage> outbound, ProgressTracker progressTracker, Monitors monitors )
     {
-        return new RaftReplicator( namedDatabaseId, leaderLocator, myself, outbound, sessionPool, progressTracker, noWaitTimeoutStrategy, 10,
-                NullLogProvider.getInstance(), databaseManager, monitors, leaderAwaitDuration );
+        return new RaftReplicator( namedDatabaseId, leaderLocator, lazySingleton( () -> myself ), outbound, sessionPool, progressTracker,
+                noWaitTimeoutStrategy, 10, NullLogProvider.getInstance(), databaseManager, monitors, leaderAwaitDuration );
     }
 
     private ReplicatingThread replicatingThread( RaftReplicator replicator, ReplicatedInteger content )

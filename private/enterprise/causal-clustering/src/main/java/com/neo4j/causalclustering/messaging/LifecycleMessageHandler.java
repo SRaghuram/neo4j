@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.messaging;
 
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 
 /**
  * A {@link Inbound.MessageHandler} that can be started and stopped.
@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.identity.RaftId;
  */
 public interface LifecycleMessageHandler<M> extends Inbound.MessageHandler<M>
 {
-    void start( RaftId raftId ) throws Exception;
+    void start( RaftGroupId raftGroupId ) throws Exception;
 
     void stop() throws Exception;
 }

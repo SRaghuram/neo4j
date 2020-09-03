@@ -91,8 +91,8 @@ public class DumpClusterState
         life.start();
         try
         {
-            dumpSimpleState( CoreStateFiles.CORE_MEMBER_ID, storageFactory.createMemberIdStorage() );
-            dumpSimpleState( CoreStateFiles.RAFT_ID, storageFactory.createRaftIdStorage( databaseToDump, nullDatabaseLogProvider() ) );
+            dumpSimpleState( CoreStateFiles.RAFT_MEMBER_ID, storageFactory.createRaftMemberIdStorage( databaseToDump ) );
+            dumpSimpleState( CoreStateFiles.RAFT_GROUP_ID, storageFactory.createRaftGroupIdStorage( databaseToDump, nullDatabaseLogProvider() ) );
 
             dumpState( CoreStateFiles.LAST_FLUSHED, storageFactory.createLastFlushedStorage( databaseToDump, life, nullDatabaseLogProvider() ) );
             dumpState( CoreStateFiles.LEASE, storageFactory.createLeaseStorage( databaseToDump, life, nullDatabaseLogProvider() ) );

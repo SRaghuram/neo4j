@@ -16,8 +16,10 @@ import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.ReplicatedRaftMapping;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
+import com.neo4j.causalclustering.discovery.akka.common.RaftMemberKnownMessage;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
@@ -46,11 +48,11 @@ public class ClientTopologyActor extends AbstractActorWithTimers
 
     public static Props props( DiscoveryMember discoveryMemberSnapshot, SourceQueueWithComplete<DatabaseCoreTopology> coreTopologySink,
             SourceQueueWithComplete<DatabaseReadReplicaTopology> rrTopologySink, SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> discoverySink,
-            SourceQueueWithComplete<ReplicatedDatabaseState> stateSink, ActorRef clusterClientManager,
-            Config config, LogProvider logProvider, Clock clock, ServerId myself )
+            SourceQueueWithComplete<ReplicatedDatabaseState> stateSink, SourceQueueWithComplete<ReplicatedRaftMapping> raftMappingSink,
+            ActorRef clusterClientManager, Config config, LogProvider logProvider, Clock clock, ServerId myself )
     {
         return Props.create( ClientTopologyActor.class,
-                () -> new ClientTopologyActor( discoveryMemberSnapshot, coreTopologySink, rrTopologySink, discoverySink, stateSink,
+                () -> new ClientTopologyActor( discoveryMemberSnapshot, coreTopologySink, rrTopologySink, discoverySink, stateSink, raftMappingSink,
                                                config, logProvider, clock, clusterClientManager, myself ) );
     }
 
@@ -63,6 +65,7 @@ public class ClientTopologyActor extends AbstractActorWithTimers
     private final PruningStateSink<DatabaseReadReplicaTopology> readreplicaTopologySink;
     private final PruningStateSink<ReplicatedDatabaseState> coresDbStateSink;
     private final PruningStateSink<ReplicatedDatabaseState> readReplicasDbStateSink;
+    private final SourceQueueWithComplete<ReplicatedRaftMapping> raftMappingSink;
     private final SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> discoverySink;
     private final Map<DatabaseId,DiscoveryDatabaseState> localDatabaseStates;
     private final ActorRef clusterClientManager;
@@ -73,8 +76,8 @@ public class ClientTopologyActor extends AbstractActorWithTimers
 
     private ClientTopologyActor( DiscoveryMember discoveryMemberSnapshot, SourceQueueWithComplete<DatabaseCoreTopology> coreTopologySink,
             SourceQueueWithComplete<DatabaseReadReplicaTopology> rrTopologySink, SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> leaderInfoSink,
-            SourceQueueWithComplete<ReplicatedDatabaseState> stateSink, Config config, LogProvider logProvider, Clock clock, ActorRef clusterClientManager,
-            ServerId myself )
+            SourceQueueWithComplete<ReplicatedDatabaseState> stateSink, SourceQueueWithComplete<ReplicatedRaftMapping> raftMappingSink, Config config,
+            LogProvider logProvider, Clock clock, ActorRef clusterClientManager, ServerId myself )
     {
         this.discoveryMemberSnapshot = discoveryMemberSnapshot;
         this.refreshDuration = config.get( CausalClusteringSettings.cluster_topology_refresh );
@@ -85,6 +88,7 @@ public class ClientTopologyActor extends AbstractActorWithTimers
         this.coresDbStateSink = PruningStateSink.forCoreDatabaseStates( stateSink, maxTopologyLifetime, clock, logProvider );
         this.readReplicasDbStateSink = PruningStateSink.forReadReplicaDatabaseStates( stateSink, maxTopologyLifetime, clock, logProvider );
         this.discoverySink = leaderInfoSink;
+        this.raftMappingSink = raftMappingSink;
         this.clusterClientManager = clusterClientManager;
         this.localDatabaseStates = new HashMap<>();
         this.config = config;
@@ -101,8 +105,10 @@ public class ClientTopologyActor extends AbstractActorWithTimers
                 .match( ReplicatedDatabaseState.class, this::handleRemoteDatabaseStateUpdate )
                 .match( TopologiesRefresh.class, ignored -> handleRefresh() )
                 .match( DatabaseStartedMessage.class, this::handleDatabaseStartedMessage )
+                .match( RaftMemberKnownMessage.class, this::handleRaftMemberKnownMessage )
                 .match( DatabaseStoppedMessage.class, this::handleDatabaseStoppedMessage )
                 .match( DiscoveryDatabaseState.class, this::handleLocalDatabaseStateUpdate )
+                .match( ReplicatedRaftMapping.class, this::handleReplicatedRaftMapping )
                 .build();
     }
 
@@ -116,6 +122,14 @@ public class ClientTopologyActor extends AbstractActorWithTimers
     }
 
     private void handleDatabaseStartedMessage( DatabaseStartedMessage message )
+    {
+        if ( startedDatabases.add( message.namedDatabaseId().databaseId() ) )
+        {
+            sendReadReplicaInfo();
+        }
+    }
+
+    private void handleRaftMemberKnownMessage( RaftMemberKnownMessage message )
     {
         if ( startedDatabases.add( message.namedDatabaseId().databaseId() ) )
         {
@@ -153,6 +167,11 @@ public class ClientTopologyActor extends AbstractActorWithTimers
         {
             localDatabaseStates.put( update.databaseId(), update );
         }
+    }
+
+    private void handleReplicatedRaftMapping( ReplicatedRaftMapping mapping )
+    {
+        raftMappingSink.offer( mapping );
     }
 
     private void handleRefresh()

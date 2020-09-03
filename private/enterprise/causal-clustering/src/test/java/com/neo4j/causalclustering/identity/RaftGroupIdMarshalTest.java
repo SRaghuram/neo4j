@@ -18,15 +18,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-class RaftIdMarshalTest
+class RaftGroupIdMarshalTest
 {
-    private ChannelMarshal<RaftId> marshal = RaftId.Marshal.INSTANCE;
+    private ChannelMarshal<RaftGroupId> marshal = RaftGroupId.Marshal.INSTANCE;
 
     @Test
     void shouldMarshalRaftId() throws Throwable
     {
         // given
-        RaftId original = IdFactory.randomRaftId();
+        RaftGroupId original = IdFactory.randomRaftId();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
         // when
@@ -34,7 +34,7 @@ class RaftIdMarshalTest
         marshal.marshal( original, writableChannel );
 
         InputStreamReadableChannel readableChannel = new InputStreamReadableChannel( new ByteArrayInputStream( outputStream.toByteArray() ) );
-        RaftId result = marshal.unmarshal( readableChannel );
+        RaftGroupId result = marshal.unmarshal( readableChannel );
 
         // then
         assertNotSame( original, result );
@@ -52,7 +52,7 @@ class RaftIdMarshalTest
         marshal.marshal( null, writableChannel );
 
         InputStreamReadableChannel readableChannel = new InputStreamReadableChannel( new ByteArrayInputStream( outputStream.toByteArray() ) );
-        RaftId result = marshal.unmarshal( readableChannel );
+        RaftGroupId result = marshal.unmarshal( readableChannel );
 
         // then
         assertNull( result );

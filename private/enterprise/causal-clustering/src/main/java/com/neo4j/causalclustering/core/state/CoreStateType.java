@@ -13,14 +13,15 @@ public enum CoreStateType
     LEASE( 2 ),
     RAFT_CORE_STATE( 3 ),
     DB_NAME( 4 ),
-    RAFT_ID( 5 ),
+    RAFT_GROUP_ID( 5 ),
     CORE_MEMBER_ID( 6 ),
     RAFT_LOG( 7 ),
     RAFT_TERM( 8 ),
     RAFT_VOTE( 9 ),
     RAFT_MEMBERSHIP( 10 ),
     LAST_FLUSHED( 11 ),
-    QUARANTINE_MARKER( 12 );
+    QUARANTINE_MARKER( 12 ),
+    RAFT_MEMBER_ID( 13 );
 
     private final int typeId;
 

@@ -13,7 +13,6 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
 import com.neo4j.causalclustering.core.state.snapshot.TopologyLookupException;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
@@ -26,6 +25,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.database.DatabaseStartAbortedException;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -115,11 +115,11 @@ class ReadReplicaBootstrap
         }
     }
 
-    private Collection<MemberId> selectUpstreams( ReadReplicaDatabaseContext databaseContext )
+    private Collection<ServerId> selectUpstreams( ReadReplicaDatabaseContext databaseContext )
     {
         try
         {
-            return selectionStrategy.bestUpstreamMembersForDatabase( databaseContext.databaseId() );
+            return selectionStrategy.bestUpstreamServersForDatabase( databaseContext.databaseId() );
         }
         catch ( UpstreamDatabaseSelectionException e )
         {
@@ -128,7 +128,7 @@ class ReadReplicaBootstrap
         return List.of();
     }
 
-    private boolean doSyncStoreCopyWithUpstream( ReadReplicaDatabaseContext databaseContext, MemberId source )
+    private boolean doSyncStoreCopyWithUpstream( ReadReplicaDatabaseContext databaseContext, ServerId source )
     {
         try
         {
@@ -158,7 +158,7 @@ class ReadReplicaBootstrap
         }
     }
 
-    private void syncStoreWithUpstream( ReadReplicaDatabaseContext databaseContext, MemberId source )
+    private void syncStoreWithUpstream( ReadReplicaDatabaseContext databaseContext, ServerId source )
             throws IOException, StoreIdDownloadFailedException, StoreCopyFailedException, TopologyLookupException, DatabaseShutdownException
     {
         CatchupComponentsRepository.CatchupComponents catchupComponents = catchupComponentsSupplier.get();
@@ -183,7 +183,7 @@ class ReadReplicaBootstrap
         }
     }
 
-    private void ensureStoreIsPresentAt( ReadReplicaDatabaseContext databaseContext, RemoteStore remoteStore, MemberId upstream )
+    private void ensureStoreIsPresentAt( ReadReplicaDatabaseContext databaseContext, RemoteStore remoteStore, ServerId upstream )
             throws StoreIdDownloadFailedException, TopologyLookupException
     {
         StoreId localStoreId = databaseContext.storeId();

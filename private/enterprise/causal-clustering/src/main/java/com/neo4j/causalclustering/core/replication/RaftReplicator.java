@@ -23,6 +23,7 @@ import java.time.Duration;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.function.Suppliers.Lazy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy.Timeout;
 import org.neo4j.kernel.availability.UnavailableException;
@@ -37,7 +38,7 @@ import org.neo4j.monitoring.Monitors;
 public class RaftReplicator implements Replicator, LeaderListener
 {
     private final NamedDatabaseId namedDatabaseId;
-    private final RaftMemberId me;
+    private final Lazy<RaftMemberId> me;
     private final Outbound<RaftMemberId,RaftMessage> outbound;
     private final ProgressTracker progressTracker;
     private final LocalSessionPool sessionPool;
@@ -49,10 +50,10 @@ public class RaftReplicator implements Replicator, LeaderListener
     private final LeaderProvider leaderProvider;
 
     // TODO: Get rid of dependency on database manager!
-    public RaftReplicator( NamedDatabaseId namedDatabaseId, LeaderLocator leaderLocator, RaftMemberId me, Outbound<RaftMemberId,RaftMessage> outbound,
-                           LocalSessionPool sessionPool, ProgressTracker progressTracker, TimeoutStrategy progressTimeoutStrategy,
-                           long availabilityTimeoutMillis,
-                           LogProvider logProvider, DatabaseManager<ClusteredDatabaseContext> databaseManager, Monitors monitors, Duration leaderAwaitDuration )
+    public RaftReplicator( NamedDatabaseId namedDatabaseId, LeaderLocator leaderLocator, Lazy<RaftMemberId> me,
+            Outbound<RaftMemberId,RaftMessage> outbound, LocalSessionPool sessionPool, ProgressTracker progressTracker,
+            TimeoutStrategy progressTimeoutStrategy, long availabilityTimeoutMillis, LogProvider logProvider,
+            DatabaseManager<ClusteredDatabaseContext> databaseManager, Monitors monitors, Duration leaderAwaitDuration )
     {
         this.namedDatabaseId = namedDatabaseId;
         this.me = me;
@@ -162,7 +163,7 @@ public class RaftReplicator implements Replicator, LeaderListener
         replicationMonitor.replicationAttempt();
 
         // blocking at least until the send has succeeded or failed before retrying
-        outbound.send( leader, new RaftMessages.NewEntry.Request( me, operation ), true );
+        outbound.send( leader, new RaftMessages.NewEntry.Request( me.get(), operation ), true );
 
         progress.awaitReplication( replicationTimeout.getAndIncrement() );
         return progress.isReplicated();

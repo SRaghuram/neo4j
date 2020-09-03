@@ -83,7 +83,7 @@ public class ReadReplicaDatabaseManager extends ClusteredMultiDatabaseManager
     private void deleteRaftId( String databaseName ) throws IOException
     {
         var raftGroupDir = clusterStateLayout.raftGroupDir( databaseName );
-        var raftIdState = clusterStateLayout.raftIdStateFile( databaseName );
+        var raftIdState = clusterStateLayout.raftGroupIdFile( databaseName );
         var raftIdStateDir = raftIdState.getParent();
 
         if ( !fs.deleteFile( raftIdState ) )

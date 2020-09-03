@@ -13,17 +13,18 @@ import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
 
 import java.time.Duration;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Health;
+import org.neo4j.util.Id;
 
 class CoreDatabaseStatusProvider
 {
@@ -57,19 +58,20 @@ class CoreDatabaseStatusProvider
     ClusteringDatabaseStatusResponse currentStatus()
     {
         var myId = raftMachine.memberId();
-        var leaderId = getLeader();
+        var optLeaderId = getLeader();
         var votingMembers = Set.copyOf( raftMembershipManager.votingMembers() );
-        var participatingInRaftGroup = leaderId != null && votingMembers.contains( myId );
+        var participatingInRaftGroup = optLeaderId.isPresent() && votingMembers.contains( myId );
         var lastAppliedRaftIndex = commandIndexTracker.getAppliedCommandIndex();
-        var millisSinceLastLeaderMessage = Objects.equals( myId, leaderId ) ? Duration.ZERO : raftMessageTimerResetMonitor.durationSinceLastMessage();
+        var millisSinceLastLeaderMessage = Objects.equals( myId, optLeaderId.orElse( null ) ) ? Duration.ZERO :
+                                           raftMessageTimerResetMonitor.durationSinceLastMessage();
         var raftCommandsPerSecond = throughputMonitor.throughput().orElse( null );
 
-        return new ClusteringDatabaseStatusResponse( lastAppliedRaftIndex, participatingInRaftGroup, votingMembers, databaseHealth.isHealthy(), myId, leaderId,
-                                                     millisSinceLastLeaderMessage, raftCommandsPerSecond, true, topologyService.isHealthy() );
+        return new ClusteringDatabaseStatusResponse( lastAppliedRaftIndex, participatingInRaftGroup, votingMembers, databaseHealth.isHealthy(), myId.uuid(),
+                optLeaderId.map( Id::uuid ).orElse( null ), millisSinceLastLeaderMessage, raftCommandsPerSecond, true, topologyService.isHealthy() );
     }
 
-    private RaftMemberId getLeader()
+    private Optional<RaftMemberId> getLeader()
     {
-        return raftMachine.getLeaderInfo().map( LeaderInfo::memberId ).orElse( null );
+        return raftMachine.getLeaderInfo().map( LeaderInfo::memberId );
     }
 }

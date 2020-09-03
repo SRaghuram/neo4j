@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.configuration.CausalClusteringSettings;
 
@@ -23,6 +22,7 @@ import java.util.stream.Stream;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
@@ -108,7 +108,7 @@ public class AddressCollector
 
     private List<SocketAddress> readEndpoints( DatabaseCoreTopology coreTopology,
                                                DatabaseReadReplicaTopology rrTopology,
-                                               Optional<MemberId> optionalLeaderId,
+                                               Optional<ServerId> optionalLeaderId,
                                                Policy policy,
                                                boolean shouldShuffle,
                                                NamedDatabaseId dbId )
@@ -125,7 +125,7 @@ public class AddressCollector
             if ( !allowReadOnLeader && coreMembers.size() > 1 && optionalLeaderId.isPresent() )
             {
                 var leaderId = optionalLeaderId.get();
-                coreMembers = coreMembers.stream().filter( serverInfo -> !serverInfo.memberId().equals( leaderId ) ).collect( toSet() );
+                coreMembers = coreMembers.stream().filter( serverInfo -> !serverInfo.serverId().equals( leaderId ) ).collect( toSet() );
             }
             // if there is only the leader return it as read end point
             // or if we cannot locate the leader return all cores as read end points
@@ -146,22 +146,22 @@ public class AddressCollector
             Collections.shuffle( readers );
         }
         return readers.stream()
-                      .filter( r -> isMemberOnline( r.memberId(), dbId ) )
+                      .filter( r -> isMemberOnline( r.serverId(), dbId ) )
                       .map( ServerInfo::boltAddress ).collect( toList() );
     }
 
-    private boolean isMemberOnline( MemberId memberId, NamedDatabaseId dbId )
+    private boolean isMemberOnline( ServerId serverId, NamedDatabaseId dbId )
     {
-        return topologyService.lookupDatabaseState( dbId, memberId ).operatorState() == STARTED;
+        return topologyService.lookupDatabaseState( dbId, serverId ).operatorState() == STARTED;
     }
 
-    private static ServerInfo newServerInfo( Map.Entry<MemberId,? extends DiscoveryServerInfo> entry )
+    private static ServerInfo newServerInfo( Map.Entry<ServerId,? extends DiscoveryServerInfo> entry )
     {
         return newServerInfo( entry.getKey(), entry.getValue() );
     }
 
-    private static ServerInfo newServerInfo( MemberId memberId, DiscoveryServerInfo discoveryServerInfo )
+    private static ServerInfo newServerInfo( ServerId serverId, DiscoveryServerInfo discoveryServerInfo )
     {
-        return new ServerInfo( discoveryServerInfo.connectors().clientBoltAddress(), memberId, discoveryServerInfo.groups() );
+        return new ServerInfo( discoveryServerInfo.connectors().clientBoltAddress(), serverId, discoveryServerInfo.groups() );
     }
 }

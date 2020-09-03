@@ -13,7 +13,6 @@ import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +25,7 @@ import java.util.UUID;
 
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes;
 import org.neo4j.kernel.availability.UnavailableException;
@@ -61,11 +61,11 @@ class WaitProcedureTest
     private final TextValue targetDatabaseId = utf8Value( randomUUID().toString() );
     private final TextValue targetDatabaseName = utf8Value( "foo" );
     private final FakeClock fakeClock = Clocks.fakeClock();
-    private final MemberId myself = MemberId.of( randomUUID() );
-    private final MemberId other1 = MemberId.of( randomUUID() );
-    private final MemberId other2 = MemberId.of( randomUUID() );
-    private final MemberId replica1 = MemberId.of( randomUUID() );
-    private final MemberId replica2 = MemberId.of( randomUUID() );
+    private final ServerId myself = new ServerId( randomUUID() );
+    private final ServerId other1 = new ServerId( randomUUID() );
+    private final ServerId other2 = new ServerId( randomUUID() );
+    private final ServerId replica1 = new ServerId( randomUUID() );
+    private final ServerId replica2 = new ServerId( randomUUID() );
 
     @Test
     void signatureIsCorrect()
@@ -73,7 +73,7 @@ class WaitProcedureTest
 
         var topologyService = mock( CoreTopologyService.class );
         var procedure =
-                WaitProcedure.clustered( topologyService, IdFactory.randomMemberId(), fakeClock,
+                WaitProcedure.clustered( topologyService, IdFactory.randomServerId(), fakeClock,
                         catchupClientFactory( InfoResponse.create( 0, null ) ), logProvider,
                         new InfoProvider( null, null ) );
 
@@ -141,7 +141,7 @@ class WaitProcedureTest
                 arrayOf( getBoltAddress( topologyService, replica2 ).toString(), "Incomplete", "server is still catching up", false ) );
     }
 
-    private static SocketAddress getBoltAddress( CoreTopologyService topologyService, MemberId serverId )
+    private static SocketAddress getBoltAddress( CoreTopologyService topologyService, ServerId serverId )
     {
         var coreServerInfo = topologyService.allCoreServers().get( serverId );
         if ( coreServerInfo != null )
@@ -297,13 +297,13 @@ class WaitProcedureTest
     {
         final var topologyService = mock( CoreTopologyService.class );
 
-        Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
+        Map<ServerId,CoreServerInfo> coreMembers = new HashMap<>();
 
         coreMembers.put( myself, addressesForCore( 0, false, Set.of() ) );
         coreMembers.put( other1, addressesForCore( 1, false, Set.of() ) );
         coreMembers.put( other2, addressesForCore( 2, false, Set.of() ) );
 
-        Map<MemberId,ReadReplicaInfo> replicaMembers = new HashMap<>();
+        Map<ServerId,ReadReplicaInfo> replicaMembers = new HashMap<>();
 
         replicaMembers.put( replica1, addressesForReadReplica( 4, Set.of() ) );
         replicaMembers.put( replica2, addressesForReadReplica( 5, Set.of() ) );

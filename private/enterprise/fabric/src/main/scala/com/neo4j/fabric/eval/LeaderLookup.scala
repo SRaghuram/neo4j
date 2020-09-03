@@ -8,9 +8,9 @@ package com.neo4j.fabric.eval
 import com.neo4j.causalclustering.discovery.ConnectorAddresses
 import com.neo4j.causalclustering.discovery.RoleInfo
 import com.neo4j.causalclustering.discovery.TopologyService
-import com.neo4j.causalclustering.identity.MemberId
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService
 import org.neo4j.configuration.helpers.SocketAddress
+import org.neo4j.dbms.identity.ServerId
 import org.neo4j.kernel.database.NamedDatabaseId
 
 import scala.collection.JavaConverters.asScalaSetConverter
@@ -19,8 +19,8 @@ import scala.compat.java8.OptionConverters.RichOptionalGeneric
 
 trait LeaderLookup {
 
-  def memberId: MemberId
-  def leaderId(databaseId: NamedDatabaseId): Option[MemberId]
+  def serverId: ServerId
+  def leaderId(databaseId: NamedDatabaseId): Option[ServerId]
   def leaderBoltAddress(databaseId: NamedDatabaseId): Option[SocketAddress]
 }
 
@@ -31,10 +31,10 @@ object LeaderLookup {
     leaderService: LeaderService,
   ) extends LeaderLookup {
 
-    def memberId: MemberId =
-      topologyService.memberId()
+    def serverId: ServerId =
+      topologyService.serverId()
 
-    def leaderId(databaseId: NamedDatabaseId): Option[MemberId] =
+    def leaderId(databaseId: NamedDatabaseId): Option[ServerId] =
       leaderService.getLeaderId(databaseId).asScala
 
     def leaderBoltAddress(databaseId: NamedDatabaseId): Option[SocketAddress] =
@@ -45,10 +45,10 @@ object LeaderLookup {
     topologyService: TopologyService,
   ) extends LeaderLookup {
 
-    def memberId: MemberId =
-      topologyService.memberId()
+    def serverId: ServerId =
+      topologyService.serverId()
 
-    def leaderId(databaseId: NamedDatabaseId): Option[MemberId] =
+    def leaderId(databaseId: NamedDatabaseId): Option[ServerId] =
       topologyService.allCoreServers().keySet().asScala
         .find(memberId => topologyService.lookupRole(databaseId, memberId) == RoleInfo.LEADER)
 
@@ -56,7 +56,7 @@ object LeaderLookup {
       LeaderLookup.leaderBoltAddress(topologyService, leaderId(databaseId), databaseId)
   }
 
-  private def leaderBoltAddress(topologyService: TopologyService, leaderId: Option[MemberId], databaseId: NamedDatabaseId): Option[SocketAddress] = {
+  private def leaderBoltAddress(topologyService: TopologyService, leaderId: Option[ServerId], databaseId: NamedDatabaseId): Option[SocketAddress] = {
     for {
       leader <- leaderId
       members = topologyService.coreTopologyForDatabase(databaseId).servers().asScala

@@ -6,7 +6,6 @@
 package com.neo4j.dbms.procedures.wait;
 
 import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
-import com.neo4j.causalclustering.identity.MemberId;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.identity.ServerId;
@@ -22,7 +21,7 @@ class ServerContext
         return new ServerContext( serverId, boltAddress, null );
     }
 
-    static ServerContext remote( MemberId serverId, DiscoveryServerInfo info )
+    static ServerContext remote( ServerId serverId, DiscoveryServerInfo info )
     {
         return new ServerContext( serverId, info.boltAddress(), info.catchupServer() );
     }

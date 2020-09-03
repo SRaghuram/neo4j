@@ -18,7 +18,6 @@ import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +25,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.kernel.database.DatabaseId;
 
@@ -43,10 +43,10 @@ class ReadReplicaViewMessageTest extends TestKit
     private final TestProbe clientManager = TestProbe.apply( getSystem() );
     private final ActorRef clusterClient = clientManager.childActorOf( Props.create( FakeClusterClient.class ) );
     private final ReadReplicaInfo readReplicaInfo = TestTopology.addressesForReadReplica( 0 );
-    private final MemberId memberId = IdFactory.randomMemberId();
+    private final ServerId serverId = IdFactory.randomServerId();
     private final Instant now = Instant.now();
 
-    private final ReadReplicaViewRecord record = new ReadReplicaViewRecord( readReplicaInfo, clientManager.ref(), memberId, now, emptyMap() );
+    private final ReadReplicaViewRecord record = new ReadReplicaViewRecord( readReplicaInfo, clientManager.ref(), serverId, now, emptyMap() );
 
     private final ReadReplicaViewMessage readReplicaViewMessage = new ReadReplicaViewMessage( Map.of( clientManager.ref().path(), record ) );
 
@@ -86,7 +86,7 @@ class ReadReplicaViewMessageTest extends TestKit
     {
         DatabaseId databaseId = Iterables.single( readReplicaInfo.startedDatabaseIds() );
         DatabaseReadReplicaTopology expected = new DatabaseReadReplicaTopology( databaseId,
-                Map.of( memberId, readReplicaInfo ) );
+                Map.of( serverId, readReplicaInfo ) );
 
         assertThat( readReplicaViewMessage.toReadReplicaTopology( databaseId ), equalTo( expected ) );
     }
@@ -106,9 +106,9 @@ class ReadReplicaViewMessageTest extends TestKit
         var info2 = TestTopology.addressesForReadReplica( 1, Set.of( dbId3, dbId1 ) );
         var info3 = TestTopology.addressesForReadReplica( 2, Set.of( dbId2, dbId3 ) );
 
-        var record1 = new ReadReplicaViewRecord( info1, clientManager.ref(), memberId, now, emptyMap() );
-        var record2 = new ReadReplicaViewRecord( info2, clientManager.ref(), memberId, now, emptyMap() );
-        var record3 = new ReadReplicaViewRecord( info3, clientManager.ref(), memberId, now, emptyMap() );
+        var record1 = new ReadReplicaViewRecord( info1, clientManager.ref(), serverId, now, emptyMap() );
+        var record2 = new ReadReplicaViewRecord( info2, clientManager.ref(), serverId, now, emptyMap() );
+        var record3 = new ReadReplicaViewRecord( info3, clientManager.ref(), serverId, now, emptyMap() );
 
         var clusterClientReadReplicas = Map.of(
                 clusterClient1.path(), record1,
@@ -133,9 +133,9 @@ class ReadReplicaViewMessageTest extends TestKit
         var dbId2 = randomDatabaseId();
         var dbId3 = randomDatabaseId();
 
-        var memberId1 = IdFactory.randomMemberId();
-        var memberId2 = IdFactory.randomMemberId();
-        var memberId3 = IdFactory.randomMemberId();
+        var serverId1 = IdFactory.randomServerId();
+        var serverId2 = IdFactory.randomServerId();
+        var serverId3 = IdFactory.randomServerId();
 
         var info1 = TestTopology.addressesForReadReplica( 0, Set.of( dbId1, dbId2 ) );
         var info2 = TestTopology.addressesForReadReplica( 1, Set.of( dbId3, dbId1 ) );
@@ -151,9 +151,9 @@ class ReadReplicaViewMessageTest extends TestKit
                 dbId2, new DiscoveryDatabaseState( dbId2, STARTED ),
                 dbId3, new DiscoveryDatabaseState( dbId3, STARTED ) );
 
-        var record1 = new ReadReplicaViewRecord( info1, clientManager.ref(), memberId1, now, states1 );
-        var record2 = new ReadReplicaViewRecord( info2, clientManager.ref(), memberId2, now, states2 );
-        var record3 = new ReadReplicaViewRecord( info3, clientManager.ref(), memberId3, now, states3 );
+        var record1 = new ReadReplicaViewRecord( info1, clientManager.ref(), serverId1, now, states1 );
+        var record2 = new ReadReplicaViewRecord( info2, clientManager.ref(), serverId2, now, states2 );
+        var record3 = new ReadReplicaViewRecord( info3, clientManager.ref(), serverId3, now, states3 );
 
         var clusterClientReadReplicas = Map.of(
                 clusterClient1.path(), record1,
@@ -162,14 +162,14 @@ class ReadReplicaViewMessageTest extends TestKit
         var readReplicaViewMessage = new ReadReplicaViewMessage( clusterClientReadReplicas );
 
         var expectedState1 = ReplicatedDatabaseState.ofReadReplicas( dbId1,
-                Map.of( memberId1, new DiscoveryDatabaseState( dbId1, STARTED ),
-                        memberId2, new DiscoveryDatabaseState( dbId1, STARTED ) ) );
+                Map.of( serverId1, new DiscoveryDatabaseState( dbId1, STARTED ),
+                        serverId2, new DiscoveryDatabaseState( dbId1, STARTED ) ) );
         var expectedState2 = ReplicatedDatabaseState.ofReadReplicas( dbId2,
-                Map.of( memberId1, new DiscoveryDatabaseState( dbId2, STOPPED ),
-                        memberId3, new DiscoveryDatabaseState( dbId2, STARTED ) ) );
+                Map.of( serverId1, new DiscoveryDatabaseState( dbId2, STOPPED ),
+                        serverId3, new DiscoveryDatabaseState( dbId2, STARTED ) ) );
         var expectedState3 = ReplicatedDatabaseState.ofReadReplicas( dbId3,
-                Map.of( memberId2, new DiscoveryDatabaseState( dbId3, STARTED ),
-                        memberId3, new DiscoveryDatabaseState( dbId3, STARTED ) ) );
+                Map.of( serverId2, new DiscoveryDatabaseState( dbId3, STARTED ),
+                        serverId3, new DiscoveryDatabaseState( dbId3, STARTED ) ) );
 
         var allExpectedStates = Map.of( dbId1, expectedState1, dbId2, expectedState2, dbId3, expectedState3 );
         var allActualStates = readReplicaViewMessage.allReadReplicaDatabaseStates();

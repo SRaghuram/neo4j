@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core.batching;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -32,10 +32,10 @@ class BatchingHandlerFactory
     /**
      * These are reusable as long as only one {@link BatchingHandler} is used at the time.
      */
-    BatchingHandler batchingHandler( Instant receivedAt, RaftId raftId )
+    BatchingHandler batchingHandler( Instant receivedAt, RaftGroupId raftGroupId )
     {
         reusableContentBatch.clear();
         reusableEntryBatch.clear();
-        return new BatchingHandler( receivedAt, raftId, batchConfig, inQueue, reusableEntryBatch, reusableContentBatch );
+        return new BatchingHandler( receivedAt, raftGroupId, batchConfig, inQueue, reusableEntryBatch, reusableContentBatch );
     }
 }

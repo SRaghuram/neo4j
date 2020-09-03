@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.neo4j.function.Suppliers.Lazy;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Log;
@@ -41,6 +42,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.neo4j.function.Suppliers.lazySingleton;
 import static org.neo4j.logging.AssertableLogProvider.Level.WARN;
 import static org.neo4j.logging.LogAssertions.assertThat;
 import static org.neo4j.logging.NullLogProvider.getInstance;
@@ -269,6 +271,8 @@ class RaftMembershipManagerTest
             initialState = new RaftMembershipState( 0, membershipEntry, null );
         }
 
+        Lazy<RaftMemberId> myself = lazySingleton( () -> this.myself );
+        myself.get();
         RaftMembershipManager raftMembershipManager = new RaftMembershipManager(
                 sendToMyself, myself, INSTANCE, log,
                 logProvider, 3, 1000, Clocks.fakeClock(),

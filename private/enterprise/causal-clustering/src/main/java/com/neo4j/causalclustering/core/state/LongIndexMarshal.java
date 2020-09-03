@@ -9,7 +9,7 @@ import java.io.IOException;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
-import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
+import org.neo4j.io.marshal.SafeStateMarshal;
 
 /**
  * A marshal for an index that starts with -1 at the empty slot before the first real entry at 0.

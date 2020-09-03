@@ -29,8 +29,6 @@ import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.core.replication.SendToMyself;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
-import com.neo4j.causalclustering.discovery.CoreTopologyService;
-import com.neo4j.causalclustering.discovery.RaftCoreTopologyConnector;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshal;
@@ -45,6 +43,7 @@ import java.util.function.Consumer;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
+import org.neo4j.function.Suppliers.Lazy;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.marshal.ChannelMarshal;
 import org.neo4j.io.state.StateStorage;
@@ -75,24 +74,25 @@ public class RaftGroup
     private final LeaderAvailabilityTimers leaderAvailabilityTimers;
 
     RaftGroup( Config config, DatabaseLogService logService, FileSystemAbstraction fileSystem, JobScheduler jobScheduler, SystemNanoClock clock,
-               RaftMemberId myself, LifeSupport life, Monitors monitors, Dependencies dependencies, Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound,
-               ClusterStateLayout clusterState, CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, NamedDatabaseId namedDatabaseId,
-               LeaderTransferService leaderTransferService, LeaderListener leaderListener, MemoryTracker memoryTracker,
-               ServerGroupsSupplier serverGroupsSupplier, AvailabilityGuard globalAvailabilityGuard,
-               Consumer<RaftMessages.StatusResponse> statusResponseConsumer, LogEntryWriterFactory logEntryWriterFactory )
+            Lazy<RaftMemberId> myself, LifeSupport raftComponents, Monitors monitors, Dependencies dependencies,
+            Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound, ClusterStateLayout clusterState,
+            ClusterStateStorageFactory storageFactory, NamedDatabaseId namedDatabaseId, LeaderTransferService leaderTransferService,
+            LeaderListener leaderListener, MemoryTracker memoryTracker, ServerGroupsSupplier serverGroupsSupplier, AvailabilityGuard globalAvailabilityGuard,
+            Consumer<RaftMessages.StatusResponse> statusResponseConsumer, LogEntryWriterFactory logEntryWriterFactory )
     {
         DatabaseLogProvider logProvider = logService.getInternalLogProvider();
         TimerService timerService = new TimerService( jobScheduler, logProvider );
 
         Map<Integer,ChannelMarshal<ReplicatedContent>> marshals = Map.of( 2, new CoreReplicatedContentMarshal( logEntryWriterFactory ) );
         RaftLog underlyingLog =
-                createRaftLog( config, life, fileSystem, clusterState, marshals, logProvider, jobScheduler, namedDatabaseId, memoryTracker, clock );
+                createRaftLog( config, raftComponents, fileSystem, clusterState, marshals, logProvider, jobScheduler, namedDatabaseId, memoryTracker, clock );
         raftLog = new MonitoredRaftLog( underlyingLog, monitors );
 
-        StateStorage<TermState> durableTermState = storageFactory.createRaftTermStorage( namedDatabaseId.name(), life, logProvider );
+        StateStorage<TermState> durableTermState = storageFactory.createRaftTermStorage( namedDatabaseId.name(), raftComponents, logProvider );
         StateStorage<TermState> termState = new MonitoredTermStateStorage( durableTermState, monitors );
-        StateStorage<VoteState> voteState = storageFactory.createRaftVoteStorage( namedDatabaseId.name(), life, logProvider );
-        StateStorage<RaftMembershipState> raftMembershipStorage = storageFactory.createRaftMembershipStorage( namedDatabaseId.name(), life, logProvider );
+        StateStorage<VoteState> voteState = storageFactory.createRaftVoteStorage( namedDatabaseId.name(), raftComponents, logProvider );
+        StateStorage<RaftMembershipState> raftMembershipStorage = storageFactory.createRaftMembershipStorage(
+                namedDatabaseId.name(), raftComponents, logProvider );
 
         var raftTimersConfig = new RaftTimersConfig( config );
         leaderAvailabilityTimers = new LeaderAvailabilityTimers( raftTimersConfig, clock, timerService, logProvider );
@@ -105,7 +105,7 @@ public class RaftGroup
                                                            config.get( join_catch_up_timeout ).toMillis(), raftMembershipStorage );
 
         dependencies.satisfyDependency( raftMembershipManager );
-        life.add( raftMembershipManager );
+        raftComponents.add( raftMembershipManager );
 
         // TODO: In-flight cache should support sharing between multiple databases.
         inFlightCache = InFlightCacheFactory.create( config, monitors );
@@ -135,8 +135,7 @@ public class RaftGroup
         monitors.addMonitorListener( durationSinceLastMessageMonitor );
         dependencies.satisfyDependency( durationSinceLastMessageMonitor );
 
-        life.add( new RaftCoreTopologyConnector( topologyService, raftMachine, namedDatabaseId ) );
-        life.add( logShipping );
+        raftComponents.add( logShipping );
     }
 
     private static RaftLog createRaftLog( Config config, LifeSupport life, FileSystemAbstraction fileSystem, ClusterStateLayout layout,

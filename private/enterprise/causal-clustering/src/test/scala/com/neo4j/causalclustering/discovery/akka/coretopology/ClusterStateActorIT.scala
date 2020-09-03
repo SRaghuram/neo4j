@@ -160,7 +160,7 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
           coreTopologyProbe.expectMsg(max = defaultWaitTime, ClusterViewMessage.EMPTY)
 
           And("send cleanup to metadata actor")
-          metadataPrope.expectMsg(max = defaultWaitTime, new CleanupMessage(member.uniqueAddress))
+          metadataProbe.expectMsg(max = defaultWaitTime, new CleanupMessage(member.uniqueAddress))
         }
         "leader changed event" in new Fixture {
           Given("A leader change event with a leader")
@@ -213,7 +213,7 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
     val cluster = mock[Cluster]
     val coreTopologyProbe = TestProbe("CoreTopology")
     val downingProbe = TestProbe("Downing")
-    val metadataPrope = TestProbe("Metadata")
+    val metadataProbe = TestProbe("Metadata")
     val config = Config.newBuilder()
       .set(akka_failure_detector_heartbeat_interval, Duration.ofSeconds( 1 ) )
       .set(akka_failure_detector_acceptable_heartbeat_pause, Duration.ofSeconds( 1 ) )
@@ -239,7 +239,7 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
 
       override def setConverged(converged: Boolean): Unit = hasSetConverged = true
     }
-    val props = ClusterStateActor.props(cluster, coreTopologyProbe.ref, downingProbe.ref, metadataPrope.ref, config, monitor)
+    val props = ClusterStateActor.props(cluster, coreTopologyProbe.ref, downingProbe.ref, metadataProbe.ref, config, monitor)
     val clusterStateRef = system.actorOf(props)
   }
 

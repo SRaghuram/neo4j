@@ -5,8 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery;
 
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.Map;
@@ -15,6 +14,7 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 
 import static java.lang.String.format;
@@ -24,13 +24,13 @@ import static java.util.Objects.requireNonNull;
 public class DatabaseCoreTopology implements Topology<CoreServerInfo>
 {
     private final DatabaseId databaseId;
-    private final RaftId raftId;
-    private final Map<MemberId,CoreServerInfo> coreServers;
+    private final RaftGroupId raftGroupId;
+    private final Map<ServerId,CoreServerInfo> coreServers;
 
-    public DatabaseCoreTopology( DatabaseId databaseId, RaftId raftId, Map<MemberId,CoreServerInfo> coreServers )
+    public DatabaseCoreTopology( DatabaseId databaseId, RaftGroupId raftGroupId, Map<ServerId,CoreServerInfo> coreServers )
     {
         this.databaseId = requireNonNull( databaseId );
-        this.raftId = raftId;
+        this.raftGroupId = raftGroupId;
         this.coreServers = Map.copyOf( coreServers );
     }
 
@@ -40,7 +40,7 @@ public class DatabaseCoreTopology implements Topology<CoreServerInfo>
     }
 
     @Override
-    public Map<MemberId,CoreServerInfo> servers()
+    public Map<ServerId,CoreServerInfo> servers()
     {
         return coreServers;
     }
@@ -51,14 +51,15 @@ public class DatabaseCoreTopology implements Topology<CoreServerInfo>
         return databaseId;
     }
 
-    public RaftId raftId()
+    public RaftGroupId raftGroupId()
     {
-        return raftId;
+        return raftGroupId;
     }
 
-    public Set<RaftMemberId> members( BiFunction<DatabaseId,MemberId,RaftMemberId> resolver )
+    public Set<RaftMemberId> members( BiFunction<DatabaseId,ServerId,RaftMemberId> resolver )
     {
-        return servers().keySet().stream().map( serverId -> resolver.apply( databaseId, serverId ) ).collect( Collectors.toSet() );
+        return servers().keySet().stream().map( serverId -> resolver.apply( databaseId, serverId ) )
+                .filter( Objects::nonNull ).collect( Collectors.toSet() );
     }
 
     @Override
@@ -74,14 +75,14 @@ public class DatabaseCoreTopology implements Topology<CoreServerInfo>
         }
         var that = (DatabaseCoreTopology) o;
         return Objects.equals( databaseId, that.databaseId ) &&
-               Objects.equals( raftId, that.raftId ) &&
+               Objects.equals( raftGroupId, that.raftGroupId ) &&
                Objects.equals( coreServers, that.coreServers );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( databaseId, raftId, coreServers );
+        return Objects.hash( databaseId, raftGroupId, coreServers );
     }
 
     @Override

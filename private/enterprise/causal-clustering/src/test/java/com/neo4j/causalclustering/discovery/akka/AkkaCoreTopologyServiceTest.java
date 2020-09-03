@@ -12,13 +12,12 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.RoleInfo;
-import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
+import com.neo4j.causalclustering.discovery.TestCoreDiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
-import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
+import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.RaftMemberId;
-import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
+import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.dbms.EnterpriseDatabaseState;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,6 +45,8 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.scheduler.JobSchedulerAdapter;
 
 import static com.neo4j.causalclustering.discovery.akka.GlobalTopologyStateTestUtil.setupCoreTopologyState;
+import static com.neo4j.causalclustering.discovery.akka.GlobalTopologyStateTestUtil.setupLeader;
+import static com.neo4j.causalclustering.discovery.akka.GlobalTopologyStateTestUtil.setupRaftMapping;
 import static com.neo4j.causalclustering.discovery.akka.GlobalTopologyStateTestUtil.setupReadReplicaTopologyState;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
@@ -73,7 +74,7 @@ class AkkaCoreTopologyServiceTest
 {
 
     private Config config = Config.defaults();
-    private ClusteringIdentityModule identityModule = new StubClusteringIdentityModule();
+    private CoreServerIdentity myIdentity = new InMemoryCoreServerIdentity();
     private LogProvider logProvider = NullLogProvider.getInstance();
     private LogProvider userLogProvider = NullLogProvider.getInstance();
     private RetryStrategy catchupAddressretryStrategy = new NoRetriesStrategy();
@@ -111,12 +112,12 @@ class AkkaCoreTopologyServiceTest
 
         service = new AkkaCoreTopologyService(
                 config,
-                identityModule,
+                myIdentity,
                 systemLifecycle,
                 logProvider,
                 userLogProvider,
                 catchupAddressretryStrategy, restarter,
-                TestDiscoveryMember::factory,
+                TestCoreDiscoveryMember::factory,
                 new JobSchedulerAdapter(),
                 clock,
                 new Monitors(),
@@ -137,7 +138,7 @@ class AkkaCoreTopologyServiceTest
         service.init();
         service.start();
 
-        var expectedSnapshot = TestDiscoveryMember.factory( identityModule, databaseStateService, Map.of() );
+        var expectedSnapshot = TestCoreDiscoveryMember.factory( myIdentity, databaseStateService, Map.of() );
         var expectedMessage = new PublishInitialData( expectedSnapshot );
         testKit.expectMsgEquals( expectedMessage );
 
@@ -215,29 +216,35 @@ class AkkaCoreTopologyServiceTest
         var databaseId1 = randomNamedDatabaseId();
         var databaseId2 = randomNamedDatabaseId();
 
-        var memberId1 = IdFactory.randomMemberId();
-        var memberId2 = IdFactory.randomMemberId();
+        var coreA = new InMemoryCoreServerIdentity();
+        var coreB = new InMemoryCoreServerIdentity();
 
-        var leaderInfo1 = new LeaderInfo( service.topologyState().resolveRaftMemberForServer( databaseId1.databaseId(), memberId1 ), 1 );
-        var leaderInfo2 = new LeaderInfo( service.topologyState().resolveRaftMemberForServer( databaseId2.databaseId(), memberId2 ), 2 );
+        setupRaftMapping( service.topologyState(), databaseId1, Map.of( coreA.serverId(), coreA.raftMemberId( databaseId1 ) ) );
+        setupRaftMapping( service.topologyState(), databaseId2, Map.of( coreB.serverId(), coreB.raftMemberId( databaseId2 ) ) );
+
+        var leaderInfo1 = new LeaderInfo( coreA.raftMemberId( databaseId1 ), 1 );
+        var leaderInfo2 = new LeaderInfo( coreB.raftMemberId( databaseId2 ), 2 );
 
         service.setLeader( leaderInfo1, databaseId1 );
         service.setLeader( leaderInfo2, databaseId2 );
 
-        assertEquals( RoleInfo.LEADER, service.lookupRole( databaseId1, memberId1 ) );
-        assertEquals( RoleInfo.LEADER, service.lookupRole( databaseId2, memberId2 ) );
+        assertEquals( RoleInfo.LEADER, service.lookupRole( databaseId1, coreA.serverId() ) );
+        assertEquals( RoleInfo.LEADER, service.lookupRole( databaseId2, coreB.serverId() ) );
 
-        assertEquals( RoleInfo.UNKNOWN, service.lookupRole( databaseId1, memberId2 ) );
-        assertEquals( RoleInfo.UNKNOWN, service.lookupRole( databaseId2, memberId1 ) );
+        assertEquals( RoleInfo.UNKNOWN, service.lookupRole( databaseId1, coreB.serverId() ) );
+        assertEquals( RoleInfo.UNKNOWN, service.lookupRole( databaseId2, coreA.serverId() ) );
     }
 
     @Test
     void shouldReturnRoleForRemoteLeader()
     {
         var databaseId = randomNamedDatabaseId();
-        var leaderId = IdFactory.randomMemberId();
+        var leaderId = IdFactory.randomServerId();
+        var leaderRaftId = IdFactory.randomRaftMemberId();
 
         setupCoreTopologyState( service.topologyState(), databaseId, leaderId );
+        setupLeader( service.topologyState(), databaseId, leaderRaftId );
+        setupRaftMapping( service.topologyState(), databaseId, Map.of( leaderId, leaderRaftId ) );
 
         assertEquals( RoleInfo.LEADER, service.lookupRole( databaseId, leaderId ) );
     }
@@ -246,11 +253,15 @@ class AkkaCoreTopologyServiceTest
     void shouldReturnRoleForFollower()
     {
         var databaseId = randomNamedDatabaseId();
-        var leaderId = IdFactory.randomMemberId();
-        var followerId1 = IdFactory.randomMemberId();
-        var followerId2 = IdFactory.randomMemberId();
+        var leaderId = IdFactory.randomServerId();
+        var leaderRaftMemberId = IdFactory.randomRaftMemberId();
+        var followerId1 = IdFactory.randomServerId();
+        var followerId2 = IdFactory.randomServerId();
 
         setupCoreTopologyState( service.topologyState(), databaseId, leaderId, followerId1, followerId2 );
+        setupLeader( service.topologyState(), databaseId, leaderRaftMemberId );
+        setupRaftMapping( service.topologyState(), databaseId,
+                Map.of( leaderId, leaderRaftMemberId, followerId1, IdFactory.randomRaftMemberId(), followerId2, IdFactory.randomRaftMemberId() ) );
 
         assertEquals( RoleInfo.LEADER, service.lookupRole( databaseId, leaderId ) );
         assertEquals( RoleInfo.FOLLOWER, service.lookupRole( databaseId, followerId1 ) );
@@ -263,8 +274,8 @@ class AkkaCoreTopologyServiceTest
         var knownDatabaseId = randomNamedDatabaseId();
         var unknownDatabaseId = randomNamedDatabaseId();
 
-        var leaderId = IdFactory.randomMemberId();
-        var followerId = IdFactory.randomMemberId();
+        var leaderId = IdFactory.randomServerId();
+        var followerId = IdFactory.randomServerId();
 
         setupCoreTopologyState( service.topologyState(), knownDatabaseId, leaderId, followerId );
 
@@ -276,9 +287,9 @@ class AkkaCoreTopologyServiceTest
     void shouldReturnRoleForUnknownMemberId()
     {
         var databaseId = randomNamedDatabaseId();
-        var leaderId = IdFactory.randomMemberId();
-        var followerId = IdFactory.randomMemberId();
-        var unknownId = IdFactory.randomMemberId();
+        var leaderId = IdFactory.randomServerId();
+        var followerId = IdFactory.randomServerId();
+        var unknownId = IdFactory.randomServerId();
 
         setupCoreTopologyState( service.topologyState(), databaseId, leaderId, followerId );
 
@@ -289,7 +300,7 @@ class AkkaCoreTopologyServiceTest
     void shouldReturnRoleWhenDatabaseStopped()
     {
         var databaseId = randomNamedDatabaseId();
-        var leaderId = IdFactory.randomMemberId();
+        var leaderId = IdFactory.randomServerId();
         var leaderInfo = new LeaderInfo( service.topologyState().resolveRaftMemberForServer( databaseId.databaseId(), leaderId ), 1 );
 
         service.setLeader( leaderInfo, databaseId );
@@ -327,7 +338,7 @@ class AkkaCoreTopologyServiceTest
         var databaseId = randomNamedDatabaseId();
 
         var bootstrapState = mock( BootstrapState.class );
-        var raftMemberId = service.resolveRaftMemberForServer( databaseId, service.memberId() );
+        var raftMemberId = service.resolveRaftMemberForServer( databaseId, service.serverId() );
         when( bootstrapState.memberBootstrappedRaft( databaseId, raftMemberId ) ).thenReturn( true );
         service.topologyState().onBootstrapStateUpdate( bootstrapState );
 
@@ -407,9 +418,9 @@ class AkkaCoreTopologyServiceTest
     private void testEmptyTopologiesAreReportedAfter( ThrowingConsumer<AkkaCoreTopologyService,Exception> testAction ) throws Exception
     {
         var databaseId = randomNamedDatabaseId();
-        var memberId1 = IdFactory.randomMemberId();
-        var memberId2 = IdFactory.randomMemberId();
-        var memberId3 = IdFactory.randomMemberId();
+        var memberId1 = IdFactory.randomServerId();
+        var memberId2 = IdFactory.randomServerId();
+        var memberId3 = IdFactory.randomServerId();
 
         service.init();
         service.start();

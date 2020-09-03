@@ -10,7 +10,7 @@ import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.cluster.ProtocolVersion;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -57,7 +57,7 @@ public class ReplicatedTxByteArray extends AbstractRaftBenchmark
     {
         byte[] bytes = new byte[nbrOfBytes( txSize )];
         return RaftMessages.OutboundRaftMessageContainer.of(
-                RaftId.from( DATABASE_ID ),
+                RaftGroupId.from( DATABASE_ID ),
                 new RaftMessages.NewEntry.Request( AbstractRaftBenchmark.MEMBER_ID,
                                                    ReplicatedTransaction.from( bytes, DATABASE_ID ) ) );
     }

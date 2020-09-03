@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.configuration.ServerGroupName;
 
 import java.util.ArrayList;
@@ -21,6 +20,7 @@ import java.util.UUID;
 import java.util.function.Function;
 
 import org.neo4j.collection.RawIterator;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
@@ -89,24 +89,24 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
         return asRawIterator( resultStream );
     }
 
-    private ResultRow buildResultRowForCore( MemberId memberId, CoreServerInfo coreInfo )
+    private ResultRow buildResultRowForCore( ServerId serverId, CoreServerInfo coreInfo )
     {
-        return buildResultRow( memberId, coreInfo, databaseId -> topologyService.lookupRole( databaseId, memberId ) );
+        return buildResultRow( serverId, coreInfo, databaseId -> topologyService.lookupRole( databaseId, serverId ) );
     }
 
-    private ResultRow buildResultRowForReadReplica( MemberId memberId, ReadReplicaInfo readReplicaInfo )
+    private ResultRow buildResultRowForReadReplica( ServerId serverId, ReadReplicaInfo readReplicaInfo )
     {
-        return buildResultRow( memberId, readReplicaInfo, ignore -> RoleInfo.READ_REPLICA );
+        return buildResultRow( serverId, readReplicaInfo, ignore -> RoleInfo.READ_REPLICA );
     }
 
-    private ResultRow buildResultRow( MemberId memberId, DiscoveryServerInfo serverInfo, Function<NamedDatabaseId,RoleInfo> result )
+    private ResultRow buildResultRow( ServerId serverId, DiscoveryServerInfo serverInfo, Function<NamedDatabaseId,RoleInfo> result )
     {
         var databases = serverInfo.startedDatabaseIds()
                 .stream()
                 .flatMap( databaseId -> databaseIdRepository.getById( databaseId ).stream() )
                 .collect( toMap( identity(), result ) );
 
-        return new ResultRow( memberId.getUuid(), serverInfo.connectors(), databases, serverInfo.groups() );
+        return new ResultRow( serverId.uuid(), serverInfo.connectors(), databases, serverInfo.groups() );
     }
 
     private static AnyValue[] formatResultRow( ResultRow row )

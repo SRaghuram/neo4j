@@ -21,7 +21,6 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -36,7 +35,7 @@ class BetterRaftMessageLoggerTest
     private final FileSystemAbstraction fs = mock( FileSystemAbstraction.class );
     private final OutputStream outputStream = mock( OutputStream.class );
 
-    private final BetterRaftMessageLogger<RaftMemberId> logger = new BetterRaftMessageLogger<>( memberId, logFile, fs, Clock.systemUTC() );
+    private final BetterRaftMessageLogger<RaftMemberId> logger = new BetterRaftMessageLogger<>( logFile, fs, Clock.systemUTC() );
 
     @BeforeEach
     void beforeEach() throws Exception
@@ -60,8 +59,7 @@ class BetterRaftMessageLoggerTest
     void shouldLogNothingWhenStopped() throws Exception
     {
         logger.start();
-        verify( outputStream ).write( any(), anyInt(), anyInt() );
-        verify( outputStream ).flush();
+        verifyNoMoreInteractions( outputStream );
 
         logger.stop();
         verify( outputStream ).close();

@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
-import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.Map;
@@ -21,20 +20,18 @@ import org.neo4j.dbms.OperatorState;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
-public class TestDiscoveryMember implements DiscoveryMember
+public class TestReadReplicaDiscoveryMember implements DiscoveryMember
 {
     private final Map<DatabaseId,DatabaseState> databaseStates;
     private final Map<DatabaseId,RaftMemberId> databaseMemberships;
     private final Map<DatabaseId,LeaderInfo> databaseLeaderships;
 
-    public TestDiscoveryMember( ClusteringIdentityModule identityModule,
-            DatabaseStateService databaseStateService,
-            Map<DatabaseId,LeaderInfo> databaseLeaderships )
+    public TestReadReplicaDiscoveryMember( DatabaseStateService databaseStateService, Map<DatabaseId,LeaderInfo> databaseLeaderships )
     {
-        this( databaseStates( databaseStateService.stateOfAllDatabases() ), databaseMemberships( identityModule, databaseStateService ), databaseLeaderships );
+        this( databaseStates( databaseStateService.stateOfAllDatabases() ), Map.of(), databaseLeaderships );
     }
 
-    private TestDiscoveryMember( Map<DatabaseId,DatabaseState> databaseStates,
+    private TestReadReplicaDiscoveryMember( Map<DatabaseId,DatabaseState> databaseStates,
             Map<DatabaseId,RaftMemberId> databaseMemberships,
             Map<DatabaseId,LeaderInfo> databaseLeaderships )
     {
@@ -43,22 +40,16 @@ public class TestDiscoveryMember implements DiscoveryMember
         this.databaseLeaderships = databaseLeaderships;
     }
 
-    private static Map<DatabaseId,RaftMemberId> databaseMemberships( ClusteringIdentityModule identityModule, DatabaseStateService databaseStates )
-    {
-        return databaseStates.stateOfAllDatabases().keySet().stream()
-                             .collect( Collectors.toMap( NamedDatabaseId::databaseId, identityModule::memberId ) );
-    }
-
     private static Map<DatabaseId,DatabaseState> databaseStates( Map<NamedDatabaseId,DatabaseState> databaseStates )
     {
         return databaseStates.entrySet().stream()
                              .collect( Collectors.toMap( entry -> entry.getKey().databaseId(), Map.Entry::getValue ) );
     }
 
-    public static TestDiscoveryMember factory( ClusteringIdentityModule identityModule, DatabaseStateService databaseStateService,
+    public static TestReadReplicaDiscoveryMember factory( DatabaseStateService databaseStateService,
             Map<DatabaseId,LeaderInfo> databaseLeaderships )
     {
-        return new TestDiscoveryMember( identityModule, databaseStateService, databaseLeaderships );
+        return new TestReadReplicaDiscoveryMember( databaseStateService, databaseLeaderships );
     }
 
     @Override
@@ -99,7 +90,7 @@ public class TestDiscoveryMember implements DiscoveryMember
         {
             return false;
         }
-        TestDiscoveryMember that = (TestDiscoveryMember) o;
+        TestReadReplicaDiscoveryMember that = (TestReadReplicaDiscoveryMember) o;
         return Objects.equals( databaseStates, that.databaseStates ) &&
                Objects.equals( databaseMemberships, that.databaseMemberships ) &&
                Objects.equals( databaseLeaderships, that.databaseLeaderships );

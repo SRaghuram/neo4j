@@ -41,13 +41,15 @@ class CoreReplicatedContentMarshallingTestV2
     static ReplicatedContent[] data()
     {
         var databaseId = new TestDatabaseIdRepository().defaultDatabase().databaseId();
+        var raftMemberId = IdFactory.randomRaftMemberId();
+        var globalSession = new GlobalSession( UUID.randomUUID(), raftMemberId );
         return new ReplicatedContent[]{new DummyRequest( new byte[]{1, 2, 3} ), ReplicatedTransaction.from( new byte[16 * 1024], databaseId ),
-                new MemberIdSet( Set.of( IdFactory.randomRaftMemberId() ) ),
+                new MemberIdSet( Set.of( raftMemberId ) ),
                 new ReplicatedTokenRequest( databaseId, TokenType.LABEL, "token", new byte[]{'c', 'o', 5} ), new NewLeaderBarrier(),
-                new ReplicatedLeaseRequest( IdFactory.randomRaftMemberId(), 2, databaseId ), new DistributedOperation(
+                new ReplicatedLeaseRequest( raftMemberId, 2, databaseId ), new DistributedOperation(
                 new DistributedOperation( ReplicatedTransaction.from( new byte[]{1, 2, 3, 4, 5, 6}, databaseId ),
-                        new GlobalSession( UUID.randomUUID(), IdFactory.randomRaftMemberId() ), new LocalOperationId( 1, 2 ) ),
-                new GlobalSession( UUID.randomUUID(), IdFactory.randomRaftMemberId() ), new LocalOperationId( 4, 5 ) )};
+                        globalSession,new LocalOperationId( 1, 2 ) ),
+                globalSession, new LocalOperationId( 4, 5 ) )};
     }
 
     @ParameterizedTest

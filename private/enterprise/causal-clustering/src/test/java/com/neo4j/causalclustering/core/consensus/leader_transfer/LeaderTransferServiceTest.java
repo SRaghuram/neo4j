@@ -8,9 +8,9 @@ package com.neo4j.causalclustering.core.consensus.leader_transfer;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
+import com.neo4j.causalclustering.identity.CoreServerIdentity;
+import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.causalclustering.identity.RaftMemberId;
-import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
 import com.neo4j.configuration.ServerGroupsSupplier;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,17 +19,14 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
-import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.lifecycle.LifeSupport;
-import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.CallableExecutorService;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.FakeClock;
@@ -37,6 +34,7 @@ import org.neo4j.time.FakeClock;
 import static java.util.concurrent.CompletableFuture.runAsync;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
+import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 
 class LeaderTransferServiceTest
 {
@@ -44,10 +42,10 @@ class LeaderTransferServiceTest
 
     private final Config config = Config.newBuilder().build();
     private final NamedDatabaseId databaseId = randomNamedDatabaseId();
-    private final ClusteringIdentityModule identityModule = new StubClusteringIdentityModule();
-    private final RaftMemberId myself = identityModule.memberId( databaseId );
-    private final ClusteringIdentityModule remoteIdentityModule = new StubClusteringIdentityModule();
-    private final RaftMemberId core1 = remoteIdentityModule.memberId( databaseId );
+    private final CoreServerIdentity myIdentity = new InMemoryCoreServerIdentity();
+    private final RaftMemberId myRaftId = myIdentity.raftMemberId( databaseId );
+    private final CoreServerIdentity remoteIdentity = new InMemoryCoreServerIdentity();
+    private final RaftMemberId remoteRaftId = remoteIdentity.raftMemberId( databaseId );
     private final Duration leaderTransferInterval = Duration.ofSeconds( 5 );
     private final Duration leaderMemberBackoff = Duration.ofSeconds( 15 );
     private ServerGroupsSupplier serverGroupsProvider;
@@ -82,9 +80,8 @@ class LeaderTransferServiceTest
         var databaseManager = new StubClusteredDatabaseManager();
         var messageHandler = new TransferLeaderJobTest.TrackingMessageHandler();
         var leaderService = new StubLeaderService( Map.of() );
-        var leaderTransferService =
-                new LeaderTransferService( jobScheduler, config, leaderTransferInterval, databaseManager, messageHandler, identityModule, leaderMemberBackoff,
-                        NullLogProvider.nullLogProvider(), clock, leaderService, serverGroupsProvider );
+        var leaderTransferService = new LeaderTransferService( jobScheduler, config, leaderTransferInterval, databaseManager, messageHandler, myIdentity,
+                leaderMemberBackoff, nullLogProvider(), clock, leaderService, serverGroupsProvider, new StubRaftMembershipResolver() );
 
         // when
         life.add( leaderTransferService );
@@ -103,14 +100,13 @@ class LeaderTransferServiceTest
         var clock = new FakeClock();
         var life = new LifeSupport();
         var databaseManager = new StubClusteredDatabaseManager();
-        var raftMembership = new StubRaftMembershipResolver( myself, core1 );
-        var fooDb = databaseWithLeader( databaseManager, myself, "foo", raftMembership );
+        var raftMembership = new StubRaftMembershipResolver( databaseId, myIdentity, remoteIdentity );
+        databaseWithLeader( databaseId, databaseManager, myRaftId, raftMembership );
         var messageHandler = new TransferLeaderJobTest.TrackingMessageHandler();
-        var leaderService = new StubLeaderService( Map.of( fooDb, myself ) );
+        var leaderService = new StubLeaderService( Map.of( databaseId, myIdentity.serverId() ) );
 
-        var leaderTransferService =
-                new LeaderTransferService( jobScheduler, config, leaderTransferInterval, databaseManager, messageHandler, identityModule, leaderMemberBackoff,
-                        NullLogProvider.nullLogProvider(), clock, leaderService, serverGroupsProvider );
+        var leaderTransferService = new LeaderTransferService( jobScheduler, config, leaderTransferInterval, databaseManager, messageHandler, myIdentity,
+                leaderMemberBackoff, nullLogProvider(), clock, leaderService, serverGroupsProvider, raftMembership );
 
         // when
         life.add( leaderTransferService );
@@ -121,17 +117,14 @@ class LeaderTransferServiceTest
         var jobHasFinished = runAsync( leaderTransferService::awaitRunningJob );
         assertThat( jobHasFinished ).succeedsWithin( Duration.ofSeconds( 30 ) );
         assertThat( messageHandler.proposals.stream().map( RaftMessages.InboundRaftMessageContainer::message ) )
-                .containsExactly( new RaftMessages.LeadershipTransfer.Proposal( myself, core1, Set.of() ) );
+                .containsExactly( new RaftMessages.LeadershipTransfer.Proposal( myRaftId, remoteRaftId, Set.of() ) );
     }
 
-    private NamedDatabaseId databaseWithLeader( StubClusteredDatabaseManager databaseManager, RaftMemberId member, String databaseName,
+    private NamedDatabaseId databaseWithLeader( NamedDatabaseId dbId, StubClusteredDatabaseManager databaseManager, RaftMemberId member,
             StubRaftMembershipResolver raftMembershipResolver )
     {
-        NamedDatabaseId dbId = DatabaseIdFactory.from( databaseName, UUID.randomUUID() );
-
         var dependencies = new Dependencies();
         dependencies.satisfyDependencies( raftMembershipResolver );
-        dependencies.satisfyDependencies( raftMembershipResolver.membersFor( dbId ) );
         var leaderLocator = new RaftLeadershipsResolverTest.StubLeaderLocator( new LeaderInfo( member, 0 ) );
         databaseManager.givenDatabaseWithConfig()
                 .withDatabaseId( dbId )

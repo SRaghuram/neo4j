@@ -5,13 +5,15 @@
  */
 package com.neo4j.causalclustering.discovery;
 
+import com.neo4j.causalclustering.discovery.member.CoreDiscoveryMemberFactory;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
-import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
+import com.neo4j.causalclustering.identity.CoreServerIdentity;
 
 import java.time.Clock;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.DatabaseStateService;
+import org.neo4j.dbms.identity.ServerIdentity;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
@@ -19,14 +21,12 @@ import org.neo4j.ssl.config.SslPolicyLoader;
 
 public interface DiscoveryServiceFactory
 {
-    CoreTopologyService coreTopologyService( Config config, ClusteringIdentityModule identityModule, JobScheduler jobScheduler, LogProvider logProvider,
-            LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver,
-            RetryStrategy topologyServiceRetryStrategy,
-            SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory,
-            DiscoveryFirstStartupDetector firstStartupDetector, Monitors monitors,
-            Clock clock, DatabaseStateService databaseStateService );
+    CoreTopologyService coreTopologyService( Config config, CoreServerIdentity myIdentity, JobScheduler jobScheduler, LogProvider logProvider,
+            LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver, RetryStrategy topologyServiceRetryStrategy,
+            SslPolicyLoader sslPolicyLoader, CoreDiscoveryMemberFactory discoveryMemberFactory, DiscoveryFirstStartupDetector firstStartupDetector,
+            Monitors monitors, Clock clock, DatabaseStateService databaseStateService );
 
-    TopologyService readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler, ClusteringIdentityModule identityModule,
+    TopologyService readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler, ServerIdentity myIdentity,
             RemoteMembersResolver remoteMembersResolver, SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory, Clock clock,
             DatabaseStateService databaseStateService );
 }

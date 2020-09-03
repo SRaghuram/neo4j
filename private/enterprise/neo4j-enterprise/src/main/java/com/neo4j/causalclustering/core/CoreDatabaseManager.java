@@ -57,7 +57,8 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
     @Override
     protected ClusteredDatabaseContext createDatabaseContext( NamedDatabaseId namedDatabaseId )
     {
-        LifeSupport clusterComponents = new LifeSupport();
+        LifeSupport raftComponents = new LifeSupport();
+
         Dependencies coreDatabaseDependencies = new Dependencies( globalModule.getGlobalDependencies() );
         DatabaseLogService coreDatabaseLogService = new DatabaseLogService( namedDatabaseId, globalModule.getLogService() );
         Monitors coreDatabaseMonitors = RaftMonitors.create( globalModule.getGlobalMonitors(), coreDatabaseDependencies );
@@ -68,15 +69,14 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         LogFiles transactionLogs = buildTransactionLogs( databaseLayout );
 
         BootstrapContext bootstrapContext = new BootstrapContext( namedDatabaseId, databaseLayout, storeFiles, transactionLogs );
-        CoreRaftContext raftContext = edition.coreDatabaseFactory().createRaftContext( namedDatabaseId, clusterComponents,
-                coreDatabaseMonitors, coreDatabaseDependencies, bootstrapContext, coreDatabaseLogService,
-                globalModule.getOtherMemoryPool().getPoolMemoryTracker() );
+        CoreRaftContext raftContext = edition.coreDatabaseFactory().createRaftContext( namedDatabaseId, raftComponents, coreDatabaseMonitors,
+                coreDatabaseDependencies, bootstrapContext, coreDatabaseLogService, globalModule.getOtherMemoryPool().getPoolMemoryTracker() );
 
         var databaseConfig = new DatabaseConfig( config, namedDatabaseId );
         var versionContextSupplier = createVersionContextSupplier( databaseConfig );
         var kernelResolvers = new CoreKernelResolvers();
         var kernelContext = edition.coreDatabaseFactory()
-                .createKernelComponents( namedDatabaseId, clusterComponents, raftContext, kernelResolvers,
+                .createKernelComponents( namedDatabaseId, raftComponents, raftContext, kernelResolvers,
                         coreDatabaseLogService, versionContextSupplier, globalModule.getOtherMemoryPool().getPoolMemoryTracker() );
 
         var databaseCreationContext = newDatabaseCreationContext( namedDatabaseId, coreDatabaseDependencies,
@@ -86,7 +86,7 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
 
         var downloadContext = new StoreDownloadContext( kernelDatabase, storeFiles, transactionLogs, internalDbmsOperator(), pageCacheTracer );
 
-        var coreDatabase = edition.coreDatabaseFactory().createDatabase( namedDatabaseId, clusterComponents, coreDatabaseMonitors, coreDatabaseDependencies,
+        var coreDatabase = edition.coreDatabaseFactory().createDatabase( namedDatabaseId, raftComponents, coreDatabaseMonitors, coreDatabaseDependencies,
                                                                          downloadContext, kernelDatabase, kernelContext, raftContext, internalDbmsOperator() );
 
         var ctx = core( kernelDatabase, kernelDatabase.getDatabaseFacade(), transactionLogs,
@@ -127,17 +127,17 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
      */
     private void deleteCoreStateThenRaftId( String databaseName ) throws IOException
     {
-        Path raftIdState = clusterStateLayout.raftIdStateFile( databaseName );
-        Path raftIdStateDir = raftIdState.getParent();
+        Path raftGroupIdStateFile = clusterStateLayout.raftGroupIdFile( databaseName );
+        Path raftGroupIdStateDir = raftGroupIdStateFile.getParent();
         Path raftGroupDir = clusterStateLayout.raftGroupDir( databaseName );
 
         if ( !fs.fileExists( raftGroupDir ) )
         {
             return;
         }
-        assert raftIdStateDir.getParent().equals( raftGroupDir );
+        assert raftGroupIdStateDir.getParent().equals( raftGroupDir );
 
-        Path[] files = fs.listFiles( raftGroupDir, path -> !raftIdStateDir.getFileName().equals( path.getFileName() ) );
+        Path[] files = fs.listFiles( raftGroupDir, path -> !raftGroupIdStateDir.getFileName().equals( path.getFileName() ) );
 
         for ( Path file : files )
         {
@@ -153,15 +153,15 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
 
         FileUtils.tryForceDirectory( raftGroupDir );
 
-        if ( files.length != 0 && !fs.fileExists( raftIdState ) )
+        if ( files.length != 0 && !fs.fileExists( raftGroupIdStateFile ) )
         {
-            log.warn( format( "The cluster state directory for %s is non-empty but does not contain a raftId. " +
+            log.warn( format( "The cluster state directory for %s is non-empty but does not contain a raft group ID. " +
                     "Cleanup has still been attempted.", databaseName ) );
         }
 
-        if ( !fs.deleteFile( raftIdState ) )
+        if ( !fs.deleteFile( raftGroupIdStateFile ) )
         {
-            throw new IOException( format( "Unable to delete file %s when dropping database %s", raftIdState.toAbsolutePath(), databaseName ) );
+            throw new IOException( format( "Unable to delete file %s when dropping database %s", raftGroupIdStateFile.toAbsolutePath(), databaseName ) );
         }
 
         fs.deleteRecursively( raftGroupDir );

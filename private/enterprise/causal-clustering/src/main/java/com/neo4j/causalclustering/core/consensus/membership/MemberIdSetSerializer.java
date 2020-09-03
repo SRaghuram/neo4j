@@ -41,7 +41,7 @@ public class MemberIdSetSerializer
         Set<RaftMemberId> members = memberSet.getMembers();
         channel.putInt( members.size() );
 
-        RaftMemberId.Marshal memberIdMarshal = new RaftMemberId.Marshal();
+        RaftMemberId.Marshal memberIdMarshal = RaftMemberId.Marshal.INSTANCE;
 
         for ( RaftMemberId member : members )
         {
@@ -54,7 +54,7 @@ public class MemberIdSetSerializer
         HashSet<RaftMemberId> members = new HashSet<>();
         int memberCount = channel.getInt();
 
-        RaftMemberId.Marshal memberIdMarshal = new RaftMemberId.Marshal();
+        RaftMemberId.Marshal memberIdMarshal = RaftMemberId.Marshal.INSTANCE;
 
         for ( int i = 0; i < memberCount; i++ )
         {

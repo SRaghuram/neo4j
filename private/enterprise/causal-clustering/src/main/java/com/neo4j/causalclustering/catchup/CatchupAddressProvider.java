@@ -13,6 +13,7 @@ import java.util.Collection;
 import java.util.List;
 
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 /**
@@ -114,12 +115,13 @@ public interface CatchupAddressProvider
         @Override
         public SocketAddress primary( NamedDatabaseId namedDatabaseId ) throws CatchupAddressResolutionException
         {
-            var leadMember = leaderProvider.getLeader( namedDatabaseId );
-            if ( leadMember == null )
+            var leader = leaderProvider.getLeader( namedDatabaseId );
+            if ( leader == null )
             {
                 throw new CatchupAddressResolutionException( new IllegalStateException( "No Leader Found" ) );
             }
-            return topologyService.lookupCatchupAddress( leadMember.serverId() );
+            ServerId server = topologyService.resolveServerForRaftMember( leader );
+            return topologyService.lookupCatchupAddress( server );
         }
 
         @Override

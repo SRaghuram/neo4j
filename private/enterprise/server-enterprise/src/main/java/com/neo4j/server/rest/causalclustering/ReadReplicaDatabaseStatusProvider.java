@@ -5,21 +5,21 @@
  */
 package com.neo4j.server.rest.causalclustering;
 
+import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
-import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
 
 import java.time.Duration;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Health;
+import org.neo4j.util.Id;
+
+import static java.util.Optional.ofNullable;
 
 class ReadReplicaDatabaseStatusProvider
 {
@@ -44,24 +44,12 @@ class ReadReplicaDatabaseStatusProvider
 
     ClusteringDatabaseStatusResponse currentStatus()
     {
-        var votingServers = topologyService.allCoreServers().keySet();
         var healthy = databaseHealth.isHealthy();
-        var myId = RaftMemberId.from( topologyService.memberId() );
-        var leaderId = findLeaderId( votingServers );
+        var myId = topologyService.serverId();
+        var leaderId = ofNullable( topologyService.getLeader( databaseId ) ).map( LeaderInfo::memberId ).map( Id::uuid ).orElse( null );
         var lastAppliedRaftIndex = commandIndexTracker.getAppliedCommandIndex();
         var raftCommandsPerSecond = throughputMonitor.throughput().orElse( null );
-        var votingMembers = votingServers.stream().map( RaftMemberId::from ).collect( Collectors.toSet() );
-
-        return new ClusteringDatabaseStatusResponse( lastAppliedRaftIndex, false, votingMembers, healthy, myId, leaderId,
+        return new ClusteringDatabaseStatusResponse( lastAppliedRaftIndex, false, Set.of(), healthy, myId.uuid(), leaderId,
                                                      MILLIS_SINCE_LAST_LEADER_MESSAGE, raftCommandsPerSecond, false, topologyService.isHealthy() );
-    }
-
-    private RaftMemberId findLeaderId( Set<MemberId> votingMembers )
-    {
-        return votingMembers.stream()
-                            .filter( memberId -> topologyService.lookupRole( databaseId, memberId ) == RoleInfo.LEADER )
-                            .map( RaftMemberId::from )
-                            .findFirst()
-                            .orElse( null );
     }
 }

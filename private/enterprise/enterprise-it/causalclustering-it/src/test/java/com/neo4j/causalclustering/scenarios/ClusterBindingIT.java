@@ -214,7 +214,7 @@ class ClusterBindingIT
     {
         var layout = coreMember.clusterStateLayout();
         var storageFactory = new ClusterStateStorageFactory( fs, layout, NullLogProvider.getInstance(), coreMember.config(), INSTANCE );
-        var raftIdStorage = storageFactory.createRaftIdStorage( databaseName, nullDatabaseLogProvider() );
+        var raftIdStorage = storageFactory.createRaftGroupIdStorage( databaseName, nullDatabaseLogProvider() );
         raftIdStorage.writeState( IdFactory.randomRaftId() );
     }
 

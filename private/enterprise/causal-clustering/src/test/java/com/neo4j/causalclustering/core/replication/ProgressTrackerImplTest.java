@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.core.consensus.ReplicatedInteger;
 import com.neo4j.causalclustering.core.replication.session.GlobalSession;
 import com.neo4j.causalclustering.core.replication.session.LocalOperationId;
 import com.neo4j.causalclustering.core.state.StateMachineResult;
+import com.neo4j.causalclustering.identity.IdFactory;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,7 @@ class ProgressTrackerImplTest
 {
     private final int DEFAULT_TIMEOUT_MS = 15_000;
 
-    private GlobalSession session = new GlobalSession( UUID.randomUUID(), null );
+    private GlobalSession session = new GlobalSession( UUID.randomUUID(), IdFactory.randomRaftMemberId() );
     private DistributedOperation operationA = new DistributedOperation(
             ReplicatedInteger.valueOf( 0 ), session, new LocalOperationId( 0, 0 ) );
     private DistributedOperation operationB = new DistributedOperation(
@@ -138,7 +139,7 @@ class ProgressTrackerImplTest
     void shouldIgnoreOtherSessions()
     {
         // given
-        GlobalSession sessionB = new GlobalSession( UUID.randomUUID(), null );
+        GlobalSession sessionB = new GlobalSession( UUID.randomUUID(), IdFactory.randomRaftMemberId() );
         DistributedOperation aliasUnderSessionB =
                 new DistributedOperation( ReplicatedInteger.valueOf( 0 ), sessionB,
                         new LocalOperationId(

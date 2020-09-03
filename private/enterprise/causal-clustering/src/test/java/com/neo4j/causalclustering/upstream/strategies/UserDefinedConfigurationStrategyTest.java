@@ -6,37 +6,26 @@
 package com.neo4j.causalclustering.upstream.strategies;
 
 import co.unruly.matchers.OptionalMatchers;
-import com.neo4j.causalclustering.discovery.ConnectorAddresses;
-import com.neo4j.causalclustering.discovery.ConnectorAddresses.ConnectorUri;
-import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.FakeTopologyService;
-import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.ServerGroupName;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.internal.helpers.collection.Pair;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.NullLogProvider;
 
-import static com.neo4j.causalclustering.discovery.ConnectorAddresses.Scheme.bolt;
-import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberId;
-import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberIds;
+import static com.neo4j.causalclustering.discovery.FakeTopologyService.serverId;
+import static com.neo4j.causalclustering.discovery.FakeTopologyService.serverIds;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
@@ -60,9 +49,9 @@ class UserDefinedConfigurationStrategyTest
     void shouldPickTheFirstMatchingServerIfCore()
     {
         // given
-        MemberId theCoreMemberId = memberId( 0 );
-        Set<MemberId> replicaIds = memberIds( 1, 101 );
-        FakeTopologyService topologyService = new FakeTopologyService( Set.of( theCoreMemberId ), replicaIds, theCoreMemberId, Set.of( DATABASE_ID ) );
+        ServerId theCoreServerId = serverId( 0 );
+        Set<ServerId> replicaIds = serverIds( 1, 101 );
+        FakeTopologyService topologyService = new FakeTopologyService( Set.of( theCoreServerId ), replicaIds, theCoreServerId, Set.of( DATABASE_ID ) );
 
         randomlyAssignGroupsNoEast( topologyService, replicaIds );
 
@@ -72,21 +61,21 @@ class UserDefinedConfigurationStrategyTest
         strategy.inject( topologyService, config, NullLogProvider.getInstance(), null );
 
         //when
-        Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
-        Collection<MemberId> memberIds = strategy.upstreamMembersForDatabase( DATABASE_ID );
+        Optional<ServerId> serverId = strategy.upstreamServerForDatabase( DATABASE_ID );
+        Collection<ServerId> serverIds = strategy.upstreamServersForDatabase( DATABASE_ID );
 
         // then
-        assertThat( memberIds, contains( theCoreMemberId ) );
-        assertThat( memberId, OptionalMatchers.contains( theCoreMemberId ) );
+        assertThat( serverIds, contains( theCoreServerId ) );
+        assertThat( serverId, OptionalMatchers.contains( theCoreServerId ) );
     }
 
     @Test
     void shouldPickTheFirstMatchingServerIfReadReplica()
     {
         // given
-        MemberId theCoreMemberId = memberId( 0 );
-        Set<MemberId> replicaIds = memberIds( 1, 101 );
-        FakeTopologyService topologyService = new FakeTopologyService( Set.of( theCoreMemberId ), replicaIds, theCoreMemberId, Set.of( DATABASE_ID ) );
+        ServerId theCoreServerId = serverId( 0 );
+        Set<ServerId> replicaIds = serverIds( 1, 101 );
+        FakeTopologyService topologyService = new FakeTopologyService( Set.of( theCoreServerId ), replicaIds, theCoreServerId, Set.of( DATABASE_ID ) );
         randomlyAssignGroupsNoEast( topologyService, replicaIds );
 
         UserDefinedConfigurationStrategy strategy = new UserDefinedConfigurationStrategy();
@@ -96,8 +85,8 @@ class UserDefinedConfigurationStrategyTest
         strategy.inject( topologyService, config, NullLogProvider.getInstance(), null );
 
         //when
-        Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
-        Collection<MemberId> memberIds = strategy.upstreamMembersForDatabase( DATABASE_ID );
+        Optional<ServerId> memberId = strategy.upstreamServerForDatabase( DATABASE_ID );
+        Collection<ServerId> memberIds = strategy.upstreamServersForDatabase( DATABASE_ID );
 
         // then
         assertThat( memberIds, everyItem( is( in( replicaIds ) ) ) );
@@ -111,9 +100,9 @@ class UserDefinedConfigurationStrategyTest
     void shouldReturnEmptyIfNoMatchingServers()
     {
         // given
-        MemberId theCoreMemberId = memberId( 0 );
-        Set<MemberId> replicaIds = memberIds( 1, 101 );
-        FakeTopologyService topologyService = new FakeTopologyService( Set.of( theCoreMemberId ), replicaIds, theCoreMemberId, Set.of( DATABASE_ID ) );
+        ServerId theCoreServerId = serverId( 0 );
+        Set<ServerId> replicaIds = serverIds( 1, 101 );
+        FakeTopologyService topologyService = new FakeTopologyService( Set.of( theCoreServerId ), replicaIds, theCoreServerId, Set.of( DATABASE_ID ) );
         randomlyAssignGroupsNoEast( topologyService, replicaIds );
 
         UserDefinedConfigurationStrategy strategy = new UserDefinedConfigurationStrategy();
@@ -122,8 +111,8 @@ class UserDefinedConfigurationStrategyTest
         strategy.inject( topologyService, config, NullLogProvider.getInstance(), null );
 
         //when
-        Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
-        Collection<MemberId> memberIds = strategy.upstreamMembersForDatabase( DATABASE_ID );
+        Optional<ServerId> memberId = strategy.upstreamServerForDatabase( DATABASE_ID );
+        Collection<ServerId> memberIds = strategy.upstreamServersForDatabase( DATABASE_ID );
 
         // then
         assertThat( memberId, OptionalMatchers.empty() );
@@ -134,9 +123,9 @@ class UserDefinedConfigurationStrategyTest
     void shouldReturnEmptyIfInvalidFilterSpecification()
     {
         // given
-        MemberId theCoreMemberId = memberId( 0 );
-        Set<MemberId> replicaIds = memberIds( 1, 101 );
-        FakeTopologyService topologyService = new FakeTopologyService( Set.of( theCoreMemberId ), replicaIds, theCoreMemberId, Set.of( DATABASE_ID ) );
+        ServerId theCoreServerId = serverId( 0 );
+        Set<ServerId> replicaIds = serverIds( 1, 101 );
+        FakeTopologyService topologyService = new FakeTopologyService( Set.of( theCoreServerId ), replicaIds, theCoreServerId, Set.of( DATABASE_ID ) );
         randomlyAssignGroupsNoEast( topologyService, replicaIds );
 
         UserDefinedConfigurationStrategy strategy = new UserDefinedConfigurationStrategy();
@@ -145,8 +134,8 @@ class UserDefinedConfigurationStrategyTest
         strategy.inject( topologyService, config, NullLogProvider.getInstance(), null );
 
         //when
-        Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
-        Collection<MemberId> memberIds = strategy.upstreamMembersForDatabase( DATABASE_ID );
+        Optional<ServerId> memberId = strategy.upstreamServerForDatabase( DATABASE_ID );
+        Collection<ServerId> memberIds = strategy.upstreamServersForDatabase( DATABASE_ID );
 
         // then
         assertThat( memberId, OptionalMatchers.empty() );
@@ -158,8 +147,8 @@ class UserDefinedConfigurationStrategyTest
     {
         // given
         var wantedGroup = new ServerGroupName( eastGroup );
-        MemberId coreId = memberId( 0 );
-        MemberId replicaId = memberId( 1 );
+        ServerId coreId = serverId( 0 );
+        ServerId replicaId = serverId( 1 );
         FakeTopologyService topologyService = new FakeTopologyService( Set.of( coreId ), Set.of( replicaId ), replicaId, Set.of( DATABASE_ID ) );
 
         topologyService.setGroups( Set.of( replicaId ), Set.of( wantedGroup ) );
@@ -170,8 +159,8 @@ class UserDefinedConfigurationStrategyTest
         strategy.inject( topologyService, config, NullLogProvider.getInstance(), replicaId );
 
         //when
-        Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
-        Collection<MemberId> memberIds = strategy.upstreamMembersForDatabase( DATABASE_ID );
+        Optional<ServerId> memberId = strategy.upstreamServerForDatabase( DATABASE_ID );
+        Collection<ServerId> memberIds = strategy.upstreamServersForDatabase( DATABASE_ID );
 
         // then
         assertThat( memberId, OptionalMatchers.empty() );
@@ -183,52 +172,23 @@ class UserDefinedConfigurationStrategyTest
         return Config.defaults( CausalClusteringSettings.user_defined_upstream_selection_strategy, filter );
     }
 
-    static DatabaseReadReplicaTopology fakeReadReplicaTopology( MemberId... readReplicaIds )
+    private void randomlyAssignGroupsNoEast( FakeTopologyService topologyService, Set<ServerId> memberIds )
     {
-        return fakeReadReplicaTopology( readReplicaIds, ignored -> Collections.emptySet() );
-    }
-
-    static DatabaseReadReplicaTopology fakeReadReplicaTopology( MemberId[] readReplicaIds, Function<MemberId,Set<ServerGroupName>> groupGenerator )
-    {
-        assert readReplicaIds.length > 0;
-
-        final AtomicInteger offset = new AtomicInteger( 10_000 );
-
-        Function<MemberId,ReadReplicaInfo> toReadReplicaInfo = memberId -> readReplicaInfo( memberId, offset, groupGenerator );
-
-        Map<MemberId,ReadReplicaInfo> readReplicas = Stream.of( readReplicaIds ).collect( Collectors.toMap( Function.identity(), toReadReplicaInfo ) );
-
-        return new DatabaseReadReplicaTopology( randomNamedDatabaseId().databaseId(), readReplicas );
-    }
-
-    private static ReadReplicaInfo readReplicaInfo( MemberId memberId, AtomicInteger offset, Function<MemberId,Set<ServerGroupName>> groupGenerator )
-    {
-        ConnectorAddresses connectorAddresses = ConnectorAddresses.fromList( List.of(
-                new ConnectorUri( bolt, new SocketAddress( "localhost", offset.getAndIncrement() ) ) ) );
-        SocketAddress catchupAddress = new SocketAddress( "localhost", offset.getAndIncrement() );
-        var groups = groupGenerator.apply( memberId );
-        Set<DatabaseId> databaseIds = Set.of( randomNamedDatabaseId().databaseId() );
-        return new ReadReplicaInfo( connectorAddresses, catchupAddress, groups, databaseIds );
-    }
-
-    private void randomlyAssignGroupsNoEast( FakeTopologyService topologyService, Set<MemberId> memberIds )
-    {
-        var groupToMembers = memberIds.stream()
-                .map( memberId -> Pair.of( noEastGroupGenerator( memberId ), List.of( memberId ) ) )
-                .collect( Collectors.toMap( Pair::first, Pair::other, this::memberIdsAccumulator ) );
+        var groupToMembers = memberIds.stream().map( memberId -> Pair.of( noEastGroupGenerator( memberId ), List.of( memberId ) ) ).collect(
+                Collectors.toMap( Pair::first, Pair::other, this::memberIdsAccumulator ) );
 
         groupToMembers.forEach( ( group, members ) -> topologyService.setGroups( Set.copyOf( members ), Set.of( group ) ) );
     }
 
-    private List<MemberId> memberIdsAccumulator( List<MemberId> l, List<MemberId> r )
+    private List<ServerId> memberIdsAccumulator( List<ServerId> l, List<ServerId> r )
     {
         return Stream.concat( l.stream(), r.stream() ).collect( Collectors.toList() );
     }
 
-    private ServerGroupName noEastGroupGenerator( MemberId memberId )
+    private ServerGroupName noEastGroupGenerator( ServerId serverId )
     {
-        // Random selection of non-east group, stable w.r.t MemberId
-        int index = Math.abs( memberId.hashCode() % noEastGroup.size() );
+        // Random selection of non-east group, stable w.r.t ServerId
+        int index = Math.abs( serverId.hashCode() % noEastGroup.size() );
         return noEastGroup.get( index );
     }
 }

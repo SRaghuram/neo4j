@@ -9,17 +9,16 @@ import com.neo4j.causalclustering.discovery.CoreTopologyService.Listener;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
-import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
+import com.neo4j.causalclustering.discovery.TestCoreDiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
-import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
+import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
+import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.dbms.EnterpriseDatabaseState;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.neo4j.configuration.Config;
@@ -44,7 +43,7 @@ import static org.mockito.Mockito.when;
 class CoreTopologyChangeListenerTest
 {
     private final NamedDatabaseId namedDatabaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
-    private final ClusteringIdentityModule identityModule = new StubClusteringIdentityModule();
+    private final CoreServerIdentity myIdentity = new InMemoryCoreServerIdentity();
     private final RetryStrategy catchupAddressRetryStrategy = new NoRetriesStrategy();
     private final Restarter restarter = new Restarter( new ConstantTimeTimeoutStrategy( 1, MILLISECONDS ), 0 );
     private final JobScheduler jobScheduler = new ThreadPoolJobScheduler( Executors.newSingleThreadExecutor() );
@@ -54,13 +53,13 @@ class CoreTopologyChangeListenerTest
 
     private final AkkaCoreTopologyService service = new AkkaCoreTopologyService(
             Config.defaults(),
-            identityModule,
+            myIdentity,
             actorSystemLifecycle,
             NullLogProvider.getInstance(),
             NullLogProvider.getInstance(),
             catchupAddressRetryStrategy,
             restarter,
-            TestDiscoveryMember::factory,
+            TestCoreDiscoveryMember::factory,
             jobScheduler,
             Clocks.systemClock(),
             new Monitors(),

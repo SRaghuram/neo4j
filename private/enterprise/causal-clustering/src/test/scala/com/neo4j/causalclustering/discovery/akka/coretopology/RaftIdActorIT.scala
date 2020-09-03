@@ -12,15 +12,15 @@ import akka.cluster.ddata.LWWMapKey
 import akka.cluster.ddata.Replicator
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
-import com.neo4j.causalclustering.discovery.TestDiscoveryMember
+import com.neo4j.causalclustering.discovery.TestCoreDiscoveryMember
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.PublishInitialData
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
-import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory
+import com.neo4j.causalclustering.discovery.member.CoreDiscoveryMemberFactory
 import com.neo4j.causalclustering.identity.IdFactory
-import com.neo4j.causalclustering.identity.RaftId
+import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity
+import com.neo4j.causalclustering.identity.RaftGroupId
 import com.neo4j.causalclustering.identity.RaftMemberId
-import com.neo4j.causalclustering.identity.StubClusteringIdentityModule
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
 
@@ -34,7 +34,7 @@ class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
     "update replicator with raft ID from this core server" in new Fixture {
       When("send raft ID locally")
       val memberId = IdFactory.randomRaftMemberId()
-      replicatedDataActorRef ! new RaftIdSetRequest(RaftId.from(randomNamedDatabaseId.databaseId()), memberId, java.time.Duration.ofSeconds( 2 ))
+      replicatedDataActorRef ! new RaftIdSetRequest(RaftGroupId.from(randomNamedDatabaseId.databaseId()), memberId, java.time.Duration.ofSeconds( 2 ))
 
       Then("update metadata")
       expectReplicatorUpdates(replicator, dataKey)
@@ -44,8 +44,8 @@ class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
       Given("RaftId->RaftMemberId mappings")
       val memberId = IdFactory.randomRaftMemberId()
       val db1Id, db2Id = randomNamedDatabaseId.databaseId()
-      val bootstrappedRaft1 = LWWMap.empty.put(cluster, RaftId.from(db1Id), memberId)
-      val bootstrappedRaft2 = LWWMap.empty.put(cluster, RaftId.from(db2Id), memberId)
+      val bootstrappedRaft1 = LWWMap.empty.put(cluster, RaftGroupId.from(db1Id), memberId)
+      val bootstrappedRaft2 = LWWMap.empty.put(cluster, RaftGroupId.from(db2Id), memberId)
 
       When("mappings updated from replicator")
       replicatedDataActorRef ! Replicator.Changed(dataKey)(bootstrappedRaft1)
@@ -60,8 +60,8 @@ class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
       Given("some initial raft membership and a RaftIdActor")
       val dbId = randomNamedDatabaseId
       val stateService = databaseStateService(Set(dbId))
-      val snapshotFactory: DiscoveryMemberFactory = TestDiscoveryMember.factory _
-      val expectedMapping = Map(RaftId.from(dbId.databaseId) -> identityModule.memberId(dbId))
+      val snapshotFactory: CoreDiscoveryMemberFactory = TestCoreDiscoveryMember.factory _
+      val expectedMapping = Map(RaftGroupId.from(dbId.databaseId) -> identityModule.raftMemberId(dbId))
       val replicatorProbe = TestProbe("replicatorProbe")
       val actor = system.actorOf(RaftIdActor.props(cluster, replicatorProbe.ref, coreTopologyProbe.ref, monitor, 3))
 
@@ -76,13 +76,13 @@ class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
     }
   }
 
-  class Fixture extends ReplicatedDataActorFixture[LWWMap[RaftId,RaftMemberId]] {
-    override val dataKey: Key[LWWMap[RaftId,RaftMemberId]] = LWWMapKey(ReplicatedDataIdentifier.RAFT_ID.keyName())
-    override val data = LWWMap.empty[RaftId,RaftMemberId]
+  class Fixture extends ReplicatedDataActorFixture[LWWMap[RaftGroupId,RaftMemberId]] {
+    override val dataKey: Key[LWWMap[RaftGroupId,RaftMemberId]] = LWWMapKey(ReplicatedDataIdentifier.RAFT_ID_PUBLISHER.keyName())
+    override val data = LWWMap.empty[RaftGroupId,RaftMemberId]
     val coreTopologyProbe = TestProbe("coreTopologyActor")
-    val identityModule = new StubClusteringIdentityModule
+    val identityModule = new InMemoryCoreServerIdentity()
     val db1 = randomNamedDatabaseId
-    val memberSnapshotFactory: DiscoveryMemberFactory = TestDiscoveryMember.factory _
+    val memberSnapshotFactory: CoreDiscoveryMemberFactory = TestCoreDiscoveryMember.factory _
     val props = RaftIdActor.props(cluster, replicator.ref, coreTopologyProbe.ref, monitor, 3)
     override val replicatedDataActorRef: ActorRef = system.actorOf(props)
   }

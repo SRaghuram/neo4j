@@ -15,23 +15,18 @@ public final class IdFactory
     {
     }
 
-    public static RaftId randomRaftId()
+    public static RaftGroupId randomRaftId()
     {
-        return new RaftId( UUID.randomUUID() );
-    }
-
-    public static MemberId randomMemberId()
-    {
-        return MemberId.of( UUID.randomUUID() );
+        return new RaftGroupId( UUID.randomUUID() );
     }
 
     public static RaftMemberId randomRaftMemberId()
     {
-        return RaftMemberId.of( UUID.randomUUID() );
+        return new RaftMemberId( UUID.randomUUID() );
     }
 
     public static ServerId randomServerId()
     {
-        return ServerId.of( UUID.randomUUID() );
+        return new ServerId( UUID.randomUUID() );
     }
 }

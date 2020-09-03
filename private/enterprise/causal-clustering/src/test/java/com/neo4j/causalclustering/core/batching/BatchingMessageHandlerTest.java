@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.helper.scheduling.LimitingScheduler;
 import com.neo4j.causalclustering.helper.scheduling.ReoccurringJobQueue;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import org.junit.jupiter.api.AfterEach;
@@ -61,7 +61,7 @@ class BatchingMessageHandlerTest
     private final Instant now = Instant.now();
     @SuppressWarnings( "unchecked" )
     private LifecycleMessageHandler<InboundRaftMessageContainer<?>> downstreamHandler = mock( LifecycleMessageHandler.class );
-    private RaftId localRaftId = IdFactory.randomRaftId();
+    private RaftGroupId localRaftGroupId = IdFactory.randomRaftId();
     private final LimitingScheduler jobScheduler = mock( LimitingScheduler.class );
 
     private ExecutorService executor;
@@ -405,13 +405,13 @@ class BatchingMessageHandlerTest
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
                                                                           BATCH_CONFIG, jobScheduler, NullLogProvider.getInstance() );
-        RaftId raftId = IdFactory.randomRaftId();
+        RaftGroupId raftGroupId = IdFactory.randomRaftId();
 
         // when
-        batchHandler.start( raftId );
+        batchHandler.start( raftGroupId );
 
         // then
-        Mockito.verify( downstreamHandler ).start( raftId );
+        Mockito.verify( downstreamHandler ).start( raftGroupId );
     }
 
     @Test
@@ -467,7 +467,7 @@ class BatchingMessageHandlerTest
             }
 
             @Override
-            public void start( RaftId raftId ) throws Exception
+            public void start( RaftGroupId raftId ) throws Exception
             {
             }
 
@@ -477,7 +477,7 @@ class BatchingMessageHandlerTest
             }
         };
 
-        RaftId raftId = IdFactory.randomRaftId();
+        RaftGroupId raftGroupId = IdFactory.randomRaftId();
         var jobScheduler = new ThreadPoolJobScheduler( executor );
         var scheduler = new LimitingScheduler( jobScheduler, Group.RAFT_HANDLER, NullLogProvider.getInstance().getLog( this.getClass() ),
                 new ReoccurringJobQueue<>() );
@@ -494,7 +494,7 @@ class BatchingMessageHandlerTest
         batchHandler.handle( wrap( message3 ) );
 
         // when
-        batchHandler.start( raftId );
+        batchHandler.start( raftGroupId );
         var stopFuture = runAsync( () -> tryOrFailAtRuntime( batchHandler::stop ) );
         Thread.sleep( 500 );
 
@@ -533,7 +533,7 @@ class BatchingMessageHandlerTest
 
     private InboundRaftMessageContainer<?> wrap( Instant instant, RaftMessage message )
     {
-        return InboundRaftMessageContainer.of( instant, localRaftId, message );
+        return InboundRaftMessageContainer.of( instant, localRaftGroupId, message );
     }
 
     private ReplicatedContent content( String content )

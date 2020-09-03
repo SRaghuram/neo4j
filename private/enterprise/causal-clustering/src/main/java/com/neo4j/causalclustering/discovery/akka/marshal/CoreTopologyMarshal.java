@@ -7,13 +7,13 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.marshal.ChannelMarshal;
@@ -23,40 +23,40 @@ import org.neo4j.kernel.database.DatabaseId;
 
 public class CoreTopologyMarshal extends SafeChannelMarshal<DatabaseCoreTopology>
 {
-    private final ChannelMarshal<MemberId> memberIdMarshal = new MemberId.Marshal();
+    private final ChannelMarshal<ServerId> serverIdMarshal = ServerId.Marshal.INSTANCE;
     private final ChannelMarshal<CoreServerInfo> coreServerInfoChannelMarshal = new CoreServerInfoMarshal();
-    private final ChannelMarshal<RaftId> raftIdMarshal = new RaftId.Marshal();
+    private final ChannelMarshal<RaftGroupId> raftGroupIdMarshal = RaftGroupId.Marshal.INSTANCE;
 
     @Override
     protected DatabaseCoreTopology unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
         DatabaseId databaseId = DatabaseIdWithoutNameMarshal.INSTANCE.unmarshal( channel );
-        RaftId raftId = raftIdMarshal.unmarshal( channel );
+        RaftGroupId raftGroupId = raftGroupIdMarshal.unmarshal( channel );
 
         int memberCount = channel.getInt();
-        HashMap<MemberId,CoreServerInfo> members = new HashMap<>( memberCount );
+        HashMap<ServerId,CoreServerInfo> members = new HashMap<>( memberCount );
         for ( int i = 0; i < memberCount; i++ )
         {
-            MemberId memberId = memberIdMarshal.unmarshal( channel );
+            ServerId serverId = serverIdMarshal.unmarshal( channel );
             CoreServerInfo coreServerInfo = coreServerInfoChannelMarshal.unmarshal( channel );
-            members.put( memberId, coreServerInfo );
+            members.put( serverId, coreServerInfo );
         }
 
-        return new DatabaseCoreTopology( databaseId, raftId, members );
+        return new DatabaseCoreTopology( databaseId, raftGroupId, members );
     }
 
     @Override
     public void marshal( DatabaseCoreTopology coreTopology, WritableChannel channel ) throws IOException
     {
         DatabaseIdWithoutNameMarshal.INSTANCE.marshal( coreTopology.databaseId(), channel );
-        raftIdMarshal.marshal( coreTopology.raftId(), channel );
+        raftGroupIdMarshal.marshal( coreTopology.raftGroupId(), channel );
 
         channel.putInt( coreTopology.servers().size() );
-        for ( Map.Entry<MemberId,CoreServerInfo> entry : coreTopology.servers().entrySet() )
+        for ( Map.Entry<ServerId,CoreServerInfo> entry : coreTopology.servers().entrySet() )
         {
-            MemberId memberId = entry.getKey();
+            ServerId serverId = entry.getKey();
             CoreServerInfo coreServerInfo = entry.getValue();
-            memberIdMarshal.marshal( memberId, channel );
+            serverIdMarshal.marshal( serverId, channel );
             coreServerInfoChannelMarshal.marshal( coreServerInfo, channel );
         }
     }

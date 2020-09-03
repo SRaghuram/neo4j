@@ -18,7 +18,6 @@ import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.EnterpriseSystemGraphDbmsModel;
 import com.neo4j.dbms.StandaloneDbmsReconcilerModule;
 import com.neo4j.dbms.database.EnterpriseMultiDatabaseManager;
-import com.neo4j.dbms.database.DbmsLogEntryWriterProvider;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.dbms.procedures.wait.WaitProcedure;
 import com.neo4j.fabric.auth.FabricAuthManagerWrapper;
@@ -130,7 +129,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
         globalProcedures.register(
-                WaitProcedure.standalone( ServerId.of( new UUID( 0, 1 ) ), globalModule.getGlobalConfig().get( BoltConnector.advertised_address ),
+                WaitProcedure.standalone( new ServerId( new UUID( 0, 1 ) ), globalModule.getGlobalConfig().get( BoltConnector.advertised_address ),
                         globalModule.getGlobalClock(), globalModule.getLogService().getInternalLogProvider(),
                         new InfoProvider( databaseManager, databaseStateService ) ) );
         fabricServicesBootstrap.registerProcedures( globalProcedures );

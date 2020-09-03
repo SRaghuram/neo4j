@@ -5,25 +5,24 @@
  */
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
-import com.neo4j.causalclustering.identity.RaftMemberId;
-
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 class LeaderTransferTarget
 {
     static final LeaderTransferTarget NO_TARGET = new LeaderTransferTarget( null, null );
     private final NamedDatabaseId namedDatabaseId;
-    private final RaftMemberId raftMemberId;
+    private final ServerId serverId;
 
-    LeaderTransferTarget( NamedDatabaseId namedDatabaseId, RaftMemberId raftMemberId )
+    LeaderTransferTarget( NamedDatabaseId namedDatabaseId, ServerId serverId )
     {
         this.namedDatabaseId = namedDatabaseId;
-        this.raftMemberId = raftMemberId;
+        this.serverId = serverId;
     }
 
-    RaftMemberId to()
+    ServerId to()
     {
-        return raftMemberId;
+        return serverId;
     }
 
     NamedDatabaseId databaseId()

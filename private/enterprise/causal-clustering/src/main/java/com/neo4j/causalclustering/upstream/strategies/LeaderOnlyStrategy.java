@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.upstream.strategies;
 
 import com.neo4j.causalclustering.discovery.RoleInfo;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 
@@ -15,6 +14,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.neo4j.annotations.service.ServiceProvider;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 @ServiceProvider
@@ -28,22 +28,22 @@ public class LeaderOnlyStrategy extends UpstreamDatabaseSelectionStrategy
     }
 
     @Override
-    public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
+    public Optional<ServerId> upstreamServerForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
     {
-        Set<MemberId> coreMemberIds = topologyService.coreTopologyForDatabase( namedDatabaseId ).servers().keySet();
+        Set<ServerId> coreServerIds = topologyService.coreTopologyForDatabase( namedDatabaseId ).servers().keySet();
 
-        if ( coreMemberIds.isEmpty() )
+        if ( coreServerIds.isEmpty() )
         {
             throw new UpstreamDatabaseSelectionException( "No core servers available" );
         }
 
-        for ( MemberId memberId : coreMemberIds )
+        for ( ServerId serverId : coreServerIds )
         {
-            RoleInfo role = topologyService.lookupRole( namedDatabaseId, memberId );
+            RoleInfo role = topologyService.lookupRole( namedDatabaseId, serverId );
 
-            if ( role == RoleInfo.LEADER && !Objects.equals( myself, memberId ) )
+            if ( role == RoleInfo.LEADER && !Objects.equals( myself, serverId ) )
             {
-                return Optional.of( memberId );
+                return Optional.of( serverId );
             }
         }
 

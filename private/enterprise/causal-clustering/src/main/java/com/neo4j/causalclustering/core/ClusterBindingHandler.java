@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.messaging.ComposableMessageHandler;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 
@@ -21,7 +21,7 @@ public class ClusterBindingHandler implements LifecycleMessageHandler<RaftMessag
     private final RaftMessageDispatcher raftMessageDispatcher;
     private final Log log;
 
-    private volatile RaftId boundRaftId;
+    private volatile RaftGroupId boundRaftGroupId;
 
     public ClusterBindingHandler( RaftMessageDispatcher raftMessageDispatcher,
             LifecycleMessageHandler<RaftMessages.InboundRaftMessageContainer<?>> delegateHandler,
@@ -38,11 +38,11 @@ public class ClusterBindingHandler implements LifecycleMessageHandler<RaftMessag
     }
 
     @Override
-    public void start( RaftId raftId ) throws Exception
+    public void start( RaftGroupId raftGroupId ) throws Exception
     {
-        boundRaftId = raftId;
-        delegateHandler.start( raftId );
-        raftMessageDispatcher.registerHandlerChain( raftId, this );
+        boundRaftGroupId = raftGroupId;
+        delegateHandler.start( raftGroupId );
+        raftMessageDispatcher.registerHandlerChain( raftGroupId, this );
     }
 
     @Override
@@ -50,10 +50,10 @@ public class ClusterBindingHandler implements LifecycleMessageHandler<RaftMessag
     {
         try
         {
-            if ( boundRaftId != null )
+            if ( boundRaftGroupId != null )
             {
-                raftMessageDispatcher.deregisterHandlerChain( boundRaftId );
-                boundRaftId = null;
+                raftMessageDispatcher.deregisterHandlerChain( boundRaftGroupId );
+                boundRaftGroupId = null;
             }
         }
         finally
@@ -65,15 +65,15 @@ public class ClusterBindingHandler implements LifecycleMessageHandler<RaftMessag
     @Override
     public void handle( RaftMessages.InboundRaftMessageContainer<?> message )
     {
-        var raftId = boundRaftId;
-        if ( Objects.isNull( raftId ) )
+        var raftGroupId = boundRaftGroupId;
+        if ( Objects.isNull( raftGroupId ) )
         {
             log.debug( "Message handling has been stopped, dropping the message: %s", message.message() );
         }
-        else if ( !Objects.equals( raftId, message.raftId() ) )
+        else if ( !Objects.equals( raftGroupId, message.raftGroupId() ) )
         {
-            log.info( "Discarding message[%s] owing to mismatched raftId. Expected: %s, Encountered: %s",
-                    message.message(), raftId, message.raftId() );
+            log.info( "Discarding message[%s] owing to mismatched raftGroupId. Expected: %s, Encountered: %s",
+                    message.message(), raftGroupId, message.raftGroupId() );
         }
         else
         {

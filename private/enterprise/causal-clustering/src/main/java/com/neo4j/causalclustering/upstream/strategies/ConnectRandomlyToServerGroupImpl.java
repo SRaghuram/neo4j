@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.upstream.strategies;
 
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.configuration.ServerGroupName;
 
 import java.util.Collection;
@@ -20,6 +19,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static java.util.stream.Collectors.toList;
@@ -28,17 +28,17 @@ public class ConnectRandomlyToServerGroupImpl
 {
     private final Supplier<Set<ServerGroupName>> groupsProvider;
     private final TopologyService topologyService;
-    private final MemberId myself;
+    private final ServerId myself;
     private final Random random = new Random();
 
-    ConnectRandomlyToServerGroupImpl( Supplier<Set<ServerGroupName>> groupsProvider, TopologyService topologyService, MemberId myself )
+    ConnectRandomlyToServerGroupImpl( Supplier<Set<ServerGroupName>> groupsProvider, TopologyService topologyService, ServerId myself )
     {
         this.groupsProvider = groupsProvider;
         this.topologyService = topologyService;
         this.myself = myself;
     }
 
-    public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId )
+    public Optional<ServerId> upstreamServerForDatabase( NamedDatabaseId namedDatabaseId )
     {
         var choices = choices( namedDatabaseId );
 
@@ -52,16 +52,16 @@ public class ConnectRandomlyToServerGroupImpl
         }
     }
 
-    public Collection<MemberId> upstreamMembersForDatabase( NamedDatabaseId namedDatabaseId )
+    public Collection<ServerId> upstreamServersForDatabase( NamedDatabaseId namedDatabaseId )
     {
         var choices = choices( namedDatabaseId );
         Collections.shuffle( choices );
         return choices;
     }
 
-    private List<MemberId> choices( NamedDatabaseId namedDatabaseId )
+    private List<ServerId> choices( NamedDatabaseId namedDatabaseId )
     {
-        Map<MemberId,ReadReplicaInfo> replicas = topologyService.readReplicaTopologyForDatabase( namedDatabaseId ).servers();
+        Map<ServerId,ReadReplicaInfo> replicas = topologyService.readReplicaTopologyForDatabase( namedDatabaseId ).servers();
 
         return groupsProvider.get()
                 .stream()
@@ -70,7 +70,7 @@ public class ConnectRandomlyToServerGroupImpl
                 .collect( toList() );
     }
 
-    private Predicate<Map.Entry<MemberId,ReadReplicaInfo>> isMyGroupAndNotMe( ServerGroupName group )
+    private Predicate<Map.Entry<ServerId,ReadReplicaInfo>> isMyGroupAndNotMe( ServerGroupName group )
     {
         return entry -> entry.getValue().groups().contains( group ) && !entry.getKey().equals( myself );
     }

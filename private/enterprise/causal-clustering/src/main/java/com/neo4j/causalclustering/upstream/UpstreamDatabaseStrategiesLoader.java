@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.upstream;
 
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.util.Collection;
@@ -16,6 +15,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.service.Services;
@@ -33,11 +33,11 @@ public class UpstreamDatabaseStrategiesLoader implements Iterable<UpstreamDataba
 {
     private final TopologyService topologyService;
     private final Config config;
-    private final MemberId myself;
+    private final ServerId myself;
     private final Log log;
     private final LogProvider logProvider;
 
-    public UpstreamDatabaseStrategiesLoader( TopologyService topologyService, Config config, MemberId myself, LogProvider logProvider )
+    public UpstreamDatabaseStrategiesLoader( TopologyService topologyService, Config config, ServerId myself, LogProvider logProvider )
     {
         this.topologyService = topologyService;
         this.config = config;

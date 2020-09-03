@@ -14,8 +14,8 @@ import com.neo4j.causalclustering.core.state.CoreStateFiles;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState;
 import com.neo4j.causalclustering.core.state.storage.DurableStateStorage;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.dbms.QuarantineMarker;
 
 import java.nio.file.Path;
@@ -53,9 +53,15 @@ public class ClusterStateStorageFactory
         return createSimpleStorage( layout.clusterStateVersionFile(), CoreStateFiles.VERSION, globalLogProvider );
     }
 
-    public SimpleStorage<MemberId> createMemberIdStorage()
+    @Deprecated // N.B: this is just used for migration now
+    public SimpleStorage<RaftMemberId> createOldMemberIdStorage()
     {
-        return createSimpleStorage( layout.memberIdStateFile(), CoreStateFiles.CORE_MEMBER_ID, globalLogProvider );
+        return createSimpleStorage( layout.oldMemberIdStateFile(), CoreStateFiles.OLD_CORE_MEMBER_ID, globalLogProvider );
+    }
+
+    public SimpleStorage<RaftMemberId> createRaftMemberIdStorage( String databaseName )
+    {
+        return createSimpleStorage( layout.raftMemberIdStateFile( databaseName ), CoreStateFiles.RAFT_MEMBER_ID, globalLogProvider );
     }
 
     public SimpleStorage<QuarantineMarker> createQuarantineMarkerStorage( String databaseName )
@@ -63,9 +69,9 @@ public class ClusterStateStorageFactory
         return createSimpleStorage( layout.quarantineMarkerStateFile( databaseName ), CoreStateFiles.QUARANTINE_MARKER, globalLogProvider );
     }
 
-    public SimpleStorage<RaftId> createRaftIdStorage( String databaseName, DatabaseLogProvider logProvider )
+    public SimpleStorage<RaftGroupId> createRaftGroupIdStorage( String databaseName, DatabaseLogProvider logProvider )
     {
-        return createSimpleStorage( layout.raftIdStateFile( databaseName ), CoreStateFiles.RAFT_ID, logProvider );
+        return createSimpleStorage( layout.raftGroupIdFile( databaseName ), CoreStateFiles.RAFT_GROUP_ID, logProvider );
     }
 
     public StateStorage<ReplicatedLeaseState> createLeaseStorage( String databaseName, LifeSupport life, DatabaseLogProvider logProvider )
@@ -108,10 +114,5 @@ public class ClusterStateStorageFactory
         DurableStateStorage<T> storage = new DurableStateStorage<>( fs, directory, type, type.rotationSize( config ), logProvider, memoryTracker );
         life.add( storage );
         return storage;
-    }
-
-    public ClusterStateLayout layout()
-    {
-        return layout;
     }
 }

@@ -6,15 +6,14 @@
 package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.stream.Collectors;
 
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 public class UpstreamAddressLookup
@@ -32,8 +31,8 @@ public class UpstreamAddressLookup
     {
         try
         {
-            MemberId upstreamMember = strategySelector.bestUpstreamMemberForDatabase( namedDatabaseId );
-            return topologyService.lookupCatchupAddress( upstreamMember );
+            ServerId upstreamServer = strategySelector.bestUpstreamServerForDatabase( namedDatabaseId );
+            return topologyService.lookupCatchupAddress( upstreamServer );
         }
         catch ( UpstreamDatabaseSelectionException e )
         {
@@ -45,11 +44,11 @@ public class UpstreamAddressLookup
     {
         try
         {
-            var upstreamMembers = strategySelector.bestUpstreamMembersForDatabase( namedDatabaseId );
+            var upstreamServers = strategySelector.bestUpstreamServersForDatabase( namedDatabaseId );
             var upstreamAddresses = new ArrayList<SocketAddress>();
-            for ( var member : upstreamMembers )
+            for ( var server : upstreamServers )
             {
-                upstreamAddresses.add( topologyService.lookupCatchupAddress( member ) );
+                upstreamAddresses.add( topologyService.lookupCatchupAddress( server ) );
             }
             return upstreamAddresses;
         }

@@ -14,7 +14,6 @@ import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
 import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.discovery.Topology;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -34,6 +33,7 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -45,7 +45,7 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.FakeClockJobScheduler;
 
-import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberId;
+import static com.neo4j.causalclustering.discovery.FakeTopologyService.serverId;
 import static org.mockito.Mockito.spy;
 import static org.neo4j.logging.LogAssertions.assertThat;
 
@@ -73,9 +73,9 @@ class TopologyLoggerTest
         // given some topology changes
         var namedDatabaseIds = generateNamedDatabaseIds( 3 );
         var databaseIds = extractDatabaseIds( namedDatabaseIds );
-        var topologyService = new FakeTopologyService( memberIds( 0, MEMBERS_PER_ROLE ),
-                                                       memberIds( MEMBERS_PER_ROLE,2 * MEMBERS_PER_ROLE ),
-                                                       memberId( 0 ),
+        var topologyService = new FakeTopologyService( serverIds( 0, MEMBERS_PER_ROLE ),
+                                                       serverIds( MEMBERS_PER_ROLE,2 * MEMBERS_PER_ROLE ),
+                                                       serverId( 0 ),
                                                        namedDatabaseIds );
 
         var logger = new AssertableLogProvider();
@@ -84,7 +84,7 @@ class TopologyLoggerTest
         var topologyLogger = new TopologyLogger( timerService, logger, GlobalTopologyState.class, () -> databaseIds );
 
         namedDatabaseIds.stream()
-                        .map( db -> topologyChangePair.create( topologyService, memberId( roleOffset ), db ) )
+                        .map( db -> topologyChangePair.create( topologyService, serverId( roleOffset ), db ) )
                         .forEach( pair -> topologyLogger.logTopologyChange( topologyDescription, pair.first(), pair.other() ) );
 
         // when the timer is fired
@@ -92,13 +92,13 @@ class TopologyLoggerTest
         timerService.getTimer().invoke();
 
         // then those topology changes should be logged
-        var sortedRemainingMembers = new TreeSet<>( Comparator.comparing( MemberId::getUuid ) );
-        sortedRemainingMembers.addAll( memberIds( 1, 3, roleOffset ) );
+        var sortedRemainingMembers = new TreeSet<>( Comparator.comparing( ServerId::uuid ) );
+        sortedRemainingMembers.addAll( serverIds( 1, 3, roleOffset ) );
         var expectedMessage = String.format( "%s for all databases is now: %s" +
                                              System.lineSeparator() +
-                                             "Lost members :%s" +
+                                             "Lost servers :%s" +
                                              System.lineSeparator() +
-                                             "No new members", topologyDescription, sortedRemainingMembers, Set.of( memberId( roleOffset ) ) );
+                                             "No new servers", topologyDescription, sortedRemainingMembers, Set.of( serverId( roleOffset ) ) );
 
         assertThat( logger )
                 .forClass( GlobalTopologyState.class )
@@ -120,9 +120,9 @@ class TopologyLoggerTest
         // given
         var namedDatabaseIds = generateNamedDatabaseIds( 5 );
         var databaseIds = extractDatabaseIds( namedDatabaseIds );
-        var topologyService = new FakeTopologyService( memberIds( 0, MEMBERS_PER_ROLE ),
-                                                       memberIds( MEMBERS_PER_ROLE,2 * MEMBERS_PER_ROLE ),
-                                                       memberId( 0 ),
+        var topologyService = new FakeTopologyService( serverIds( 0, MEMBERS_PER_ROLE ),
+                                                       serverIds( MEMBERS_PER_ROLE,2 * MEMBERS_PER_ROLE ),
+                                                       serverId( 0 ),
                                                        namedDatabaseIds );
 
         var logger = new AssertableLogProvider();
@@ -135,7 +135,7 @@ class TopologyLoggerTest
         namedDatabaseIds.stream()
                         .limit( 2 )
                         .peek( namedDatabaseId -> loggedDatabaseIds.add( namedDatabaseId.databaseId() ) )
-                        .map( namedDatabaseId -> topologyChangePair.create( topologyService, memberId( roleOffset ), namedDatabaseId ) )
+                        .map( namedDatabaseId -> topologyChangePair.create( topologyService, serverId( roleOffset ), namedDatabaseId ) )
                         .forEach( topology -> topologyLogger.logTopologyChange( topologyDescription, topology.first(), topology.other() ) );
 
         // then nothing should be logged
@@ -145,18 +145,18 @@ class TopologyLoggerTest
         namedDatabaseIds.stream()
                         .skip( 2 )
                         .limit( 2 )
-                        .map( namedDatabaseId -> topologyChangePair.create( topologyService, memberId( roleOffset + 1 ), namedDatabaseId ) )
+                        .map( namedDatabaseId -> topologyChangePair.create( topologyService, serverId( roleOffset + 1 ), namedDatabaseId ) )
                         .forEach( topology -> topologyLogger.logTopologyChange( topologyDescription, topology.first(), topology.other() ) );
 
         // then first batchKey should be flushed
-        var sortedRemainingMembers = memberIds( roleOffset + 1, roleOffset + 3 );
+        var sortedRemainingMembers = serverIds( roleOffset + 1, roleOffset + 3 );
         var expectedMessage = String.format( "%s for databases %s and %s is now: %s" +
                                              System.lineSeparator() +
-                                             "Lost members :%s" +
+                                             "Lost servers :%s" +
                                              System.lineSeparator() +
-                                             "No new members",
+                                             "No new servers",
                                              topologyDescription, loggedDatabaseIds.get( 0 ), loggedDatabaseIds.get( 1 ),
-                                             sortedRemainingMembers, Set.of( memberId( roleOffset ) ) );
+                                             sortedRemainingMembers, Set.of( serverId( roleOffset ) ) );
         assertThat( logger )
                 .forClass( GlobalTopologyState.class )
                 .forLevel( AssertableLogProvider.Level.INFO )
@@ -170,9 +170,9 @@ class TopologyLoggerTest
         // given
         var namedDatabaseIds = generateNamedDatabaseIds( 3 );
         var databaseIds = extractDatabaseIds( namedDatabaseIds );
-        var topologyService = new FakeTopologyService( memberIds( 0, MEMBERS_PER_ROLE ),
-                                                       memberIds( MEMBERS_PER_ROLE, 2 * MEMBERS_PER_ROLE ),
-                                                       memberId( 0 ),
+        var topologyService = new FakeTopologyService( serverIds( 0, MEMBERS_PER_ROLE ),
+                                                       serverIds( MEMBERS_PER_ROLE, 2 * MEMBERS_PER_ROLE ),
+                                                       serverId( 0 ),
                                                        namedDatabaseIds );
 
         var logger = new AssertableLogProvider();
@@ -181,19 +181,19 @@ class TopologyLoggerTest
         var topologyLogger = new TopologyLogger( timerService, logger, GlobalTopologyState.class, () -> databaseIds );
 
         // when timer is fired after topology change for one database
-        var newOldTopology = topologyChangePair.create( topologyService, memberId( roleOffset ), namedDatabaseIds.first() );
+        var newOldTopology = topologyChangePair.create( topologyService, serverId( roleOffset ), namedDatabaseIds.first() );
         topologyLogger.logTopologyChange( topologyDescription, newOldTopology.first(), newOldTopology.other() );
         timerService.getTimer().invoke();
 
         // then log should contain one explicit database name
-        var sortedRemainingMembers = memberIds( 1, 3, roleOffset );
+        var sortedRemainingMembers = serverIds( 1, 3, roleOffset );
         var expectedMessage = String.format( "%s for database %s is now: %s" +
                                          System.lineSeparator() +
-                                         "Lost members :%s" +
+                                         "Lost servers :%s" +
                                          System.lineSeparator() +
-                                         "No new members",
+                                         "No new servers",
                                          topologyDescription, namedDatabaseIds.first().databaseId(),
-                                             sortedRemainingMembers, Set.of( memberId( roleOffset ) ) );
+                                             sortedRemainingMembers, Set.of( serverId( roleOffset ) ) );
         assertThat( logger )
                 .forClass( GlobalTopologyState.class )
                 .forLevel( AssertableLogProvider.Level.INFO )
@@ -207,9 +207,9 @@ class TopologyLoggerTest
         // given
         var namedDatabaseIds = generateNamedDatabaseIds( 3 );
         var databaseIds = extractDatabaseIds( namedDatabaseIds );
-        var topologyService = new FakeTopologyService( memberIds( 0, MEMBERS_PER_ROLE ),
-                                                       memberIds( MEMBERS_PER_ROLE,2 * MEMBERS_PER_ROLE ),
-                                                       memberId( 0 ),
+        var topologyService = new FakeTopologyService( serverIds( 0, MEMBERS_PER_ROLE ),
+                                                       serverIds( MEMBERS_PER_ROLE,2 * MEMBERS_PER_ROLE ),
+                                                       serverId( 0 ),
                                                        namedDatabaseIds );
 
         var logger = new AssertableLogProvider();
@@ -219,18 +219,18 @@ class TopologyLoggerTest
 
         // when timer is fired after topology change for all database
         namedDatabaseIds.stream()
-                        .map( namedDatabaseId -> topologyChangePair.create( topologyService, memberId( roleOffset ), namedDatabaseId ) )
+                        .map( namedDatabaseId -> topologyChangePair.create( topologyService, serverId( roleOffset ), namedDatabaseId ) )
                         .forEach( pair -> topologyLogger.logTopologyChange( topologyDescription, pair.first(), pair.other() ) );
         timerService.getTimer().invoke();
 
         // then log should contain changes for "all databases"
-        var sortedRemainingMembers = memberIds( 1, 3, roleOffset );
+        var sortedRemainingMembers = serverIds( 1, 3, roleOffset );
         var expectedMessage = String.format( "%s for all databases is now: %s" +
                                              System.lineSeparator() +
-                                             "Lost members :%s" +
+                                             "Lost servers :%s" +
                                              System.lineSeparator() +
-                                             "No new members",
-                                             topologyDescription, sortedRemainingMembers, Set.of( memberId( roleOffset ) ) );
+                                             "No new servers",
+                                             topologyDescription, sortedRemainingMembers, Set.of( serverId( roleOffset ) ) );
         assertThat( logger )
                 .forClass( GlobalTopologyState.class )
                 .forLevel( AssertableLogProvider.Level.INFO )
@@ -244,9 +244,9 @@ class TopologyLoggerTest
         // given
         var namedDatabaseIds = generateNamedDatabaseIds( 5 );
         var databaseIds = extractDatabaseIds( namedDatabaseIds );
-        var topologyService = new FakeTopologyService( memberIds( 0, MEMBERS_PER_ROLE ),
-                                                       memberIds( MEMBERS_PER_ROLE, 2 * MEMBERS_PER_ROLE ),
-                                                       memberId( 0 ),
+        var topologyService = new FakeTopologyService( serverIds( 0, MEMBERS_PER_ROLE ),
+                                                       serverIds( MEMBERS_PER_ROLE, 2 * MEMBERS_PER_ROLE ),
+                                                       serverId( 0 ),
                                                        namedDatabaseIds );
 
         var logger = new AssertableLogProvider();
@@ -257,19 +257,19 @@ class TopologyLoggerTest
         // when timer is fired after topology change for 4 out of 5 databases
         namedDatabaseIds.stream()
                         .filter( namedDatabaseId -> !namedDatabaseId.equals( namedDatabaseIds.first() ) )
-                        .map( namedDatabaseId -> topologyChangePair.create( topologyService, memberId( roleOffset ), namedDatabaseId ) )
+                        .map( namedDatabaseId -> topologyChangePair.create( topologyService, serverId( roleOffset ), namedDatabaseId ) )
                         .forEach( pair -> topologyLogger.logTopologyChange( topologyDescription, pair.first(), pair.other() ) );
         timerService.getTimer().invoke();
 
         // then log should contain changes for "all databases except..."
-        var sortedRemainingMembers = memberIds( 1, 3, roleOffset );
+        var sortedRemainingMembers = serverIds( 1, 3, roleOffset );
         var expectedMessage = String.format( "%s for all databases except for %s is now: %s" +
                                              System.lineSeparator() +
-                                             "Lost members :%s" +
+                                             "Lost servers :%s" +
                                              System.lineSeparator() +
-                                             "No new members",
+                                             "No new servers",
                                              topologyDescription, namedDatabaseIds.first().databaseId(),
-                                             sortedRemainingMembers, Set.of( memberId( roleOffset ) ) );
+                                             sortedRemainingMembers, Set.of( serverId( roleOffset ) ) );
         assertThat( logger )
                 .forClass( GlobalTopologyState.class )
                 .forLevel( AssertableLogProvider.Level.INFO )
@@ -283,9 +283,9 @@ class TopologyLoggerTest
         // given
         var namedDatabaseIds = generateNamedDatabaseIds( 8 );
         var databaseIds = extractDatabaseIds( namedDatabaseIds );
-        var topologyService = new FakeTopologyService( memberIds( 0, MEMBERS_PER_ROLE ),
-                                                       memberIds( MEMBERS_PER_ROLE, 2 * MEMBERS_PER_ROLE ),
-                                                       memberId( 0 ),
+        var topologyService = new FakeTopologyService( serverIds( 0, MEMBERS_PER_ROLE ),
+                                                       serverIds( MEMBERS_PER_ROLE, 2 * MEMBERS_PER_ROLE ),
+                                                       serverId( 0 ),
                                                        namedDatabaseIds );
 
         var logger = new AssertableLogProvider();
@@ -296,7 +296,7 @@ class TopologyLoggerTest
         // when timer is fired after topology change for 2 out of 8 databases
         var changedDatabases = new ArrayList<DatabaseId>( 2 );
         namedDatabaseIds.stream().limit( 2 )
-                                .map( namedDatabaseId -> topologyChangePair.create( topologyService, memberId( roleOffset ), namedDatabaseId ) )
+                                .map( namedDatabaseId -> topologyChangePair.create( topologyService, serverId( roleOffset ), namedDatabaseId ) )
                                 .forEach( pair -> {
                                     topologyLogger.logTopologyChange( topologyDescription, pair.first(), pair.other() );
                                     changedDatabases.add( pair.first().databaseId() );
@@ -304,14 +304,14 @@ class TopologyLoggerTest
         timerService.getTimer().invoke();
 
         // then log should contain explicit names for changed databases
-        var sortedRemainingMembers = memberIds( 1, 3, roleOffset );
+        var sortedRemainingMembers = serverIds( 1, 3, roleOffset );
         var expectedMessage = String.format( "%s for databases %s and %s is now: %s" +
                                              System.lineSeparator() +
-                                             "Lost members :%s" +
+                                             "Lost servers :%s" +
                                              System.lineSeparator() +
-                                             "No new members",
+                                             "No new servers",
                                              topologyDescription, changedDatabases.get( 0 ), changedDatabases.get( 1 ),
-                                             sortedRemainingMembers, Set.of( memberId( roleOffset ) ) );
+                                             sortedRemainingMembers, Set.of( serverId( roleOffset ) ) );
         assertThat( logger )
                 .forClass( GlobalTopologyState.class )
                 .forLevel( AssertableLogProvider.Level.INFO )
@@ -327,9 +327,9 @@ class TopologyLoggerTest
 
         var namedDatabaseIds = generateNamedDatabaseIds( 15 );
         var databaseIds = extractDatabaseIds( namedDatabaseIds );
-        var topologyService = new FakeTopologyService( memberIds( 0, MEMBERS_PER_ROLE ),
-                                                       memberIds( MEMBERS_PER_ROLE, 2 * MEMBERS_PER_ROLE ),
-                                                       memberId( 0 ),
+        var topologyService = new FakeTopologyService( serverIds( 0, MEMBERS_PER_ROLE ),
+                                                       serverIds( MEMBERS_PER_ROLE, 2 * MEMBERS_PER_ROLE ),
+                                                       serverId( 0 ),
                                                        namedDatabaseIds );
 
         var logger = new AssertableLogProvider();
@@ -339,18 +339,18 @@ class TopologyLoggerTest
 
         // when timer is fired after topology change for 8 out of 15 databases
         namedDatabaseIds.stream().limit( NBR_CHANGED_DATABASES )
-                        .map( namedDatabaseId -> topologyChangePair.create( topologyService, memberId( roleOffset ), namedDatabaseId ) )
+                        .map( namedDatabaseId -> topologyChangePair.create( topologyService, serverId( roleOffset ), namedDatabaseId ) )
                         .forEach( pair -> topologyLogger.logTopologyChange( topologyDescription, pair.first(), pair.other() ) );
         timerService.getTimer().invoke();
 
         // then log should contain number of databases changed
-        var sortedRemainingMembers = memberIds( 1, 3, roleOffset );
+        var sortedRemainingMembers = serverIds( 1, 3, roleOffset );
         var expectedMessage = String.format( "%s for %d databases is now: %s" +
                                              System.lineSeparator() +
-                                             "Lost members :%s" +
+                                             "Lost servers :%s" +
                                              System.lineSeparator() +
-                                             "No new members",
-                                             topologyDescription, NBR_CHANGED_DATABASES, sortedRemainingMembers, Set.of( memberId( roleOffset ) ) );
+                                             "No new servers",
+                                             topologyDescription, NBR_CHANGED_DATABASES, sortedRemainingMembers, Set.of( serverId( roleOffset ) ) );
         assertThat( logger )
                 .forClass( GlobalTopologyState.class )
                 .forLevel( AssertableLogProvider.Level.INFO )
@@ -363,9 +363,9 @@ class TopologyLoggerTest
         // given
         var namedDatabaseIds = generateNamedDatabaseIds( 3 );
         var databaseIds = extractDatabaseIds( namedDatabaseIds );
-        var topologyService = new FakeTopologyService( memberIds( 0, MEMBERS_PER_ROLE ),
+        var topologyService = new FakeTopologyService( serverIds( 0, MEMBERS_PER_ROLE ),
                                                        Set.of(),
-                                                       memberId( 0 ),
+                                                       serverId( 0 ),
                                                        namedDatabaseIds );
 
         var scheduler = new FakeClockJobScheduler();
@@ -375,9 +375,9 @@ class TopologyLoggerTest
         var topologyLogger = new TopologyLogger( timerService, logProvider, GlobalTopologyState.class, () -> databaseIds, batchTime );
 
         var dbIds = namedDatabaseIds.toArray( NamedDatabaseId[]::new );
-        var batch1 = coreChangeFactory.create( topologyService, memberId( 0 ), dbIds[0] );
-        var batch2Change1 = coreChangeFactory.create( topologyService, memberId( 1 ), dbIds[1] );
-        var batch2Change2 = coreChangeFactory.create( topologyService, memberId( 1 ), dbIds[2] );
+        var batch1 = coreChangeFactory.create( topologyService, serverId( 0 ), dbIds[0] );
+        var batch2Change1 = coreChangeFactory.create( topologyService, serverId( 1 ), dbIds[1] );
+        var batch2Change2 = coreChangeFactory.create( topologyService, serverId( 1 ), dbIds[2] );
 
         // when
         // First batch starts timer for batch time
@@ -389,17 +389,17 @@ class TopologyLoggerTest
 
         // then
         var sortedRemainingMembers = topologyService.allCoreServers().keySet().stream()
-                                                    .filter( member -> !Objects.equals( member, memberId( 0 ) ) )
-                                                    .collect( sortedSetCollector( MemberId::getUuid ) );
+                                                    .filter( server -> !Objects.equals( server, serverId( 0 ) ) )
+                                                    .collect( sortedSetCollector( ServerId::uuid ) );
         var expectedMessage = String.format( "%s for database %s is now: %s" +
                                              System.lineSeparator() +
-                                             "Lost members :%s" +
+                                             "Lost servers :%s" +
                                              System.lineSeparator() +
-                                             "No new members",
+                                             "No new servers",
                                              CORE_TOPOLOGY_DESCRIPTION,
                                              dbIds[0].databaseId(),
                                              sortedRemainingMembers,
-                                             Set.of( memberId( 0 ) ) );
+                                             Set.of( serverId( 0 ) ) );
         assertThat( logProvider )
                 .forClass( GlobalTopologyState.class )
                 .forLevel( AssertableLogProvider.Level.INFO )
@@ -422,17 +422,17 @@ class TopologyLoggerTest
 
         //then
         sortedRemainingMembers = topologyService.allCoreServers().keySet().stream()
-                                                .filter( member -> !Objects.equals( member, memberId( 1 ) ) )
-                                                .collect( sortedSetCollector( MemberId::getUuid ) );
+                                                .filter( server -> !Objects.equals( server, serverId( 1 ) ) )
+                                                .collect( sortedSetCollector( ServerId::uuid ) );
         expectedMessage = String.format( "%s for all databases except for %s is now: %s" +
                                          System.lineSeparator() +
-                                         "Lost members :%s" +
+                                         "Lost servers :%s" +
                                          System.lineSeparator() +
-                                         "No new members",
+                                         "No new servers",
                                          CORE_TOPOLOGY_DESCRIPTION,
                                          dbIds[0].databaseId(),
                                          sortedRemainingMembers,
-                                         Set.of( memberId( 1 ) ) );
+                                         Set.of( serverId( 1 ) ) );
         assertThat( logProvider )
                 .forClass( GlobalTopologyState.class )
                 .forLevel( AssertableLogProvider.Level.INFO )
@@ -442,30 +442,30 @@ class TopologyLoggerTest
     @FunctionalInterface
     interface TopologyChangePair<T extends Topology<? extends DiscoveryServerInfo>>
     {
-        Pair<T,T> create( TopologyService topologyService, MemberId removed, NamedDatabaseId database );
+        Pair<T,T> create( TopologyService topologyService, ServerId removed, NamedDatabaseId database );
     }
 
-    private static Pair<DatabaseCoreTopology,DatabaseCoreTopology> newOldCoreTopology( TopologyService topologyService, MemberId removed,
+    private static Pair<DatabaseCoreTopology,DatabaseCoreTopology> newOldCoreTopology( TopologyService topologyService, ServerId removed,
             NamedDatabaseId databaseId )
     {
         var oldTopology = topologyService.coreTopologyForDatabase( databaseId );
 
-        var membersMinusRemoved = new HashMap<>( oldTopology.servers() );
-        membersMinusRemoved.remove( removed );
+        var serversMinusRemoved = new HashMap<>( oldTopology.servers() );
+        serversMinusRemoved.remove( removed );
 
-        var newTopology = new DatabaseCoreTopology( databaseId.databaseId(), oldTopology.raftId(), membersMinusRemoved );
+        var newTopology = new DatabaseCoreTopology( databaseId.databaseId(), oldTopology.raftGroupId(), serversMinusRemoved );
         return Pair.of( newTopology, oldTopology );
     }
 
-    private static Pair<DatabaseReadReplicaTopology,DatabaseReadReplicaTopology> newOldReplicaTopology( TopologyService topologyService, MemberId removed,
+    private static Pair<DatabaseReadReplicaTopology,DatabaseReadReplicaTopology> newOldReplicaTopology( TopologyService topologyService, ServerId removed,
             NamedDatabaseId databaseId )
     {
         var oldReplicaTopology = topologyService.readReplicaTopologyForDatabase( databaseId );
 
-        var membersMinusRemoved = new HashMap<>( oldReplicaTopology.servers() );
-        membersMinusRemoved.remove( removed );
+        var serversMinusRemoved = new HashMap<>( oldReplicaTopology.servers() );
+        serversMinusRemoved.remove( removed );
 
-        var newReplicaTopology = new DatabaseReadReplicaTopology( databaseId.databaseId(), membersMinusRemoved );
+        var newReplicaTopology = new DatabaseReadReplicaTopology( databaseId.databaseId(), serversMinusRemoved );
         return Pair.of( newReplicaTopology, oldReplicaTopology );
     }
 
@@ -485,15 +485,15 @@ class TopologyLoggerTest
     }
 
     @SuppressWarnings( "SameParameterValue" )
-    private static SortedSet<MemberId> memberIds( int from, int until, int roleOffset )
+    private static SortedSet<ServerId> serverIds( int from, int until, int roleOffset )
     {
-        return memberIds( from + roleOffset, until + roleOffset );
+        return serverIds( from + roleOffset, until + roleOffset );
     }
 
-    private static SortedSet<MemberId> memberIds( int from, int until )
+    private static SortedSet<ServerId> serverIds( int from, int until )
     {
-        var result = new TreeSet<>( Comparator.comparing( MemberId::getUuid ) );
-        result.addAll( FakeTopologyService.memberIds( from, until ) );
+        var result = new TreeSet<>( Comparator.comparing( ServerId::uuid ) );
+        result.addAll( FakeTopologyService.serverIds( from, until ) );
         return result;
     }
 

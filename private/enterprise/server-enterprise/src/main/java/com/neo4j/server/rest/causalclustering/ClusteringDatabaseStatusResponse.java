@@ -6,11 +6,11 @@
 package com.neo4j.server.rest.causalclustering;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.time.Duration;
 import java.util.Collection;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @JsonSerialize
@@ -28,15 +28,14 @@ public class ClusteringDatabaseStatusResponse
     private final boolean isDiscoveryHealthy;
 
     ClusteringDatabaseStatusResponse( long lastAppliedRaftIndex, boolean isParticipatingInRaftGroup, Collection<RaftMemberId> votingMembers, boolean isHealthy,
-            RaftMemberId memberId, RaftMemberId leader, Duration millisSinceLastLeaderMessage, Double raftCommandsPerSecond, boolean isCore,
-            boolean isDiscoveryHealthy )
+            UUID memberId, UUID leader, Duration millisSinceLastLeaderMessage, Double raftCommandsPerSecond, boolean isCore, boolean isDiscoveryHealthy )
     {
         this.lastAppliedRaftIndex = lastAppliedRaftIndex;
         this.isParticipatingInRaftGroup = isParticipatingInRaftGroup;
-        this.votingMembers = votingMembers.stream().map( member -> member.getUuid().toString() ).sorted().collect( Collectors.toList() );
+        this.votingMembers = votingMembers.stream().map( member -> member.uuid().toString() ).sorted().collect( Collectors.toList() );
         this.isHealthy = isHealthy;
-        this.memberId = memberId.getUuid().toString();
-        this.leader = leader == null ? null : leader.getUuid().toString();
+        this.memberId = memberId.toString();
+        this.leader = leader == null ? null : leader.toString();
         this.millisSinceLastLeaderMessage = millisSinceLastLeaderMessage == null ? null : millisSinceLastLeaderMessage.toMillis();
         this.raftCommandsPerSecond = raftCommandsPerSecond;
         this.isCore = isCore;

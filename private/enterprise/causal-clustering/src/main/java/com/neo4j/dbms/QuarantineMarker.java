@@ -5,13 +5,13 @@
  */
 package com.neo4j.dbms;
 
-import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 
 import java.io.IOException;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.marshal.SafeStateMarshal;
 
 import static java.util.Objects.requireNonNull;
 

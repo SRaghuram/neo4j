@@ -12,7 +12,7 @@ import com.neo4j.bench.micro.benchmarks.cluster.ProtocolVersion;
 import com.neo4j.bench.micro.benchmarks.cluster.TxFactory;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -67,7 +67,7 @@ public class ReplicatedTxRepresentation extends AbstractRaftBenchmark
         log.info( "Created transaction representation of size: %d. Expected: %d. Diff%%: %f", clusterTx.size(), expectedSize,
                   diffPercent( expectedSize, clusterTx.size() ) );
         var replicatedTx = ReplicatedTransaction.from( clusterTx.txRepresentation(), NAMED_DATABASE_ID, LogEntryWriterFactory.LATEST );
-        return RaftMessages.OutboundRaftMessageContainer.of( RaftId.from( DATABASE_ID ), new RaftMessages.NewEntry.Request( MEMBER_ID, replicatedTx ) );
+        return RaftMessages.OutboundRaftMessageContainer.of( RaftGroupId.from( DATABASE_ID ), new RaftMessages.NewEntry.Request( MEMBER_ID, replicatedTx ) );
     }
 
     private float diffPercent( int expectedSize, int size )

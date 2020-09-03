@@ -11,15 +11,15 @@ import akka.cluster.MemberStatus;
 import akka.cluster.UniqueAddress;
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
-import java.util.TreeSet;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 
@@ -144,8 +144,8 @@ class BootstrapStateTest
         var otherRaftMemberId = IdFactory.randomRaftMemberId();
 
         var previouslyBootstrapped = Map.of(
-                RaftId.from( namedDatabaseId.databaseId() ), myRaftMemberId,
-                RaftId.from( otherNamedDatabased.databaseId() ), otherRaftMemberId );
+                RaftGroupId.from( namedDatabaseId.databaseId() ), myRaftMemberId,
+                RaftGroupId.from( otherNamedDatabased.databaseId() ), otherRaftMemberId );
 
         var bootstrapState = newBootstrapState( clusterViewMessage, metadataMessage, me.uniqueAddress(),
                 refuseToBeLeader, previouslyBootstrapped );
@@ -167,7 +167,7 @@ class BootstrapStateTest
                                                      MetadataMessage metadataMessage,
                                                      UniqueAddress uniqueAddress,
                                                      boolean refuseToBeLeader,
-                                                     Map<RaftId,RaftMemberId> previouslyBootstrapped )
+                                                     Map<RaftGroupId,RaftMemberId> previouslyBootstrapped )
     {
         var config = Config.defaults(refuse_to_be_leader, refuseToBeLeader );
 

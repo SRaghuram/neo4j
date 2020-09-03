@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.InboundRaftMessageContainer;
 import com.neo4j.causalclustering.helper.scheduling.LimitingScheduler;
 import com.neo4j.causalclustering.helper.scheduling.ReoccurringJobQueue;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.messaging.ComposableMessageHandler;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
@@ -71,9 +71,9 @@ public class BatchingMessageHandler implements Runnable, LifecycleMessageHandler
     }
 
     @Override
-    public void start( RaftId raftId ) throws Exception
+    public void start( RaftGroupId raftGroupId ) throws Exception
     {
-        handler.start( raftId );
+        handler.start( raftGroupId );
     }
 
     @Override
@@ -153,7 +153,7 @@ public class BatchingMessageHandler implements Runnable, LifecycleMessageHandler
     {
         inQueue.poll().ifPresent( message ->
         {
-            var batchedMessage = message.message().dispatch( batchingHandlerFactory.batchingHandler( message.receivedAt(), message.raftId() ) );
+            var batchedMessage = message.message().dispatch( batchingHandlerFactory.batchingHandler( message.receivedAt(), message.raftGroupId() ) );
             handler.handle( batchedMessage == null ? message : batchedMessage );
         } );
     }

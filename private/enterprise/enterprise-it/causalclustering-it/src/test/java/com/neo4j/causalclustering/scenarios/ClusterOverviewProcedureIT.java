@@ -239,7 +239,7 @@ class ClusterOverviewProcedureIT
         List<String> expectedMemberIds()
         {
             return sortedClusterMembers()
-                    .map( member -> member.serverId().getUuid().toString() )
+                    .map( member -> member.serverId().uuid().toString() )
                     .collect( toList() );
         }
 
@@ -288,7 +288,7 @@ class ClusterOverviewProcedureIT
         {
             return cluster.allMembers()
                     .stream()
-                    .sorted( comparing( member -> member.serverId().getUuid() ) );
+                    .sorted( comparing( member -> member.serverId().uuid() ) );
         }
 
         RoleInfo expectedRole( ClusterMember member, String databaseName )

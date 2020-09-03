@@ -9,8 +9,7 @@ import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -18,6 +17,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.io.marshal.ChannelMarshal;
 
@@ -33,8 +33,8 @@ class CoreTopologyMarshalTest extends BaseMarshalTest<DatabaseCoreTopology>
         var dbId3 = randomDatabaseId();
 
         return Arrays.asList(
-                new DatabaseCoreTopology( dbId1, RaftId.from( dbId1 ), coreServerInfos( 0 ) ),
-                new DatabaseCoreTopology( dbId2, RaftId.from( dbId2 ), coreServerInfos( 3 ) ),
+                new DatabaseCoreTopology( dbId1, RaftGroupId.from( dbId1 ), coreServerInfos( 0 ) ),
+                new DatabaseCoreTopology( dbId2, RaftGroupId.from( dbId2 ), coreServerInfos( 3 ) ),
                 new DatabaseCoreTopology( dbId3, null, coreServerInfos( 4 ) )
         );
     }
@@ -45,10 +45,10 @@ class CoreTopologyMarshalTest extends BaseMarshalTest<DatabaseCoreTopology>
         return new CoreTopologyMarshal();
     }
 
-    static Map<MemberId,CoreServerInfo> coreServerInfos( int count )
+    static Map<ServerId,CoreServerInfo> coreServerInfos( int count )
     {
         return IntStream.range( 0, count )
-                .mapToObj( i -> Pair.of( IdFactory.randomMemberId(), TestTopology.addressesForCore( i, false ) ) )
+                .mapToObj( i -> Pair.of( IdFactory.randomServerId(), TestTopology.addressesForCore( i, false ) ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
     }
 }

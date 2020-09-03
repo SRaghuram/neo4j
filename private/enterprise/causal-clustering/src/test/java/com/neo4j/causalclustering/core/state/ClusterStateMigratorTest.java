@@ -29,8 +29,8 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.causalclustering.core.state.CoreStateFiles.CORE_MEMBER_ID;
-import static com.neo4j.causalclustering.core.state.CoreStateFiles.RAFT_ID;
+import static com.neo4j.causalclustering.core.state.CoreStateFiles.OLD_CORE_MEMBER_ID;
+import static com.neo4j.causalclustering.core.state.CoreStateFiles.RAFT_GROUP_ID;
 import static com.neo4j.causalclustering.core.state.CoreStateFiles.VERSION;
 import static com.neo4j.configuration.CausalClusteringSettings.DEFAULT_CLUSTER_STATE_DIRECTORY_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -125,10 +125,10 @@ class ClusterStateMigratorTest
     {
         setup( clusterStateDirectory );
 
-        var memberId = IdFactory.randomMemberId();
-        var memberIdFile = clusterStateLayout.memberIdStateFile();
+        var memberId = IdFactory.randomRaftMemberId();
+        var memberIdFile = clusterStateLayout.oldMemberIdStateFile();
         assertFalse( fs.fileExists( memberIdFile ) );
-        var memberIdStorage = new SimpleFileStorage<>( fs, memberIdFile, CORE_MEMBER_ID.marshal(), INSTANCE );
+        var memberIdStorage = new SimpleFileStorage<>( fs, memberIdFile, OLD_CORE_MEMBER_ID.marshal(), INSTANCE );
         memberIdStorage.writeState( memberId );
         assertTrue( fs.fileExists( memberIdFile ) );
 
@@ -141,7 +141,7 @@ class ClusterStateMigratorTest
     private void setup( String clusterStateDirectory ) throws IOException
     {
         clusterStateLayout = ClusterStateLayout.of( testDirectory.directory( clusterStateDirectory ) );
-        writeRandomClusterId( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_NAME ) );
+        writeRandomClusterId( clusterStateLayout.raftGroupIdFile( DEFAULT_DATABASE_NAME ) );
 
         clusterStateVersionStorage = new SimpleFileStorage<>( fs, clusterStateLayout.clusterStateVersionFile(), VERSION.marshal(), INSTANCE );
         migrator = new ClusterStateMigrator( fs, clusterStateLayout, clusterStateVersionStorage, logProvider );
@@ -155,7 +155,7 @@ class ClusterStateMigratorTest
     private void writeRandomClusterId( Path file ) throws IOException
     {
         assertFalse( fs.fileExists( file ) );
-        var clusterIdStorage = new SimpleFileStorage<>( fs, file, RAFT_ID.marshal(), INSTANCE );
+        var clusterIdStorage = new SimpleFileStorage<>( fs, file, RAFT_GROUP_ID.marshal(), INSTANCE );
         clusterIdStorage.writeState( IdFactory.randomRaftId() );
         assertTrue( fs.fileExists( file ) );
     }
@@ -164,13 +164,13 @@ class ClusterStateMigratorTest
     {
         assertTrue( fs.isDirectory( clusterStateLayout.getClusterStateDirectory() ) );
         assertTrue( fs.fileExists( clusterStateLayout.clusterStateVersionFile() ) );
-        assertFalse( fs.fileExists( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_NAME ) ) );
+        assertFalse( fs.fileExists( clusterStateLayout.raftGroupIdFile( DEFAULT_DATABASE_NAME ) ) );
         assertEquals( new ClusterStateVersion( 1, 0 ), clusterStateVersionStorage.readState() );
     }
 
     private void assertMigrationDidNotHappen()
     {
         assertTrue( fs.isDirectory( clusterStateLayout.getClusterStateDirectory() ) );
-        assertTrue( fs.fileExists( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_NAME ) ) );
+        assertTrue( fs.fileExists( clusterStateLayout.raftGroupIdFile( DEFAULT_DATABASE_NAME ) ) );
     }
 }

@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FlushableChannel;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
+import org.neo4j.io.marshal.StateMarshal;
 import org.neo4j.io.memory.HeapScopedBuffer;
 import org.neo4j.io.state.StateStorage;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;

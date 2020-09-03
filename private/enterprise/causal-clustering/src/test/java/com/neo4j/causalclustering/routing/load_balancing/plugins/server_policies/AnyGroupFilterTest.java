@@ -26,42 +26,42 @@ class AnyGroupFilterTest
 
         ServerInfo serverA = new ServerInfo(
                 new SocketAddress( "bolt", 1 ),
-                IdFactory.randomMemberId(),
+                IdFactory.randomServerId(),
                 setOf( "china-west" )
         );
         ServerInfo serverB = new ServerInfo(
                 new SocketAddress( "bolt", 2 ),
-                IdFactory.randomMemberId(),
+                IdFactory.randomServerId(),
                 setOf( "europe" )
         );
         ServerInfo serverC = new ServerInfo(
                 new SocketAddress( "bolt", 3 ),
-                IdFactory.randomMemberId(),
+                IdFactory.randomServerId(),
                 setOf( "china", "china-west" )
         );
         ServerInfo serverD = new ServerInfo(
                 new SocketAddress( "bolt", 4 ),
-                IdFactory.randomMemberId(),
+                IdFactory.randomServerId(),
                 setOf( "china-west", "china" )
         );
         ServerInfo serverE = new ServerInfo(
                 new SocketAddress( "bolt", 5 ),
-                IdFactory.randomMemberId(),
+                IdFactory.randomServerId(),
                 setOf( "china-east", "asia" )
         );
         ServerInfo serverF = new ServerInfo(
                 new SocketAddress( "bolt", 6 ),
-                IdFactory.randomMemberId(),
+                IdFactory.randomServerId(),
                 setOf( "europe-west" )
         );
         ServerInfo serverG = new ServerInfo(
                 new SocketAddress( "bolt", 7 ),
-                IdFactory.randomMemberId(),
+                IdFactory.randomServerId(),
                 setOf( "china-west", "europe" )
         );
         ServerInfo serverH = new ServerInfo(
                 new SocketAddress( "bolt", 8 ),
-                IdFactory.randomMemberId(),
+                IdFactory.randomServerId(),
                 setOf( "africa" )
         );
 

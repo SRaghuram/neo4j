@@ -10,14 +10,15 @@ import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.discovery.ReplicatedRaftMapping;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
@@ -29,33 +30,40 @@ final class GlobalTopologyStateTestUtil
     {
     }
 
-    static void setupCoreTopologyState( GlobalTopologyState topologyState, NamedDatabaseId namedDatabaseId, MemberId leaderId, MemberId... followerIds )
+    static void setupCoreTopologyState( GlobalTopologyState topologyState, NamedDatabaseId namedDatabaseId, ServerId... coreIds )
     {
         var databaseId = namedDatabaseId.databaseId();
-        var coreMembers = new HashMap<MemberId,CoreServerInfo>();
+        var coreMembers = new HashMap<ServerId,CoreServerInfo>();
 
-        if ( leaderId != null )
+        if ( coreIds != null )
         {
-            coreMembers.put( leaderId, addressesForCore( 0, false, Set.of( databaseId ) ) );
-            topologyState.onDbLeaderUpdate( Map.of( databaseId, new LeaderInfo( RaftMemberId.from( leaderId ), 42 ) ) );
-        }
-
-        if ( followerIds != null )
-        {
-            for ( var i = 0; i < followerIds.length; i++ )
+            for ( var i = 0; i < coreIds.length; i++ )
             {
-                coreMembers.put( followerIds[i], addressesForCore( i + 1, false, Set.of( databaseId ) ) );
+                coreMembers.put( coreIds[i], addressesForCore( i + 1, false, Set.of( databaseId ) ) );
             }
         }
 
-        var coreTopology = new DatabaseCoreTopology( databaseId, RaftId.from( databaseId ), coreMembers );
+        var coreTopology = new DatabaseCoreTopology( databaseId, RaftGroupId.from( databaseId ), coreMembers );
         topologyState.onTopologyUpdate( coreTopology );
     }
 
-    static void setupReadReplicaTopologyState( GlobalTopologyState topologyState, NamedDatabaseId namedDatabaseId, MemberId... readReplicaIds )
+    static void setupRaftMapping( GlobalTopologyState topologyState, NamedDatabaseId namedDatabaseId, Map<ServerId,RaftMemberId> mapping )
     {
         var databaseId = namedDatabaseId.databaseId();
-        var readReplicas = new HashMap<MemberId,ReadReplicaInfo>();
+        mapping.forEach(
+                ( serverId, raftMemberId ) -> topologyState.onRaftMappingUpdate( ReplicatedRaftMapping.of( serverId, Map.of( databaseId, raftMemberId ) ) ) );
+    }
+
+    static void setupLeader( GlobalTopologyState topologyState, NamedDatabaseId namedDatabaseId, RaftMemberId leaderId )
+    {
+        var databaseId = namedDatabaseId.databaseId();
+        topologyState.onDbLeaderUpdate( Map.of( databaseId, new LeaderInfo( leaderId, 42 ) ) );
+    }
+
+    static void setupReadReplicaTopologyState( GlobalTopologyState topologyState, NamedDatabaseId namedDatabaseId, ServerId... readReplicaIds )
+    {
+        var databaseId = namedDatabaseId.databaseId();
+        var readReplicas = new HashMap<ServerId,ReadReplicaInfo>();
 
         if ( readReplicaIds != null )
         {

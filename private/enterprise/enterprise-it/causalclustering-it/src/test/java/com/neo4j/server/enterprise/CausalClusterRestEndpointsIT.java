@@ -58,6 +58,7 @@ import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 import static javax.ws.rs.core.Response.Status.OK;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.anEmptyMap;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -423,7 +424,7 @@ class CausalClusterRestEndpointsIT
             assertEventually( statusEndpoint( replica, KNOWN_DB ), new HamcrestCondition<>( leaderFieldIs( not( emptyOrNullString() ) ) ), 1, MINUTES );
             assertEventually( statusEndpoint( replica, KNOWN_DB ), new HamcrestCondition<>( raftMessageThroughputPerSecondFieldIs( greaterThan( 0.0 ) ) ),
                     1, MINUTES );
-            assertEventually( statusEndpoint( replica, KNOWN_DB ), new HamcrestCondition<>( votingMemberSetIs( hasSize( 3 ) ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( replica, KNOWN_DB ), new HamcrestCondition<>( votingMemberSetIs( empty() ) ), 1, MINUTES );
             assertEventually( statusEndpoint( replica, KNOWN_DB ), new HamcrestCondition<>( participatingInRaftGroup( false ) ), 1, MINUTES );
             assertEventually( statusEndpoint( replica, KNOWN_DB ), new HamcrestCondition<>( millisSinceLastLeaderMessageSanityCheck( false ) ), 1, MINUTES );
         }
@@ -540,7 +541,7 @@ class CausalClusterRestEndpointsIT
         assertEventually( readReplicaStatus, new HamcrestCondition<>( healthFieldIs( equalTo( true ) ) ), 1, MINUTES );
         assertEventually( readReplicaStatus, new HamcrestCondition<>( leaderFieldIs( not( emptyOrNullString() ) ) ), 1, MINUTES );
         assertEventually( readReplicaStatus, new HamcrestCondition<>( raftMessageThroughputPerSecondFieldIs( greaterThanOrEqualTo( 0.0 ) ) ), 1, MINUTES );
-        assertEventually( readReplicaStatus, new HamcrestCondition<>( votingMemberSetIs( hasSize( 3 ) ) ), 1, MINUTES );
+        assertEventually( readReplicaStatus, new HamcrestCondition<>( votingMemberSetIs( empty() ) ), 1, MINUTES );
         assertEventually( readReplicaStatus, new HamcrestCondition<>( participatingInRaftGroup( false ) ), 1, MINUTES );
         assertEventually( readReplicaStatus, new HamcrestCondition<>( millisSinceLastLeaderMessageSanityCheck( false ) ), 1, MINUTES );
     }

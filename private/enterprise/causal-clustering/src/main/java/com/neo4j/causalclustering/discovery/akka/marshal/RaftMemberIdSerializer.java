@@ -11,6 +11,6 @@ public class RaftMemberIdSerializer extends BaseAkkaSerializer<RaftMemberId>
 {
     protected RaftMemberIdSerializer()
     {
-        super( new RaftMemberId.Marshal(), MEMBER_ID, 17 );
+        super( RaftMemberId.Marshal.INSTANCE, RAFT_MEMBER_ID, 17 );
     }
 }

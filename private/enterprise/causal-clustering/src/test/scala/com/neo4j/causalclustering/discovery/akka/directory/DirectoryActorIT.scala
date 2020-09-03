@@ -19,17 +19,15 @@ import akka.stream.javadsl.Source
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
-import com.neo4j.causalclustering.discovery.TestDiscoveryMember
+import com.neo4j.causalclustering.discovery.TestCoreDiscoveryMember
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.DirectoryUpdateSink
 import com.neo4j.causalclustering.discovery.akka.PublishInitialData
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
 import com.neo4j.causalclustering.identity.IdFactory
-import com.neo4j.causalclustering.identity.StubClusteringIdentityModule
-import org.neo4j.dbms.DatabaseStateService
+import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
-import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
 
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.util.Random
@@ -56,10 +54,10 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
       val leadershipSnapshot = databaseIds.map(_.databaseId -> randomLeaderInfo).toMap
       val actor = system.actorOf(DirectoryActor.props(cluster, replicator.ref, discoverySink, rrActor.ref, monitor))
       val stateService = databaseStateService(databaseIds)
-      val identityModule = new StubClusteringIdentityModule
+      val identityModule = new InMemoryCoreServerIdentity
 
       When("PublishInitialData request received")
-      actor ! new PublishInitialData(new TestDiscoveryMember(identityModule,stateService,leadershipSnapshot.asJava))
+      actor ! new PublishInitialData(new TestCoreDiscoveryMember(identityModule,stateService,leadershipSnapshot.asJava))
 
       Then("the initial leaderships should be published")
       val update = expectReplicatorUpdates(replicator, dataKey)

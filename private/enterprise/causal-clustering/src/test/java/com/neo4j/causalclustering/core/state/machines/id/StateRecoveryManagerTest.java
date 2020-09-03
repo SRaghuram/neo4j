@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.core.state.machines.id;
 
 import com.neo4j.causalclustering.core.state.StateRecoveryManager;
-import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +18,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.marshal.SafeStateMarshal;
 import org.neo4j.io.memory.ByteBuffers;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.EphemeralTestDirectoryExtension;

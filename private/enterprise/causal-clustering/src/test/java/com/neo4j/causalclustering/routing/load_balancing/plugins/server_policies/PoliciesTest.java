@@ -39,8 +39,8 @@ class PoliciesTest
         // when
         Policy policy = policies.selectFor( EMPTY_MAP );
         Set<ServerInfo> input = asSet(
-                new ServerInfo( new SocketAddress( "bolt", 1 ), IdFactory.randomMemberId(), ServerGroupName.setOf( "groupA" ) ),
-                new ServerInfo( new SocketAddress( "bolt", 2 ), IdFactory.randomMemberId(), ServerGroupName.setOf( "groupB" ) )
+                new ServerInfo( new SocketAddress( "bolt", 1 ), IdFactory.randomServerId(), ServerGroupName.setOf( "groupA" ) ),
+                new ServerInfo( new SocketAddress( "bolt", 2 ), IdFactory.randomServerId(), ServerGroupName.setOf( "groupB" ) )
         );
 
         Set<ServerInfo> output = policy.apply( input );

@@ -333,7 +333,7 @@ class StoreCopyClientIT
     void shouldLogUpstreamIssueMessage()
     {
         InMemoryStoreStreamProvider clientStoreFileStream = new InMemoryStoreStreamProvider();
-        CatchupAddressResolutionException catchupAddressResolutionException = new CatchupAddressResolutionException( IdFactory.randomMemberId() );
+        CatchupAddressResolutionException catchupAddressResolutionException = new CatchupAddressResolutionException( IdFactory.randomServerId() );
 
         CatchupAddressProvider addressProvider = new CatchupAddressProvider()
         {

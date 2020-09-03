@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
-import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseToMember;
+import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseServer;
 import com.neo4j.causalclustering.identity.IdFactory;
 
 import java.util.Collection;
@@ -16,19 +16,19 @@ import org.neo4j.io.marshal.ChannelMarshal;
 
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
-public class DatabaseToMemberMarshalTest extends BaseMarshalTest<DatabaseToMember>
+public class DatabaseServerMarshalTest extends BaseMarshalTest<DatabaseServer>
 {
     @Override
-    Collection<DatabaseToMember> originals()
+    Collection<DatabaseServer> originals()
     {
-        return Stream.generate( () -> new DatabaseToMember( randomDatabaseId(), IdFactory.randomMemberId() ) )
+        return Stream.generate( () -> new DatabaseServer( randomDatabaseId(), IdFactory.randomServerId() ) )
                 .limit( 5 )
                 .collect( Collectors.toList() );
     }
 
     @Override
-    ChannelMarshal<DatabaseToMember> marshal()
+    ChannelMarshal<DatabaseServer> marshal()
     {
-        return DatabaseToMemberMarshal.INSTANCE;
+        return DatabaseServerMarshal.INSTANCE;
     }
 }

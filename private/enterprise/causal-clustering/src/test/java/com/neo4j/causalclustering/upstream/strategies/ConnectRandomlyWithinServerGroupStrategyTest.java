@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.upstream.strategies;
 
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.ServerGroupName;
 import org.junit.jupiter.api.Test;
@@ -17,13 +16,14 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
 import static co.unruly.matchers.OptionalMatchers.contains;
-import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberId;
-import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberIds;
+import static com.neo4j.causalclustering.discovery.FakeTopologyService.serverId;
+import static com.neo4j.causalclustering.discovery.FakeTopologyService.serverIds;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.everyItem;
@@ -44,20 +44,20 @@ class ConnectRandomlyWithinServerGroupStrategyTest
         // given
         var myServerGroup = ServerGroupName.listOf( "my_server_group" );
         Config configWithMyServerGroup = Config.defaults( CausalClusteringSettings.server_groups, myServerGroup );
-        Set<MemberId> myGroupMemberIds = memberIds( 0, 10 );
-        var topologyService = ConnectRandomlyToServerGroupStrategyImplTest.getTopologyService( Set.copyOf( myServerGroup ), myGroupMemberIds,
+        Set<ServerId> myGroupServerIds = serverIds( 0, 10 );
+        var topologyService = ConnectRandomlyToServerGroupStrategyImplTest.getTopologyService( Set.copyOf( myServerGroup ), myGroupServerIds,
                 ServerGroupName.setOf( "your_server_group" ), Set.of( DATABASE_ID ) );
 
         ConnectRandomlyWithinServerGroupStrategy strategy = new ConnectRandomlyWithinServerGroupStrategy();
-        strategy.inject( topologyService, configWithMyServerGroup, NullLogProvider.getInstance(), memberId( 0 ) );
+        strategy.inject( topologyService, configWithMyServerGroup, NullLogProvider.getInstance(), serverId( 0 ) );
 
         // when
-        Optional<MemberId> result = strategy.upstreamMemberForDatabase( DATABASE_ID );
-        Collection<MemberId> results = strategy.upstreamMembersForDatabase( DATABASE_ID );
+        Optional<ServerId> result = strategy.upstreamServerForDatabase( DATABASE_ID );
+        Collection<ServerId> results = strategy.upstreamServersForDatabase( DATABASE_ID );
 
         // then
-        assertThat( results, everyItem( is( in( myGroupMemberIds ) ) ) );
-        assertThat( result, contains( is( in( myGroupMemberIds ) ) ) );
+        assertThat( results, everyItem( is( in( myGroupServerIds ) ) ) );
+        assertThat( result, contains( is( in( myGroupServerIds ) ) ) );
     }
 
     @Test
@@ -66,25 +66,25 @@ class ConnectRandomlyWithinServerGroupStrategyTest
         // given
         var myServerGroup = ServerGroupName.listOf( "my_server_group" );
         Config configWithMyServerGroup = Config.defaults( CausalClusteringSettings.server_groups, myServerGroup );
-        Set<MemberId> myGroupMemberIds = memberIds( 0, 10 );
-        var topologyService = ConnectRandomlyToServerGroupStrategyImplTest.getTopologyService( Set.copyOf( myServerGroup ), myGroupMemberIds,
+        Set<ServerId> myGroupServerIds = serverIds( 0, 10 );
+        var topologyService = ConnectRandomlyToServerGroupStrategyImplTest.getTopologyService( Set.copyOf( myServerGroup ), myGroupServerIds,
                 ServerGroupName.setOf( "your_server_group" ), Set.of( DATABASE_ID ) );
 
         ConnectRandomlyWithinServerGroupStrategy strategy = new ConnectRandomlyWithinServerGroupStrategy();
-        strategy.inject( topologyService, configWithMyServerGroup, NullLogProvider.getInstance(), memberId( 0 ) );
+        strategy.inject( topologyService, configWithMyServerGroup, NullLogProvider.getInstance(), serverId( 0 ) );
 
         // when
-        Optional<MemberId> result = strategy.upstreamMemberForDatabase( DATABASE_ID );
-        Collection<MemberId> results = strategy.upstreamMembersForDatabase( DATABASE_ID );
+        Optional<ServerId> result = strategy.upstreamServerForDatabase( DATABASE_ID );
+        Collection<ServerId> results = strategy.upstreamServersForDatabase( DATABASE_ID );
 
         // then
-        assertThat( results, everyItem( is( in( myGroupMemberIds ) ) ) );
-        assertThat( result, contains( is( in( myGroupMemberIds ) ) ) );
+        assertThat( results, everyItem( is( in( myGroupServerIds ) ) ) );
+        assertThat( result, contains( is( in( myGroupServerIds ) ) ) );
 
         // when
         configWithMyServerGroup.set( CausalClusteringSettings.server_groups, List.of() );
-        result = strategy.upstreamMemberForDatabase( DATABASE_ID );
-        results = strategy.upstreamMembersForDatabase( DATABASE_ID );
+        result = strategy.upstreamServerForDatabase( DATABASE_ID );
+        results = strategy.upstreamServersForDatabase( DATABASE_ID );
 
         // then
         assertThat( results, empty() );
@@ -100,13 +100,13 @@ class ConnectRandomlyWithinServerGroupStrategyTest
 
         // and
         ConnectRandomlyWithinServerGroupStrategy connectRandomlyWithinServerGroupStrategy = new ConnectRandomlyWithinServerGroupStrategy();
-        MemberId myself = MemberId.of( new UUID( 123, 456 ) );
+        ServerId myself = new ServerId( new UUID( 123, 456 ) );
         connectRandomlyWithinServerGroupStrategy.inject( new TopologyServiceThatPrioritisesItself( myself, groupName ), config, NullLogProvider.getInstance(),
                 myself );
 
         // when
-        Optional<MemberId> result = connectRandomlyWithinServerGroupStrategy.upstreamMemberForDatabase( DATABASE_ID );
-        Collection<MemberId> results = connectRandomlyWithinServerGroupStrategy.upstreamMembersForDatabase( DATABASE_ID );
+        Optional<ServerId> result = connectRandomlyWithinServerGroupStrategy.upstreamServerForDatabase( DATABASE_ID );
+        Collection<ServerId> results = connectRandomlyWithinServerGroupStrategy.upstreamServersForDatabase( DATABASE_ID );
 
         // then
         assertFalse( results.isEmpty() );

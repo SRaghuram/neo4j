@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core.consensus;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.core.state.machines.status.Status;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.configuration.ServerGroupName;
 
@@ -1026,24 +1026,24 @@ public interface RaftMessages
 
     final class OutboundRaftMessageContainer<RM extends RaftMessage>
     {
-        private final RaftId raftId;
+        private final RaftGroupId raftGroupId;
         private final RM message;
 
-        public static <RM extends RaftMessage> OutboundRaftMessageContainer<RM> of( RaftId raftId, RM message )
+        public static <RM extends RaftMessage> OutboundRaftMessageContainer<RM> of( RaftGroupId raftGroupId, RM message )
         {
-            return new OutboundRaftMessageContainer<>( raftId, message );
+            return new OutboundRaftMessageContainer<>( raftGroupId, message );
         }
 
-        private OutboundRaftMessageContainer( RaftId raftId, RM message )
+        private OutboundRaftMessageContainer( RaftGroupId raftGroupId, RM message )
         {
             Objects.requireNonNull( message );
-            this.raftId = raftId;
+            this.raftGroupId = raftGroupId;
             this.message = message;
         }
 
-        public RaftId raftId()
+        public RaftGroupId raftGroupId()
         {
-            return raftId;
+            return raftGroupId;
         }
 
         public RM message()
@@ -1063,37 +1063,37 @@ public interface RaftMessages
                 return false;
             }
             OutboundRaftMessageContainer<?> that = (OutboundRaftMessageContainer<?>) o;
-            return Objects.equals( raftId, that.raftId ) && Objects.equals( message(), that.message() );
+            return Objects.equals( raftGroupId, that.raftGroupId ) && Objects.equals( message(), that.message() );
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash( raftId, message() );
+            return Objects.hash( raftGroupId, message() );
         }
 
         @Override
         public String toString()
         {
-            return format( "{raftId: %s, message: %s}", raftId, message() );
+            return format( "{raftGroupId: %s, message: %s}", raftGroupId, message() );
         }
     }
 
     final class InboundRaftMessageContainer<RM extends RaftMessage>
     {
         private final Instant receivedAt;
-        private final RaftId raftId;
+        private final RaftGroupId raftGroupId;
         private final RM message;
 
-        public static <RM extends RaftMessage> InboundRaftMessageContainer<RM> of( Instant receivedAt, RaftId raftId, RM message )
+        public static <RM extends RaftMessage> InboundRaftMessageContainer<RM> of( Instant receivedAt, RaftGroupId raftGroupId, RM message )
         {
-            return new InboundRaftMessageContainer<>( receivedAt, raftId, message );
+            return new InboundRaftMessageContainer<>( receivedAt, raftGroupId, message );
         }
 
-        private InboundRaftMessageContainer( Instant receivedAt, RaftId raftId, RM message )
+        private InboundRaftMessageContainer( Instant receivedAt, RaftGroupId raftGroupId, RM message )
         {
             Objects.requireNonNull( message );
-            this.raftId = raftId;
+            this.raftGroupId = raftGroupId;
             this.receivedAt = receivedAt;
             this.message = message;
         }
@@ -1103,9 +1103,9 @@ public interface RaftMessages
             return receivedAt;
         }
 
-        public RaftId raftId()
+        public RaftGroupId raftGroupId()
         {
-            return raftId;
+            return raftGroupId;
         }
 
         public RM message()
@@ -1125,19 +1125,20 @@ public interface RaftMessages
                 return false;
             }
             InboundRaftMessageContainer<?> that = (InboundRaftMessageContainer<?>) o;
-            return Objects.equals( receivedAt, that.receivedAt ) && Objects.equals( raftId, that.raftId ) && Objects.equals( message(), that.message() );
+            return Objects.equals( receivedAt, that.receivedAt ) && Objects.equals( raftGroupId, that.raftGroupId )
+                    && Objects.equals( message(), that.message() );
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash( receivedAt, raftId, message() );
+            return Objects.hash( receivedAt, raftGroupId, message() );
         }
 
         @Override
         public String toString()
         {
-            return format( "{raftId: %s, receivedAt: %s, message: %s}", raftId, receivedAt, message() );
+            return format( "{raftGroupId: %s, receivedAt: %s, message: %s}", raftGroupId, receivedAt, message() );
         }
     }
 

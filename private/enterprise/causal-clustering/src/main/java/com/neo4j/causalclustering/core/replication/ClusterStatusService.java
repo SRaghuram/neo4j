@@ -15,6 +15,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 
+import org.neo4j.function.Suppliers.Lazy;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.DatabaseLogService;
@@ -23,7 +24,7 @@ public final class ClusterStatusService
 {
 
     private final NamedDatabaseId namedDatabaseId;
-    private final RaftMemberId myself;
+    private final Lazy<RaftMemberId> myself;
     private final RaftMachine raftMachine;
     private final RaftReplicator raftReplicator;
     private final Log log;
@@ -31,7 +32,7 @@ public final class ClusterStatusService
     private final Executor executor;
     private final Duration clusterRequestMaximumWait;
 
-    public ClusterStatusService( NamedDatabaseId namedDatabaseId, RaftMemberId myself, RaftMachine raftMachine,
+    public ClusterStatusService( NamedDatabaseId namedDatabaseId, Lazy<RaftMemberId> myself, RaftMachine raftMachine,
                                  RaftReplicator raftReplicator, DatabaseLogService logService, ClusterStatusResponseCollector collector,
                                  Executor executor, Duration clusterRequestMaximumWait )
     {
@@ -50,8 +51,8 @@ public final class ClusterStatusService
         var expectedResponseCount = raftMachine.replicationMembers().size();
         collector.expectFollowerStatusesFor( requestID, expectedResponseCount );
 
-        return CompletableFuture
-                .supplyAsync( () -> raftReplicator.replicate( new StatusRequest( requestID, namedDatabaseId.databaseId(), myself ) ), executor )
+        return CompletableFuture.supplyAsync(
+                () -> raftReplicator.replicate( new StatusRequest( requestID, namedDatabaseId.databaseId(), myself.get() ) ), executor )
                 .thenApply( replicationResult ->
                 {
                     try

@@ -6,8 +6,8 @@
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.core.consensus.membership.RaftMembership;
-import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
+import com.neo4j.causalclustering.identity.CoreServerIdentity;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.configuration.ServerGroupsSupplier;
@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
@@ -42,6 +43,7 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
     private final Duration leaderTransferInterval;
     private final DatabasePenalties databasePenalties;
     private final Log log;
+    private final RaftMembershipResolver membershipResolver;
     private JobHandle<?> jobHandle;
     private final RaftLeadershipsResolver leadershipsResolver;
     private final LeadershipTransferor leadershipTransferor;
@@ -49,24 +51,21 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
     public LeaderTransferService( JobScheduler jobScheduler, Config config, Duration leaderTransferInterval,
             DatabaseManager<ClusteredDatabaseContext> databaseManager,
             Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler,
-            ClusteringIdentityModule identityModule, Duration leaderMemberBackoff, LogProvider logProvider, Clock clock,
-            LeaderService leaderService, ServerGroupsSupplier serverGroupsSupplier )
+            CoreServerIdentity myIdentity, Duration leaderMemberBackoff, LogProvider logProvider, Clock clock,
+            LeaderService leaderService, ServerGroupsSupplier serverGroupsSupplier, RaftMembershipResolver membershipResolver )
     {
         this.databasePenalties = new DatabasePenalties( leaderMemberBackoff, clock );
         this.jobScheduler = jobScheduler;
         this.leaderTransferInterval = leaderTransferInterval;
         this.log = logProvider.getLog( getClass() );
 
-        RaftMembershipResolver membershipResolver = id ->
-                databaseManager.getDatabaseContext( id )
-                        .map( ctx -> ctx.dependencies().resolveDependency( RaftMembership.class ) )
-                        .orElse( RaftMembership.EMPTY );
+        this.membershipResolver = membershipResolver;
 
-        this.leadershipTransferor = new LeadershipTransferor( messageHandler, identityModule, databasePenalties, membershipResolver, clock );
-        this.leadershipsResolver = new RaftLeadershipsResolver( databaseManager, identityModule );
+        this.leadershipTransferor = new LeadershipTransferor( messageHandler, myIdentity, databasePenalties, membershipResolver, clock );
+        this.leadershipsResolver = new RaftLeadershipsResolver( databaseManager, myIdentity );
 
         this.transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config,
-                pickSelectionStrategy( config, databaseManager, leaderService, identityModule ), leadershipsResolver );
+                pickSelectionStrategy( config, databaseManager, leaderService, myIdentity ), leadershipsResolver );
     }
 
     @Override
@@ -102,7 +101,9 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
     @Override
     public void handleRejection( RaftMessages.LeadershipTransfer.Rejection rejection, NamedDatabaseId namedDatabaseId )
     {
-        databasePenalties.issuePenalty( rejection.from().serverId(), namedDatabaseId );
+        RaftMemberId memberId = rejection.from();
+        ServerId serverId = membershipResolver.resolveServerForRaftMember( memberId );
+        databasePenalties.issuePenalty( serverId, namedDatabaseId );
     }
 
     @VisibleForTesting
@@ -126,13 +127,13 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
     }
 
     private static SelectionStrategy pickSelectionStrategy( Config config, DatabaseManager<ClusteredDatabaseContext> databaseManager,
-                                                            LeaderService leaderService, ClusteringIdentityModule identityModule )
+                                                            LeaderService leaderService, CoreServerIdentity myIdentity )
     {
         var strategyChoice = config.get( leader_balancing );
         switch ( strategyChoice )
         {
         case EQUAL_BALANCING:
-            return new RandomEvenStrategy( () -> databaseManager.registeredDatabases().keySet(), leaderService, identityModule );
+            return new RandomEvenStrategy( () -> databaseManager.registeredDatabases().keySet(), leaderService, myIdentity );
         case NO_BALANCING:
         default:
             return SelectionStrategy.NO_OP;

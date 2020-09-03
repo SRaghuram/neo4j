@@ -22,22 +22,23 @@ import akka.testkit.TestActorRef
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.CoreServerInfo
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology
-import com.neo4j.causalclustering.discovery.TestDiscoveryMember
+import com.neo4j.causalclustering.discovery.ReplicatedRaftMapping
+import com.neo4j.causalclustering.discovery.TestCoreDiscoveryMember
 import com.neo4j.causalclustering.discovery.TestTopology
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor
 import com.neo4j.causalclustering.identity.IdFactory
-import com.neo4j.causalclustering.identity.MemberId
-import com.neo4j.causalclustering.identity.RaftId
+import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity
+import com.neo4j.causalclustering.identity.RaftGroupId
 import com.neo4j.causalclustering.identity.RaftMemberId
-import com.neo4j.causalclustering.identity.StubClusteringIdentityModule
 import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
 import org.mockito.Mockito.verify
 import org.neo4j.configuration.Config
+import org.neo4j.dbms.identity.ServerId
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
 
@@ -125,8 +126,8 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
           makeTopologyActorKnowAboutCoreMember()
 
           val otherDatabaseId = randomNamedDatabaseId().databaseId()
-          val otherTopology = new DatabaseCoreTopology(otherDatabaseId, raftId, Map(IdFactory.randomMemberId -> coreServerInfo(42)).asJava)
-          val emptyTopology = new DatabaseCoreTopology(databaseId, raftId, Map.empty[MemberId, CoreServerInfo].asJava)
+          val otherTopology = new DatabaseCoreTopology(otherDatabaseId, raftId, Map(IdFactory.randomServerId() -> coreServerInfo(42)).asJava)
+          val emptyTopology = new DatabaseCoreTopology(databaseId, raftId, Map.empty[ServerId, CoreServerInfo].asJava)
 
           Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(otherDatabaseId), any(), any(), any())).thenReturn(otherTopology)
           Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(databaseId), any(), any(), any())).thenReturn(emptyTopology)
@@ -153,7 +154,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
 
           Then("update bootstrap state")
           val expectedBootstrapState = new BootstrapState(clusterView, metadataMessage,
-            myUniqueAddress, config, Map.empty[RaftId,RaftMemberId].asJava)
+            myUniqueAddress, config, Map.empty[RaftGroupId,RaftMemberId].asJava)
           bootstrapStateReceiver.receiveOne(defaultWaitTime) should equal(expectedBootstrapState)
         }
 
@@ -165,7 +166,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
           val bootstrappedRaftsMessage = new BootstrappedRaftsMessage(previouslyBootstrapped)
 
           val expectedBootstrapState1 = new BootstrapState(clusterView, metadataMessage,
-            myUniqueAddress, config, Map.empty[RaftId,RaftMemberId].asJava)
+            myUniqueAddress, config, Map.empty[RaftGroupId,RaftMemberId].asJava)
           val expectedBootstrapState2 = new BootstrapState(clusterView, metadataMessage,
             myUniqueAddress, config, previouslyBootstrapped)
 
@@ -196,11 +197,11 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
 
           Then("update bootstrap state")
           val expectedBootstrapState1 = new BootstrapState(initialClusterView, metadataMessage,
-            myUniqueAddress, config, Map.empty[RaftId,RaftMemberId].asJava)
+            myUniqueAddress, config, Map.empty[RaftGroupId,RaftMemberId].asJava)
           bootstrapStateReceiver.receiveOne(defaultWaitTime) should equal(expectedBootstrapState1)
 
           val expectedBootstrapState2 = new BootstrapState(clusterViewMessage, metadataMessage,
-            myUniqueAddress, config, Map.empty[RaftId,RaftMemberId].asJava)
+            myUniqueAddress, config, Map.empty[RaftGroupId,RaftMemberId].asJava)
           bootstrapStateReceiver.receiveOne(defaultWaitTime) should equal(expectedBootstrapState2)
         }
       }
@@ -210,6 +211,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
   trait Fixture {
     val coreTopologyReceiver = TestProbe("CoreTopologyReceiver")
     val bootstrapStateReceiver = TestProbe("BootstrapStateReceiver")
+    val mappingReceiver = TestProbe("MappingReceiver")
 
     val materializer = ActorMaterializer()
 
@@ -221,6 +223,10 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
       .to(Sink.foreach(msg => bootstrapStateReceiver.ref ! msg))
       .run(materializer)
 
+    val raftMappingSink = Source.queue[ReplicatedRaftMapping](1, OverflowStrategy.dropHead)
+      .to(Sink.foreach(msg => mappingReceiver.ref ! msg))
+      .run(materializer)
+
     val config = {
       val myCoreServerConfig = TestTopology.configFor(coreServerInfo(0))
       val conf = Config.newBuilder().fromConfig(myCoreServerConfig).build()
@@ -228,17 +234,17 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
     }
 
     val databaseId = randomNamedDatabaseId().databaseId()
-    val raftId = RaftId.from(databaseId)
+    val raftId = RaftGroupId.from(databaseId)
 
     val replicatorProbe = TestProbe("replicator")
 
     val memberDataKey = LWWMapKey[UniqueAddress, CoreServerInfoForServerId](ReplicatedDataIdentifier.METADATA.keyName())
-    val raftIdKey = LWWMapKey[String, RaftId](ReplicatedDataIdentifier.RAFT_ID.keyName())
+    val raftIdKey = LWWMapKey[String, RaftGroupId](ReplicatedDataIdentifier.RAFT_ID_PUBLISHER.keyName())
 
     val topologyBuilder = mock[TopologyBuilder]
     val expectedCoreTopology = new DatabaseCoreTopology(databaseId, raftId, Map(
-      IdFactory.randomMemberId() -> coreServerInfo(0),
-      IdFactory.randomMemberId() -> coreServerInfo(1)
+      IdFactory.randomServerId() -> coreServerInfo(0),
+      IdFactory.randomServerId() -> coreServerInfo(1)
     ).asJava)
     Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(databaseId), any(), any(), any()))
       .thenReturn(expectedCoreTopology)
@@ -247,21 +253,22 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
     val cluster = mock[Cluster]
     val myAddress = Address("akka", system.name, "myHost", 12)
     val myUniqueAddress = UniqueAddress(myAddress, 42L)
-    val identityModule = new StubClusteringIdentityModule
+    val identityModule = new InMemoryCoreServerIdentity()
     Mockito.when(cluster.selfAddress).thenReturn(myAddress)
     Mockito.when(cluster.selfUniqueAddress).thenReturn(myUniqueAddress)
 
     val props = CoreTopologyActor.props(
       topologySink,
       bootstrapStateSink,
+      raftMappingSink,
       readReplicaProbe.ref,
       replicatorProbe.ref,
       cluster,
       topologyBuilder,
       config,
+      identityModule,
       mock[ReplicatedDataMonitor],
-      mock[ClusterSizeMonitor],
-      identityModule.myself())
+      mock[ClusterSizeMonitor])
 
     val topologyActorRef = TestActorRef.create[CoreTopologyActor](system, props)
     topologyActorRef.underlyingActor.onMemberUp()
@@ -278,7 +285,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
     }
 
     def newMetadataMessage(databaseId: DatabaseId = databaseId): MetadataMessage = {
-      val myInfo = new CoreServerInfoForServerId(identityModule.myself(), coreServerInfo(1, databaseId))
+      val myInfo = new CoreServerInfoForServerId(identityModule.serverId(), coreServerInfo(1, databaseId))
       val otherInfo = new CoreServerInfoForServerId(IdFactory.randomServerId(), coreServerInfo(2, databaseId))
       val metadata = Map(
         myUniqueAddress -> myInfo,
@@ -290,14 +297,14 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
     def initialMembers(): util.TreeSet[Member] = {
       val initialMembers = new util.TreeSet[Member](Member.ordering)
       initialMembers.add(ClusterViewMessageTest.createMember(myUniqueAddress, MemberStatus.Up))
-      return initialMembers
+      initialMembers
     }
 
     def coreServerInfo(serverId: Int, databaseId: DatabaseId = databaseId): CoreServerInfo =
       TestTopology.addressesForCore(serverId, false, Set[DatabaseId](databaseId).asJava)
 
     def sendInitialData(): ClusterViewMessage = {
-      val myInfo = new CoreServerInfoForServerId(identityModule.myself(), coreServerInfo(0, databaseId))
+      val myInfo = new CoreServerInfoForServerId(identityModule.serverId(), coreServerInfo(0, databaseId))
       val metadata = Map(
         myUniqueAddress -> myInfo,
       ).asJava
@@ -311,8 +318,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
       coreTopologyReceiver.receiveOne(defaultWaitTime)
       readReplicaProbe.receiveOne(defaultWaitTime)
       bootstrapStateReceiver.receiveOne(defaultWaitTime)
-
-      return clusterViewMessage
+      clusterViewMessage
     }
   }
 

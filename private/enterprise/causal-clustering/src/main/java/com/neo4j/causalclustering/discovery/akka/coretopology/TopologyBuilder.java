@@ -7,26 +7,25 @@ package com.neo4j.causalclustering.discovery.akka.coretopology;
 
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 
 import java.util.Map;
 import javax.annotation.Nullable;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 
 import static java.util.stream.Collectors.toMap;
 
 public class TopologyBuilder
 {
-    DatabaseCoreTopology buildCoreTopology( DatabaseId databaseId, @Nullable RaftId raftId, ClusterViewMessage cluster, MetadataMessage memberData )
+    DatabaseCoreTopology buildCoreTopology( DatabaseId databaseId, @Nullable RaftGroupId raftGroupId, ClusterViewMessage cluster, MetadataMessage memberData )
     {
-        Map<MemberId,CoreServerInfo> coreMembers = cluster.availableMembers()
+        Map<ServerId,CoreServerInfo> coreMembers = cluster.availableMembers()
                 .flatMap( memberData::getStream )
                 .filter( member -> member.coreServerInfo().startedDatabaseIds().contains( databaseId ) )
-                .collect( toMap( coreServerInfoForServerId -> MemberId.of( coreServerInfoForServerId.serverId() ),
-                        CoreServerInfoForServerId::coreServerInfo ) );
+                .collect( toMap( CoreServerInfoForServerId::serverId, CoreServerInfoForServerId::coreServerInfo ) );
 
-        return new DatabaseCoreTopology( databaseId, raftId, coreMembers );
+        return new DatabaseCoreTopology( databaseId, raftGroupId, coreMembers );
     }
 }

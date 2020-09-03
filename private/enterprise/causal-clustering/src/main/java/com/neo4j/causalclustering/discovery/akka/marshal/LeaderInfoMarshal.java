@@ -17,7 +17,7 @@ import org.neo4j.io.marshal.SafeChannelMarshal;
 
 public class LeaderInfoMarshal extends SafeChannelMarshal<LeaderInfo>
 {
-    private RaftMemberId.Marshal memberIdMarshal = new RaftMemberId.Marshal();
+    private RaftMemberId.Marshal memberIdMarshal = RaftMemberId.Marshal.INSTANCE;
 
     @Override
     protected LeaderInfo unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException

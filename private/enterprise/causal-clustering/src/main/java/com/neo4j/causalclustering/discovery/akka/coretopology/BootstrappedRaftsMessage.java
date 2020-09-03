@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.akka.coretopology;
 
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.Map;
@@ -17,14 +17,14 @@ import java.util.Objects;
 public class BootstrappedRaftsMessage
 {
     public static final BootstrappedRaftsMessage EMPTY = new BootstrappedRaftsMessage( Map.of() );
-    private final Map<RaftId,RaftMemberId> bootstrappedRafts;
+    private final Map<RaftGroupId,RaftMemberId> bootstrappedRafts;
 
-    public BootstrappedRaftsMessage( Map<RaftId,RaftMemberId> bootstrappedRafts )
+    public BootstrappedRaftsMessage( Map<RaftGroupId,RaftMemberId> bootstrappedRafts )
     {
         this.bootstrappedRafts = Map.copyOf( bootstrappedRafts );
     }
 
-    public Map<RaftId,RaftMemberId> bootstrappedRafts()
+    public Map<RaftGroupId,RaftMemberId> bootstrappedRafts()
     {
         return bootstrappedRafts;
     }

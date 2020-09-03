@@ -7,9 +7,8 @@ package com.neo4j.causalclustering.diagnostics;
 
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotMonitor;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftBinder;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -30,7 +29,7 @@ class RaftMonitorTest
     private final AssertableLogProvider debug = new AssertableLogProvider();
 
     private final NamedDatabaseId namedDatabaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
-    private final MemberId myself = IdFactory.randomMemberId();
+    private final RaftMemberId myself = IdFactory.randomRaftMemberId();
 
     private RaftBinder.Monitor raftBinderMonitor;
     private CoreSnapshotMonitor snapshotMonitor;
@@ -46,26 +45,20 @@ class RaftMonitorTest
     }
 
     @Test
-    void shouldNotDuplicateToAnyLog()
+    void shouldLogWhenRaftIdReadFromTopology()
     {
-        var raftId = RaftId.from( namedDatabaseId.databaseId() );
-        raftBinderMonitor.boundToRaftThroughTopology( namedDatabaseId, raftId, myself );
+        raftBinderMonitor.boundToRaftThroughTopology( namedDatabaseId, myself );
 
-        var expected = format( "Bound database '%s' to raft with id '%s' as member id '%s'.",
-                namedDatabaseId.name(), raftId.uuid(), myself.getUuid() );
-        assertThat( user ).containsMessages( expected );
+        var expected = format( "Bound as %s to %s published in discovery", myself, namedDatabaseId );
         assertThat( debug ).containsMessages( expected );
     }
 
     @Test
     void shouldLogWhenRaftIdReadFromDisk()
     {
-        var raftId = RaftId.from( namedDatabaseId.databaseId() );
-        raftBinderMonitor.boundToRaftFromDisk( namedDatabaseId, raftId, myself );
+        raftBinderMonitor.boundToRaftFromDisk( namedDatabaseId, myself );
 
-        var expected = format( "Bound database '%s' to raft with id '%s' as member id '%s', found on disk.",
-                namedDatabaseId.name(), raftId.uuid(), myself.getUuid() );
-        assertThat( user ).containsMessages( expected );
+        var expected = format( "Bound as %s to %s existing on disk", myself, namedDatabaseId );
         assertThat( debug ).containsMessages( expected );
     }
 

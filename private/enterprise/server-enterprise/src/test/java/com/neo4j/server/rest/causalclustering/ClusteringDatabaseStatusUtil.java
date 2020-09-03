@@ -15,7 +15,6 @@ import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
 
@@ -27,6 +26,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -147,7 +147,7 @@ final class ClusteringDatabaseStatusUtil
             when( resolver.resolveDependency( TopologyService.class ) ).thenReturn( topologyService );
 
             var raftMachine = mock( RaftMachine.class );
-            when( raftMachine.memberId() ).thenReturn(  memberId );
+            when( raftMachine.memberId() ).thenReturn( memberId );
             when( raftMachine.getLeaderInfo() ).thenReturn( Optional.of( new LeaderInfo( leaderId, 1 ) ) );
             when( resolver.resolveDependency( RaftMachine.class ) ).thenReturn( raftMachine );
 
@@ -176,10 +176,11 @@ final class ClusteringDatabaseStatusUtil
         private NamedDatabaseId databaseId;
         private boolean healthy;
         private boolean available;
-        private MemberId readReplicaId;
-        private Map<MemberId,RoleInfo> coreRoles = new HashMap<>();
+        private ServerId readReplicaId;
+        private Map<ServerId,RoleInfo> coreRoles = new HashMap<>();
         private long appliedCommandIndex;
         private double throughput;
+        private RaftMemberId leaderId;
 
         private ReadReplicaStatusMockBuilder()
         {
@@ -203,15 +204,21 @@ final class ClusteringDatabaseStatusUtil
             return this;
         }
 
-        ReadReplicaStatusMockBuilder readReplicaId( MemberId readReplicaId )
+        ReadReplicaStatusMockBuilder readReplicaId( ServerId readReplicaId )
         {
             this.readReplicaId = readReplicaId;
             return this;
         }
 
-        ReadReplicaStatusMockBuilder coreRole( MemberId coreId, RoleInfo role )
+        ReadReplicaStatusMockBuilder coreRole( ServerId coreId, RoleInfo role )
         {
             this.coreRoles.put( coreId, role );
+            return this;
+        }
+
+        ReadReplicaStatusMockBuilder leader( RaftMemberId leaderId )
+        {
+            this.leaderId = leaderId;
             return this;
         }
 
@@ -244,7 +251,7 @@ final class ClusteringDatabaseStatusUtil
             when( resolver.resolveDependency( DatabaseHealth.class ) ).thenReturn( databaseHealth );
 
             var topologyService = mock( TopologyService.class );
-            when( topologyService.memberId() ).thenReturn( readReplicaId );
+            when( topologyService.serverId() ).thenReturn( readReplicaId );
 
             var allCoreServers = coreRoles.entrySet()
                                           .stream()
@@ -254,7 +261,17 @@ final class ClusteringDatabaseStatusUtil
 
             for ( var entry : coreRoles.entrySet() )
             {
+                var raftMember = new RaftMemberId( entry.getKey().uuid() );
                 when( topologyService.lookupRole( databaseId, entry.getKey() ) ).thenReturn( entry.getValue() );
+                when( topologyService.resolveServerForRaftMember( raftMember ) ).thenReturn( entry.getKey() );
+                if ( entry.getValue() == RoleInfo.LEADER && leaderId == null )
+                {
+                    when( topologyService.getLeader( databaseId ) ).thenReturn( new LeaderInfo( raftMember, 1 ) );
+                }
+            }
+            if ( leaderId != null )
+            {
+                when( topologyService.getLeader( databaseId ) ).thenReturn( new LeaderInfo( leaderId, 1 ) );
             }
 
             when( resolver.resolveDependency( TopologyService.class ) ).thenReturn( topologyService );

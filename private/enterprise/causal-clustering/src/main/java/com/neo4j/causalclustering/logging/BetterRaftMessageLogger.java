@@ -45,7 +45,6 @@ public class BetterRaftMessageLogger<MEMBER> extends LifecycleAdapter implements
         }
     }
 
-    private final MEMBER me;
     private final Path logFile;
     private final FileSystemAbstraction fs;
     private final Clock clock;
@@ -53,9 +52,8 @@ public class BetterRaftMessageLogger<MEMBER> extends LifecycleAdapter implements
 
     private PrintWriter printWriter;
 
-    public BetterRaftMessageLogger( MEMBER me, Path logFile, FileSystemAbstraction fs, Clock clock )
+    public BetterRaftMessageLogger( Path logFile, FileSystemAbstraction fs, Clock clock )
     {
-        this.me = me;
         this.logFile = logFile;
         this.fs = fs;
         this.clock = clock;
@@ -69,7 +67,7 @@ public class BetterRaftMessageLogger<MEMBER> extends LifecycleAdapter implements
         {
             checkState( printWriter == null, "Already started" );
             printWriter = openPrintWriter();
-            log( "", me, Direction.INFO, me, "Info", "I am " + me );
+            // log( "", me, Direction.INFO, me, "Info", "I am " + me ); // TODO: perhaps log this on creation of the specific member ID?
         }
         finally
         {

@@ -22,10 +22,12 @@ import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.PublishRaftIdOutcome;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.ReplicatedRaftMapping;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
+import com.neo4j.causalclustering.discovery.akka.common.RaftMemberKnownMessage;
 import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyMessage;
@@ -39,10 +41,9 @@ import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
-import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
-import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.discovery.member.CoreDiscoveryMemberFactory;
+import com.neo4j.causalclustering.identity.CoreServerIdentity;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 
@@ -61,6 +62,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.DatabaseState;
 import org.neo4j.dbms.DatabaseStateService;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
@@ -80,15 +82,15 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     private final LogProvider logProvider;
     private final RetryStrategy catchupAddressRetryStrategy;
     private final Restarter restarter;
+    private final CoreDiscoveryMemberFactory memberSnapshotFactory;
     private final JobScheduler jobScheduler;
-    private final DiscoveryMemberFactory memberSnapshotFactory;
     private final Executor executor;
     private final Clock clock;
     private final ReplicatedDataMonitor replicatedDataMonitor;
     private final ClusterSizeMonitor clusterSizeMonitor;
     private final DatabaseStateService databaseStateService;
     private final Config config;
-    private final ClusteringIdentityModule identityModule;
+    private final CoreServerIdentity myIdentity;
     private final Log log;
     private final Log userLog;
 
@@ -101,21 +103,21 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     private volatile ActorRef databaseStateActorRef;
     private volatile GlobalTopologyState globalTopologyState;
 
-    public AkkaCoreTopologyService( Config config, ClusteringIdentityModule identityModule, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
+    public AkkaCoreTopologyService( Config config, CoreServerIdentity myIdentity, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
             LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, Restarter restarter,
-            DiscoveryMemberFactory memberSnapshotFactory, JobScheduler jobScheduler, Clock clock, Monitors monitors,
+            CoreDiscoveryMemberFactory memberSnapshotFactory, JobScheduler jobScheduler, Clock clock, Monitors monitors,
             DatabaseStateService databaseStateService )
     {
         this.actorSystemLifecycle = actorSystemLifecycle;
         this.logProvider = logProvider;
         this.catchupAddressRetryStrategy = catchupAddressRetryStrategy;
         this.restarter = restarter;
+        this.memberSnapshotFactory = memberSnapshotFactory;
         this.jobScheduler = jobScheduler;
         this.executor = jobScheduler.executor( Group.AKKA_HELPER );
-        this.memberSnapshotFactory = memberSnapshotFactory;
         this.clock = clock;
         this.config = config;
-        this.identityModule = identityModule;
+        this.myIdentity = myIdentity;
         this.log = logProvider.getLog( getClass() );
         this.userLog = userLogProvider.getLog( getClass() );
         this.replicatedDataMonitor = monitors.newMonitor( ReplicatedDataMonitor.class );
@@ -133,31 +135,34 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         var bootstrapStateSink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onBootstrapStateUpdate );
         var databaseStateSink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbStateUpdate );
         SourceQueueWithComplete<DatabaseReadReplicaTopology> rrTopologySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );
+        var raftMappingSink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onRaftMappingUpdate );
 
         var cluster = actorSystemLifecycle.cluster();
         var replicator = actorSystemLifecycle.replicator();
         var rrTopologyActor = readReplicaTopologyActor( rrTopologySink, databaseStateSink );
-        coreTopologyActorRef = coreTopologyActor( cluster, replicator, coreTopologySink, bootstrapStateSink, rrTopologyActor );
+        coreTopologyActorRef = coreTopologyActor( cluster, replicator, coreTopologySink, bootstrapStateSink, raftMappingSink, rrTopologyActor );
         directoryActorRef = directoryActor( cluster, replicator, directorySink, rrTopologyActor );
         databaseStateActorRef = databaseStateActor( cluster, replicator, databaseStateSink, rrTopologyActor );
         publishInitialData( coreTopologyActorRef, directoryActorRef, databaseStateActorRef );
     }
 
     private ActorRef coreTopologyActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<CoreTopologyMessage> topologySink,
-            SourceQueueWithComplete<BootstrapState> bootstrapStateSink, ActorRef rrTopologyActor )
+            SourceQueueWithComplete<BootstrapState> bootstrapStateSink, SourceQueueWithComplete<ReplicatedRaftMapping> raftMappingSink,
+            ActorRef rrTopologyActor )
     {
         var topologyBuilder = new TopologyBuilder();
         var coreTopologyProps = CoreTopologyActor.props(
                 topologySink,
                 bootstrapStateSink,
+                raftMappingSink,
                 rrTopologyActor,
                 replicator,
                 cluster,
                 topologyBuilder,
                 config,
+                myIdentity,
                 replicatedDataMonitor,
-                clusterSizeMonitor,
-                identityModule.myself() );
+                clusterSizeMonitor );
         return actorSystemLifecycle.applicationActorOf( coreTopologyProps, CoreTopologyActor.NAME );
     }
 
@@ -177,8 +182,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     private ActorRef databaseStateActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<ReplicatedDatabaseState> stateSink,
             ActorRef rrTopologyActor )
     {
-        Props stateProps = DatabaseStateActor.props( cluster, replicator, stateSink, rrTopologyActor, replicatedDataMonitor,
-                                                     identityModule.myself() );
+        Props stateProps = DatabaseStateActor.props( cluster, replicator, stateSink, rrTopologyActor, replicatedDataMonitor, myIdentity.serverId() );
         return actorSystemLifecycle.applicationActorOf( stateProps, DatabaseStateActor.NAME );
     }
 
@@ -192,7 +196,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
 
     private void publishInitialData( ActorRef... actorRefs )
     {
-        var memberSnapshot = memberSnapshotFactory.createSnapshot( identityModule, databaseStateService, localLeadershipsSnapshot() );
+        var memberSnapshot = memberSnapshotFactory.createSnapshot( myIdentity, databaseStateService, localLeadershipsSnapshot() );
         for ( ActorRef actorRef : actorRefs )
         {
             actorRef.tell( new PublishInitialData( memberSnapshot ), noSender() );
@@ -216,7 +220,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
 
         if ( this.isRestarting )
         {
-            globalTopologyState.clearRemoteData( memberId() );
+            globalTopologyState.clearRemoteData( serverId() );
         }
         else
         {
@@ -229,12 +233,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     @Override
     public SocketAddress lookupRaftAddress( RaftMemberId target )
     {
-        var targetCoreInfo = allCoreServers().get( target.serverId() );
-        if ( targetCoreInfo != null )
-        {
-            return targetCoreInfo.getRaftServer();
-        }
-        return null;
+        return globalTopologyState.getCoreServerInfo( target ).map( CoreServerInfo::getRaftServer ).orElse( null );
     }
 
     @Override
@@ -251,13 +250,13 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public PublishRaftIdOutcome publishRaftId( RaftId raftId, RaftMemberId memberId ) throws TimeoutException
+    public PublishRaftIdOutcome publishRaftId( RaftGroupId raftGroupId, RaftMemberId memberId ) throws TimeoutException
     {
         var coreTopologyActor = coreTopologyActorRef;
         if ( coreTopologyActor != null )
         {
             var timeout = config.get( CausalClusteringInternalSettings.raft_id_publish_timeout );
-            var request = new RaftIdSetRequest( raftId, memberId, timeout );
+            var request = new RaftIdSetRequest( raftGroupId, memberId, timeout );
             var idSetJob = Patterns.ask( coreTopologyActor, request, timeout )
                                    .thenApplyAsync( this::checkOutcome, executor )
                                    .toCompletableFuture();
@@ -281,9 +280,15 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public RaftMemberId resolveRaftMemberForServer( NamedDatabaseId namedDatabaseId, MemberId serverId )
+    public RaftMemberId resolveRaftMemberForServer( NamedDatabaseId namedDatabaseId, ServerId serverId )
     {
         return globalTopologyState.resolveRaftMemberForServer( namedDatabaseId.databaseId(), serverId );
+    }
+
+    @Override
+    public ServerId resolveServerForRaftMember( RaftMemberId raftMemberId )
+    {
+        return globalTopologyState.resolveServerForRaftMember( raftMemberId );
     }
 
     private PublishRaftIdOutcome checkOutcome( Object response )
@@ -305,7 +310,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     @Override
     public boolean didBootstrapDatabase( NamedDatabaseId namedDatabaseId )
     {
-        var thisRaftMember = resolveRaftMemberForServer( namedDatabaseId, identityModule.memberId() );
+        var thisRaftMember = resolveRaftMemberForServer( namedDatabaseId, myIdentity.serverId() );
         return globalTopologyState.bootstrapState().memberBootstrappedRaft( namedDatabaseId, thisRaftMember );
     }
 
@@ -355,6 +360,16 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
+    public void onRaftMemberKnown( NamedDatabaseId namedDatabaseId )
+    {
+        var coreTopologyActor = coreTopologyActorRef;
+        if ( coreTopologyActor != null )
+        {
+            coreTopologyActor.tell( new RaftMemberKnownMessage( namedDatabaseId ), noSender() );
+        }
+    }
+
+    @Override
     public void onDatabaseStop( NamedDatabaseId namedDatabaseId )
     {
         localLeadersByDatabaseId.remove( namedDatabaseId );
@@ -381,7 +396,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         var currentLeaderInfo = getLocalLeader( namedDatabaseId );
         if ( currentLeaderInfo.term() < newLeaderInfo.term() )
         {
-            log.info( "I am member %s. Updating leader info to member %s %s and term %s", memberId(), newLeaderInfo.memberId(), namedDatabaseId,
+            log.info( "I am server %s. Updating leader info to member %s %s and term %s", serverId(), newLeaderInfo.memberId(), namedDatabaseId,
                     newLeaderInfo.term() );
             localLeadersByDatabaseId.put( namedDatabaseId, newLeaderInfo );
             sendLeaderInfoIfNeeded( newLeaderInfo, namedDatabaseId );
@@ -394,13 +409,13 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         var currentLeaderInfo = getLocalLeader( namedDatabaseId );
 
         var wasLeaderForTerm =
-                Objects.equals( identityModule.memberId( namedDatabaseId ), currentLeaderInfo.memberId() ) &&
+                Objects.equals( myIdentity.raftMemberId( namedDatabaseId ), currentLeaderInfo.memberId() ) &&
                 term == currentLeaderInfo.term();
 
         if ( wasLeaderForTerm )
         {
             log.info( "Step down event detected. This topology member, with MemberId %s, was leader for %s in term %s, now moving " +
-                      "to follower.", memberId(), namedDatabaseId, currentLeaderInfo.term() );
+                      "to follower.", serverId(), namedDatabaseId, currentLeaderInfo.term() );
 
             var newLeaderInfo = currentLeaderInfo.stepDown();
             localLeadersByDatabaseId.put( namedDatabaseId, newLeaderInfo );
@@ -409,15 +424,15 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public RoleInfo lookupRole( NamedDatabaseId namedDatabaseId, MemberId memberId )
+    public RoleInfo lookupRole( NamedDatabaseId namedDatabaseId, ServerId serverId )
     {
         var leaderInfo = localLeadersByDatabaseId.get( namedDatabaseId );
-        var raftMemberId = globalTopologyState.resolveRaftMemberForServer( namedDatabaseId.databaseId(), memberId );
+        var raftMemberId = globalTopologyState.resolveRaftMemberForServer( namedDatabaseId.databaseId(), serverId );
         if ( leaderInfo != null && Objects.equals( raftMemberId, leaderInfo.memberId() ) )
         {
             return RoleInfo.LEADER;
         }
-        return globalTopologyState.role( namedDatabaseId, memberId );
+        return globalTopologyState.role( namedDatabaseId, serverId );
     }
 
     @Override
@@ -427,7 +442,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public Map<MemberId,CoreServerInfo> allCoreServers()
+    public Map<ServerId,CoreServerInfo> allCoreServers()
     {
         return globalTopologyState.allCoreServers();
     }
@@ -439,7 +454,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public Map<MemberId,ReadReplicaInfo> allReadReplicas()
+    public Map<ServerId,ReadReplicaInfo> allReadReplicas()
     {
         return globalTopologyState.allReadReplicas();
     }
@@ -451,7 +466,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public SocketAddress lookupCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
+    public SocketAddress lookupCatchupAddress( ServerId upstream ) throws CatchupAddressResolutionException
     {
         try
         {
@@ -464,25 +479,25 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public MemberId memberId()
+    public ServerId serverId()
     {
-        return identityModule.memberId();
+        return myIdentity.serverId();
     }
 
     @Override
-    public DiscoveryDatabaseState lookupDatabaseState( NamedDatabaseId namedDatabaseId, MemberId memberId )
+    public DiscoveryDatabaseState lookupDatabaseState( NamedDatabaseId namedDatabaseId, ServerId serverId )
     {
-        return globalTopologyState.stateFor( memberId, namedDatabaseId );
+        return globalTopologyState.stateFor( serverId, namedDatabaseId );
     }
 
     @Override
-    public Map<MemberId,DiscoveryDatabaseState> allCoreStatesForDatabase( NamedDatabaseId namedDatabaseId )
+    public Map<ServerId,DiscoveryDatabaseState> allCoreStatesForDatabase( NamedDatabaseId namedDatabaseId )
     {
         return Map.copyOf( globalTopologyState.coreStatesForDatabase( namedDatabaseId ).memberStates() );
     }
 
     @Override
-    public Map<MemberId,DiscoveryDatabaseState> allReadReplicaStatesForDatabase( NamedDatabaseId namedDatabaseId )
+    public Map<ServerId,DiscoveryDatabaseState> allReadReplicaStatesForDatabase( NamedDatabaseId namedDatabaseId )
     {
         return Map.copyOf( globalTopologyState.readReplicaStatesForDatabase( namedDatabaseId ).memberStates() );
     }

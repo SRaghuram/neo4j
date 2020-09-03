@@ -55,10 +55,10 @@ class CoreDatabaseStatusProviderTest
 
         assertEquals( 42L, status.getLastAppliedRaftIndex() );
         assertTrue( status.isParticipatingInRaftGroup() );
-        assertThat( status.getVotingMembers(), containsInAnyOrder( memberId.getUuid().toString(), leaderId.getUuid().toString() ) );
+        assertThat( status.getVotingMembers(), containsInAnyOrder( memberId.uuid().toString(), leaderId.uuid().toString() ) );
         assertTrue( status.isHealthy() );
-        assertEquals( memberId.getUuid().toString(), status.getMemberId() );
-        assertEquals( leaderId.getUuid().toString(), status.getLeader() );
+        assertEquals( memberId.uuid().toString(), status.getMemberId() );
+        assertEquals( leaderId.uuid().toString(), status.getLeader() );
         assertEquals( 42L, status.getMillisSinceLastLeaderMessage() );
         assertEquals( 42.0, status.getRaftCommandsPerSecond() );
         assertTrue( status.isCore() );

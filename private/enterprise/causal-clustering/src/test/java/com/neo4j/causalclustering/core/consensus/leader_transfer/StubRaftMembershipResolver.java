@@ -5,53 +5,61 @@
  */
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
-import com.neo4j.causalclustering.core.consensus.membership.RaftMembership;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
+import org.neo4j.dbms.identity.ServerId;
+import org.neo4j.dbms.identity.ServerIdentity;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 class StubRaftMembershipResolver implements RaftMembershipResolver
 {
-    private final Set<RaftMemberId> votingMembers;
+    private final Map<NamedDatabaseId,Set<CoreServerIdentity>> dbServers = new HashMap<>();
 
-    StubRaftMembershipResolver( RaftMemberId... members )
+    StubRaftMembershipResolver()
+    {}
+
+    StubRaftMembershipResolver( NamedDatabaseId databaseId, CoreServerIdentity... servers )
     {
-        this.votingMembers = Set.of( members );
+        add( databaseId, servers );
+    }
+
+    StubRaftMembershipResolver add( NamedDatabaseId databaseId, CoreServerIdentity... servers )
+    {
+        dbServers.put( databaseId, Set.of( servers ) );
+        return this;
     }
 
     @Override
-    public RaftMembership membersFor( NamedDatabaseId databaseId )
+    public Set<ServerId> votingServers( NamedDatabaseId databaseId )
     {
-        return new StubRaftMembership( votingMembers );
+        return dbServers
+                .get( databaseId )
+                .stream()
+                .map( ServerIdentity::serverId )
+                .collect( Collectors.toSet() );
     }
 
-    private static class StubRaftMembership implements RaftMembership
+    @Override
+    public RaftMemberId resolveRaftMemberForServer( NamedDatabaseId databaseId, ServerId to )
     {
-        private final Set<RaftMemberId> memberIds;
+        return dbServers
+                .get( databaseId )
+                .stream()
+                .filter( c -> c.serverId().equals( to ) )
+                .findFirst()
+                .map( c -> c.raftMemberId( databaseId ) )
+                .orElse( null );
+    }
 
-        StubRaftMembership( Set<RaftMemberId> memberIds )
-        {
-            this.memberIds = memberIds;
-        }
-
-        @Override
-        public Set<RaftMemberId> votingMembers()
-        {
-            return memberIds;
-        }
-
-        @Override
-        public Set<RaftMemberId> replicationMembers()
-        {
-            return memberIds;
-        }
-
-        @Override
-        public void registerListener( Listener listener )
-        { // no-op
-        }
+    @Override
+    public ServerId resolveServerForRaftMember( RaftMemberId memberId )
+    {
+        throw new UnsupportedOperationException();
     }
 }

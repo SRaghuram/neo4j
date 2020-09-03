@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.catchup.Protocol;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import io.netty.buffer.ByteBuf;
@@ -38,7 +38,7 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
     public void decode( ChannelHandlerContext ctx, ByteBuf buffer, List<Object> list ) throws Exception
     {
         ReadableChannel channel = new NetworkReadableChannel( buffer );
-        RaftId raftId = RaftId.Marshal.INSTANCE.unmarshal( channel );
+        RaftGroupId raftGroupId = RaftGroupId.Marshal.INSTANCE.unmarshal( channel );
 
         int messageTypeWire = channel.getInt();
         RaftMessages.Type[] values = RaftMessages.Type.values();
@@ -50,7 +50,7 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
         composer = getLazyComposer( channel, messageType, from )
                 .orElseThrow(() -> new IllegalArgumentException( "Unknown message type" ));
 
-        list.add( new InboundRaftMessageContainerComposer( composer, raftId ) );
+        list.add( new InboundRaftMessageContainerComposer( composer, raftGroupId ) );
         protocol.expect( ContentType.ContentType );
     }
 
@@ -195,24 +195,24 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
     public static class InboundRaftMessageContainerComposer
     {
         private final LazyComposer composer;
-        private final RaftId raftId;
+        private final RaftGroupId raftGroupId;
 
-        public InboundRaftMessageContainerComposer( LazyComposer composer, RaftId raftId )
+        public InboundRaftMessageContainerComposer( LazyComposer composer, RaftGroupId raftGroupId )
         {
             this.composer = composer;
-            this.raftId = raftId;
+            this.raftGroupId = raftGroupId;
         }
 
         public Optional<RaftMessages.InboundRaftMessageContainer> maybeCompose( Clock clock, Queue<Long> terms, Queue<ReplicatedContent> contents )
         {
             return composer.maybeComplete( terms, contents )
-                           .map( m -> RaftMessages.InboundRaftMessageContainer.of( clock.instant(), raftId, m ) );
+                           .map( m -> RaftMessages.InboundRaftMessageContainer.of( clock.instant(), raftGroupId, m ) );
         }
     }
 
     protected RaftMemberId retrieveMember( ReadableChannel buffer ) throws IOException, EndOfStreamException
     {
-        RaftMemberId.Marshal memberIdMarshal = new RaftMemberId.Marshal();
+        RaftMemberId.Marshal memberIdMarshal = RaftMemberId.Marshal.INSTANCE;
         return memberIdMarshal.unmarshal( buffer );
     }
 

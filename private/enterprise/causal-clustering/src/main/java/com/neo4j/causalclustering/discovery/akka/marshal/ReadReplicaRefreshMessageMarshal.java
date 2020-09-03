@@ -26,7 +26,7 @@ import org.neo4j.kernel.database.DatabaseId;
 public class ReadReplicaRefreshMessageMarshal extends SafeChannelMarshal<ReadReplicaRefreshMessage>
 {
     private final ChannelMarshal<ReadReplicaInfo> readReplicaInfoMarshal;
-    private final ChannelMarshal<ServerId> serverIdMarshal = new ServerId.Marshal();
+    private final ChannelMarshal<ServerId> serverIdMarshal = ServerId.Marshal.INSTANCE;
     private final ChannelMarshal<ActorRef> actorRefMarshal;
 
     public ReadReplicaRefreshMessageMarshal( ExtendedActorSystem system )

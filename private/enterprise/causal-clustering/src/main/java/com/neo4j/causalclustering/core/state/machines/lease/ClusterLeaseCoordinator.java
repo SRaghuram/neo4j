@@ -10,11 +10,14 @@ import com.neo4j.causalclustering.core.replication.ReplicationResult;
 import com.neo4j.causalclustering.core.replication.Replicator;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
+import java.util.function.Supplier;
+
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.api.LeaseClient;
 import org.neo4j.kernel.impl.api.LeaseException;
 import org.neo4j.kernel.impl.api.LeaseService;
+import org.neo4j.util.VisibleForTesting;
 
 import static com.neo4j.causalclustering.core.state.machines.lease.Lease.nextCandidateId;
 import static org.neo4j.kernel.api.exceptions.Status.Cluster.NotALeader;
@@ -36,14 +39,22 @@ public class ClusterLeaseCoordinator implements LeaseService
     private volatile int invalidLeaseId = NO_LEASE;
     private volatile int myLeaseId = NO_LEASE;
 
-    private final RaftMemberId myself;
+    private final Supplier<RaftMemberId> myself;
     private final Replicator replicator;
     private final LeaderLocator leaderLocator;
     private final ReplicatedLeaseStateMachine leaseStateMachine;
     private final NamedDatabaseId namedDatabaseId;
 
-    public ClusterLeaseCoordinator( RaftMemberId myself, Replicator replicator, LeaderLocator leaderLocator, ReplicatedLeaseStateMachine leaseStateMachine,
+    @VisibleForTesting
+    public ClusterLeaseCoordinator( RaftMemberId myself, Replicator replicator, LeaderLocator leaderLocator,
+            ReplicatedLeaseStateMachine leaseStateMachine,
             NamedDatabaseId namedDatabaseId )
+    {
+        this( () -> myself, replicator, leaderLocator, leaseStateMachine, namedDatabaseId );
+    }
+
+    public ClusterLeaseCoordinator( Supplier<RaftMemberId> myself, Replicator replicator, LeaderLocator leaderLocator,
+            ReplicatedLeaseStateMachine leaseStateMachine, NamedDatabaseId namedDatabaseId )
     {
         this.myself = myself;
         this.replicator = replicator;
@@ -91,7 +102,7 @@ public class ClusterLeaseCoordinator implements LeaseService
     synchronized int acquireLeaseOrThrow() throws LeaseException
     {
         Lease currentLease = currentLease();
-        if ( myself.equals( currentLease.owner() ) && !isInvalid( currentLease.id() ) )
+        if ( myself.get().equals( currentLease.owner() ) && !isInvalid( currentLease.id() ) )
         {
             return currentLease.id();
         }
@@ -99,7 +110,7 @@ public class ClusterLeaseCoordinator implements LeaseService
         /* If we are not the leader then we will not even attempt to acquire the lease. */
         ensureLeader();
 
-        ReplicatedLeaseRequest leaseRequest = new ReplicatedLeaseRequest( myself, nextCandidateId( currentLease.id() ), namedDatabaseId.databaseId() );
+        ReplicatedLeaseRequest leaseRequest = new ReplicatedLeaseRequest( myself.get(), nextCandidateId( currentLease.id() ), namedDatabaseId.databaseId() );
         ReplicationResult replicationResult = replicator.replicate( leaseRequest );
 
         if ( replicationResult.outcome() != ReplicationResult.Outcome.APPLIED )
@@ -135,7 +146,7 @@ public class ClusterLeaseCoordinator implements LeaseService
         {
             leader = leaderInfo.get().memberId();
         }
-        if ( !myself.equals( leader ) )
+        if ( !myself.get().equals( leader ) )
         {
             throw new LeaseException( NOT_ON_LEADER_ERROR_MESSAGE, NotALeader );
         }

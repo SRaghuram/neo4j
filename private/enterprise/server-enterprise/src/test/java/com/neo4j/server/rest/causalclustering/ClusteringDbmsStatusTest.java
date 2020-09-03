@@ -7,8 +7,9 @@ package com.neo4j.server.rest.causalclustering;
 
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.discovery.RoleInfo;
+import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,8 @@ import java.util.stream.Stream;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
+import org.neo4j.dbms.identity.ServerId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -50,44 +53,61 @@ class ClusteringDbmsStatusTest
     private final DatabaseManagementService managementService = mock( DatabaseManagementService.class );
     private final ClusteringDbmsStatus statusOutput = new ClusteringDbmsStatus( managementService );
 
-    private final RaftMemberId coreId1 = IdFactory.randomRaftMemberId();
-    private final RaftMemberId coreId2 = IdFactory.randomRaftMemberId();
-    private final MemberId readReplicaId = IdFactory.randomMemberId();
+    private final CoreServerIdentity coreA = new InMemoryCoreServerIdentity();
+    private final CoreServerIdentity coreB = new InMemoryCoreServerIdentity();
+    private final ServerId readReplicaId = IdFactory.randomServerId();
 
-    private final GraphDatabaseAPI coreDb1 = coreStatusMockBuilder()
-            .databaseId( databaseIdRepository.getRaw( "foo" ) )
-            .memberId( coreId1 )
-            .leaderId( coreId2 )
-            .healthy( true )
-            .available( true )
-            .durationSinceLastMessage( ofMillis( 1 ) )
-            .appliedCommandIndex( 2 )
-            .throughput( 3 )
-            .role( Role.LEADER )
-            .build();
+    NamedDatabaseId fooDb = databaseIdRepository.getRaw( "foo" );
+    NamedDatabaseId barDb = databaseIdRepository.getRaw( "bar" );
+    NamedDatabaseId bazDb = databaseIdRepository.getRaw( "baz" );
 
-    private final GraphDatabaseAPI coreDb2 = coreStatusMockBuilder()
-            .databaseId( databaseIdRepository.getRaw( "bar" ) )
-            .memberId( coreId2 )
-            .leaderId( coreId1 )
-            .healthy( true )
-            .available( true )
-            .durationSinceLastMessage( ofMillis( 4 ) )
-            .appliedCommandIndex( 5 )
-            .throughput( 6 )
-            .role( Role.FOLLOWER )
-            .build();
+    private final GraphDatabaseAPI coreDb1;
 
-    private final GraphDatabaseAPI readReplicaDb = readReplicaStatusMockBuilder()
-            .databaseId( databaseIdRepository.getRaw( "baz" ) )
-            .healthy( false )
-            .available( true )
-            .readReplicaId( readReplicaId )
-            .coreRole( coreId1.serverId(), RoleInfo.FOLLOWER )
-            .coreRole( coreId2.serverId(), RoleInfo.LEADER )
-            .appliedCommandIndex( 7 )
-            .throughput( 8 )
-            .build();
+    {
+        coreDb1 = coreStatusMockBuilder()
+                    .databaseId( fooDb )
+                    .memberId( coreA.raftMemberId( fooDb ) )
+                    .leaderId( coreB.raftMemberId( fooDb ) )
+                    .healthy( true )
+                    .available( true )
+                    .durationSinceLastMessage( ofMillis( 1 ) )
+                    .appliedCommandIndex( 2 )
+                    .throughput( 3 )
+                    .role( Role.LEADER )
+                    .build();
+    }
+
+    private final GraphDatabaseAPI coreDb2;
+
+    {
+        coreDb2 = coreStatusMockBuilder()
+                    .databaseId( barDb )
+                    .memberId( coreB.raftMemberId( barDb ) )
+                    .leaderId( coreA.raftMemberId( barDb ) )
+                    .healthy( true )
+                    .available( true )
+                    .durationSinceLastMessage( ofMillis( 4 ) )
+                    .appliedCommandIndex( 5 )
+                    .throughput( 6 )
+                    .role( Role.FOLLOWER )
+                    .build();
+    }
+
+    private final GraphDatabaseAPI readReplicaDb;
+
+    {
+        readReplicaDb = readReplicaStatusMockBuilder()
+                    .databaseId( bazDb )
+                    .healthy( false )
+                    .available( true )
+                    .readReplicaId( readReplicaId )
+                    .coreRole( coreA.serverId(), RoleInfo.FOLLOWER )
+                    .coreRole( coreB.serverId(), RoleInfo.LEADER )
+                    .leader( coreB.raftMemberId( bazDb ) )
+                    .appliedCommandIndex( 7 )
+                    .throughput( 8 )
+                    .build();
+    }
 
     @BeforeEach
     void beforeEach()
@@ -124,10 +144,10 @@ class ClusteringDbmsStatusTest
         var status1 = findDatabaseStatus( json, coreDb1 );
         verifyLastAppliedRaftIndex( status1, 2 );
         verifyParticipatingInRaftGroup( status1, true );
-        verifyVotingMembers( status1, coreId1, coreId2 );
+        verifyVotingMembers( status1, coreA.raftMemberId( fooDb ), coreB.raftMemberId( fooDb ) );
         verifyHealthy( status1, true );
-        verifyMemberId( status1, coreId1.getUuid() );
-        verifyLeader( status1, coreId2 );
+        verifyMemberId( status1, coreA.raftMemberId( fooDb ).uuid() );
+        verifyLeader( status1, coreB.raftMemberId( fooDb ) );
         verifyMillisSinceLastLeaderMessage( status1, 1 );
         verifyRaftCommandsPerSecond( status1, 3.0 );
         verifyCore( status1, true );
@@ -135,10 +155,10 @@ class ClusteringDbmsStatusTest
         var status2 = findDatabaseStatus( json, coreDb2 );
         verifyLastAppliedRaftIndex( status2, 5 );
         verifyParticipatingInRaftGroup( status2, true );
-        verifyVotingMembers( status2, coreId1, coreId2 );
+        verifyVotingMembers( status2, coreA.raftMemberId( barDb ), coreB.raftMemberId( barDb ) );
         verifyHealthy( status2, true );
-        verifyMemberId( status2, coreId2.getUuid() );
-        verifyLeader( status2, coreId1 );
+        verifyMemberId( status2, coreB.raftMemberId( barDb ).uuid() );
+        verifyLeader( status2, coreA.raftMemberId( barDb ) );
         verifyMillisSinceLastLeaderMessage( status2, 4 );
         verifyRaftCommandsPerSecond( status2, 6.0 );
         verifyCore( status2, true );
@@ -146,10 +166,10 @@ class ClusteringDbmsStatusTest
         var status3 = findDatabaseStatus( json, readReplicaDb );
         verifyLastAppliedRaftIndex( status3, 7 );
         verifyParticipatingInRaftGroup( status3, false );
-        verifyVotingMembers( status3, coreId1, coreId2 );
+        verifyVotingMembers( status3 );
         verifyHealthy( status3, false );
-        verifyMemberId( status3, readReplicaId.getUuid() );
-        verifyLeader( status3, coreId2 );
+        verifyMemberId( status3, readReplicaId.uuid() );
+        verifyLeader( status3, coreB.raftMemberId( bazDb ) );
         verifyMillisSinceLastLeaderMessage( status3, null );
         verifyRaftCommandsPerSecond( status3, 8.0 );
         verifyCore( status3, false );
@@ -186,10 +206,11 @@ class ClusteringDbmsStatusTest
 
         for ( var illegalInfo : illegalInfos )
         {
+            NamedDatabaseId qux = databaseIdRepository.getRaw( "qux" );
             var db = coreStatusMockBuilder()
-                    .databaseId( databaseIdRepository.getRaw( "qux" ) )
-                    .memberId( coreId1 )
-                    .leaderId( coreId2 )
+                    .databaseId( qux )
+                    .memberId( coreA.raftMemberId( qux ) )
+                    .leaderId( coreB.raftMemberId( qux ) )
                     .available( true )
                     .build();
 
@@ -265,7 +286,7 @@ class ClusteringDbmsStatusTest
         var value = status.get( "votingMembers" );
         assertThat( value, instanceOf( List.class ) );
 
-        var expectedVotingMember = Stream.of( expected ).map( id -> id.getUuid().toString() ).sorted().collect( toList() );
+        var expectedVotingMember = Stream.of( expected ).map( id -> id.uuid().toString() ).sorted().collect( toList() );
         var actualVotingMember = (List<String>) status.get( "votingMembers" );
         actualVotingMember.sort( naturalOrder() );
 
@@ -290,7 +311,7 @@ class ClusteringDbmsStatusTest
     {
         var value = status.get( "leader" );
         assertThat( value, instanceOf( String.class ) );
-        assertEquals( expected.getUuid().toString(), value );
+        assertEquals( expected.uuid().toString(), value );
     }
 
     private static void verifyMillisSinceLastLeaderMessage( Map<String,Object> status, Integer expected )

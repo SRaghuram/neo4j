@@ -38,7 +38,7 @@ class BatchingHandlerTest
         {
             queue.offer( message );
         }
-        var batchingHandler = new BatchingHandler( message.receivedAt(), message.raftId(), config, queue, new ArrayList<>(), new ArrayList<>() );
+        var batchingHandler = new BatchingHandler( message.receivedAt(), message.raftGroupId(), config, queue, new ArrayList<>(), new ArrayList<>() );
 
         var batchedMessage =
                 (RaftMessages.InboundRaftMessageContainer<RaftMessages.NewEntry.BatchRequest>) message.message().dispatch( batchingHandler );
@@ -59,7 +59,7 @@ class BatchingHandlerTest
         {
             queue.offer( message );
         }
-        var batchingHandler = new BatchingHandler( message.receivedAt(), message.raftId(), config, queue, new ArrayList<>(), new ArrayList<>() );
+        var batchingHandler = new BatchingHandler( message.receivedAt(), message.raftGroupId(), config, queue, new ArrayList<>(), new ArrayList<>() );
 
         var batchedMessage =
                 (RaftMessages.InboundRaftMessageContainer<RaftMessages.NewEntry.BatchRequest>) message.message().dispatch( batchingHandler );
@@ -80,7 +80,7 @@ class BatchingHandlerTest
         {
             queue.offer( message( i, new RaftLogEntry[]{new RaftLogEntry( 1, emptyContent() )} ) );
         }
-        var batchingHandler = new BatchingHandler( message.receivedAt(), message.raftId(), config, queue, new ArrayList<>(), new ArrayList<>() );
+        var batchingHandler = new BatchingHandler( message.receivedAt(), message.raftGroupId(), config, queue, new ArrayList<>(), new ArrayList<>() );
 
         var batchedMessage =
                 (RaftMessages.InboundRaftMessageContainer<RaftMessages.AppendEntries.Request>) message.message().dispatch( batchingHandler );
@@ -101,7 +101,7 @@ class BatchingHandlerTest
         {
             queue.offer( message( i, new RaftLogEntry[]{new RaftLogEntry( 1, contentWithOneByte() )} ) );
         }
-        var batchingHandler = new BatchingHandler( message.receivedAt(), message.raftId(), config, queue, new ArrayList<>(), new ArrayList<>() );
+        var batchingHandler = new BatchingHandler( message.receivedAt(), message.raftGroupId(), config, queue, new ArrayList<>(), new ArrayList<>() );
 
         var batchedMessage =
                 (RaftMessages.InboundRaftMessageContainer<RaftMessages.AppendEntries.Request>) message.message().dispatch( batchingHandler );
@@ -122,7 +122,7 @@ class BatchingHandlerTest
         queue.offer( message( 4, new RaftLogEntry[]{new RaftLogEntry( 1, emptyContent() )} ) );
 
         var batchingHandler =
-                new BatchingHandler( message.receivedAt(), message.raftId(), new BatchingConfig( 100, 100 ), queue, new ArrayList<>(), new ArrayList<>() );
+                new BatchingHandler( message.receivedAt(), message.raftGroupId(), new BatchingConfig( 100, 100 ), queue, new ArrayList<>(), new ArrayList<>() );
 
         var batchedMessage =
                 (RaftMessages.InboundRaftMessageContainer<RaftMessages.AppendEntries.Request>) message.message().dispatch( batchingHandler );
@@ -143,7 +143,7 @@ class BatchingHandlerTest
         queue.offer( message );
 
         var batchingHandler =
-                new BatchingHandler( message.receivedAt(), message.raftId(), new BatchingConfig( 100, 100 ), queue, new ArrayList<>(), new ArrayList<>() );
+                new BatchingHandler( message.receivedAt(), message.raftGroupId(), new BatchingConfig( 100, 100 ), queue, new ArrayList<>(), new ArrayList<>() );
 
         var batchedMessage =
                 (RaftMessages.InboundRaftMessageContainer<RaftMessages.NewEntry.BatchRequest>) message.message().dispatch( batchingHandler );

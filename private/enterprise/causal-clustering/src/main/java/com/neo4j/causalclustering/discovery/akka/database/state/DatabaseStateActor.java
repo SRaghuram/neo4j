@@ -16,7 +16,6 @@ import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
-import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Map;
 import java.util.stream.Collector;
@@ -29,20 +28,20 @@ import org.neo4j.kernel.database.DatabaseId;
 import static com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.DATABASE_STATE;
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
 
-public class DatabaseStateActor extends BaseReplicatedDataActor<LWWMap<DatabaseToMember,DiscoveryDatabaseState>>
+public class DatabaseStateActor extends BaseReplicatedDataActor<LWWMap<DatabaseServer,DiscoveryDatabaseState>>
 {
     public static Props props( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<ReplicatedDatabaseState> discoveryUpdateSink,
             ActorRef rrTopologyActor, ReplicatedDataMonitor monitor, ServerId myself )
     {
-        return Props.create( DatabaseStateActor.class, () -> new DatabaseStateActor( cluster, replicator, discoveryUpdateSink,
-                                                                                     rrTopologyActor, monitor, myself ) );
+        return Props.create(
+                DatabaseStateActor.class, () -> new DatabaseStateActor( cluster, replicator, discoveryUpdateSink, rrTopologyActor, monitor, myself ) );
     }
 
     public static final String NAME = "cc-database-status-actor";
 
     private final SourceQueueWithComplete<ReplicatedDatabaseState> stateUpdateSink;
     private final ActorRef rrTopologyActor;
-    private final MemberId myself;
+    private final ServerId myself;
 
     private DatabaseStateActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<ReplicatedDatabaseState> stateUpdateSink,
             ActorRef rrTopologyActor, ReplicatedDataMonitor monitor,
@@ -51,8 +50,7 @@ public class DatabaseStateActor extends BaseReplicatedDataActor<LWWMap<DatabaseT
         super( cluster, replicator, LWWMapKey::create, LWWMap::create, DATABASE_STATE, monitor );
         this.stateUpdateSink = stateUpdateSink;
         this.rrTopologyActor = rrTopologyActor;
-        //TODO: Remove deprecated MemberId.of factory when we refactor to DatabaseToServer
-        this.myself = MemberId.of( myself );
+        this.myself = myself;
     }
 
     @Override
@@ -79,13 +77,13 @@ public class DatabaseStateActor extends BaseReplicatedDataActor<LWWMap<DatabaseT
         }
     }
 
-    private LWWMap<DatabaseToMember,DiscoveryDatabaseState> addState( LWWMap<DatabaseToMember,DiscoveryDatabaseState> acc,
+    private LWWMap<DatabaseServer,DiscoveryDatabaseState> addState( LWWMap<DatabaseServer,DiscoveryDatabaseState> acc,
             Map.Entry<DatabaseId,DatabaseState> entry )
     {
         var databaseId = entry.getKey();
         var dbState = entry.getValue();
         var discoveryState = new DiscoveryDatabaseState( databaseId, dbState.operatorState(), dbState.failure().orElse( null ) );
-        return acc.put( cluster, new DatabaseToMember( databaseId, myself ), discoveryState );
+        return acc.put( cluster, new DatabaseServer( databaseId, myself ), discoveryState );
     }
 
     @Override
@@ -98,20 +96,20 @@ public class DatabaseStateActor extends BaseReplicatedDataActor<LWWMap<DatabaseT
     {
         if ( update.operatorState() == DROPPED )
         {
-            modifyReplicatedData( key, map -> map.remove( cluster, new DatabaseToMember( update.databaseId(), myself ) ) );
+            modifyReplicatedData( key, map -> map.remove( cluster, new DatabaseServer( update.databaseId(), myself ) ) );
         }
         else
         {
-            modifyReplicatedData( key, map -> map.put( cluster, new DatabaseToMember( update.databaseId(), myself ), update ) );
+            modifyReplicatedData( key, map -> map.put( cluster, new DatabaseServer( update.databaseId(), myself ), update ) );
         }
     }
 
     @Override
-    protected void handleIncomingData( LWWMap<DatabaseToMember,DiscoveryDatabaseState> newData )
+    protected void handleIncomingData( LWWMap<DatabaseServer,DiscoveryDatabaseState> newData )
     {
         data = newData;
         var statesGroupedByDatabase = data.getEntries().entrySet().stream()
-                .map( e -> Map.entry( e.getKey().memberId(), e.getValue() ) )
+                .map( e -> Map.entry( e.getKey().serverId(), e.getValue() ) )
                 .collect( Collectors.groupingBy( e -> e.getValue().databaseId(), entriesToMap() ) );
 
         var allReplicatedStates = statesGroupedByDatabase.entrySet().stream()

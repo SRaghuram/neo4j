@@ -14,8 +14,7 @@ import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.configuration.ServerGroupName;
 
@@ -26,6 +25,7 @@ import java.util.UUID;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.DatabaseState;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -35,20 +35,25 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
 {
     private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase().databaseId();
 
-    private final MemberId memberId;
+    private final ServerId serverId;
     private final ServerGroupName matchingGroupName;
 
-    private final MemberId coreNotSelf = MemberId.of( new UUID( 321, 654 ) );
-    private final MemberId readReplicaNotSelf = MemberId.of( new UUID( 432, 543 ) );
+    private final ServerId coreNotSelf = new ServerId( new UUID( 321, 654 ) );
+    private final ServerId readReplicaNotSelf = new ServerId( new UUID( 432, 543 ) );
 
-    TopologyServiceThatPrioritisesItself( MemberId memberId, ServerGroupName matchingGroupName )
+    TopologyServiceThatPrioritisesItself( ServerId serverId, ServerGroupName matchingGroupName )
     {
-        this.memberId = memberId;
+        this.serverId = serverId;
         this.matchingGroupName = matchingGroupName;
     }
 
     @Override
     public void onDatabaseStart( NamedDatabaseId namedDatabaseId )
+    {
+    }
+
+    @Override
+    public void onRaftMemberKnown( NamedDatabaseId namedDatabaseId )
     {
     }
 
@@ -63,9 +68,9 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public Map<MemberId,CoreServerInfo> allCoreServers()
+    public Map<ServerId,CoreServerInfo> allCoreServers()
     {
-        return Map.of( memberId, coreServerInfo(),
+        return Map.of( serverId, coreServerInfo(),
                 coreNotSelf, coreServerInfo() );
     }
 
@@ -73,13 +78,13 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     public DatabaseCoreTopology coreTopologyForDatabase( NamedDatabaseId namedDatabaseId )
     {
         var databaseId = namedDatabaseId.databaseId();
-        return new DatabaseCoreTopology( databaseId, RaftId.from( databaseId ), allCoreServers() );
+        return new DatabaseCoreTopology( databaseId, RaftGroupId.from( databaseId ), allCoreServers() );
     }
 
     @Override
-    public Map<MemberId,ReadReplicaInfo> allReadReplicas()
+    public Map<ServerId,ReadReplicaInfo> allReadReplicas()
     {
-        return Map.of( memberId, readReplicaInfo( matchingGroupName ),
+        return Map.of( serverId, readReplicaInfo( matchingGroupName ),
                 readReplicaNotSelf, readReplicaInfo( matchingGroupName ) );
     }
 
@@ -90,13 +95,13 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public SocketAddress lookupCatchupAddress( MemberId upstream )
+    public SocketAddress lookupCatchupAddress( ServerId upstream )
     {
         throw new RuntimeException( "Unimplemented" );
     }
 
     @Override
-    public RoleInfo lookupRole( NamedDatabaseId namedDatabaseId, MemberId memberId )
+    public RoleInfo lookupRole( NamedDatabaseId namedDatabaseId, ServerId serverId )
     {
         return RoleInfo.UNKNOWN;
     }
@@ -108,31 +113,37 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public MemberId memberId()
+    public ServerId serverId()
     {
-        return memberId;
+        return serverId;
     }
 
     @Override
-    public RaftMemberId resolveRaftMemberForServer( NamedDatabaseId namedDatabaseId, MemberId serverId )
+    public RaftMemberId resolveRaftMemberForServer( NamedDatabaseId namedDatabaseId, ServerId serverId )
     {
-        return RaftMemberId.from( serverId );
+        throw new RuntimeException( "Unimplemented" );
     }
 
     @Override
-    public DiscoveryDatabaseState lookupDatabaseState( NamedDatabaseId namedDatabaseId, MemberId memberId )
+    public ServerId resolveServerForRaftMember( RaftMemberId raftMemberId )
+    {
+        throw new RuntimeException( "Unimplemented" );
+    }
+
+    @Override
+    public DiscoveryDatabaseState lookupDatabaseState( NamedDatabaseId namedDatabaseId, ServerId serverId )
     {
         return DiscoveryDatabaseState.unknown( namedDatabaseId.databaseId() );
     }
 
     @Override
-    public Map<MemberId,DiscoveryDatabaseState> allCoreStatesForDatabase( NamedDatabaseId namedDatabaseId )
+    public Map<ServerId,DiscoveryDatabaseState> allCoreStatesForDatabase( NamedDatabaseId namedDatabaseId )
     {
         return Map.of();
     }
 
     @Override
-    public Map<MemberId,DiscoveryDatabaseState> allReadReplicaStatesForDatabase( NamedDatabaseId namedDatabaseId )
+    public Map<ServerId,DiscoveryDatabaseState> allReadReplicaStatesForDatabase( NamedDatabaseId namedDatabaseId )
     {
         return Map.of();
     }

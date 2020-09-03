@@ -5,12 +5,12 @@
  */
 package com.neo4j.causalclustering.read_replica;
 
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 
 import java.util.Optional;
 
 import org.neo4j.annotations.service.ServiceProvider;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 @ServiceProvider
@@ -26,7 +26,7 @@ public class SpecificReplicaStrategy extends UpstreamDatabaseSelectionStrategy
     }
 
     @Override
-    public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId )
+    public Optional<ServerId> upstreamServerForDatabase( NamedDatabaseId namedDatabaseId )
     {
         ReadReplica current = upstreamFactory.current();
         if ( current == null )
@@ -35,7 +35,7 @@ public class SpecificReplicaStrategy extends UpstreamDatabaseSelectionStrategy
         }
         else
         {
-            return Optional.of( MemberId.of( current.serverId() ) );
+            return Optional.of( current.serverId() );
         }
     }
 

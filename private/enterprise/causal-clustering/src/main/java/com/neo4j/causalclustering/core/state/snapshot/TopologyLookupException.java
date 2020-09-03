@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state.snapshot;
 
-import com.neo4j.causalclustering.identity.MemberId;
+import org.neo4j.dbms.identity.ServerId;
 
 import static java.lang.String.format;
 
@@ -16,8 +16,8 @@ public class TopologyLookupException extends Exception
         super( cause );
     }
 
-    public TopologyLookupException( MemberId memberId )
+    public TopologyLookupException( ServerId serverId )
     {
-        super( format( "Cannot find the target member %s socket address", memberId ) );
+        super( format( "Cannot find the target server %s socket address", serverId ) );
     }
 }

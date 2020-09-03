@@ -8,11 +8,11 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
 import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
-import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
+import com.neo4j.causalclustering.discovery.TestCoreDiscoveryMember;
 import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
-import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
+import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.EnterpriseDatabaseState;
 import com.neo4j.dbms.EnterpriseOperatorState;
@@ -52,7 +52,7 @@ class AkkaCoreTopologyServiceIT
                 .set( CausalClusteringSettings.discovery_listen_address, new SocketAddress( "localhost", allocatePort() ) )
                 .build();
 
-        var identityModule = new StubClusteringIdentityModule();
+        var identityModule = new InMemoryCoreServerIdentity();
 
         var logProvider = NullLogProvider.getInstance();
         jobScheduler = createInitialisedScheduler();
@@ -63,7 +63,7 @@ class AkkaCoreTopologyServiceIT
 
         service = new AkkaDiscoveryServiceFactory().coreTopologyService( config, identityModule, jobScheduler, logProvider, logProvider,
                                                                          initialDiscoveryMemberResolver, new NoRetriesStrategy(), sslPolicyLoader,
-                                                                         TestDiscoveryMember::factory, firstStartupDetector,
+                                                                         TestCoreDiscoveryMember::factory, firstStartupDetector,
                                                                          new Monitors(), Clocks.systemClock(), databaseStateService );
     }
 

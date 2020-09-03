@@ -6,11 +6,11 @@
 package com.neo4j.causalclustering.upstream;
 
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -25,34 +25,34 @@ public class UpstreamDatabaseSelectionStrategyTest
     void upstreamMembersShouldWrapWrapOptionalByDefault() throws UpstreamDatabaseSelectionException
     {
         // given
-        var memberId = IdFactory.randomMemberId();
-        var populatedStrategy = new StubStrategy( memberId );
+        var serverId = IdFactory.randomServerId();
+        var populatedStrategy = new StubStrategy( serverId );
         var emptyStrategy = new StubStrategy( null );
 
         // when
-        var nonEmptyMemberIds = populatedStrategy.upstreamMembersForDatabase( null ); // databaseId ignored
-        var emptyMemberIds = emptyStrategy.upstreamMembersForDatabase( null );
+        var nonEmptyMemberIds = populatedStrategy.upstreamServersForDatabase( null ); // databaseId ignored
+        var emptyMemberIds = emptyStrategy.upstreamServersForDatabase( null );
 
         // then
         assertThat( nonEmptyMemberIds, hasSize( 1 ) );
-        assertThat( nonEmptyMemberIds, contains( memberId ) );
+        assertThat( nonEmptyMemberIds, contains( serverId ) );
         assertThat( emptyMemberIds, empty() );
     }
 
     private static class StubStrategy extends UpstreamDatabaseSelectionStrategy
     {
-        private final MemberId memberId;
+        private final ServerId serverId;
 
-        StubStrategy( MemberId memberId )
+        StubStrategy( ServerId serverId )
         {
             super( "StubStrategy" );
-            this.memberId = memberId;
+            this.serverId = serverId;
         }
 
         @Override
-        public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId ignored )
+        public Optional<ServerId> upstreamServerForDatabase( NamedDatabaseId ignored )
         {
-            return Optional.ofNullable( memberId );
+            return Optional.ofNullable( serverId );
         }
     }
 }

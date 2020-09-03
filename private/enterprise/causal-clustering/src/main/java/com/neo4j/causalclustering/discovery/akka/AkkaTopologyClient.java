@@ -14,17 +14,17 @@ import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.ReplicatedRaftMapping;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
+import com.neo4j.causalclustering.discovery.akka.common.RaftMemberKnownMessage;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ClientTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ClusterClientManager;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
-import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.time.Clock;
@@ -34,6 +34,8 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.DatabaseState;
 import org.neo4j.dbms.DatabaseStateService;
+import org.neo4j.dbms.identity.ServerId;
+import org.neo4j.dbms.identity.ServerIdentity;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
@@ -48,7 +50,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     private final Config config;
     private final ActorSystemLifecycle actorSystemLifecycle;
     private final DiscoveryMemberFactory discoveryMemberFactory;
-    private final ClusteringIdentityModule identityModule;
+    private final ServerIdentity myIdentity;
     private final LogProvider logProvider;
     private final Clock clock;
     private final JobScheduler jobScheduler;
@@ -57,11 +59,11 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     private volatile ActorRef clientTopologyActorRef;
     private volatile GlobalTopologyState globalTopologyState;
 
-    AkkaTopologyClient( Config config, LogProvider logProvider, ClusteringIdentityModule identityModule, ActorSystemLifecycle actorSystemLifecycle,
-                        DiscoveryMemberFactory discoveryMemberFactory, Clock clock, JobScheduler jobScheduler, DatabaseStateService databaseStateService )
+    AkkaTopologyClient( Config config, LogProvider logProvider, ServerIdentity myIdentity, ActorSystemLifecycle actorSystemLifecycle,
+            DiscoveryMemberFactory discoveryMemberFactory, Clock clock, JobScheduler jobScheduler, DatabaseStateService databaseStateService )
     {
         this.config = config;
-        this.identityModule = identityModule;
+        this.myIdentity = myIdentity;
         this.actorSystemLifecycle = actorSystemLifecycle;
         this.discoveryMemberFactory = discoveryMemberFactory;
         this.logProvider = logProvider;
@@ -91,19 +93,22 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
                 actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbLeaderUpdate );
         SourceQueueWithComplete<ReplicatedDatabaseState> databaseStateSink =
                 actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbStateUpdate );
+        SourceQueueWithComplete<ReplicatedRaftMapping> raftMappingSink =
+                actorSystemLifecycle.queueMostRecent( globalTopologyState::onRaftMappingUpdate );
 
-        var discoveryMemberSnapshot = discoveryMemberFactory.createSnapshot( identityModule, databaseStateService, Map.of() );
+        var discoveryMemberSnapshot = discoveryMemberFactory.createSnapshot( databaseStateService, Map.of() );
         var clientTopologyProps = ClientTopologyActor.props(
                 discoveryMemberSnapshot,
                 coreTopologySink,
                 rrTopologySink,
                 directorySink,
                 databaseStateSink,
+                raftMappingSink,
                 clusterClientManager,
                 config,
                 logProvider,
                 clock,
-                identityModule.myself() );
+                myIdentity.serverId() );
         clientTopologyActorRef = actorSystemLifecycle.applicationActorOf( clientTopologyProps, ClientTopologyActor.NAME );
     }
 
@@ -122,6 +127,16 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
         if ( clientTopologyActor != null )
         {
             clientTopologyActor.tell( new DatabaseStartedMessage( namedDatabaseId ), noSender() );
+        }
+    }
+
+    @Override
+    public void onRaftMemberKnown( NamedDatabaseId namedDatabaseId )
+    {
+        var clientTopologyActor = clientTopologyActorRef;
+        if ( clientTopologyActor != null )
+        {
+            clientTopologyActor.tell( new RaftMemberKnownMessage( namedDatabaseId ), noSender() );
         }
     }
 
@@ -146,7 +161,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public Map<MemberId,CoreServerInfo> allCoreServers()
+    public Map<ServerId,CoreServerInfo> allCoreServers()
     {
         return globalTopologyState.allCoreServers();
     }
@@ -158,7 +173,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public Map<MemberId,ReadReplicaInfo> allReadReplicas()
+    public Map<ServerId,ReadReplicaInfo> allReadReplicas()
     {
         return globalTopologyState.allReadReplicas();
     }
@@ -170,7 +185,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public SocketAddress lookupCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
+    public SocketAddress lookupCatchupAddress( ServerId upstream ) throws CatchupAddressResolutionException
     {
         SocketAddress advertisedSocketAddress = globalTopologyState.retrieveCatchupServerAddress( upstream );
         if ( advertisedSocketAddress == null )
@@ -181,9 +196,9 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public RoleInfo lookupRole( NamedDatabaseId namedDatabaseId, MemberId memberId )
+    public RoleInfo lookupRole( NamedDatabaseId namedDatabaseId, ServerId serverId )
     {
-        return globalTopologyState.role( namedDatabaseId, memberId );
+        return globalTopologyState.role( namedDatabaseId, serverId );
     }
 
     @Override
@@ -193,25 +208,25 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public MemberId memberId()
+    public ServerId serverId()
     {
-        return identityModule.memberId();
+        return myIdentity.serverId();
     }
 
     @Override
-    public DiscoveryDatabaseState lookupDatabaseState( NamedDatabaseId namedDatabaseId, MemberId memberId )
+    public DiscoveryDatabaseState lookupDatabaseState( NamedDatabaseId namedDatabaseId, ServerId serverId )
     {
-        return globalTopologyState.stateFor( memberId, namedDatabaseId );
+        return globalTopologyState.stateFor( serverId, namedDatabaseId );
     }
 
     @Override
-    public Map<MemberId,DiscoveryDatabaseState> allCoreStatesForDatabase( NamedDatabaseId namedDatabaseId )
+    public Map<ServerId,DiscoveryDatabaseState> allCoreStatesForDatabase( NamedDatabaseId namedDatabaseId )
     {
         return Map.copyOf( globalTopologyState.coreStatesForDatabase( namedDatabaseId ).memberStates() );
     }
 
     @Override
-    public Map<MemberId,DiscoveryDatabaseState> allReadReplicaStatesForDatabase( NamedDatabaseId namedDatabaseId )
+    public Map<ServerId,DiscoveryDatabaseState> allReadReplicaStatesForDatabase( NamedDatabaseId namedDatabaseId )
     {
         return Map.copyOf( globalTopologyState.readReplicaStatesForDatabase( namedDatabaseId ).memberStates() );
     }
@@ -223,9 +238,15 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public RaftMemberId resolveRaftMemberForServer( NamedDatabaseId namedDatabaseId, MemberId serverId )
+    public RaftMemberId resolveRaftMemberForServer( NamedDatabaseId namedDatabaseId, ServerId serverId )
     {
         return globalTopologyState.resolveRaftMemberForServer( namedDatabaseId.databaseId(), serverId );
+    }
+
+    @Override
+    public ServerId resolveServerForRaftMember( RaftMemberId raftMemberId )
+    {
+        return globalTopologyState.resolveServerForRaftMember( raftMemberId );
     }
 
     @VisibleForTesting
@@ -236,6 +257,8 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
 
     private static GlobalTopologyState newGlobalTopologyState( LogProvider logProvider, JobScheduler jobScheduler )
     {
-        return new GlobalTopologyState( logProvider, ( ingnored1, ignored2 ) -> {}, jobScheduler );
+        return new GlobalTopologyState( logProvider, ( ignored1, ignored2 ) ->
+        {
+        }, jobScheduler );
     }
 }

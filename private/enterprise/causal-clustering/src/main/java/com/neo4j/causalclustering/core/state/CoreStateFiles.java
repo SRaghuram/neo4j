@@ -12,11 +12,10 @@ import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
-import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersionMarshal;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.dbms.QuarantineMarker;
 
 import java.util.Collections;
@@ -24,7 +23,10 @@ import java.util.Comparator;
 import java.util.List;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.io.layout.Neo4jLayout;
+import org.neo4j.io.marshal.SafeStateMarshal;
 
 import static com.neo4j.causalclustering.core.state.CoreStateFiles.Scope.DATABASE;
 import static com.neo4j.causalclustering.core.state.CoreStateFiles.Scope.GLOBAL;
@@ -50,14 +52,24 @@ public class CoreStateFiles<STATE>
     }
 
     // global state
-
     public static final CoreStateFiles<ClusterStateVersion> VERSION =
             new CoreStateFiles<>( "version", GLOBAL, new ClusterStateVersionMarshal(), CoreStateType.VERSION );
-    public static final CoreStateFiles<MemberId> CORE_MEMBER_ID =
-            new CoreStateFiles<>( "core-member-id", GLOBAL, new MemberId.Marshal(), CoreStateType.CORE_MEMBER_ID );
+
+    /**
+     * Migrated to ServerId and individual per-database RaftMemberIds.
+     *
+     * @see Neo4jLayout#serverIdFile()
+     * @see ClusterStateLayout#raftMemberIdStateFile(String)
+     * @see ServerId
+     * @see RaftMemberId
+     */
+    @Deprecated( since = "4.3.0" ) // can be considered for removal in 5.0
+    public static final CoreStateFiles<RaftMemberId> OLD_CORE_MEMBER_ID =
+            new CoreStateFiles<>( "core-member-id", GLOBAL, RaftMemberId.Marshal.INSTANCE, CoreStateType.CORE_MEMBER_ID );
 
     // per-database state
-
+    public static final CoreStateFiles<RaftMemberId> RAFT_MEMBER_ID =
+            new CoreStateFiles<>( "raft-member-id", DATABASE, RaftMemberId.Marshal.INSTANCE, CoreStateType.RAFT_MEMBER_ID );
     public static final CoreStateFiles<ReplicatedLeaseState> LEASE =
             new CoreStateFiles<>( "lease", DATABASE, new ReplicatedLeaseState.Marshal(), replicated_lease_state_size,
                     CoreStateType.LEASE );
@@ -66,7 +78,9 @@ public class CoreStateFiles<STATE>
                     CoreStateType.SESSION_TRACKER );
     public static final CoreStateFiles<RaftCoreState> RAFT_CORE_STATE =
             new CoreStateFiles<>( "core", DATABASE, new RaftCoreState.Marshal(), CoreStateType.RAFT_CORE_STATE );
-    public static final CoreStateFiles<RaftId> RAFT_ID = new CoreStateFiles<>( "raft-id", DATABASE, new RaftId.Marshal(), CoreStateType.RAFT_ID );
+    // TODO: worth trying to rename file to raft-group-id?
+    public static final CoreStateFiles<RaftGroupId> RAFT_GROUP_ID = new CoreStateFiles<>( "raft-id", DATABASE,
+            RaftGroupId.Marshal.INSTANCE, CoreStateType.RAFT_GROUP_ID );
     public static final CoreStateFiles<RaftLog> RAFT_LOG = new CoreStateFiles<>( "raft-log", DATABASE, null, CoreStateType.RAFT_LOG );
     public static final CoreStateFiles<TermState> RAFT_TERM =
             new CoreStateFiles<>( "term", DATABASE, new TermState.Marshal(), term_state_size, CoreStateType.RAFT_TERM );
@@ -89,8 +103,8 @@ public class CoreStateFiles<STATE>
 
     static
     {
-        List<CoreStateFiles<?>> all = asList( VERSION, LEASE, RAFT_ID, CORE_MEMBER_ID, RAFT_LOG, RAFT_TERM, RAFT_VOTE, RAFT_MEMBERSHIP, RAFT_CORE_STATE,
-                LAST_FLUSHED, SESSION_TRACKER, QUARANTINE_MARKER );
+        List<CoreStateFiles<?>> all = asList( VERSION, LEASE, RAFT_GROUP_ID, OLD_CORE_MEMBER_ID, RAFT_LOG, RAFT_TERM, RAFT_VOTE, RAFT_MEMBERSHIP,
+                RAFT_CORE_STATE, LAST_FLUSHED, SESSION_TRACKER, RAFT_MEMBER_ID, QUARANTINE_MARKER );
         all.sort( Comparator.comparingInt( CoreStateFiles::typeId ) );
         VALUES = Collections.unmodifiableList( all );
     }

@@ -6,91 +6,97 @@
 package com.neo4j.causalclustering.identity;
 
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.util.Collection;
+import java.util.UUID;
 
 import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.state.SimpleFileStorage;
 import org.neo4j.io.state.SimpleStorage;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.memory.MemoryTracker;
+import org.neo4j.util.Id;
 
-public class MemberIdMigrator
+import static java.lang.String.format;
+
+/**
+ * As part of 4.3 a new ServerID was introduced.
+ *
+ * Previously there was just a single MemberID which was stored as follows
+ *
+ *     data/cluster-state/core-member-id-state/core-member-id
+ *
+ * but after migration the setup now looks as follows
+ *
+ *     data/server_id
+ *     data/cluster-state/db/system/core-member-id-state/core-member-id
+ *     data/cluster-state/db/neo4j/core-member-id-state/core-member-id
+ *     ...
+ *
+ * As part of migration during an upgrade the old MemberID will be copied to all
+ * of the above locations, keeping backwards compatibility as far as identifiers
+ * communicated across the network is concerned. This separates the concepts of
+ * ServerID and MemberID and will for example allow for the unbinding of individual
+ * raft groups.
+ */
+public class MemberIdMigrator extends LifecycleAdapter
 {
-    public static MemberIdMigrator create( LogProvider logProvider, FileSystemAbstraction fs, Neo4jLayout neo4jLayout, MemoryTracker memoryTracker,
-            ClusterStateStorageFactory storageFactory )
-    {
-        return new MemberIdMigrator( logProvider, fs, neo4jLayout, memoryTracker, storageFactory );
-    }
-
     private final Log log;
     private final Neo4jLayout neo4jLayout;
     private final FileSystemAbstraction fs;
     private final MemoryTracker memoryTracker;
     private final ClusterStateStorageFactory storageFactory;
+    private ClusterStateLayout clusterStateLayout;
 
-    private MemberIdMigrator( LogProvider logProvider, FileSystemAbstraction fs, Neo4jLayout neo4jLayout, MemoryTracker memoryTracker,
-            ClusterStateStorageFactory storageFactory )
+    public MemberIdMigrator( LogProvider logProvider, FileSystemAbstraction fs, Neo4jLayout neo4jLayout, ClusterStateLayout clusterStateLayout,
+            ClusterStateStorageFactory storageFactory, MemoryTracker memoryTracker )
     {
         this.log = logProvider.getLog( getClass() );
         this.fs = fs;
         this.neo4jLayout = neo4jLayout;
+        this.clusterStateLayout = clusterStateLayout;
         this.memoryTracker = memoryTracker;
         this.storageFactory = storageFactory;
     }
 
-    public void migrate()
+    @Override
+    public void init()
     {
-        convertOldServerIdFilename();
-
-        var memberIdStorage = storageFactory.createMemberIdStorage();
-        if ( memberIdStorage.exists() )
+        var oldMemberIdStorage = storageFactory.createOldMemberIdStorage();
+        if ( oldMemberIdStorage.exists() )
         {
-            readAndConvertMemberId( memberIdStorage );
+            readAndConvertMemberId( oldMemberIdStorage );
         }
     }
 
-    private void convertOldServerIdFilename()
-    {
-        var oldFile = neo4jLayout.dataDirectory().resolve( "server-id" );
-        if ( fs.fileExists( oldFile ) )
-        {
-            var newFile = neo4jLayout.serverIdFile();
-            if ( fs.fileExists( newFile ) )
-            {
-                throw new IllegalStateException( "Two ServerIds present, migration to ServerId not possible" );
-            }
-            try
-            {
-                fs.renameFile( oldFile, newFile );
-            }
-            catch ( IOException ioe )
-            {
-                throw new RuntimeException( "Problem renaming old ServerId file to new, migration to ServerId not possible", ioe );
-            }
-        }
-    }
-
-    private void readAndConvertMemberId( SimpleStorage<MemberId> memberIdStorage )
+    private void readAndConvertMemberId( SimpleStorage<RaftMemberId> oldMemberIdStorage )
     {
         try
         {
-            var memberId = memberIdStorage.readState();
-            if ( memberId == null )
+            var oldMemberId = oldMemberIdStorage.readState();
+            if ( oldMemberId == null )
             {
                 throw new IllegalStateException(
                         "MemberId storage was found on disk, but it could not be read correctly, migration to ServerId not possible" );
             }
             else
             {
-                generateIdsFromMemberId( memberId );
-                memberIdStorage.removeState();
-                log.info( String.format(
-                        "Existing MemberId found on disk: %s (%s), it has been removed and ServerId has been created with same value",
-                        memberId, memberId.getUuid() ) );
+                generateServerIdFromOldMemberId( oldMemberId );
+                generateNewMemberIdsFromOldMemberId( oldMemberId );
+
+                oldMemberIdStorage.removeState();
+                Path oldMemberIdDir = clusterStateLayout.oldMemberIdStateFile().getParent();
+                fs.deleteFile( oldMemberIdDir );
+
+                log.info( format( "Existing MemberId was found on disk: %s, it has been removed and ServerId has been created with same value",
+                        oldMemberId.uuid() ) );
             }
         }
         catch ( IOException ioe )
@@ -99,22 +105,45 @@ public class MemberIdMigrator
         }
     }
 
-    private void generateIdsFromMemberId( MemberId memberId )
+    private void generateServerIdFromOldMemberId( RaftMemberId oldMemberId )
     {
         var serverIdStorage = createServerIdStorage();
         if ( serverIdStorage.exists() )
         {
-            readAndCompareServerId( memberId, serverIdStorage );
+            readAndCompareServerId( oldMemberId, serverIdStorage );
         }
         else
         {
-            writeServerId( memberId, serverIdStorage );
+            writeServerId( serverIdStorage, oldMemberId.uuid() );
         }
-        // TODO: Also copy MemberId to all of the RaftGroups (part of the rolling is that in the beginning all MemberIds will have the same value);
-        //  Remove MemberId from cluster-state; Change clusterStateLayout
     }
 
-    private void readAndCompareServerId( MemberId memberId, SimpleStorage<ServerId> serverIdStorage )
+    private void generateNewMemberIdsFromOldMemberId( RaftMemberId oldMemberId ) throws IOException
+    {
+        Collection<String> databaseNames = clusterStateLayout.allRaftGroups();
+
+        for ( String databaseName : databaseNames )
+        {
+            SimpleStorage<RaftMemberId> newMemberIdStorage = storageFactory.createRaftMemberIdStorage( databaseName );
+            if ( newMemberIdStorage.exists() )
+            {
+                RaftMemberId newMemberId = newMemberIdStorage.readState();
+                if ( !oldMemberId.equals( newMemberId ) )
+                {
+                    throw new IllegalStateException(
+                            format( "Found new MemberID %s during migration which does not equal old MemberID %s at %s", newMemberId.uuid(), oldMemberId.uuid(),
+                                    clusterStateLayout.raftMemberIdStateFile( databaseName ) ) );
+                }
+                // this is considered fine, since it could be a previous migration that was aborted mid-way
+            }
+            else
+            {
+                newMemberIdStorage.writeState( oldMemberId );
+            }
+        }
+    }
+
+    private void readAndCompareServerId( Id memberId, SimpleStorage<ServerId> serverIdStorage )
     {
         try
         {
@@ -122,32 +151,32 @@ public class MemberIdMigrator
             if ( serverId == null )
             {
                 throw new IllegalStateException(
-                        "ServerId storage was found on disk, but it could not be read correctly, migration to ServerId not possible" );
+                        "ServerId storage was found on disk, but it could not be read correctly. Migration to ServerId is not possible." );
             }
-            if ( !serverId.getUuid().equals( memberId.getUuid() ) )
+            if ( !serverId.uuid().equals( memberId.uuid() ) )
             {
                 throw new IllegalStateException(
-                        "Both MemberId and ServerId was found during migration with different values, migration to ServerId not possible. " +
-                        "This may indicate the need for an unbind or removing either persisted member id or server id" );
+                        "Both old MemberId and ServerId were found during migration with different values. Migration to ServerId is not possible. " +
+                        "This may indicate the need for an unbind or removing either old member id or server id." );
             }
         }
         catch ( IOException ioe )
         {
             throw new RuntimeException(
-                    "ServerId storage was found on disk, but it could not be read correctly, migration to ServerId not possible", ioe );
+                    "ServerId storage was found on disk, but it could not be read correctly. Migration to ServerId is not possible.", ioe );
         }
     }
 
-    private void writeServerId( MemberId memberId, SimpleStorage<ServerId> serverStorage )
+    private void writeServerId( SimpleStorage<ServerId> serverStorage, UUID uuid )
     {
         try
         {
-            serverStorage.writeState( memberId );
+            serverStorage.writeState( new ServerId( uuid ) );
         }
         catch ( IOException ioe )
         {
             throw new RuntimeException(
-                    "MemberId storage was found on disk, but ServerId could not be written correctly, migration to ServerId not possible", ioe );
+                    "Old MemberId was found on disk, but ServerId could not be written correctly. Migration to ServerId is not possible.", ioe );
         }
     }
 

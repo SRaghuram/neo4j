@@ -22,6 +22,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.LongSupplier;
 
+import org.neo4j.function.Suppliers.Lazy;
 import org.neo4j.io.state.StateStorage;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
@@ -43,7 +44,7 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
     private Set<RaftMemberId> targetMembers;
 
     private final SendToMyself sendToMyself;
-    private final RaftMemberId myself;
+    private final Lazy<RaftMemberId> myself;
     private final RaftMembers.Builder<RaftMemberId> memberSetBuilder;
     private final ReadableRaftLog raftLog;
     private final Log log;
@@ -61,7 +62,7 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
     private Set<Listener> listeners = new HashSet<>();
     private Set<RaftMemberId> additionalReplicationMembers = new HashSet<>();
 
-    public RaftMembershipManager( SendToMyself sendToMyself, RaftMemberId myself, RaftMembers.Builder<RaftMemberId> memberSetBuilder,
+    public RaftMembershipManager( SendToMyself sendToMyself, Lazy<RaftMemberId> myself, RaftMembers.Builder<RaftMemberId> memberSetBuilder,
             ReadableRaftLog raftLog, LogProvider logProvider, int minimumConsensusGroupSize, long catchupLagTimeout,
             Clock clock, long catchupTimeout, StateStorage<RaftMembershipState> membershipStorage )
     {
@@ -208,7 +209,10 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
         }
         Set<RaftMemberId> superfluousMembers = new HashSet<>( votingMembers() );
         superfluousMembers.removeAll( targetMembers );
-        superfluousMembers.remove( myself );
+        if ( myself.isInitialised() )
+        {
+            superfluousMembers.remove( myself.get() );
+        }
 
         return superfluousMembers;
     }
@@ -308,6 +312,7 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
         {
             if ( entry.content() instanceof RaftMembers )
             {
+                //noinspection unchecked
                 RaftMembers<RaftMemberId> raftMembers = (RaftMembers<RaftMemberId>) entry.content();
 
                 if ( state.uncommittedMemberChangeInLog() )

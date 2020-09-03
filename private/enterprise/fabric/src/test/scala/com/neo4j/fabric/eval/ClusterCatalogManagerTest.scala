@@ -9,7 +9,6 @@ import java.time.Duration
 import java.util
 import java.util.UUID
 
-import com.neo4j.causalclustering.identity.MemberId
 import com.neo4j.configuration.FabricEnterpriseConfig
 import com.neo4j.configuration.FabricEnterpriseConfig.GlobalDriverConfig
 import com.neo4j.configuration.FabricEnterpriseConfig.Graph
@@ -18,6 +17,7 @@ import org.neo4j.configuration.helpers.NormalizedGraphName
 import org.neo4j.configuration.helpers.SocketAddress
 import org.neo4j.cypher.internal.ast.CatalogName
 import org.neo4j.dbms.api.DatabaseManagementService
+import org.neo4j.dbms.identity.ServerId
 import org.neo4j.fabric.FabricTest
 import org.neo4j.fabric.config.FabricConfig
 import org.neo4j.fabric.eval.Catalog.ExternalGraph
@@ -55,21 +55,21 @@ class ClusterCatalogManagerTest extends FabricTest {
 
   private val internalDbs = Set(intA, intB, mega)
 
-  private val myId = MemberId.of(UUID.randomUUID())
-  private val remoteId = MemberId.of(UUID.randomUUID())
+  private val myId = new ServerId(UUID.randomUUID())
+  private val remoteId = new ServerId(UUID.randomUUID())
   private val remoteAddress = new SocketAddress("remote", 1234)
   private val remoteAddresses = Map(remoteId -> remoteAddress)
   private val databaseManagementService = MockitoSugar.mock[DatabaseManagementService]
 
-  def createManager(leaderMapping: Map[NamedDatabaseId, MemberId]) = new ClusterCatalogManager(
+  def createManager(leaderMapping: Map[NamedDatabaseId, ServerId]) = new ClusterCatalogManager(
     databaseLookup = new DatabaseLookup {
       def databaseIds: Set[NamedDatabaseId] = internalDbs
       def databaseId(databaseName: NormalizedDatabaseName): Option[NamedDatabaseId] = internalDbs.find(_.name() == databaseName.name())
     },
     databaseManagementService,
     leaderLookup = new LeaderLookup {
-      def memberId: MemberId = myId
-      def leaderId(databaseId: NamedDatabaseId): Option[MemberId] = leaderMapping.get(databaseId)
+      def serverId: ServerId = myId
+      def leaderId(databaseId: NamedDatabaseId): Option[ServerId] = leaderMapping.get(databaseId)
       def leaderBoltAddress(databaseId: NamedDatabaseId): Option[SocketAddress] = leaderId(databaseId).flatMap(remoteAddresses.get)
     },
     fabricConfig = config,

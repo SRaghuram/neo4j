@@ -30,9 +30,11 @@ import static com.neo4j.configuration.CausalClusteringInternalSettings.akka_fail
  */
 public class ClusterStateActor extends AbstractActorWithTimersAndLogging
 {
-    static Props props( Cluster cluster, ActorRef topologyActor, ActorRef downingActor, ActorRef metadataActor, Config config, ClusterSizeMonitor monitor )
+    static Props props( Cluster cluster, ActorRef topologyActor, ActorRef downingActor, ActorRef metadataActor,
+            Config config, ClusterSizeMonitor monitor )
     {
-        return Props.create( ClusterStateActor.class, () -> new ClusterStateActor( cluster, topologyActor, downingActor, metadataActor, config, monitor ) );
+        return Props.create( ClusterStateActor.class, () ->
+                new ClusterStateActor( cluster, topologyActor, downingActor, metadataActor, config, monitor ) );
     }
 
     private final Cluster cluster;
@@ -131,7 +133,8 @@ public class ClusterStateActor extends AbstractActorWithTimersAndLogging
         Member member = event.member();
         clusterView = clusterView.withoutMember( member );
         sendClusterView();
-        metadataActor.tell( new CleanupMessage( member.uniqueAddress() ), getSelf() );
+        var cleanupMessage = new CleanupMessage( member.uniqueAddress() );
+        metadataActor.tell( cleanupMessage, getSelf() );
     }
 
     private void handleLeaderChanged( ClusterEvent.LeaderChanged event )

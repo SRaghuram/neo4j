@@ -12,8 +12,9 @@ import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.DiscoveryFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.ReplicatedRaftMapping;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForServerId;
-import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseToMember;
+import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseServer;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
 import com.neo4j.causalclustering.discovery.akka.directory.ReplicatedLeaderInfo;
@@ -22,7 +23,7 @@ import com.neo4j.causalclustering.discovery.akka.marshal.CoreServerInfoForServer
 import com.neo4j.causalclustering.discovery.akka.marshal.CoreTopologySerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.DatabaseIdWithoutNameSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.DatabaseLeaderInfoMessageSerializer;
-import com.neo4j.causalclustering.discovery.akka.marshal.DatabaseToMemberSerializer;
+import com.neo4j.causalclustering.discovery.akka.marshal.DatabaseServerSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.DiscoveryDatabaseStateSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.LeaderInfoSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.RaftIdSerializer;
@@ -33,10 +34,11 @@ import com.neo4j.causalclustering.discovery.akka.marshal.ReadReplicaRemovalMessa
 import com.neo4j.causalclustering.discovery.akka.marshal.ReadReplicaTopologySerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.ReplicatedDatabaseStateSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.ReplicatedLeaderInfoSerializer;
+import com.neo4j.causalclustering.discovery.akka.marshal.ReplicatedRaftMappingSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.UniqueAddressSerializer;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRefreshMessage;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
@@ -240,11 +242,10 @@ public final class TypesafeConfigService
         configMap.put( "akka.actor.allow-java-serialization", "off" );
 
         addSerializer( LeaderInfo.class, LeaderInfoSerializer.class, configMap );
-        addSerializer( RaftId.class, RaftIdSerializer.class, configMap );
+        addSerializer( RaftGroupId.class, RaftIdSerializer.class, configMap );
         addSerializer( UniqueAddress.class, UniqueAddressSerializer.class, configMap );
         addSerializer( CoreServerInfoForServerId.class, CoreServerInfoForServerIdSerializer.class, configMap );
         addSerializer( ReadReplicaRefreshMessage.class, ReadReplicaRefreshMessageSerializer.class, configMap );
-        //addSerializer( MemberId.class, MemberIdSerializer.class, configMap );
         addSerializer( RaftMemberId.class, RaftMemberIdSerializer.class, configMap );
         addSerializer( ReadReplicaInfo.class, ReadReplicaInfoSerializer.class, configMap );
         addSerializer( DatabaseCoreTopology.class, CoreTopologySerializer.class, configMap );
@@ -254,8 +255,9 @@ public final class TypesafeConfigService
         addSerializer( ReplicatedLeaderInfo.class, ReplicatedLeaderInfoSerializer.class, configMap );
         addSerializer( DatabaseId.class, DatabaseIdWithoutNameSerializer.class, configMap );
         addSerializer( ReplicatedDatabaseState.class, ReplicatedDatabaseStateSerializer.class, configMap );
-        addSerializer( DatabaseToMember.class, DatabaseToMemberSerializer.class, configMap );
+        addSerializer( DatabaseServer.class, DatabaseServerSerializer.class, configMap );
         addSerializer( DiscoveryDatabaseState.class, DiscoveryDatabaseStateSerializer.class, configMap );
+        addSerializer( ReplicatedRaftMapping.class, ReplicatedRaftMappingSerializer.class, configMap );
 
         return ConfigFactory.parseMap( configMap );
     }

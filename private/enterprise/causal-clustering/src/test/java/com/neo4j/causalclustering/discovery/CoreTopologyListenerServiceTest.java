@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.discovery.CoreTopologyService.Listener;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.Test;
 
@@ -85,8 +85,8 @@ class CoreTopologyListenerServiceTest
     private static Set<RaftMemberId> createTopologyAndGetMembers( NamedDatabaseId id )
     {
         var coreServerInfo = TestTopology.addressesForCore( 1, false );
-        var coreTopology = new DatabaseCoreTopology( id.databaseId(), RaftId.from( id.databaseId() ), Map.of( IdFactory.randomMemberId(), coreServerInfo ) );
-        return coreTopology.members( ( databaseId, serverId ) -> RaftMemberId.from( serverId ) );
+        var coreTopology = new DatabaseCoreTopology(
+                id.databaseId(), RaftGroupId.from( id.databaseId() ), Map.of( IdFactory.randomServerId(), coreServerInfo ) );
+        return coreTopology.members( ( databaseId, serverId ) -> IdFactory.randomRaftMemberId() );
     }
-
 }

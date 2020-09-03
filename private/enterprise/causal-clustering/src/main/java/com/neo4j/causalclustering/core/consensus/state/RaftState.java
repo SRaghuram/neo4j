@@ -23,13 +23,16 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.neo4j.function.Suppliers.Lazy;
 import org.neo4j.io.state.StateStorage;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
+import static org.neo4j.function.Suppliers.lazySingleton;
+
 public class RaftState implements ReadableRaftState
 {
-    private final RaftMemberId myself;
+    private final Lazy<RaftMemberId> myself;
     private final StateStorage<TermState> termStorage;
     private final StateStorage<VoteState> voteStorage;
     private final RaftMembership membership;
@@ -53,7 +56,13 @@ public class RaftState implements ReadableRaftState
     private boolean isPreElection;
     private boolean timersStarted;
 
-    public RaftState( RaftMemberId myself,
+    public RaftState( RaftMemberId myself, StateStorage<TermState> termStorage, RaftMembership membership, RaftLog entryLog,
+            StateStorage<VoteState> voteStorage, InFlightCache inFlightCache, LogProvider logProvider, ExpiringSet<RaftMemberId> leadershipTransfers )
+    {
+        this( lazySingleton( () -> myself ), termStorage, membership, entryLog, voteStorage, inFlightCache, logProvider, leadershipTransfers );
+    }
+
+    public RaftState( Lazy<RaftMemberId> myself,
                       StateStorage<TermState> termStorage,
                       RaftMembership membership,
                       RaftLog entryLog,
@@ -76,7 +85,7 @@ public class RaftState implements ReadableRaftState
     @Override
     public RaftMemberId myself()
     {
-        return myself;
+        return myself.get();
     }
 
     @Override

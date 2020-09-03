@@ -22,11 +22,13 @@ import java.time.Duration;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.neo4j.function.Suppliers.Lazy;
 import org.neo4j.io.state.StateStorage;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.time.FakeClock;
 
 import static java.util.Collections.emptySet;
+import static org.neo4j.function.Suppliers.lazySingleton;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 public class RaftStateBuilder
@@ -41,7 +43,7 @@ public class RaftStateBuilder
     }
 
     private Outcome outcome = OutcomeTestBuilder.builder().build();
-    public RaftMemberId myself;
+    public Lazy<RaftMemberId> myself;
     private Set<RaftMemberId> votingMembers = emptySet();
     private Set<RaftMemberId> replicationMembers = emptySet();
     private RaftLog entryLog = new InMemoryRaftLog();
@@ -50,7 +52,7 @@ public class RaftStateBuilder
 
     public RaftStateBuilder myself( RaftMemberId myself )
     {
-        this.myself = myself;
+        this.myself = lazySingleton( () -> myself );
         return this;
     }
 

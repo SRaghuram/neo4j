@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.upstream;
 
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Collection;
 import java.util.Optional;
@@ -14,6 +13,7 @@ import java.util.stream.Collectors;
 
 import org.neo4j.annotations.service.Service;
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -25,7 +25,7 @@ public abstract class UpstreamDatabaseSelectionStrategy implements NamedService
     protected TopologyService topologyService;
     protected Config config;
     protected Log log;
-    protected MemberId myself;
+    protected ServerId myself;
     protected String name;
 
     protected UpstreamDatabaseSelectionStrategy( String name )
@@ -40,7 +40,7 @@ public abstract class UpstreamDatabaseSelectionStrategy implements NamedService
     }
 
     // Service loader can't inject via the constructor
-    public void inject( TopologyService topologyService, Config config, LogProvider logProvider, MemberId myself )
+    public void inject( TopologyService topologyService, Config config, LogProvider logProvider, ServerId myself )
     {
         this.topologyService = topologyService;
         this.config = config;
@@ -55,21 +55,21 @@ public abstract class UpstreamDatabaseSelectionStrategy implements NamedService
     }
 
     /**
-     * @deprecated Callers of this method should use {@link UpstreamDatabaseSelectionStrategy#firstUpstreamMemberForDatabase(NamedDatabaseId)}.
-     *   Implementers should override {@link UpstreamDatabaseSelectionStrategy#upstreamMembersForDatabase(NamedDatabaseId)} instead.
+     * @deprecated Callers of this method should use {@link UpstreamDatabaseSelectionStrategy#firstUpstreamServerForDatabase(NamedDatabaseId)}.
+     *   Implementers should override {@link UpstreamDatabaseSelectionStrategy#upstreamServersForDatabase(NamedDatabaseId)} instead.
      *   In future versions this method will first be provided with no-op default implementation, then eventually removed.
      */
     @Deprecated( since = "4.0.3" )
-    public abstract Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException;
+    public abstract Optional<ServerId> upstreamServerForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException;
 
-    public final Optional<MemberId> firstUpstreamMemberForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
+    public final Optional<ServerId> firstUpstreamServerForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
     {
-        return upstreamMembersForDatabase( namedDatabaseId ).stream().findFirst();
+        return upstreamServersForDatabase( namedDatabaseId ).stream().findFirst();
     }
 
-    public Collection<MemberId> upstreamMembersForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
+    public Collection<ServerId> upstreamServersForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
     {
-        return upstreamMemberForDatabase( namedDatabaseId ).stream().collect( Collectors.toList() );
+        return upstreamServerForDatabase( namedDatabaseId ).stream().collect( Collectors.toList() );
     }
 
     @Override

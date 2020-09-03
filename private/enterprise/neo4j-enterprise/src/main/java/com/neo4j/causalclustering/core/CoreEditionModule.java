@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.consensus.RaftGroupFactory;
+import com.neo4j.causalclustering.core.consensus.leader_transfer.DefaultRaftMembershipResolver;
 import com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferService;
 import com.neo4j.causalclustering.core.consensus.protocol.RaftProtocolClientInstaller;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
@@ -28,7 +29,6 @@ import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import com.neo4j.causalclustering.discovery.procedures.CoreRoleProcedure;
 import com.neo4j.causalclustering.discovery.procedures.InstalledProtocolsProcedure;
 import com.neo4j.causalclustering.error_handling.PanicService;
-import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.CoreIdentityModule;
 import com.neo4j.causalclustering.identity.MemberIdMigrator;
 import com.neo4j.causalclustering.identity.RaftMemberId;
@@ -143,7 +143,7 @@ import static org.neo4j.kernel.recovery.Recovery.recoveryFacade;
  */
 public class CoreEditionModule extends ClusteringEditionModule implements AbstractEnterpriseEditionModule
 {
-    private final ClusteringIdentityModule identityModule;
+    private final CoreIdentityModule identityModule;
     private final SslPolicyLoader sslPolicyLoader;
     private final ClusterStateStorageFactory storageFactory;
     private final ClusterStateLayout clusterStateLayout;
@@ -203,6 +203,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         // migration needs to happen as early as possible in the lifecycle
         var clusterStateMigrator = createClusterStateMigrator( globalModule, clusterStateLayout, storageFactory );
         globalLife.add( clusterStateMigrator );
+        globalLife.add( new MemberIdMigrator( logProvider, fileSystem, globalModule.getNeo4jLayout(), clusterStateLayout, storageFactory, memoryTracker ) );
 
         temporaryDatabaseFactory = new EnterpriseTemporaryDatabaseFactory( globalModule.getPageCache(), globalModule.getFileSystem() );
 
@@ -211,10 +212,10 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
         watcherServiceFactory = layout -> createDatabaseFileSystemWatcher( globalModule.getFileWatcher(), layout, logService, fileWatcherFileNameFilter() );
 
-        MemberIdMigrator.create( logProvider, fileSystem, globalModule.getNeo4jLayout(), memoryTracker, storageFactory ).migrate();
-        identityModule = CoreIdentityModule.create( logProvider, fileSystem, globalModule.getNeo4jLayout(), memoryTracker, storageFactory );
+        identityModule = new CoreIdentityModule(
+                logProvider, fileSystem, globalModule.getNeo4jLayout(), memoryTracker, storageFactory );
         globalDependencies.satisfyDependency( identityModule );
-        globalModule.getJobScheduler().setTopLevelGroupName( "Core " + identityModule.myself() );
+        globalModule.getJobScheduler().setTopLevelGroupName( "Core " + identityModule.serverId() );
         this.discoveryServiceFactory = discoveryServiceFactory;
 
         sslPolicyLoader = SslPolicyLoader.create( globalConfig, logProvider );
@@ -296,7 +297,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         globalProcedures.register( new QuarantineProcedure( quarantineOperator,
                 globalModule.getGlobalClock(), globalConfig.get( GraphDatabaseSettings.db_timezone ).getZoneId() ) );
         globalProcedures.register(
-                WaitProcedure.clustered( topologyService, identityModule.myself(), globalModule.getGlobalClock(),
+                WaitProcedure.clustered( topologyService, identityModule.serverId(), globalModule.getGlobalClock(),
                                          catchupComponentsProvider.catchupClientFactory(), globalModule.getLogService().getInternalLogProvider(),
                                          new InfoProvider( databaseManager, reconcilerModule.databaseStateService() ) ) );
         globalProcedures.register( new ClusterSetDefaultDatabaseProcedure( databaseManager.databaseIdRepository(), topologyService ) );
@@ -314,15 +315,14 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     }
 
     /* Component Factories */
-    private static RaftMessageLogger<RaftMemberId> createRaftLogger( GlobalModule globalModule, ClusteringIdentityModule identityModule )
+    private static RaftMessageLogger<RaftMemberId> createRaftLogger( GlobalModule globalModule )
     {
         RaftMessageLogger<RaftMemberId> raftMessageLogger;
         var config = globalModule.getGlobalConfig();
         if ( config.get( CausalClusteringInternalSettings.raft_messages_log_enable ) )
         {
             var logFile = config.get( CausalClusteringInternalSettings.raft_messages_log_path );
-            var myself = /*RaftMessageLogger*/ RaftMemberId.from( identityModule.myself() );
-            var logger = new BetterRaftMessageLogger<>( myself, logFile, globalModule.getFileSystem(), globalModule.getGlobalClock() );
+            var logger = new BetterRaftMessageLogger<RaftMemberId>( logFile, globalModule.getFileSystem(), globalModule.getGlobalClock() );
             raftMessageLogger = globalModule.getGlobalLife().add( logger );
         }
         else
@@ -359,7 +359,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         leaderService = new DefaultLeaderService( topologyService, logProvider );
         dependencies.satisfyDependencies( leaderService );
 
-        var raftLogger = createRaftLogger( globalModule, identityModule );
+        var raftLogger = createRaftLogger( globalModule );
 
         RaftMessageDispatcher raftMessageDispatcher = new RaftMessageDispatcher( logProvider, globalModule.getGlobalClock() );
 
@@ -367,14 +367,17 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var leaderTransferInterval = globalConfig.get( CausalClusteringInternalSettings.leader_transfer_interval );
         var leaderTransferBackoff = globalConfig.get( CausalClusteringInternalSettings.leader_transfer_member_backoff );
 
+        var membershipResolver = new DefaultRaftMembershipResolver( topologyService, databaseManager );
+
         var leaderTransferService = new LeaderTransferService( globalModule.getJobScheduler(), globalConfig, leaderTransferInterval, databaseManager,
-                raftMessageDispatcher, identityModule, leaderTransferBackoff, logProvider, globalModule.getGlobalClock(), leaderService, serverGroupsSupplier );
+                raftMessageDispatcher, identityModule, leaderTransferBackoff, logProvider, globalModule.getGlobalClock(), leaderService, serverGroupsSupplier,
+                membershipResolver );
 
         var logEntryWriterFactory = new DbmsLogEntryWriterProvider( databaseManager );
 
-        RaftGroupFactory raftGroupFactory = new RaftGroupFactory( identityModule, globalModule, clusterStateLayout, topologyService, storageFactory,
-                leaderTransferService, namedDatabaseId -> ((DefaultLeaderService) leaderService).createListener( namedDatabaseId ), globalOtherTracker,
-                serverGroupsSupplier, logEntryWriterFactory );
+        RaftGroupFactory raftGroupFactory = new RaftGroupFactory( globalModule, clusterStateLayout, storageFactory, leaderTransferService,
+                namedDatabaseId -> ((DefaultLeaderService) leaderService).createListener( namedDatabaseId ), globalOtherTracker, serverGroupsSupplier,
+                logEntryWriterFactory );
 
         RecoveryFacade recoveryFacade = recoveryFacade( globalModule.getFileSystem(), globalModule.getPageCache(), globalModule.getTracers(), globalConfig,
                 globalModule.getStorageEngineFactory(), globalOtherTracker );

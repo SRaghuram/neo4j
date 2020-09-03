@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.discovery.member;
 
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
-import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 
 import java.util.Map;
 
@@ -16,6 +15,5 @@ import org.neo4j.kernel.database.DatabaseId;
 @FunctionalInterface
 public interface DiscoveryMemberFactory
 {
-    DiscoveryMember createSnapshot( ClusteringIdentityModule identityModule,
-            DatabaseStateService databaseStateService, Map<DatabaseId,LeaderInfo> databaseLeaderships );
+    DiscoveryMember createSnapshot( DatabaseStateService databaseStateService, Map<DatabaseId,LeaderInfo> databaseLeaderships );
 }

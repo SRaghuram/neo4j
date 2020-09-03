@@ -18,26 +18,26 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState
-import com.neo4j.causalclustering.discovery.TestDiscoveryMember
+import com.neo4j.causalclustering.discovery.ReplicatedRaftMapping
+import com.neo4j.causalclustering.discovery.TestCoreDiscoveryMember
 import com.neo4j.causalclustering.discovery.TestTopology
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.DatabaseStateUpdateSink
 import com.neo4j.causalclustering.discovery.akka.DirectoryUpdateSink
+import com.neo4j.causalclustering.discovery.akka.RaftMappingUpdateSink
 import com.neo4j.causalclustering.discovery.akka.TopologyUpdateSink
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage
 import com.neo4j.causalclustering.identity.IdFactory
-import com.neo4j.causalclustering.identity.MemberId
-import com.neo4j.causalclustering.identity.RaftId
-import com.neo4j.causalclustering.identity.StubClusteringIdentityModule
+import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity
+import com.neo4j.causalclustering.identity.RaftGroupId
 import com.neo4j.configuration.CausalClusteringSettings
 import com.neo4j.dbms.EnterpriseDatabaseState
 import com.neo4j.dbms.EnterpriseOperatorState
 import org.neo4j.configuration.Config
 import org.neo4j.dbms.DatabaseState
 import org.neo4j.dbms.StubDatabaseStateService
-import org.neo4j.dbms.identity.ServerId
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.NamedDatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
@@ -72,10 +72,10 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       "forward incoming core topologies" in new Fixture {
         Given("new topology")
         val dbId = randomNamedDatabaseId().databaseId()
-        val raftId = RaftId.from(dbId)
-        val newCoreTopology = new DatabaseCoreTopology(dbId, raftId, Map(
-                                            IdFactory.randomMemberId() -> TestTopology.addressesForCore(0, false),
-                                            IdFactory.randomMemberId() -> TestTopology.addressesForCore(1, false)
+        val raftGroupId = RaftGroupId.from(dbId)
+        val newCoreTopology = new DatabaseCoreTopology(dbId, raftGroupId, Map(
+                                            IdFactory.randomServerId() -> TestTopology.addressesForCore(0, false),
+                                            IdFactory.randomServerId() -> TestTopology.addressesForCore(1, false)
                                           ).asJava)
 
         When("incoming topology")
@@ -83,7 +83,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
 
         Then("topology fed to sink")
         awaitCond(
-          actualCoreTopology == newCoreTopology && actualCoreTopology.raftId() == newCoreTopology.raftId(),
+          actualCoreTopology == newCoreTopology && actualCoreTopology.raftGroupId() == newCoreTopology.raftGroupId(),
           max = defaultWaitTime,
           message = s"Expected $newCoreTopology but was $actualCoreTopology"
         )
@@ -91,8 +91,8 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       "forward incoming read replica topologies" in new Fixture {
         Given("new topology")
         val newRRTopology = new DatabaseReadReplicaTopology(randomNamedDatabaseId().databaseId(), Map(
-                          IdFactory.randomMemberId() -> TestTopology.addressesForReadReplica(0),
-                          IdFactory.randomMemberId() -> TestTopology.addressesForReadReplica(1)
+                          IdFactory.randomServerId() -> TestTopology.addressesForReadReplica(0),
+                          IdFactory.randomServerId() -> TestTopology.addressesForReadReplica(1)
                         ).asJava )
 
         When("incoming topology")
@@ -176,8 +176,9 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
     var actualReadReplicaTopology: DatabaseReadReplicaTopology = _
     var actualLeaderPerDb = Collections.emptyMap[DatabaseId, LeaderInfo]
     var actualDatabaseStates: ReplicatedDatabaseState = _
+    var lastMapping: ReplicatedRaftMapping = _
 
-    val updateSink = new TopologyUpdateSink with DirectoryUpdateSink with DatabaseStateUpdateSink {
+    val updateSink = new TopologyUpdateSink with DirectoryUpdateSink with DatabaseStateUpdateSink with RaftMappingUpdateSink {
       override def onTopologyUpdate(topology: DatabaseCoreTopology) = actualCoreTopology = topology
 
       override def onTopologyUpdate(topology: DatabaseReadReplicaTopology) = actualReadReplicaTopology = topology
@@ -185,6 +186,8 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       override def onDbLeaderUpdate(leaderPerDb: java.util.Map[DatabaseId, LeaderInfo]) = actualLeaderPerDb = leaderPerDb
 
       override def onDbStateUpdate(databaseState: ReplicatedDatabaseState) = actualDatabaseStates = databaseState
+
+      override def onRaftMappingUpdate(mapping: ReplicatedRaftMapping) = lastMapping = mapping
     }
 
     val materializer = ActorMaterializer()
@@ -200,9 +203,12 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
     val databaseStateSink = Source.queue[ReplicatedDatabaseState](1, OverflowStrategy.dropHead)
       .to(Sink.foreach(updateSink.onDbStateUpdate))
       .run(materializer)
+    val raftMappingSink = Source.queue[ReplicatedRaftMapping](1, OverflowStrategy.dropHead)
+      .to(Sink.foreach(updateSink.onRaftMappingUpdate))
+      .run(materializer)
 
-    val identityModule = new StubClusteringIdentityModule
-    val serverId = identityModule.myself()
+    val identityModule = new InMemoryCoreServerIdentity()
+    val serverId = identityModule.serverId()
 
     val databaseIds = Set(randomNamedDatabaseId(), randomNamedDatabaseId(), randomNamedDatabaseId())
 
@@ -221,7 +227,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
 
     val databaseStates = databaseIds.map(id => id -> new EnterpriseDatabaseState(id, EnterpriseOperatorState.STARTED)).toMap[NamedDatabaseId,DatabaseState]
     val databaseStateService = new StubDatabaseStateService(databaseStates.asJava, EnterpriseDatabaseState.unknown _)
-    val discoveryMemberSnapshot = TestDiscoveryMember.factory(identityModule,databaseStateService,Map.empty[DatabaseId,LeaderInfo].asJava)
+    val discoveryMemberSnapshot = TestCoreDiscoveryMember.factory(identityModule,databaseStateService,Map.empty[DatabaseId,LeaderInfo].asJava)
     val clusterClientProbe = TestProbe()
     val props = ClientTopologyActor.props(
       discoveryMemberSnapshot,
@@ -229,11 +235,12 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       readReplicaTopologySink,
       discoverySink,
       databaseStateSink,
+      raftMappingSink,
       clusterClientProbe.ref,
       config,
       NullLogProvider.getInstance(),
       Clocks.systemClock(),
-      identityModule.myself()
+      identityModule.serverId()
     )
 
     val topologyActorRef = system.actorOf(props)

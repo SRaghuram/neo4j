@@ -5,8 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
-import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
-import com.neo4j.causalclustering.identity.RaftMemberId;
+import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 
 import java.util.Collections;
@@ -25,14 +24,14 @@ import static com.neo4j.causalclustering.core.consensus.leader_transfer.Strategy
 public class RandomEvenStrategy implements SelectionStrategy
 {
     private final Supplier<Set<NamedDatabaseId>> databasesSupplier;
-    private final ClusteringIdentityModule identityModule;
+    private final CoreServerIdentity myIdentity;
     private final LeaderService leaderService;
 
-    RandomEvenStrategy( Supplier<Set<NamedDatabaseId>> databasesSupplier, LeaderService leaderService, ClusteringIdentityModule identityModule )
+    RandomEvenStrategy( Supplier<Set<NamedDatabaseId>> databasesSupplier, LeaderService leaderService, CoreServerIdentity myIdentity )
     {
         this.leaderService = leaderService;
         this.databasesSupplier = databasesSupplier;
-        this.identityModule = identityModule;
+        this.myIdentity = myIdentity;
     }
 
     @Override
@@ -44,12 +43,12 @@ public class RandomEvenStrategy implements SelectionStrategy
         }
 
         var allServers = validTopologies.stream()
-                                        .flatMap( t -> serversOf( t.members() ).stream() )
+                                        .flatMap( t -> t.members().stream() )
                                         .collect( Collectors.toSet() );
 
         var validServers = serversWithFewerLeaderships( allServers );
         var targetTopologies = validTopologies.stream()
-                       .filter( t -> !Collections.disjoint( validServers, serversOf( t.members() ) ) )
+                       .filter( t -> !Collections.disjoint( validServers, t.members() ) )
                        .collect( Collectors.toList() );
 
         var randomTopology = selectRandom( targetTopologies );
@@ -57,20 +56,15 @@ public class RandomEvenStrategy implements SelectionStrategy
         var randomTarget = randomTopology.flatMap( t ->
         {
             var validMembersInTopology = findValidMembersForTopology( t, validServers );
-            return selectRandom( validMembersInTopology ).map( memberId -> new LeaderTransferTarget( t.databaseId(), memberId ) );
+            return selectRandom( validMembersInTopology ).map( serverId -> new LeaderTransferTarget( t.databaseId(), serverId ) );
         } );
 
         return randomTarget.orElse( LeaderTransferTarget.NO_TARGET );
     }
 
-    private Set<ServerId> serversOf( Set<RaftMemberId> members )
+    private Set<ServerId> findValidMembersForTopology( TransferCandidates targetTopology, Set<ServerId> validMembers )
     {
-        return members.stream().map( RaftMemberId::serverId ).collect( Collectors.toSet() );
-    }
-
-    private Set<RaftMemberId> findValidMembersForTopology( TransferCandidates targetTopology, Set<ServerId> validMembers )
-    {
-        return targetTopology.members().stream().filter( member -> validMembers.contains( member.serverId() ) ).collect( Collectors.toSet() );
+        return targetTopology.members().stream().filter( validMembers::contains ).collect( Collectors.toSet() );
     }
 
     /**
@@ -85,11 +79,11 @@ public class RandomEvenStrategy implements SelectionStrategy
         var databaseIds = databasesSupplier.get();
         Map<ServerId,Long> leadershipCounts = databaseIds.stream()
                    .flatMap( dbId -> leaderService.getLeaderId( dbId ).stream() )
-                   .collect( Collectors.groupingBy( Function.<ServerId>identity(), Collectors.counting() ) );
+                   .collect( Collectors.groupingBy( Function.identity(), Collectors.counting() ) );
 
         allServers.forEach( serverId -> leadershipCounts.putIfAbsent( serverId, 0L ) );
 
-        var myLeadershipCount = leadershipCounts.getOrDefault( identityModule.myself(), 0L );
+        var myLeadershipCount = leadershipCounts.getOrDefault( myIdentity.serverId(), 0L );
 
         return leadershipCounts.entrySet().stream()
                                .filter( e -> e.getValue() < ( myLeadershipCount - 1 ) )

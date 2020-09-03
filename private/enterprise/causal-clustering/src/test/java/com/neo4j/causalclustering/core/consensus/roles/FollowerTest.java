@@ -323,7 +323,10 @@ class FollowerTest
     void shouldNotSolicitPreVotesOnTimeoutEvenIfSupportedIfRefuseToLead() throws Throwable
     {
         // given
-        var ctx = contextBuilder()
+        var state = builder()
+                .myself( myself )
+                .build();
+        var ctx = contextBuilder( state )
                 .refusesToBeLeader( true )
                 .supportsPreVoting( true )
                 .build();

@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.common.ClusteredDatabase;
-import com.neo4j.causalclustering.common.DatabaseTopologyNotifier;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
@@ -33,16 +32,15 @@ import static org.neo4j.kernel.lifecycle.LifecycleAdapter.simpleLife;
 class CoreDatabase extends ClusteredDatabase
 {
     CoreDatabase( RaftMachine raftMachine, Database kernelDatabase, CommandApplicationProcess commandApplicationProcess,
-            LifecycleMessageHandler<?> raftMessageHandler, CoreDownloaderService downloadService, RecoveryFacade recoveryFacade, Lifecycle clusterComponents,
-            CorePanicHandlers panicHandler, CoreBootstrap bootstrap, DatabaseTopologyNotifier topologyNotifier )
+            LifecycleMessageHandler<?> raftMessageHandler, CoreDownloaderService downloadService, RecoveryFacade recoveryFacade,
+            CorePanicHandlers panicHandler, RaftStarter raftStarter, Lifecycle topologyComponents )
     {
         addComponent( panicHandler );
 
-        addComponent( clusterComponents );
         addComponent( onStart( () -> recoveryFacade.recovery( kernelDatabase.getDatabaseLayout() ) ) );
 
-        addComponent( topologyNotifier ); // bootstrap depends on the notifier
-        addComponent( onStart( bootstrap::perform ) );
+        addComponent( topologyComponents );
+        addComponent( raftStarter );
 
         addComponent( kernelDatabase );
         addComponent( simpleLife( commandApplicationProcess::start, commandApplicationProcess::stop ) );

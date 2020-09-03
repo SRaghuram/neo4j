@@ -5,8 +5,6 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import com.neo4j.causalclustering.core.state.storage.StateMarshal;
-
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -14,6 +12,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.marshal.EndOfStreamException;
+import org.neo4j.io.marshal.StateMarshal;
 import org.neo4j.io.memory.NativeScopedBuffer;
 import org.neo4j.memory.MemoryTracker;
 

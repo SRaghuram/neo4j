@@ -13,11 +13,13 @@ import akka.cluster.ddata.LWWMapKey;
 import akka.cluster.ddata.LWWRegister;
 import akka.cluster.ddata.Replicator;
 import akka.japi.pf.ReceiveBuilder;
+import com.neo4j.causalclustering.core.state.RaftBootstrapper;
 import com.neo4j.causalclustering.discovery.PublishRaftIdOutcome;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftBinder;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.Map;
@@ -26,9 +28,16 @@ import java.util.Optional;
 
 import org.neo4j.kernel.database.DatabaseId;
 
-import static com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.RAFT_ID;
+import static com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.RAFT_ID_PUBLISHER;
 
-public class RaftIdActor extends BaseReplicatedDataActor<LWWMap<RaftId,RaftMemberId>>
+/**
+ * Keeps a mapping from the RaftGroupId to the RaftMemberId which was first in publishing it.
+ * The one who was first to publish will in cases where it is necessary take the special bootstrapper role.
+ *
+ * @see RaftBinder
+ * @see RaftBootstrapper
+ */
+public class RaftIdActor extends BaseReplicatedDataActor<LWWMap<RaftGroupId,RaftMemberId>>
 {
     private final ActorRef coreTopologyActor;
     //We use a reverse clock because we want the RaftId map to observe first-write-wins semantics, not the standard last-write-wins
@@ -37,7 +46,7 @@ public class RaftIdActor extends BaseReplicatedDataActor<LWWMap<RaftId,RaftMembe
 
     RaftIdActor( Cluster cluster, ActorRef replicator, ActorRef coreTopologyActor, ReplicatedDataMonitor monitors, int minRuntimeCores )
     {
-        super( cluster, replicator, LWWMapKey::create, LWWMap::create, RAFT_ID, monitors );
+        super( cluster, replicator, LWWMapKey::create, LWWMap::create, RAFT_ID_PUBLISHER, monitors );
         this.coreTopologyActor = coreTopologyActor;
         this.minRuntimeQuorumSize = ( minRuntimeCores / 2 ) + 1;
     }
@@ -59,9 +68,9 @@ public class RaftIdActor extends BaseReplicatedDataActor<LWWMap<RaftId,RaftMembe
         }
     }
 
-    private LWWMap<RaftId,RaftMemberId> addRaftId( LWWMap<RaftId,RaftMemberId> acc, Map.Entry<DatabaseId,RaftMemberId> entry )
+    private LWWMap<RaftGroupId,RaftMemberId> addRaftId( LWWMap<RaftGroupId,RaftMemberId> acc, Map.Entry<DatabaseId,RaftMemberId> entry )
     {
-        var raftId = RaftId.from( entry.getKey() );
+        var raftId = new RaftGroupId( entry.getKey().uuid() );
         var memberId = entry.getValue();
         return acc.put( cluster, raftId, memberId, clock );
     }
@@ -78,7 +87,7 @@ public class RaftIdActor extends BaseReplicatedDataActor<LWWMap<RaftId,RaftMembe
     private void setRaftId( RaftIdSetRequest message )
     {
         log().debug( "Setting RaftId: {}", message );
-        modifyReplicatedData( key, map -> map.put( cluster, message.raftId(), message.publisher(), clock ), message.withReplyTo( getSender() ) );
+        modifyReplicatedData( key, map -> map.put( cluster, message.raftGroupId(), message.publisher(), clock ), message.withReplyTo( getSender() ) );
     }
 
     private void handleUpdateSuccess( Replicator.UpdateSuccess<?> updateSuccess )
@@ -93,24 +102,24 @@ public class RaftIdActor extends BaseReplicatedDataActor<LWWMap<RaftId,RaftMembe
                     // we must validate the impact by fetching the latest contents of the Replicator. We use a read quorum to
                     // ensure the update isn't validated against stale data.
                     Replicator.ReadConsistency readConsistency = new Replicator.ReadFrom( minRuntimeQuorumSize, m.timeout() );
-                    Replicator.Get<LWWMap<RaftId,RaftMemberId>> getOp = new Replicator.Get<>( key, readConsistency, Optional.of( m ) );
+                    Replicator.Get<LWWMap<RaftGroupId,RaftMemberId>> getOp = new Replicator.Get<>( key, readConsistency, Optional.of( m ) );
                     replicator.tell( getOp, getSelf() );
                 } );
     }
 
-    private void validateRaftIdUpdate( Replicator.GetSuccess<LWWMap<RaftId,RaftMemberId>> getSuccess )
+    private void validateRaftIdUpdate( Replicator.GetSuccess<LWWMap<RaftGroupId,RaftMemberId>> getSuccess )
     {
-        LWWMap<RaftId,RaftMemberId> current = getSuccess.get( key );
+        LWWMap<RaftGroupId,RaftMemberId> current = getSuccess.get( key );
         getSuccess.getRequest()
                 .filter( m -> m instanceof RaftIdSetRequest )
                 .map( m -> (RaftIdSetRequest) m )
                 .ifPresent( request ->
                 {
                     //The original RaftIdSetRequest is passed through all messages in this actor as additional request context (.getRequest())
-                    // we check whether the request sent by this actor was successful by checking whether the publisher MemberId for the RaftId
+                    // we check whether the request sent by this actor was successful by checking whether the published RaftMemberId for the RaftId
                     // stored in the replicator is the same as that in the request. If the two MemberIds do not match, then another member
                     // succeeded in publishing earlier than us and we should fail.
-                    RaftMemberId successfulPublisher = current.getEntries().get( request.raftId() );
+                    RaftMemberId successfulPublisher = current.getEntries().get( request.raftGroupId() );
                     PublishRaftIdOutcome outcome;
                     if ( successfulPublisher == null )
                     {
@@ -142,7 +151,7 @@ public class RaftIdActor extends BaseReplicatedDataActor<LWWMap<RaftId,RaftMembe
     }
 
     @Override
-    protected void handleIncomingData( LWWMap<RaftId,RaftMemberId> newData )
+    protected void handleIncomingData( LWWMap<RaftGroupId,RaftMemberId> newData )
     {
         data = newData;
         coreTopologyActor.tell( new BootstrappedRaftsMessage( data.getEntries() ), getSelf() );

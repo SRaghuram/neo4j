@@ -12,10 +12,12 @@ import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
+import com.neo4j.causalclustering.discovery.ReplicatedRaftMapping;
 import com.neo4j.causalclustering.discovery.RoleInfo;
+import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.configuration.ServerGroupName;
 import org.junit.jupiter.api.Test;
@@ -27,6 +29,7 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -35,6 +38,7 @@ import org.neo4j.test.scheduler.JobSchedulerAdapter;
 
 import static com.neo4j.causalclustering.discovery.ConnectorAddresses.Scheme.bolt;
 import static com.neo4j.causalclustering.discovery.ConnectorAddresses.Scheme.http;
+import static com.neo4j.causalclustering.discovery.akka.GlobalTopologyStateTestUtil.setupRaftMapping;
 import static java.lang.String.format;
 import static java.lang.System.lineSeparator;
 import static java.util.Collections.emptyMap;
@@ -60,15 +64,19 @@ class GlobalTopologyStateTest
     private final NamedDatabaseId namedDatabaseId2 = databaseIdRepository.getRaw( "db2" );
     private final DatabaseId databaseId2 = databaseIdRepository.getRaw( "db2" ).databaseId();
 
-    private final MemberId coreId1 = IdFactory.randomMemberId();
-    private final MemberId coreId2 = IdFactory.randomMemberId();
-    private final MemberId coreId3 = IdFactory.randomMemberId();
+    private final CoreServerIdentity myIdentity1 = new InMemoryCoreServerIdentity();
+    private final CoreServerIdentity myIdentity2 = new InMemoryCoreServerIdentity();
+    private final CoreServerIdentity myIdentity3 = new InMemoryCoreServerIdentity();
+
+    private final ServerId coreId1 = myIdentity1.serverId();
+    private final ServerId coreId2 = myIdentity2.serverId();
+    private final ServerId coreId3 = myIdentity3.serverId();
     private final CoreServerInfo coreInfo1 = newCoreInfo( coreId1, Set.of( databaseId1, databaseId2 ) );
     private final CoreServerInfo coreInfo2 = newCoreInfo( coreId2, Set.of( databaseId1 ) );
     private final CoreServerInfo coreInfo3 = newCoreInfo( coreId3, Set.of( databaseId1 ) );
 
-    private final MemberId readReplicaId1 = IdFactory.randomMemberId();
-    private final MemberId readReplicaId2 = IdFactory.randomMemberId();
+    private final ServerId readReplicaId1 = IdFactory.randomServerId();
+    private final ServerId readReplicaId2 = IdFactory.randomServerId();
     private final ReadReplicaInfo readReplicaInfo1 = newReadReplicaInfo( readReplicaId1, Set.of( databaseId1, databaseId2 ) );
     private final ReadReplicaInfo readReplicaInfo2 = newReadReplicaInfo( readReplicaId2, Set.of( databaseId2 ) );
 
@@ -88,10 +96,10 @@ class GlobalTopologyStateTest
     void shouldKeepTrackOfCoreTopologies()
     {
         var coreMembers1 = Map.of( coreId1, coreInfo1, coreId2, coreInfo2 );
-        var coreTopology1 = new DatabaseCoreTopology( databaseId1, RaftId.from( databaseId1 ), coreMembers1 );
+        var coreTopology1 = new DatabaseCoreTopology( databaseId1, RaftGroupId.from( databaseId1 ), coreMembers1 );
 
         var coreMembers2 = Map.of( coreId2, coreInfo2, coreId3, coreInfo3 );
-        var coreTopology2 = new DatabaseCoreTopology( databaseId2, RaftId.from( databaseId2 ), coreMembers2 );
+        var coreTopology2 = new DatabaseCoreTopology( databaseId2, RaftGroupId.from( databaseId2 ), coreMembers2 );
 
         state.onTopologyUpdate( coreTopology1 );
         state.onTopologyUpdate( coreTopology2 );
@@ -104,10 +112,15 @@ class GlobalTopologyStateTest
     @Test
     void shouldNotifyCallbackOnCoreTopologyChange()
     {
-        var coreTopology1 = new DatabaseCoreTopology( databaseId1, RaftId.from( databaseId1 ),
+        var coreTopology1 = new DatabaseCoreTopology( databaseId1, RaftGroupId.from( databaseId1 ),
                 Map.of( coreId1, coreInfo1, coreId2, coreInfo2 ) );
-        var coreTopology2 = new DatabaseCoreTopology( databaseId1, RaftId.from( databaseId2 ),
+        var coreTopology2 = new DatabaseCoreTopology( databaseId1, RaftGroupId.from( databaseId2 ),
                 Map.of( coreId1, coreInfo1, coreId2, coreInfo2, coreId3, coreInfo3 ) );
+
+        setupRaftMapping( state, namedDatabaseId1,
+                Map.of( coreId1, IdFactory.randomRaftMemberId(), coreId2, IdFactory.randomRaftMemberId() ) );
+        setupRaftMapping( state, namedDatabaseId1,
+                Map.of( coreId1, IdFactory.randomRaftMemberId(), coreId2, IdFactory.randomRaftMemberId(), coreId3, IdFactory.randomRaftMemberId() ) );
 
         state.onTopologyUpdate( coreTopology1 );
         verify( listener ).accept( databaseId1, toRaftMembers( coreTopology1 ) );
@@ -119,7 +132,7 @@ class GlobalTopologyStateTest
     @Test
     void shouldNotNotifyCallbackIfCoreTopologyDoesNotChange()
     {
-        var coreTopology = new DatabaseCoreTopology( databaseId1, RaftId.from( databaseId1 ), Map.of( coreId1, coreInfo1, coreId2, coreInfo2 ) );
+        var coreTopology = new DatabaseCoreTopology( databaseId1, RaftGroupId.from( databaseId1 ), Map.of( coreId1, coreInfo1, coreId2, coreInfo2 ) );
 
         state.onTopologyUpdate( coreTopology );
         state.onTopologyUpdate( coreTopology );
@@ -149,16 +162,25 @@ class GlobalTopologyStateTest
     void shouldKeepTrackOfLeaderUpdates()
     {
         var coreMembers = Map.of( coreId1, coreInfo1, coreId2, coreInfo2, coreId3, coreInfo3 );
-
-        var coreTopology1 = new DatabaseCoreTopology( databaseId1, RaftId.from( databaseId1 ), coreMembers );
+        var coreTopology1 = new DatabaseCoreTopology( databaseId1, RaftGroupId.from( databaseId1 ), coreMembers );
+        var coreTopology2 = new DatabaseCoreTopology( databaseId2, RaftGroupId.from( databaseId2 ), coreMembers );
         state.onTopologyUpdate( coreTopology1 );
-        var coreTopology2 = new DatabaseCoreTopology( databaseId2, RaftId.from( databaseId2 ), coreMembers );
         state.onTopologyUpdate( coreTopology2 );
 
-        var leaderInfos = Map.<DatabaseId,LeaderInfo>of( databaseId1,
-                new LeaderInfo( RaftMemberId.from( coreId1 ), 42 ), databaseId2, new LeaderInfo( RaftMemberId.from( coreId3 ), 4242 ) );
+        var raftMappings1 = Map.of(
+                databaseId1, myIdentity1.raftMemberId( namedDatabaseId1 ), databaseId2, myIdentity1.raftMemberId( namedDatabaseId2 ) );
+        var raftMappings2 = Map.of(
+                databaseId1, myIdentity2.raftMemberId( namedDatabaseId1 ), databaseId2, myIdentity2.raftMemberId( namedDatabaseId2 ) );
+        var raftMappings3 = Map.of(
+                databaseId1, myIdentity3.raftMemberId( namedDatabaseId1 ), databaseId2, myIdentity3.raftMemberId( namedDatabaseId2 ) );
 
-        state.onDbLeaderUpdate( leaderInfos );
+        state.onRaftMappingUpdate( ReplicatedRaftMapping.of( coreId1, raftMappings1 ) );
+        state.onRaftMappingUpdate( ReplicatedRaftMapping.of( coreId2, raftMappings2 ) );
+        state.onRaftMappingUpdate( ReplicatedRaftMapping.of( coreId3, raftMappings3 ) );
+
+        state.onDbLeaderUpdate( Map.of(
+                databaseId1, new LeaderInfo( myIdentity1.raftMemberId( namedDatabaseId1 ), 42 ),
+                databaseId2, new LeaderInfo( myIdentity3.raftMemberId( namedDatabaseId2 ), 4242 ) ) );
 
         assertEquals( RoleInfo.LEADER, state.role( namedDatabaseId1, coreId1 ) );
         assertEquals( RoleInfo.FOLLOWER, state.role( namedDatabaseId1, coreId2 ) );
@@ -178,7 +200,7 @@ class GlobalTopologyStateTest
     void shouldReturnCoreRoleForUnknownDatabase()
     {
         var coreMembers = Map.of( coreId1, coreInfo1, coreId2, coreInfo2, coreId3, coreInfo3 );
-        var coreTopology = new DatabaseCoreTopology( databaseId1, RaftId.from( databaseId1 ), coreMembers );
+        var coreTopology = new DatabaseCoreTopology( databaseId1, RaftGroupId.from( databaseId1 ), coreMembers );
         state.onTopologyUpdate( coreTopology );
 
         assertEquals( RoleInfo.UNKNOWN, state.role( namedDatabaseId2, coreId1 ) );
@@ -190,7 +212,7 @@ class GlobalTopologyStateTest
     void shouldReturnCoreRoleForUnknownMember()
     {
         var coreMembers = Map.of( coreId1, coreInfo1 );
-        var coreTopology = new DatabaseCoreTopology( databaseId1, RaftId.from( databaseId1 ), coreMembers );
+        var coreTopology = new DatabaseCoreTopology( databaseId1, RaftGroupId.from( databaseId1 ), coreMembers );
         state.onTopologyUpdate( coreTopology );
 
         assertEquals( RoleInfo.UNKNOWN, state.role( namedDatabaseId1, coreId2 ) );
@@ -201,16 +223,28 @@ class GlobalTopologyStateTest
     void shouldReturnCoreRoles()
     {
         var coreMembers1 = Map.of( coreId1, coreInfo1, coreId2, coreInfo2 );
-        var coreTopology1 = new DatabaseCoreTopology( databaseId1, RaftId.from( databaseId1 ), coreMembers1 );
+        var coreTopology1 = new DatabaseCoreTopology( databaseId1, RaftGroupId.from( databaseId1 ), coreMembers1 );
 
         var coreMembers2 = Map.of( coreId2, coreInfo2, coreId3, coreInfo3 );
-        var coreTopology2 = new DatabaseCoreTopology( databaseId2, RaftId.from( databaseId2 ), coreMembers2 );
+        var coreTopology2 = new DatabaseCoreTopology( databaseId2, RaftGroupId.from( databaseId2 ), coreMembers2 );
 
         state.onTopologyUpdate( coreTopology1 );
         state.onTopologyUpdate( coreTopology2 );
 
-        state.onDbLeaderUpdate( Map.of( databaseId1,
-                new LeaderInfo( RaftMemberId.from( coreId1 ), 42 ), databaseId2, new LeaderInfo( RaftMemberId.from( coreId3 ), 42 ) ) );
+        var raftMappings1 = Map.of(
+                databaseId1, myIdentity1.raftMemberId( namedDatabaseId1 ), databaseId2, myIdentity1.raftMemberId( namedDatabaseId2 ) );
+        var raftMappings2 = Map.of(
+                databaseId1, myIdentity2.raftMemberId( namedDatabaseId1 ), databaseId2, myIdentity2.raftMemberId( namedDatabaseId2 ) );
+        var raftMappings3 = Map.of(
+                databaseId1, myIdentity3.raftMemberId( namedDatabaseId1 ), databaseId2, myIdentity3.raftMemberId( namedDatabaseId2 ) );
+
+        state.onRaftMappingUpdate( ReplicatedRaftMapping.of( coreId1, raftMappings1 ) );
+        state.onRaftMappingUpdate( ReplicatedRaftMapping.of( coreId2, raftMappings2 ) );
+        state.onRaftMappingUpdate( ReplicatedRaftMapping.of( coreId3, raftMappings3 ) );
+
+        state.onDbLeaderUpdate( Map.of(
+                databaseId1, new LeaderInfo( myIdentity1.raftMemberId( namedDatabaseId1 ), 42 ),
+                databaseId2, new LeaderInfo( myIdentity3.raftMemberId( namedDatabaseId2 ), 42 ) ) );
 
         assertEquals( RoleInfo.LEADER, state.role( namedDatabaseId1, coreId1 ) );
         assertEquals( RoleInfo.FOLLOWER, state.role( namedDatabaseId1, coreId2 ) );
@@ -225,11 +259,11 @@ class GlobalTopologyStateTest
     void shouldReturnAllCores()
     {
         var coreMembers1 = Map.of( coreId1, coreInfo1, coreId3, coreInfo3 );
-        var coreTopology1 = new DatabaseCoreTopology( databaseId1, RaftId.from( databaseId1 ), coreMembers1 );
+        var coreTopology1 = new DatabaseCoreTopology( databaseId1, RaftGroupId.from( databaseId1 ), coreMembers1 );
         state.onTopologyUpdate( coreTopology1 );
 
         var coreMembers2 = Map.of( coreId2, coreInfo2, coreId3, coreInfo3 );
-        var coreTopology2 = new DatabaseCoreTopology( databaseId2, RaftId.from( databaseId2 ), coreMembers2 );
+        var coreTopology2 = new DatabaseCoreTopology( databaseId2, RaftGroupId.from( databaseId2 ), coreMembers2 );
         state.onTopologyUpdate( coreTopology2 );
 
         assertEquals( Map.of( coreId1, coreInfo1, coreId2, coreInfo2, coreId3, coreInfo3 ), state.allCoreServers() );
@@ -253,7 +287,7 @@ class GlobalTopologyStateTest
     void shouldReturnCoreTopologyForKnownDatabase()
     {
         var coreMembers = Map.of( coreId1, coreInfo1, coreId3, coreInfo3 );
-        var coreTopology = new DatabaseCoreTopology( databaseId1, RaftId.from( databaseId1 ), coreMembers );
+        var coreTopology = new DatabaseCoreTopology( databaseId1, RaftGroupId.from( databaseId1 ), coreMembers );
         state.onTopologyUpdate( coreTopology );
 
         assertEquals( coreTopology, state.coreTopologyForDatabase( namedDatabaseId1 ) );
@@ -263,7 +297,7 @@ class GlobalTopologyStateTest
     void shouldReturnCoreTopologyForUnknownDatabase()
     {
         var coreMembers = Map.of( coreId1, coreInfo1, coreId3, coreInfo3 );
-        var coreTopology = new DatabaseCoreTopology( databaseId1, RaftId.from( databaseId1 ), coreMembers );
+        var coreTopology = new DatabaseCoreTopology( databaseId1, RaftGroupId.from( databaseId1 ), coreMembers );
         state.onTopologyUpdate( coreTopology );
 
         assertEquals( DatabaseCoreTopology.empty( databaseId2 ), state.coreTopologyForDatabase( namedDatabaseId2 ) );
@@ -293,7 +327,7 @@ class GlobalTopologyStateTest
     void shouldRetrieveCatchupAddressForCore()
     {
         var coreMembers = Map.of( coreId1, coreInfo1, coreId2, coreInfo2 );
-        var coreTopology = new DatabaseCoreTopology( databaseId1, RaftId.from( databaseId1 ), coreMembers );
+        var coreTopology = new DatabaseCoreTopology( databaseId1, RaftGroupId.from( databaseId1 ), coreMembers );
         state.onTopologyUpdate( coreTopology );
 
         assertEquals( coreInfo1.catchupServer(), state.retrieveCatchupServerAddress( coreId1 ) );
@@ -315,7 +349,7 @@ class GlobalTopologyStateTest
     void shouldRetrieveNullCatchupAddressForUnknownMember()
     {
         var coreMembers = Map.of( coreId1, coreInfo1 );
-        var coreTopology = new DatabaseCoreTopology( databaseId1, RaftId.from( databaseId1 ), coreMembers );
+        var coreTopology = new DatabaseCoreTopology( databaseId1, RaftGroupId.from( databaseId1 ), coreMembers );
         state.onTopologyUpdate( coreTopology );
 
         var readReplicas = Map.of( readReplicaId1, readReplicaInfo1 );
@@ -330,8 +364,11 @@ class GlobalTopologyStateTest
     @Test
     void shouldNotStoreEmptyCoreTopologies()
     {
-        var coreTopology1 = new DatabaseCoreTopology( databaseId1, RaftId.from( databaseId1 ), Map.of( coreId1, coreInfo1, coreId2, coreInfo2 ) );
-        var coreTopology2 = new DatabaseCoreTopology( databaseId1, RaftId.from( databaseId1 ), emptyMap() );
+        var coreTopology1 = new DatabaseCoreTopology( databaseId1, RaftGroupId.from( databaseId1 ), Map.of( coreId1, coreInfo1, coreId2, coreInfo2 ) );
+        var coreTopology2 = new DatabaseCoreTopology( databaseId1, RaftGroupId.from( databaseId1 ), emptyMap() );
+
+        setupRaftMapping( state, namedDatabaseId1, Map.of( coreId1, IdFactory.randomRaftMemberId(), coreId2, IdFactory.randomRaftMemberId() ) );
+        setupRaftMapping( state, namedDatabaseId1, emptyMap() );
 
         state.onTopologyUpdate( coreTopology1 );
         state.onTopologyUpdate( coreTopology2 );
@@ -378,62 +415,63 @@ class GlobalTopologyStateTest
         // given
         var prefix = "Database leader(s) update:" + lineSeparator() + "  ";
         var leaders = new HashMap<DatabaseId,LeaderInfo>();
-        leaders.put( databaseId2, new LeaderInfo( RaftMemberId.from( coreId3 ), 1 ) );
+        leaders.put( databaseId2, new LeaderInfo( myIdentity3.raftMemberId( namedDatabaseId2 ), 1 ) );
         state.onDbLeaderUpdate( Map.copyOf( leaders ) );
 
         // when
         logProvider.clear();
-        leaders.put( databaseId1, new LeaderInfo( RaftMemberId.from( coreId1 ), 1 ) );
-        state.onDbLeaderUpdate( Map.copyOf( leaders ) );
-        // then
-        assertThat( logProvider ).forClass( GlobalTopologyState.class ).forLevel( INFO ).containsMessages(
-                format( "%sDiscovered leader %s in term %d for database %s", prefix, RaftMemberId.from( coreId1 ), 1, databaseId1 ) );
-
-        // when
-        logProvider.clear();
-        leaders.put( databaseId1, new LeaderInfo( RaftMemberId.from( coreId1 ), 2 ) );
+        leaders.put( databaseId1, new LeaderInfo( myIdentity1.raftMemberId( namedDatabaseId1 ), 1 ) );
         state.onDbLeaderUpdate( Map.copyOf( leaders ) );
         // then
         assertThat( logProvider ).forClass( GlobalTopologyState.class ).forLevel( INFO ).containsMessages(
-                format( "%sDatabase %s leader remains %s but term changed to %d", prefix, databaseId1, RaftMemberId.from( coreId1 ), 2 ) );
+                format( "%sDiscovered leader %s in term %d for database %s", prefix, myIdentity1.raftMemberId( namedDatabaseId1 ), 1, databaseId1 ) );
 
         // when
         logProvider.clear();
-        leaders.put( databaseId1, new LeaderInfo( RaftMemberId.from( coreId2 ), 3 ) );
+        leaders.put( databaseId1, new LeaderInfo( myIdentity1.raftMemberId( namedDatabaseId1 ), 2 ) );
+        state.onDbLeaderUpdate( Map.copyOf( leaders ) );
+        // then
+        assertThat( logProvider ).forClass( GlobalTopologyState.class ).forLevel( INFO ).containsMessages(
+                format( "%sDatabase %s leader remains %s but term changed to %d", prefix, databaseId1, myIdentity1.raftMemberId( namedDatabaseId1 ), 2 ) );
+
+        // when
+        logProvider.clear();
+        leaders.put( databaseId1, new LeaderInfo( myIdentity2.raftMemberId( namedDatabaseId1 ), 3 ) );
         state.onDbLeaderUpdate( Map.copyOf( leaders ) );
         // then
         assertThat( logProvider ).forClass( GlobalTopologyState.class ).forLevel( INFO ).containsMessages(
                 format( "%sDatabase %s switch leader from %s to %s in term %d", prefix, databaseId1,
-                        RaftMemberId.from( coreId1 ), RaftMemberId.from( coreId2 ), 3 ) );
+                        myIdentity1.raftMemberId( namedDatabaseId1 ), myIdentity2.raftMemberId( namedDatabaseId1 ), 3 ) );
 
-        // whens
+        // when
         logProvider.clear();
         leaders.remove( databaseId1 );
         state.onDbLeaderUpdate( Map.copyOf( leaders ) );
+
         // then
         assertThat( logProvider ).forClass( GlobalTopologyState.class ).forLevel( INFO ).containsMessages(
-                format( "%sDatabase %s lost its leader. Previous leader was %s", prefix, databaseId1, RaftMemberId.from( coreId2 ) ) );
+                format( "%sDatabase %s lost its leader. Previous leader was %s", prefix, databaseId1, myIdentity2.raftMemberId( namedDatabaseId1 ) ) );
     }
 
-    private static CoreServerInfo newCoreInfo( MemberId memberId, Set<DatabaseId> databaseIds )
+    private static CoreServerInfo newCoreInfo( ServerId serverId, Set<DatabaseId> databaseIds )
     {
-        var raftAddress = new SocketAddress( "raft-" + memberId.getUuid(), 1 );
-        var catchupAddress = new SocketAddress( "catchup-" + memberId.getUuid(), 2 );
-        var boltUri = new ConnectorUri( bolt, new SocketAddress( "bolt-" + memberId.getUuid(), 3 ) );
-        var httpUri = new ConnectorUri( http, new SocketAddress( "http-" + memberId.getUuid(), 4 ) );
+        var raftAddress = new SocketAddress( "raft-" + serverId.uuid(), 1 );
+        var catchupAddress = new SocketAddress( "catchup-" + serverId.uuid(), 2 );
+        var boltUri = new ConnectorUri( bolt, new SocketAddress( "bolt-" + serverId.uuid(), 3 ) );
+        var httpUri = new ConnectorUri( http, new SocketAddress( "http-" + serverId.uuid(), 4 ) );
         var connectorUris = ConnectorAddresses.fromList( List.of( boltUri, httpUri ) );
-        var groups = ServerGroupName.setOf( "group-1-" + memberId.getUuid(), "group-2-" + memberId.getUuid() );
-        var refuseToBeLeader = memberId.getUuid().getLeastSignificantBits() % 2 == 0;
+        var groups = ServerGroupName.setOf( "group-1-" + serverId.uuid(), "group-2-" + serverId.uuid() );
+        var refuseToBeLeader = serverId.uuid().getLeastSignificantBits() % 2 == 0;
         return new CoreServerInfo( raftAddress, catchupAddress, connectorUris, groups, databaseIds, refuseToBeLeader );
     }
 
-    private static ReadReplicaInfo newReadReplicaInfo( MemberId memberId, Set<DatabaseId> databaseIds )
+    private static ReadReplicaInfo newReadReplicaInfo( ServerId serverId, Set<DatabaseId> databaseIds )
     {
-        var catchupAddress = new SocketAddress( "catchup-" + memberId.getUuid(), 1 );
-        var boltUri = new ConnectorUri( bolt, new SocketAddress( "bolt-" + memberId.getUuid(), 2 ) );
-        var httpUri = new ConnectorUri( http, new SocketAddress( "http-" + memberId.getUuid(), 3 ) );
+        var catchupAddress = new SocketAddress( "catchup-" + serverId.uuid(), 1 );
+        var boltUri = new ConnectorUri( bolt, new SocketAddress( "bolt-" + serverId.uuid(), 2 ) );
+        var httpUri = new ConnectorUri( http, new SocketAddress( "http-" + serverId.uuid(), 3 ) );
         var connectorUris = ConnectorAddresses.fromList( List.of( boltUri, httpUri ) );
-        var groups = ServerGroupName.setOf( "group-1-" + memberId.getUuid(), "group-2-" + memberId.getUuid() );
+        var groups = ServerGroupName.setOf( "group-1-" + serverId.uuid(), "group-2-" + serverId.uuid() );
         return new ReadReplicaInfo( connectorUris, catchupAddress, groups, databaseIds );
     }
 
@@ -441,5 +479,4 @@ class GlobalTopologyStateTest
     {
         return coreTopology.members( state::resolveRaftMemberForServer );
     }
-
 }

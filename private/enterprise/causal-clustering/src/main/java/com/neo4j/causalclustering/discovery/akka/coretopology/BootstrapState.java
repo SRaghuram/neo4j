@@ -7,13 +7,12 @@ package com.neo4j.causalclustering.discovery.akka.coretopology;
 
 import akka.cluster.UniqueAddress;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
+import com.neo4j.causalclustering.identity.RaftGroupId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-
-import com.neo4j.causalclustering.identity.RaftId;
-import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -30,10 +29,10 @@ public class BootstrapState
     private final MetadataMessage memberData;
     private final UniqueAddress selfAddress;
     private final Config config;
-    private final Map<RaftId,RaftMemberId> previouslyBootstrapped;
+    private final Map<RaftGroupId,RaftMemberId> previouslyBootstrapped;
 
     BootstrapState( ClusterViewMessage clusterView, MetadataMessage memberData, UniqueAddress selfAddress,
-                   Config config, Map<RaftId,RaftMemberId> previouslyBootstrapped )
+                   Config config, Map<RaftGroupId,RaftMemberId> previouslyBootstrapped )
     {
         this.clusterView = requireNonNull( clusterView );
         this.memberData = requireNonNull( memberData );
@@ -53,7 +52,7 @@ public class BootstrapState
 
     public boolean memberBootstrappedRaft( NamedDatabaseId namedDatabaseId, RaftMemberId raftMemberId )
     {
-        var raftid = RaftId.from( namedDatabaseId.databaseId() );
+        var raftid = RaftGroupId.from( namedDatabaseId.databaseId() );
         var bootstrapper = previouslyBootstrapped.get( raftid );
         return Objects.equals( raftMemberId, bootstrapper );
     }

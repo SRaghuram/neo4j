@@ -8,8 +8,8 @@ package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policie
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
+import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftTestMember;
 import com.neo4j.causalclustering.routing.load_balancing.DefaultLeaderService;
 import com.neo4j.dbms.EnterpriseOperatorState;
@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
@@ -32,7 +33,8 @@ import org.neo4j.logging.Log;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForReadReplica;
 import static com.neo4j.causalclustering.identity.RaftTestMember.leader;
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
+import static com.neo4j.causalclustering.identity.RaftTestMember.server;
 import static com.neo4j.configuration.CausalClusteringSettings.cluster_allow_reads_on_followers;
 import static com.neo4j.configuration.CausalClusteringSettings.cluster_allow_reads_on_leader;
 import static com.neo4j.configuration.CausalClusteringSettings.load_balancing_shuffle;
@@ -97,6 +99,7 @@ class AddressCollectorTest
         var address0 = addressesForCore( 0, false ).boltAddress();
         var address1 = addressesForCore( 1, false ).boltAddress();
         var address2 = addressesForCore( 2, false ).boltAddress();
+
         // when
         var routingResult = addressCollector.createRoutingResult( namedDatabaseId, null );
 
@@ -117,6 +120,7 @@ class AddressCollectorTest
         var address0 = addressesForCore( 0, false ).boltAddress();
         var address1 = addressesForCore( 1, false ).boltAddress();
         var address2 = addressesForCore( 2, false ).boltAddress();
+
         // when
         var routingResult = addressCollector.createRoutingResult( namedDatabaseId, null );
 
@@ -140,6 +144,7 @@ class AddressCollectorTest
         var address3 = addressesForReadReplica( 3 ).boltAddress();
         var address4 = addressesForReadReplica( 4 ).boltAddress();
         var address5 = addressesForReadReplica( 5 ).boltAddress();
+
         // when
         var routingResult = addressCollector.createRoutingResult( namedDatabaseId, null );
 
@@ -163,6 +168,7 @@ class AddressCollectorTest
         var address3 = addressesForReadReplica( 3 ).boltAddress();
         var address4 = addressesForReadReplica( 4 ).boltAddress();
         var address5 = addressesForReadReplica( 5 ).boltAddress();
+
         // when
         var routingResult = addressCollector.createRoutingResult( namedDatabaseId, null );
 
@@ -186,6 +192,7 @@ class AddressCollectorTest
         var address3 = addressesForReadReplica( 3 ).boltAddress();
         var address4 = addressesForReadReplica( 4 ).boltAddress();
         var address5 = addressesForReadReplica( 5 ).boltAddress();
+
         // when
         var routingResult = addressCollector.createRoutingResult( namedDatabaseId, null );
 
@@ -289,7 +296,7 @@ class AddressCollectorTest
 
         var config = getConfig( true, false,true );
 
-        var topologyService = new FakeTopologyService( cores.keySet(), readReplicas.keySet(), member( 0 ), Set.of( namedDatabaseId ) );
+        var topologyService = new FakeTopologyService( cores.keySet(), readReplicas.keySet(), server( 0 ), Set.of( namedDatabaseId ) );
         var leaderService = new DefaultLeaderService( topologyService, nullLogProvider() );
 
         topologyService.setState( cores.keySet(), new DiscoveryDatabaseState( namedDatabaseId.databaseId(), STOPPED ) );
@@ -321,7 +328,8 @@ class AddressCollectorTest
 
         var config = getConfig( false, false,true );
 
-        var topologyService = new FakeTopologyService( cores.keySet(), readReplicas.keySet(), member( 0 ), Set.of( namedDatabaseId ) );
+        var topologyService = new FakeTopologyService( cores.keySet(), readReplicas.keySet(), server( 0 ), Set.of( namedDatabaseId ) );
+        topologyService.setRaftMemberIdMapping( raftMember( 0 ), server( 0 ) );
         var leaderService = new DefaultLeaderService( topologyService, nullLogProvider() );
         leaderService.onLeaderSwitch( namedDatabaseId, leader( 0, 1 ) );
 
@@ -358,17 +366,17 @@ class AddressCollectorTest
                                     boolean allowReadsOnLeader,
                                     boolean shuffle,
                                     int leaderIndex,
-                                    Map<MemberId,CoreServerInfo> cores,
-                                    Map<MemberId,ReadReplicaInfo> readReplicas )
+                                    Map<ServerId,CoreServerInfo> cores,
+                                    Map<ServerId,ReadReplicaInfo> readReplicas )
     {
-        Set<MemberId> sortedCores =
+        Set<ServerId> sortedCores =
                 cores.keySet().stream().sorted( Comparator.comparingInt( m -> cores.get( m ).getRaftServer().getPort() ) ).collect(
                         Collectors.toCollection( LinkedHashSet::new ) );
-        Set<MemberId> sortedRead =
+        Set<ServerId> sortedRead =
                 readReplicas.keySet().stream().sorted( Comparator.comparingInt( m -> readReplicas.get( m ).catchupServer().getPort() ) ).collect(
                         Collectors.toCollection( LinkedHashSet::new ) );
 
-        FakeTopologyService topologyService = new FakeTopologyService( sortedCores, sortedRead, member( 1 ), Set.of( namedDatabaseId ) );
+        FakeTopologyService topologyService = new FakeTopologyService( sortedCores, sortedRead, server( 1 ), Set.of( namedDatabaseId ) );
         topologyService.setState( sortedCores, new DiscoveryDatabaseState( namedDatabaseId.databaseId(), EnterpriseOperatorState.STARTED ) );
         topologyService.setState( sortedRead, new DiscoveryDatabaseState( namedDatabaseId.databaseId(), EnterpriseOperatorState.STARTED ) );
 
@@ -382,6 +390,7 @@ class AddressCollectorTest
         {
             topologyService.removeLeader();
         }
+        topologyService.setRaftMemberIdMapping( raftMember( leaderIndex ), server( leaderIndex ) );
 
         Config config = getConfig( allowReadsOnFollowers, allowReadsOnLeader, shuffle );
 
@@ -397,15 +406,15 @@ class AddressCollectorTest
         return config;
     }
 
-    private Map<MemberId,ReadReplicaInfo> createReadReplicas( int numberOfCores, int numberOnReplicas )
+    private Map<ServerId,ReadReplicaInfo> createReadReplicas( int numberOfCores, int numberOnReplicas )
     {
         return IntStream.range( numberOfCores, numberOfCores + numberOnReplicas ).boxed()
-                        .collect( Collectors.toMap( RaftTestMember::member, i -> addressesForReadReplica( i ) ) );
+                        .collect( Collectors.toMap( RaftTestMember::server, TestTopology::addressesForReadReplica ) );
     }
 
-    private Map<MemberId,CoreServerInfo> createCores( int numberOfCores )
+    private Map<ServerId,CoreServerInfo> createCores( int numberOfCores )
     {
         return IntStream.range( 0, numberOfCores ).boxed()
-                        .collect( Collectors.toMap( RaftTestMember::member, i -> addressesForCore( i, false ) ) );
+                        .collect( Collectors.toMap( RaftTestMember::server, i -> addressesForCore( i, false ) ) );
     }
 }

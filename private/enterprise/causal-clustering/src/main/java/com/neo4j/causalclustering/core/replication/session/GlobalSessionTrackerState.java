@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.core.replication.session;
 
-import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.io.IOException;
@@ -18,6 +17,7 @@ import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.marshal.ChannelMarshal;
 import org.neo4j.io.marshal.EndOfStreamException;
+import org.neo4j.io.marshal.SafeStateMarshal;
 
 /**
  * In memory implementation of {@link GlobalSessionTrackerState}.

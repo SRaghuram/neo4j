@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.consensus;
 
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -79,13 +79,13 @@ class RaftMessageMonitoringHandlerTest
     void shouldDelegateStart() throws Throwable
     {
         // given
-        RaftId raftId = IdFactory.randomRaftId();
+        RaftGroupId raftGroupId = IdFactory.randomRaftId();
 
         // when
-        handler.start( raftId );
+        handler.start( raftGroupId );
 
         // then
-        Mockito.verify( downstream ).start( raftId );
+        Mockito.verify( downstream ).start( raftGroupId );
     }
 
     @Test

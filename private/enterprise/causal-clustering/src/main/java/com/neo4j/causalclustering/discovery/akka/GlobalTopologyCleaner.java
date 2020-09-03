@@ -8,38 +8,38 @@ package com.neo4j.causalclustering.discovery.akka;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
-import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Map;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 
 import static java.util.Collections.emptyMap;
 
 class GlobalTopologyCleaner
 {
-    private final MemberId localMemberId;
+    private final ServerId localServerId;
 
-    GlobalTopologyCleaner( MemberId localMemberId )
+    GlobalTopologyCleaner( ServerId localServerId )
     {
-        this.localMemberId = localMemberId;
+        this.localServerId = localServerId;
     }
 
     DatabaseCoreTopology removeRemoteDatabaseCoreTopologies( DatabaseId databaseId, DatabaseCoreTopology databaseCoreTopology )
     {
         return new DatabaseCoreTopology(
                 databaseId,
-                databaseCoreTopology.raftId(),
+                databaseCoreTopology.raftGroupId(),
                 databaseCoreTopology.servers()
-                                    .containsKey( localMemberId ) ? Map.of( localMemberId, databaseCoreTopology.servers().get( localMemberId ) )
+                                    .containsKey( localServerId ) ? Map.of( localServerId, databaseCoreTopology.servers().get( localServerId ) )
                                                                   : emptyMap()
         );
     }
 
     ReplicatedDatabaseState removeRemoteReplicatedDatabaseState( DatabaseId databaseId, ReplicatedDatabaseState coreStates )
     {
-        return coreStates.stateFor( localMemberId )
-                         .map( coreState -> ReplicatedDatabaseState.ofCores( databaseId, Map.of( localMemberId, coreState ) ) )
+        return coreStates.stateFor( localServerId )
+                         .map( coreState -> ReplicatedDatabaseState.ofCores( databaseId, Map.of( localServerId, coreState ) ) )
                          .orElse( ReplicatedDatabaseState.ofCores( databaseId, emptyMap() ) );
     }
 
@@ -48,7 +48,7 @@ class GlobalTopologyCleaner
         return new DatabaseReadReplicaTopology(
                 databaseId,
                 readReplicaTopology.servers()
-                                   .containsKey( localMemberId ) ? Map.of( localMemberId, readReplicaTopology.servers().get( localMemberId ) )
+                                   .containsKey( localServerId ) ? Map.of( localServerId, readReplicaTopology.servers().get( localServerId ) )
                                                                  : emptyMap()
         );
     }

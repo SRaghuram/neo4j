@@ -5,90 +5,35 @@
  */
 package com.neo4j.causalclustering.identity;
 
-import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
-
 import java.io.IOException;
-import java.util.Objects;
 import java.util.UUID;
 
-import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.marshal.SafeStateMarshal;
 import org.neo4j.util.Id;
 
-public final class RaftMemberId
+public final class RaftMemberId extends Id
 {
-    private final Id id;
-
-    private final MemberId serverId;
-
-    RaftMemberId( UUID uuid, MemberId serverId )
+    public RaftMemberId( UUID uuid )
     {
-        this.id = new Id( uuid );
-        this.serverId = serverId;
-    }
-
-    public static RaftMemberId of( UUID id )
-    {
-        return new RaftMemberId( id, MemberId.of( id ) );
-    }
-
-    public MemberId serverId()
-    {
-        return serverId;
-    }
-
-    /**
-     * This conversion should be only temporary, until mapping is implemented in Topology
-     */
-    @Deprecated
-    public static RaftMemberId from( ServerId memberId )
-    {
-        return new RaftMemberId( memberId.getUuid(), MemberId.of( memberId ) );
-    }
-
-    @Override
-    public boolean equals( Object o )
-    {
-        if ( this == o )
-        {
-            return true;
-        }
-        if ( o == null || getClass() != o.getClass() )
-        {
-            return false;
-        }
-        RaftMemberId raftId = (RaftMemberId) o;
-        return Objects.equals( id, raftId.id );
-    }
-
-    @Override
-    public int hashCode()
-    {
-        return Objects.hash( id );
-    }
-
-    public UUID getUuid()
-    {
-        return id.uuid();
+        super( uuid );
     }
 
     @Override
     public String toString()
     {
-        return "RaftMemberId{" + id + '}';
+        return "RaftMemberId{" + shortName() + '}';
     }
 
-    /**
-     * Format:
-     * ┌──────────────────────────────┐
-     * │mostSignificantBits    8 bytes│
-     * │leastSignificantBits   8 bytes│
-     * └──────────────────────────────┘
-     */
     public static class Marshal extends SafeStateMarshal<RaftMemberId>
     {
         public static final RaftMemberId.Marshal INSTANCE = new RaftMemberId.Marshal();
+
+        private Marshal()
+        {
+            // use INSTANCE
+        }
 
         @Override
         public void marshal( RaftMemberId memberId, WritableChannel channel ) throws IOException
@@ -100,8 +45,8 @@ public final class RaftMemberId
             else
             {
                 channel.put( (byte) 1 );
-                channel.putLong( memberId.getUuid().getMostSignificantBits() );
-                channel.putLong( memberId.getUuid().getLeastSignificantBits() );
+                channel.putLong( memberId.uuid().getMostSignificantBits() );
+                channel.putLong( memberId.uuid().getLeastSignificantBits() );
             }
         }
 
@@ -115,10 +60,9 @@ public final class RaftMemberId
             }
             else
             {
-                var mostSigBits = channel.getLong();
-                var leastSigBits = channel.getLong();
-                var uuid = new UUID( mostSigBits, leastSigBits );
-                return new RaftMemberId( uuid, MemberId.of( uuid ) );
+                long mostSigBits = channel.getLong();
+                long leastSigBits = channel.getLong();
+                return new RaftMemberId( new UUID( mostSigBits, leastSigBits ) );
             }
         }
 

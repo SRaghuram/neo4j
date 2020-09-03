@@ -5,21 +5,23 @@
  */
 package com.neo4j.causalclustering.discovery.akka.database.state;
 
-import com.neo4j.causalclustering.identity.MemberId;
-
 import java.util.Objects;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 
-public class DatabaseToMember
+/**
+ * Represents a database hosted by a server.
+ */
+public class DatabaseServer
 {
     private final DatabaseId databaseId;
-    private final MemberId memberId;
+    private final ServerId serverId;
 
-    public DatabaseToMember( DatabaseId databaseId, MemberId memberId )
+    public DatabaseServer( DatabaseId databaseId, ServerId serverId )
     {
         this.databaseId = databaseId;
-        this.memberId = memberId;
+        this.serverId = serverId;
     }
 
     public DatabaseId databaseId()
@@ -27,9 +29,9 @@ public class DatabaseToMember
         return databaseId;
     }
 
-    public MemberId memberId()
+    public ServerId serverId()
     {
-        return memberId;
+        return serverId;
     }
 
     @Override
@@ -43,19 +45,19 @@ public class DatabaseToMember
         {
             return false;
         }
-        DatabaseToMember that = (DatabaseToMember) o;
-        return Objects.equals( databaseId, that.databaseId ) && Objects.equals( memberId, that.memberId );
+        DatabaseServer that = (DatabaseServer) o;
+        return Objects.equals( databaseId, that.databaseId ) && Objects.equals( serverId, that.serverId );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( databaseId, memberId );
+        return Objects.hash( databaseId, serverId );
     }
 
     @Override
     public String toString()
     {
-        return "DatabaseToMember{" + "databaseId=" + databaseId + ", memberId=" + memberId + '}';
+        return "DatabaseServer{" + "databaseId=" + databaseId + ", serverId=" + serverId + '}';
     }
 }

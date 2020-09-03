@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core.batching;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import java.time.Instant;
@@ -25,16 +25,16 @@ class BatchingHandler extends RaftMessages.HandlerAdaptor<RaftMessages.InboundRa
     private final BatchingConfig batchConfig;
     private final BoundedPriorityQueue<RaftMessages.InboundRaftMessageContainer<?>> inQueue;
     private final Instant receivedAt;
-    private final RaftId raftId;
+    private final RaftGroupId raftGroupId;
     private final List<ReplicatedContent> contentBatch;
     private final List<RaftLogEntry> entryBatch;
 
-    BatchingHandler( Instant receivedAt, RaftId raftId, BatchingConfig batchConfig,
+    BatchingHandler( Instant receivedAt, RaftGroupId raftGroupId, BatchingConfig batchConfig,
             BoundedPriorityQueue<RaftMessages.InboundRaftMessageContainer<?>> inQueue,
             List<RaftLogEntry> entryBatch, List<ReplicatedContent> contentBatch )
     {
         this.receivedAt = receivedAt;
-        this.raftId = raftId;
+        this.raftGroupId = raftGroupId;
         this.contentBatch = contentBatch;
         this.entryBatch = entryBatch;
         this.batchConfig = batchConfig;
@@ -45,7 +45,7 @@ class BatchingHandler extends RaftMessages.HandlerAdaptor<RaftMessages.InboundRa
     public RaftMessages.InboundRaftMessageContainer<?> handle( RaftMessages.NewEntry.Request request ) throws RuntimeException
     {
         RaftMessages.NewEntry.BatchRequest newEntryBatch = batchNewEntries( request );
-        return RaftMessages.InboundRaftMessageContainer.of( receivedAt, raftId, newEntryBatch );
+        return RaftMessages.InboundRaftMessageContainer.of( receivedAt, raftGroupId, newEntryBatch );
     }
 
     @Override
@@ -58,7 +58,7 @@ class BatchingHandler extends RaftMessages.HandlerAdaptor<RaftMessages.InboundRa
         }
 
         var appendEntriesBatch = batchAppendEntries( request );
-        return RaftMessages.InboundRaftMessageContainer.of( receivedAt, raftId, appendEntriesBatch );
+        return RaftMessages.InboundRaftMessageContainer.of( receivedAt, raftGroupId, appendEntriesBatch );
     }
 
     /**

@@ -7,10 +7,9 @@ package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
-import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseToMember;
+import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseServer;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.configuration.ServerGroupName;
 
@@ -30,6 +29,7 @@ import java.util.stream.IntStream;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.DatabaseState;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -41,21 +41,22 @@ import static java.util.function.Function.identity;
  */
 public class FakeTopologyService extends LifecycleAdapter implements TopologyService
 {
-    private final Map<MemberId,CoreServerInfo> coreMembers;
-    private final Map<MemberId,ReadReplicaInfo> replicaMembers;
+    private final Map<ServerId,CoreServerInfo> coreMembers;
+    private final Map<ServerId,ReadReplicaInfo> replicaMembers;
     //For this test class all members have the same role across all databases
-    private final Map<MemberId,RoleInfo> coreRoles;
-    private final Map<DatabaseToMember,DiscoveryDatabaseState> databaseStates;
-    private final MemberId myself;
+    private final Map<ServerId,RoleInfo> coreRoles;
+    private final Map<DatabaseServer,DiscoveryDatabaseState> databaseStates;
+    private final ServerId myself;
+    private final Map<RaftMemberId,ServerId> raftMemberIdMapping = new HashMap<>();
 
-    public FakeTopologyService( Set<MemberId> cores, Set<MemberId> replicas, MemberId myself, Set<NamedDatabaseId> namedDatabaseIds )
+    public FakeTopologyService( Set<ServerId> cores, Set<ServerId> replicas, ServerId myself, Set<NamedDatabaseId> namedDatabaseIds )
     {
         this.myself = myself;
 
         int offset = 0;
         this.coreMembers = new HashMap<>();
         var databaseIds = namedDatabaseIds.stream().map( NamedDatabaseId::databaseId ).collect( Collectors.toSet() );
-        for ( MemberId core : cores )
+        for ( ServerId core : cores )
         {
             coreMembers.put( core, TestTopology.addressesForCore( offset, false, databaseIds ) );
             offset++;
@@ -74,7 +75,7 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
         }
 
         this.replicaMembers = new HashMap<>();
-        for ( MemberId replica : replicas )
+        for ( ServerId replica : replicas )
         {
             replicaMembers.put( replica, TestTopology.addressesForReadReplica( offset, databaseIds ) );
             offset++;
@@ -82,28 +83,28 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
         databaseStates = new HashMap<>();
     }
 
-    public void setRole( MemberId memberId, RoleInfo nextRole )
+    public void setRole( ServerId serverId, RoleInfo nextRole )
     {
-        if ( memberId == null && nextRole == RoleInfo.LEADER )
+        if ( serverId == null && nextRole == RoleInfo.LEADER )
         {
             leader().ifPresent( member -> coreRoles.put( member, RoleInfo.FOLLOWER ) );
             return;
         }
-        else if ( !coreRoles.containsKey( memberId ) )
+        else if ( !coreRoles.containsKey( serverId ) )
         {
             return;
         }
 
-        var currentRole = coreRoles.get( memberId );
+        var currentRole = coreRoles.get( serverId );
 
         if ( currentRole != nextRole && nextRole == RoleInfo.LEADER )
         {
             leader().ifPresent( member -> coreRoles.put( member, RoleInfo.FOLLOWER ) );
         }
-        coreRoles.put( memberId, nextRole );
+        coreRoles.put( serverId, nextRole );
     }
 
-    private Optional<MemberId> leader()
+    private Optional<ServerId> leader()
     {
         return coreRoles.entrySet().stream()
                 .filter( e -> e.getValue() == RoleInfo.LEADER )
@@ -111,7 +112,7 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
                 .findAny();
     }
 
-    public void setGroups( Set<MemberId> members, final Set<ServerGroupName> groups )
+    public void setGroups( Set<ServerId> members, final Set<ServerGroupName> groups )
     {
         Function<CoreServerInfo,CoreServerInfo> coreInfoTransform = serverInfo ->
                 new CoreServerInfo( serverInfo.getRaftServer(), serverInfo.catchupServer(),
@@ -124,7 +125,7 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
         updateMembers( members, coreInfoTransform, replicaInfoTransform );
     }
 
-    public void setDatabases( Set<MemberId> members, final Set<DatabaseId> databases )
+    public void setDatabases( Set<ServerId> members, final Set<DatabaseId> databases )
     {
         Function<CoreServerInfo,CoreServerInfo> coreInfoTransform = serverInfo ->
                 new CoreServerInfo( serverInfo.getRaftServer(), serverInfo.catchupServer(),
@@ -137,30 +138,35 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
         updateMembers( members, coreInfoTransform, replicaInfoTransform );
     }
 
-    private void updateMembers( Set<MemberId> members, Function<CoreServerInfo,CoreServerInfo> coreInfoTransform,
+    private void updateMembers( Set<ServerId> servers, Function<CoreServerInfo,CoreServerInfo> coreInfoTransform,
             Function<ReadReplicaInfo,ReadReplicaInfo> replicaInfoTransform )
     {
         var updatedCores = coreMembers.entrySet().stream()
-                .filter( e -> members.contains( e.getKey() ) )
+                .filter( e -> servers.contains( e.getKey() ) )
                 .collect( Collectors.toMap( Map.Entry::getKey, e -> coreInfoTransform.apply( e.getValue() ) ) );
 
         var updatedRRs = replicaMembers.entrySet().stream()
-                .filter( e -> members.contains( e.getKey() ) )
+                .filter( e -> servers.contains( e.getKey() ) )
                 .collect( Collectors.toMap( Map.Entry::getKey, e -> replicaInfoTransform.apply( e.getValue() ) ) );
 
         coreMembers.putAll( updatedCores );
         replicaMembers.putAll( updatedRRs );
     }
 
-    public void setState( Set<MemberId> memberIds, DiscoveryDatabaseState state )
+    public void setState( Set<ServerId> memberIds, DiscoveryDatabaseState state )
     {
         var newStates = memberIds.stream()
-                .collect( Collectors.toMap( m -> new DatabaseToMember( state.databaseId(), m ), ignored -> state ) );
+                .collect( Collectors.toMap( m -> new DatabaseServer( state.databaseId(), m ), ignored -> state ) );
         databaseStates.putAll( newStates );
     }
 
     @Override
     public void onDatabaseStart( NamedDatabaseId namedDatabaseId )
+    {
+    }
+
+    @Override
+    public void onRaftMemberKnown( NamedDatabaseId namedDatabaseId )
     {
     }
 
@@ -175,7 +181,7 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     }
 
     @Override
-    public Map<MemberId,CoreServerInfo> allCoreServers()
+    public Map<ServerId,CoreServerInfo> allCoreServers()
     {
         return coreMembers;
     }
@@ -187,11 +193,11 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
         var coresWithDatabase = coreMembers.entrySet().stream()
                 .filter( e -> e.getValue().startedDatabaseIds().contains( databaseId ) )
                 .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) );
-        return new DatabaseCoreTopology( databaseId, RaftId.from( databaseId ), coresWithDatabase );
+        return new DatabaseCoreTopology( databaseId, RaftGroupId.from( databaseId ), coresWithDatabase );
     }
 
     @Override
-    public Map<MemberId,ReadReplicaInfo> allReadReplicas()
+    public Map<ServerId,ReadReplicaInfo> allReadReplicas()
     {
         return replicaMembers;
     }
@@ -207,7 +213,7 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     }
 
     @Override
-    public SocketAddress lookupCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
+    public SocketAddress lookupCatchupAddress( ServerId upstream ) throws CatchupAddressResolutionException
     {
         return Optional.<DiscoveryServerInfo>ofNullable( coreMembers.get( upstream ) )
                 .or( () -> Optional.ofNullable( replicaMembers.get( upstream ) ) )
@@ -216,12 +222,12 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     }
 
     @Override
-    public RoleInfo lookupRole( NamedDatabaseId ignored, MemberId memberId )
+    public RoleInfo lookupRole( NamedDatabaseId ignored, ServerId serverId )
     {
-        var role = coreRoles.get( memberId );
+        var role = coreRoles.get( serverId );
         if ( role == null )
         {
-            var isReadReplica = replicaMembers.containsKey( memberId );
+            var isReadReplica = replicaMembers.containsKey( serverId );
             return isReadReplica ? RoleInfo.READ_REPLICA : RoleInfo.UNKNOWN;
         }
         return role;
@@ -232,48 +238,51 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     {
         return coreRoles.entrySet().stream()
                         .filter( entry -> entry.getValue() == RoleInfo.LEADER )
-                        .map( entry -> new LeaderInfo( RaftMemberId.from( entry.getKey() ), 1 ) )
+                        .map( entry -> new LeaderInfo( new RaftMemberId( entry.getKey().uuid() ), 1 ) )
                         .findFirst().orElse( null );
     }
 
     @Override
-    public RaftMemberId resolveRaftMemberForServer( NamedDatabaseId namedDatabaseId, MemberId serverId )
+    public RaftMemberId resolveRaftMemberForServer( NamedDatabaseId namedDatabaseId, ServerId serverId )
     {
-        return RaftMemberId.from( serverId );
+        return new RaftMemberId( serverId.uuid() );
+    }
+
+    @Override
+    public ServerId resolveServerForRaftMember( RaftMemberId raftMemberId )
+    {
+        return raftMemberIdMapping.getOrDefault( raftMemberId, new ServerId( raftMemberId.uuid() ) );
     }
 
     public void removeLeader()
     {
-        Map.Entry<MemberId,RoleInfo> leader = coreRoles.entrySet()
-                                                       .stream()
-                                                       .filter( entry -> entry.getValue() == RoleInfo.LEADER )
-                                                       .findFirst().orElse( null );
-        if ( leader != null )
-        {
-            coreRoles.remove( leader.getKey() );
-        }
+        coreRoles.entrySet()
+                 .stream()
+                 .filter( entry -> entry.getValue() == RoleInfo.LEADER )
+                 .findFirst()
+                 .ifPresent( leader -> coreRoles.remove( leader.getKey() ) );
     }
 
     @Override
-    public MemberId memberId()
+    public ServerId serverId()
     {
         return myself;
     }
 
     @Override
-    public DiscoveryDatabaseState lookupDatabaseState( NamedDatabaseId namedDatabaseId, MemberId memberId )
+    public DiscoveryDatabaseState lookupDatabaseState( NamedDatabaseId namedDatabaseId, ServerId serverId )
     {
-        return databaseStates.get( new DatabaseToMember( namedDatabaseId.databaseId(), memberId ) );
+        return databaseStates.get( new DatabaseServer( namedDatabaseId.databaseId(), serverId ) );
     }
 
     @Override
-    public Map<MemberId,DiscoveryDatabaseState> allCoreStatesForDatabase( final NamedDatabaseId namedDatabaseId )
+    public Map<ServerId,DiscoveryDatabaseState> allCoreStatesForDatabase( final NamedDatabaseId namedDatabaseId )
     {
         return getMemberStatesForRole( namedDatabaseId, allCoreServers().keySet() );
     }
 
     @Override
-    public Map<MemberId,DiscoveryDatabaseState> allReadReplicaStatesForDatabase( NamedDatabaseId namedDatabaseId )
+    public Map<ServerId,DiscoveryDatabaseState> allReadReplicaStatesForDatabase( NamedDatabaseId namedDatabaseId )
     {
         return getMemberStatesForRole( namedDatabaseId, allReadReplicas().keySet() );
     }
@@ -284,25 +293,30 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
         return true;
     }
 
-    private Map<MemberId,DiscoveryDatabaseState> getMemberStatesForRole( final NamedDatabaseId namedDatabaseId, Set<MemberId> membersOfRole )
+    private Map<ServerId,DiscoveryDatabaseState> getMemberStatesForRole( final NamedDatabaseId namedDatabaseId, Set<ServerId> membersOfRole )
     {
         final var members = Set.copyOf( membersOfRole );
-        Predicate<DatabaseToMember> memberIsRoleForDb =
-                key -> Objects.equals( key.databaseId(), namedDatabaseId.databaseId() ) && members.contains( key.memberId() );
+        Predicate<DatabaseServer> memberIsRoleForDb =
+                key -> Objects.equals( key.databaseId(), namedDatabaseId.databaseId() ) && members.contains( key.serverId() );
 
         return databaseStates.entrySet().stream()
                 .filter( e -> memberIsRoleForDb.test( e.getKey() ) )
-                .collect( Collectors.toMap( e -> e.getKey().memberId(), Map.Entry::getValue ) );
+                .collect( Collectors.toMap( e -> e.getKey().serverId(), Map.Entry::getValue ) );
     }
 
-    public static MemberId memberId( int seed )
+    public static ServerId serverId( int seed )
     {
         var rng = new Random( seed );
-        return MemberId.of( new UUID( rng.nextLong(), rng.nextLong() ) );
+        return new ServerId( new UUID( rng.nextLong(), rng.nextLong() ) );
     }
 
-    public static Set<MemberId> memberIds( int from, int until )
+    public static Set<ServerId> serverIds( int from, int until )
     {
-        return IntStream.range( from, until ).mapToObj( FakeTopologyService::memberId ).collect( Collectors.toSet() );
+        return IntStream.range( from, until ).mapToObj( FakeTopologyService::serverId ).collect( Collectors.toSet() );
+    }
+
+    public void setRaftMemberIdMapping( RaftMemberId raftMemberId, ServerId serverId )
+    {
+        raftMemberIdMapping.put( raftMemberId, serverId );
     }
 }

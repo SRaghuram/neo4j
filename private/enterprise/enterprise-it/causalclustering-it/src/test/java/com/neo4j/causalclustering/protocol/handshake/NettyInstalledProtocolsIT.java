@@ -348,7 +348,7 @@ class NettyInstalledProtocolsIT
                         if ( message instanceof RaftMessages.InboundRaftMessageContainer )
                         {
                             var inbound = (RaftMessages.InboundRaftMessageContainer) message;
-                            return inbound.raftId().equals( expected.raftId() ) && inbound.message().equals( expected.message() );
+                            return inbound.raftGroupId().equals( expected.raftGroupId() ) && inbound.message().equals( expected.message() );
                         }
                     }
                     return false;

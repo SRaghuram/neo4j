@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.marshalling.ReplicatedContentHandler;
 
@@ -21,7 +21,7 @@ import org.neo4j.kernel.database.DatabaseIdFactory;
 class Helpers
 {
     private static final java.util.UUID UUID = java.util.UUID.randomUUID();
-    private static final RaftId RAFT_ID = RaftId.from( DatabaseIdFactory.from( UUID ) );
+    private static final RaftGroupId RAFT_ID = RaftGroupId.from( DatabaseIdFactory.from( UUID ) );
     private static final RaftMemberId MEMBER_ID = IdFactory.randomRaftMemberId();
     private static final Instant INSTANT = Instant.MAX;
 

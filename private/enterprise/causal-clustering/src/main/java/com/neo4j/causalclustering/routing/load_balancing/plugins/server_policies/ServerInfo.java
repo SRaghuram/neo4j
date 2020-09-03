@@ -5,13 +5,13 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies;
 
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.configuration.ServerGroupName;
 
 import java.util.Objects;
 import java.util.Set;
 
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.identity.ServerId;
 
 /**
  * Hold the server information that is interesting for load balancing purposes.
@@ -19,19 +19,19 @@ import org.neo4j.configuration.helpers.SocketAddress;
 public class ServerInfo
 {
     private final SocketAddress boltAddress;
-    private MemberId memberId;
+    private ServerId serverId;
     private Set<ServerGroupName> groups;
 
-    public ServerInfo( SocketAddress boltAddress, MemberId memberId, Set<ServerGroupName> groups )
+    public ServerInfo( SocketAddress boltAddress, ServerId serverId, Set<ServerGroupName> groups )
     {
         this.boltAddress = boltAddress;
-        this.memberId = memberId;
+        this.serverId = serverId;
         this.groups = groups;
     }
 
-    public MemberId memberId()
+    public ServerId serverId()
     {
-        return memberId;
+        return serverId;
     }
 
     SocketAddress boltAddress()
@@ -56,19 +56,19 @@ public class ServerInfo
             return false;
         }
         ServerInfo that = (ServerInfo) o;
-        return Objects.equals( boltAddress, that.boltAddress ) && Objects.equals( memberId, that.memberId ) &&
+        return Objects.equals( boltAddress, that.boltAddress ) && Objects.equals( serverId, that.serverId ) &&
                 Objects.equals( groups, that.groups );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( boltAddress, memberId, groups );
+        return Objects.hash( boltAddress, serverId, groups );
     }
 
     @Override
     public String toString()
     {
-        return "ServerInfo{" + "boltAddress=" + boltAddress + ", memberId=" + memberId + ", groups=" + groups + '}';
+        return "ServerInfo{" + "boltAddress=" + boltAddress + ", serverId=" + serverId + ", groups=" + groups + '}';
     }
 }

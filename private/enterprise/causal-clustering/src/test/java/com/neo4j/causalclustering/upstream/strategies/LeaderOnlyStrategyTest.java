@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.upstream.strategies;
 
 import com.neo4j.causalclustering.discovery.RoleInfo;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.configuration.ServerGroupName;
 import org.junit.jupiter.api.Test;
@@ -15,6 +14,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
@@ -28,7 +28,7 @@ class LeaderOnlyStrategyTest
     void ignoresSelf() throws UpstreamDatabaseSelectionException
     {
         // given
-        MemberId myself = MemberId.of( new UUID( 1234, 5678 ) );
+        ServerId myself = new ServerId( new UUID( 1234, 5678 ) );
         var groupName = new ServerGroupName( "groupName" );
 
         // and
@@ -36,7 +36,7 @@ class LeaderOnlyStrategyTest
         var topologyServiceNoRetriesStrategy = new TopologyServiceThatPrioritisesItself( myself, groupName )
         {
             @Override
-            public RoleInfo lookupRole( NamedDatabaseId databaseId, MemberId memberId )
+            public RoleInfo lookupRole( NamedDatabaseId databaseId, ServerId serverId )
             {
                 return RoleInfo.LEADER;
             }
@@ -44,7 +44,7 @@ class LeaderOnlyStrategyTest
         leaderOnlyStrategy.inject( topologyServiceNoRetriesStrategy, Config.defaults(), NullLogProvider.getInstance(), myself );
 
         // when
-        Optional<MemberId> resolved = leaderOnlyStrategy.upstreamMemberForDatabase( new TestDatabaseIdRepository().defaultDatabase() );
+        Optional<ServerId> resolved = leaderOnlyStrategy.upstreamServerForDatabase( new TestDatabaseIdRepository().defaultDatabase() );
 
         // then
         assertTrue( resolved.isPresent() );

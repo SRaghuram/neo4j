@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
 import com.neo4j.causalclustering.identity.BoundState;
 import com.neo4j.causalclustering.identity.RaftBinder;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.DatabaseStartAborter;
@@ -20,11 +20,13 @@ import java.util.Optional;
 
 import org.neo4j.io.state.SimpleStorage;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.lifecycle.Lifecycle;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.scheduler.JobHandle;
 
 import static java.lang.String.format;
 
-class CoreBootstrap
+class RaftStarter extends LifecycleAdapter
 {
     private final Database kernelDatabase;
     private final RaftBinder raftBinder;
@@ -34,13 +36,14 @@ class CoreBootstrap
     private final CoreDownloaderService downloadService;
     private final ClusterInternalDbmsOperator clusterInternalOperator;
     private final DatabaseStartAborter databaseStartAborter;
-    private final SimpleStorage<RaftId> raftIdStorage;
+    private final SimpleStorage<RaftGroupId> raftIdGroupStorage;
     private final BootstrapSaver bootstrapSaver;
     private final TempBootstrapDir tempBootstrapDir;
+    private final Lifecycle raftComponents;
 
-    CoreBootstrap( Database kernelDatabase, RaftBinder raftBinder, LifecycleMessageHandler<?> raftMessageHandler, CoreSnapshotService snapshotService,
+    RaftStarter( Database kernelDatabase, RaftBinder raftBinder, LifecycleMessageHandler<?> raftMessageHandler, CoreSnapshotService snapshotService,
             CoreDownloaderService downloadService, ClusterInternalDbmsOperator clusterInternalOperator, DatabaseStartAborter databaseStartAborter,
-            SimpleStorage<RaftId> raftIdStorage, BootstrapSaver bootstrapSaver, TempBootstrapDir tempBootstrapDir )
+            SimpleStorage<RaftGroupId> raftIdGroupStorage, BootstrapSaver bootstrapSaver, TempBootstrapDir tempBootstrapDir, Lifecycle raftComponents )
     {
         this.kernelDatabase = kernelDatabase;
         this.raftBinder = raftBinder;
@@ -49,12 +52,14 @@ class CoreBootstrap
         this.downloadService = downloadService;
         this.clusterInternalOperator = clusterInternalOperator;
         this.databaseStartAborter = databaseStartAborter;
-        this.raftIdStorage = raftIdStorage;
+        this.raftIdGroupStorage = raftIdGroupStorage;
         this.bootstrapSaver = bootstrapSaver;
         this.tempBootstrapDir = tempBootstrapDir;
+        this.raftComponents = raftComponents;
     }
 
-    public void perform() throws Exception
+    @Override
+    public void start() throws Exception
     {
         var bootstrapHandle = clusterInternalOperator.bootstrap( kernelDatabase.getNamedDatabaseId() );
         try
@@ -68,6 +73,12 @@ class CoreBootstrap
         }
     }
 
+    @Override
+    public void stop() throws Exception
+    {
+        raftComponents.shutdown();
+    }
+
     private void bindAndStartMessageHandler() throws Exception
     {
         bootstrapSaver.restore( kernelDatabase.getDatabaseLayout() );
@@ -75,16 +86,17 @@ class CoreBootstrap
         tempBootstrapDir.delete();
 
         BoundState boundState = raftBinder.bindToRaft( databaseStartAborter );
+        raftComponents.start();
 
         if ( boundState.snapshot().isPresent() )
         {
             // this means that we bootstrapped the cluster
             snapshotService.installSnapshot( boundState.snapshot().get() );
-            raftMessageHandler.start( boundState.raftId() );
+            raftMessageHandler.start( boundState.raftGroupId() );
         }
         else
         {
-            raftMessageHandler.start( boundState.raftId() );
+            raftMessageHandler.start( boundState.raftGroupId() );
             try
             {
                 awaitState();
@@ -97,18 +109,18 @@ class CoreBootstrap
                 throw e;
             }
         }
-        if ( raftIdStorage.exists() )
+        if ( raftIdGroupStorage.exists() )
         {
-            var raftIdStore = raftIdStorage.readState();
-            if ( !raftIdStore.equals( boundState.raftId() ) )
+            var raftGroupIdStore = raftIdGroupStorage.readState();
+            if ( !raftGroupIdStore.equals( boundState.raftGroupId() ) )
             {
                 throw new IllegalStateException(
-                        format( "Exiting raft id '%s' is different from bound state '%s'.", raftIdStore.uuid(), boundState.raftId().uuid() ) );
+                        format( "Existing raft group id '%s' is different from bound state '%s'.", raftGroupIdStore.uuid(), boundState.raftGroupId().uuid() ) );
             }
         }
         else
         {
-            raftIdStorage.writeState( boundState.raftId() );
+            raftIdGroupStorage.writeState( boundState.raftGroupId() );
         }
     }
 

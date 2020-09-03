@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.discovery.member;
 
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
-import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
+import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.Map;
@@ -34,11 +34,16 @@ public final class DefaultDiscoveryMember implements DiscoveryMember
         this.databaseLeaderships = databaseLeaderships;
     }
 
-    public static DefaultDiscoveryMember factory( ClusteringIdentityModule identityModule,
+    public static DefaultDiscoveryMember coreFactory( CoreServerIdentity identityModule,
             DatabaseStateService databaseStateService, Map<DatabaseId,LeaderInfo> databaseLeaderships )
     {
         return new DefaultDiscoveryMember( databaseMemberships( databaseStateService, identityModule ),
                                            databaseStates( databaseStateService ), Map.copyOf( databaseLeaderships ) );
+    }
+
+    public static DefaultDiscoveryMember rrFactory( DatabaseStateService databaseStateService, Map<DatabaseId,LeaderInfo> databaseLeaderships )
+    {
+        return new DefaultDiscoveryMember( Map.of(), databaseStates( databaseStateService ), Map.copyOf( databaseLeaderships ) );
     }
 
     private static Map<DatabaseId,DatabaseState> databaseStates( DatabaseStateService databaseStateService )
@@ -47,10 +52,10 @@ public final class DefaultDiscoveryMember implements DiscoveryMember
                                    .collect( Collectors.toUnmodifiableMap( entry -> entry.getKey().databaseId(), Map.Entry::getValue ) );
     }
 
-    private static Map<DatabaseId,RaftMemberId> databaseMemberships( DatabaseStateService databaseStateService, ClusteringIdentityModule identityModule )
+    private static Map<DatabaseId,RaftMemberId> databaseMemberships( DatabaseStateService databaseStateService, CoreServerIdentity identityModule )
     {
-        return databaseStateService.stateOfAllDatabases().keySet().stream()
-                                   .collect( Collectors.toUnmodifiableMap( NamedDatabaseId::databaseId, identityModule::memberId ) );
+        return databaseStateService.stateOfAllDatabases().keySet().stream().collect(
+                Collectors.toUnmodifiableMap( NamedDatabaseId::databaseId, dbId -> identityModule.raftMemberId( dbId.databaseId() ) ) );
     }
 
     @Override

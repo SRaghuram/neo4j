@@ -5,11 +5,10 @@
  */
 package com.neo4j.causalclustering.discovery;
 
-import com.neo4j.causalclustering.identity.MemberId;
-
 import java.util.Map;
 import java.util.Objects;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 
 import static java.lang.String.format;
@@ -19,9 +18,9 @@ import static java.util.Objects.requireNonNull;
 public class DatabaseReadReplicaTopology implements Topology<ReadReplicaInfo>
 {
     private final DatabaseId databaseId;
-    private final Map<MemberId,ReadReplicaInfo> readReplicaServers;
+    private final Map<ServerId,ReadReplicaInfo> readReplicaServers;
 
-    public DatabaseReadReplicaTopology( DatabaseId databaseId, Map<MemberId,ReadReplicaInfo> readReplicaServers )
+    public DatabaseReadReplicaTopology( DatabaseId databaseId, Map<ServerId,ReadReplicaInfo> readReplicaServers )
     {
         this.databaseId = requireNonNull( databaseId );
         this.readReplicaServers = readReplicaServers;
@@ -39,7 +38,7 @@ public class DatabaseReadReplicaTopology implements Topology<ReadReplicaInfo>
     }
 
     @Override
-    public Map<MemberId, ReadReplicaInfo> servers()
+    public Map<ServerId, ReadReplicaInfo> servers()
     {
         return readReplicaServers;
     }

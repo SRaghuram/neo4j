@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.discovery.akka.coretopology;
 
 import akka.actor.ActorRef;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.time.Duration;
@@ -17,19 +17,19 @@ import java.util.Objects;
  */
 public class RaftIdSetRequest
 {
-    private final RaftId raftId;
+    private final RaftGroupId raftGroupId;
     private final RaftMemberId publisher;
     private final Duration timeout;
     private final ActorRef replyTo;
 
-    public RaftIdSetRequest( RaftId raftId, RaftMemberId publisher, Duration timeout )
+    public RaftIdSetRequest( RaftGroupId raftGroupId, RaftMemberId publisher, Duration timeout )
     {
-        this( raftId, publisher, timeout, ActorRef.noSender() );
+        this( raftGroupId, publisher, timeout, ActorRef.noSender() );
     }
 
-    private RaftIdSetRequest( RaftId raftId, RaftMemberId publisher, Duration timeout, ActorRef replyTo )
+    private RaftIdSetRequest( RaftGroupId raftGroupId, RaftMemberId publisher, Duration timeout, ActorRef replyTo )
     {
-        this.raftId = raftId;
+        this.raftGroupId = raftGroupId;
         this.publisher = publisher;
         this.timeout = timeout;
         this.replyTo = replyTo;
@@ -37,7 +37,7 @@ public class RaftIdSetRequest
 
     RaftIdSetRequest withReplyTo( ActorRef replyTo )
     {
-        return new RaftIdSetRequest( raftId, publisher, timeout, replyTo );
+        return new RaftIdSetRequest( raftGroupId, publisher, timeout, replyTo );
     }
 
     ActorRef replyTo()
@@ -45,9 +45,9 @@ public class RaftIdSetRequest
         return replyTo;
     }
 
-    public RaftId raftId()
+    public RaftGroupId raftGroupId()
     {
-        return raftId;
+        return raftGroupId;
     }
 
     public RaftMemberId publisher()
@@ -72,18 +72,18 @@ public class RaftIdSetRequest
             return false;
         }
         RaftIdSetRequest that = (RaftIdSetRequest) o;
-        return Objects.equals( raftId, that.raftId ) && Objects.equals( publisher, that.publisher );
+        return Objects.equals( raftGroupId, that.raftGroupId ) && Objects.equals( publisher, that.publisher );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( raftId, publisher );
+        return Objects.hash( raftGroupId, publisher );
     }
 
     @Override
     public String toString()
     {
-        return "RaftIdSetRequest{" + "raftId=" + raftId + ", publisher=" + publisher + ", timeout=" + timeout + ", replyTo=" + replyTo + '}';
+        return "RaftIdSetRequest{" + "raftGroupId=" + raftGroupId + ", publisher=" + publisher + ", timeout=" + timeout + ", replyTo=" + replyTo + '}';
     }
 }

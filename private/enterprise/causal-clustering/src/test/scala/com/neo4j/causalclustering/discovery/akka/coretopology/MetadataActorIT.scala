@@ -12,24 +12,24 @@ import akka.cluster.ddata.LWWMapKey
 import akka.cluster.ddata.Replicator
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
-import com.neo4j.causalclustering.discovery.TestDiscoveryMember
+import com.neo4j.causalclustering.discovery.TestCoreDiscoveryMember
 import com.neo4j.causalclustering.discovery.TestTopology
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.PublishInitialData
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
-import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory
+import com.neo4j.causalclustering.discovery.member.CoreDiscoveryMemberFactory
 import com.neo4j.causalclustering.identity.IdFactory
-import com.neo4j.causalclustering.identity.StubClusteringIdentityModule
+import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity
 import org.neo4j.configuration.Config
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.NamedDatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
 
-import scala.collection.JavaConverters.setAsJavaSetConverter
 import scala.collection.JavaConverters.mapAsJavaMapConverter
+import scala.collection.JavaConverters.setAsJavaSetConverter
 
 class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
   "metadata actor" should {
@@ -38,7 +38,7 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
 
     "send initial data to replicator when asked" in new Fixture {
       When("PublishInitialData request received")
-      replicatedDataActorRef ! new PublishInitialData( snapshot )
+      replicatedDataActorRef ! new PublishInitialData(snapshot)
 
       Then("the initial serverInfos should be published")
       expectUpdateWithDatabases(namedDatabaseIds)
@@ -71,18 +71,22 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
 
     "cleanup metadata" in new Fixture {
       Given("a cleanup message")
-      val memberAddress = UniqueAddress(Address("udp", system.name, "1.2.3.4", 8213), 1L)
-      val message = new CleanupMessage(memberAddress)
+      val message = new CleanupMessage(cluster.selfUniqueAddress)
 
       And("initial update")
-      replicatedDataActorRef ! new PublishInitialData( snapshot )
-      expectReplicatorUpdates(replicator, dataKey)
+      replicatedDataActorRef ! new PublishInitialData(snapshot)
+      val replicatedUpdate = expectReplicatorUpdates(replicator, dataKey)
+      val replicatedData = replicatedUpdate.modify.apply(Some(data))
+      replicatedDataActorRef ! Replicator.Changed(dataKey)(replicatedData)
 
       When("receive cleanup message")
       replicatedDataActorRef ! message
 
       Then("update replicator")
       expectReplicatorUpdates(replicator, dataKey)
+
+      And("sending cleanup to mapping")
+      mappingProbe.expectMsg(new RaftMemberMappingActor.CleanupMessage(identityModule.serverId()));
     }
 
     "update data on database start" in new Fixture {
@@ -90,7 +94,7 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
       val namedDatabaseId1, namedDatabaseId2 = randomNamedDatabaseId()
 
       And("initial update")
-      replicatedDataActorRef ! new PublishInitialData( snapshot )
+      replicatedDataActorRef ! new PublishInitialData(snapshot)
       expectReplicatorUpdates(replicator, dataKey)
 
       When("receive both start messages")
@@ -107,7 +111,7 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
       val namedDatabaseId1, namedDatabaseId2 = randomNamedDatabaseId()
 
       And("initial update")
-      replicatedDataActorRef ! new PublishInitialData( snapshot )
+      replicatedDataActorRef ! new PublishInitialData(snapshot)
       expectReplicatorUpdates(replicator, dataKey)
 
       And("both databases started")
@@ -128,15 +132,16 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
 
   class Fixture extends ReplicatedDataActorFixture[LWWMap[UniqueAddress, CoreServerInfoForServerId]] {
     val coreTopologyProbe = TestProbe("topology")
-    val identityModule = new StubClusteringIdentityModule
+    val mappingProbe = TestProbe("mapping")
+    val identityModule = new InMemoryCoreServerIdentity()
     val dataKey = LWWMapKey.create[UniqueAddress, CoreServerInfoForServerId](ReplicatedDataIdentifier.METADATA.keyName())
     val data = LWWMap.empty[UniqueAddress, CoreServerInfoForServerId]
 
     val databaseIdRepository = new TestDatabaseIdRepository()
     val namedDatabaseIds = Set("system", "not_system").map(databaseIdRepository.getRaw)
     val stateService = databaseStateService(namedDatabaseIds)
-    val memberSnapshotFactory: DiscoveryMemberFactory = TestDiscoveryMember.factory _
-    val snapshot = memberSnapshotFactory.createSnapshot(identityModule, stateService, Map.empty[DatabaseId,LeaderInfo].asJava)
+    val memberSnapshotFactory: CoreDiscoveryMemberFactory = TestCoreDiscoveryMember.factory _
+    val snapshot = memberSnapshotFactory.createSnapshot(identityModule, stateService, Map.empty[DatabaseId, LeaderInfo].asJava)
 
     val coreServerInfo = TestTopology.addressesForCore(0, false, (Set.empty[DatabaseId] ++ namedDatabaseIds.map(_.databaseId())).asJava)
 
@@ -145,13 +150,14 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
       conf
     }
 
-    val replicatedDataActorRef = system.actorOf(MetadataActor.props(cluster, replicator.ref, coreTopologyProbe.ref, config, monitor, identityModule.myself()))
+    val replicatedDataActorRef = system.actorOf(MetadataActor.props(cluster, replicator.ref, coreTopologyProbe.ref, mappingProbe.ref, config, monitor,
+      identityModule.serverId()))
 
     def expectUpdateWithDatabases(namedDatabaseIds: Set[NamedDatabaseId]): Unit = {
       val update = expectReplicatorUpdates(replicator, dataKey)
       val data = update.modify.apply(Some(LWWMap.create()))
       val infoForMemberId = data.entries(cluster.selfUniqueAddress)
-      infoForMemberId.serverId() should equal(identityModule.myself())
+      infoForMemberId.serverId() should equal(identityModule.serverId())
       val serverInfo = infoForMemberId.coreServerInfo()
       serverInfo.startedDatabaseIds should contain theSameElementsAs namedDatabaseIds.map(_.databaseId())
     }

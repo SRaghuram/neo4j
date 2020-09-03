@@ -6,15 +6,18 @@
 package com.neo4j.causalclustering.core.replication;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
+import com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 
+import org.neo4j.function.Suppliers.Lazy;
+
 public class SendToMyself
 {
-    private final RaftMemberId myself;
-    private final Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound;
+    private final Lazy<RaftMemberId> myself;
+    private final Outbound<RaftMemberId,RaftMessage> outbound;
 
-    public SendToMyself( RaftMemberId myself, Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound )
+    public SendToMyself( Lazy<RaftMemberId> myself, Outbound<RaftMemberId,RaftMessage> outbound )
     {
         this.myself = myself;
         this.outbound = outbound;
@@ -22,6 +25,6 @@ public class SendToMyself
 
     public void replicate( ReplicatedContent content )
     {
-        outbound.send( myself, new RaftMessages.NewEntry.Request( myself, content ) );
+        outbound.send( myself.get(), new RaftMessages.NewEntry.Request( myself.get(), content ) );
     }
 }

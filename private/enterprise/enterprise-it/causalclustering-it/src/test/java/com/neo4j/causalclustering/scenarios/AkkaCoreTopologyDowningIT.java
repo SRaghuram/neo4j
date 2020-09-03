@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
 import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
-import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
+import com.neo4j.causalclustering.discovery.TestCoreDiscoveryMember;
 import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.Restarter;
@@ -18,7 +18,7 @@ import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.akka.system.JoinMessageFactory;
 import com.neo4j.causalclustering.helper.ErrorHandler;
-import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
+import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.EnterpriseDatabaseState;
 import org.assertj.core.api.HamcrestCondition;
@@ -252,17 +252,16 @@ class AkkaCoreTopologyDowningIT
         Map<NamedDatabaseId,DatabaseState> states = Map.of( databaseIdRepository.defaultDatabase(),
                                                             new EnterpriseDatabaseState( databaseIdRepository.defaultDatabase(), STARTED ) );
         DatabaseStateService databaseStateService = new StubDatabaseStateService( states, EnterpriseDatabaseState::unknown );
-        var identityModule = new StubClusteringIdentityModule();
 
         AkkaCoreTopologyService service = new AkkaCoreTopologyService(
                 config,
-                identityModule,
+                new InMemoryCoreServerIdentity(),
                 actorSystemLifecycle,
                 logProvider,
                 logProvider,
                 new NoRetriesStrategy(),
                 new Restarter( new ConstantTimeTimeoutStrategy( 1, MILLISECONDS ), 2 ),
-                TestDiscoveryMember::factory,
+                TestCoreDiscoveryMember::factory,
                 createInitialisedScheduler(),
                 Clocks.systemClock(),
                 new Monitors(),

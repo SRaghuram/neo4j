@@ -13,11 +13,11 @@ import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.ReplicatedRaftMapping;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.Topology;
 import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.HashMap;
@@ -43,30 +43,33 @@ import static java.lang.System.lineSeparator;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
+import static java.util.Optional.ofNullable;
 import static org.neo4j.internal.helpers.Strings.printMap;
 
-public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateSink, BootstrapStateUpdateSink, DatabaseStateUpdateSink
+public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateSink, BootstrapStateUpdateSink, DatabaseStateUpdateSink, RaftMappingUpdateSink
 {
     private final Log log;
     private final BiConsumer<DatabaseId,Set<RaftMemberId>> callback;
     private final TopologyLogger topologyLogger;
-    private volatile Map<MemberId,CoreServerInfo> coresByMemberId;
-    private volatile Map<MemberId,ReadReplicaInfo> readReplicasByMemberId;
+    private volatile Map<ServerId,CoreServerInfo> coresByServerId;
+    private volatile Map<ServerId,ReadReplicaInfo> readReplicasByServerId;
     private volatile Map<DatabaseId,LeaderInfo> remoteDbLeaderMap;
     private volatile BootstrapState bootstrapState = BootstrapState.EMPTY;
     private final Map<DatabaseId,DatabaseCoreTopology> coreTopologiesByDatabase = new ConcurrentHashMap<>();
     private final Map<DatabaseId,DatabaseReadReplicaTopology> readReplicaTopologiesByDatabase = new ConcurrentHashMap<>();
-    private final Map<DatabaseId, ReplicatedDatabaseState> coreStatesByDatabase = new ConcurrentHashMap<>();
-    private final Map<DatabaseId, ReplicatedDatabaseState> readReplicaStatesByDatabase = new ConcurrentHashMap<>();
+    private final Map<DatabaseId,ReplicatedDatabaseState> coreStatesByDatabase = new ConcurrentHashMap<>();
+    private final Map<DatabaseId,ReplicatedDatabaseState> readReplicaStatesByDatabase = new ConcurrentHashMap<>();
+    private final RaftMappingState raftMappingState;
 
     GlobalTopologyState( LogProvider logProvider, BiConsumer<DatabaseId,Set<RaftMemberId>> listener, JobScheduler jobScheduler )
     {
         var timerService = new TimerService( jobScheduler, logProvider );
         this.log = logProvider.getLog( getClass() );
-        this.coresByMemberId = emptyMap();
-        this.readReplicasByMemberId = emptyMap();
+        this.coresByServerId = emptyMap();
+        this.readReplicasByServerId = emptyMap();
         this.remoteDbLeaderMap = emptyMap();
         this.callback = listener;
+        this.raftMappingState = new RaftMappingState( log );
         this.topologyLogger = new TopologyLogger( timerService, logProvider, getClass(), this::getAllDatabases );
     }
 
@@ -82,7 +85,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
             {
                 currentCoreTopology = DatabaseCoreTopology.empty( databaseId );
             }
-            this.coresByMemberId = extractServerInfos( coreTopologiesByDatabase );
+            this.coresByServerId = extractServerInfos( coreTopologiesByDatabase );
             topologyLogger.logTopologyChange( "Core topology", newCoreTopology, currentCoreTopology );
             callback.accept( databaseId, newCoreTopology.members( this::resolveRaftMemberForServer ) );
         }
@@ -106,7 +109,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
             {
                 currentReadReplicaTopology = DatabaseReadReplicaTopology.empty( databaseId );
             }
-            this.readReplicasByMemberId = extractServerInfos( readReplicaTopologiesByDatabase );
+            this.readReplicasByServerId = extractServerInfos( readReplicaTopologiesByDatabase );
             topologyLogger.logTopologyChange( "Read replica topology", newReadReplicaTopology, currentReadReplicaTopology );
         }
 
@@ -172,6 +175,14 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         bootstrapState = requireNonNull( newBootstrapState );
     }
 
+    @Override
+    public void onRaftMappingUpdate( ReplicatedRaftMapping mapping )
+    {
+        var changedDatabaseIds = raftMappingState.update( mapping );
+        changedDatabaseIds.stream().filter( Objects::nonNull ).map( coreTopologiesByDatabase::get ).filter( Objects::nonNull )
+                .forEach( newCoreTopology -> callback.accept( newCoreTopology.databaseId(), newCoreTopology.members( this::resolveRaftMemberForServer ) ) );
+    }
+
     private static String printLeaderInfoMap( Map<DatabaseId,LeaderInfo> leaderInfoMap, Map<DatabaseId,LeaderInfo> oldDbLeaderMap )
     {
         var allDatabaseIds = new HashSet<>( leaderInfoMap.keySet() );
@@ -217,40 +228,52 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
 
     public RaftMemberId resolveRaftMemberForServer( DatabaseId databaseId, ServerId serverId )
     {
-        return RaftMemberId.from( serverId );
+        return raftMappingState.resolveRaftMemberForServer( databaseId, serverId );
     }
 
-    public RoleInfo role( NamedDatabaseId namedDatabaseId, MemberId memberId )
+    public ServerId resolveServerForRaftMember( RaftMemberId memberId )
+    {
+        return raftMappingState.resolveServerForRaftMember( memberId );
+    }
+
+    public Optional<CoreServerInfo> getCoreServerInfo( RaftMemberId raftMemberId )
+    {
+        // TODO: optimize with single map?
+        return ofNullable( raftMappingState.resolveServerForRaftMember( raftMemberId ) )
+                .map( id -> coresByServerId.get( id ) );
+    }
+
+    public RoleInfo role( NamedDatabaseId namedDatabaseId, ServerId serverId )
     {
         var databaseId = namedDatabaseId.databaseId();
         var rrTopology = readReplicaTopologiesByDatabase.get( databaseId );
         var coreTopology = coreTopologiesByDatabase.get( databaseId );
 
-        if ( coreTopology != null && coreTopology.servers().containsKey( memberId ) )
+        if ( coreTopology != null && coreTopology.servers().containsKey( serverId ) )
         {
             var leaderInfo = remoteDbLeaderMap.getOrDefault( databaseId, LeaderInfo.INITIAL );
-            var raftMemberId = resolveRaftMemberForServer( namedDatabaseId.databaseId(), memberId );
+            var raftMemberId = resolveRaftMemberForServer( namedDatabaseId.databaseId(), serverId );
             if ( Objects.equals( raftMemberId, leaderInfo.memberId() ) )
             {
                 return RoleInfo.LEADER;
             }
             return RoleInfo.FOLLOWER;
         }
-        else if ( rrTopology != null && rrTopology.servers().containsKey( memberId ) )
+        else if ( rrTopology != null && rrTopology.servers().containsKey( serverId ) )
         {
             return RoleInfo.READ_REPLICA;
         }
         return RoleInfo.UNKNOWN;
     }
 
-    public Map<MemberId,CoreServerInfo> allCoreServers()
+    public Map<ServerId,CoreServerInfo> allCoreServers()
     {
-        return coresByMemberId;
+        return coresByServerId;
     }
 
-    public Map<MemberId,ReadReplicaInfo> allReadReplicas()
+    public Map<ServerId,ReadReplicaInfo> allReadReplicas()
     {
-        return readReplicasByMemberId;
+        return readReplicasByServerId;
     }
 
     public DatabaseCoreTopology coreTopologyForDatabase( NamedDatabaseId namedDatabaseId )
@@ -272,52 +295,54 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         return remoteDbLeaderMap.get( namedDatabaseId.databaseId() );
     }
 
-    public void clearRemoteData( MemberId localMemberId )
+    public void clearRemoteData( ServerId localServerId )
     {
-        var coresByMemberId = this.coresByMemberId;
-        var readReplicasByMemberId = this.readReplicasByMemberId;
+        var coresByServerId = this.coresByServerId;
+        var readReplicasByServerId = this.readReplicasByServerId;
 
-        this.coresByMemberId = coresByMemberId.containsKey( localMemberId ) ? Map.of( localMemberId, coresByMemberId.get( localMemberId ) ) : emptyMap();
-        this.readReplicasByMemberId = readReplicasByMemberId.containsKey( localMemberId ) ? Map.of( localMemberId, readReplicasByMemberId.get( localMemberId ) )
+        this.coresByServerId = coresByServerId.containsKey( localServerId ) ? Map.of( localServerId, coresByServerId.get( localServerId ) ) : emptyMap();
+        this.readReplicasByServerId = readReplicasByServerId.containsKey( localServerId ) ? Map.of( localServerId, readReplicasByServerId.get( localServerId ) )
                                                                                           : emptyMap();
         this.remoteDbLeaderMap = emptyMap();
 
         bootstrapState = BootstrapState.EMPTY;
 
-        var remoteDataCleaner = new GlobalTopologyCleaner( localMemberId );
+        var remoteDataCleaner = new GlobalTopologyCleaner( localServerId );
 
         this.coreTopologiesByDatabase.replaceAll( remoteDataCleaner::removeRemoteDatabaseCoreTopologies );
         this.coreStatesByDatabase.replaceAll( remoteDataCleaner::removeRemoteReplicatedDatabaseState );
 
         this.readReplicaTopologiesByDatabase.replaceAll( remoteDataCleaner::removeRemoteDatabaseReadReplicaTopologies );
         this.readReplicaStatesByDatabase.replaceAll( remoteDataCleaner::removeRemoteReplicatedDatabaseState );
+
+        raftMappingState.clearRemoteData( localServerId );
     }
 
-    SocketAddress retrieveCatchupServerAddress( MemberId memberId )
+    SocketAddress retrieveCatchupServerAddress( ServerId serverId )
     {
-        CoreServerInfo coreServerInfo = coresByMemberId.get( memberId );
+        CoreServerInfo coreServerInfo = coresByServerId.get( serverId );
         if ( coreServerInfo != null )
         {
             SocketAddress address = coreServerInfo.catchupServer();
-            log.debug( "Catchup address for core %s was %s", memberId, address );
+            log.debug( "Catchup address for core %s was %s", serverId, address );
             return coreServerInfo.catchupServer();
         }
-        ReadReplicaInfo readReplicaInfo = readReplicasByMemberId.get( memberId );
+        ReadReplicaInfo readReplicaInfo = readReplicasByServerId.get( serverId );
         if ( readReplicaInfo != null )
         {
             SocketAddress address = readReplicaInfo.catchupServer();
-            log.debug( "Catchup address for read replica %s was %s", memberId, address );
+            log.debug( "Catchup address for read replica %s was %s", serverId, address );
             return address;
         }
-        log.debug( "Catchup address for member %s not found", memberId );
+        log.debug( "Catchup address for member %s not found", serverId );
         return null;
     }
 
-    DiscoveryDatabaseState stateFor( MemberId memberId, NamedDatabaseId namedDatabaseId )
+    DiscoveryDatabaseState stateFor( ServerId serverId, NamedDatabaseId namedDatabaseId )
     {
         var databaseId = namedDatabaseId.databaseId();
-        return lookupState( memberId, databaseId, coreStatesByDatabase )
-                .or( () -> lookupState( memberId, databaseId, readReplicaStatesByDatabase ) )
+        return lookupState( serverId, databaseId, coreStatesByDatabase )
+                .or( () -> lookupState( serverId, databaseId, readReplicaStatesByDatabase ) )
                 .orElse( DiscoveryDatabaseState.unknown( namedDatabaseId.databaseId() ) );
     }
 
@@ -333,11 +358,11 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         return readReplicaStatesByDatabase.getOrDefault( databaseId, ReplicatedDatabaseState.ofReadReplicas( databaseId, Map.of() ) );
     }
 
-    private Optional<DiscoveryDatabaseState> lookupState( MemberId memberId, DatabaseId databaseId,
+    private Optional<DiscoveryDatabaseState> lookupState( ServerId serverId, DatabaseId databaseId,
             Map<DatabaseId,ReplicatedDatabaseState> states )
     {
-        return Optional.ofNullable( states.get( databaseId ) )
-                .flatMap( replicated -> replicated.stateFor( memberId ) );
+        return ofNullable( states.get( databaseId ) )
+                .flatMap( replicated -> replicated.stateFor( serverId ) );
     }
 
     BootstrapState bootstrapState()
@@ -345,12 +370,12 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         return bootstrapState;
     }
 
-    private static <T extends DiscoveryServerInfo> Map<MemberId,T> extractServerInfos( Map<DatabaseId,? extends Topology<T>> topologies )
+    private static <T extends DiscoveryServerInfo> Map<ServerId,T> extractServerInfos( Map<DatabaseId,? extends Topology<T>> topologies )
     {
-        Map<MemberId,T> result = new HashMap<>();
+        Map<ServerId,T> result = new HashMap<>();
         for ( Topology<T> topology : topologies.values() )
         {
-            for ( Map.Entry<MemberId,T> entry : topology.servers().entrySet() )
+            for ( Map.Entry<ServerId,T> entry : topology.servers().entrySet() )
             {
                 result.put( entry.getKey(), entry.getValue() );
             }
@@ -362,5 +387,4 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     {
         return topology.servers().isEmpty();
     }
-
 }

@@ -75,7 +75,7 @@ class BoltCausalClusteringIT
 
     @Nested
     @ClusterExtension
-    class SingeCluster
+    class SharedCluster
     {
         @Inject
         private ClusterFactory clusterFactory;
@@ -424,7 +424,7 @@ class BoltCausalClusteringIT
     @Nested
     @ClusterExtension
     @TestInstance( TestInstance.Lifecycle.PER_METHOD )
-    class PerTest
+    class PerTestCluster
     {
 
         @Inject

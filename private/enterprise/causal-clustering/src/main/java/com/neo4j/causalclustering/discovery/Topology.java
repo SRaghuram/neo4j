@@ -5,15 +5,14 @@
  */
 package com.neo4j.causalclustering.discovery;
 
-import com.neo4j.causalclustering.identity.MemberId;
-
 import java.util.Map;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 
 public interface Topology<T extends DiscoveryServerInfo>
 {
     DatabaseId databaseId();
 
-    Map<MemberId, T> servers();
+    Map<ServerId, T> servers();
 }

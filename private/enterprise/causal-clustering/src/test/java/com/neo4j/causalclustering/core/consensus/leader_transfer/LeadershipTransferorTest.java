@@ -6,11 +6,10 @@
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
-import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.RaftMemberId;
-import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
+import com.neo4j.causalclustering.identity.CoreServerIdentity;
+import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.configuration.ServerGroupName;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -22,7 +21,6 @@ import java.util.function.Function;
 
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
-import org.neo4j.time.Clocks;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -30,106 +28,93 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.time.Clocks.fakeClock;
 
 class LeadershipTransferorTest
 {
-    private final ClusteringIdentityModule clusteringIdentityModule = new StubClusteringIdentityModule();
+    private final CoreServerIdentity myIdentity = new InMemoryCoreServerIdentity();
+    private final CoreServerIdentity other = new InMemoryCoreServerIdentity();
     private final NamedDatabaseId fooId = DatabaseIdFactory.from( "foo", UUID.randomUUID() );
-    private final RaftMemberId myself = clusteringIdentityModule.memberId( fooId );
-    private final RaftMemberId other = IdFactory.randomRaftMemberId();
     private final ServerGroupName serverGroupName = new ServerGroupName( "prio" );
+
+    private final AtomicReference<RaftMessages.InboundRaftMessageContainer<?>> raftMessage = new AtomicReference<>();
+
+    private StubRaftMembershipResolver membershipResolver;
+
+    private DatabasePenalties databasePenalties;
+    private LeadershipTransferor transferor;
+
+    @BeforeEach
+    public void setup()
+    {
+        membershipResolver = new StubRaftMembershipResolver( fooId, myIdentity, other );
+        databasePenalties = new DatabasePenalties( Duration.ofSeconds( 10 ), fakeClock() );
+        transferor = new LeadershipTransferor( raftMessage::set, myIdentity, databasePenalties, membershipResolver, fakeClock() );
+    }
 
     @Test
     void shouldThrowIfNoGroupExistsForDatabase()
     {
-        // given
-        var leadershipTransferor = new LeadershipTransferor( message ->
-        {
-        }, clusteringIdentityModule, new DatabasePenalties( Duration.ofSeconds( 10 ), Clocks.fakeClock() ), new StubRaftMembershipResolver( myself, other ),
-                Clocks.fakeClock() );
-
         // when there is no server id with the database
         Function<NamedDatabaseId,Set<ServerGroupName>> namedDatabaseIdSetFunction = dbid -> Set.of();
 
         // then this is wrong usage and should throw
-        assertThrows( IllegalArgumentException.class,
-                () ->
-                {
-                    leadershipTransferor.toPrioritisedGroup( List.of( fooId ), new RandomStrategy(), namedDatabaseIdSetFunction );
-                } );
+        assertThrows( IllegalArgumentException.class, () ->
+        {
+            transferor.toPrioritisedGroup( List.of( fooId ), new RandomStrategy(), namedDatabaseIdSetFunction );
+        } );
     }
 
     @Test
     void shouldReturnFalseIfThereIsNoTarget()
     {
         // given
-        var leadershipTransferor = new LeadershipTransferor( message ->
-        {
-        }, clusteringIdentityModule, new DatabasePenalties( Duration.ofSeconds( 10 ), Clocks.fakeClock() ), new StubRaftMembershipResolver( myself, other ),
-                Clocks.fakeClock() );
+        var transferor = new LeadershipTransferor( message -> { }, myIdentity, databasePenalties, membershipResolver, fakeClock() );
 
         // and
         var noOp = SelectionStrategy.NO_OP;
 
         // then
-        assertFalse( leadershipTransferor.toPrioritisedGroup( List.of( fooId ), noOp, dbi -> Set.of( serverGroupName ) ) );
+        assertFalse( transferor.toPrioritisedGroup( List.of( fooId ), noOp, dbi -> Set.of( serverGroupName ) ) );
 
         // and
-        assertFalse( leadershipTransferor.balanceLeadership( List.of( fooId ), noOp ) );
+        assertFalse( transferor.balanceLeadership( List.of( fooId ), noOp ) );
     }
 
     @Test
     void shouldSuccessfullySendToPriorityGroupIfExists()
     {
-        // given
-        AtomicReference<RaftMessages.InboundRaftMessageContainer<?>> raftMessage = new AtomicReference<>();
-        var leadershipTransferor =
-                new LeadershipTransferor( raftMessage::set, clusteringIdentityModule, new DatabasePenalties( Duration.ofSeconds( 10 ), Clocks.fakeClock() ),
-                        new StubRaftMembershipResolver( myself, other ), Clocks.fakeClock() );
-
         // when
-        var result = leadershipTransferor.toPrioritisedGroup( List.of( fooId ), new RandomStrategy(), dbi -> Set.of( serverGroupName ) );
+        var result = transferor.toPrioritisedGroup( List.of( fooId ), new RandomStrategy(), dbi -> Set.of( serverGroupName ) );
 
         // then
         assertTrue( result );
         assertNotNull( raftMessage.get() );
         assertThat( raftMessage.get().message() ).isEqualTo(
-                new RaftMessages.LeadershipTransfer.Proposal( myself, other, Set.of( serverGroupName ) ) );
+                new RaftMessages.LeadershipTransfer.Proposal( myIdentity.raftMemberId( fooId ), other.raftMemberId( fooId ), Set.of( serverGroupName ) ) );
     }
 
     @Test
     void shouldSuccessfullyBalance()
     {
-        // given
-        AtomicReference<RaftMessages.InboundRaftMessageContainer<?>> raftMessage = new AtomicReference<>();
-        var leadershipTransferor =
-                new LeadershipTransferor( raftMessage::set, clusteringIdentityModule, new DatabasePenalties( Duration.ofSeconds( 10 ), Clocks.fakeClock() ),
-                        new StubRaftMembershipResolver( myself, other ), Clocks.fakeClock() );
-
         // when
-        var result = leadershipTransferor.balanceLeadership( List.of( fooId ), new RandomStrategy() );
+        var result = transferor.balanceLeadership( List.of( fooId ), new RandomStrategy() );
 
         // then
         assertTrue( result );
         assertNotNull( raftMessage.get() );
         assertThat( raftMessage.get().message() ).isEqualTo(
-                new RaftMessages.LeadershipTransfer.Proposal( myself, other, Set.of() ) );
+                new RaftMessages.LeadershipTransfer.Proposal( myIdentity.raftMemberId( fooId ), other.raftMemberId( fooId ), Set.of() ) );
     }
 
     @Test
     void shouldNotBalanceIfPenalised()
     {
         // given
-        AtomicReference<RaftMessages.InboundRaftMessageContainer<?>> raftMessage = new AtomicReference<>();
-        var databasePenalties = new DatabasePenalties( Duration.ofSeconds( 10 ), Clocks.fakeClock() );
-        var leadershipTransferor = new LeadershipTransferor( raftMessage::set, clusteringIdentityModule, databasePenalties,
-                new StubRaftMembershipResolver( myself, other ), Clocks.fakeClock() );
-
-        // and
         databasePenalties.issuePenalty( other.serverId(), fooId );
 
         // when
-        var result = leadershipTransferor.balanceLeadership( List.of( fooId ), new RandomStrategy() );
+        var result = transferor.balanceLeadership( List.of( fooId ), new RandomStrategy() );
 
         // then
         assertFalse( result );
@@ -140,16 +125,10 @@ class LeadershipTransferorTest
     void shouldNotSendToPenalisedPriortyGroupMember()
     {
         // given
-        AtomicReference<RaftMessages.InboundRaftMessageContainer<?>> raftMessage = new AtomicReference<>();
-        var databasePenalties = new DatabasePenalties( Duration.ofSeconds( 10 ), Clocks.fakeClock() );
-        var leadershipTransferor = new LeadershipTransferor( raftMessage::set, clusteringIdentityModule, databasePenalties,
-                new StubRaftMembershipResolver( myself, other ), Clocks.fakeClock() );
-
-        // and
         databasePenalties.issuePenalty( other.serverId(), fooId );
 
         // when
-        var result = leadershipTransferor.toPrioritisedGroup( List.of( fooId ), new RandomStrategy(), dbid -> Set.of( serverGroupName ) );
+        var result = transferor.toPrioritisedGroup( List.of( fooId ), new RandomStrategy(), dbid -> Set.of( serverGroupName ) );
 
         // then
         assertFalse( result );

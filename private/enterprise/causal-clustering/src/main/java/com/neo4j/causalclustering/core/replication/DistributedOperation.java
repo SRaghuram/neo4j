@@ -71,7 +71,7 @@ public class DistributedOperation implements ReplicatedContent
     {
         channel.putLong( globalSession().sessionId().getMostSignificantBits() );
         channel.putLong( globalSession().sessionId().getLeastSignificantBits() );
-        new RaftMemberId.Marshal().marshal( globalSession().owner(), channel );
+        RaftMemberId.Marshal.INSTANCE.marshal( globalSession().owner(), channel );
 
         channel.putLong( operationId.localSessionId() );
         channel.putLong( operationId.sequenceNumber() );
@@ -81,7 +81,7 @@ public class DistributedOperation implements ReplicatedContent
     {
         long mostSigBits = channel.getLong();
         long leastSigBits = channel.getLong();
-        RaftMemberId owner = new RaftMemberId.Marshal().unmarshal( channel );
+        RaftMemberId owner = RaftMemberId.Marshal.INSTANCE.unmarshal( channel );
         GlobalSession globalSession = new GlobalSession( new UUID( mostSigBits, leastSigBits ), owner );
 
         long localSessionId = channel.getLong();

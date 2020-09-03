@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.core.consensus.LeaderListener;
 import com.neo4j.causalclustering.discovery.ClientConnector;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.Map;
@@ -19,6 +18,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -41,10 +41,10 @@ public class DefaultLeaderService implements LeaderService, GlobalLeaderListener
     }
 
     @Override
-    public Optional<MemberId> getLeaderId( NamedDatabaseId namedDatabaseId )
+    public Optional<ServerId> getLeaderId( NamedDatabaseId namedDatabaseId )
     {
         return currentLeaderAccordingToRaft( namedDatabaseId ).or( () -> leaderFromTopology( namedDatabaseId ) )
-                .map( RaftMemberId::serverId );
+                .map( topologyService::resolveServerForRaftMember );
     }
 
     private Optional<RaftMemberId> leaderFromTopology( NamedDatabaseId namedDatabaseId )
@@ -81,11 +81,11 @@ public class DefaultLeaderService implements LeaderService, GlobalLeaderListener
         return Optional.ofNullable( topologyService.getLeader( namedDatabaseId ) ).map( LeaderInfo::memberId );
     }
 
-    private Optional<SocketAddress> resolveBoltAddress( MemberId memberId )
+    private Optional<SocketAddress> resolveBoltAddress( ServerId serverId )
     {
-        Map<MemberId,CoreServerInfo> coresById = topologyService.allCoreServers();
-        log.debug( "Resolving Bolt address for member %s using %s", memberId, coresById );
-        return Optional.ofNullable( coresById.get( memberId ) ).map( ClientConnector::boltAddress );
+        Map<ServerId,CoreServerInfo> coresById = topologyService.allCoreServers();
+        log.debug( "Resolving Bolt address for server %s using %s", serverId, coresById );
+        return Optional.ofNullable( coresById.get( serverId ) ).map( ClientConnector::boltAddress );
     }
 
     @Override

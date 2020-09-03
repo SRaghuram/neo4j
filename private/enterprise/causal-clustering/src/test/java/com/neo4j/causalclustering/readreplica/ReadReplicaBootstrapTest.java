@@ -15,8 +15,7 @@ import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategy;
@@ -35,6 +34,7 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.database.DatabaseStartAbortedException;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.kernel.database.Database;
@@ -60,8 +60,8 @@ import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProv
 class ReadReplicaBootstrapTest
 {
     private final NamedDatabaseId namedDatabaseA = TestDatabaseIdRepository.randomNamedDatabaseId();
-    private final RaftId raftId = RaftId.from( namedDatabaseA.databaseId() );
-    private final MemberId memberA = IdFactory.randomMemberId();
+    private final RaftGroupId raftGroupId = RaftGroupId.from( namedDatabaseA.databaseId() );
+    private final ServerId serverA = IdFactory.randomServerId();
     private final SocketAddress addressA = new SocketAddress( "127.0.0.1", 123 );
     private final StoreId storeA = new StoreId( 0, 1, 2, 3, 4 );
     private final StoreId storeB = new StoreId( 5, 6, 7, 8, 9 );
@@ -85,18 +85,17 @@ class ReadReplicaBootstrapTest
     void shouldTryAllUpstreamMembersBeforeBackingOff() throws Exception
     {
         // given
-        var memberB = IdFactory.randomMemberId();
+        var memberB = IdFactory.randomServerId();
         var topologyService = mock( TopologyService.class );
-        var members = Map.of(
-                memberA, mock( CoreServerInfo.class ),
+        var members = Map.of( serverA, mock( CoreServerInfo.class ),
                 memberB, mock( CoreServerInfo.class ) );
         when( topologyService.allCoreServers() )
                 .thenReturn( members );
         when( topologyService.coreTopologyForDatabase( namedDatabaseA ) )
-                .thenReturn( new DatabaseCoreTopology( namedDatabaseA.databaseId(), raftId, members ) );
-        when( topologyService.lookupCatchupAddress( any( MemberId.class ) ) )
-                .thenThrow( new CatchupAddressResolutionException( memberA ) )
-                .thenThrow( new CatchupAddressResolutionException( memberA ) )
+                .thenReturn( new DatabaseCoreTopology( namedDatabaseA.databaseId(), raftGroupId, members ) );
+        when( topologyService.lookupCatchupAddress( any( ServerId.class ) ) )
+                .thenThrow( new CatchupAddressResolutionException( serverA ) )
+                .thenThrow( new CatchupAddressResolutionException( serverA ) )
                 .thenReturn( addressA );
 
         var catchupComponents = catchupComponents( addressA, storeA );
@@ -116,7 +115,7 @@ class ReadReplicaBootstrapTest
         bootstrapper.perform();
 
         // then
-        inOrder.verify( topologyService, times( 2 ) ).lookupCatchupAddress( any( MemberId.class ) );
+        inOrder.verify( topologyService, times( 2 ) ).lookupCatchupAddress( any( ServerId.class ) );
         inOrder.verify( timeout ).getMillis();
         inOrder.verify( timeout ).increment();
     }
@@ -125,7 +124,7 @@ class ReadReplicaBootstrapTest
     void shouldFailToStartWhenStartAborted() throws Throwable
     {
         // given
-        var topologyService = topologyService( namedDatabaseA, memberA, addressA );
+        var topologyService = topologyService( namedDatabaseA, serverA, addressA );
 
         // Catchup components should throw an expected exception to cause a retry
         var catchupComponents = catchupComponents( addressA, storeA );
@@ -149,7 +148,7 @@ class ReadReplicaBootstrapTest
     void shouldClearAborterCacheOnStart() throws Throwable
     {
         // given
-        var topologyService = topologyService( namedDatabaseA, memberA, addressA );
+        var topologyService = topologyService( namedDatabaseA, serverA, addressA );
         var catchupComponents = catchupComponents( addressA, storeA );
         var databaseContext = normalDatabase( namedDatabaseA, storeA, false );
         var aborter = neverAbort();
@@ -167,7 +166,7 @@ class ReadReplicaBootstrapTest
     void shouldClearAborterCacheOnFailedStart() throws Throwable
     {
         // given
-        var topologyService = topologyService( namedDatabaseA, memberA, addressA );
+        var topologyService = topologyService( namedDatabaseA, serverA, addressA );
         var catchupComponents = catchupComponents( addressA, storeA );
 
         var exception = RuntimeException.class;
@@ -185,7 +184,7 @@ class ReadReplicaBootstrapTest
     void shouldRetryOnExpectedException() throws Throwable
     {
         // given
-        TopologyService topologyService = topologyService( namedDatabaseA, memberA, addressA );
+        TopologyService topologyService = topologyService( namedDatabaseA, serverA, addressA );
 
         CatchupComponentsRepository.CatchupComponents catchupComponents = catchupComponents( addressA, storeA );
 
@@ -208,7 +207,7 @@ class ReadReplicaBootstrapTest
     void shouldReplaceEmptyMismatchingStoreWithRemote() throws Throwable
     {
         // given
-        TopologyService topologyService = topologyService( namedDatabaseA, memberA, addressA );
+        TopologyService topologyService = topologyService( namedDatabaseA, serverA, addressA );
         CatchupComponentsRepository.CatchupComponents catchupComponents = catchupComponents( addressA, storeB );
 
         ReadReplicaDatabaseContext databaseContext = normalDatabase( namedDatabaseA, storeA, true );
@@ -226,7 +225,7 @@ class ReadReplicaBootstrapTest
     void shouldNotStartWithMismatchedNonEmptyStore() throws Throwable
     {
         // given
-        TopologyService topologyService = topologyService( namedDatabaseA, memberA, addressA );
+        TopologyService topologyService = topologyService( namedDatabaseA, serverA, addressA );
         CatchupComponentsRepository.CatchupComponents catchupComponents = catchupComponents( addressA, storeB );
 
         ReadReplicaDatabaseContext databaseContext = normalDatabase( namedDatabaseA, storeA, false );
@@ -244,7 +243,7 @@ class ReadReplicaBootstrapTest
     void shouldStartWithMatchingDatabase() throws Throwable
     {
         // given
-        TopologyService topologyService = topologyService( namedDatabaseA, memberA, addressA );
+        TopologyService topologyService = topologyService( namedDatabaseA, serverA, addressA );
         CatchupComponentsRepository.CatchupComponents catchupComponents = catchupComponents( addressA, storeA );
 
         ReadReplicaDatabaseContext databaseContext = normalDatabase( namedDatabaseA, storeA, false );
@@ -262,7 +261,7 @@ class ReadReplicaBootstrapTest
     void shouldReplaceEmptyMatchingStoreWithRemote() throws Throwable
     {
         // given
-        TopologyService topologyService = topologyService( namedDatabaseA, memberA, addressA );
+        TopologyService topologyService = topologyService( namedDatabaseA, serverA, addressA );
         CatchupComponentsRepository.CatchupComponents catchupComponents = catchupComponents( addressA, storeA );
 
         ReadReplicaDatabaseContext databaseContext = normalDatabase( namedDatabaseA, storeA, true );
@@ -280,7 +279,7 @@ class ReadReplicaBootstrapTest
     void shouldFailToStartOnUnexpectedIssue() throws Throwable
     {
         // given
-        TopologyService topologyService = topologyService( namedDatabaseA, memberA, addressA );
+        TopologyService topologyService = topologyService( namedDatabaseA, serverA, addressA );
         CatchupComponentsRepository.CatchupComponents catchupComponents = catchupComponents( addressA, storeA );
 
         Class<RuntimeException> exception = RuntimeException.class;
@@ -292,14 +291,14 @@ class ReadReplicaBootstrapTest
         assertThrows( exception, bootstrap::perform );
     }
 
-    TopologyService topologyService( NamedDatabaseId namedDatabaseId, MemberId upstreamMember, SocketAddress address ) throws CatchupAddressResolutionException
+    TopologyService topologyService( NamedDatabaseId namedDatabaseId, ServerId upstreamMember, SocketAddress address ) throws CatchupAddressResolutionException
     {
         TopologyService topologyService = mock( TopologyService.class );
-        Map<MemberId,CoreServerInfo> members = Map.of( upstreamMember, mock( CoreServerInfo.class ) );
+        Map<ServerId,CoreServerInfo> members = Map.of( upstreamMember, mock( CoreServerInfo.class ) );
         when( topologyService.allCoreServers() )
                 .thenReturn( members );
         when( topologyService.coreTopologyForDatabase( namedDatabaseId ) )
-                .thenReturn( new DatabaseCoreTopology( namedDatabaseId.databaseId(), raftId, members ) );
+                .thenReturn( new DatabaseCoreTopology( namedDatabaseId.databaseId(), raftGroupId, members ) );
         when( topologyService.lookupCatchupAddress( upstreamMember ) )
                 .thenReturn( address );
         return topologyService;
@@ -373,12 +372,11 @@ class ReadReplicaBootstrapTest
         }
 
         @Override
-        public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId )
+        public Optional<ServerId> upstreamServerForDatabase( NamedDatabaseId namedDatabaseId )
         {
             DatabaseCoreTopology coreTopology = topologyService.coreTopologyForDatabase( namedDatabaseId );
             return Optional.ofNullable( coreTopology.servers().keySet().iterator().next() );
         }
 
     }
-
 }

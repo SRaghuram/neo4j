@@ -416,6 +416,7 @@ class LeaderTest
         raftLog.skip( leaderPrevIndex, term );
 
         RaftState state = builder()
+                .myself( myself )
                 .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( term ).build() )
                 .entryLog( raftLog )
                 .build();
@@ -494,6 +495,7 @@ class LeaderTest
     {
         // given
         RaftState state = builder()
+                .myself( myself )
                 .votingMembers( myself, member1, member2 )
                 .additionalReplicationMembers( myself, member1, member2 )
                 .build();
@@ -703,6 +705,7 @@ class LeaderTest
 
         Leader leader = new Leader();
         RaftState state = builder()
+                .myself( myself )
                 .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( leaderTerm ).setCommitIndex( leaderCommitIndex ).build() )
                 .build();
 
@@ -730,6 +733,7 @@ class LeaderTest
 
         Leader leader = new Leader();
         RaftState state = builder()
+                .myself( myself )
                 .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( leaderTerm ).setCommitIndex( leaderCommitIndex ).build() )
                 .build();
 
@@ -779,6 +783,7 @@ class LeaderTest
 
         Leader leader = new Leader();
         RaftState state = builder()
+                .myself( myself )
                 .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( leaderTerm ).setCommitIndex( leaderCommitIndex ).build() )
                 .build();
 
@@ -803,6 +808,7 @@ class LeaderTest
 
         Leader leader = new Leader();
         RaftState state = builder()
+                .myself( myself )
                 .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( leaderTerm ).setCommitIndex( leaderCommitIndex ).build() )
                 .build();
 
@@ -833,6 +839,7 @@ class LeaderTest
 
         Leader leader = new Leader();
         RaftState state = builder()
+                .myself( myself )
                 .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( leaderTerm ).setCommitIndex( leaderCommitIndex ).build() )
                 .build();
 

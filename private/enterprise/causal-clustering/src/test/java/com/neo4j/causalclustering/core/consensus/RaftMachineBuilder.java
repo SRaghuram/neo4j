@@ -33,18 +33,20 @@ import java.time.Duration;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.DurationRange;
+import org.neo4j.function.Suppliers.Lazy;
 import org.neo4j.io.state.StateStorage;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 
 import static com.neo4j.configuration.ServerGroupsSupplier.listen;
+import static org.neo4j.function.Suppliers.lazySingleton;
 
 public class RaftMachineBuilder
 {
-    private final RaftMemberId member;
+    private final Lazy<RaftMemberId> member;
     private final int expectedClusterSize;
-    private final RaftMembers.Builder memberSetBuilder;
+    private final RaftMembers.Builder<RaftMemberId> memberSetBuilder;
     private final Clock clock;
 
     private TermState termState = new TermState();
@@ -82,7 +84,7 @@ public class RaftMachineBuilder
 
     public RaftMachineBuilder( RaftMemberId member, int expectedClusterSize, RaftMembers.Builder memberSetBuilder, Clock clock )
     {
-        this.member = member;
+        this.member = lazySingleton( () -> member );
         this.expectedClusterSize = expectedClusterSize;
         this.memberSetBuilder = memberSetBuilder;
         this.clock = clock;
@@ -105,9 +107,8 @@ public class RaftMachineBuilder
         var raftTimersConfig = new RaftTimersConfig( config );
         LeaderAvailabilityTimers leaderAvailabilityTimers = new LeaderAvailabilityTimers( raftTimersConfig, clock, timerService, logProvider );
         SendToMyself leaderOnlyReplicator = new SendToMyself( member, outbound );
-        RaftMembershipManager membershipManager = new RaftMembershipManager( leaderOnlyReplicator, member,
-                                                                             memberSetBuilder, raftLog, logProvider, expectedClusterSize, detectionWindowMin,
-                                                                             clock, catchupTimeout, raftMembership );
+        RaftMembershipManager membershipManager = new RaftMembershipManager( leaderOnlyReplicator, member, memberSetBuilder, raftLog, logProvider,
+                expectedClusterSize, detectionWindowMin, clock, catchupTimeout, raftMembership );
         membershipManager.setRecoverFromIndexSupplier( () -> 0 );
         RaftLogShippingManager logShipping =
                 new RaftLogShippingManager( outbound, logProvider, raftLog, timerService, clock, member, membershipManager,

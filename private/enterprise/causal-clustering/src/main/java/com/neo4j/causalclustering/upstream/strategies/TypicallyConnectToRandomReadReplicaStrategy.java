@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.upstream.strategies;
 
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 
 import java.util.ArrayList;
@@ -18,6 +17,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.annotations.service.ServiceProvider;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static java.util.function.Predicate.not;
@@ -40,29 +40,29 @@ public class TypicallyConnectToRandomReadReplicaStrategy extends UpstreamDatabas
     }
 
     @Override
-    public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId )
+    public Optional<ServerId> upstreamServerForDatabase( NamedDatabaseId namedDatabaseId )
     {
         if ( counter.shouldReturnOnlyCores() )
         {
-            return randomCoreMember( namedDatabaseId );
+            return randomCoreServer( namedDatabaseId );
         }
         else
         {
-            // shuffled members
-            List<MemberId> readReplicaMembers = new ArrayList<>( topologyService.readReplicaTopologyForDatabase( namedDatabaseId ).servers().keySet() );
-            Collections.shuffle( readReplicaMembers );
+            // shuffled servers
+            List<ServerId> readReplicaServers = new ArrayList<>( topologyService.readReplicaTopologyForDatabase( namedDatabaseId ).servers().keySet() );
+            Collections.shuffle( readReplicaServers );
 
-            List<MemberId> coreMembers = new ArrayList<>( topologyService.coreTopologyForDatabase( namedDatabaseId ).servers().keySet() );
-            Collections.shuffle( coreMembers );
+            List<ServerId> coreServers = new ArrayList<>( topologyService.coreTopologyForDatabase( namedDatabaseId ).servers().keySet() );
+            Collections.shuffle( coreServers );
 
-            return Stream.concat( readReplicaMembers.stream(), coreMembers.stream() ).filter( not( myself::equals ) ).findFirst();
+            return Stream.concat( readReplicaServers.stream(), coreServers.stream() ).filter( not( myself::equals ) ).findFirst();
         }
     }
 
     @Override
-    public Collection<MemberId> upstreamMembersForDatabase( NamedDatabaseId namedDatabaseId )
+    public Collection<ServerId> upstreamServersForDatabase( NamedDatabaseId namedDatabaseId )
     {
-        var cores = otherCoreMembers( namedDatabaseId );
+        var cores = otherCoreServers( namedDatabaseId );
         var readReplicas = otherReadReplicas( namedDatabaseId );
         if ( counter.shouldReturnOnlyCores() || readReplicas.isEmpty() )
         {
@@ -76,9 +76,9 @@ public class TypicallyConnectToRandomReadReplicaStrategy extends UpstreamDatabas
         }
     }
 
-    private Optional<MemberId> randomCoreMember( NamedDatabaseId namedDatabaseId )
+    private Optional<ServerId> randomCoreServer( NamedDatabaseId namedDatabaseId )
     {
-        List<MemberId> coreMembersNotSelf = topologyService.coreTopologyForDatabase( namedDatabaseId )
+        List<ServerId> coreMembersNotSelf = topologyService.coreTopologyForDatabase( namedDatabaseId )
                 .servers().keySet().stream()
                 .filter( not( myself::equals ) )
                 .collect( Collectors.toList() );
@@ -92,7 +92,7 @@ public class TypicallyConnectToRandomReadReplicaStrategy extends UpstreamDatabas
         return Optional.of( coreMembersNotSelf.get( randomIndex ) );
     }
 
-    private List<MemberId> otherCoreMembers( NamedDatabaseId namedDatabaseId )
+    private List<ServerId> otherCoreServers( NamedDatabaseId namedDatabaseId )
     {
         return topologyService.coreTopologyForDatabase( namedDatabaseId )
                 .servers().keySet().stream()
@@ -100,7 +100,7 @@ public class TypicallyConnectToRandomReadReplicaStrategy extends UpstreamDatabas
                 .collect( Collectors.toList() );
     }
 
-    private List<MemberId> otherReadReplicas( NamedDatabaseId namedDatabaseId )
+    private List<ServerId> otherReadReplicas( NamedDatabaseId namedDatabaseId )
     {
         return topologyService.readReplicaTopologyForDatabase( namedDatabaseId )
                 .servers().keySet().stream()

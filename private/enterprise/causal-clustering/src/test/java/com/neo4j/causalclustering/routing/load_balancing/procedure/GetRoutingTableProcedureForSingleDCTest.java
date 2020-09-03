@@ -12,9 +12,7 @@ import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
-import com.neo4j.causalclustering.identity.RaftMemberId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.routing.load_balancing.DefaultLeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.dbms.EnterpriseOperatorState;
@@ -43,6 +41,7 @@ import java.util.stream.Stream;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.exceptions.Status;
@@ -61,8 +60,7 @@ import org.neo4j.values.virtual.MapValue;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForReadReplica;
 import static com.neo4j.causalclustering.discovery.TestTopology.readReplicaInfoMap;
-import static com.neo4j.causalclustering.identity.RaftTestMember.leader;
-import static com.neo4j.causalclustering.identity.RaftTestMember.member;
+import static com.neo4j.causalclustering.identity.RaftTestMember.server;
 import static com.neo4j.configuration.CausalClusteringSettings.cluster_allow_reads_on_followers;
 import static com.neo4j.configuration.CausalClusteringSettings.cluster_allow_reads_on_leader;
 import static java.util.Collections.emptyMap;
@@ -95,7 +93,7 @@ class GetRoutingTableProcedureForSingleDCTest
 {
     private DatabaseManager<?> databaseManager;
     private NamedDatabaseId namedDatabaseId;
-    private RaftId raftId;
+    private RaftGroupId raftGroupId;
     private DatabaseAvailabilityGuard availabilityGuard;
     private MutableLeaderService leaderService;
     private CoreTopologyService coreTopologyService;
@@ -124,7 +122,7 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         var databaseManager = new StubClusteredDatabaseManager();
         this.namedDatabaseId = databaseManager.databaseIdRepository().getByName( "my_test_database" ).get();
-        this.raftId = RaftId.from( namedDatabaseId.databaseId() );
+        this.raftGroupId = RaftGroupId.from( namedDatabaseId.databaseId() );
         this.availabilityGuard = mock( DatabaseAvailabilityGuard.class );
         when( availabilityGuard.isAvailable() ).thenReturn( true );
         databaseManager.givenDatabaseWithConfig().withDatabaseId( namedDatabaseId ).withDatabaseAvailabilityGuard( availabilityGuard ).register();
@@ -140,7 +138,7 @@ class GetRoutingTableProcedureForSingleDCTest
     @RoutingConfigsTest
     void ttlShouldBeInSeconds( Config config ) throws Exception
     {
-        var coreMembers = Map.of( member( 0 ), addressesForCore( 0, false ) );
+        var coreMembers = Map.of( server( 0 ), addressesForCore( 0, false ) );
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
 
         var leaderService = newLeaderService( coreTopologyService );
@@ -178,7 +176,7 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldProvideReaderAndRouterForSingleCoreSetup( Config config ) throws Exception
     {
         // given
-        var coreMembers = Map.of( member( 0 ), addressesForCore( 0, false ) );
+        var coreMembers = Map.of( server( 0 ), addressesForCore( 0, false ) );
 
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
 
@@ -199,12 +197,12 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldReturnCoreServersWithRouteAllCoresButLeaderAsReadAndSingleWriteActions( Config config ) throws Exception
     {
         // given
-        leaderService.setLeader( getLeaderForId( 0 ) );
+        leaderService.setLeader( server( 0 ) );
 
         var coreMembers = Map.of(
-                member( 0 ), addressesForCore( 0, false ),
-                member( 1 ), addressesForCore( 1, false ),
-                member( 2 ), addressesForCore( 2, false ) );
+                server( 0 ), addressesForCore( 0, false ),
+                server( 1 ), addressesForCore( 1, false ),
+                server( 2 ), addressesForCore( 2, false ) );
 
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
 
@@ -233,8 +231,8 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldReturnSelfIfOnlyMemberOfTheCluster( Config config ) throws Exception
     {
         // given
-        leaderService.setLeader( getLeaderForId( 0 ) );
-        var coreMembers = Map.of( member( 0 ), addressesForCore( 0, false ) );
+        leaderService.setLeader( server( 0 ) );
+        var coreMembers = Map.of( server( 0 ), addressesForCore( 0, false ) );
 
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
 
@@ -256,10 +254,9 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldReturnTheCoreLeaderForWriteAndReadReplicasAndCoresForReads( Config config ) throws Exception
     {
         // given
-        var theLeader = getLeaderForId( 0 );
-        leaderService.setLeader( theLeader );
-        var coreMembers = Map.of( member( 0 ), addressesForCore( 0, false ),
-                                  member( 1 ), addressesForCore( 1, false ) );
+        leaderService.setLeader( server( 0 ) );
+        var coreMembers = Map.of( server( 0 ), addressesForCore( 0, false ),
+                                  server( 1 ), addressesForCore( 1, false ) );
 
         setupCoreTopologyService( coreTopologyService, coreMembers, readReplicaInfoMap( 1 ) );
 
@@ -296,10 +293,9 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldReturnCoreMemberAsReadServerIfNoReadReplicasAvailable( Config config ) throws Exception
     {
         // given
-        var theLeader = getLeaderForId( 0 );
-        leaderService.setLeader( theLeader );
+        leaderService.setLeader( server( 0 ) );
 
-        var coreMembers = Map.of( member( 0 ), addressesForCore( 0, false ) );
+        var coreMembers = Map.of( server( 0 ), addressesForCore( 0, false ) );
 
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
 
@@ -321,7 +317,7 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldReturnNoWriteEndpointsIfThereIsNoLeader( Config config ) throws Exception
     {
         // given
-        var coreMembers = Map.of( member( 0 ), addressesForCore( 0, false ) );
+        var coreMembers = Map.of( server( 0 ), addressesForCore( 0, false ) );
 
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
 
@@ -342,8 +338,8 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldReturnNoWriteEndpointsIfThereIsNoAddressForTheLeader( Config config ) throws Exception
     {
         // given
-        leaderService.setLeader( getLeaderForId( 1 ) );
-        var coreMembers = Map.of( member( 0 ), addressesForCore( 0, false ) );
+        leaderService.setLeader( server( 1 ) );
+        var coreMembers = Map.of( server( 0 ), addressesForCore( 0, false ) );
 
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
 
@@ -366,12 +362,12 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         // given
         var config = Config.defaults();
-        leaderService.setLeader( getLeaderForId( 0 ) );
+        leaderService.setLeader( server( 0 ) );
 
         var coreMembers = Map.of(
-                member( 0 ), addressesForCore( 0, false ),
-                member( 1 ), addressesForCore( 1, false ),
-                member( 2 ), addressesForCore( 2, false ) );
+                server( 0 ), addressesForCore( 0, false ),
+                server( 1 ), addressesForCore( 1, false ),
+                server( 2 ), addressesForCore( 2, false ) );
 
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
 
@@ -401,7 +397,7 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldHaveCorrectSignature() throws Exception
     {
         // given
-        leaderService.setLeader( getLeaderForId( 1 ) );
+        leaderService.setLeader( server( 1 ) );
 
         var proc = newProcedure( coreTopologyService, leaderService, Config.defaults() );
 
@@ -436,7 +432,7 @@ class GetRoutingTableProcedureForSingleDCTest
         var databaseManager = new StubClusteredDatabaseManager( databaseIdRepository );
         var databaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
         databaseIdRepository.filter( databaseId.name() );
-        leaderService.setLeader( getLeaderForId( 0 ) );
+        leaderService.setLeader( server( 0 ) );
 
         var proc = newProcedure( coreTopologyService, leaderService, databaseManager );
 
@@ -450,14 +446,14 @@ class GetRoutingTableProcedureForSingleDCTest
         var databaseManager = new StubClusteredDatabaseManager();
         var databaseId = databaseManager.databaseIdRepository().getByName( "stopped database" ).get();
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).withStoppedDatabase().register();
-        leaderService.setLeader( databaseId, getLeaderForId( 0 ) );
+        leaderService.setLeader( databaseId, server( 0 ) );
 
         var coreMembers = Map.of(
-                member( 0 ), addressesForCore( 0, false ),
-                member( 1 ), addressesForCore( 1, false ),
-                member( 2 ), addressesForCore( 2, false ) );
+                server( 0 ), addressesForCore( 0, false ),
+                server( 1 ), addressesForCore( 1, false ),
+                server( 2 ), addressesForCore( 2, false ) );
 
-        setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap(), databaseId, raftId );
+        setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap(), databaseId, raftGroupId );
 
         var proc = newProcedure( coreTopologyService, leaderService, databaseManager, config );
 
@@ -486,18 +482,13 @@ class GetRoutingTableProcedureForSingleDCTest
         when( coreTopologyService.readReplicaTopologyForDatabase( unknownNamedDatabaseId ) )
                 .thenReturn( DatabaseReadReplicaTopology.empty( unknownNamedDatabaseId.databaseId() ) );
 
-        leaderService.setLeader( getLeaderForId( 0 ) );
+        leaderService.setLeader( server( 0 ) );
         var config = Config.defaults();
 
         var proc = newProcedure( coreTopologyService, leaderService, config );
 
         var error = assertThrows( ProcedureException.class, () -> run( proc, unknownNamedDatabaseId, config ) );
         assertEquals( Status.Database.DatabaseUnavailable, error.status() );
-    }
-
-    private RaftMemberId getLeaderForId( int id )
-    {
-        return leader( id, 1 ).memberId();
     }
 
     private Object[] getEndpoints( CallableProcedure proc ) throws ProcedureException
@@ -554,18 +545,18 @@ class GetRoutingTableProcedureForSingleDCTest
         return new AnyValue[]{MapValue.EMPTY, stringValue( namedDatabaseId.name() )};
     }
 
-    private void setupCoreTopologyService( CoreTopologyService topologyService, Map<MemberId,CoreServerInfo> cores, Map<MemberId,ReadReplicaInfo> readReplicas )
+    private void setupCoreTopologyService( CoreTopologyService topologyService, Map<ServerId,CoreServerInfo> cores, Map<ServerId,ReadReplicaInfo> readReplicas )
     {
-        setupCoreTopologyService( topologyService, cores, readReplicas, namedDatabaseId, raftId );
+        setupCoreTopologyService( topologyService, cores, readReplicas, namedDatabaseId, raftGroupId );
     }
 
-    private static void setupCoreTopologyService( CoreTopologyService topologyService, Map<MemberId,CoreServerInfo> cores,
-                                                  Map<MemberId,ReadReplicaInfo> readReplicas, NamedDatabaseId namedDatabaseId, RaftId raftId )
+    private static void setupCoreTopologyService( CoreTopologyService topologyService, Map<ServerId,CoreServerInfo> cores,
+                                                  Map<ServerId,ReadReplicaInfo> readReplicas, NamedDatabaseId namedDatabaseId, RaftGroupId raftGroupId )
     {
         when( topologyService.allCoreServers() ).thenReturn( cores );
         when( topologyService.allReadReplicas() ).thenReturn( readReplicas );
         when( topologyService.coreTopologyForDatabase( namedDatabaseId ) )
-                .thenReturn( new DatabaseCoreTopology( namedDatabaseId.databaseId(), raftId, cores ) );
+                .thenReturn( new DatabaseCoreTopology( namedDatabaseId.databaseId(), raftGroupId, cores ) );
         when( topologyService.readReplicaTopologyForDatabase( namedDatabaseId ) )
                 .thenReturn( new DatabaseReadReplicaTopology( namedDatabaseId.databaseId(), readReplicas ) );
     }
@@ -680,7 +671,7 @@ class GetRoutingTableProcedureForSingleDCTest
 
     private static class MutableLeaderService implements LeaderService
     {
-        Map<NamedDatabaseId,RaftMemberId> leaders = new HashMap<>();
+        Map<NamedDatabaseId,ServerId> leaders = new HashMap<>();
         private NamedDatabaseId defaultDb;
         private CoreTopologyService coreTopologyService;
 
@@ -690,9 +681,9 @@ class GetRoutingTableProcedureForSingleDCTest
             this.coreTopologyService = coreTopologyService;
         }
 
-        public Optional<MemberId> getLeaderId( NamedDatabaseId namedDatabaseId )
+        public Optional<ServerId> getLeaderId( NamedDatabaseId namedDatabaseId )
         {
-            return Optional.ofNullable( leaders.get( namedDatabaseId ) ).map( RaftMemberId::serverId );
+            return Optional.ofNullable( leaders.get( namedDatabaseId ) );
         }
 
         @Override
@@ -701,18 +692,18 @@ class GetRoutingTableProcedureForSingleDCTest
             var leader = leaders.get( namedDatabaseId );
             if ( leader != null )
             {
-                return Optional.ofNullable( coreTopologyService.allCoreServers().get( leader.serverId() ) )
+                return Optional.ofNullable( coreTopologyService.allCoreServers().get( leader ) )
                         .map( coreInfo -> coreInfo.connectors().clientBoltAddress() );
             }
             return Optional.empty();
         }
 
-        void setLeader( RaftMemberId leader )
+        void setLeader( ServerId leader )
         {
             setLeader( defaultDb, leader );
         }
 
-        void setLeader( NamedDatabaseId namedDatabaseId, RaftMemberId leader )
+        void setLeader( NamedDatabaseId namedDatabaseId, ServerId leader )
         {
             this.leaders.put( namedDatabaseId, leader );
         }

@@ -25,7 +25,7 @@ import static java.util.stream.Collectors.toSet;
 
 public class ClusterSystemGraphDbmsModel extends EnterpriseSystemGraphDbmsModel
 {
-    static final String INITIAL_MEMBERS = "initial_members";
+    static final String INITIAL_SERVERS = "initial_members"; // TODO: migrate name of field?
     static final String STORE_CREATION_TIME = "store_creation_time";
     static final String STORE_RANDOM_ID = "store_random_id";
     static final String STORE_VERSION = "store_version";
@@ -36,16 +36,16 @@ public class ClusterSystemGraphDbmsModel extends EnterpriseSystemGraphDbmsModel
     }
 
     /**
-     * Initial members are not written for databases created during cluster formation.
+     * Initial servers are not written for databases created during cluster formation.
      */
-    public Set<UUID> getInitialMembers( NamedDatabaseId namedDatabaseId )
+    public Set<UUID> getInitialServers( NamedDatabaseId namedDatabaseId )
     {
         try ( var tx = systemDatabase.get().beginTx() )
         {
             var node = databaseNode( namedDatabaseId, tx );
 
-            String[] initialMembers = (String[]) node.getProperty( INITIAL_MEMBERS );
-            return Arrays.stream( initialMembers )
+            String[] initialServers = (String[]) node.getProperty( INITIAL_SERVERS );
+            return Arrays.stream( initialServers )
                          .map( UUID::fromString )
                          .collect( toSet() );
         }
@@ -83,7 +83,7 @@ public class ClusterSystemGraphDbmsModel extends EnterpriseSystemGraphDbmsModel
                 while ( databaseItr.hasNext() )
                 {
                     Node database = databaseItr.next();
-                    database.removeProperty( INITIAL_MEMBERS );
+                    database.removeProperty( INITIAL_SERVERS );
                     database.removeProperty( STORE_CREATION_TIME );
                     database.removeProperty( STORE_RANDOM_ID );
                     database.removeProperty( STORE_VERSION );

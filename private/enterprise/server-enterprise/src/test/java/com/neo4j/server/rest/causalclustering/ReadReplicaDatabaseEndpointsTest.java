@@ -10,7 +10,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.discovery.RoleInfo;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitorService;
 import com.neo4j.dbms.EnterpriseDatabaseState;
 import com.neo4j.dbms.EnterpriseOperatorState;
@@ -21,17 +20,14 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.ws.rs.core.Response;
 
 import org.neo4j.collection.Dependencies;
-import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.StubDatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.kernel.database.NamedDatabaseId;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -47,15 +43,13 @@ import org.neo4j.server.rest.repr.formats.JsonFormat;
 import org.neo4j.time.FakeClock;
 import org.neo4j.time.SystemNanoClock;
 
-import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberId;
-import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberIds;
-import static java.util.stream.Collectors.toList;
+import static com.neo4j.causalclustering.discovery.FakeTopologyService.serverId;
+import static com.neo4j.causalclustering.discovery.FakeTopologyService.serverIds;
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 import static javax.ws.rs.core.Response.Status.OK;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -71,9 +65,9 @@ class ReadReplicaDatabaseEndpointsTest
     private CommandIndexTracker commandIndexTracker;
 
     private final TestDatabaseIdRepository idRepository = new TestDatabaseIdRepository();
-    private final Set<MemberId> cores = memberIds( 0,3 );
-    private final Set<MemberId> replicas = memberIds( 3, 5 );
-    private final MemberId myself = memberId( 3 );
+    private final Set<ServerId> cores = serverIds( 0,3 );
+    private final Set<ServerId> replicas = serverIds( 3, 5 );
+    private final ServerId myself = serverId( 3 );
     private final LogProvider logProvider = NullLogProvider.getInstance();
     private final SystemNanoClock clock = new FakeClock();
 
@@ -151,25 +145,6 @@ class ReadReplicaDatabaseEndpointsTest
     }
 
     @Test
-    void responseIncludesAllCores() throws IOException
-    {
-        var description = status.description();
-
-        assertEquals( Response.Status.OK.getStatusCode(), description.getStatus() );
-        var expectedVotingMembers = topologyService.allCoreServers()
-                .keySet()
-                .stream()
-                .map( memberId -> memberId.getUuid().toString() )
-                .collect( toList() );
-        var responseJson = responseAsMap( description );
-        //noinspection unchecked
-        var actualVotingMembers = (List<String>) responseJson.get( "votingMembers" );
-        Collections.sort( expectedVotingMembers );
-        Collections.sort( actualVotingMembers );
-        assertEquals( expectedVotingMembers, actualVotingMembers );
-    }
-
-    @Test
     void dbHealthIsIncludedInResponse() throws IOException
     {
         var description = status.description();
@@ -184,7 +159,7 @@ class ReadReplicaDatabaseEndpointsTest
     void includesMemberId() throws IOException
     {
         var description = status.description();
-        assertEquals( myself.getUuid().toString(), responseAsMap( description ).get( "memberId" ) );
+        assertEquals( myself.uuid().toString(), responseAsMap( description ).get( "memberId" ) );
     }
 
     @Test
@@ -201,7 +176,7 @@ class ReadReplicaDatabaseEndpointsTest
                 .orElseThrow( () -> new IllegalStateException( "No cores in topology" ) );
         topologyService.setRole( selectedLead, RoleInfo.LEADER );
         description = status.description();
-        assertEquals( selectedLead.getUuid().toString(), responseAsMap( description ).get( "leader" ) );
+        assertEquals( selectedLead.uuid().toString(), responseAsMap( description ).get( "leader" ) );
     }
 
     @Test

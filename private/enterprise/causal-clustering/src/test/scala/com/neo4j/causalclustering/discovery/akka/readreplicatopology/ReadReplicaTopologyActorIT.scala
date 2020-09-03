@@ -20,7 +20,6 @@ import com.neo4j.causalclustering.discovery.TestTopology
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState
 import com.neo4j.causalclustering.identity.IdFactory
-import com.neo4j.causalclustering.identity.MemberId
 import com.neo4j.dbms.EnterpriseOperatorState.STARTED
 import org.neo4j.configuration.Config
 import org.neo4j.dbms.identity.ServerId
@@ -65,7 +64,7 @@ class ReadReplicaTopologyActorIT extends BaseAkkaIT("ReadReplicaTopologyActorIT"
         readReplicaTopologyActor ! message
 
         Then("empty topology is built for the previous database")
-        val expectedEmptyTopology = new DatabaseReadReplicaTopology(initialDatabaseId.databaseId(), Map.empty[MemberId, ReadReplicaInfo].asJava )
+        val expectedEmptyTopology = new DatabaseReadReplicaTopology(initialDatabaseId.databaseId(), Map.empty[ServerId, ReadReplicaInfo].asJava )
         awaitAssert(topologyReceiver.expectMsg(expectedEmptyTopology), defaultWaitTime)
 
         And("non-empty topology is built for the new database")

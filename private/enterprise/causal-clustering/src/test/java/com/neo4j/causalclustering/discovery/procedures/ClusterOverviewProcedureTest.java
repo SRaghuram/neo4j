@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RoleInfo;
-import com.neo4j.causalclustering.identity.MemberId;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.Test;
@@ -24,6 +23,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.neo4j.collection.RawIterator;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
@@ -83,10 +83,10 @@ class ClusterOverviewProcedureTest
         // given
         final CoreTopologyService topologyService = mock( CoreTopologyService.class );
 
-        Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
-        MemberId theLeader = MemberId.of( new UUID( 1, 0 ) );
-        MemberId follower1 = MemberId.of( new UUID( 2, 0 ) );
-        MemberId follower2 = MemberId.of( new UUID( 3, 0 ) );
+        Map<ServerId,CoreServerInfo> coreMembers = new HashMap<>();
+        ServerId theLeader = new ServerId( new UUID( 1, 0 ) );
+        ServerId follower1 = new ServerId( new UUID( 2, 0 ) );
+        ServerId follower2 = new ServerId( new UUID( 3, 0 ) );
 
         Set<NamedDatabaseId> leaderDatabases = databaseIds( "customers", "orders", "system" );
         Set<NamedDatabaseId> follower1Databases = databaseIds( "system", "orders" );
@@ -95,9 +95,9 @@ class ClusterOverviewProcedureTest
         coreMembers.put( follower1, addressesForCore( 1, false, toRaw( follower1Databases ) ) );
         coreMembers.put( follower2, addressesForCore( 2, false, toRaw( follower2Databases ) ) );
 
-        Map<MemberId,ReadReplicaInfo> replicaMembers = new HashMap<>();
-        MemberId replica4 = MemberId.of( new UUID( 4, 0 ) );
-        MemberId replica5 = MemberId.of( new UUID( 5, 0 ) );
+        Map<ServerId,ReadReplicaInfo> replicaMembers = new HashMap<>();
+        ServerId replica4 = new ServerId( new UUID( 4, 0 ) );
+        ServerId replica5 = new ServerId( new UUID( 5, 0 ) );
 
         Set<NamedDatabaseId> replica1Databases = databaseIds( "system", "orders" );
         Set<NamedDatabaseId> replica2Databases = databaseIds( "system", "customers" );
@@ -154,14 +154,14 @@ class ClusterOverviewProcedureTest
 
     private static class IsRecord extends TypeSafeMatcher<AnyValue[]>
     {
-        private final UUID memberId;
+        private final UUID serverId;
         private final int boltPort;
         private final Map<NamedDatabaseId,RoleInfo> databases;
         private final Set<String> groups;
 
-        private IsRecord( MemberId memberId, int boltPort, Map<NamedDatabaseId,RoleInfo> databases, Set<String> groups )
+        private IsRecord( ServerId serverId, int boltPort, Map<NamedDatabaseId,RoleInfo> databases, Set<String> groups )
         {
-            this.memberId = memberId.getUuid();
+            this.serverId = serverId.uuid();
             this.boltPort = boltPort;
             this.databases = databases;
             this.groups = groups;
@@ -175,7 +175,7 @@ class ClusterOverviewProcedureTest
                 return false;
             }
 
-            if ( !stringValue( memberId.toString() ).equals( record[0] ) )
+            if ( !stringValue( serverId.toString() ).equals( record[0] ) )
             {
                 return false;
             }
@@ -216,7 +216,7 @@ class ClusterOverviewProcedureTest
         public void describeTo( Description description )
         {
             description.appendText(
-                    "memberId=" + memberId +
+                    "serverId=" + serverId +
                     ", boltPort=" + boltPort +
                     ", databases=" + databases +
                     ", groups=" + groups +

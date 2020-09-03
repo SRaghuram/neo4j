@@ -12,7 +12,6 @@ import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
-import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -22,6 +21,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.DatabaseId;
 
@@ -56,11 +56,11 @@ class ReadReplicaViewMessage
 
     DatabaseReadReplicaTopology toReadReplicaTopology( DatabaseId databaseId )
     {
-        Map<MemberId,ReadReplicaInfo> knownReadReplicas = clientToReadReplicaRecords
+        Map<ServerId,ReadReplicaInfo> knownReadReplicas = clientToReadReplicaRecords
                 .values()
                 .stream()
                 .filter( info -> info.readReplicaInfo().startedDatabaseIds().contains( databaseId ) )
-                .map( info -> Pair.of( MemberId.of( info.serverId() ), info.readReplicaInfo() ) )
+                .map( info -> Pair.of( info.serverId(), info.readReplicaInfo() ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
 
         return new DatabaseReadReplicaTopology( databaseId, knownReadReplicas );
@@ -76,9 +76,9 @@ class ReadReplicaViewMessage
                 .collect( Collectors.toMap( Map.Entry::getKey, e -> ReplicatedDatabaseState.ofReadReplicas( e.getKey(), e.getValue() ) ) );
     }
 
-    private Stream<Pair<MemberId,DiscoveryDatabaseState>> getAllStatesFromMember( ReadReplicaViewRecord record )
+    private Stream<Pair<ServerId,DiscoveryDatabaseState>> getAllStatesFromMember( ReadReplicaViewRecord record )
     {
-         return record.databaseStates().values().stream().map( state -> Pair.of( MemberId.of( record.serverId() ), state ) );
+         return record.databaseStates().values().stream().map( state -> Pair.of( record.serverId(), state ) );
     }
 
     Set<DatabaseId> databaseIds()

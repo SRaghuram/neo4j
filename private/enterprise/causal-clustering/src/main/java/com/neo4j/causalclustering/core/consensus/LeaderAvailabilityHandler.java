@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus;
 
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.messaging.ComposableMessageHandler;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 
@@ -37,9 +37,9 @@ public class LeaderAvailabilityHandler implements LifecycleMessageHandler<RaftMe
     }
 
     @Override
-    public synchronized void start( RaftId raftId ) throws Exception
+    public synchronized void start( RaftGroupId raftGroupId ) throws Exception
     {
-        delegateHandler.start( raftId );
+        delegateHandler.start( raftGroupId );
     }
 
     @Override

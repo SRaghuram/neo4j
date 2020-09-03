@@ -9,6 +9,7 @@ import java.util.UUID
 import java.util.concurrent.ThreadLocalRandom
 
 import com.neo4j.causalclustering.core.consensus.RaftMachine
+import com.neo4j.causalclustering.discovery.TopologyService
 import com.neo4j.configuration.EnterpriseEditionSettings
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager
 import com.neo4j.server.security.enterprise.auth.PrivilegeResolver
@@ -798,8 +799,10 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       def asInternalKeys(keys: Array[String]): Array[String] = keys.map(internalKey)
 
       def virtualMapClusterConverter(raftMachine: RaftMachine): (Transaction, MapValue) => MapValue = (_ ,params) => {
+        val topologyService = resolver.resolveDependency(classOf[TopologyService])
         val initialMembersSet = raftMachine.coreState.committed.members.asScala
-        val initial = initialMembersSet.map(_.getUuid.toString).toArray
+        val initial = initialMembersSet.map(topologyService.resolveServerForRaftMember).filter(_!=null).map(_.uuid.toString).toArray
+        if (initial.length < 2) throw new IllegalStateException( "The system has too low fault tolerance at this time to create a new database" )
         val creation = System.currentTimeMillis()
         val randomId = ThreadLocalRandom.current().nextLong()
         val storeVersion = Standard.LATEST_STORE_VERSION

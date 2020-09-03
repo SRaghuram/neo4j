@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.replication.ProgressTracker;
 import com.neo4j.causalclustering.core.replication.Replicator;
 import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.identity.RaftBinder;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 
 import org.neo4j.io.state.SimpleStorage;
 
@@ -21,10 +21,10 @@ class CoreRaftContext
     private final CommandIndexTracker commandIndexTracker;
     private final ProgressTracker progressTracker;
     private final RaftBinder raftBinder;
-    private final SimpleStorage<RaftId> raftIdStorage;
+    private final SimpleStorage<RaftGroupId> raftIdStorage;
 
     CoreRaftContext( RaftGroup raftGroup, Replicator replicator, CommandIndexTracker commandIndexTracker, ProgressTracker progressTracker,
-            RaftBinder raftBinder, SimpleStorage<RaftId> raftIdStorage )
+            RaftBinder raftBinder, SimpleStorage<RaftGroupId> raftIdStorage )
     {
         this.raftGroup = raftGroup;
         this.replicator = replicator;
@@ -59,7 +59,7 @@ class CoreRaftContext
         return raftBinder;
     }
 
-    SimpleStorage<RaftId> raftIdStorage()
+    SimpleStorage<RaftGroupId> raftIdStorage()
     {
         return raftIdStorage;
     }

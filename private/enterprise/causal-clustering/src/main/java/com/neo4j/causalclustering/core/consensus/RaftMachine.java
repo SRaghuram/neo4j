@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Optional;
 import java.util.Set;
 
+import org.neo4j.function.Suppliers.Lazy;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -41,7 +42,7 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
 
     private final RaftState state;
     private final RaftMessageHandlingContext messageHandlingContext;
-    private final RaftMemberId myself;
+    private final Lazy<RaftMemberId> myself;
 
     private final LeaderAvailabilityTimers leaderAvailabilityTimers;
     private final RaftMembershipManager membershipManager;
@@ -49,7 +50,7 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
     private final Log log;
     private volatile Role currentRole = Role.FOLLOWER;
 
-    public RaftMachine( RaftMemberId myself, LeaderAvailabilityTimers leaderAvailabilityTimers, LogProvider logProvider,
+    public RaftMachine( Lazy<RaftMemberId> myself, LeaderAvailabilityTimers leaderAvailabilityTimers, LogProvider logProvider,
             RaftMembershipManager membershipManager, InFlightCache inFlightCache, RaftOutcomeApplier outcomeApplier, RaftState state,
             RaftMessageHandlingContext messageHandlingContext )
     {
@@ -103,12 +104,17 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
 
     public void triggerElection() throws IOException
     {
-        handle( new RaftMessages.Timeout.Election( myself ) );
+        handle( new RaftMessages.Timeout.Election( myself.get() ) );
+    }
+
+    private RaftMemberId myself()
+    {
+        return myself.get();
     }
 
     private void triggerHeartbeat() throws IOException
     {
-        handle( new RaftMessages.Timeout.Heartbeat( myself ) );
+        handle( new RaftMessages.Timeout.Heartbeat( myself.get() ) );
     }
 
     public synchronized RaftCoreState coreState()
@@ -182,14 +188,14 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
 
     public RaftMemberId memberId()
     {
-        return myself;
+        return myself();
     }
 
     @Override
     public String toString()
     {
         return "RaftMachine{" +
-               "myself=" + myself +
+               "myself=" + myself.get() +
                ", currentRole=" + currentRole +
                ", term=" + term() +
                ", votingMembers=" + votingMembers() +

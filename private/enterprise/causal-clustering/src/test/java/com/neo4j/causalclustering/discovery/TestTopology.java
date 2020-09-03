@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.ServerGroupName;
 
@@ -21,6 +20,7 @@ import java.util.stream.Collectors;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
@@ -94,9 +94,9 @@ public class TestTopology
         return new ReadReplicaInfo( clientConnectorAddresses, catchupSocketAddress, ServerGroupName.setOf( "replica", "replica" + id ), databaseIds );
     }
 
-    public static Map<MemberId,ReadReplicaInfo> readReplicaInfoMap( int... ids )
+    public static Map<ServerId,ReadReplicaInfo> readReplicaInfoMap( int... ids )
     {
         return Arrays.stream( ids ).mapToObj( TestTopology::addressesForReadReplica ).collect( Collectors
-                .toMap( p -> IdFactory.randomMemberId(), Function.identity() ) );
+                .toMap( p -> IdFactory.randomServerId(), Function.identity() ) );
     }
 }

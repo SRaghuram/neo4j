@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.readreplica;
 
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 
 import java.util.Objects;
 
@@ -16,10 +16,10 @@ import static java.lang.String.format;
 
 class RaftIdCheck
 {
-    private final SimpleStorage<RaftId> raftIdStorage;
+    private final SimpleStorage<RaftGroupId> raftIdStorage;
     private final NamedDatabaseId namedDatabaseId;
 
-    RaftIdCheck( SimpleStorage<RaftId> raftIdStorage, NamedDatabaseId namedDatabaseId )
+    RaftIdCheck( SimpleStorage<RaftGroupId> raftIdStorage, NamedDatabaseId namedDatabaseId )
     {
         this.raftIdStorage = raftIdStorage;
         this.namedDatabaseId = namedDatabaseId;
@@ -41,7 +41,7 @@ class RaftIdCheck
         else
         {
             // If the raft id state doesn't exist, create it. RaftId must correspond to the database id
-            var raftId = RaftId.from( namedDatabaseId.databaseId() );
+            var raftId = RaftGroupId.from( namedDatabaseId.databaseId() );
             raftIdStorage.writeState( raftId );
         }
     }

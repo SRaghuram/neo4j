@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.core.consensus;
 
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import org.junit.jupiter.api.Test;
@@ -26,7 +26,7 @@ class LeaderAvailabilityHandlerTest
     @SuppressWarnings( "unchecked" )
     private LifecycleMessageHandler<RaftMessages.InboundRaftMessageContainer<?>> delegate = Mockito.mock( LifecycleMessageHandler.class );
     private LeaderAvailabilityTimers leaderAvailabilityTimers = Mockito.mock( LeaderAvailabilityTimers.class );
-    private RaftId raftId = IdFactory.randomRaftId();
+    private RaftGroupId raftGroupId = IdFactory.randomRaftId();
     private RaftMessageTimerResetMonitor raftMessageTimerResetMonitor = new DurationSinceLastMessageMonitor( Clocks.nanoClock() );
     private LongSupplier term = () -> 3;
 
@@ -34,19 +34,19 @@ class LeaderAvailabilityHandlerTest
 
     private RaftMemberId leader = IdFactory.randomRaftMemberId();
     private RaftMessages.InboundRaftMessageContainer<?> heartbeat =
-            RaftMessages.InboundRaftMessageContainer.of( Instant.now(), raftId, new RaftMessages.Heartbeat( leader, term.getAsLong(), 0, 0 ) );
+            RaftMessages.InboundRaftMessageContainer.of( Instant.now(), raftGroupId, new RaftMessages.Heartbeat( leader, term.getAsLong(), 0, 0 ) );
     private RaftMessages.InboundRaftMessageContainer<?> appendEntries =
-            RaftMessages.InboundRaftMessageContainer.of( Instant.now(), raftId,
+            RaftMessages.InboundRaftMessageContainer.of( Instant.now(), raftGroupId,
                                                          new RaftMessages.AppendEntries.Request( leader, term.getAsLong(), 0, 0, RaftLogEntry.empty, 0 )
             );
     private RaftMessages.InboundRaftMessageContainer<?> voteResponse =
-            RaftMessages.InboundRaftMessageContainer.of( Instant.now(), raftId, new RaftMessages.Vote.Response( leader, term.getAsLong(), false ) );
+            RaftMessages.InboundRaftMessageContainer.of( Instant.now(), raftGroupId, new RaftMessages.Vote.Response( leader, term.getAsLong(), false ) );
 
     @Test
     void shouldRenewElectionForHeartbeats() throws Throwable
     {
         // given
-        handler.start( raftId );
+        handler.start( raftGroupId );
 
         // when
         handler.handle( heartbeat );
@@ -59,7 +59,7 @@ class LeaderAvailabilityHandlerTest
     void shouldRenewElectionForAppendEntriesRequests() throws Throwable
     {
         // given
-        handler.start( raftId );
+        handler.start( raftGroupId );
 
         // when
         handler.handle( appendEntries );
@@ -72,7 +72,7 @@ class LeaderAvailabilityHandlerTest
     void shouldNotRenewElectionForOtherMessages() throws Throwable
     {
         // given
-        handler.start( raftId );
+        handler.start( raftGroupId );
 
         // when
         handler.handle( voteResponse );
@@ -86,9 +86,9 @@ class LeaderAvailabilityHandlerTest
     {
         // given
         RaftMessages.InboundRaftMessageContainer<?> heartbeat =  RaftMessages.InboundRaftMessageContainer.of(
-                Instant.now(), raftId, new RaftMessages.Heartbeat( leader, term.getAsLong() - 1, 0, 0 ) );
+                Instant.now(), raftGroupId, new RaftMessages.Heartbeat( leader, term.getAsLong() - 1, 0, 0 ) );
 
-        handler.start( raftId );
+        handler.start( raftGroupId );
 
         // when
         handler.handle( heartbeat );
@@ -101,12 +101,12 @@ class LeaderAvailabilityHandlerTest
     void shouldNotRenewElectionTimeoutsForAppendEntriesRequestsFromEarlierTerms() throws Throwable
     {
         RaftMessages.InboundRaftMessageContainer<?> appendEntries = RaftMessages.InboundRaftMessageContainer.of(
-                Instant.now(), raftId,
+                Instant.now(), raftGroupId,
                 new RaftMessages.AppendEntries.Request(
                         leader, term.getAsLong() - 1, 0, 0, RaftLogEntry.empty, 0 )
         );
 
-        handler.start( raftId );
+        handler.start( raftGroupId );
 
         // when
         handler.handle( appendEntries );
@@ -119,10 +119,10 @@ class LeaderAvailabilityHandlerTest
     void shouldDelegateStart() throws Throwable
     {
         // when
-        handler.start( raftId );
+        handler.start( raftGroupId );
 
         // then
-        verify( delegate ).start( raftId );
+        verify( delegate ).start( raftGroupId );
     }
 
     @Test

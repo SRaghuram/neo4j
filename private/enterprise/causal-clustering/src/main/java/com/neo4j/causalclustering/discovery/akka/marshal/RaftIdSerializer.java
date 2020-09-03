@@ -5,14 +5,14 @@
  */
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 
-public class RaftIdSerializer extends BaseAkkaSerializer<RaftId>
+public class RaftIdSerializer extends BaseAkkaSerializer<RaftGroupId>
 {
     static final int SIZE_HINT = 16;
 
     public RaftIdSerializer()
     {
-        super( new RaftId.Marshal(), RAFT_ID, SIZE_HINT );
+        super( RaftGroupId.Marshal.INSTANCE, RAFT_ID, SIZE_HINT );
     }
 }

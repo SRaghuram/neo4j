@@ -15,7 +15,6 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
@@ -497,7 +496,7 @@ public final class CausalClusteringTestHelpers
         return serverIds.stream().map( serverId -> allStates.getOrDefault( serverId, UNKNOWN ) );
     }
 
-    private static Map<ServerId, EnterpriseOperatorState> convertTopologyState( Map<MemberId,DiscoveryDatabaseState> memberIdDiscoveryDatabaseStateMap )
+    private static Map<ServerId, EnterpriseOperatorState> convertTopologyState( Map<ServerId,DiscoveryDatabaseState> memberIdDiscoveryDatabaseStateMap )
     {
         return memberIdDiscoveryDatabaseStateMap.entrySet().stream()
                 .collect( Collectors.toMap( Map.Entry::getKey, entry -> (EnterpriseOperatorState) entry.getValue().operatorState() ) );

@@ -22,7 +22,7 @@ import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.ImpermanentDbmsExtension;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.dbms.ClusterSystemGraphDbmsModel.INITIAL_MEMBERS;
+import static com.neo4j.dbms.ClusterSystemGraphDbmsModel.INITIAL_SERVERS;
 import static com.neo4j.dbms.ClusterSystemGraphDbmsModel.STORE_CREATION_TIME;
 import static com.neo4j.dbms.ClusterSystemGraphDbmsModel.STORE_RANDOM_ID;
 import static com.neo4j.dbms.ClusterSystemGraphDbmsModel.STORE_VERSION;
@@ -70,18 +70,17 @@ class ClusterSystemGraphDbmsModelTest
             makeDatabaseNodeForCluster( tx, deletedDatabaseId, expectedMembers, storeId2, true );
             tx.commit();
         }
-
         // when
-        var initialMembers = dbmsModel.getInitialMembers( databaseId );
-        var deletedInitialMembers = dbmsModel.getInitialMembers( deletedDatabaseId );
+        var initialServers = dbmsModel.getInitialServers( databaseId );
+        var deletedInitialServers = dbmsModel.getInitialServers( deletedDatabaseId );
         var storeId = dbmsModel.getStoreId( databaseId );
         var deletedStoreId = dbmsModel.getStoreId( deletedDatabaseId );
 
         // then
-        assertFalse( initialMembers.isEmpty() );
-        assertFalse( deletedInitialMembers.isEmpty() );
-        assertEquals( expectedMembers, initialMembers );
-        assertEquals( expectedMembers, deletedInitialMembers );
+        assertFalse( initialServers.isEmpty() );
+        assertFalse( deletedInitialServers.isEmpty() );
+        assertEquals( expectedMembers, initialServers );
+        assertEquals( expectedMembers, deletedInitialServers );
         assertEquals( storeId1, storeId );
         assertEquals( storeId2, deletedStoreId );
     }
@@ -94,7 +93,7 @@ class ClusterSystemGraphDbmsModelTest
 
         // when/then
         assertThrows( IllegalStateException.class, () -> dbmsModel.getStoreId( nonExistentDatabaseId ) );
-        assertThrows( IllegalStateException.class, () -> dbmsModel.getInitialMembers( nonExistentDatabaseId ) );
+        assertThrows( IllegalStateException.class, () -> dbmsModel.getInitialServers( nonExistentDatabaseId ) );
     }
 
     private void makeDatabaseNodeForCluster( Transaction tx, NamedDatabaseId namedDatabaseId, Set<UUID> initialMembers, StoreId storeId, boolean deleted )
@@ -105,7 +104,7 @@ class ClusterSystemGraphDbmsModelTest
         node.setProperty( DATABASE_STATUS_PROPERTY, "online" );
         node.setProperty( DATABASE_UUID_PROPERTY, namedDatabaseId.databaseId().uuid().toString() );
 
-        node.setProperty( INITIAL_MEMBERS, initialMembers.stream().map( UUID::toString ).toArray( String[]::new ) );
+        node.setProperty( INITIAL_SERVERS, initialMembers.stream().map( UUID::toString ).toArray( String[]::new ) );
 
         node.setProperty( STORE_CREATION_TIME, storeId.getCreationTime() );
         node.setProperty( STORE_RANDOM_ID, storeId.getRandomId() );

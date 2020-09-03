@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.discovery.akka.directory
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
 import com.neo4j.causalclustering.discovery.akka.NeoSuite
 import com.neo4j.causalclustering.identity.IdFactory
-import com.neo4j.causalclustering.identity.MemberId
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 

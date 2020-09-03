@@ -15,7 +15,6 @@ import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.error_handling.PanicService;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitorService;
 import com.neo4j.causalclustering.upstream.NoOpUpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
@@ -33,6 +32,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.Database;
@@ -52,7 +52,7 @@ class ReadReplicaDatabaseFactory
     private final Config config;
     private final JobScheduler jobScheduler;
     private final TopologyService topologyService;
-    private final MemberId myIdentity;
+    private final ServerId serverId;
     private final CatchupComponentsRepository catchupComponentsRepository;
     private final CatchupClientFactory catchupClientFactory;
     private final ReplicatedDatabaseEventService databaseEventService;
@@ -62,14 +62,14 @@ class ReadReplicaDatabaseFactory
     private final PageCacheTracer pageCacheTracer;
 
     ReadReplicaDatabaseFactory( Config config, SystemNanoClock clock, JobScheduler jobScheduler, TopologyService topologyService,
-            MemberId myIdentity, CatchupComponentsRepository catchupComponentsRepository,
+            ServerId serverId, CatchupComponentsRepository catchupComponentsRepository,
             CatchupClientFactory catchupClientFactory, ReplicatedDatabaseEventService databaseEventService, ClusterStateStorageFactory clusterStateFactory,
             PanicService panicService, DatabaseStartAborter databaseStartAborter, PageCacheTracer pageCacheTracer )
     {
         this.config = config;
         this.jobScheduler = jobScheduler;
         this.topologyService = topologyService;
-        this.myIdentity = myIdentity;
+        this.serverId = serverId;
         this.catchupComponentsRepository = catchupComponentsRepository;
         this.catchupClientFactory = catchupClientFactory;
         this.databaseEventService = databaseEventService;
@@ -94,9 +94,9 @@ class ReadReplicaDatabaseFactory
 
         TimerService timerService = new TimerService( jobScheduler, internalLogProvider );
         ConnectToRandomCoreServerStrategy defaultStrategy = new ConnectToRandomCoreServerStrategy();
-        defaultStrategy.inject( topologyService, config, internalLogProvider, myIdentity );
+        defaultStrategy.inject( topologyService, config, internalLogProvider, serverId );
         UpstreamDatabaseStrategySelector upstreamDatabaseStrategySelector = createUpstreamDatabaseStrategySelector(
-                myIdentity, config, internalLogProvider, topologyService, defaultStrategy );
+                serverId, config, internalLogProvider, topologyService, defaultStrategy );
 
         DatabasePanicker panicker = panicService.panickerFor( namedDatabaseId );
         ReplicatedDatabaseEventDispatch databaseEventDispatch = databaseEventService.getDatabaseEventDispatch( namedDatabaseId );
@@ -105,7 +105,7 @@ class ReadReplicaDatabaseFactory
                 config, databaseEventDispatch, pageCacheTracer );
         databaseContext.dependencies().satisfyDependency( catchupProcess );
 
-        var raftIdStorage = clusterStateFactory.createRaftIdStorage( databaseContext.databaseId().name(), internalLogProvider );
+        var raftIdStorage = clusterStateFactory.createRaftGroupIdStorage( databaseContext.databaseId().name(), internalLogProvider );
 
         // TODO: Fix lifecycle issue.
         Supplier<CatchupComponents> catchupComponentsSupplier = () -> catchupComponentsRepository.componentsFor( namedDatabaseId ).orElseThrow(
@@ -124,7 +124,7 @@ class ReadReplicaDatabaseFactory
         return new ReadReplicaDatabase( catchupProcess, kernelDatabase, clusterComponents, bootstrap, panicHandler, raftIdCheck, topologyNotifier );
     }
 
-    private UpstreamDatabaseStrategySelector createUpstreamDatabaseStrategySelector( MemberId myself, Config config, LogProvider logProvider,
+    private UpstreamDatabaseStrategySelector createUpstreamDatabaseStrategySelector( ServerId myself, Config config, LogProvider logProvider,
             TopologyService topologyService, ConnectToRandomCoreServerStrategy defaultStrategy )
     {
         UpstreamDatabaseStrategiesLoader loader;

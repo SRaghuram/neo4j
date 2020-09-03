@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.consensus.outcome.ConsensusOutcome;
 import com.neo4j.causalclustering.core.consensus.outcome.SnapshotRequirement;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 
 import java.util.Optional;
@@ -86,7 +86,7 @@ public class RaftMessageApplier implements LifecycleMessageHandler<RaftMessages.
     }
 
     @Override
-    public synchronized void start( RaftId raftId )
+    public synchronized void start( RaftGroupId raftGroupId )
     {
         stopped = false;
     }

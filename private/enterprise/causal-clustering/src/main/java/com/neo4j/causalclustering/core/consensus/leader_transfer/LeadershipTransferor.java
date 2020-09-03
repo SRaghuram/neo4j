@@ -6,20 +6,22 @@
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.CoreServerIdentity;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.configuration.ServerGroupName;
 
 import java.time.Clock;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferTarget.NO_TARGET;
@@ -29,16 +31,16 @@ import static java.util.stream.Collectors.toSet;
 class LeadershipTransferor
 {
     private final Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler;
-    private final ClusteringIdentityModule identityModule;
+    private final CoreServerIdentity myIdentity;
     private final DatabasePenalties databasePenalties;
     private final RaftMembershipResolver membershipResolver;
     private final Clock clock;
 
-    LeadershipTransferor( Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler,
-            ClusteringIdentityModule identityModule,DatabasePenalties databasePenalties, RaftMembershipResolver membershipResolver, Clock clock )
+    LeadershipTransferor( Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler, CoreServerIdentity myIdentity,
+            DatabasePenalties databasePenalties, RaftMembershipResolver membershipResolver, Clock clock )
     {
         this.messageHandler = messageHandler;
-        this.identityModule = identityModule;
+        this.myIdentity = myIdentity;
         this.databasePenalties = databasePenalties;
         this.membershipResolver = membershipResolver;
         this.clock = clock;
@@ -58,8 +60,7 @@ class LeadershipTransferor
         {
             throw new IllegalArgumentException( "Server groups must exists for database " + targetDatabaseId + " when sending to prioritised groups." );
         }
-        handleProposal( target, prioritisedGroups );
-        return true;
+        return handleProposal( target, prioritisedGroups );
     }
 
     boolean balanceLeadership( Collection<NamedDatabaseId> leaders, SelectionStrategy selectionStrategy )
@@ -87,30 +88,36 @@ class LeadershipTransferor
 
     private Stream<TransferCandidates> findValidTransferCandidatesForDb( NamedDatabaseId namedDatabaseId )
     {
-        var raftMembership = membershipResolver.membersFor( namedDatabaseId );
-        var votingMembers = raftMembership.votingMembers();
-        Predicate<RaftMemberId> notSuspendedOrMe = member ->
-                !Objects.equals( member, identityModule.memberId( namedDatabaseId ) ) &&
-                databasePenalties.notSuspended( namedDatabaseId.databaseId(), member.serverId() );
+        var votingServers = new HashSet<>( membershipResolver.votingServers( namedDatabaseId ) );
 
-        var validMembers = votingMembers.stream()
+        Predicate<ServerId> notSuspendedOrMe = serverId ->
+                !Objects.equals( serverId, myIdentity.serverId() ) &&
+                databasePenalties.notSuspended( namedDatabaseId.databaseId(), serverId );
+
+        var validServers = votingServers.stream()
                 .filter( notSuspendedOrMe )
                 .collect( toSet() );
 
-        if ( validMembers.isEmpty() )
+        if ( validServers.isEmpty() )
         {
             return Stream.empty();
         }
 
-        return Stream.of( new TransferCandidates( namedDatabaseId, validMembers ) );
+        return Stream.of( new TransferCandidates( namedDatabaseId, validServers ) );
     }
 
-    private void handleProposal( LeaderTransferTarget transferTarget, Set<ServerGroupName> prioritisedGroups )
+    private boolean handleProposal( LeaderTransferTarget transferTarget, Set<ServerGroupName> prioritisedGroups )
     {
-        var raftId = RaftId.from( transferTarget.databaseId().databaseId() );
-        var proposal = new RaftMessages.LeadershipTransfer.Proposal(
-                identityModule.memberId( transferTarget.databaseId() ), transferTarget.to(), prioritisedGroups );
-        var message = RaftMessages.InboundRaftMessageContainer.of( clock.instant(), raftId, proposal );
+        var raftGroupId = RaftGroupId.from( transferTarget.databaseId().databaseId() );
+        final RaftMemberId from = myIdentity.raftMemberId( transferTarget.databaseId() );
+        final RaftMemberId to = membershipResolver.resolveRaftMemberForServer( transferTarget.databaseId(), transferTarget.to() );
+        if ( to == null )
+        {
+            return false;
+        }
+        var proposal = new RaftMessages.LeadershipTransfer.Proposal( from, to, prioritisedGroups );
+        var message = RaftMessages.InboundRaftMessageContainer.of( clock.instant(), raftGroupId, proposal );
         messageHandler.handle( message );
+        return true;
     }
 }

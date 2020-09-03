@@ -15,13 +15,13 @@ import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForServerId;
-import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseToMember;
+import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseServer;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.directory.ReplicatedLeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRefreshMessage;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.dbms.EnterpriseOperatorState;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -60,7 +60,7 @@ class BaseAkkaSerializerTest
     {
         String actorPath = String.format( "akka://%s/user/%s", system.name(), ActorRefMarshalTest.Actor.name );
         var randomDbId = randomDatabaseId();
-        var randomRaftId = RaftId.from( randomDbId );
+        var randomRaftId = RaftGroupId.from( randomDbId );
         return Stream.of(
                 new Object[]{new LeaderInfo( IdFactory.randomRaftMemberId(), 37L ), new LeaderInfoSerializer()},
                 new Object[]{IdFactory.randomRaftId(), new RaftIdSerializer()},
@@ -76,8 +76,7 @@ class BaseAkkaSerializerTest
                         system.provider().resolveActorRef( actorPath + 2 ),
                         Collections.emptyMap() ),
                              new ReadReplicaRefreshMessageSerializer( (ExtendedActorSystem) system )},
-                new Object[]{IdFactory.randomMemberId(),
-                             new MemberIdSerializer()},
+                new Object[]{IdFactory.randomRaftMemberId(), new RaftMemberIdSerializer()},
                 new Object[]{TestTopology.addressesForReadReplica( 74839 ),
                              new ReadReplicaInfoSerializer()},
                 new Object[]{new DatabaseCoreTopology( randomDbId, randomRaftId,
@@ -88,7 +87,7 @@ class BaseAkkaSerializerTest
                 new Object[]{LeaderInfoDirectoryMessageMarshalTest.generate(), new DatabaseLeaderInfoMessageSerializer()},
                 new Object[]{new ReplicatedLeaderInfo( new LeaderInfo( IdFactory.randomRaftMemberId(), 14L ) ), new ReplicatedLeaderInfoSerializer()},
                 new Object[]{randomDatabaseId(), new DatabaseIdWithoutNameSerializer()},
-                new Object[]{randomDatabaseToMember(), new DatabaseToMemberSerializer()},
+                new Object[]{randomDatabaseToServer(), new DatabaseServerSerializer()},
                 new Object[]{randomDatabaseState( randomDatabaseId() ), new DiscoveryDatabaseStateSerializer()},
                 new Object[]{randomReplicatedState(), new ReplicatedDatabaseStateSerializer()}
         );
@@ -118,9 +117,9 @@ class BaseAkkaSerializerTest
         assertThat( binary.length ).isLessThanOrEqualTo( serializer.sizeHint() );
     }
 
-    private static DatabaseToMember randomDatabaseToMember()
+    private static DatabaseServer randomDatabaseToServer()
     {
-        return new DatabaseToMember( randomDatabaseId(), IdFactory.randomMemberId() );
+        return new DatabaseServer( randomDatabaseId(), IdFactory.randomServerId() );
     }
 
     private static DiscoveryDatabaseState randomDatabaseState( DatabaseId databaseId )
@@ -135,7 +134,7 @@ class BaseAkkaSerializerTest
     {
         var isCore = ThreadLocalRandom.current().nextBoolean();
         var id = randomDatabaseId();
-        var randomMemberStates = Stream.generate( () -> Map.entry( IdFactory.randomMemberId(), randomDatabaseState( id ) ) )
+        var randomMemberStates = Stream.generate( () -> Map.entry( IdFactory.randomServerId(), randomDatabaseState( id ) ) )
                 .limit( 5 )
                 .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) );
         if ( isCore )

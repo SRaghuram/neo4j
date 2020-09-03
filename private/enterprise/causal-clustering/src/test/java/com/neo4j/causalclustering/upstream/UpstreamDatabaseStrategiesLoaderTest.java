@@ -7,13 +7,13 @@ package com.neo4j.causalclustering.upstream;
 
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.configuration.CausalClusteringSettings.upstream_selection_strategy;
@@ -23,8 +23,7 @@ import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 class UpstreamDatabaseStrategiesLoaderTest
 {
-
-    private MemberId myself = IdFactory.randomMemberId();
+    private ServerId myself = IdFactory.randomServerId();
 
     @Test
     void shouldReturnConfiguredClassesOnly()

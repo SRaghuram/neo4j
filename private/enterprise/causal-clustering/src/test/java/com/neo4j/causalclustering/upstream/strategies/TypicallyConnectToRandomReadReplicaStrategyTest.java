@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.upstream.strategies;
 
 import com.neo4j.causalclustering.discovery.FakeTopologyService;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.configuration.ServerGroupName;
 import org.junit.jupiter.api.Test;
 
@@ -18,12 +17,13 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
-import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberId;
-import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberIds;
+import static com.neo4j.causalclustering.discovery.FakeTopologyService.serverId;
+import static com.neo4j.causalclustering.discovery.FakeTopologyService.serverIds;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -33,29 +33,29 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TypicallyConnectToRandomReadReplicaStrategyTest
 {
     private final NamedDatabaseId namedDatabaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
-    private final MemberId myself = memberId( 0 );
+    private final ServerId myself = serverId( 0 );
 
     @Test
     void shouldConnectToCoreOneInTenTimesByDefault()
     {
         // given
-        MemberId theCoreMemberId = memberId( 1 );
-        var topologyService = new FakeTopologyService( Set.of( theCoreMemberId ), memberIds( 2, 102 ),
+        ServerId theCoreServerId = serverId( 1 );
+        var topologyService = new FakeTopologyService( Set.of( theCoreServerId ), serverIds( 2, 102 ),
                 myself, Set.of( namedDatabaseId ) );
 
         TypicallyConnectToRandomReadReplicaStrategy connectionStrategy = new TypicallyConnectToRandomReadReplicaStrategy( 2 );
         connectionStrategy.inject( topologyService, Config.defaults(), NullLogProvider.getInstance(), myself );
 
-        List<MemberId> responses = new ArrayList<>();
+        List<ServerId> responses = new ArrayList<>();
 
         // when
         for ( int i = 0; i < 3; i++ )
         {
             for ( int j = 0; j < 2; j++ )
             {
-                responses.add( connectionStrategy.upstreamMemberForDatabase( namedDatabaseId ).get() );
+                responses.add( connectionStrategy.upstreamServerForDatabase( namedDatabaseId ).get() );
             }
-            assertThat( responses, hasItem( theCoreMemberId ) );
+            assertThat( responses, hasItem( theCoreServerId ) );
             responses.clear();
         }
 
@@ -74,7 +74,7 @@ class TypicallyConnectToRandomReadReplicaStrategyTest
                 NullLogProvider.getInstance(), myself );
 
         // when
-        Optional<MemberId> found = typicallyConnectToRandomReadReplicaStrategy.upstreamMemberForDatabase( namedDatabaseId );
+        Optional<ServerId> found = typicallyConnectToRandomReadReplicaStrategy.upstreamServerForDatabase( namedDatabaseId );
 
         // then
         assertTrue( found.isPresent() );
@@ -88,13 +88,13 @@ class TypicallyConnectToRandomReadReplicaStrategyTest
         TypicallyConnectToRandomReadReplicaStrategy connectionStrategy = new TypicallyConnectToRandomReadReplicaStrategy( 1 );
 
         // and requesting core member will return self and another member
-        MemberId otherCoreMember = memberId( 1 );
-        var topologyService = new FakeTopologyService( Set.of( myself, otherCoreMember ), memberIds( 2, 4 ),
+        ServerId otherCoreServer = serverId( 1 );
+        var topologyService = new FakeTopologyService( Set.of( myself, otherCoreServer ), serverIds( 2, 4 ),
                 myself, Set.of( namedDatabaseId ) );
         connectionStrategy.inject( topologyService, Config.defaults(), NullLogProvider.getInstance(), myself );
 
         // when
-        Optional<MemberId> found = connectionStrategy.upstreamMemberForDatabase( namedDatabaseId );
+        Optional<ServerId> found = connectionStrategy.upstreamServerForDatabase( namedDatabaseId );
 
         // then
         assertTrue( found.isPresent() );
@@ -108,15 +108,15 @@ class TypicallyConnectToRandomReadReplicaStrategyTest
         TypicallyConnectToRandomReadReplicaStrategy connectionStrategy = new TypicallyConnectToRandomReadReplicaStrategy( 1 );
 
         // and
-        MemberId firstOther = memberId( 1 );
-        MemberId secondOther = memberId( 2 );
+        ServerId firstOther = serverId( 1 );
+        ServerId secondOther = serverId( 2 );
         var topologyService = new FakeTopologyService( Set.of( myself, firstOther, secondOther ),
-                memberIds( 3, 5 ), myself, Set.of( namedDatabaseId ) );
+                serverIds( 3, 5 ), myself, Set.of( namedDatabaseId ) );
         connectionStrategy.inject( topologyService, Config.defaults(), NullLogProvider.getInstance(), myself );
 
         // when we collect enough results to feel confident of random values
-        List<MemberId> found = IntStream.range( 0, 20 )
-                .mapToObj( i -> connectionStrategy.upstreamMemberForDatabase( namedDatabaseId ) )
+        List<ServerId> found = IntStream.range( 0, 20 )
+                .mapToObj( i -> connectionStrategy.upstreamServerForDatabase( namedDatabaseId ) )
                 .filter( Optional::isPresent )
                 .map( Optional::get )
                 .collect( Collectors.toList() );

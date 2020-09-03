@@ -9,9 +9,8 @@ import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.configuration.ServerGroupName;
 import org.junit.jupiter.api.Test;
@@ -22,6 +21,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
@@ -44,29 +44,29 @@ class ConnectToRandomCoreServerStrategyTest
     void shouldConnectToRandomCoreServer() throws Exception
     {
         // given
-        MemberId memberId1 = IdFactory.randomMemberId();
-        MemberId memberId2 = IdFactory.randomMemberId();
-        MemberId memberId3 = IdFactory.randomMemberId();
+        ServerId serverId1 = IdFactory.randomServerId();
+        ServerId serverId2 = IdFactory.randomServerId();
+        ServerId serverId3 = IdFactory.randomServerId();
 
         TopologyService topologyService = mock( TopologyService.class );
-        when( topologyService.coreTopologyForDatabase( NAMED_DATABASE_ID ) ).thenReturn( fakeCoreTopology( memberId1, memberId2, memberId3 ) );
+        when( topologyService.coreTopologyForDatabase( NAMED_DATABASE_ID ) ).thenReturn( fakeCoreTopology( serverId1, serverId2, serverId3 ) );
 
         ConnectToRandomCoreServerStrategy connectionStrategy = new ConnectToRandomCoreServerStrategy();
         connectionStrategy.inject( topologyService, Config.defaults(), NullLogProvider.getInstance(), null );
 
         // when
-        Optional<MemberId> memberId = connectionStrategy.upstreamMemberForDatabase( NAMED_DATABASE_ID );
+        Optional<ServerId> memberId = connectionStrategy.upstreamServerForDatabase( NAMED_DATABASE_ID );
 
         // then
         assertTrue( memberId.isPresent() );
-        assertThat( memberId.get(), anyOf( equalTo( memberId1 ), equalTo( memberId2 ), equalTo( memberId3 ) ) );
+        assertThat( memberId.get(), anyOf( equalTo( serverId1 ), equalTo( serverId2 ), equalTo( serverId3 ) ) );
     }
 
     @Test
     void filtersSelf() throws UpstreamDatabaseSelectionException
     {
         // given
-        MemberId myself = MemberId.of( new UUID( 1234, 5678 ) );
+        ServerId myself = new ServerId( new UUID( 1234, 5678 ) );
         Config config = Config.defaults();
         var groupName = new ServerGroupName( "groupName" );
 
@@ -76,28 +76,28 @@ class ConnectToRandomCoreServerStrategyTest
                 myself );
 
         // when
-        Optional<MemberId> found = connectToRandomCoreServerStrategy.upstreamMemberForDatabase( NAMED_DATABASE_ID );
+        Optional<ServerId> found = connectToRandomCoreServerStrategy.upstreamServerForDatabase( NAMED_DATABASE_ID );
 
         // then
         assertTrue( found.isPresent() );
         assertNotEquals( myself, found );
     }
 
-    static DatabaseCoreTopology fakeCoreTopology( MemberId... memberIds )
+    static DatabaseCoreTopology fakeCoreTopology( ServerId... serverIds )
     {
-        assertThat( memberIds, arrayWithSize( greaterThan( 0 ) ) );
+        assertThat( serverIds, arrayWithSize( greaterThan( 0 ) ) );
 
-        RaftId raftId = IdFactory.randomRaftId();
-        Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
+        RaftGroupId raftGroupId = IdFactory.randomRaftId();
+        Map<ServerId,CoreServerInfo> coreMembers = new HashMap<>();
 
         int offset = 0;
 
-        for ( MemberId memberId : memberIds )
+        for ( ServerId serverId : serverIds )
         {
-            coreMembers.put( memberId, TestTopology.addressesForCore( offset, false ) );
+            coreMembers.put( serverId, TestTopology.addressesForCore( offset, false ) );
             offset++;
         }
 
-        return new DatabaseCoreTopology( NAMED_DATABASE_ID.databaseId(), raftId, coreMembers );
+        return new DatabaseCoreTopology( NAMED_DATABASE_ID.databaseId(), raftGroupId, coreMembers );
     }
 }

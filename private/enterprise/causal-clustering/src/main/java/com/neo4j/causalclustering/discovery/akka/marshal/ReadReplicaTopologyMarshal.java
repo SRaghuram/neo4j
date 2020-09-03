@@ -7,12 +7,12 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import com.neo4j.causalclustering.identity.MemberId;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.marshal.ChannelMarshal;
@@ -23,7 +23,7 @@ import org.neo4j.kernel.database.DatabaseId;
 public class ReadReplicaTopologyMarshal extends SafeChannelMarshal<DatabaseReadReplicaTopology>
 {
     private final ChannelMarshal<ReadReplicaInfo> readReplicaInfoMarshal;
-    private final ChannelMarshal<MemberId> memberIdMarshal = new MemberId.Marshal();
+    private final ChannelMarshal<ServerId> serverIdMarshal = ServerId.Marshal.INSTANCE;
 
     public ReadReplicaTopologyMarshal()
     {
@@ -35,12 +35,12 @@ public class ReadReplicaTopologyMarshal extends SafeChannelMarshal<DatabaseReadR
     {
         DatabaseId databaseId = DatabaseIdWithoutNameMarshal.INSTANCE.unmarshal( channel );
         int size = channel.getInt();
-        HashMap<MemberId,ReadReplicaInfo> replicas = new HashMap<>( size );
+        HashMap<ServerId,ReadReplicaInfo> replicas = new HashMap<>( size );
         for ( int i = 0; i < size; i++ )
         {
-            MemberId memberId = memberIdMarshal.unmarshal( channel );
+            ServerId serverId = serverIdMarshal.unmarshal( channel );
             ReadReplicaInfo readReplicaInfo = readReplicaInfoMarshal.unmarshal( channel );
-            replicas.put( memberId, readReplicaInfo );
+            replicas.put( serverId, readReplicaInfo );
         }
 
         return new DatabaseReadReplicaTopology( databaseId, replicas );
@@ -51,11 +51,11 @@ public class ReadReplicaTopologyMarshal extends SafeChannelMarshal<DatabaseReadR
     {
         DatabaseIdWithoutNameMarshal.INSTANCE.marshal( readReplicaTopology.databaseId(), channel );
         channel.putInt( readReplicaTopology.servers().size() );
-        for ( Map.Entry<MemberId,ReadReplicaInfo> entry : readReplicaTopology.servers().entrySet() )
+        for ( Map.Entry<ServerId,ReadReplicaInfo> entry : readReplicaTopology.servers().entrySet() )
         {
-            MemberId memberId = entry.getKey();
+            ServerId serverId = entry.getKey();
             ReadReplicaInfo readReplicaInfo = entry.getValue();
-            memberIdMarshal.marshal( memberId, channel );
+            serverIdMarshal.marshal( serverId, channel );
             readReplicaInfoMarshal.marshal( readReplicaInfo, channel );
         }
     }

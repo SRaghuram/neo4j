@@ -8,13 +8,13 @@ package com.neo4j.causalclustering.discovery;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.dbms.DatabaseStateChangedListener;
 
 import java.util.Map;
 
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
@@ -25,31 +25,35 @@ public interface TopologyService extends Lifecycle, DatabaseStateChangedListener
 {
     void onDatabaseStart( NamedDatabaseId namedDatabaseId );
 
+    void onRaftMemberKnown( NamedDatabaseId namedDatabaseId );
+
     void onDatabaseStop( NamedDatabaseId namedDatabaseId );
 
-    MemberId memberId();
+    ServerId serverId();
 
-    Map<MemberId,CoreServerInfo> allCoreServers();
+    Map<ServerId,CoreServerInfo> allCoreServers();
 
-    Map<MemberId,ReadReplicaInfo> allReadReplicas();
+    Map<ServerId,ReadReplicaInfo> allReadReplicas();
 
     DatabaseCoreTopology coreTopologyForDatabase( NamedDatabaseId namedDatabaseId );
 
     DatabaseReadReplicaTopology readReplicaTopologyForDatabase( NamedDatabaseId namedDatabaseId );
 
-    SocketAddress lookupCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException;
+    SocketAddress lookupCatchupAddress( ServerId upstream ) throws CatchupAddressResolutionException;
 
     LeaderInfo getLeader( NamedDatabaseId namedDatabaseId );
 
-    RoleInfo lookupRole( NamedDatabaseId namedDatabaseId, MemberId memberId );
+    RoleInfo lookupRole( NamedDatabaseId namedDatabaseId, ServerId serverId );
 
-    DiscoveryDatabaseState lookupDatabaseState( NamedDatabaseId namedDatabaseId, MemberId memberId );
+    DiscoveryDatabaseState lookupDatabaseState( NamedDatabaseId namedDatabaseId, ServerId serverId );
 
-    Map<MemberId,DiscoveryDatabaseState> allCoreStatesForDatabase( NamedDatabaseId namedDatabaseId );
+    Map<ServerId,DiscoveryDatabaseState> allCoreStatesForDatabase( NamedDatabaseId namedDatabaseId );
 
-    Map<MemberId,DiscoveryDatabaseState> allReadReplicaStatesForDatabase( NamedDatabaseId namedDatabaseId );
+    Map<ServerId,DiscoveryDatabaseState> allReadReplicaStatesForDatabase( NamedDatabaseId namedDatabaseId );
 
     boolean isHealthy();
 
-    RaftMemberId resolveRaftMemberForServer( NamedDatabaseId namedDatabaseId, MemberId serverId );
+    RaftMemberId resolveRaftMemberForServer( NamedDatabaseId namedDatabaseId, ServerId serverId );
+
+    ServerId resolveServerForRaftMember( RaftMemberId raftMemberId );
 }

@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessageNettyHandler;
 import com.neo4j.causalclustering.core.consensus.protocol.RaftProtocolServerInstaller;
-import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
+import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.logging.RaftMessageLogger;
 import com.neo4j.causalclustering.messaging.LoggingInbound;
@@ -62,7 +62,7 @@ public class RaftServerFactory
     public static final String RAFT_SERVER_NAME = "raft-server";
 
     private final GlobalModule globalModule;
-    private final ClusteringIdentityModule clusteringIdentityModule;
+    private final CoreServerIdentity myIdentity;
     private final ApplicationSupportedProtocols supportedApplicationProtocol;
     private final RaftMessageLogger<RaftMemberId> raftMessageLogger;
     private final NettyPipelineBuilderFactory pipelineBuilderFactory;
@@ -71,12 +71,12 @@ public class RaftServerFactory
     private final ServerNameService serverNameService;
     private final LogProvider internalLogProvider;
 
-    RaftServerFactory( GlobalModule globalModule, ClusteringIdentityModule clusteringIdentityModule, NettyPipelineBuilderFactory pipelineBuilderFactory,
+    RaftServerFactory( GlobalModule globalModule, CoreServerIdentity myIdentity, NettyPipelineBuilderFactory pipelineBuilderFactory,
             RaftMessageLogger<RaftMemberId> raftMessageLogger, ApplicationSupportedProtocols supportedApplicationProtocol,
             Collection<ModifierSupportedProtocols> supportedModifierProtocols, DatabaseIdRepository databaseIdRepository )
     {
         this.globalModule = globalModule;
-        this.clusteringIdentityModule = clusteringIdentityModule;
+        this.myIdentity = myIdentity;
         this.supportedApplicationProtocol = supportedApplicationProtocol;
         this.raftMessageLogger = raftMessageLogger;
         this.pipelineBuilderFactory = pipelineBuilderFactory;
@@ -116,8 +116,7 @@ public class RaftServerFactory
         var raftServer = new Server( channelInitializer, installedProtocolsHandler, serverNameService, raftListenAddress, raftServerExecutor,
                 globalModule.getConnectorPortRegister(), BootstrapConfiguration.serverConfig( config ) );
 
-        var myself = /*RaftMessageLogger*/ RaftMemberId.from( clusteringIdentityModule.memberId() );
-        var loggingRaftInbound = new LoggingInbound( nettyHandler, raftMessageLogger, myself, databaseIdRepository );
+        var loggingRaftInbound = new LoggingInbound( nettyHandler, raftMessageLogger, myIdentity, databaseIdRepository );
         loggingRaftInbound.registerHandler( raftMessageDispatcher );
 
         return raftServer;

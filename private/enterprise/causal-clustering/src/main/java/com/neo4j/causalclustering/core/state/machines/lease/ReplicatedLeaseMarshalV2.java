@@ -25,14 +25,14 @@ public class ReplicatedLeaseMarshalV2
     {
         DatabaseIdWithoutNameMarshal.INSTANCE.marshal( leaseRequest.databaseId(), channel );
         channel.putInt( leaseRequest.id() );
-        new RaftMemberId.Marshal().marshal( leaseRequest.owner(), channel );
+        RaftMemberId.Marshal.INSTANCE.marshal( leaseRequest.owner(), channel );
     }
 
     public static ReplicatedLeaseRequest unmarshal( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
         DatabaseId databaseId = DatabaseIdWithoutNameMarshal.INSTANCE.unmarshal( channel );
         int leaseId = channel.getInt();
-        RaftMemberId owner = new RaftMemberId.Marshal().unmarshal( channel );
+        RaftMemberId owner = RaftMemberId.Marshal.INSTANCE.unmarshal( channel );
         return new ReplicatedLeaseRequest( owner, leaseId, databaseId );
     }
 }

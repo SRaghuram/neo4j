@@ -8,11 +8,11 @@ package com.neo4j.causalclustering.core.state.machines.lease;
 import com.neo4j.causalclustering.core.state.CoreStateFiles;
 import com.neo4j.causalclustering.core.state.storage.DurableStateStorage;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
-import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
+import org.neo4j.io.marshal.SafeStateMarshal;
 import org.neo4j.io.state.StateStorage;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;

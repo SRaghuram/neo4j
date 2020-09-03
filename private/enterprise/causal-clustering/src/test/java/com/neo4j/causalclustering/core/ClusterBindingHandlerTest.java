@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -28,10 +28,10 @@ import static org.mockito.Mockito.verify;
 
 class ClusterBindingHandlerTest
 {
-    private RaftId raftId = IdFactory.randomRaftId();
+    private RaftGroupId raftGroupId = IdFactory.randomRaftId();
 
     private RaftMessages.InboundRaftMessageContainer<?> heartbeat =
-            RaftMessages.InboundRaftMessageContainer.of( Instant.now(), raftId,
+            RaftMessages.InboundRaftMessageContainer.of( Instant.now(), raftGroupId,
                                                          new RaftMessages.Heartbeat( IdFactory.randomRaftMemberId(), 0L, 0, 0 ) );
 
     @SuppressWarnings( "unchecked" )
@@ -54,7 +54,7 @@ class ClusterBindingHandlerTest
     void shouldDropMessagesIfHasBeenStopped() throws Throwable
     {
         // given
-        handler.start( raftId );
+        handler.start( raftGroupId );
         handler.stop();
 
         // when
@@ -68,7 +68,7 @@ class ClusterBindingHandlerTest
     void shouldDropMessagesIfForDifferentRaftId() throws Throwable
     {
         // given
-        handler.start( raftId );
+        handler.start( raftGroupId );
 
         // when
         handler.handle( RaftMessages.InboundRaftMessageContainer.of(
@@ -84,7 +84,7 @@ class ClusterBindingHandlerTest
     void shouldDelegateMessages() throws Throwable
     {
         // given
-        handler.start( raftId );
+        handler.start( raftGroupId );
 
         // when
         handler.handle( heartbeat );
@@ -97,10 +97,10 @@ class ClusterBindingHandlerTest
     void shouldDelegateStartCalls() throws Throwable
     {
         // when
-        handler.start( raftId );
+        handler.start( raftGroupId );
 
         // then
-        verify( delegate ).start( raftId );
+        verify( delegate ).start( raftGroupId );
     }
 
     @Test
@@ -117,25 +117,25 @@ class ClusterBindingHandlerTest
     void shouldRegisterInRaftMessageDispatcherWhenStarted() throws Throwable
     {
         // when
-        handler.start( raftId );
+        handler.start( raftGroupId );
 
         // then
-        verify( messageDispatcher ).registerHandlerChain( raftId, handler );
+        verify( messageDispatcher ).registerHandlerChain( raftGroupId, handler );
     }
 
     @Test
     void shouldDeregisterInRaftMessageDispatcherWhenStopped() throws Throwable
     {
         // given
-        handler.start( raftId );
+        handler.start( raftGroupId );
 
         // when
         handler.stop();
 
         // then
         InOrder inOrder = inOrder( messageDispatcher );
-        inOrder.verify( messageDispatcher ).registerHandlerChain( raftId, handler );
-        inOrder.verify( messageDispatcher ).deregisterHandlerChain( raftId );
+        inOrder.verify( messageDispatcher ).registerHandlerChain( raftGroupId, handler );
+        inOrder.verify( messageDispatcher ).deregisterHandlerChain( raftGroupId );
     }
 
     @Test
@@ -144,7 +144,7 @@ class ClusterBindingHandlerTest
         // given
         RuntimeException error = new RuntimeException( "Unable to stop" );
         Mockito.doThrow( error ).when( delegate ).stop();
-        handler.start( raftId );
+        handler.start( raftGroupId );
 
         // when
         RuntimeException thrownError = assertThrows( RuntimeException.class, handler::stop );
@@ -152,9 +152,9 @@ class ClusterBindingHandlerTest
 
         // then
         InOrder inOrder = inOrder( messageDispatcher, delegate );
-        inOrder.verify( delegate ).start( raftId );
-        inOrder.verify( messageDispatcher ).registerHandlerChain( raftId, handler );
-        inOrder.verify( messageDispatcher ).deregisterHandlerChain( raftId );
+        inOrder.verify( delegate ).start( raftGroupId );
+        inOrder.verify( messageDispatcher ).registerHandlerChain( raftGroupId, handler );
+        inOrder.verify( messageDispatcher ).deregisterHandlerChain( raftGroupId );
         inOrder.verify( delegate ).stop();
     }
 
@@ -171,14 +171,14 @@ class ClusterBindingHandlerTest
     void shouldStopDelegateIfMessageDispatcherThrows() throws Exception
     {
         var error = new RuntimeException();
-        doThrow( error ).when( messageDispatcher ).deregisterHandlerChain( raftId );
-        handler.start( raftId );
+        doThrow( error ).when( messageDispatcher ).deregisterHandlerChain( raftGroupId );
+        handler.start( raftGroupId );
 
         var thrownError = assertThrows( RuntimeException.class, handler::stop );
 
         assertEquals( error, thrownError );
         var inOrder = inOrder( messageDispatcher, delegate );
-        inOrder.verify( messageDispatcher ).deregisterHandlerChain( raftId );
+        inOrder.verify( messageDispatcher ).deregisterHandlerChain( raftGroupId );
         inOrder.verify( delegate ).stop();
     }
 }
