@@ -11,7 +11,6 @@ import com.neo4j.kernel.impl.store.format.highlimit.HighLimitFormatFamily;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimitFormatSettings;
 import com.neo4j.kernel.impl.store.format.highlimit.NodeRecordFormat;
 import com.neo4j.kernel.impl.store.format.highlimit.PropertyRecordFormat;
-import com.neo4j.kernel.impl.store.format.highlimit.RelationshipGroupRecordFormat;
 import com.neo4j.kernel.impl.store.format.highlimit.RelationshipRecordFormat;
 
 import org.neo4j.kernel.impl.store.format.BaseRecordFormats;
@@ -80,7 +79,7 @@ public class HighLimitV4_0_0 extends BaseRecordFormats
     @Override
     public RecordFormat<RelationshipGroupRecord> relationshipGroup()
     {
-        return new RelationshipGroupRecordFormat();
+        return new RelationshipGroupRecordFormatV4_0_0();
     }
 
     @Override

@@ -48,19 +48,33 @@ public class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Rel
                                                 Integer.BYTES /* first loop */ +
                                                 Integer.BYTES /* owning node */;
 
-    public static final int HAS_OUTGOING_BIT = 0b0000_1000;
-    public static final int HAS_INCOMING_BIT = 0b0001_0000;
-    public static final int HAS_LOOP_BIT     = 0b0010_0000;
-    public static final int HAS_NEXT_BIT     = 0b0100_0000;
+    // For the Dynamic format
+    public static final int D_HAS_OUTGOING_BIT = 0b0000_1000;
+    public static final int D_HAS_INCOMING_BIT = 0b0001_0000;
+    public static final int D_HAS_LOOP_BIT = 0b0010_0000;
+    public static final int D_HAS_NEXT_BIT = 0b0100_0000;
+    // Ideally we would have wanted to have three bits here, one for each direction, like for the other versions of this format.
+    // But there's only one available if we want the format to be backwards compatible. So instead this bit is set if any of
+    // the directions have external degrees and if so the stored owning node will be shifted upwards and the three bits stored in its lsb.
+    public static final int D_HAS_ANY_EXTERNAL_DEGREES_BIT = 0b1000_0000;
+    public static final int D_HAS_DIR_EXTERNAL_DEGREES_MASK = 0b1;
+    public static final int D_HAS_OUT_EXTERNAL_DEGREES_SHIFT = 0;
+    public static final int D_HAS_IN_EXTERNAL_DEGREES_SHIFT = 1;
+    public static final int D_HAS_LOOP_EXTERNAL_DEGREES_SHIFT = 2;
+    public static final int D_OWNING_NODE_EXTERNAL_DEGREES_SHIFT = 3;
 
-    private static final int NEXT_RECORD_BIT = 0b0000_0001;
-    private static final int FIRST_OUT_BIT = 0b0000_0010;
-    private static final int FIRST_IN_BIT = 0b0000_0100;
-    private static final int FIRST_LOOP_BIT = 0b0000_1000;
-    private static final int OWNING_NODE_BIT = 0b0001_0000;
+    // For the Fixed reference format
+    private static final int F_NEXT_RECORD_BIT = 0b0000_0001;
+    private static final int F_FIRST_OUT_BIT = 0b0000_0010;
+    private static final int F_FIRST_IN_BIT = 0b0000_0100;
+    private static final int F_FIRST_LOOP_BIT = 0b0000_1000;
+    private static final int F_OWNING_NODE_BIT = 0b0001_0000;
+    private static final int F_HAS_EXTERNAL_DEGREES_OUT_BIT = 0b0010_0000;
+    private static final int F_HAS_EXTERNAL_DEGREES_IN_BIT = 0b0100_0000;
+    private static final int F_HAS_EXTERNAL_DEGREES_LOOP_BIT = 0b1000_0000;
 
-    private static final long ONE_BIT_OVERFLOW_BIT_MASK = 0xFFFF_FFFE_0000_0000L;
-    private static final long HIGH_DWORD_LAST_BIT_MASK = 0x100000000L;
+    private static final long F_ONE_BIT_OVERFLOW_BIT_MASK = 0xFFFF_FFFE_0000_0000L;
+    private static final long F_HIGH_DWORD_LAST_BIT_MASK = 0x100000000L;
 
     public RelationshipGroupRecordFormat()
     {
@@ -91,13 +105,26 @@ public class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Rel
         else
         {
             int type = getType( cursor );
-            record.initialize( inUse,
-                    type,
-                    decodeCompressedReference( cursor, headerByte, HAS_OUTGOING_BIT, NULL ),
-                    decodeCompressedReference( cursor, headerByte, HAS_INCOMING_BIT, NULL ),
-                    decodeCompressedReference( cursor, headerByte, HAS_LOOP_BIT, NULL ),
-                    decodeCompressedReference( cursor ),
-                    decodeCompressedReference( cursor, headerByte, HAS_NEXT_BIT, NULL ) );
+            long firstOut = decodeCompressedReference( cursor, headerByte, D_HAS_OUTGOING_BIT, NULL );
+            long firstIn = decodeCompressedReference( cursor, headerByte, D_HAS_INCOMING_BIT, NULL );
+            long firstLoop = decodeCompressedReference( cursor, headerByte, D_HAS_LOOP_BIT, NULL );
+            long owningNode = decodeCompressedReference( cursor );
+            long next = decodeCompressedReference( cursor, headerByte, D_HAS_NEXT_BIT, NULL );
+            boolean hasExternalDegreesOut = false;
+            boolean hasExternalDegreesIn = false;
+            boolean hasExternalDegreesLoop = false;
+            boolean hasAnyExternalDegrees = (headerByte & D_HAS_ANY_EXTERNAL_DEGREES_BIT) != 0;
+            if ( hasAnyExternalDegrees )
+            {
+                hasExternalDegreesOut = ((owningNode >> D_HAS_OUT_EXTERNAL_DEGREES_SHIFT) & D_HAS_DIR_EXTERNAL_DEGREES_MASK) != 0;
+                hasExternalDegreesIn = ((owningNode >> D_HAS_IN_EXTERNAL_DEGREES_SHIFT) & D_HAS_DIR_EXTERNAL_DEGREES_MASK) != 0;
+                hasExternalDegreesLoop = ((owningNode >> D_HAS_LOOP_EXTERNAL_DEGREES_SHIFT) & D_HAS_DIR_EXTERNAL_DEGREES_MASK) != 0;
+                owningNode >>= D_OWNING_NODE_EXTERNAL_DEGREES_SHIFT;
+            }
+            record.initialize( inUse, type, firstOut, firstIn, firstLoop, owningNode, next );
+            record.setHasExternalDegreesOut( hasExternalDegreesOut );
+            record.setHasExternalDegreesIn( hasExternalDegreesIn );
+            record.setHasExternalDegreesLoop( hasExternalDegreesLoop );
         }
     }
 
@@ -105,13 +132,15 @@ public class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Rel
     protected byte headerBits( RelationshipGroupRecord record )
     {
         byte header = 0;
-        header = set( header, HAS_OUTGOING_BIT, record.getFirstOut(), NULL );
-        header = set( header, HAS_INCOMING_BIT, record.getFirstIn(), NULL );
-        header = set( header, HAS_LOOP_BIT, record.getFirstLoop(), NULL );
-        header = set( header, HAS_NEXT_BIT, record.getNext(), NULL );
+        header = set( header, D_HAS_OUTGOING_BIT, record.getFirstOut(), NULL );
+        header = set( header, D_HAS_INCOMING_BIT, record.getFirstIn(), NULL );
+        header = set( header, D_HAS_LOOP_BIT, record.getFirstLoop(), NULL );
+        header = set( header, D_HAS_NEXT_BIT, record.getNext(), NULL );
+        header = set( header, D_HAS_ANY_EXTERNAL_DEGREES_BIT, hasAnyExternalDegrees( record ) );
         return header;
     }
 
+    // This is called if the format is the dynamic format
     @Override
     protected int requiredDataLength( RelationshipGroupRecord record )
     {
@@ -119,8 +148,26 @@ public class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Rel
                length( record.getFirstOut(), NULL ) +
                length( record.getFirstIn(), NULL ) +
                length( record.getFirstLoop(), NULL ) +
-               length( record.getOwningNode() ) +
+               length( owningNodeWithExternalDegreesBits( record ) ) +
                length( record.getNext(), NULL );
+    }
+
+    private long owningNodeWithExternalDegreesBits( RelationshipGroupRecord record )
+    {
+        long owningNode = record.getOwningNode();
+        if ( hasAnyExternalDegrees( record ) )
+        {
+            owningNode <<= D_OWNING_NODE_EXTERNAL_DEGREES_SHIFT;
+            owningNode |= record.hasExternalDegreesOut() ? (1 << D_HAS_OUT_EXTERNAL_DEGREES_SHIFT) : 0;
+            owningNode |= record.hasExternalDegreesIn() ? (1 << D_HAS_IN_EXTERNAL_DEGREES_SHIFT) : 0;
+            owningNode |= record.hasExternalDegreesLoop() ? (1 << D_HAS_LOOP_EXTERNAL_DEGREES_SHIFT) : 0;
+        }
+        return owningNode;
+    }
+
+    private boolean hasAnyExternalDegrees( RelationshipGroupRecord record )
+    {
+        return record.hasExternalDegreesOut() || record.hasExternalDegreesIn() || record.hasExternalDegreesLoop();
     }
 
     @Override
@@ -137,7 +184,7 @@ public class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Rel
             encode( cursor, record.getFirstOut(), NULL );
             encode( cursor, record.getFirstIn(), NULL );
             encode( cursor, record.getFirstLoop(), NULL );
-            encode( cursor, record.getOwningNode() );
+            encode( cursor, owningNodeWithExternalDegreesBits( record ) );
             encode( cursor, record.getNext(), NULL );
         }
     }
@@ -146,11 +193,11 @@ public class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Rel
     protected boolean canUseFixedReferences( RelationshipGroupRecord record, int recordSize )
     {
         return isRecordBigEnoughForFixedReferences( recordSize ) &&
-                (record.getNext() == NULL || (record.getNext() & ONE_BIT_OVERFLOW_BIT_MASK) == 0) &&
-                (record.getFirstOut() == NULL || (record.getFirstOut() & ONE_BIT_OVERFLOW_BIT_MASK) == 0) &&
-                (record.getFirstIn() == NULL || (record.getFirstIn() & ONE_BIT_OVERFLOW_BIT_MASK) == 0) &&
-                (record.getFirstLoop() == NULL || (record.getFirstLoop() & ONE_BIT_OVERFLOW_BIT_MASK) == 0) &&
-                (record.getOwningNode() == NULL || (record.getOwningNode() & ONE_BIT_OVERFLOW_BIT_MASK) == 0);
+                (record.getNext() == NULL || (record.getNext() & F_ONE_BIT_OVERFLOW_BIT_MASK) == 0) &&
+                (record.getFirstOut() == NULL || (record.getFirstOut() & F_ONE_BIT_OVERFLOW_BIT_MASK) == 0) &&
+                (record.getFirstIn() == NULL || (record.getFirstIn() & F_ONE_BIT_OVERFLOW_BIT_MASK) == 0) &&
+                (record.getFirstLoop() == NULL || (record.getFirstLoop() & F_ONE_BIT_OVERFLOW_BIT_MASK) == 0) &&
+                (record.getOwningNode() == NULL || (record.getOwningNode() & F_ONE_BIT_OVERFLOW_BIT_MASK) == 0);
     }
 
     private boolean isRecordBigEnoughForFixedReferences( int recordSize )
@@ -165,6 +212,9 @@ public class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Rel
         // [    , x  ] high firstIn bits
         // [    ,x   ] high firstLoop bits
         // [   x,    ] high owner bits
+        // [  x ,    ] has external degrees out
+        // [ x  ,    ] has external degrees in
+        // [x   ,    ] has external degrees loop
         long modifiers = cursor.getByte();
 
         int type = getType( cursor );
@@ -175,11 +225,14 @@ public class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Rel
         long firstLoopLowBits = cursor.getInt() & 0xFFFFFFFFL;
         long owningNodeLowBits = cursor.getInt() & 0xFFFFFFFFL;
 
-        long nextMod = (modifiers & NEXT_RECORD_BIT) << 32;
-        long firstOutMod = (modifiers & FIRST_OUT_BIT) << 31;
-        long firstInMod = (modifiers & FIRST_IN_BIT) << 30;
-        long firstLoopMod = (modifiers & FIRST_LOOP_BIT) << 29;
-        long owningNodeMod = (modifiers & OWNING_NODE_BIT) << 28;
+        long nextMod = (modifiers & F_NEXT_RECORD_BIT) << 32;
+        long firstOutMod = (modifiers & F_FIRST_OUT_BIT) << 31;
+        long firstInMod = (modifiers & F_FIRST_IN_BIT) << 30;
+        long firstLoopMod = (modifiers & F_FIRST_LOOP_BIT) << 29;
+        long owningNodeMod = (modifiers & F_OWNING_NODE_BIT) << 28;
+        boolean hasExternalDegreesOut = (modifiers & F_HAS_EXTERNAL_DEGREES_OUT_BIT) != 0;
+        boolean hasExternalDegreesIn = (modifiers & F_HAS_EXTERNAL_DEGREES_IN_BIT) != 0;
+        boolean hasExternalDegreesLoop = (modifiers & F_HAS_EXTERNAL_DEGREES_LOOP_BIT) != 0;
 
         record.initialize( inUse, type,
                 BaseRecordFormat.longFromIntAndMod( firstOutLowBits, firstOutMod ),
@@ -187,22 +240,32 @@ public class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Rel
                 BaseRecordFormat.longFromIntAndMod( firstLoopLowBits, firstLoopMod ),
                 BaseRecordFormat.longFromIntAndMod( owningNodeLowBits, owningNodeMod ),
                 BaseRecordFormat.longFromIntAndMod( nextLowBits, nextMod ) );
+        record.setHasExternalDegreesOut( hasExternalDegreesOut );
+        record.setHasExternalDegreesIn( hasExternalDegreesIn );
+        record.setHasExternalDegreesLoop( hasExternalDegreesLoop );
     }
 
     private void writeFixedReferencesRecord( RelationshipGroupRecord record, PageCursor cursor )
     {
-        long nextMod = record.getNext() == NULL ? 0 : (record.getNext() & HIGH_DWORD_LAST_BIT_MASK) >> 32;
-        long firstOutMod = record.getFirstOut() == NULL ? 0 : (record.getFirstOut() & HIGH_DWORD_LAST_BIT_MASK) >> 31;
-        long firstInMod = record.getFirstIn() == NULL ? 0 : (record.getFirstIn() & HIGH_DWORD_LAST_BIT_MASK) >> 30;
-        long firstLoopMod = record.getFirstLoop() == NULL ? 0 : (record.getFirstLoop() & HIGH_DWORD_LAST_BIT_MASK) >> 29;
-        long owningNodeMod = record.getOwningNode() == NULL ? 0 : (record.getOwningNode() & HIGH_DWORD_LAST_BIT_MASK) >> 28;
+        long nextMod = record.getNext() == NULL ? 0 : (record.getNext() & F_HIGH_DWORD_LAST_BIT_MASK) >> 32;
+        long firstOutMod = record.getFirstOut() == NULL ? 0 : (record.getFirstOut() & F_HIGH_DWORD_LAST_BIT_MASK) >> 31;
+        long firstInMod = record.getFirstIn() == NULL ? 0 : (record.getFirstIn() & F_HIGH_DWORD_LAST_BIT_MASK) >> 30;
+        long firstLoopMod = record.getFirstLoop() == NULL ? 0 : (record.getFirstLoop() & F_HIGH_DWORD_LAST_BIT_MASK) >> 29;
+        long owningNodeMod = record.getOwningNode() == NULL ? 0 : (record.getOwningNode() & F_HIGH_DWORD_LAST_BIT_MASK) >> 28;
+        long hasExternalDegreesOutMod = record.hasExternalDegreesOut() ? F_HAS_EXTERNAL_DEGREES_OUT_BIT : 0;
+        long hasExternalDegreesInMod = record.hasExternalDegreesIn() ? F_HAS_EXTERNAL_DEGREES_IN_BIT : 0;
+        long hasExternalDegreesLoopMod = record.hasExternalDegreesLoop() ? F_HAS_EXTERNAL_DEGREES_LOOP_BIT : 0;
 
         // [    ,   x] high next bits
         // [    ,  x ] high firstOut bits
         // [    , x  ] high firstIn bits
         // [    ,x   ] high firstLoop bits
         // [   x,    ] high owner bits
-        cursor.putByte( (byte) (nextMod | firstOutMod | firstInMod | firstLoopMod | owningNodeMod) );
+        // [  x ,    ] has external degrees out
+        // [ x  ,    ] has external degrees in
+        // [x   ,    ] has external degrees loop
+        cursor.putByte( (byte) (nextMod | firstOutMod | firstInMod | firstLoopMod | owningNodeMod | hasExternalDegreesOutMod | hasExternalDegreesInMod |
+                hasExternalDegreesLoopMod) );
 
         writeType( cursor, record.getType() );
 

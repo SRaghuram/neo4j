@@ -50,6 +50,7 @@ public class HighLimit extends BaseRecordFormats
                 RecordStorageCapability.FLEXIBLE_SCHEMA_STORE,
                 RecordStorageCapability.INTERNAL_TOKENS,
                 RecordStorageCapability.GBPTREE_ID_FILES,
+                RecordStorageCapability.GROUP_DEGREES_STORE,
                 IndexCapabilities.LuceneCapability.LUCENE_8,
                 IndexCapabilities.IndexProviderCapability.INDEX_PROVIDERS_40,
                 IndexCapabilities.ConfigCapability.SCHEMA_STORE_CONFIG,

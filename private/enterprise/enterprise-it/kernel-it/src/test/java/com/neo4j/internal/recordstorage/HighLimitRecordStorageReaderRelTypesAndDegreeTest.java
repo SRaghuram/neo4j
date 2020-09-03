@@ -25,10 +25,10 @@ import org.neo4j.storageengine.util.SingleDegree;
 import org.neo4j.test.rule.RecordStorageEngineRule;
 
 import static com.neo4j.kernel.impl.store.format.highlimit.BaseHighLimitRecordFormat.HEADER_BIT_FIXED_REFERENCE;
-import static com.neo4j.kernel.impl.store.format.highlimit.RelationshipGroupRecordFormat.HAS_INCOMING_BIT;
-import static com.neo4j.kernel.impl.store.format.highlimit.RelationshipGroupRecordFormat.HAS_LOOP_BIT;
-import static com.neo4j.kernel.impl.store.format.highlimit.RelationshipGroupRecordFormat.HAS_NEXT_BIT;
-import static com.neo4j.kernel.impl.store.format.highlimit.RelationshipGroupRecordFormat.HAS_OUTGOING_BIT;
+import static com.neo4j.kernel.impl.store.format.highlimit.RelationshipGroupRecordFormat.D_HAS_INCOMING_BIT;
+import static com.neo4j.kernel.impl.store.format.highlimit.RelationshipGroupRecordFormat.D_HAS_LOOP_BIT;
+import static com.neo4j.kernel.impl.store.format.highlimit.RelationshipGroupRecordFormat.D_HAS_NEXT_BIT;
+import static com.neo4j.kernel.impl.store.format.highlimit.RelationshipGroupRecordFormat.D_HAS_OUTGOING_BIT;
 import static com.neo4j.kernel.impl.store.format.highlimit.RelationshipRecordFormat.HAS_FIRST_CHAIN_NEXT_BIT;
 import static com.neo4j.kernel.impl.store.format.highlimit.RelationshipRecordFormat.HAS_PROPERTY_BIT;
 import static com.neo4j.kernel.impl.store.format.highlimit.RelationshipRecordFormat.HAS_SECOND_CHAIN_NEXT_BIT;
@@ -77,10 +77,10 @@ public class HighLimitRecordStorageReaderRelTypesAndDegreeTest extends RecordSto
             cursor.setOffset( offset );
             int header = cursor.getByte( offset );
             header |= HEADER_BIT_FIXED_REFERENCE; // Enable the dynamic record format.
-            header |= HAS_OUTGOING_BIT;
-            header |= HAS_INCOMING_BIT;
-            header |= HAS_LOOP_BIT;
-            header |= HAS_NEXT_BIT;
+            header |= D_HAS_OUTGOING_BIT;
+            header |= D_HAS_INCOMING_BIT;
+            header |= D_HAS_LOOP_BIT;
+            header |= D_HAS_NEXT_BIT;
             cursor.putByte( (byte) header );
             while ( cursor.getOffset() < cursor.getCurrentPageSize() - 1 )
             {

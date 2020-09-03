@@ -8,26 +8,32 @@ package com.neo4j.kernel.impl.store.format.highlimit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.RandomExtension;
+import org.neo4j.test.rule.RandomRule;
 
 import static com.neo4j.kernel.impl.store.format.highlimit.BaseHighLimitRecordFormat.NULL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@ExtendWith( RandomExtension.class )
 class RelationshipGroupRecordFormatTest
 {
+    @Inject
+    private RandomRule random;
 
     private RelationshipGroupRecordFormat recordFormat;
     private FixedLinkedStubPageCursor pageCursor;
@@ -54,6 +60,9 @@ class RelationshipGroupRecordFormatTest
         RelationshipGroupRecord target = new RelationshipGroupRecord( 1 );
         source.initialize( true, randomType(), randomFixedReference(), randomFixedReference(),
                 randomFixedReference(), randomFixedReference(), randomFixedReference());
+        source.setHasExternalDegreesOut( random.nextBoolean() );
+        source.setHasExternalDegreesOut( random.nextBoolean() );
+        source.setHasExternalDegreesOut( random.nextBoolean() );
 
         writeReadRecord( source, target );
 
@@ -86,6 +95,9 @@ class RelationshipGroupRecordFormatTest
         RelationshipGroupRecord target = new RelationshipGroupRecord( 1 );
         source.initialize( true, randomType(), randomFixedReference(), randomFixedReference(),
                 randomFixedReference(), randomFixedReference(), randomFixedReference());
+        source.setHasExternalDegreesOut( random.nextBoolean() );
+        source.setHasExternalDegreesOut( random.nextBoolean() );
+        source.setHasExternalDegreesOut( random.nextBoolean() );
 
         writeReadRecord( source, target, RelationshipGroupRecordFormat.FIXED_FORMAT_RECORD_SIZE - 1 );
 
@@ -100,6 +112,9 @@ class RelationshipGroupRecordFormatTest
         RelationshipGroupRecord target = new RelationshipGroupRecord( 1 );
         source.initialize( true, randomType(), randomFixedReference(), randomFixedReference(),
                 randomFixedReference(), randomFixedReference(), randomFixedReference());
+        source.setHasExternalDegreesOut( random.nextBoolean() );
+        source.setHasExternalDegreesOut( random.nextBoolean() );
+        source.setHasExternalDegreesOut( random.nextBoolean() );
 
         writeReadRecord( source, target, RelationshipGroupRecordFormat.FIXED_FORMAT_RECORD_SIZE );
 
@@ -136,7 +151,7 @@ class RelationshipGroupRecordFormatTest
         }
     }
 
-    private static List<Long> buildReferenceList( int differentReferences, long poison )
+    private List<Long> buildReferenceList( int differentReferences, long poison )
     {
         List<Long> references = new ArrayList<>( differentReferences );
         references.add( poison );
@@ -149,6 +164,7 @@ class RelationshipGroupRecordFormatTest
 
     private static void verifySame( RelationshipGroupRecord recordA, RelationshipGroupRecord recordB )
     {
+        assertEquals( recordA, recordB );
         assertEquals( recordA.getType(), recordB.getType(), "Types should be equal." );
         assertEquals( recordA.getFirstIn(), recordB.getFirstIn(), "First In references should be equal." );
         assertEquals( recordA.getFirstLoop(), recordB.getFirstLoop(), "First Loop references should be equal." );
@@ -156,6 +172,9 @@ class RelationshipGroupRecordFormatTest
         assertEquals( recordA.getNext(), recordB.getNext(), "Next references should be equal." );
         assertEquals( recordA.getPrev(), recordB.getPrev(), "Prev references should be equal." );
         assertEquals( recordA.getOwningNode(), recordB.getOwningNode(), "Owning node references should be equal." );
+        assertEquals( recordA.hasExternalDegreesOut(), recordB.hasExternalDegreesOut(), "Has external degrees out should be equal" );
+        assertEquals( recordA.hasExternalDegreesIn(), recordB.hasExternalDegreesIn(), "Has external degrees in should be equal" );
+        assertEquals( recordA.hasExternalDegreesLoop(), recordB.hasExternalDegreesLoop(), "Has external degrees loop should be equal" );
     }
 
     private void writeReadRecord( RelationshipGroupRecord source, RelationshipGroupRecord target ) throws java.io.IOException
@@ -172,19 +191,18 @@ class RelationshipGroupRecordFormatTest
         recordFormat.read( target, pageCursor, RecordLoad.NORMAL, recordSize, pageCursor.getCurrentPageSize() / recordSize );
     }
 
-    private static int randomType()
+    private int randomType()
     {
         return (int) randomReference( 1L << 24 );
     }
 
-    private static long randomFixedReference()
+    private long randomFixedReference()
     {
         return randomReference( 1L << (Integer.SIZE + 1) );
     }
 
-    private static long randomReference( long maxValue )
+    private long randomReference( long maxValue )
     {
-        return ThreadLocalRandom.current().nextLong( maxValue );
+        return random.nextLong( maxValue );
     }
-
 }
