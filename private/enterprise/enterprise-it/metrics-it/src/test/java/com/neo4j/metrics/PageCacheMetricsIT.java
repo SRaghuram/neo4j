@@ -73,7 +73,7 @@ class PageCacheMetricsIT
         }
 
         var greaterThanZero = new Condition<Long>( value -> value > 0, "Greater than zero" );
-        var greaterThanEqualZero = new Condition<Long>( value -> value >= 0, "Greater than zero" );
+        var greaterThanEqualZero = new Condition<Long>( value -> value >= 0, "Greater than or equal to zero" );
         assertMetrics( "Metrics report should include page cache pins", "neo4j.page_cache.pins", greaterThanZero );
         assertMetrics( "Metrics report should include page cache unpins", "neo4j.page_cache.unpins", greaterThanZero );
         assertMetrics( "Metrics report should include page cache evictions", "neo4j.page_cache.evictions", greaterThanEqualZero );

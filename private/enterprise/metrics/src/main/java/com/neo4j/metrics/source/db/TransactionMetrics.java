@@ -61,6 +61,11 @@ public class TransactionMetrics extends LifecycleAdapter
     @Documented( "The ID of the last closed transaction. (counter)" )
     private static final String LAST_CLOSED_TX_ID_TEMPLATE = name( TRANSACTION_PREFIX, "last_closed_tx_id" );
 
+    @Documented( "The transactions' size on heap in bytes. (histogram)" )
+    private static final String TX_SIZE_HEAP_TEMPLATE = name( TRANSACTION_PREFIX, "tx_size_heap" );
+    @Documented( "The transactions' size in native memory in bytes. (histogram)" )
+    private static final String TX_SIZE_NATIVE_TEMPLATE = name( TRANSACTION_PREFIX, "tx_size_native" );
+
     private final String txStarted;
     private final String txPeakConcurrent;
 
@@ -82,6 +87,10 @@ public class TransactionMetrics extends LifecycleAdapter
 
     private final String lastCommittedTxId;
     private final String lastClosedTxId;
+
+    private final String txSizeHeap;
+    private final String txSizeNative;
+    private final TransactionSizeMetrics transactionSizeMetrics = new TransactionSizeMetrics();
 
     private final MetricRegistry registry;
     private final TransactionCounters transactionCounters;
@@ -106,6 +115,8 @@ public class TransactionMetrics extends LifecycleAdapter
         this.writeTxTerminated = name( metricsPrefix, WRITE_TX_TERMINATED_TEMPLATE );
         this.lastCommittedTxId = name( metricsPrefix, LAST_COMMITTED_TX_ID_TEMPLATE );
         this.lastClosedTxId = name( metricsPrefix, LAST_CLOSED_TX_ID_TEMPLATE );
+        this.txSizeHeap = name( metricsPrefix, TX_SIZE_HEAP_TEMPLATE );
+        this.txSizeNative = name( metricsPrefix, TX_SIZE_NATIVE_TEMPLATE );
         this.registry = registry;
         this.transactionIdStoreSupplier = transactionIdStoreSupplier;
         this.transactionCounters = transactionCounters;
@@ -114,6 +125,8 @@ public class TransactionMetrics extends LifecycleAdapter
     @Override
     public void start()
     {
+        transactionCounters.setTransactionSizeCallback( transactionSizeMetrics );
+
         registry.register( txStarted, new MetricsCounter( transactionCounters::getNumberOfStartedTransactions ) );
         registry.register( txPeakConcurrent, new MetricsCounter( transactionCounters::getPeakConcurrentNumberOfTransactions ) );
 
@@ -135,6 +148,9 @@ public class TransactionMetrics extends LifecycleAdapter
 
         registry.register( lastCommittedTxId, new MetricsCounter( () -> transactionIdStoreSupplier.get().getLastCommittedTransactionId() ) );
         registry.register( lastClosedTxId, new MetricsCounter( () -> transactionIdStoreSupplier.get().getLastClosedTransactionId() ) );
+
+        registry.register( txSizeHeap, transactionSizeMetrics.heapTxSizeHistogram() );
+        registry.register( txSizeNative, transactionSizeMetrics.nativeTxSizeHistogram() );
     }
 
     @Override
@@ -161,5 +177,10 @@ public class TransactionMetrics extends LifecycleAdapter
 
         registry.remove( lastCommittedTxId );
         registry.remove( lastClosedTxId );
+
+        registry.remove( txSizeHeap );
+        registry.remove( txSizeNative );
+
+        transactionCounters.setTransactionSizeCallback( null );
     }
 }

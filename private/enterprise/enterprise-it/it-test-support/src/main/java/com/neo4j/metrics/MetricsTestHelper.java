@@ -85,7 +85,21 @@ public final class MetricsTestHelper
         @Override
         public String header()
         {
-            return name().toLowerCase( Locale.ROOT );
+            return name().toLowerCase( Locale.ENGLISH );
+        }
+    }
+
+    enum HistogramField implements CsvField
+    {
+        T,
+        COUNT,
+        MAX,MEAN,MIN,STDDEV,
+        P50,P75,P95,P98,P99,P999;
+
+        @Override
+        public String header()
+        {
+            return name().toLowerCase( Locale.ENGLISH );
         }
     }
 
@@ -141,6 +155,16 @@ public final class MetricsTestHelper
             throws IOException
     {
         return readValueAndAssert( metricFile, 0d, TimerField.T, field, Double::parseDouble, assumption );
+    }
+
+    public static double readHistogramMeanValue( Path metricFile ) throws IOException
+    {
+        return readValueAndAssert( metricFile, 0d, HistogramField.T, HistogramField.MEAN, Double::parseDouble, ( a, b ) -> true );
+    }
+
+    public static int readHistogramCountValue( Path metricFile ) throws IOException
+    {
+        return readValueAndAssert( metricFile, 0, HistogramField.T, HistogramField.COUNT, Integer::parseInt, ( a, b ) -> true );
     }
 
     private static <T, FIELD extends Enum<FIELD> & CsvField> T readValueAndAssert( Path metricFile, T startValue, FIELD timeStampField, FIELD metricsValue,
