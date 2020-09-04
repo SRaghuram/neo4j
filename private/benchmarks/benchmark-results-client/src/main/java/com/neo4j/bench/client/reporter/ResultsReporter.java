@@ -183,12 +183,9 @@ public class ResultsReporter
                                                               recordingDescriptor -> !ignoredRecordingTypes.contains( recordingDescriptor.recordingType() ),
                                                               // attached valid/copied recordings to test run report
                                                               ( recordingDescriptor, recording ) ->
-                                                              {
-                                                                  System.out.println( " --->>> " + s3Folder + recording.getFileName().toString() );
-                                                                  profilerRecordings.with( recordingDescriptor.recordingType(),
-                                                                                           recordingDescriptor.additionalParams(),
-                                                                                           s3Folder + recording.getFileName().toString() );
-                                                              } );
+                                                                      profilerRecordings.with( recordingDescriptor.recordingType(),
+                                                                                               recordingDescriptor.additionalParams(),
+                                                                                               s3Folder + recording.getFileName().toString() ) );
                     }
                     if ( !profilerRecordings.toMap().isEmpty() )
                     {

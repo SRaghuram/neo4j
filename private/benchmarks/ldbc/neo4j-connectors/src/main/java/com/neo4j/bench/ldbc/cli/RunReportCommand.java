@@ -68,7 +68,6 @@ import com.neo4j.bench.model.model.Repository;
 import com.neo4j.bench.model.model.TestRun;
 import com.neo4j.bench.model.model.TestRunReport;
 import com.neo4j.bench.model.process.JvmArgs;
-import com.neo4j.bench.model.util.JsonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -107,18 +106,6 @@ import static java.util.stream.Collectors.toList;
 public class RunReportCommand implements Runnable
 {
     private static final Logger LOG = LoggerFactory.getLogger( RunReportCommand.class );
-
-    // ===================================================
-    // ===================== Export ======================
-    // ===================================================
-
-    private static final String CMD_JSON_OUTPUT = "--json-output";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_JSON_OUTPUT},
-             description = "Path specifying where to export JSON-formatted results",
-             title = "JSON output" )
-    @Required
-    private File jsonOutput;
 
     // ===================================================
     // ====================== Neo4j ======================
@@ -434,6 +421,10 @@ public class RunReportCommand implements Runnable
 
     private static final String LDBC_FORK_NAME = "ldbc-fork";
 
+    public RunReportCommand()
+    {
+    }
+
     @Override
     public void run()
     {
@@ -467,8 +458,6 @@ public class RunReportCommand implements Runnable
 
             LOG.debug(
                     "==============================================================\n" +
-                    CMD_JSON_OUTPUT + " : " + jsonOutput.getAbsolutePath() + "\n" +
-                    "--------------------------------------------------------------\n" +
                     CMD_NEO4J_COMMIT + " : " + neo4jCommit + "\n" +
                     CMD_NEO4J_VERSION + " : " + neo4jVersion + "\n" +
                     CMD_NEO4J_BRANCH + " : " + neo4jBranch + "\n" +
@@ -608,13 +597,11 @@ public class RunReportCommand implements Runnable
                     summaryBenchmark,
                     neo4jConfig,
                     triggeredBy );
-            LOG.debug( "Export results to: " + jsonOutput.getAbsolutePath() );
-            JsonUtil.serializeJson( jsonOutput.toPath(), testRunReport );
 
             ResultsReporter resultsReporter = new ResultsReporter( resultsStoreUsername,
                                                                    resultsStorePassword,
                                                                    resultsStoreUri );
-            resultsReporter.reportAndUpload( testRunReport, s3Bucket, workingDir, awsEndpointURL, REPORT_THEN_FAIL );
+            resultsReporter.reportAndUpload( testRunReport, s3Bucket, resultsDir, awsEndpointURL, REPORT_THEN_FAIL );
         }
         catch ( Exception e )
         {

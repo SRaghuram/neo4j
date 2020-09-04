@@ -62,7 +62,6 @@ if [[ -z "$JAVA_HOME" ]]; then
 fi
 
 ldbc_benchmarks_dir=$(pwd)
-json_path=${ldbc_benchmarks_dir}/results.json
 
 # path to on-out-of-memory script
 basedir=$(dirname "$(realpath "$0")")
@@ -97,7 +96,6 @@ echo "LDBC tooling branch owner: ${tool_branch_owner}"
 echo "------------------------------------------------"
 echo "Results store uri:   ${results_store_uri}"
 echo "Results store user:  ${results_store_user}"
-echo "JSON path:           ${json_path}"
 echo "------------------------------------------------"
 echo "Read params dir:     ${ldbc_read_params}"
 echo "Write params dir:    ${ldbc_write_params}"
@@ -153,7 +151,6 @@ ${jvm_path} -XX:OnOutOfMemoryError="$out_of_memory_script --jvm-pid %p --output-
   --tool-commit "${ldbc_tooling_commit}" \
   --tool-branch-owner "${tool_branch_owner}" \
   --tool-branch "${tool_branch}" \
-  --json-output "${json_path}" \
   --ldbc-jar "${ldbc_benchmarks_dir}"/neo4j-connectors/target/ldbc.jar  \
   --working-dir "${ldbc_working_dir}" \
   --reuse-db "${ldbc_db_reuse_policy}" \
