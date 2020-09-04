@@ -506,8 +506,7 @@ class EndToEndIT extends BaseEndToEndIT
                                 query.benchmark(),
                                 RunPhase.MEASUREMENT,
                                 ParameterizedProfiler.defaultProfiler( profilerType ),
-                                // TODO should this be 'params'?
-                                Parameters.NONE );
+                                params );
                         for ( RecordingType recordingType : profilerType.allRecordingTypes() )
                         {
                             RecordingDescriptor recordingDescriptor = profilerRecordingDescriptor.recordingDescriptorFor( recordingType );
