@@ -153,16 +153,17 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   test("should not be able to pass in parameter from another transaction state with different database") {
     // given
     val tx1 = graph.getGraphDatabaseService.beginTx()
-    managementService.createDatabase("other")
-    val dbOther = managementService.database("other")
+    val dbOtherName = "other"
+    managementService.createDatabase(dbOtherName)
+    val dbOther = managementService.database(dbOtherName)
     val tx2 = dbOther.beginTx()
     tx1.createNode(Label.label("FOO"))
     val node2 = tx2.createNode(Label.label("BOO"))
 
     // then
     failWithErrorOnTx(Configs.All, tx1, "MATCH (b) WHERE b = $param RETURN labels(b)",
-      Seq(s"Can not use an entity from another database. Entity id: ${node2.getId}, entity database: ${tx2.asInstanceOf[InternalTransaction].getDatabaseId}, " +
-        s"expected database: ${tx1.asInstanceOf[InternalTransaction].getDatabaseId}."), params = Map("param" -> node2))
+      Seq(s"Can not use an entity from another database. Entity id: ${node2.getId}, entity database: $dbOtherName, " +
+        s"expected database: ${tx1.asInstanceOf[InternalTransaction].getDatabaseName}."), params = Map("param" -> node2))
 
     tx1.close()
     tx2.close()
