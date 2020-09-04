@@ -70,7 +70,6 @@ class ClusteredShowDatabasesIT
 {
     private static final int LOCAL_STATE_CHANGE_TIMEOUT_SECONDS = 240;
     private static final String ADDITIONAL_DATABASE_NAME = "foo";
-    private static final String SECOND_ADDITIONAL_DATABASE_NAME = "bar";
     private final Set<String> defaultDatabases = Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME );
     private final Set<String> databasesWithAdditional = Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME, ADDITIONAL_DATABASE_NAME );
 
@@ -474,15 +473,13 @@ class ClusteredShowDatabasesIT
             // when
             createDatabase( ADDITIONAL_DATABASE_NAME, cluster );
             waitForClusterToReachLocalState( initialMembers, getNamedDatabaseId( cluster, ADDITIONAL_DATABASE_NAME ), STARTED );
-            createDatabase( SECOND_ADDITIONAL_DATABASE_NAME, cluster );
-            waitForClusterToReachLocalState( initialMembers, getNamedDatabaseId( cluster, SECOND_ADDITIONAL_DATABASE_NAME ), STARTED );
 
             // then
-            assertEventually( "SHOW DATABASES should return 2 rows with an error for database bar", () -> showDatabases( cluster ),
-                              containsError( "The total limit of databases is already reached", "bar", 2 ), timeoutSeconds, SECONDS );
-            assertEventually( format( "SHOW DATABASES should show Started status for members %s, for database bar", initialClusterAddresses ),
+            assertEventually( "SHOW DATABASES should return 2 rows with an error for database foo", () -> showDatabases( cluster ),
+                              containsError( "The total limit of databases is already reached", "foo", 2 ), timeoutSeconds, SECONDS );
+            assertEventually( format( "SHOW DATABASES should show Started status for members %s, for database foo", initialClusterAddresses ),
                               () -> showDatabases( cluster ),
-                              membersHaveStateForDatabases( initialClusterAddresses, singleton( SECOND_ADDITIONAL_DATABASE_NAME ), STARTED ), timeoutSeconds,
+                              membersHaveStateForDatabases( initialClusterAddresses, singleton( ADDITIONAL_DATABASE_NAME ), STARTED ), timeoutSeconds,
                               SECONDS );
         }
     }

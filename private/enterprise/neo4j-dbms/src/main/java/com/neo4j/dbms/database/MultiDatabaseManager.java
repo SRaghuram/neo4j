@@ -50,7 +50,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
         {
             throw new DatabaseExistsException( format( "Database with name `%s` already exists.", namedDatabaseId.name() ) );
         }
-        if ( databaseMap.size() > maximumNumberOfDatabases )
+        if ( databaseMap.size() >= maximumNumberOfDatabases )
         {
             throw new DatabaseLimitReachedException(
                     format( "Reached maximum number of active databases. Unable to create new database `%s`.", namedDatabaseId.name() ) );
