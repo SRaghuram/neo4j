@@ -123,14 +123,13 @@ class ConvenientLocalExecutionIT
                 triggeredBy
         );
 
-            RunMacroWorkloadCommand.runReport( workloadParams,
-                                               RESULT_DIR.toFile(),
-                                               STORE_DIR.toFile(),
-                                               profilerRecordingsDir.toFile(),
-                                               neo4jConfigFile().toFile(),
-                                               ErrorReporter.ErrorPolicy.SKIP,
-                                               null );
-        }
+        RunMacroWorkloadCommand.runReport( workloadParams,
+                                           RESULT_DIR.toFile(),
+                                           STORE_DIR.toFile(),
+                                           profilerRecordingsDir.toFile(),
+                                           neo4jConfigFile().toFile(),
+                                           ErrorReporter.ErrorPolicy.SKIP,
+                                           null );
     }
 
     // Required fields for running Single query
@@ -174,7 +173,7 @@ class ConvenientLocalExecutionIT
         }
     }
 
-    private Path neo4jConfigFile() throws Exception
+    private Path neo4jConfigFile()
     {
         Path neo4jConfigFile = temporaryFolder.file( "neo4j.conf" ).toPath();
         Neo4jConfig neo4jConfig = neo4jConfig();

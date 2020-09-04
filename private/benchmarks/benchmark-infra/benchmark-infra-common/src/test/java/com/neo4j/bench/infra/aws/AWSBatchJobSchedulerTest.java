@@ -12,9 +12,7 @@ import com.amazonaws.services.batch.model.SubmitJobResult;
 import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.JobId;
 import com.neo4j.bench.infra.JobScheduler.JobRequestConsumer;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
@@ -31,8 +29,6 @@ import static org.mockito.Mockito.when;
 
 public class AWSBatchJobSchedulerTest
 {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     @Test
     public void scheduleJob() throws Exception

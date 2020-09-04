@@ -5,24 +5,23 @@
  */
 package com.neo4j.bench.common.tool.macro;
 
-import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.options.Version;
-import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.model.options.Edition;
+import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.model.util.JsonUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 import static com.neo4j.bench.common.profiling.ParameterizedProfiler.defaultProfilers;
 import static java.util.Collections.emptyList;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class RunMacroWorkloadParamsTest
 {

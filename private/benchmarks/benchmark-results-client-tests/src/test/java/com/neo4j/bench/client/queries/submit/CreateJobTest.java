@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2019 "Neo4j,"
+ * Copyright (c) 2002-2020 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
@@ -23,37 +23,56 @@ import com.neo4j.bench.model.model.Repository;
 import com.neo4j.bench.model.model.TestRun;
 import com.neo4j.bench.model.model.TestRunReport;
 import com.neo4j.bench.model.options.Edition;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.harness.junit.extension.EnterpriseNeo4jExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.net.URI;
 import java.time.ZonedDateTime;
 import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Values;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.harness.junit.EnterpriseNeo4jRule;
-import org.neo4j.harness.junit.Neo4jRule;
-import org.neo4j.kernel.configuration.Settings;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.harness.junit.extension.Neo4jExtension;
+import org.neo4j.internal.helpers.HostnamePort;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static java.util.Collections.emptyMap;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class CreateJobTest
 {
 
-    @Rule
-    public final Neo4jRule neo4j = new EnterpriseNeo4jRule()
-            .withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE );
+    @RegisterExtension
+    static Neo4jExtension neo4jExtension = EnterpriseNeo4jExtension.builder()
+                                                                   .withConfig( BoltConnector.enabled, true )
+                                                                   .withConfig( BoltConnector.encryption_level, BoltConnector.EncryptionLevel.OPTIONAL )
+                                                                   .withConfig( GraphDatabaseSettings.auth_enabled, false )
+                                                                   .build();
+    private URI boltUri;
+
+    @BeforeEach
+    public void setUp( GraphDatabaseService databaseService )
+    {
+        HostnamePort address = ((GraphDatabaseAPI) databaseService).getDependencyResolver()
+                                                                   .resolveDependency( ConnectorPortRegister.class ).getLocalAddress( "bolt" );
+        boltUri = URI.create( "bolt://" + address.toString() );
+    }
 
     @Test
     public void createBatchJob()
     {
         // given
-        StoreClient storeClient = StoreClient.connect( neo4j.boltURI(), "neo4j", "neo4j" );
+        StoreClient storeClient = StoreClient.connect( boltUri, "neo4j", "neo4j" );
         storeClient.execute( new CreateSchema() );
 
         TestRun testRun = new TestRun( UUID.randomUUID().toString(), 0, 0, 0, 0, "triggeredBy" );
@@ -89,7 +108,6 @@ public class CreateJobTest
 
         storeClient.execute( submitTestRun );
 
-        ZonedDateTime startDateTime = ZonedDateTime.now();
         String awsBatchJobId = UUID.randomUUID().toString();
 
         Job job = new Job( awsBatchJobId,

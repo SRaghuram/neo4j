@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2019 "Neo4j,"
+ * Copyright (c) 2002-2020 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
@@ -20,10 +20,10 @@ import com.neo4j.bench.infra.JobParams;
 import com.neo4j.bench.infra.JobScheduler;
 import com.neo4j.bench.infra.JobStatus;
 import com.neo4j.bench.infra.Workspace;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -32,6 +32,7 @@ import org.mockito.stubbing.Answer;
 
 import java.io.File;
 import java.net.URI;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Collection;
@@ -42,22 +43,19 @@ import java.util.concurrent.LinkedBlockingDeque;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.startsWith;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 public class BenchmarkJobSchedulerTest
 {
-
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     @Mock
     private JobScheduler jobScheduler;
@@ -68,8 +66,8 @@ public class BenchmarkJobSchedulerTest
     private Workspace workspace;
     private BenchmarkJobScheduler benchmarkJobScheduler;
 
-    @Before
-    public void setUp() throws Exception
+    @BeforeEach
+    public void setUp( @TempDir Path tempDir ) throws Exception
     {
         MockitoAnnotations.initMocks( this );
 
@@ -77,13 +75,14 @@ public class BenchmarkJobSchedulerTest
                                              "awsSecretAccessKey",
                                              "awsRegion" );
 
-        File workDir = temporaryFolder.newFolder( "work_dir" );
+        File workDir = Files.createTempDirectory( tempDir, "work_dir" ).toFile();
         workspace = Workspace.create( workDir.toPath() ).build();
         benchmarkJobScheduler = BenchmarkJobScheduler.create( jobScheduler, artifactStorage, awsCredentials, Duration.ofSeconds( 1 ) );
     }
 
-    @Test( timeout = 10_000 )
-    public void scheduleJobAwaitFinishWhenSucceededAndReport() throws Exception
+    @Test
+    @Timeout( 10_000 )
+    public void scheduleJobAwaitFinishWhenSucceededAndReport( @TempDir Path tempDir ) throws Exception
     {
         // given
         JobId jobId = new JobId( UUID.randomUUID().toString() );
@@ -109,7 +108,7 @@ public class BenchmarkJobSchedulerTest
                                                                         jobParams,
                                                                         workspace,
                                                                         URI.create( "http://localhost/worker.jar" ),
-                                                                        temporaryFolder.newFile( "job-parameters.json" ) );
+                                                                        Files.createTempFile( tempDir, "job-parameters", ".json" ).toFile() );
         // then
         assertEquals( jobId, actualjobId );
 
@@ -135,8 +134,9 @@ public class BenchmarkJobSchedulerTest
         assertCreateJob( benchmarkJob, testRunId, actualCreateJob );
     }
 
-    @Test( timeout = 10_000 )
-    public void scheduleJobAwaitFinishWhenFailedAndReport() throws Exception
+    @Test
+    @Timeout( 10_000 )
+    public void scheduleJobAwaitFinishWhenFailedAndReport( @TempDir Path tempDir ) throws Exception
     {
         // given
         JobId jobId = new JobId( UUID.randomUUID().toString() );
@@ -161,7 +161,7 @@ public class BenchmarkJobSchedulerTest
                                                                         jobParams,
                                                                         workspace,
                                                                         URI.create( "http://localhost/worker.jar" ),
-                                                                        temporaryFolder.newFile( "job-parameters.json" ) );
+                                                                        Files.createTempFile( tempDir, "job-parameters", ".json" ).toFile() );
         // then
         assertEquals( jobId, actualjobId );
 
@@ -176,7 +176,7 @@ public class BenchmarkJobSchedulerTest
         {
             assertThat( e, instanceOf( BenchmarkJobFailedException.class ) );
             assertThat( e.getMessage(), startsWith( "there are failed jobs:" ) );
-            benchmarkJobs = ((BenchmarkJobFailedException)e).benchmarkJobs();
+            benchmarkJobs = ((BenchmarkJobFailedException) e).benchmarkJobs();
         }
 
         // then
