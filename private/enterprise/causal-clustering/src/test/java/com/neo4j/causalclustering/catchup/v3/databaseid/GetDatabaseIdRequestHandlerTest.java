@@ -16,6 +16,9 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
+import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -29,15 +32,19 @@ import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedData
 
 class GetDatabaseIdRequestHandlerTest
 {
-    private final DatabaseIdRepository databaseIdRepository = mock( DatabaseIdRepository.class );
+    private final DatabaseIdRepository.Caching databaseIdRepository = mock( DatabaseIdRepository.Caching.class );
+    private final DatabaseManager<DatabaseContext> databaseManager = mock( DatabaseManager.class );
     private final CatchupServerProtocol protocol = new CatchupServerProtocol();
     private final EmbeddedChannel channel = new EmbeddedChannel();
 
     @BeforeEach
     void beforeEach()
     {
-        var handler = new GetDatabaseIdRequestHandler( databaseIdRepository, protocol );
+        when( databaseManager.databaseIdRepository() ).thenReturn( databaseIdRepository );
+
+        var handler = new GetDatabaseIdRequestHandler( databaseManager, protocol );
         channel.pipeline().addLast( handler );
+
     }
 
     @AfterEach
@@ -52,6 +59,11 @@ class GetDatabaseIdRequestHandlerTest
         var databaseName = "foo";
         var namedDatabaseId = randomNamedDatabaseId();
         var request = new GetDatabaseIdRequest( databaseName );
+        var dbContext = mock( DatabaseContext.class );
+        var database = mock( Database.class );
+        when( database.isStarted() ).thenReturn( true );
+        when( dbContext.database() ).thenReturn( database );
+        when( databaseManager.getDatabaseContext( databaseName ) ).thenReturn( Optional.of( dbContext ) );
         when( databaseIdRepository.getByName( databaseName ) ).thenReturn( Optional.of( namedDatabaseId ) );
 
         assertFalse( channel.writeInbound( request ) );
@@ -66,6 +78,11 @@ class GetDatabaseIdRequestHandlerTest
     {
         var databaseName = "bar";
         var request = new GetDatabaseIdRequest( databaseName );
+        var dbContext = mock( DatabaseContext.class );
+        var database = mock( Database.class );
+        when( database.isStarted() ).thenReturn( true );
+        when( dbContext.database() ).thenReturn( database );
+        when( databaseManager.getDatabaseContext( databaseName ) ).thenReturn( Optional.of( dbContext ) );
         when( databaseIdRepository.getByName( databaseName ) ).thenReturn( Optional.empty() );
 
         assertFalse( channel.writeInbound( request ) );
@@ -75,5 +92,28 @@ class GetDatabaseIdRequestHandlerTest
         assertEquals( CatchupResult.E_DATABASE_UNKNOWN, errorResponse.status() );
         assertThat( errorResponse.message(), containsString( "Database '" + databaseName + "' does not exist" ) );
         assertTrue( protocol.isExpecting( CatchupServerProtocol.State.MESSAGE_TYPE ) );
+    }
+
+    @Test
+    void shouldWriteErrorForStoppedDB()
+    {
+        var databaseName = "bar";
+        var namedDatabaseId = randomNamedDatabaseId();
+        var request = new GetDatabaseIdRequest( databaseName );
+        var dbContext = mock( DatabaseContext.class );
+        var database = mock( Database.class );
+        when( database.isStarted() ).thenReturn( false );
+        when( dbContext.database() ).thenReturn( database );
+        when( databaseManager.getDatabaseContext( databaseName ) ).thenReturn( Optional.of( dbContext ) );
+        when( databaseIdRepository.getByName( databaseName ) ).thenReturn( Optional.of( namedDatabaseId ) );
+
+        assertFalse( channel.writeInbound( request ) );
+
+        assertEquals( ResponseMessageType.ERROR, channel.readOutbound() );
+        CatchupErrorResponse errorResponse = channel.readOutbound();
+        assertEquals( CatchupResult.E_STORE_UNAVAILABLE, errorResponse.status() );
+        assertThat( errorResponse.message(), containsString( "Database '" + databaseName + "' is stopped. Start the database before backup" ) );
+        assertTrue( protocol.isExpecting( CatchupServerProtocol.State.MESSAGE_TYPE ) );
+
     }
 }

@@ -12,17 +12,20 @@ import com.neo4j.causalclustering.catchup.ResponseMessageType;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 
 public class GetDatabaseIdRequestHandler extends SimpleChannelInboundHandler<GetDatabaseIdRequest>
 {
     private final CatchupServerProtocol protocol;
+    private final DatabaseManager<?> databaseManager;
     private final DatabaseIdRepository databaseIdRepository;
 
-    public GetDatabaseIdRequestHandler( DatabaseIdRepository databaseIdRepository, CatchupServerProtocol protocol )
+    public GetDatabaseIdRequestHandler( DatabaseManager<?> databaseManager, CatchupServerProtocol protocol )
     {
         this.protocol = protocol;
-        this.databaseIdRepository = databaseIdRepository;
+        this.databaseManager = databaseManager;
+        this.databaseIdRepository = databaseManager.databaseIdRepository();
     }
 
     @Override
@@ -30,11 +33,21 @@ public class GetDatabaseIdRequestHandler extends SimpleChannelInboundHandler<Get
     {
         var databaseName = msg.databaseName();
         var databaseIdOptional = databaseIdRepository.getByName( databaseName );
+        var startedDB = databaseManager.getDatabaseContext( databaseName ).map( dbContext -> dbContext.database().isStarted() )
+                                       .orElse( false );
 
         if ( databaseIdOptional.isPresent() )
         {
-            ctx.write( ResponseMessageType.DATABASE_ID_RESPONSE );
-            ctx.writeAndFlush( databaseIdOptional.get().databaseId() );
+            if ( !startedDB )
+            {
+                ctx.write( ResponseMessageType.ERROR );
+                ctx.writeAndFlush( stoppedDatabaseResponse( databaseName ) );
+            }
+            else
+            {
+                ctx.write( ResponseMessageType.DATABASE_ID_RESPONSE );
+                ctx.writeAndFlush( databaseIdOptional.get().databaseId() );
+            }
         }
         else
         {
@@ -48,5 +61,11 @@ public class GetDatabaseIdRequestHandler extends SimpleChannelInboundHandler<Get
     private static CatchupErrorResponse unknownDatabaseResponse( String databaseName )
     {
         return new CatchupErrorResponse( CatchupResult.E_DATABASE_UNKNOWN, "Database '" + databaseName + "' does not exist" );
+    }
+
+    private static CatchupErrorResponse stoppedDatabaseResponse( String databaseName )
+    {
+        return new CatchupErrorResponse( CatchupResult.E_STORE_UNAVAILABLE, "Database '" + databaseName + "' is stopped. " +
+                                                                           "Start the database before backup" );
     }
 }

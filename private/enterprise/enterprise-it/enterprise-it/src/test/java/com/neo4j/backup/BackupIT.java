@@ -955,6 +955,25 @@ class BackupIT
         managementService.shutdown();
     }
 
+    @TestWithRecordFormats
+    void shouldReceiveAnExceptionIfBackupOnStoppedDB( String recordFormatName )
+    {
+        //given
+        createInitialDataSet( serverHomeDir, recordFormatName );
+        var defaultDB = startDb( serverHomeDir );
+        var natureDB = "nature";
+
+        //when
+        createDatabase( natureDB );
+        managementService.shutdownDatabase( natureDB );
+
+        var contextBuilder = defaultBackupContextBuilder( backupAddress( defaultDB ) ).withDatabaseNamePattern( natureDB );
+        var exception = assertThrows( BackupExecutionException.class, () -> executeBackup( contextBuilder ) );
+
+        //then
+        assertThat( getRootCause( exception ).getMessage() ).contains( "Database '" + natureDB + "' is stopped" );
+    }
+
     private void createTransactionWithWeirdRelationshipGroupRecord( GraphDatabaseService db )
     {
         Node node;

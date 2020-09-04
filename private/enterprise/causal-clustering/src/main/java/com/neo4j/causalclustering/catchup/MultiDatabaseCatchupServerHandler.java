@@ -47,7 +47,7 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
     @Override
     public ChannelHandler getDatabaseIdRequestHandler( CatchupServerProtocol protocol )
     {
-        return new GetDatabaseIdRequestHandler( databaseManager.databaseIdRepository(), protocol );
+        return new GetDatabaseIdRequestHandler( databaseManager, protocol );
     }
 
     @Override
