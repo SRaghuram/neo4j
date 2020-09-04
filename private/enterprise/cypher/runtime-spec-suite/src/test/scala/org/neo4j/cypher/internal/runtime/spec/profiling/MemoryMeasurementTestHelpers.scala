@@ -85,7 +85,7 @@ trait MemoryMeasurementTestHelpers[CONTEXT <: RuntimeContext] extends BeforeAndA
 
   override protected def afterAll(): Unit = {
     if (summaryPrint)
-      (Seq(Record.header) ++ measurementRecords.map(_.fields))
+      (Record.header +: measurementRecords.map(_.fields))
         .map(row => row.mkString(";"))
         .foreach(println)
     if (deleteHeapDumps)
@@ -231,7 +231,6 @@ trait MemoryMeasurementTestHelpers[CONTEXT <: RuntimeContext] extends BeforeAndA
     def runMeasurement(query: LogicalQuery, input: => InputDataStream): HeapMeasuringExecution = {
       val highWaterMark = runAndGetTriggerEstimate(query, input)
       debug(s"highWaterMark: $highWaterMark")
-//      val trackerDecorator = HighWaterMarkHeapDumpTrackerDecorator(highWaterMark)
       val trackerDecorator = HighWaterMarkReleaseHeapDumpTrackerDecorator(highWaterMark)
       setMemoryTrackingDecorator(trackerDecorator)
       val measurementResult = profileNonRecording(query, runtime, input)
