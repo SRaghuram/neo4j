@@ -12,6 +12,7 @@ import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
+import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
 import scala.collection.mutable
 
@@ -278,6 +279,116 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
       Map("segment" -> "PROCEDURE(dbms.security.listUsers)", "action" -> "execute_boosted_temp", "role" -> "default", "access" -> "DENIED"),
 
       Map("segment" -> "database", "action" -> "access", "role" -> "custom", "access" -> "GRANTED")
+    ))
+  }
+
+  test("should allow grant/revoke of procedure privileges to role in dbms.security.procedures.roles/default_allowed") {
+    // GIVEN
+    execute("CREATE ROLE procRole")
+    execute("CREATE ROLE default")
+
+    // WHEN
+    execute("GRANT EXECUTE BOOSTED PROCEDURE dbms.showCurrentUser ON DBMS TO procRole, default")
+
+    // THEN
+    execute("SHOW ROLE procRole, default PRIVILEGES").toSet should be(Set(
+      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").map,
+      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").map,
+      granted(executeBoosted).procedure("dbms.showCurrentUser").role("procRole").map,
+
+      granted(adminAction("execute_boosted_temp")).procedure("*").role("default").map,
+      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("default").map,
+      denied(adminAction("execute_boosted_temp")).procedure("db.property*").role("default").map,
+      denied(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("default").map,
+      granted(executeBoosted).procedure("dbms.showCurrentUser").role("default").map
+    ))
+
+    // WHEN
+    execute("REVOKE GRANT EXECUTE BOOSTED PROCEDURE dbms.showCurrentUser ON DBMS FROM procRole, default")
+
+    // THEN
+    execute("SHOW ROLE procRole, default PRIVILEGES").toSet should be(Set(
+      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").map,
+      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").map,
+
+      granted(adminAction("execute_boosted_temp")).procedure("*").role("default").map,
+      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("default").map,
+      denied(adminAction("execute_boosted_temp")).procedure("db.property*").role("default").map,
+      denied(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("default").map
+    ))
+  }
+
+  test("should allow grant/revoke of same procedure privileges to role in dbms.security.procedures.roles/default_allowed") {
+    // GIVEN
+    execute("CREATE ROLE procRole")
+    execute("CREATE ROLE default")
+
+    // WHEN
+    execute("GRANT EXECUTE BOOSTED PROCEDURE db.labels ON DBMS TO procRole, default")
+
+    // THEN
+    execute("SHOW ROLE procRole, default PRIVILEGES").toSet should be(Set(
+      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").map,
+      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").map,
+      granted(executeBoosted).procedure("db.labels").role("procRole").map,
+
+      granted(adminAction("execute_boosted_temp")).procedure("*").role("default").map,
+      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("default").map,
+      denied(adminAction("execute_boosted_temp")).procedure("db.property*").role("default").map,
+      denied(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("default").map,
+      granted(executeBoosted).procedure("db.labels").role("default").map
+    ))
+
+    // WHEN
+    execute("REVOKE GRANT EXECUTE BOOSTED PROCEDURE db.labels ON DBMS FROM procRole, default")
+
+    // THEN
+    execute("SHOW ROLE procRole, default PRIVILEGES").toSet should be(Set(
+      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").map,
+      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").map,
+
+      granted(adminAction("execute_boosted_temp")).procedure("*").role("default").map,
+      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("default").map,
+      denied(adminAction("execute_boosted_temp")).procedure("db.property*").role("default").map,
+      denied(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("default").map
+    ))
+  }
+
+  test("should have nice error message when trying to revoke privilege from dbms.security.procedures.roles") {
+    // GIVEN
+    execute("CREATE ROLE procRole")
+
+    // WHEN .. THEN
+    (the[InvalidArgumentsException] thrownBy {
+      execute("REVOKE EXECUTE BOOSTED PROCEDURE db.property* ON DBMS FROM procRole")
+    }).getMessage should be
+      """Failed to revoke execute_boosted privilege from role 'procRole': This privilege was granted through the config.
+        |Altering the settings 'dbms.security.procedures.roles' and 'dbms.security.procedures.default_allowed' will affect this privilege after restart.""".stripMargin
+
+    // THEN
+    execute("SHOW ROLE procRole PRIVILEGES").toSet should be(Set(
+      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").map,
+      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").map,
+    ))
+  }
+
+  test("should have nice error message when trying to revoke privilege from dbms.security.procedures.default_allowed") {
+    // GIVEN
+    execute("CREATE ROLE default")
+
+    // WHEN .. THEN
+    (the[InvalidArgumentsException] thrownBy {
+      execute("REVOKE EXECUTE BOOSTED PROCEDURE * ON DBMS FROM default")
+    }).getMessage should be
+      """Failed to revoke execute_boosted privilege from role 'default': This privilege was granted through the config.
+        |Altering the settings 'dbms.security.procedures.roles' and 'dbms.security.procedures.default_allowed' will affect this privilege after restart.""".stripMargin
+
+    // THEN
+    execute("SHOW ROLE default PRIVILEGES").toSet should be(Set(
+      granted(adminAction("execute_boosted_temp")).procedure("*").role("default").map,
+      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("default").map,
+      denied(adminAction("execute_boosted_temp")).procedure("db.property*").role("default").map,
+      denied(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("default").map
     ))
   }
 

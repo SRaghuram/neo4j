@@ -479,6 +479,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
            |WITH type(g) AS access, p.action AS action, $resourceColumn AS resource,
            |coalesce(d.name, '*') AS graph, segment, r.name AS role
         """.stripMargin
+      val innerReturn = "RETURN access, action, resource, graph, segment, role"
 
       val temporaryPrivileges = VirtualValues.list(authManager.getTemporaryPrivileges.asScala.map(m => VirtualValues.map(m.asScala.keys.toArray, m.asScala.values.map(Values.of).toArray)): _*)
       val temporaryPrivilegesKey = internalKey("temporaryPrivileges")
@@ -502,16 +503,19 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
           (nameKeys, nameFields.map(_.nameValue), nestedConverter,
             s"""
+               |CALL {
                |OPTIONAL MATCH (r:Role) WHERE r.name IN [$$`${nameKeys.mkString("`, $`")}`] WITH r
                |$privilegeMatch
                |WITH g, p, res, d, $segmentColumn AS segment, r
                |$projection
-               |$filtering
-               |$returnClause
+               |$innerReturn
                |UNION
                |UNWIND $$$temporaryPrivilegesKey AS temporary
                |WITH temporary.role AS role, temporary.graph AS graph, temporary.segment AS segment, temporary.resource AS resource, temporary.action AS action, temporary.access AS access
                |WHERE role IN [$$`${nameKeys.mkString("`, $`")}`]
+               |$innerReturn
+               |}
+               |WITH *
                |$filtering
                |$returnClause
           """.stripMargin
@@ -541,16 +545,19 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           }
           (List(userNameFields.nameKey), List(userNameFields.nameValue), rolesMapper,
             s"""
+               |CALL {
                |OPTIONAL MATCH (r:Role) WHERE r.name IN $$`$rolesKey` WITH r
                |$privilegeMatch
                |WITH g, p, res, d, $segmentColumn AS segment, r ORDER BY d.name, r.name, segment
                |$projection, $$`${userNameFields.nameKey}` AS user
-               |$filtering
-               |$returnClause
+               |$innerReturn, user
                |UNION
                |UNWIND $$$temporaryPrivilegesKey AS temporary
                |WITH temporary.role AS role, temporary.graph AS graph, temporary.segment AS segment, temporary.resource AS resource, temporary.action AS action, temporary.access AS access, $$`${userNameFields.nameKey}` AS user
                |WHERE role IN $$`$rolesKey`
+               |$innerReturn, user
+               |}
+               |WITH *
                |$filtering
                |$returnClause
           """.stripMargin
@@ -604,13 +611,13 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           }
           (nameKeys, nameFields.map(_.nameValue), converter,
             s"""
+               |CALL {
                |OPTIONAL MATCH (r:Role) WHERE r.name IN $$`$rolesKey` WITH r
                |MATCH (u:User) WHERE u.name IN [$$`${nameKeys.mkString("`, $`")}`] AND (r.name = 'PUBLIC' OR (u)-[:HAS_ROLE]->(r)) WITH r, u
                |$privilegeMatch
                |WITH g, p, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, r.name, u.name, segment
                |$projection, u.name AS user
-               |$filtering
-               |$returnClause
+               |$innerReturn, user
                |UNION
                |OPTIONAL MATCH (r:Role) WHERE r.name IN $$`$rolesKey` WITH r
                |MATCH (u:User) WHERE u.name IN [$$`${nameKeys.mkString("`, $`")}`] AND (r.name = 'PUBLIC' OR (u)-[:HAS_ROLE]->(r)) WITH r, u
@@ -618,6 +625,9 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
                |WITH r, u, temporary
                |WHERE temporary.role = r.name
                |WITH temporary.role AS role, temporary.graph AS graph, temporary.segment AS segment, temporary.resource AS resource, temporary.action AS action, temporary.access AS access, u.name as user
+               |$innerReturn, user
+               |}
+               |WITH *
                |$filtering
                |$returnClause
           """.stripMargin
@@ -625,31 +635,37 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         case ShowUserPrivileges(None) =>
           (List("grantee"), List(Values.NO_VALUE), IdentityConverter, // will generate correct parameter name later and don't want to risk clash
             s"""
+               |CALL {
                |OPTIONAL MATCH (r:Role) WHERE r.name IN $$`$currentUserRolesKey` WITH r
                |$privilegeMatch
                |WITH g, p, res, d, $segmentColumn AS segment, r ORDER BY d.name, r.name, segment
                |$projection, $$`$currentUserKey` AS user
-               |$filtering
-               |$returnClause
+               |$innerReturn, user
                |UNION
                |UNWIND $$$temporaryPrivilegesKey AS temporary
                |WITH temporary.role AS role, temporary.graph AS graph, temporary.segment AS segment, temporary.resource AS resource, temporary.action AS action, temporary.access AS access, $$`$currentUserKey` AS user
                |WHERE role IN $$`$currentUserRolesKey`
+               |$innerReturn, user
+               |}
+               |WITH *
                |$filtering
                |$returnClause
           """.stripMargin
           )
         case ShowAllPrivileges() => (List("grantee"), List(Values.NO_VALUE), IdentityConverter,
           s"""
+             |CALL {
              |OPTIONAL MATCH (r:Role) WITH r
              |$privilegeMatch
              |WITH g, p, res, d, $segmentColumn AS segment, r ORDER BY d.name, r.name, segment
              |$projection
-             |$filtering
-             |$returnClause
+             |$innerReturn
              |UNION
              |UNWIND $$$temporaryPrivilegesKey AS temporary
              |WITH temporary.role AS role, temporary.graph AS graph, temporary.segment AS segment, temporary.resource AS resource, temporary.action AS action, temporary.access AS access
+             |$innerReturn
+             |}
+             |WITH *
              |$filtering
              |$returnClause
           """.stripMargin
@@ -1034,11 +1050,41 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         case (e: HasStatus, p) if e.status() == Status.Cluster.NotALeader =>
           new DatabaseAdministrationOnFollowerException(s"${startOfErrorMessage(p)}: $followerError", e)
         case (e, p) => new IllegalStateException(s"${startOfErrorMessage(p)}.", e)
-      },
+      }.handleNoResult(params => {
+        val roleName = params.get(nameFields.nameKey).asInstanceOf[TextValue].stringValue()
+        if (isTemporaryPrivilege(privilegeAction, qualifier, revokeType, roleName))
+          Some(new InvalidArgumentsException(
+            s"""${startOfErrorMessage(params)}: This privilege was granted through the config.
+               |Altering the settings 'dbms.security.procedures.roles' and 'dbms.security.procedures.default_allowed' will affect this privilege after restart.""".stripMargin))
+        else
+          None
+      }),
       source,
       parameterConverter = (tx, p) => databaseConverter(tx, qualifierConverter(tx, nameFields.nameConverter(tx, p))),
       assertPrivilegeAction = tx => enterpriseSecurityGraphComponent.assertUpdateWithAction(tx, privilegeAction, specialDatabase)
     )
+  }
+
+  private def isTemporaryPrivilege(privilegeAction: PrivilegeAction, qualifier: PrivilegeQualifier, revokeType: String, roleName: String): Boolean = {
+    if (privilegeAction == PrivilegeAction.EXECUTE_BOOSTED) {
+      val qualifierString = qualifier match {
+        case ProcedureQualifier(nameSpace, procedureName) => (nameSpace.parts :+ procedureName.name).mkString(".")
+        case _ => "*"
+      }
+      // This has to be formatted in this way, since the result from getTemporaryPrivileges is formatted to be usable in a cypher unwind for showing privileges
+      val notFoundPrivilege = java.util.Map.of(
+        "role", roleName,
+        "graph", "*",
+        "segment", s"PROCEDURE($qualifierString)",
+        "resource", "database",
+        "action", "execute_boosted_temp",
+        "access", revokeType
+      )
+      authManager.getTemporaryPrivileges.contains(notFoundPrivilege)
+    }
+    else {
+      false
+    }
   }
 
   override def isApplicableAdministrationCommand(logicalPlanState: LogicalPlanState): Boolean =
