@@ -164,15 +164,15 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
             val outputSlots = physicalPlan.slotConfigurations(p.id)
 
             val aggregators = Array.newBuilder[Aggregator]
-            val aggregationExpressions = Array.newBuilder[Expression]
+            val aggregationExpressions = Array.newBuilder[Array[Expression]]
             aggregationExpressionsMap.foreach {
               case (_, astExpression) =>
                 val (aggregator, innerAstExpression) = aggregatorFactory.newAggregator(astExpression)
                 aggregators += aggregator
                 aggregationExpressions += innerAstExpression
             }
-            val aggregationAstExpressions: Array[Expression] = aggregationExpressions.result()
-            val aggregationExpressionsCreator = () => aggregationAstExpressions.map(e => ctx.compileExpression(e)())
+            val aggregationAstExpressions: Array[Array[Expression]] = aggregationExpressions.result()
+            val aggregationExpressionsCreator = () => aggregationAstExpressions.map(a => a.map(e => ctx.compileExpression(e)()))
             if (groupingExpressions.nonEmpty) {
               new AggregationMapperOperatorTaskTemplate(ctx.innermost,
                 p.id,

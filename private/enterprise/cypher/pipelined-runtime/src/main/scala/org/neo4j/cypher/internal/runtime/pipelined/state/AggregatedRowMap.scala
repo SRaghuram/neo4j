@@ -39,7 +39,7 @@ trait AggregatedRow {
  */
 trait AggregatedRowUpdaters {
   def updater(index: Int): Updater
-  def addUpdate(index: Int, value: AnyValue): Unit
+  def addUpdate(index: Int, value: Array[AnyValue]): Unit
   def applyUpdates(): Unit
 }
 
@@ -127,7 +127,7 @@ class StandardAggregators(reducers: Array[StandardReducer]) extends AggregatedRo
 
   // Update
   override def updater(n: Int): Updater = reducers(n)
-  override def addUpdate(n: Int, value: AnyValue): Unit = reducers(n).add(value)
+  override def addUpdate(n: Int, value: Array[AnyValue]): Unit = reducers(n).add(value)
   override def applyUpdates(): Unit = {
     var i = 0
     while (i < reducers.length) {
@@ -145,7 +145,7 @@ class StandardDirectAggregators(reducers: Array[StandardReducer]) extends Aggreg
 
   // Update
   override def updater(n: Int): Updater = reducers(n)
-  override def addUpdate(n: Int, value: AnyValue): Unit = reducers(n).add(value)
+  override def addUpdate(n: Int, value: Array[AnyValue]): Unit = reducers(n).add(value)
   override def applyUpdates(): Unit = {} // Noop, since updates to direct aggregators are applied directly on addUpdate
 }
 
@@ -192,7 +192,7 @@ class ConcurrentAggregators(reducers: Array[Reducer], numberOfWorkers: Int) exte
 
 class ConcurrentUpdaters(updaters: Array[Updater]) extends AggregatedRowUpdaters {
   override def updater(n: Int): Updater = updaters(n)
-  override def addUpdate(n: Int, value: AnyValue): Unit = updaters(n).add(value)
+  override def addUpdate(n: Int, value: Array[AnyValue]): Unit = updaters(n).add(value)
   def applyUpdates(): Unit = {
     updaters.foreach(_.applyUpdates())
   }

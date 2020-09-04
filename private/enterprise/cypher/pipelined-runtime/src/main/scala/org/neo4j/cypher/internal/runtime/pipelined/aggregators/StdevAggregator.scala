@@ -108,7 +108,7 @@ class StdevStandardReducer(val population: Boolean) extends StdevBase with Stand
     }
 
   // Updater
-  override def add(value: AnyValue): Unit = update(value)
+  override def add(value: Array[AnyValue]): Unit = update(value(0))
 }
 
 // See https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Parallel_algorithm
@@ -146,7 +146,7 @@ class StdevConcurrentReducer(val population: Boolean) extends Reducer {
 
   class Upd() extends StdevBase with Updater {
 
-    override def add(value: AnyValue): Unit = update(value)
+    override def add(value: Array[AnyValue]): Unit = update(value(0))
 
     override def applyUpdates(): Unit = {
       onNumberUpdate(movingAvg, m2, count)

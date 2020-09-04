@@ -41,7 +41,7 @@ class MinStandardReducer() extends MinUpdater with DirectStandardReducer {
   override def result: AnyValue = min
 
   // Updater
-  override def add(value: AnyValue): Unit = update(value)
+  override def add(value: Array[AnyValue]): Unit = update(value(0))
 }
 
 class MinConcurrentReducer() extends Reducer {
@@ -53,7 +53,7 @@ class MinConcurrentReducer() extends Reducer {
 
   // Updater
   class Upd() extends MinUpdater with Updater {
-    override def add(value: AnyValue): Unit = update(value)
+    override def add(value: Array[AnyValue]): Unit = update(value(0))
     override def applyUpdates(): Unit =
       minAR.updateAndGet(oldMin => if (MinAggregator.shouldUpdate(oldMin, min)) min else oldMin)
   }

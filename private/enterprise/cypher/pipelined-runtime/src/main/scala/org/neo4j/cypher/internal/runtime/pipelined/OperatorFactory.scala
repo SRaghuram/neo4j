@@ -876,14 +876,14 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
     }
   }
 
-  private def buildAggregators(operatorId: Id, aggregationExpression: Map[String, org.neo4j.cypher.internal.expressions.Expression]): (Array[Aggregator], Array[Expression]) = {
+  private def buildAggregators(operatorId: Id, aggregationExpression: Map[String, org.neo4j.cypher.internal.expressions.Expression]): (Array[Aggregator], Array[Array[Expression]]) = {
     val aggregators = Array.newBuilder[Aggregator]
-    val expressions = Array.newBuilder[Expression]
+    val expressions = Array.newBuilder[Array[Expression]]
     aggregationExpression.foreach {
       case (_, astExpression) =>
-        val (aggregator, expression) = aggregatorFactory.newAggregator(astExpression)
+        val (aggregator, arguments) = aggregatorFactory.newAggregator(astExpression)
         aggregators += aggregator
-        expressions += converters.toCommandExpression(operatorId, expression)
+        expressions += arguments.map(converters.toCommandExpression(operatorId, _))
     }
     (aggregators.result(), expressions.result())
   }

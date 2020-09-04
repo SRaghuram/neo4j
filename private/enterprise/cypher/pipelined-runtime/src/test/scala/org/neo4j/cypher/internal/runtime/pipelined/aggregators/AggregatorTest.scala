@@ -35,7 +35,7 @@ trait AggregatorTest {
     var i = 0
     for (group <- groups) {
       val updater = updaters(i)
-      group.foreach(updater.add)
+      group.foreach(g => updater.add(Array(g)))
       updater.applyUpdates()
       i = (i+1) % updaters.length
     }

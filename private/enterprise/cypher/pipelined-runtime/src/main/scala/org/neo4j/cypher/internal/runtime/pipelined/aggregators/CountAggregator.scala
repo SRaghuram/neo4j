@@ -54,8 +54,8 @@ class CountStandardReducer(countNulls: Boolean) extends DirectStandardReducer {
   override def result: AnyValue = Values.longValue(count)
 
   // Updater
-  override def add(value: AnyValue): Unit =
-    if (countNulls || !(value eq Values.NO_VALUE))
+  override def add(value: Array[AnyValue]): Unit =
+    if (countNulls || !(value(0) eq Values.NO_VALUE))
       count += 1
 }
 
@@ -67,9 +67,11 @@ class CountConcurrentReducer(countNulls: Boolean) extends Reducer {
 
   class Upd(countNulls: Boolean) extends Updater {
     var partCount = 0L
-    override def add(value: AnyValue): Unit =
-      if (countNulls || !(value eq Values.NO_VALUE))
+    override def add(values: Array[AnyValue]): Unit = {
+      if (countNulls || !(values(0) eq Values.NO_VALUE)) {
         partCount += 1
+      }
+    }
 
     override def applyUpdates(): Unit = {
       count.addAndGet(partCount)

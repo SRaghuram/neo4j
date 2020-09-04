@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 import org.neo4j.cypher.internal.expressions
 import org.neo4j.cypher.internal.expressions.CountStar
 import org.neo4j.cypher.internal.expressions.FunctionInvocation
-import org.neo4j.cypher.internal.expressions.Null
 import org.neo4j.cypher.internal.expressions.functions
 import org.neo4j.cypher.internal.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
@@ -24,7 +23,7 @@ case class AggregatorFactory(physicalPlan: PhysicalPlan) {
    * Creates a new [[Aggregator]] from an input AST Expression. Will also return the command [[expressions.Expression]]
    * required to compute the aggregator input value.
    */
-  def newAggregator(expression: expressions.Expression): (Aggregator, expressions.Expression) =
+  def newAggregator(expression: expressions.Expression): (Aggregator, Array[expressions.Expression]) =
     expression match {
       // TODO move somewhere else
       case e if e.arguments.exists(_.containsAggregate) =>
@@ -32,54 +31,54 @@ case class AggregatorFactory(physicalPlan: PhysicalPlan) {
       case e if !e.isDeterministic =>
         throw new SyntaxException("Can't use non-deterministic (random) functions inside of aggregate functions.")
 
-      case _: CountStar => (CountStarAggregator, Null.NULL)
-      case CollectAll(expr) => (CollectAllAggregator, expr)
-      case NonEmpty() => (NonEmptyAggregator, Null.NULL)
-      case IsEmpty() => (IsEmptyAggregator, Null.NULL)
+      case _: CountStar => (CountStarAggregator, Array.empty)
+      case CollectAll(expr) => (CollectAllAggregator, Array(expr))
+      case NonEmpty() => (NonEmptyAggregator, Array.empty)
+      case IsEmpty() => (IsEmptyAggregator, Array.empty)
 
       case c: FunctionInvocation =>
         c.function match {
           case functions.Count if c.distinct =>
-            (CountDistinctAggregator, c.arguments.head)
+            (CountDistinctAggregator, Array(c.arguments.head))
 
           case functions.Count =>
-            (CountAggregator, c.arguments.head)
+            (CountAggregator, Array(c.arguments.head))
 
           case functions.Sum if c.distinct =>
-            (SumDistinctAggregator, c.arguments.head)
+            (SumDistinctAggregator, Array(c.arguments.head))
 
           case functions.Sum =>
-            (SumAggregator, c.arguments.head)
+            (SumAggregator, Array(c.arguments.head))
 
           case functions.Max => // no difference if distinct
-            (MaxAggregator, c.arguments.head)
+            (MaxAggregator, Array(c.arguments.head))
 
           case functions.Min => // no difference if distinct
-            (MinAggregator, c.arguments.head)
+            (MinAggregator, Array(c.arguments.head))
 
           case functions.Collect if c.distinct =>
-            (CollectDistinctAggregator, c.arguments.head)
+            (CollectDistinctAggregator, Array(c.arguments.head))
 
           case functions.Collect =>
-            (CollectAggregator, c.arguments.head)
+            (CollectAggregator, Array(c.arguments.head))
 
           case functions.Avg if c.distinct  =>
-            (AvgDistinctAggregator, c.arguments.head)
+            (AvgDistinctAggregator, Array(c.arguments.head))
 
           case functions.Avg =>
-            (AvgAggregator, c.arguments.head)
+            (AvgAggregator, Array(c.arguments.head))
 
           case functions.StdDev if c.distinct  =>
-            (StdevDistinctAggregator, c.arguments.head)
+            (StdevDistinctAggregator, Array(c.arguments.head))
 
           case functions.StdDev =>
-            (StdevAggregator, c.arguments.head)
+            (StdevAggregator, Array(c.arguments.head))
 
           case functions.StdDevP if c.distinct  =>
-            (StdevPDistinctAggregator, c.arguments.head)
+            (StdevPDistinctAggregator, Array(c.arguments.head))
 
           case functions.StdDevP =>
-            (StdevPAggregator, c.arguments.head)
+            (StdevPAggregator, Array(c.arguments.head))
 
           case _: AggregatingFunction =>
             throw new CantCompileQueryException(s"Pipelined does not yet support the Aggregating function `${c.name}`, use another runtime.")

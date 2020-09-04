@@ -48,7 +48,7 @@ trait Updater {
   /**
    * Update this updater with a new value.
    */
-  def add(value: AnyValue): Unit
+  def add(value: Array[AnyValue]): Unit
 
   /**
    * Apply the current state of this updater to it's parent [[Reducer]].

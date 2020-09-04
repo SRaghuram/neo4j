@@ -21,10 +21,12 @@ class DistinctStandardReducer(inner: StandardReducer, memoryTracker: MemoryTrack
   override def result: AnyValue = inner.result
 
   // Updater
-  override def add(value: AnyValue): Unit =
+  override def add(values: Array[AnyValue]): Unit = {
+    val value = values(0)
     if (seenSet.add(value)) {
-      inner.add(value)
+      inner.add(values)
     }
+  }
 
   override def isDirect: Boolean = inner.isDirect
   override def applyUpdates(): Unit = inner.applyUpdates()
@@ -39,11 +41,11 @@ class DistinctConcurrentReducer(inner: Reducer) extends Reducer {
   class Upd(inner: Updater) extends Updater {
     private var partSeenSet: DistinctSet[AnyValue] = DistinctSet.createDistinctSet[AnyValue](EmptyMemoryTracker.INSTANCE)
 
-    override def add(value: AnyValue): Unit = partSeenSet.add(value)
+    override def add(value: Array[AnyValue]): Unit = partSeenSet.add(value(0))
     override def applyUpdates(): Unit = {
       partSeenSet.each(x => {
         if (seenSet.add(x)) {
-          inner.add(x)
+          inner.add(Array(x))
         }
       })
       partSeenSet = DistinctSet.createDistinctSet[AnyValue](EmptyMemoryTracker.INSTANCE)

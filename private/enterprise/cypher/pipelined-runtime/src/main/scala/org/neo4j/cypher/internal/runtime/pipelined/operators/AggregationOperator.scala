@@ -50,11 +50,11 @@ import org.neo4j.cypher.internal.runtime.pipelined.aggregators.CountStarAggregat
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.IsEmptyAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.MaxAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.MinAggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.NonEmptyAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.StdevAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.StdevDistinctAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.StdevPAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.StdevPDistinctAggregator
-import org.neo4j.cypher.internal.runtime.pipelined.aggregators.NonEmptyAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.SumAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.SumDistinctAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ArgumentSlots
@@ -89,7 +89,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
   def mapper(argumentSlotOffset: Int,
              argumentStateMapId: ArgumentStateMapId,
-             expressionValues: Array[Expression],
+             expressionValues: Array[Array[Expression]],
              operatorId: Id) =
     new AggregationMapperOperator(argumentSlotOffset, argumentStateMapId, expressionValues)(operatorId)
 
@@ -105,7 +105,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
    */
   class AggregationMapperOperator(argumentSlotOffset: Int,
                                   argumentStateMapId: ArgumentStateMapId,
-                                  expressionValues: Array[Expression])
+                                  expressionValues: Array[Array[Expression]])
                                  (val id: Id = Id.INVALID_ID)
     extends OutputOperator {
 
@@ -147,8 +147,14 @@ case class AggregationOperator(workIdentity: WorkIdentity,
           val update = aggregatorRow.updaters(resources.workerId)
           var i = 0
           while (i < aggregations.length) {
-            val value = expressionValues(i)(readCursor, queryState)
-            update.addUpdate(i, value)
+            val arguments = expressionValues(i)
+            val input = new Array[AnyValue](arguments.length)
+            var j = 0
+            while (j < arguments.length) {
+              input(j) = arguments(j)(readCursor, queryState)
+              j += 1
+            }
+            update.addUpdate(i, input)
             i += 1
           }
         }
@@ -259,7 +265,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
                                             argumentSlotOffset: Int,
                                             aggregators: Array[Aggregator],
                                             argumentStateMapId: ArgumentStateMapId,
-                                            aggregationExpressionsCreator : () => Array[IntermediateExpression],
+                                            aggregationExpressionsCreator : () => Array[Array[IntermediateExpression]],
                                             groupingKeyExpressionCreator: () => IntermediateExpression,
                                             serialExecutionOnly: Boolean = false)
                                            (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
@@ -277,7 +283,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
   private val aggregatedRowMapVar = variable[AggregatedRowMap](codeGen.namer.nextVariableName("aggregatedRowMap"), constant(null))
   private val workerIdVar = variable[Int](codeGen.namer.nextVariableName("workerId"), constant(-1))
 
-  private var compiledAggregationExpressions: Array[IntermediateExpression] = _
+  private var compiledAggregationExpressions: Array[Array[IntermediateExpression]] = _
   private var compiledGroupingExpression: IntermediateExpression = _
 
   // constructor
@@ -387,9 +393,9 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
        */
       block(
         compiledAggregationExpressions.indices.map(i => {
-          invokeSideEffect(load(updaters), method[AggregatedRowUpdaters, Unit, Int, AnyValue]("addUpdate"),
+          invokeSideEffect(load(updaters), method[AggregatedRowUpdaters, Unit, Int, Array[AnyValue]]("addUpdate"),
                            constant(i),
-                           nullCheckIfRequired(compiledAggregationExpressions(i)))
+                           arrayOf[AnyValue](compiledAggregationExpressions(i).map(e => nullCheckIfRequired(e)):_*))
         }): _ *
       ),
 
@@ -420,7 +426,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(argVar, aggregatorsVar, aggregatedRowMapVar, workerIdVar)
 
-  override def genExpressions: Seq[IntermediateExpression] = compiledAggregationExpressions ++ Seq(compiledGroupingExpression)
+  override def genExpressions: Seq[IntermediateExpression] = compiledAggregationExpressions.flatten ++ Seq(compiledGroupingExpression)
 
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
 
