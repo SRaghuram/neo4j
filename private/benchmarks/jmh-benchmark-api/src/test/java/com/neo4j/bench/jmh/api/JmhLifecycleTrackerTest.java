@@ -5,18 +5,16 @@
  */
 package com.neo4j.bench.jmh.api;
 
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkGroup;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
@@ -24,57 +22,51 @@ import java.util.List;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class JmhLifecycleTrackerTest
 {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     private static final BenchmarkGroup GROUP = new BenchmarkGroup( "group" );
     private static final Benchmark BENCHMARK = Benchmark.benchmarkFor( "desc", "bench", Benchmark.Mode.LATENCY, new HashMap<>() );
 
     @Test
-    public void shouldInitAndReload() throws IOException
+    public void shouldInitAndReload( @TempDir Path tempDir )
     {
-        // given
-        Path workDir = temporaryFolder.newFolder().toPath();
-
         // when
-        JmhLifecycleTracker before = JmhLifecycleTracker.init( workDir );
+        JmhLifecycleTracker before = JmhLifecycleTracker.init( tempDir );
 
         // then
-        JmhLifecycleTracker after = JmhLifecycleTracker.load( workDir );
+        JmhLifecycleTracker after = JmhLifecycleTracker.load( tempDir );
 
         assertThat( before.jsonFile(), equalTo( after.jsonFile() ) );
         assertThat( before.lifeCycleEvents(), equalTo( after.lifeCycleEvents() ) );
     }
 
-    @Test( expected = IllegalStateException.class )
-    public void shouldNotAllowMultipleRunIds() throws IOException
+    @Test
+    public void shouldNotAllowMultipleRunIds( @TempDir Path tempDir )
     {
         // given
-        Path workDir = temporaryFolder.newFolder().toPath();
-        RunnerParams runnerParams = RunnerParams.create( workDir );
+        RunnerParams runnerParams = RunnerParams.create( tempDir );
 
         // when
-        JmhLifecycleTracker tracker = JmhLifecycleTracker.init( workDir );
-        tracker.addTrial( runnerParams, GROUP, BENCHMARK );
+        JmhLifecycleTracker tracker = JmhLifecycleTracker.init( tempDir );
+        assertThrows( IllegalStateException.class, () -> tracker.addTrial( runnerParams, GROUP, BENCHMARK ) );
 
         // then
-        tracker.addTrial( runnerParams.copyWithNewRunId(), GROUP, BENCHMARK );
+        assertThrows( IllegalStateException.class, () -> tracker.addTrial( runnerParams.copyWithNewRunId(), GROUP, BENCHMARK ) );
     }
 
     @Test
-    public void shouldUpdateSingleEventLogEntryAndSerialize() throws IOException
+    public void shouldUpdateSingleEventLogEntryAndSerialize( @TempDir Path tempDir )
     {
         // given
-        Path workDir = temporaryFolder.newFolder().toPath();
-        RunnerParams runnerParams = RunnerParams.create( workDir )
+        RunnerParams runnerParams = RunnerParams.create( tempDir )
                                                 .copyWithProfilers( ParameterizedProfiler.defaultProfilers( ProfilerType.GC ) );
-        JmhLifecycleTracker before = JmhLifecycleTracker.init( workDir );
-        List<BenchmarkGroupDirectory> groupsBefore = BenchmarkGroupDirectory.searchAllIn( workDir );
+        JmhLifecycleTracker before = JmhLifecycleTracker.init( tempDir );
+        List<BenchmarkGroupDirectory> groupsBefore = BenchmarkGroupDirectory.searchAllIn( tempDir );
         assertTrue( groupsBefore.isEmpty() );
 
         // when
@@ -83,7 +75,7 @@ public class JmhLifecycleTrackerTest
         ForkDirectory forkDirectory = before.addTrial( runnerParams, GROUP, BENCHMARK );
 
         // then
-        List<BenchmarkGroupDirectory> groupsAfter = BenchmarkGroupDirectory.searchAllIn( workDir );
+        List<BenchmarkGroupDirectory> groupsAfter = BenchmarkGroupDirectory.searchAllIn( tempDir );
         assertThat( groupsAfter.size(), equalTo( 1 ) );
         BenchmarkGroupDirectory groupDir = groupsAfter.get( 0 );
         assertThat( groupDir.benchmarkGroup(), equalTo( GROUP ) );
@@ -97,20 +89,19 @@ public class JmhLifecycleTrackerTest
         assertThat( forkDirs.size(), equalTo( 1 ) );
         assertThat( forkDirs.get( 0 ).toAbsolutePath(), equalTo( forkDirectory.toAbsolutePath() ) );
 
-        JmhLifecycleTracker after = JmhLifecycleTracker.load( workDir );
+        JmhLifecycleTracker after = JmhLifecycleTracker.load( tempDir );
         assertThat( before.jsonFile(), equalTo( after.jsonFile() ) );
         assertThat( before.lifeCycleEvents(), equalTo( after.lifeCycleEvents() ) );
     }
 
     @Test
-    public void shouldUpdateMultipleEventLogEntriesWithOneProfiler() throws IOException
+    public void shouldUpdateMultipleEventLogEntriesWithOneProfiler( @TempDir Path tempDir )
     {
         // given
         boolean isForking = true;
-        Path workDir = temporaryFolder.newFolder().toPath();
-        RunnerParams runnerParams = RunnerParams.create( workDir )
+        RunnerParams runnerParams = RunnerParams.create( tempDir )
                                                 .copyWithProfilers( ParameterizedProfiler.defaultProfilers( ProfilerType.NO_OP ) );
-        JmhLifecycleTracker before = JmhLifecycleTracker.init( workDir );
+        JmhLifecycleTracker before = JmhLifecycleTracker.init( tempDir );
 
         /*
         Expected Fork Directory creation behavior, given 1 profiler:
@@ -129,7 +120,7 @@ public class JmhLifecycleTrackerTest
         // (1) new fork directory is created by profiler: fork0
         ForkDirectory forkDir0 = before.addTrial( runnerParams, GROUP, BENCHMARK );
 
-        BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.searchAllIn( workDir ).get( 0 );
+        BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.searchAllIn( tempDir ).get( 0 );
         BenchmarkDirectory benchDir = groupDir.benchmarksDirectories().get( 0 );
 
         List<ForkDirectory> forkDirs = benchDir.forks();
@@ -154,19 +145,18 @@ public class JmhLifecycleTrackerTest
         assertThat( before.getForkDirectory( runnerParams, isForking, GROUP, BENCHMARK ).toAbsolutePath(), equalTo( forkDir2.toAbsolutePath() ) );
 
         // should load multiple events correctly
-        JmhLifecycleTracker after = JmhLifecycleTracker.load( workDir );
+        JmhLifecycleTracker after = JmhLifecycleTracker.load( tempDir );
         assertThat( before.jsonFile(), equalTo( after.jsonFile() ) );
         assertThat( before.lifeCycleEvents(), equalTo( after.lifeCycleEvents() ) );
     }
 
     @Test
-    public void shouldUpdateMultipleEventLogEntriesWithTwoProfilers() throws IOException
+    public void shouldUpdateMultipleEventLogEntriesWithTwoProfilers( @TempDir Path tempDir )
     {
         // given
-        Path workDir = temporaryFolder.newFolder().toPath();
-        RunnerParams runnerParams = RunnerParams.create( workDir )
+        RunnerParams runnerParams = RunnerParams.create( tempDir )
                                                 .copyWithProfilers( ParameterizedProfiler.defaultProfilers( ProfilerType.GC, ProfilerType.JFR ) );
-        JmhLifecycleTracker before = JmhLifecycleTracker.init( workDir );
+        JmhLifecycleTracker before = JmhLifecycleTracker.init( tempDir );
 
         /*
         Expected Fork Directory creation behavior, given 2 profilers:
@@ -183,7 +173,7 @@ public class JmhLifecycleTrackerTest
         // (1) new fork directory is created
         ForkDirectory forkDir1 = before.addTrial( runnerParams, GROUP, BENCHMARK );
 
-        BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.searchAllIn( workDir ).get( 0 );
+        BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.searchAllIn( tempDir ).get( 0 );
         BenchmarkDirectory benchDir = groupDir.benchmarksDirectories().get( 0 );
 
         List<ForkDirectory> forkDirs = benchDir.forks();
@@ -201,31 +191,29 @@ public class JmhLifecycleTrackerTest
         assertThat( before.addTrial( runnerParams, GROUP, BENCHMARK ).toAbsolutePath(), equalTo( forkDir2.toAbsolutePath() ) );
 
         // should load multiple events correctly
-        JmhLifecycleTracker after = JmhLifecycleTracker.load( workDir );
+        JmhLifecycleTracker after = JmhLifecycleTracker.load( tempDir );
         assertThat( before.jsonFile(), equalTo( after.jsonFile() ) );
         assertThat( before.lifeCycleEvents(), equalTo( after.lifeCycleEvents() ) );
     }
 
-    @Test( expected = IllegalStateException.class )
-    public void shouldNotAllowTrackingWithoutProfilerConfigured() throws IOException
+    @Test
+    public void shouldNotAllowTrackingWithoutProfilerConfigured( @TempDir Path tempDir )
     {
         // given
-        Path workDir = temporaryFolder.newFolder().toPath();
-        RunnerParams runnerParams = RunnerParams.create( workDir );
-        JmhLifecycleTracker before = JmhLifecycleTracker.init( workDir );
+        RunnerParams runnerParams = RunnerParams.create( tempDir );
+        JmhLifecycleTracker before = JmhLifecycleTracker.init( tempDir );
 
         // when, then
-        before.addTrial( runnerParams, GROUP, BENCHMARK );
+        assertThrows( IllegalStateException.class, () -> before.addTrial( runnerParams, GROUP, BENCHMARK ) );
     }
 
     @Test
-    public void shouldResetTracker() throws IOException
+    public void shouldResetTracker( @TempDir Path tempDir )
     {
         // given
-        Path workDir = temporaryFolder.newFolder().toPath();
-        RunnerParams runnerParams = RunnerParams.create( workDir )
+        RunnerParams runnerParams = RunnerParams.create( tempDir )
                                                 .copyWithProfilers( ParameterizedProfiler.defaultProfilers( ProfilerType.GC ) );
-        JmhLifecycleTracker before = JmhLifecycleTracker.init( workDir );
+        JmhLifecycleTracker before = JmhLifecycleTracker.init( tempDir );
 
         before.addTrial( runnerParams, GROUP, BENCHMARK );
         before.addTrial( runnerParams, GROUP, BENCHMARK );
@@ -242,7 +230,7 @@ public class JmhLifecycleTrackerTest
         assertTrue( before.lifeCycleEvents().isEmpty() );
 
         // should also clear the persisted event log
-        JmhLifecycleTracker after = JmhLifecycleTracker.load( workDir );
+        JmhLifecycleTracker after = JmhLifecycleTracker.load( tempDir );
         assertTrue( after.lifeCycleEvents().isEmpty() );
     }
 }

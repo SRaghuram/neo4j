@@ -13,43 +13,39 @@ import org.apache.commons.compress.compressors.CompressorException;
 import org.apache.commons.compress.compressors.CompressorOutputStream;
 import org.apache.commons.compress.compressors.CompressorStreamFactory;
 import org.apache.commons.compress.utils.IOUtils;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ExtractorTest
 {
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
     @Test
-    public void extractDataset() throws Exception
+    public void extractDataset( @TempDir Path tempDir ) throws Exception
     {
         // given
-        Path testArchive = createDatasetArchive();
-        Path tempDir = temporaryFolder.newFolder( "neo" ).toPath();
+        Path testArchive = createDatasetArchive( tempDir );
+        Path dir = Files.createTempDirectory( tempDir, "neo" );
 
         // when
-        Extractor.extract( tempDir, Files.newInputStream( testArchive ) );
+        Extractor.extract( dir, Files.newInputStream( testArchive ) );
 
         // then
-        assertTrue( Files.isRegularFile( tempDir.resolve( "neo.txt" ) ) );
+        assertTrue( Files.isRegularFile( dir.resolve( "neo.txt" ) ) );
     }
 
-    private Path createDatasetArchive() throws IOException, CompressorException, ArchiveException
+    private Path createDatasetArchive( @TempDir Path tempDir ) throws IOException, CompressorException, ArchiveException
     {
-        Path tempDataFile = temporaryFolder.newFile( "neofile.txt" ).toPath();
+        Path tempDataFile = Files.createTempFile( tempDir, "neofile", ".txt" );
         Files.write( tempDataFile, Arrays.asList( "neo" ) );
 
-        Path tempArchiveFile = temporaryFolder.newFile( "neo.tar.gz" ).toPath();
+        Path tempArchiveFile = Files.createTempFile( tempDir, "neo", ".tar.gz" );
 
         try ( CompressorOutputStream compressorOutput = new CompressorStreamFactory()
                 .createCompressorOutputStream( CompressorStreamFactory.GZIP, Files.newOutputStream( tempArchiveFile ) );

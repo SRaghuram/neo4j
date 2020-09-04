@@ -9,9 +9,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -25,21 +24,16 @@ import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class RunnerParamsTest
 {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     @Test
-    public void shouldCreateBaseRunnerParams() throws IOException
+    public void shouldCreateBaseRunnerParams( @TempDir Path tempDir ) throws IOException
     {
-        // given
-        Path workDir = temporaryFolder.newFolder().toPath();
-
         // when
-        RunnerParams runnerParams = RunnerParams.create( workDir );
+        RunnerParams runnerParams = RunnerParams.create( tempDir );
 
         Set<String> paramKeys = runnerParams.asList()
                                             .stream()
@@ -53,22 +47,21 @@ public class RunnerParamsTest
                                                         RunnerParams.PARAM_PROFILERS );
 
         assertThat( paramKeys, equalTo( expectedParamKeys ) );
-        assertThat( runnerParams.workDir(), equalTo( workDir ) );
+        assertThat( runnerParams.workDir(), equalTo( tempDir ) );
         assertThat( runnerParams.profilerTypes(), equalTo( Collections.emptyList() ) );
     }
 
     @Test
-    public void shouldBeImmutableWhenUpdating() throws IOException
+    public void shouldBeImmutableWhenUpdating( @TempDir Path tempDir ) throws IOException
     {
         // given
         HashSet<String> baseParamKeys = newHashSet( RunnerParams.PARAM_RUNNER_PARAMS,
                                                     RunnerParams.PARAM_WORK_DIR,
                                                     RunnerParams.PARAM_RUN_ID,
                                                     RunnerParams.PARAM_PROFILERS );
-        Path workDir = temporaryFolder.newFolder().toPath();
 
         // when
-        RunnerParams runnerParams0 = RunnerParams.create( workDir );
+        RunnerParams runnerParams0 = RunnerParams.create( tempDir );
 
         // update profiler types
         List<ProfilerType> expectedProfilerTypes1 = Lists.newArrayList( ProfilerType.GC, ProfilerType.ASYNC );

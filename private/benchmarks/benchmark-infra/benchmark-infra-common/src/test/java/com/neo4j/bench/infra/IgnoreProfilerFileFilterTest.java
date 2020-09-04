@@ -6,9 +6,8 @@
 package com.neo4j.bench.infra;
 
 import com.neo4j.bench.model.profiling.RecordingType;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -21,36 +20,32 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.equalTo;
 
 public class IgnoreProfilerFileFilterTest
 {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     @Test
-    public void shouldFilerOutProfilingFiles() throws IOException
+    public void shouldFilerOutProfilingFiles( @TempDir Path tempDir ) throws IOException
     {
-        Path topFolder = temporaryFolder.newFolder().toPath();
         RecordingType[] recordingTypes = RecordingType.values();
         Arrays.stream( recordingTypes ).forEach( recordingType ->
                                                  {
                                                      try
                                                      {
-                                                         Files.createFile( topFolder.resolve( "shouldBeFiltered" + recordingType.extension() ) );
+                                                         Files.createFile( tempDir.resolve( "shouldBeFiltered" + recordingType.extension() ) );
                                                      }
                                                      catch ( IOException e )
                                                      {
                                                          throw new UncheckedIOException( e );
                                                      }
                                                  } );
-        Path shouldSave = Files.createFile( topFolder.resolve( "shouldNotBeFiltered.txt" ) );
+        Path shouldSave = Files.createFile( tempDir.resolve( "shouldNotBeFiltered.txt" ) );
         IgnoreProfilerFileFilter ignoreProfilerFileFilter = new IgnoreProfilerFileFilter();
-        try ( Stream<Path> dirs = Files.walk( topFolder ) )
+        try ( Stream<Path> dirs = Files.walk( tempDir ) )
         {
             Set<Path> filteredPaths = dirs.filter( dir -> ignoreProfilerFileFilter.accept( dir.toFile() ) ).collect( Collectors.toSet() );
             //Should contains both the file and the folder
-            assertThat( filteredPaths, containsInAnyOrder( shouldSave, topFolder ) );
+            assertThat( filteredPaths, containsInAnyOrder( shouldSave, tempDir ) );
         }
         catch ( IOException e )
         {

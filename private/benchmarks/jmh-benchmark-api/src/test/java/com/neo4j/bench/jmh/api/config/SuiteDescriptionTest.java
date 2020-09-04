@@ -14,8 +14,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.google.common.collect.Sets.newHashSet;
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.CONFIGURED_PARAMETER_DOES_NOT_EXIST;
@@ -25,7 +23,7 @@ import static java.util.Collections.singletonMap;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -126,7 +124,7 @@ class SuiteDescriptionTest extends BenchmarksFinderFixture
     }
 
     @Test
-    public void shouldCreateFewerPartitionsIfConucurrencyIsTooHigh()
+    public void shouldCreateFewerPartitionsIfConcurrencyIsTooHigh()
     {
         SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getValidBenchmarksFinder(), new Validation() );
         int maxPartitions = suiteDescription.explodeEnabledBenchmarks().size();

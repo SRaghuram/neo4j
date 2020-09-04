@@ -18,12 +18,13 @@ import com.neo4j.bench.infra.macro.MacroToolRunner;
 import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.model.util.JsonUtil;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.UUID;
@@ -35,11 +36,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class JobParamsTest
 {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     @Test
-    public void serializeAndDeserialize() throws IOException
+    public void serializeAndDeserialize( @TempDir Path tempDir ) throws IOException
     {
         // given
         JobParams<RunToolMacroWorkloadParams> jobParams = new JobParams<>(
@@ -52,7 +51,7 @@ public class JobParamsTest
                         URI.create( "bolt://localhost/" ),
                         URI.create( "s3://benchmarking.com/123456" ),
                         ErrorReportingPolicy.REPORT_THEN_FAIL,
-                        Workspace.create( temporaryFolder.newFolder().toPath() ).build() ),
+                        Workspace.create( tempDir ).build() ),
                 new BenchmarkingRun<>(
                         new BenchmarkingTool<>(
                                 MacroToolRunner.class,
@@ -94,7 +93,7 @@ public class JobParamsTest
     }
 
     @Test
-    public void serializeAndDeserializeServer() throws IOException
+    public void serializeAndDeserializeServer( @TempDir Path tempDir ) throws IOException
     {
         // given
         JobParams<RunToolMacroWorkloadParams> jobParams = new JobParams<>(
@@ -107,7 +106,7 @@ public class JobParamsTest
                         URI.create( "bolt://localhost/" ),
                         URI.create( "s3://benchmarking.com/123456" ),
                         ErrorReportingPolicy.REPORT_THEN_FAIL,
-                        Workspace.create( temporaryFolder.newFolder().toPath() ).build() ),
+                        Workspace.create( Files.createTempDirectory( tempDir, "workspace" ) ).build() ),
                 new BenchmarkingRun<>(
                         new BenchmarkingTool<>(
                                 MacroToolRunner.class,
@@ -129,7 +128,7 @@ public class JobParamsTest
                                                                     JvmArgs.from( "-Xmx4g", "-Xms4g" ),
                                                                     false,
                                                                     false,
-                                                                    Deployment.server( temporaryFolder.newFolder().toPath().toString() ),
+                                                                    Deployment.server( Files.createTempDirectory( tempDir, "server" ).toString() ),
                                                                     "neo4jCommit",
                                                                     new Version( "3.4.12" ),
                                                                     "neo4jBranch",

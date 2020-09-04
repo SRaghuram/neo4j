@@ -31,7 +31,7 @@ public class AWSBatchJobSchedulerTest
 {
 
     @Test
-    public void scheduleJob() throws Exception
+    public void scheduleJob()
     {
         // given
         AWSBatch awsBatch = mock( AWSBatch.class );

@@ -7,26 +7,23 @@ package com.neo4j.bench.infra.commands;
 
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.infra.AWSCredentials;
-import com.neo4j.bench.model.util.JsonUtil;
 import com.neo4j.bench.infra.InfraParams;
-import org.junit.jupiter.api.Test;
 import com.neo4j.bench.infra.Workspace;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
+import com.neo4j.bench.model.util.JsonUtil;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class InfraParamsTest
 {
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
     @Test
-    public void serializationTest() throws IOException
+    public void serializationTest( @TempDir Path tempDir ) throws IOException
     {
         InfraParams infraParams = new InfraParams( new AWSCredentials( "awsKey",
                                                                        "awsSecret",
@@ -36,7 +33,7 @@ public class InfraParamsTest
                                                    URI.create( "http://resultStoreUri" ),
                                                    URI.create( "http://artifactBaseUri" ),
                                                    ErrorReportingPolicy.FAIL,
-                                                   Workspace.create( temporaryFolder.newFolder().toPath() ).build() );
+                                                   Workspace.create( tempDir ).build() );
         InfraParams actualInfraParams = JsonUtil.deserializeJson( JsonUtil.serializeJson( infraParams ), InfraParams.class );
         assertEquals( infraParams, actualInfraParams );
     }

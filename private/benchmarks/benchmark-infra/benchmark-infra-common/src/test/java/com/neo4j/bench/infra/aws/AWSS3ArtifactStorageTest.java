@@ -22,11 +22,10 @@ import org.apache.commons.compress.compressors.CompressorException;
 import org.apache.commons.compress.compressors.CompressorOutputStream;
 import org.apache.commons.compress.compressors.CompressorStreamFactory;
 import org.apache.commons.compress.utils.IOUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -35,26 +34,23 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class AWSS3ArtifactStorageTest
 {
-
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     private S3Mock api;
     private Path s3Dir;
     private EndpointConfiguration endpointConfiguration;
     private AmazonS3 amazonS3;
 
-    @Before
-    public void setUp() throws Exception
+    @BeforeEach
+    public void setUp( @TempDir Path tempDir ) throws Exception
     {
-        s3Dir = temporaryFolder.newFolder( "s3" ).toPath();
+        s3Dir = Files.createTempDirectory( tempDir, "s3" );
         api = new S3Mock.Builder().withPort( 8001 ).withFileBackend( s3Dir.toString() ).build();
         api.start();
 
@@ -67,17 +63,17 @@ public class AWSS3ArtifactStorageTest
         amazonS3.createBucket( AWSS3ArtifactStorage.BENCHMARKING_BUCKET_NAME );
     }
 
-    @After
+    @AfterEach
     public void tearDown()
     {
         api.shutdown();
     }
 
     @Test
-    public void transferBuildArtifactWorkspace() throws Exception
+    public void transferBuildArtifactWorkspace( @TempDir Path tempDir ) throws Exception
     {
         // given
-        Path directory = temporaryFolder.newFolder( "build" ).toPath();
+        Path directory = Files.createTempDirectory( tempDir, "build" );
         Files.createFile( directory.resolve( "artifact0.jar" ) );
         Files.createDirectories( directory.resolve( "artifact1" ) );
         Files.createFile( directory.resolve( "artifact1/artifact1.jar" ) );
@@ -102,7 +98,7 @@ public class AWSS3ArtifactStorageTest
                 s3Dir.resolve( "benchmarking.neo4j.com/artifacts/buildID" ).resolve( "artifact1/artifact1.jar" ) ) );
 
         // when
-        Path downloadDir = temporaryFolder.newFolder( "download" ).toPath();
+        Path downloadDir = Files.createTempDirectory( tempDir, "download" );
         Workspace artifactsWorkspace =
                 artifactStorage.downloadBuildArtifacts( downloadDir, artifactURI, workspace );
         // then
@@ -116,10 +112,10 @@ public class AWSS3ArtifactStorageTest
     }
 
     @Test
-    public void downloadDataset() throws Exception
+    public void downloadDataset( @TempDir Path tempDir ) throws Exception
     {
         // given
-        Path tempArchiveFile = createDatasetArchive();
+        Path tempArchiveFile = createDatasetArchive(tempDir);
         amazonS3.putObject( "benchmarking.neo4j.com", "datasets/macro/3.3.0-enterprise-datasets/dataset.tgz", tempArchiveFile.toFile() );
         ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( endpointConfiguration );
 
@@ -127,7 +123,7 @@ public class AWSS3ArtifactStorageTest
         String neo4jVersion = "3.3.0";
         String datasetName = "dataset";
         Dataset dataset = artifactStorage.downloadDataset( neo4jVersion, datasetName );
-        Path tempFile = temporaryFolder.newFile( "dataset.tar.gz" ).toPath();
+        Path tempFile = Files.createTempFile( tempDir, "dataset", ".tar.gz" );
         dataset.copyInto( Files.newOutputStream( tempFile ) );
 
         // then
@@ -136,10 +132,10 @@ public class AWSS3ArtifactStorageTest
     }
 
     @Test
-    public void extractDataset() throws Exception
+    public void extractDataset( @TempDir Path tempDir ) throws Exception
     {
         // given
-        Path tempArchiveFile = createDatasetArchive();
+        Path tempArchiveFile = createDatasetArchive(tempDir);
         amazonS3.putObject( "benchmarking.neo4j.com", "datasets/macro/3.3.0-enterprise-datasets/dataset.tgz", tempArchiveFile.toFile() );
         ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( endpointConfiguration );
 
@@ -147,20 +143,20 @@ public class AWSS3ArtifactStorageTest
         String neo4jVersion = "3.3.0";
         String datasetName = "dataset";
         Dataset dataset = artifactStorage.downloadDataset( neo4jVersion, datasetName );
-        Path tempDir = temporaryFolder.newFolder( "dataset" ).toPath();
-        dataset.extractInto( tempDir );
+        Path dir = Files.createTempDirectory( tempDir, "dataset" );
+        dataset.extractInto( dir );
 
         // then
-        assertTrue( Files.isRegularFile( tempDir.resolve( "data.txt" ) ) );
+        assertTrue( Files.isRegularFile( dir.resolve( "data.txt" ) ) );
     }
 
     // lots of ceremony, but I want to be sure we are downloading the right thing
-    private Path createDatasetArchive() throws IOException, CompressorException, ArchiveException
+    private Path createDatasetArchive( @TempDir Path tempDir ) throws IOException, CompressorException, ArchiveException
     {
-        Path tempDataFile = temporaryFolder.newFile( "datafile.txt" ).toPath();
+        Path tempDataFile = Files.createTempFile( tempDir, "datafile", ".txt" );
         Files.write( tempDataFile, Arrays.asList( "data" ) );
 
-        Path tempArchiveFile = temporaryFolder.newFile().toPath();
+        Path tempArchiveFile = Files.createTempFile( tempDir, "archive", ".tar.gz" );
 
         try ( CompressorOutputStream compressorOutput = new CompressorStreamFactory()
                 .createCompressorOutputStream( CompressorStreamFactory.GZIP, Files.newOutputStream( tempArchiveFile ) );
