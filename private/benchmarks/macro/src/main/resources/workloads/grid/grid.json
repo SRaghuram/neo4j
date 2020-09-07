@@ -26,6 +26,26 @@
       "name": "Q5",
       "description": "Extremely long pattern expression: 30 relationships (original IDP cannot compile)",
       "queryFile": "queries/Q5.cypher"
+    },
+    {
+      "name": "Q6",
+      "description": "Few disconnected components with no join possibilities",
+      "queryFile": "queries/Q6.cypher"
+    },
+    {
+      "name": "Q7",
+      "description": "Extremely many disconnected components with no join possibilities",
+      "queryFile": "queries/Q7.cypher"
+    },
+    {
+      "name": "Q8",
+      "description": "Many disconnected components with join possibilities",
+      "queryFile": "queries/Q8.cypher"
+    },
+    {
+      "name": "Q9",
+      "description": "Many disconnected components with join possibilities and ordering",
+      "queryFile": "queries/Q9.cypher"
     }
   ]
 }
