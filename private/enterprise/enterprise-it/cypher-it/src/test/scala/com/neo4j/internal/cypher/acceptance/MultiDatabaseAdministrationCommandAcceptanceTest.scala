@@ -240,6 +240,23 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     exception.getMessage should include("STOP DATABASE is not supported")
   }
 
+  test("should fail to stop stopped database when config setting start_stop_drop_database is set to true") {
+    // GIVEN
+    val config = Config.defaults()
+    setup(config)
+    execute("CREATE DATABASE foo")
+    execute("STOP DATABASE foo")
+
+    config.set(block_start_stop_database, java.lang.Boolean.TRUE)
+    restart(config)
+
+    // WHEN & THEN
+    val exception = the[UnsupportedOperationException] thrownBy {
+      execute("STOP DATABASE foo")
+    }
+    exception.getMessage should include("STOP DATABASE is not supported")
+  }
+
   test("should fail to start database when config setting start_stop_drop_database is set to true") {
     // GIVEN
     val config = Config.defaults()

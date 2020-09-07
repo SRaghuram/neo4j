@@ -55,6 +55,8 @@ import org.neo4j.cypher.internal.ast.ShowAllPrivileges
 import org.neo4j.cypher.internal.ast.ShowRolesPrivileges
 import org.neo4j.cypher.internal.ast.ShowUserPrivileges
 import org.neo4j.cypher.internal.ast.ShowUsersPrivileges
+import org.neo4j.cypher.internal.ast.StartDatabaseAction
+import org.neo4j.cypher.internal.ast.StopDatabaseAction
 import org.neo4j.cypher.internal.ast.UserAllQualifier
 import org.neo4j.cypher.internal.ast.UserQualifier
 import org.neo4j.cypher.internal.ast.prettifier.ExpressionStringifier
@@ -183,7 +185,10 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       val (blocked, actionString) = action match {
         case CreateDatabaseAction => (create_drop_database_is_blocked, "CREATE")
         case DropDatabaseAction => (create_drop_database_is_blocked, "DROP")
+        case StartDatabaseAction => (start_stop_database_is_blocked, "START")
+        case StopDatabaseAction => (start_stop_database_is_blocked, "STOP")
       }
+
       val errorMessage = s"$actionString DATABASE is not supported, for more info see https://aura.support.neo4j.com/hc/en-us/articles/360050567093"
 
       new PredicateExecutionPlan((_, sc) => !blocked || sc.subject().hasUsername(operator_name),
@@ -741,10 +746,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // START DATABASE foo
     case StartDatabase(source, dbName) => (context, parameterMapping) =>
-      if (start_stop_database_is_blocked) {
-        throw new UnsupportedOperationException("START DATABASE is not supported, for more info see https://aura.support.neo4j.com/hc/en-us/articles/360050567093")
-      }
-
       val oldStatusKey = internalKey("oldStatus")
       val statusKey = internalKey("status")
       val nameFields = getNameFields("databaseName", dbName, valueMapper = s => new NormalizedDatabaseName(s).name())
@@ -778,10 +779,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // STOP DATABASE foo
     case StopDatabase(source, dbName) => (context, parameterMapping) =>
-      if (start_stop_database_is_blocked) {
-        throw new UnsupportedOperationException("STOP DATABASE is not supported, for more info see https://aura.support.neo4j.com/hc/en-us/articles/360050567093")
-      }
-
       val oldStatusKey = internalKey("oldStatus")
       val statusKey = internalKey("status")
       val nameFields = getNameFields("databaseName", dbName, valueMapper = s => new NormalizedDatabaseName(s).name())

@@ -26,6 +26,8 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ACCESS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DATABASE_MANAGEMENT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.START_DATABASE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.STOP_DATABASE;
 
 public class PrivilegeResolver
 {
@@ -35,6 +37,8 @@ public class PrivilegeResolver
     private final ResourcePrivilege accessOnSystem;
     private final ResourcePrivilege executeUpgrade;
     private final ResourcePrivilege createDropDatabase;
+    private final ResourcePrivilege startDatabase;
+    private final ResourcePrivilege stopDatabase;
     private final Map<String, Set<ResourcePrivilege>> roleToPrivilege = new HashMap<>();
 
     public PrivilegeResolver( SystemGraphRealm systemGraphRealm, Config config )
@@ -55,6 +59,10 @@ public class PrivilegeResolver
             // CRETE & DROP DATABASE ON DBMS
             createDropDatabase = new ResourcePrivilege( GRANT, DATABASE_MANAGEMENT, new DatabaseResource(), Segment.ALL,
                     ResourcePrivilege.SpecialDatabase.ALL );
+            // START DATABASE for all databases
+            startDatabase = new ResourcePrivilege( GRANT, START_DATABASE, new DatabaseResource(), Segment.ALL, ResourcePrivilege.SpecialDatabase.ALL );
+            // STOP DATABASE for all databases
+            stopDatabase = new ResourcePrivilege( GRANT, STOP_DATABASE, new DatabaseResource(), Segment.ALL, ResourcePrivilege.SpecialDatabase.ALL );
         }
         catch ( InvalidArgumentsException e )
         {
@@ -88,6 +96,8 @@ public class PrivilegeResolver
             privileges.add( accessOnSystem );
             privileges.add( executeUpgrade );
             privileges.add( createDropDatabase );
+            privileges.add( startDatabase );
+            privileges.add( stopDatabase );
             return privileges;
         }
         return Collections.emptySet();

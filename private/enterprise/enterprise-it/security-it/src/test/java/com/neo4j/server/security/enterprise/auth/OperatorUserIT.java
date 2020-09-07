@@ -383,6 +383,78 @@ class OperatorUserIT
     }
 
     @Test
+    void shouldAllowOperatorUserToStartAndStopDatabase() throws InvalidAuthTokenException
+    {
+        // GIVEN
+        GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( true );
+        LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
+
+        // WHEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            // Stop online database
+            tx.execute( String.format( "STOP DATABASE %s", DEFAULT_DATABASE_NAME ) );
+            tx.commit();
+        }
+
+        // THEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            Result result = tx.execute( "SHOW DEFAULT DATABASE" );
+            final Set<Object> status = result.columnAs( "currentStatus" ).stream().collect( Collectors.toSet() );
+            assertEquals( Set.of( "offline" ), status );
+        }
+
+        // WHEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            // Stop offline database
+            tx.execute( String.format( "STOP DATABASE %s", DEFAULT_DATABASE_NAME ) );
+            tx.commit();
+        }
+
+        // THEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            Result result = tx.execute( "SHOW DEFAULT DATABASE" );
+            final Set<Object> status = result.columnAs( "currentStatus" ).stream().collect( Collectors.toSet() );
+            assertEquals( Set.of( "offline" ), status );
+        }
+
+        // WHEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            // Start offline database
+            tx.execute( String.format( "START DATABASE %s", DEFAULT_DATABASE_NAME ) );
+            tx.commit();
+        }
+
+        // THEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            Result result = tx.execute( "SHOW DEFAULT DATABASE" );
+            final Set<Object> status = result.columnAs( "currentStatus" ).stream().collect( Collectors.toSet() );
+            assertEquals( Set.of( "online" ), status );
+        }
+
+        // WHEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            // Start online database
+            tx.execute( String.format( "START DATABASE %s", DEFAULT_DATABASE_NAME ) );
+            tx.commit();
+        }
+
+        // THEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            Result result = tx.execute( "SHOW DEFAULT DATABASE" );
+            final Set<Object> status = result.columnAs( "currentStatus" ).stream().collect( Collectors.toSet() );
+            assertEquals( Set.of( "online" ), status );
+        }
+    }
+
+    @Test
     void shouldNotListUpgradeUser() throws InvalidAuthTokenException
     {
         setInitialPassword( "baz" );
