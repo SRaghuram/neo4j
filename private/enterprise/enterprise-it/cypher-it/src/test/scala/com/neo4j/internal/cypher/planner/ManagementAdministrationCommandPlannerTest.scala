@@ -351,6 +351,34 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     )
   }
 
+  test("Create user with encrypted password") {
+    // When
+    val plan = execute("EXPLAIN CREATE USER foo SET ENCRYPTED PASSWORD 'secret'").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        managementPlan("CreateUser", Seq(userArg("foo")),
+          assertDbmsAdminPlan("CREATE USER")
+        )
+      ).toString
+    )
+  }
+
+  test("Create user with plaintext password") {
+    // When
+    val plan = execute("EXPLAIN CREATE USER foo SET PLAINTEXT PASSWORD 'secret'").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        managementPlan("CreateUser", Seq(userArg("foo")),
+          assertDbmsAdminPlan("CREATE USER")
+        )
+      ).toString
+    )
+  }
+
   test("Drop user") {
     // Given
     execute("CREATE USER foo SET PASSWORD 'secret'")
@@ -478,6 +506,40 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
           helperPlan("AssertNotCurrentUser", Seq(userArg("foo")),
             assertDbmsAdminPlan("SET PASSWORDS", "SET USER STATUS")
           )
+        )
+      ).toString
+    )
+  }
+
+  test("Alter user with encrypted password") {
+    // Given
+    execute("CREATE USER foo SET PASSWORD 'secret'")
+
+    // When
+    val plan = execute("EXPLAIN ALTER USER foo SET ENCRYPTED PASSWORD 'password'").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        managementPlan("AlterUser", Seq(userArg("foo")),
+          assertDbmsAdminPlan("SET PASSWORDS")
+        )
+      ).toString
+    )
+  }
+
+  test("Alter user with plaintext password") {
+    // Given
+    execute("CREATE USER foo SET PASSWORD 'secret'")
+
+    // When
+    val plan = execute("EXPLAIN ALTER USER foo SET PLAINTEXT PASSWORD 'password'").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        managementPlan("AlterUser", Seq(userArg("foo")),
+          assertDbmsAdminPlan("SET PASSWORDS")
         )
       ).toString
     )
