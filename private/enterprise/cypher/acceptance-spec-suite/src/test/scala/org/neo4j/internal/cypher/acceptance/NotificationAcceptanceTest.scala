@@ -20,6 +20,7 @@ import org.neo4j.graphdb.impl.notification.NotificationCode.DEPRECATED_PROCEDURE
 import org.neo4j.graphdb.impl.notification.NotificationCode.DEPRECATED_PROCEDURE_RETURN_FIELD
 import org.neo4j.graphdb.impl.notification.NotificationCode.INDEX_HINT_UNFULFILLABLE
 import org.neo4j.graphdb.impl.notification.NotificationCode.INDEX_LOOKUP_FOR_DYNAMIC_PROPERTY
+import org.neo4j.graphdb.impl.notification.NotificationCode.MISSING_ALIAS
 import org.neo4j.graphdb.impl.notification.NotificationCode.MISSING_LABEL
 import org.neo4j.graphdb.impl.notification.NotificationCode.MISSING_PROPERTY_NAME
 import org.neo4j.graphdb.impl.notification.NotificationCode.MISSING_REL_TYPE
@@ -688,6 +689,33 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     result.notifications should contain(SUBQUERY_VARIABLE_SHADOWING.notification(
       new graphdb.InputPosition(32, 1, 33),
       NotificationDetail.Factory.shadowingVariable("n")))
+  }
+
+  test("should warn about missing aliases in subquery return") {
+    val query = "EXPLAIN CALL { RETURN 1 } RETURN `1` as one"
+    val result = executeSingle(query, Map.empty)
+    result.notifications should contain(MISSING_ALIAS.notification(
+        new graphdb.InputPosition(15, 1, 16)))
+  }
+
+  test("should warn about missing aliases in union subquery return") {
+    val query = "EXPLAIN CALL { RETURN 1 UNION RETURN 1 } RETURN `1` as one"
+    val result = executeSingle(query, Map.empty)
+    result.notifications should contain(MISSING_ALIAS.notification(
+        new graphdb.InputPosition(15, 1, 16)))
+  }
+  test("should warn about missing aliases in correlated subquery return") {
+    val query = "EXPLAIN MATCH (n) CALL { WITH n RETURN 1 } RETURN `1` as one"
+    val result = executeSingle(query, Map.empty)
+    result.notifications should contain(MISSING_ALIAS.notification(
+        new graphdb.InputPosition(32, 1, 33)))
+  }
+
+  test("should warn about missing aliases in correlated union subquery return") {
+    val query = "EXPLAIN MATCH (n) CALL { WITH n RETURN 1 UNION WITH n RETURN 1 } RETURN `1` as one"
+    val result = executeSingle(query, Map.empty)
+    result.notifications should contain(MISSING_ALIAS.notification(
+        new graphdb.InputPosition(32, 1, 33)))
   }
 }
 
