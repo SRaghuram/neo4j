@@ -12,7 +12,7 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSu
 
 class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
-  test( "should handle switch between Cypher versions" ) {
+  test("should handle switch between Cypher versions") {
     // run query against latest version
     executeSingle("MATCH (n) RETURN n")
 
@@ -20,7 +20,7 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     executeSingle("CYPHER 3.5 RETURN toInt('1') AS one")
 
     // toInt should fail in latest version
-    val exception = the [SyntaxException] thrownBy {
+    val exception = the[SyntaxException] thrownBy {
       executeSingle("RETURN toInt('1') AS one")
     }
     exception.getMessage should include("The function toInt() is no longer supported. Please use toInteger() instead")
@@ -167,6 +167,22 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
   }
 
   // Additions in 4.0 and 4.1
+  test("Creating a user with an encrypted password should not work with Cypher 3.5") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 CREATE USER foo SET ENCRYPTED PASSWORD 'bar'")
+    }
+    exception.getMessage should include("Creating a user with an encrypted password is not supported in this Cypher version.")
+  }
+
+  test("Updating a user with an encrypted password should not work with Cypher 3.5") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 ALTER USER foo SET ENCRYPTED PASSWORD 'bar'")
+    }
+    exception.getMessage should include("Updating a user with an encrypted password is not supported in this Cypher version.")
+  }
+
   test("The USE clause should not work with CYPHER 3.5") {
     // WHEN
     val exception = the[SyntaxException] thrownBy {
