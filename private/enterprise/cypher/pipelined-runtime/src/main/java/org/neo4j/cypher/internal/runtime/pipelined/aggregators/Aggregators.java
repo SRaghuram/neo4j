@@ -30,4 +30,5 @@ public class Aggregators
     public static final Aggregator STDEVP = StdevPAggregator$.MODULE$;
     public static final Aggregator STDEVP_DISTINCT = StdevPDistinctAggregator$.MODULE$;
     public static final Aggregator PERCENTILE_DISC = PercentileDiscAggregator$.MODULE$;
+    public static final Aggregator PERCENTILE_CONT = PercentileContAggregator$.MODULE$;
 }

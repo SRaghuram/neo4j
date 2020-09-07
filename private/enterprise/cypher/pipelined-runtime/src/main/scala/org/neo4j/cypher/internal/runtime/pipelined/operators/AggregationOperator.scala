@@ -51,6 +51,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.aggregators.IsEmptyAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.MaxAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.MinAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.NonEmptyAggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.PercentileContAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.PercentileDiscAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.StdevAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.StdevDistinctAggregator
@@ -254,6 +255,7 @@ object AggregationMapperOperatorTaskTemplate {
       case StdevDistinctAggregator => getStatic[Aggregators,Aggregator]("STDEV_DISTINCT")
       case StdevPAggregator => getStatic[Aggregators,Aggregator]("STDEVP")
       case StdevPDistinctAggregator => getStatic[Aggregators,Aggregator]("STDEVP_DISTINCT")
+      case PercentileContAggregator => getStatic[Aggregators,Aggregator]("PERCENTILE_CONT")
       case PercentileDiscAggregator => getStatic[Aggregators,Aggregator]("PERCENTILE_DISC")
       case aggregator =>
         throw new SyntaxException(s"Unexpected Aggregator: ${aggregator.getClass.getName}")
