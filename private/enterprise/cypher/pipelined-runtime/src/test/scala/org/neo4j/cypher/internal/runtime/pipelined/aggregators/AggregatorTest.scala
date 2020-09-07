@@ -23,37 +23,48 @@ trait AggregatorTest {
   /**
    * Override to specify how to perform the aggregation
    */
-  def runAggregation(values: Seq[AnyValue]): AnyValue
+  def runAggregation(values: Seq[Array[AnyValue]]): AnyValue
+
+  /**
+   * Helper method for the case when the aggregation is on a single value
+   */
+  def runSingleAggregation(values: Seq[AnyValue]): AnyValue = runAggregation(values.map(Array[AnyValue](_)))
 
   private val random: ThreadLocalRandom = ThreadLocalRandom.current()
   private val randomValues: RandomValues = RandomValues.create(random)
 
-  private def runAggregator(reducer: Reducer, values: Seq[AnyValue]): AnyValue = {
+  private def runAggregator(reducer: Reducer, values: Seq[Array[AnyValue]]): AnyValue = {
     val upperBound = Math.max(2, values.size / 10)
     val groups = values.grouped(random.nextInt(1, upperBound))
     val updaters = (0 until random.nextInt(2, 5)).map(_ => reducer.newUpdater())
     var i = 0
     for (group <- groups) {
       val updater = updaters(i)
-      group.foreach(g => updater.add(Array(g)))
+      group.foreach(g => updater.add(g))
       updater.applyUpdates()
       i = (i+1) % updaters.length
     }
     reducer.result
   }
 
-  def runAggregationFunction(getFunction: Expression => AggregationFunction, values: Seq[AnyValue]): AnyValue = {
-    val func = getFunction(Variable("x"))
+  def runAggregationFunction(getFunction: Array[Expression] => AggregationFunction, values: Seq[Array[AnyValue]]): AnyValue = {
+    //require()
+    val inputSize = if (values.isEmpty) 0 else values.head.length
+    val args = (0 until inputSize).map(i => Variable(s"x$i"))
+    val func = getFunction(args.toArray)
     for (value <- values) {
-      func.apply(CypherRow.from("x" -> value), null)
+      val rows = value.zipWithIndex.map {
+        case (v, i) => s"x$i" -> v
+      }
+      func.apply(CypherRow.from(rows:_*), null)
     }
     func.result(null)
   }
 
-  def runStandardAggregator(aggregator: Aggregator, values: Seq[AnyValue]): AnyValue =
+  def runStandardAggregator(aggregator: Aggregator, values: Seq[Array[AnyValue]]): AnyValue =
     runAggregator(aggregator.newStandardReducer(EmptyMemoryTracker.INSTANCE), values)
 
-  def runConcurrentAggregator(aggregator: Aggregator, values: Seq[AnyValue]): AnyValue =
+  def runConcurrentAggregator(aggregator: Aggregator, values: Seq[Array[AnyValue]]): AnyValue =
     runAggregator(aggregator.newConcurrentReducer, values)
 
   protected val randomInts: Seq[Int] = random.ints(50, 0, 15).toArray
@@ -69,14 +80,15 @@ trait AggregatorTest {
 }
 
 trait StandardAggregatorTest extends AggregatorTest {
-  def runAggregation(values: Seq[AnyValue]): AnyValue = runStandardAggregator(aggregator, values)
+  def runAggregation(values: Seq[Array[AnyValue]]): AnyValue = runStandardAggregator(aggregator, values)
   def aggregator: Aggregator
 }
 trait ConcurrentAggregatorTest extends AggregatorTest {
-  def runAggregation(values: Seq[AnyValue]): AnyValue = runConcurrentAggregator(aggregator, values)
+  def runAggregation(values: Seq[Array[AnyValue]]): AnyValue = runConcurrentAggregator(aggregator, values)
   def aggregator: Aggregator
 }
 trait FunctionAggregatorTest extends AggregatorTest {
-  def runAggregation(values: Seq[AnyValue]): AnyValue = runAggregationFunction(getAggregationFunction, values)
+  def runAggregation(values: Seq[Array[AnyValue]]): AnyValue = runAggregationFunction(getAggregationFunction, values)
   def getAggregationFunction(e: Expression): AggregationFunction
+  def getAggregationFunction(e: Array[Expression]): AggregationFunction = getAggregationFunction(e.head)
 }

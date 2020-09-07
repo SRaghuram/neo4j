@@ -28,7 +28,7 @@ class FunctionCountAggregatorTest extends CountAggregatorTest with FunctionAggre
 
 abstract class CountAggregatorTest extends CypherFunSuite with AggregatorTest {
   test("should count") {
-    val result = runAggregation(randomIntValuesWithNulls)
+    val result = runSingleAggregation(randomIntValuesWithNulls)
     result should be(Values.intValue(randomInts.length))
   }
 }
@@ -47,7 +47,7 @@ class FunctionCountStarAggregatorTest extends CountStarAggregatorTest with Funct
 
 abstract class CountStarAggregatorTest extends CypherFunSuite with AggregatorTest {
   test("should count *") {
-    val result = runAggregation(randomIntValuesWithNulls)
+    val result = runSingleAggregation(randomIntValuesWithNulls)
     result should be(Values.intValue(randomIntValuesWithNulls.length))
   }
 }
@@ -66,7 +66,7 @@ class FunctionCountDistinctAggregatorTest extends CountDistinctAggregatorTest wi
 
 abstract class CountDistinctAggregatorTest extends CypherFunSuite with AggregatorTest {
   test("should count DISTINCT") {
-    val result = runAggregation(randomIntValuesWithNulls)
+    val result = runSingleAggregation(randomIntValuesWithNulls)
     result should be(Values.intValue(randomInts.distinct.length))
   }
 }

@@ -25,7 +25,7 @@ class FunctionMaxAggregatorTest extends MaxAggregatorTest with FunctionAggregato
 
 abstract class MaxAggregatorTest extends CypherFunSuite with AggregatorTest {
   test("should max numbers") {
-    val result = runAggregation(randomIntValuesWithNulls)
+    val result = runSingleAggregation(randomIntValuesWithNulls)
     result should be(Values.intValue(randomInts.max))
   }
 }

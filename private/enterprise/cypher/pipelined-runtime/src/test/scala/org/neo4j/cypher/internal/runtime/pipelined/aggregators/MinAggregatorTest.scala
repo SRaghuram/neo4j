@@ -25,7 +25,7 @@ class FunctionMinAggregatorTest extends MinAggregatorTest with FunctionAggregato
 
 abstract class MinAggregatorTest extends CypherFunSuite with AggregatorTest {
   test("should min numbers") {
-    val result = runAggregation(randomIntValuesWithNulls)
+    val result = runSingleAggregation(randomIntValuesWithNulls)
     result should be(Values.intValue(randomInts.min))
   }
 }

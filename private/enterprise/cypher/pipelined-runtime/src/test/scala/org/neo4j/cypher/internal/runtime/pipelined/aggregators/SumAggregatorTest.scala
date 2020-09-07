@@ -27,12 +27,12 @@ class FunctionSumAggregatorTest extends SumAggregatorTest with FunctionAggregato
 
 abstract class SumAggregatorTest extends CypherFunSuite with AggregatorTest {
   test("should sum numbers") {
-    val result = runAggregation(randomIntValuesWithNulls)
+    val result = runSingleAggregation(randomIntValuesWithNulls)
     result should be(Values.intValue(randomInts.sum))
   }
 
   test("should sum durations") {
-    val result = runAggregation(randomDurationsWithNulls)
+    val result = runSingleAggregation(randomDurationsWithNulls)
     result should be(randomDurations.reduce(_ add _))
   }
 }
@@ -51,12 +51,12 @@ class FunctionSumDistinctAggregatorTest extends SumDistinctAggregatorTest with F
 
 abstract class SumDistinctAggregatorTest extends CypherFunSuite with AggregatorTest {
   test("should sum DISTINCT numbers") {
-    val result = runAggregation(randomIntValuesWithNulls)
+    val result = runSingleAggregation(randomIntValuesWithNulls)
     result should be(Values.intValue(randomInts.distinct.sum))
   }
 
   test("should sum DISTINCT durations") {
-    val result = runAggregation(randomDurationsWithNulls)
+    val result = runSingleAggregation(randomDurationsWithNulls)
     result should be(randomDurations.distinct.reduce(_ add _))
   }
 }

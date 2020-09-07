@@ -19,17 +19,17 @@ class ConcurrentCollectAggregatorTest extends CypherFunSuite with ConcurrentAggr
   override def aggregator: Aggregator = throw new UnsupportedOperationException()
 
   test("should collect concurrent") {
-    val result = runConcurrentAggregator(CollectAggregator, randomIntValuesWithNulls).asInstanceOf[ListValue].asArray()
+    val result = runConcurrentAggregator(CollectAggregator, randomIntValuesWithNulls.map(Array[AnyValue](_))).asInstanceOf[ListValue].asArray()
     result should contain theSameElementsAs randomIntValues
   }
 
   test("should collect all concurrent") {
-    val result = runConcurrentAggregator(CollectAllAggregator, randomIntValuesWithNulls).asInstanceOf[ListValue].asArray()
+    val result = runConcurrentAggregator(CollectAllAggregator, randomIntValuesWithNulls.map(Array[AnyValue](_))).asInstanceOf[ListValue].asArray()
     result should contain theSameElementsAs randomIntValuesWithNulls
   }
 
   test("should collect DISTINCT concurrent") {
-    val result = runConcurrentAggregator(CollectDistinctAggregator, randomIntValuesWithNulls).asInstanceOf[ListValue].asArray()
+    val result = runConcurrentAggregator(CollectDistinctAggregator, randomIntValuesWithNulls.map(Array[AnyValue](_))).asInstanceOf[ListValue].asArray()
     result should contain theSameElementsAs randomIntValues.distinct
   }
 }
@@ -44,16 +44,16 @@ class FunctionCollectAggregatorTest extends CollectAggregatorTest with FunctionA
 
 abstract class CollectAggregatorTest extends CypherFunSuite with AggregatorTest {
   test("should collect") {
-    val result = runAggregation(randomIntValuesWithNulls)
+    val result = runAggregation(randomIntValuesWithNulls.map(Array[AnyValue](_)))
     result should be(VirtualValues.list(randomIntValues: _*))
   }
 }
 
 class CollectAllAggregatorTest extends CypherFunSuite with AggregatorTest {
-  override def runAggregation(values: Seq[AnyValue]): AnyValue = throw new UnsupportedOperationException()
+  override def runAggregation(values: Seq[Array[AnyValue]]): AnyValue = throw new UnsupportedOperationException()
 
   test("should collect all standard") {
-    val result = runStandardAggregator(CollectAllAggregator, randomIntValuesWithNulls)
+    val result = runStandardAggregator(CollectAllAggregator, randomIntValuesWithNulls.map(Array[AnyValue](_)))
     result should be(VirtualValues.list(randomIntValuesWithNulls: _*))
   }
 }
@@ -68,7 +68,7 @@ class FunctionCollectDistinctAggregatorTest extends CollectDistinctAggregatorTes
 
 abstract class CollectDistinctAggregatorTest extends CypherFunSuite with AggregatorTest {
   test("should collect DISTINCT") {
-    val result = runAggregation(randomIntValuesWithNulls)
+    val result = runAggregation(randomIntValuesWithNulls.map(Array[AnyValue](_)))
     result should be(VirtualValues.list(randomIntValues.distinct: _*))
   }
 }

@@ -40,7 +40,7 @@ class FunctionStdevPAggregatorTest extends StdevPAggregatorTest with FunctionAgg
 
 abstract class StdevPAggregatorTest extends CypherFunSuite with AggregatorTest {
   test("should stdevP numbers") {
-    val result = runAggregation(randomIntValuesWithNulls).asInstanceOf[NumberValue].doubleValue()
+    val result = runSingleAggregation(randomIntValuesWithNulls).asInstanceOf[NumberValue].doubleValue()
     result should be(stdevP(randomInts) +- 0.0001)
   }
 }
@@ -59,7 +59,7 @@ class FunctionStdevPDistinctAggregatorTest extends StdevPDistinctAggregatorTest 
 
 abstract class StdevPDistinctAggregatorTest extends CypherFunSuite with AggregatorTest {
   test("should stdevP DISTINCT numbers") {
-    val result = runAggregation(randomIntValuesWithNulls).asInstanceOf[NumberValue].doubleValue()
+    val result = runSingleAggregation(randomIntValuesWithNulls).asInstanceOf[NumberValue].doubleValue()
     result should be(stdevP(randomInts.distinct) +- 0.0001)
   }
 }
