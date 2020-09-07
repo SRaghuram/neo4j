@@ -101,8 +101,9 @@ public class CreateJobTest
                     benchmarkGroupBenchmarkMetrics,
                     new BenchmarkTool( Repository.NEO4J, "commit", "owner", "branch" ),
                     Java.current( "" ),
-                    Collections.emptyList()
-            );
+                    Collections.emptyList(),
+                Collections.emptyList()
+        );
 
             SubmitTestRun submitTestRun = new SubmitTestRun( testRunReport );
 

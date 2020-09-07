@@ -209,7 +209,6 @@ public class DirectoryTest
         assertThat( "Files created for same fork should have same parent folder", file1.getParent(), equalTo( file2.getParent() ) );
 
         Path planFile = forkDir.pathForPlan();
-        assertThat( "Path to plan file should have correct name", planFile.getFileName().toString(), equalTo( ForkDirectory.PLAN_JSON ) );
         assertFalse( Files.exists( planFile ), "Plan file should not yet be created" );
     }
 

@@ -43,7 +43,7 @@ import static java.util.stream.Collectors.toMap;
 public class ForkDirectory
 {
     private static final String FORK_JSON = "fork.json";
-    static final String PLAN_JSON = "plan.json";
+    private static final String PLAN_JSON = "plan.json";
     private final Path dir;
     private final ForkDescription forkDescription;
 

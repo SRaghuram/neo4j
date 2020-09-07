@@ -23,7 +23,6 @@ public class Main
         CliBuilder<Runnable> builder = Cli.<Runnable>builder( "client" )
                 .withDefaultCommand( Help.class )
                 .withCommand( ReIndexStoreCommand.class )
-//                .withCommand( ReportCommand.class )
                 .withCommand( CompareVersionsCommand.class )
                 .withCommand( Help.class );
 

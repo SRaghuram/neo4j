@@ -90,7 +90,7 @@ ${jvm_path} -jar "${jar_path}" run-export  \
         --tool_branch_owner "${tool_branch_owner}" \
         --config "${benchmark_config}" \
         --triggered-by "${triggered_by}" \
-        --stores-dir "${work_dir}" \
+        --work-dir "${work_dir}" \
         --profilers "${profilers}" \
         --results-store-uri "${results_store_uri}" \
         --results-store-user "${results_store_user}" \

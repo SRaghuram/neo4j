@@ -63,7 +63,7 @@ public class RunReportParams
     public static final String CMD_PROFILERS = "--profilers";
     private String parameterizedProfilers = "";
 
-    public static final String CMD_WORK_DIR = "--stores-dir";
+    public static final String CMD_WORK_DIR = "--work-dir";
     private File workDir;
 
     public static final String CMD_ERROR_POLICY = "--error-policy";
