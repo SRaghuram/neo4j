@@ -9,9 +9,11 @@ import java.util
 
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
-import org.neo4j.cypher.internal.DatabaseStatus.Online
 import org.neo4j.cypher.CacheCounts
 import org.neo4j.cypher.ExecutionEngineCacheCounter
+import org.neo4j.cypher.internal.DatabaseStatus.Online
+import org.neo4j.cypher.internal.security.SecureHasher
+import org.neo4j.cypher.internal.security.SystemGraphCredential
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.exceptions.ParameterNotFoundException
 import org.neo4j.exceptions.ParameterWrongTypeException
@@ -26,7 +28,7 @@ import scala.collection.JavaConverters.mapAsJavaMapConverter
 
 class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
-  test("GraphStatistics should tell us if a query contains system updates or not"){
+  test("GraphStatistics should tell us if a query contains system updates or not") {
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (n) RETURN n").queryStatistics().containsUpdates() should be(true)
     execute("CREATE (n) RETURN n").queryStatistics().containsSystemUpdates() should be(false)
@@ -83,7 +85,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val result = execute("SHOW USERS YIELD user, suspended")
 
     // THEN
-    result.toSet should be(Set(Map("user"->"neo4j", "suspended" -> false)))
+    result.toSet should be(Set(Map("user" -> "neo4j", "suspended" -> false)))
   }
 
   test("should show users with yield and return") {
@@ -123,7 +125,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val result = execute("SHOW USERS WHERE 'admin' IN roles")
 
     // THEN
-    result.toSet should be (Set(adminUser("neo4j")))
+    result.toSet should be(Set(adminUser("neo4j")))
   }
 
   test("should show users with yield and where") {
@@ -134,7 +136,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val result = execute("SHOW USERS YIELD user, suspended WHERE user = 'neo4j'")
 
     // THEN
-    result.toSet should be(Set(Map("user"->"neo4j", "suspended"-> false)))
+    result.toSet should be(Set(Map("user" -> "neo4j", "suspended" -> false)))
   }
 
   test("should show users with yield and where 2") {
@@ -146,7 +148,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val result = execute("SHOW USERS YIELD user, suspended WHERE user = 'bar'")
 
     // THEN
-    result.toList should be(List(Map("user"->"bar", "suspended"-> true)))
+    result.toList should be(List(Map("user" -> "bar", "suspended" -> true)))
   }
 
   test("should show users with yield and skip") {
@@ -213,7 +215,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val result = execute("SHOW USERS YIELD user ORDER BY user ASC")
 
     // THEN
-    result.toList should be(List(Map("user" -> "bar"),Map("user" -> "foo"),Map("user" -> "neo4j")))
+    result.toList should be(List(Map("user" -> "bar"), Map("user" -> "foo"), Map("user" -> "neo4j")))
   }
 
   test("should show users with yield and order by desc") {
@@ -226,7 +228,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val result = execute("SHOW USERS YIELD user ORDER BY user DESC")
 
     // THEN
-    result.toList should be(List(Map("user" -> "neo4j"),Map("user" -> "foo"),Map("user" -> "bar")))
+    result.toList should be(List(Map("user" -> "neo4j"), Map("user" -> "foo"), Map("user" -> "bar")))
   }
 
   test("should show users with yield and aliasing") {
@@ -408,8 +410,8 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // GIVEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     val passwords = Seq("bar", "abc", "password")
-    val createCount = Map("cachable" -> 1, "total" ->  2)   // create has one outer and one inner command
-    val dropCount = Map("cachable" -> 3, "total" ->  3)     // drop has one outer and two inner commands
+    val createCount = Map("cachable" -> 1, "total" -> 2) // create has one outer and one inner command
+    val dropCount = Map("cachable" -> 3, "total" -> 3) // drop has one outer and two inner commands
     val hits = (createCount("cachable") + dropCount("cachable")) * (passwords.size - 1)
     val total = (createCount("total") + dropCount("total")) * passwords.size
     val misses = total - hits
@@ -419,11 +421,11 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     kernelMonitors.addMonitorListener(counter)
     counter.counts should equal(CacheCounts())
     passwords.foreach { pw =>
-        execute("CREATE USER foo SET PASSWORD $password CHANGE NOT REQUIRED", Map("password" -> pw))
-        testUserLogin("foo", "wrong", AuthenticationResult.FAILURE)
-        testUserLogin("foo", pw, AuthenticationResult.SUCCESS)
-        execute("DROP USER foo")
-        testUserLogin("foo", pw, AuthenticationResult.FAILURE)
+      execute("CREATE USER foo SET PASSWORD $password CHANGE NOT REQUIRED", Map("password" -> pw))
+      testUserLogin("foo", "wrong", AuthenticationResult.FAILURE)
+      testUserLogin("foo", pw, AuthenticationResult.SUCCESS)
+      execute("DROP USER foo")
+      testUserLogin("foo", pw, AuthenticationResult.FAILURE)
     }
 
     // THEN
@@ -481,7 +483,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should create user with password change not required") {
     // WHEN
-    execute("CREATE USER foo SET PASSWORD 'password' CHANGE NOT REQUIRED")
+    execute("CREATE USER foo SET PLAINTEXT PASSWORD 'password' CHANGE NOT REQUIRED")
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo", passwordChangeRequired = false))
@@ -511,7 +513,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should create user with all parameters") {
     // WHEN
-    execute("CREATE USER foo SET PASSWORD 'password' CHANGE NOT REQUIRED SET STATUS SUSPENDED")
+    execute("CREATE USER foo SET PLAINTEXT PASSWORD 'password' CHANGE NOT REQUIRED SET STATUS SUSPENDED")
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo", passwordChangeRequired = false, suspended = true))
@@ -656,6 +658,101 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     exception2.getMessage should include("Failed to create the specified user '$user': cannot have both `OR REPLACE` and `IF NOT EXISTS`.")
   }
 
+  test("should create user with encrypted password") {
+    // GIVEN
+    val username = "foo"
+    val password = "bar"
+    val encryptedPassword = getMaskedEncodedPassword(password)
+
+    // WHEN
+    execute(s"CREATE USER $username SET ENCRYPTED PASSWORD '$encryptedPassword'")
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user(username))
+    testUserLogin(username, "wrong", AuthenticationResult.FAILURE)
+    testUserLogin(username, encryptedPassword, AuthenticationResult.FAILURE)
+    testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+  }
+
+  test("should create user with old configuration encrypted password") {
+    // GIVEN
+    val username = "foo"
+    val password = "bar"
+    val version = "0"
+    val encryptedPassword = getMaskedEncodedPassword(password, version)
+
+    // WHEN
+    execute(s"CREATE USER $username SET ENCRYPTED PASSWORD '$encryptedPassword'")
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user(username))
+    testUserLogin(username, "wrong", AuthenticationResult.FAILURE)
+    testUserLogin(username, encryptedPassword, AuthenticationResult.FAILURE)
+    testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+  }
+
+  test("should fail to create user with unmasked encrypted password") {
+    // GIVEN
+    val username = "foo"
+    val unmaskedEncryptedPassword = "SHA-256,04773b8510aea96ca2085cb81764b0a2,75f4201d047191c17c5e236311b7c4d77e36877503fe60b1ca6d4016160782ab,1024"
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute(s"CREATE USER $username SET ENCRYPTED PASSWORD '$unmaskedEncryptedPassword'")
+      // THEN
+    } should have message "Incorrect format of encrypted password. Correct format is '<encryption-version>,<hash>,<salt>'."
+  }
+
+  test("should fail to create user with encrypted password and unsupported version number") {
+    // GIVEN
+    val username = "foo"
+    val incorrectlyEncryptedPassword = "8,04773b8510aea96ca2085cb81764b0a2,75f4201d047191c17c5e236311b7c4d77e36877503fe60b1ca6d4016160782ab"
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute(s"CREATE USER $username SET ENCRYPTED PASSWORD '$incorrectlyEncryptedPassword'")
+      // THEN
+    } should have message "The encryption version specified is not available."
+  }
+
+  test("should fail to create user with encrypted password and missing salt/hash") {
+    // GIVEN
+    val username = "foo"
+    val incorrectlyEncryptedPassword = "1,75f4201d047191c17c5e236311b7c4d77e36877503fe60b1ca6d4016160782ab"
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute(s"CREATE USER $username SET ENCRYPTED PASSWORD '$incorrectlyEncryptedPassword'")
+      // THEN
+    } should have message "Incorrect format of encrypted password. Correct format is '<encryption-version>,<hash>,<salt>'."
+  }
+
+  test("should fail to create user with empty encrypted password") {
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("CREATE USER foo SET ENCRYPTED PASSWORD ''")
+      // THEN
+    } should have message "Incorrect format of encrypted password. Correct format is '<encryption-version>,<hash>,<salt>'."
+
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+  }
+
+  test("should create user with encrypted password as parameter") {
+    // GIVEN
+    val username = "foo"
+    val password = "bar"
+    val encryptedPassword = getMaskedEncodedPassword(password)
+
+    // WHEN
+    execute("CREATE USER foo SET ENCRYPTED PASSWORD $password CHANGE REQUIRED", Map("password" -> encryptedPassword))
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo"))
+    testUserLogin(username, "wrong", AuthenticationResult.FAILURE)
+    testUserLogin(username, encryptedPassword, AuthenticationResult.FAILURE)
+    testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+  }
+
   // Tests for dropping users
 
   test("should drop user") {
@@ -709,7 +806,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     ))
 
     // WHEN
-    executeOnSystem("bob", "bar",  "DROP USER alice")
+    executeOnSystem("bob", "bar", "DROP USER alice")
 
     // THEN
     execute("SHOW USERS").toSet should be(Set(neo4jUser, user("bob", Seq("admin"), passwordChangeRequired = false)))
@@ -808,7 +905,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     prepareUser("foo", "bar")
 
     // WHEN
-    execute("ALTER USER foo SET PASSWORD 'bAz'")
+    execute("ALTER USER foo SET PLAINTEXT PASSWORD 'bAz'")
 
     // THEN
     testUserLogin("foo", "bAz", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
@@ -868,7 +965,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     prepareUser("foo", "bar")
 
     // WHEN
-    execute("ALTER USER foo SET PASSWORD $password", Map("password" -> "baz"))
+    execute("ALTER USER foo SET PLAINTEXT PASSWORD $password", Map("password" -> "baz"))
 
     // THEN
     testUserLogin("foo", "baz", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
@@ -998,7 +1095,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should not alter current user status to suspended") {
     // GIVEN
-    execute("ALTER USER neo4j SET PASSWORD 'potato' CHANGE NOT REQUIRED")
+    execute("ALTER USER neo4j SET PLAINTEXT PASSWORD 'potato' CHANGE NOT REQUIRED")
 
     // WHEN
     the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
@@ -1221,6 +1318,86 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       execute("ALTER USER foo SET PASSWORD $password SET STATUS ACTIVE", Map("password" -> "baz"))
       // THEN
     } should have message "Failed to alter the specified user 'foo': User does not exist."
+  }
+
+  test("should alter user with encrypted password") {
+    // GIVEN
+    val username = "foo"
+    val oldPassword = "bar"
+    val password = "baz"
+    val encryptedPassword = getMaskedEncodedPassword(password)
+
+    execute(s"CREATE USER $username SET PASSWORD '$oldPassword'")
+
+    // WHEN
+    execute(s"ALTER USER $username SET ENCRYPTED PASSWORD '$encryptedPassword'")
+
+    // THEN
+    testUserLogin(username, oldPassword, AuthenticationResult.FAILURE)
+    testUserLogin(username, encryptedPassword, AuthenticationResult.FAILURE)
+    testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+  }
+
+  test("should alter user with old configuration encrypted password") {
+    // GIVEN
+    val username = "foo"
+    val oldPassword = "bar"
+    val password = "baz"
+    val version = "0"
+    val encryptedPassword = getMaskedEncodedPassword(password, version)
+
+    execute(s"CREATE USER $username SET PASSWORD '$oldPassword'")
+
+    // WHEN
+    execute(s"ALTER USER $username SET ENCRYPTED PASSWORD '$encryptedPassword'")
+
+    // THEN
+    testUserLogin(username, oldPassword, AuthenticationResult.FAILURE)
+    testUserLogin(username, encryptedPassword, AuthenticationResult.FAILURE)
+    testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+  }
+
+  test("should fail to alter user with empty encrypted password") {
+    // GIVEN
+    val username = "foo"
+    val password = "bar"
+    execute(s"CREATE USER $username SET PASSWORD '$password'")
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("ALTER USER foo SET ENCRYPTED PASSWORD ''")
+      // THEN
+    } should have message "Incorrect format of encrypted password. Correct format is '<encryption-version>,<hash>,<salt>'."
+  }
+
+  test("should alter user with encrypted password as parameter") {
+    // GIVEN
+    val username = "foo"
+    val oldPassword = "bar"
+    val password = "baz"
+    val encryptedPassword = getMaskedEncodedPassword(password)
+
+    execute(s"CREATE USER $username SET PASSWORD '$oldPassword'")
+
+    // WHEN
+    execute("ALTER USER foo SET ENCRYPTED PASSWORD $password CHANGE REQUIRED", Map("password" -> encryptedPassword))
+
+    // THEN
+    testUserLogin(username, oldPassword, AuthenticationResult.FAILURE)
+    testUserLogin(username, encryptedPassword, AuthenticationResult.FAILURE)
+    testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+  }
+
+  test("should fail to alter user with incorrectly encrypted password") {
+    // GIVEN
+    val username = "foo"
+    val incorrectlyEncryptedPassword = "0b1ca6d4016160782ab"
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute(s"CREATE USER $username SET ENCRYPTED PASSWORD '$incorrectlyEncryptedPassword'")
+      // THEN
+    } should have message "Incorrect format of encrypted password. Correct format is '<encryption-version>,<hash>,<salt>'."
   }
 
   // Tests for changing own password
@@ -1775,5 +1952,17 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user(username))
     testUserLogin(username, "wrong", AuthenticationResult.FAILURE)
     testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+  }
+
+  private def getMaskedEncodedPassword(password: String): String = {
+    val hasher = new SecureHasher()
+    val credential = SystemGraphCredential.createCredentialForPassword(password.getBytes, hasher)
+    SystemGraphCredential.maskSerialized(credential.serialize())
+  }
+
+  private def getMaskedEncodedPassword(password: String, version: String): String = {
+    val hasher = new SecureHasher(version)
+    val credential = SystemGraphCredential.createCredentialForPassword(password.getBytes, hasher)
+    SystemGraphCredential.maskSerialized(credential.serialize())
   }
 }
