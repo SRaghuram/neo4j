@@ -51,7 +51,7 @@ class SecurityLogTest
     @Test
     void shouldRotateLog() throws Exception
     {
-        SecurityLog securityLog = new SecurityLog( config );
+        SecurityLog securityLog = new SecurityLog( config, fs );
         securityLog.init();
         securityLog.info( "line 1" );
         securityLog.info( "line 2" );
@@ -90,7 +90,7 @@ class SecurityLogTest
         Config timeZoneConfig = Config.newBuilder()
                 .set( GraphDatabaseSettings.db_timezone, LogTimeZone.SYSTEM )
                 .set( GraphDatabaseSettings.neo4j_home, dir.homePath() ).build();
-        SecurityLog securityLog = new SecurityLog( timeZoneConfig );
+        SecurityLog securityLog = new SecurityLog( timeZoneConfig, fs );
         securityLog.init();
         securityLog.info( "line 1" );
         securityLog.shutdown();
@@ -133,8 +133,8 @@ class SecurityLogTest
     {
         return new SecurityLog(
                 Config.newBuilder().set( SecuritySettings.security_log_level, debug )
-                        .set( GraphDatabaseSettings.neo4j_home, dir.homePath() ).build()
-            );
+                        .set( GraphDatabaseSettings.neo4j_home, dir.homePath() ).build(),
+                fs );
     }
 
     private String[] readLogFile( FileSystemAbstraction fs, File activeLogFile ) throws IOException

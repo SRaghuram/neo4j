@@ -52,6 +52,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.batchimport.cache.idmapping.string.Workers;
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.impl.locking.DumpLocksVisitor;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -287,7 +288,7 @@ public class Orchestrator
         log.info( "Dumping locks to: " + outputFile );
         DependencyResolver resolver = db.getDependencyResolver();
 
-        Log4jLogProvider logProvider = new Log4jLogProvider( LogConfig.createBuilder( outputFile, Level.INFO ).build() );
+        Log4jLogProvider logProvider = new Log4jLogProvider( LogConfig.createBuilder( new DefaultFileSystemAbstraction(), outputFile, Level.INFO ).build() );
         resolver.resolveDependency( Locks.class ).accept( new DumpLocksVisitor( logProvider.getLog( Locks.class ) ) );
         logProvider.close();
     }

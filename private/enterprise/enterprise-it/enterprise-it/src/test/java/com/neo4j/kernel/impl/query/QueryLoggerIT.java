@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -38,6 +37,7 @@ import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.UncloseableDelegatingFileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
@@ -503,77 +503,86 @@ class QueryLoggerIT
         final Path logsDirectory = testDirectory.homePath().resolve( "logs" );
         final Path logFilename = logsDirectory.resolve( "query.log" );
         final Path shiftedLogFilename1 = logsDirectory.resolve( "query.log.1" );
-        databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
-                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() )
-                       .setConfig( GraphDatabaseSettings.log_queries_rotation_threshold, 0L );
-        buildDatabase();
-
-        // Logging is done asynchronously, so write many times to make sure we would have rotated something
-        for ( int i = 0; i < 100; i++ )
+        try ( FileSystemAbstraction fs = new DefaultFileSystemAbstraction() )
         {
-            executeQuery( QUERY );
+            ((TestEnterpriseDatabaseManagementServiceBuilder) databaseBuilder)
+                    .setFileSystem( fs ).setConfig( log_queries, LogQueryLevel.INFO )
+                           .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() )
+                           .setConfig( GraphDatabaseSettings.log_queries_rotation_threshold, 0L );
+            buildDatabase();
+
+            // Logging is done asynchronously, so write many times to make sure we would have rotated something
+            for ( int i = 0; i < 100; i++ )
+            {
+                executeQuery( QUERY );
+            }
+
+            databaseManagementService.shutdown();
+
+            assertFalse( fs.fileExists( shiftedLogFilename1 ), "There should not exist a shifted log file because rotation is disabled" );
+
+            List<String> lines = readAllLines( logFilename );
+            assertEquals( 100, lines.size() );
         }
-
-        databaseManagementService.shutdown();
-
-        assertFalse( Files.exists( shiftedLogFilename1 ), "There should not exist a shifted log file because rotation is disabled" );
-
-        List<String> lines = readAllLines( logFilename );
-        assertEquals( 100, lines.size() );
     }
 
     @Test
-    void queryLogRotation()
+    void queryLogRotation() throws IOException
     {
         final Path logsDirectory = testDirectory.homePath().resolve( "logs" );
-        databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
-                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() )
-                       .setConfig( GraphDatabaseSettings.log_queries_max_archives, 100 )
-                       .setConfig( GraphDatabaseSettings.log_queries_rotation_threshold, 1L );
-        buildDatabase();
-
-        // Logging is done asynchronously, and it turns out it's really hard to make it all work the same on Linux
-        // and on Windows, so just write many times to make sure we rotate several times.
-
-        for ( int i = 0; i < 100; i++ )
+        try ( FileSystemAbstraction fs = new DefaultFileSystemAbstraction() )
         {
-            executeQuery( QUERY );
-        }
+            ((TestEnterpriseDatabaseManagementServiceBuilder) databaseBuilder)
+                    .setFileSystem( fs )
+                    .setConfig( log_queries, LogQueryLevel.INFO )
+                    .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toAbsolutePath() )
+                    .setConfig( GraphDatabaseSettings.log_queries_max_archives, 100 )
+                    .setConfig( GraphDatabaseSettings.log_queries_rotation_threshold, 1L );
+            buildDatabase();
 
-        databaseManagementService.shutdown();
+            // Logging is done asynchronously, and it turns out it's really hard to make it all work the same on Linux
+            // and on Windows, so just write many times to make sure we rotate several times.
+
+            for ( int i = 0; i < 100; i++ )
+            {
+                executeQuery( QUERY );
+            }
+
+            databaseManagementService.shutdown();
 
         Path[] queryLogs = fileSystem.listFiles( logsDirectory, ( dir1, name1 ) -> name1.startsWith( "query.log" ) );
         assertThat( "Expect to have more then one query log file.", queryLogs.length, greaterThanOrEqualTo( 2 ) );
 
-        List<String> loggedQueries = Arrays.stream( queryLogs )
-                                           .map( this::readAllLinesSilent )
-                                           .flatMap( Collection::stream )
-                                           .collect( Collectors.toList() );
-        assertThat( "Expected log file to have at least one log entry", loggedQueries, hasSize( 100 ) );
+            List<String> loggedQueries = Arrays.stream( queryLogs )
+                                               .map( this::readAllLinesSilent )
+                                               .flatMap( Collection::stream )
+                                               .collect( Collectors.toList() );
+            assertThat( "Expected log file to have at least one log entry", loggedQueries, hasSize( 100 ) );
 
-        buildDatabase();
-        try ( Transaction transaction = database.beginTx() )
-        {
-            // Now modify max_archives and rotation_threshold at runtime, and observe that we end up with fewer larger files
-            transaction.execute( "CALL dbms.setConfigValue('" + GraphDatabaseSettings.log_queries_max_archives.name() + "','1')" );
-            transaction.execute( "CALL dbms.setConfigValue('" + GraphDatabaseSettings.log_queries_rotation_threshold.name() + "','20m')" );
-            for ( int i = 0; i < 100; i++ )
+            buildDatabase();
+            try ( Transaction transaction = database.beginTx() )
             {
-                transaction.execute( QUERY );
+                // Now modify max_archives and rotation_threshold at runtime, and observe that we end up with fewer larger files
+                transaction.execute( "CALL dbms.setConfigValue('" + GraphDatabaseSettings.log_queries_max_archives.name() + "','1')" );
+                transaction.execute( "CALL dbms.setConfigValue('" + GraphDatabaseSettings.log_queries_rotation_threshold.name() + "','20m')" );
+                for ( int i = 0; i < 100; i++ )
+                {
+                    transaction.execute( QUERY );
+                }
+                transaction.commit();
             }
-            transaction.commit();
-        }
 
-        databaseManagementService.shutdown();
+            databaseManagementService.shutdown();
 
         queryLogs = fileSystem.listFiles( logsDirectory, ( dir, name ) -> name.startsWith( "query.log" ) );
         assertThat( "Expect to have more then one query log file.", queryLogs.length, lessThan( 100 ) );
 
-        loggedQueries = Arrays.stream( queryLogs )
-                              .map( this::readAllLinesSilent )
-                              .flatMap( Collection::stream )
-                              .collect( Collectors.toList() );
-        assertThat( "Expected log file to have at least one log entry", loggedQueries.size(), lessThanOrEqualTo( 202 ) );
+            loggedQueries = Arrays.stream( queryLogs )
+                                  .map( this::readAllLinesSilent )
+                                  .flatMap( Collection::stream )
+                                  .collect( Collectors.toList() );
+            assertThat( "Expected log file to have at least one log entry", loggedQueries.size(), lessThanOrEqualTo( 202 ) );
+        }
     }
 
     @Test

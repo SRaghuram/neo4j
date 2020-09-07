@@ -153,8 +153,9 @@ class BackupSchemaIT
         Path backupsDir = testDirectory.directory( "backups" ).toPath();
 
         var context = OnlineBackupContext.builder()
-                                         .withAddress( "localhost", getConnectorAddress( db, BACKUP_SERVER_NAME ).getPort() )
-                                         .withBackupDirectory( backupsDir );
+                .withAddress( "localhost", getConnectorAddress( db, BACKUP_SERVER_NAME ).getPort() )
+                .withBackupDirectory( backupsDir )
+                .withReportsDirectory( testDirectory.directory( "reports" ).toPath() );
 
         LogProvider logProvider = new Log4jLogProvider( System.out );
         OnlineBackupExecutor executor = OnlineBackupExecutor.builder()

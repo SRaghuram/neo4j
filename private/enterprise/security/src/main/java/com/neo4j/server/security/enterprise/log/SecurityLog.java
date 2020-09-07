@@ -13,6 +13,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.AbstractLog;
 import org.neo4j.logging.Log;
@@ -28,22 +29,25 @@ public class SecurityLog extends AbstractLog implements Lifecycle
     private Log inner;
     private Neo4jLoggerContext ctx;
     private Config config;
+    private final FileSystemAbstraction fileSystem;
 
-    public SecurityLog( Config config )
+    public SecurityLog( Config config, FileSystemAbstraction fileSystem )
     {
         this.config = config;
+        this.fileSystem = fileSystem;
     }
 
     /* Only used for tests */
     public SecurityLog( Log log )
     {
         inner = log;
+        fileSystem = null;
     }
 
     @Override
     public void init()
     {
-        ctx = LogConfig.createBuilder( config.get( SecuritySettings.security_log_filename ), config.get( SecuritySettings.security_log_level ) )
+        ctx = LogConfig.createBuilder( fileSystem, config.get( SecuritySettings.security_log_filename ), config.get( SecuritySettings.security_log_level ) )
                 .withCategory( false )
                 .withFormat( config.get( GraphDatabaseInternalSettings.log_format ) )
                 .withTimezone( config.get( GraphDatabaseSettings.db_timezone ) )

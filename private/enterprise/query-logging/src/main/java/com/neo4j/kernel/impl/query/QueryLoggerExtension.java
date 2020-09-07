@@ -7,6 +7,7 @@ package com.neo4j.kernel.impl.query;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.ExtensionType;
 import org.neo4j.kernel.extension.context.ExtensionContext;
@@ -19,6 +20,8 @@ public class QueryLoggerExtension extends ExtensionFactory<QueryLoggerExtension.
 {
     public interface Dependencies
     {
+        FileSystemAbstraction fileSystem();
+
         Config config();
 
         Monitors monitoring();
@@ -32,6 +35,7 @@ public class QueryLoggerExtension extends ExtensionFactory<QueryLoggerExtension.
     @Override
     public Lifecycle newInstance( @SuppressWarnings( "unused" ) ExtensionContext context, final Dependencies dependencies )
     {
+        FileSystemAbstraction fileSystem = dependencies.fileSystem();
         Config config = dependencies.config();
         Monitors monitoring = dependencies.monitoring();
 
@@ -42,7 +46,7 @@ public class QueryLoggerExtension extends ExtensionFactory<QueryLoggerExtension.
             @Override
             public void init()
             {
-                this.logger = new DynamicLoggingQueryExecutionMonitor( config );
+                this.logger = new DynamicLoggingQueryExecutionMonitor( config, fileSystem );
                 this.logger.init();
                 monitoring.addMonitorListener( this.logger );
             }

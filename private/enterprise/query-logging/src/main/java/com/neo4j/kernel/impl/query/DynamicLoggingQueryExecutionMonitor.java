@@ -12,6 +12,7 @@ import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.impl.query.QueryExecutionMonitor;
@@ -28,6 +29,7 @@ import static com.neo4j.kernel.impl.query.QueryLogger.NO_LOG;
 class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements QueryExecutionMonitor
 {
     private final Config config;
+    private final FileSystemAbstraction fileSystem;
 
     /**
      * The currently configured QueryLogger.
@@ -44,9 +46,10 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
     private Path heapDumpPath;
     private Neo4jLoggerContext logContext;
 
-    DynamicLoggingQueryExecutionMonitor( Config config )
+    DynamicLoggingQueryExecutionMonitor( Config config, FileSystemAbstraction fileSystem )
     {
         this.config = config;
+        this.fileSystem = fileSystem;
     }
 
     @Override
@@ -143,7 +146,7 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
 
     private LogConfig.Builder getQueryLogBuilder( long rotationThreshold, int maxArchives )
     {
-        return LogConfig.createBuilder( config.get( GraphDatabaseSettings.log_queries_filename ), Level.INFO )
+        return LogConfig.createBuilder( fileSystem, config.get( GraphDatabaseSettings.log_queries_filename ), Level.INFO )
                 .withTimezone( config.get( GraphDatabaseSettings.db_timezone ) )
                 .withFormat( config.get( GraphDatabaseInternalSettings.log_format ) )
                 .withRotation( rotationThreshold, maxArchives )

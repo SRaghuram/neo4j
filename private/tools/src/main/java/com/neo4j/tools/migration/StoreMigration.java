@@ -94,7 +94,7 @@ public final class StoreMigration
 
     public static void run( final FileSystemAbstraction fs, final File storeDirectory, Config config, LogProvider userLogProvider ) throws Exception
     {
-        Neo4jLoggerContext ctx = LogConfig.createBuilder(config.get( store_internal_log_path ), Level.INFO).build();
+        Neo4jLoggerContext ctx = LogConfig.createBuilder( fs, config.get( store_internal_log_path ), Level.INFO ).build();
 
         SimpleLogService logService = new SimpleLogService( userLogProvider, new Log4jLogProvider( ctx ) );
 

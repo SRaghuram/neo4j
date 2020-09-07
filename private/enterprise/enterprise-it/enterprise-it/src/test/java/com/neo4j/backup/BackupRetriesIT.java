@@ -265,6 +265,7 @@ class BackupRetriesIT
                                   .withAddress( backupAddress( db ) )
                                   .withDatabaseNamePattern( DB_NAME )
                                   .withBackupDirectory( backupsDir )
+                                  .withReportsDirectory( testDirectory.directory( "reports" ).toPath() )
                                   .withConfig( config );
 
     }
