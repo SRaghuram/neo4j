@@ -7,6 +7,7 @@ package com.neo4j.bench.infra.scheduler;
 
 import com.neo4j.bench.infra.JobId;
 import com.neo4j.bench.infra.JobStatus;
+import com.neo4j.bench.model.model.Job;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
@@ -104,8 +105,8 @@ public class BatchBenchmarkJobTest
         // when
         jobStatus = new JobStatus( jobId,
                                    "SUCCEEDED",
-                                   null,
-                                   null );
+                                   "logStreamName",
+                                   "statusReason" );
         benchmarkJob = benchmarkJob.copyWith( jobStatus, clock );
 
         // then
@@ -114,5 +115,15 @@ public class BatchBenchmarkJobTest
         assertEquals( queued, benchmarkJob.queuedAt() );
         assertEquals( running, benchmarkJob.runAt() );
         assertNotNull( benchmarkJob.doneAt() );
+
+        // when
+        Job job = benchmarkJob.toJob();
+
+        // then
+        assertEquals( benchmarkJob.queuedAt().toEpochSecond(), job.queuedAt().longValue() );
+        assertEquals( benchmarkJob.doneAt().toEpochSecond(), job.doneAt().longValue() );
+        assertEquals( benchmarkJob.runAt().toEpochSecond(), job.runAt().longValue() );
+        assertEquals( "logStreamName", job.logStreamName() );
+        assertEquals( "statusReason", job.statusReason() );
     }
 }

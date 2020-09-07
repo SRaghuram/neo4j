@@ -65,8 +65,8 @@ class BatchBenchmarkJob
                         queuedAt().toEpochSecond(),
                         ofNullable( runAt() ).map( ChronoZonedDateTime::toEpochSecond ).orElse( null ),
                         ofNullable( doneAt() ).map( ChronoZonedDateTime::toEpochSecond ).orElse( null ),
-                        lastJobStatus().logStreamName(),
-                        lastJobStatus().statusReason().orElse( null ) );
+                        lastJobStatus().statusReason().orElse( null ),
+                        lastJobStatus().logStreamName() );
     }
 
     JobStatus lastJobStatus()
