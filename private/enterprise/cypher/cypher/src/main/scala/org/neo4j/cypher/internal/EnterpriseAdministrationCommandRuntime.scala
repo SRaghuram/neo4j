@@ -10,7 +10,6 @@ import java.util.concurrent.ThreadLocalRandom
 
 import com.neo4j.causalclustering.core.consensus.RaftMachine
 import com.neo4j.configuration.EnterpriseEditionSettings
-import com.neo4j.configuration.SecurityInternalSettings
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager
 import com.neo4j.server.security.enterprise.auth.Resource
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny
@@ -26,15 +25,18 @@ import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.configuration.helpers.DatabaseNameValidator
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.cypher.internal.ast.ActionResource
+import org.neo4j.cypher.internal.ast.AdminAction
 import org.neo4j.cypher.internal.ast.AllDatabasesQualifier
 import org.neo4j.cypher.internal.ast.AllDatabasesScope
 import org.neo4j.cypher.internal.ast.AllGraphsScope
 import org.neo4j.cypher.internal.ast.AllLabelResource
 import org.neo4j.cypher.internal.ast.AllPropertyResource
 import org.neo4j.cypher.internal.ast.AllQualifier
+import org.neo4j.cypher.internal.ast.CreateDatabaseAction
 import org.neo4j.cypher.internal.ast.DatabaseResource
 import org.neo4j.cypher.internal.ast.DefaultDatabaseScope
 import org.neo4j.cypher.internal.ast.DefaultGraphScope
+import org.neo4j.cypher.internal.ast.DropDatabaseAction
 import org.neo4j.cypher.internal.ast.DumpData
 import org.neo4j.cypher.internal.ast.GraphOrDatabaseScope
 import org.neo4j.cypher.internal.ast.LabelAllQualifier
@@ -59,6 +61,7 @@ import org.neo4j.cypher.internal.ast.prettifier.ExpressionStringifier
 import org.neo4j.cypher.internal.compiler.phases.LogicalPlanState
 import org.neo4j.cypher.internal.expressions.Parameter
 import org.neo4j.cypher.internal.logical.plans.AlterUser
+import org.neo4j.cypher.internal.logical.plans.AssertNotBlocked
 import org.neo4j.cypher.internal.logical.plans.CopyRolePrivileges
 import org.neo4j.cypher.internal.logical.plans.CreateDatabase
 import org.neo4j.cypher.internal.logical.plans.CreateRole
@@ -89,6 +92,7 @@ import org.neo4j.cypher.internal.logical.plans.StartDatabase
 import org.neo4j.cypher.internal.logical.plans.StopDatabase
 import org.neo4j.cypher.internal.procs.ActionMapper
 import org.neo4j.cypher.internal.procs.LoggingSystemCommandExecutionPlan
+import org.neo4j.cypher.internal.procs.PredicateExecutionPlan
 import org.neo4j.cypher.internal.procs.QueryHandler
 import org.neo4j.cypher.internal.procs.SystemCommandExecutionPlan
 import org.neo4j.cypher.internal.procs.UpdatingSystemCommandExecutionPlan
@@ -140,6 +144,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
   private val maxDBLimit: Long = config.get(EnterpriseEditionSettings.max_number_of_databases)
   private val create_drop_database_is_blocked = config.get(GraphDatabaseInternalSettings.block_create_drop_database)
   private val start_stop_database_is_blocked = config.get(GraphDatabaseInternalSettings.block_start_stop_database)
+  private val operator_name = config.get(GraphDatabaseInternalSettings.upgrade_username)
 
   override def name: String = "enterprise administration-commands"
 
@@ -169,6 +174,24 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
   private def fullLogicalToExecutable = logicalToExecutable orElse communityCommandRuntime.logicalToExecutable
 
   private def logicalToExecutable: PartialFunction[LogicalPlan, (RuntimeContext, ParameterMapping) => ExecutionPlan] = {
+
+    /*
+     *  Check that the current user is not blocked from database management
+     *  Should fail if the blocking setting is true and the user is not the operator
+     */
+    case AssertNotBlocked(source, action: AdminAction) => (context, parameterMapping) => {
+      val (blocked, actionString) = action match {
+        case CreateDatabaseAction => (create_drop_database_is_blocked, "CREATE")
+        case DropDatabaseAction => (create_drop_database_is_blocked, "DROP")
+      }
+      val errorMessage = s"$actionString DATABASE is not supported, for more info see https://aura.support.neo4j.com/hc/en-us/articles/360050567093"
+
+      new PredicateExecutionPlan((_, sc) => !blocked || sc.subject().hasUsername(operator_name),
+        onViolation = (_, _) => new UnsupportedOperationException(errorMessage),
+        source = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
+      )
+    }
+
     // SHOW USERS
     case ShowUsers(source, symbols, yields, where, returns) => (context, parameterMapping) =>
       SystemCommandExecutionPlan("ShowUsers", normalExecutionEngine,
@@ -596,10 +619,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // CREATE [OR REPLACE] DATABASE foo [IF NOT EXISTS]
     case CreateDatabase(source, dbName) => (context, parameterMapping) =>
-      if (create_drop_database_is_blocked) {
-        throw new UnsupportedOperationException("CREATE DATABASE is not supported, for more info see https://aura.support.neo4j.com/hc/en-us/articles/360050567093")
-      }
-
       // Ensuring we don't exceed the max number of databases is a separate step
       val nameFields = getNameFields("databaseName", dbName, valueMapper = s => {
         val normalizedName = new NormalizedDatabaseName(s)
@@ -698,9 +717,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // DROP DATABASE foo [IF EXISTS] [DESTROY | DUMP DATA]
     case DropDatabase(source, dbName, additionalAction) => (context, parameterMapping) =>
-      if (create_drop_database_is_blocked) {
-        throw new UnsupportedOperationException("DROP DATABASE is not supported, for more info see https://aura.support.neo4j.com/hc/en-us/articles/360050567093")
-      }
       val dumpDataKey = internalKey("dumpData")
       val shouldDumpData = additionalAction == DumpData
       val nameFields = getNameFields("databaseName", dbName, valueMapper = s => new NormalizedDatabaseName(s).name())

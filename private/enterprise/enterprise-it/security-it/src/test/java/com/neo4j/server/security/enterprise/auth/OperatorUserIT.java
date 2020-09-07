@@ -20,7 +20,9 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.commandline.admin.security.SetInitialPasswordCommand;
@@ -48,6 +50,7 @@ import org.neo4j.test.extension.Inject;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
@@ -231,7 +234,7 @@ class OperatorUserIT
     }
 
     @Test
-    void shouldAllowOperatorUserToShowSystemDatabase() throws InvalidAuthTokenException
+    void shouldAllowOperatorUserToShowDatabases() throws InvalidAuthTokenException
     {
         GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( true );
         LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
@@ -239,9 +242,8 @@ class OperatorUserIT
         try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
         {
             Result result = tx.execute( "SHOW DATABASES" );
-            assertThat( result.hasNext() ).isTrue();
-            assertThat( result.next().get( "name" ).equals( "system" ) );
-            assertThat( result.hasNext() ).isFalse();
+            final Set<Object> names = result.columnAs( "name" ).stream().collect( Collectors.toSet() );
+            assertEquals( Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME ), names );
         }
 
         try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
@@ -252,12 +254,131 @@ class OperatorUserIT
 
         try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
         {
-            /*
-              The operator should be allowed to run this command,
-              but the output will be empty since he does not have any access on the default database.
-             */
             Result result = tx.execute( "SHOW DEFAULT DATABASE" );
-            assertThat( result.hasNext() ).isFalse();
+            assertThat( result.hasNext() ).isTrue();
+        }
+    }
+
+    @Test
+    void shouldAllowOperatorUserToCreateDatabase() throws InvalidAuthTokenException
+    {
+        // GIVEN
+        GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( true );
+        LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
+
+        // WHEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            tx.execute( "CREATE DATABASE operational" );
+            tx.commit();
+        }
+
+        // THEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            Result result = tx.execute( "SHOW DATABASES" );
+            final Set<Object> names = result.columnAs( "name" ).stream().collect( Collectors.toSet() );
+            assertEquals( Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME, "operational" ), names );
+        }
+    }
+
+    @Test
+    void shouldAllowOperatorUserToCreateDatabaseIfNotExists() throws InvalidAuthTokenException
+    {
+        // GIVEN
+        GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( true );
+        LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
+
+        // WHEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            // Existing database
+            tx.execute( String.format( "CREATE DATABASE %s IF NOT EXISTS", DEFAULT_DATABASE_NAME ) );
+            // Non-existing database
+            tx.execute( "CREATE DATABASE operational IF NOT EXISTS" );
+            tx.commit();
+        }
+
+        // THEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            Result result = tx.execute( "SHOW DATABASES" );
+            final Set<Object> names = result.columnAs( "name" ).stream().collect( Collectors.toSet() );
+            assertEquals( Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME, "operational" ), names );
+        }
+    }
+
+    @Test
+    void shouldAllowOperatorUserToCreateOrReplaceDatabase() throws InvalidAuthTokenException
+    {
+        // GIVEN
+        GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( true );
+        LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
+
+        // WHEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            // Existing database
+            tx.execute( String.format( "CREATE OR REPLACE DATABASE %s", DEFAULT_DATABASE_NAME ) );
+            // Non-existing database
+            tx.execute( "CREATE OR REPLACE DATABASE operational" );
+            tx.commit();
+        }
+
+        // THEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            Result result = tx.execute( "SHOW DATABASES" );
+            final Set<Object> names = result.columnAs( "name" ).stream().collect( Collectors.toSet() );
+            assertEquals( Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME, "operational" ), names );
+        }
+    }
+
+    @Test
+    void shouldAllowOperatorUserToDropDatabase() throws InvalidAuthTokenException
+    {
+        // GIVEN
+        GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( true );
+        LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
+
+        // WHEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            tx.execute( String.format( "DROP DATABASE %s", DEFAULT_DATABASE_NAME ) );
+            tx.commit();
+        }
+
+        // THEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            Result result = tx.execute( "SHOW DATABASES" );
+            final Set<Object> names = result.columnAs( "name" ).stream().collect( Collectors.toSet() );
+            assertEquals( Set.of( SYSTEM_DATABASE_NAME ), names );
+        }
+    }
+
+    @Test
+    void shouldAllowOperatorUserToDropDatabaseIfExists() throws InvalidAuthTokenException
+    {
+        // GIVEN
+        GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( true );
+        LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
+
+        // WHEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            // Existing database
+            tx.execute( String.format( "DROP DATABASE %s IF EXISTS", DEFAULT_DATABASE_NAME ) );
+            // Non-existing database
+            tx.execute( "DROP DATABASE operational IF EXISTS" );
+            tx.commit();
+        }
+
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            Result result = tx.execute( "SHOW DATABASES" );
+            final Set<Object> names = result.columnAs( "name" ).stream().collect( Collectors.toSet() );
+            assertEquals( Set.of( SYSTEM_DATABASE_NAME ), names );
         }
     }
 
@@ -335,7 +456,7 @@ class OperatorUserIT
                 .build();
     }
 
-    private GraphDatabaseAPI setupOperatorUserAndSystemDatabase( boolean restrictUpgrade)
+    private GraphDatabaseAPI setupOperatorUserAndSystemDatabase( boolean restrictUpgrade )
     {
         setOperatorPassword( "bar" );
         final Map<Setting<?>, Object> config =

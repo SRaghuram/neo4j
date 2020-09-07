@@ -110,11 +110,37 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     setup(config)
     selectDatabase(SYSTEM_DATABASE_NAME)
 
-    // WHEN & THEN
-    val exception = the[UnsupportedOperationException] thrownBy {
+    // WHEN & THEN (existing database)
+    val exception1 = the[UnsupportedOperationException] thrownBy {
       execute("CREATE DATABASE neo4j")
     }
-    exception.getMessage should include("CREATE DATABASE is not supported")
+    exception1.getMessage should include("CREATE DATABASE is not supported")
+
+    // WHEN & THEN (non-existing database)
+    val exception2 = the[UnsupportedOperationException] thrownBy {
+      execute("CREATE DATABASE database")
+    }
+    exception2.getMessage should include("CREATE DATABASE is not supported")
+  }
+
+    test("should fail CREATE DATABASE IF NOT EXISTS when config setting block_create_drop_database is set to true ") {
+    // GIVEN
+    val config = Config.defaults()
+    config.set(block_create_drop_database, java.lang.Boolean.TRUE)
+    setup(config)
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // WHEN & THEN (existing database)
+    val exception1 = the[UnsupportedOperationException] thrownBy {
+      execute("CREATE DATABASE neo4j IF NOT EXISTS")
+    }
+    exception1.getMessage should include("CREATE DATABASE is not supported")
+
+    // WHEN & THEN (non-existing database)
+    val exception2 = the[UnsupportedOperationException] thrownBy {
+      execute("CREATE DATABASE database IF NOT EXISTS")
+    }
+    exception2.getMessage should include("CREATE DATABASE is not supported")
   }
 
   test("should fail CREATE OR REPLACE DATABASE when config setting block_create_drop_database is set to true ") {
@@ -124,11 +150,17 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     setup(config)
     selectDatabase(SYSTEM_DATABASE_NAME)
 
-    // WHEN & THEN
-    val exception = the[UnsupportedOperationException] thrownBy {
+    // WHEN & THEN (existing database)
+    val exception1 = the[UnsupportedOperationException] thrownBy {
       execute("CREATE OR REPLACE DATABASE neo4j")
     }
-    exception.getMessage should include("CREATE DATABASE is not supported")
+    exception1.getMessage should include("CREATE DATABASE is not supported")
+
+    // WHEN & THEN (non-existing database)
+    val exception2 = the[UnsupportedOperationException] thrownBy {
+      execute("CREATE OR REPLACE DATABASE database")
+    }
+    exception2.getMessage should include("CREATE DATABASE is not supported")
   }
 
   test("should fail DROP DATABASE when config setting block_create_drop_database is set to true ") {
@@ -138,11 +170,37 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     setup(config)
     selectDatabase(SYSTEM_DATABASE_NAME)
 
-    // WHEN & THEN
-    val exception = the[UnsupportedOperationException] thrownBy {
+    // WHEN & THEN (existing datbase)
+    val exception1 = the[UnsupportedOperationException] thrownBy {
       execute("DROP DATABASE neo4j")
     }
-    exception.getMessage should include("DROP DATABASE is not supported")
+    exception1.getMessage should include("DROP DATABASE is not supported")
+
+    // WHEN & THEN (non-existing datbase)
+    val exception2 = the[UnsupportedOperationException] thrownBy {
+      execute("DROP DATABASE database")
+    }
+    exception2.getMessage should include("DROP DATABASE is not supported")
+  }
+
+  test("should fail DROP DATABASE IF EXISTS when config setting block_create_drop_database is set to true ") {
+    // GIVEN
+    val config = Config.defaults()
+    config.set(block_create_drop_database, java.lang.Boolean.TRUE)
+    setup(config)
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // WHEN & THEN (existing database)
+    val exception1 = the[UnsupportedOperationException] thrownBy {
+      execute("DROP DATABASE neo4j IF EXISTS")
+    }
+    exception1.getMessage should include("DROP DATABASE is not supported")
+
+    // WHEN & THEN (non-existing database)
+    val exception2 = the[UnsupportedOperationException] thrownBy {
+      execute("DROP DATABASE database IF EXISTS")
+    }
+    exception2.getMessage should include("DROP DATABASE is not supported")
   }
 
   test("should not fail to stop and start database when config setting start_stop_drop_database is default ") {

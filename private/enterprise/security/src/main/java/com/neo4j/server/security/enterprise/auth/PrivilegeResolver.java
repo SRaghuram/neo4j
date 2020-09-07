@@ -24,6 +24,7 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ACCESS;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DATABASE_MANAGEMENT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
 
 public class PrivilegeResolver
@@ -33,6 +34,7 @@ public class PrivilegeResolver
     private final Boolean restrictUpgrade;
     private final ResourcePrivilege accessOnSystem;
     private final ResourcePrivilege executeUpgrade;
+    private final ResourcePrivilege createDropDatabase;
     private final Map<String, Set<ResourcePrivilege>> roleToPrivilege = new HashMap<>();
 
     public PrivilegeResolver( SystemGraphRealm systemGraphRealm, Config config )
@@ -43,13 +45,16 @@ public class PrivilegeResolver
 
         try
         {
-            // Privileges for the upgrade user
+            // Privileges for the operator user
 
             // ACCESS ON DATABASE system
             accessOnSystem = new ResourcePrivilege( GRANT, ACCESS, new DatabaseResource(), Segment.ALL, SYSTEM_DATABASE_NAME );
             // EXECUTE dbms.upgrade* ON DBMS
             ProcedureSegment segment = new ProcedureSegment( "dbms.upgrade*" );
             executeUpgrade = new ResourcePrivilege( GRANT, EXECUTE, new DatabaseResource(), segment, SYSTEM_DATABASE_NAME );
+            // CRETE & DROP DATABASE ON DBMS
+            createDropDatabase = new ResourcePrivilege( GRANT, DATABASE_MANAGEMENT, new DatabaseResource(), Segment.ALL,
+                    ResourcePrivilege.SpecialDatabase.ALL );
         }
         catch ( InvalidArgumentsException e )
         {
@@ -82,6 +87,7 @@ public class PrivilegeResolver
             HashSet<ResourcePrivilege> privileges = new HashSet<>();
             privileges.add( accessOnSystem );
             privileges.add( executeUpgrade );
+            privileges.add( createDropDatabase );
             return privileges;
         }
         return Collections.emptySet();
