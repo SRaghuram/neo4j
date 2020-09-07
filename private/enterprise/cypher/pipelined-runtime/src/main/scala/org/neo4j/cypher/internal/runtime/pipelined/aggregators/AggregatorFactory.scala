@@ -80,6 +80,9 @@ case class AggregatorFactory(physicalPlan: PhysicalPlan) {
           case functions.StdDevP =>
             (StdevPAggregator, Array(c.arguments.head))
 
+          case functions.PercentileDisc =>
+            (PercentileDiscAggregator, Array(c.arguments.head, c.arguments(1)))
+
           case _: AggregatingFunction =>
             throw new CantCompileQueryException(s"Pipelined does not yet support the Aggregating function `${c.name}`, use another runtime.")
 
