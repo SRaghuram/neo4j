@@ -249,6 +249,22 @@
       "name": "Q37",
       "description": "GetDegree vs. SemiApply",
       "queryFile": "queries/Q37.cypher"
+    },
+    {
+      "name": "Q38",
+      "description": "Triadic closure",
+      "queryFile": "queries/Q38.cypher",
+      "parameters": {
+        "file": "parameters/profiles.txt"
+      }
+    },
+    {
+      "name": "Q39",
+      "description": "Triadic closure with dense nodes",
+      "queryFile": "queries/Q39.cypher",
+      "parameters": {
+        "file": "parameters/dense_nodes.txt"
+      }
     }
   ]
 }

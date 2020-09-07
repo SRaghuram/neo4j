@@ -31,6 +31,11 @@
       "queryFile": "queries/Q5.cypher"
     },
     {
+      "name": "Q5_no_limit",
+      "description": "A version of Q5 without LIMIT",
+      "queryFile": "queries/Q5_no_limit.cypher"
+    },
+    {
       "name": "Q6",
       "description": "Graph Global: find the persons that have the same competencies, have worked at the same companies, are currently not working together, and are foaf",
       "queryFile": "queries/Q6.cypher"
