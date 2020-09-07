@@ -28,7 +28,7 @@
         <benchmarks.deploy.skip>true</benchmarks.deploy.skip>
         <!-- This is benchmark version, that is going to be used for internal release -->
         <!-- DO NOT REMOVE IT !!!, TOUCH IT ONLY WHEN YOU WANT TO DO INTERNAL RELEASE -->
-        <benchmarks.version>1.0.0-alpha7</benchmarks.version>
+        <benchmarks.version>1.0.0-alpha8</benchmarks.version>
         <jmh.version>1.24</jmh.version>
     </properties>
 
