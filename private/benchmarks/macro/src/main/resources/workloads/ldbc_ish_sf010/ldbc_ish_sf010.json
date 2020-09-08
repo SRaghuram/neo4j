@@ -17,6 +17,38 @@
       "parameters": {
         "file": "parameters/query_14.txt"
       }
+    },
+    {
+      "name": "Triadic closure (few friends)",
+      "description": "Friend of a friend that is not already a friend",
+      "queryFile": "queries/triadic_closure.cypher",
+      "parameters": {
+        "file": "parameters/persons_with_few_friends.txt"
+      }
+    },
+    {
+      "name": "Triadic closure (many friends)",
+      "description": "Friend of a friend that is not already a friend",
+      "queryFile": "queries/triadic_closure.cypher",
+      "parameters": {
+        "file": "parameters/persons_with_many_friends.txt"
+      }
+    },
+    {
+      "name": "Triadic closure in a subquery (few friends)",
+      "description": "Friend of a friend that is not already a friend nested in a subquery",
+      "queryFile": "queries/triadic_closure_subquery.cypher",
+      "parameters": {
+        "file": "parameters/persons_with_few_friends.txt"
+      }
+    },
+    {
+      "name": "Triadic closure in a subquery (many friends)",
+      "description": "Friend of a friend that is not already a friend nested in a subquery",
+      "queryFile": "queries/triadic_closure_subquery.cypher",
+      "parameters": {
+        "file": "parameters/persons_with_many_friends.txt"
+      }
     }
   ]
 }
