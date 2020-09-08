@@ -19,7 +19,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.equal
 import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
-import org.neo4j.codegen.api.IntermediateRepresentation.isNotNull
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
@@ -121,8 +120,7 @@ class SerialTopLevelDistinctPrimitiveOperatorTaskTemplate(val inner: OperatorTas
 
   private var groupingExpression: IntermediateGroupingExpression = _
 
-  private val distinctStateField = field[DistinctState](codeGen.namer.nextVariableName("distinctState"),
-    peekState[DistinctState](argumentStateMapId))
+  private val distinctStateField = field[DistinctState](codeGen.namer.nextVariableName("distinctState"), constant(null))
   private val memoryTrackerField = field[MemoryTracker](codeGen.namer.nextVariableName("memoryTracker"))
   private val primitiveSlotsField = staticConstant[Array[Int]]("primitiveSlots", primitiveSlots)
 
@@ -281,13 +279,7 @@ object SerialTopLevelDistinctPrimitiveOperatorTaskTemplate {
         })
     }
 
-    override def genOperateExit: IntermediateRepresentation = {
-      block(
-        condition(isNotNull(loadField(distinctStateField))) {
-          IntermediateRepresentation.noop()
-        },
-        inner.genOperateExit)
-    }
+    override def genOperateExit: IntermediateRepresentation = inner.genOperateExit
 
     override def genLocalVariables: Seq[LocalVariable] = Seq.empty
 

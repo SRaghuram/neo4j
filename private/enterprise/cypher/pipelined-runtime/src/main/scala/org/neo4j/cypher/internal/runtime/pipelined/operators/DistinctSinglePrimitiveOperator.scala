@@ -19,7 +19,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
 import org.neo4j.codegen.api.IntermediateRepresentation.equal
 import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
-import org.neo4j.codegen.api.IntermediateRepresentation.isNotNull
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
@@ -351,13 +350,7 @@ class SerialDistinctOnRhsOfApplySinglePrimitiveOperatorTaskTemplate(override val
       })
   }
 
-  override def genOperateExit: IntermediateRepresentation = {
-    block(
-      condition(isNotNull(loadField(distinctStateField))) {
-        IntermediateRepresentation.noop()
-      },
-      inner.genOperateExit)
-  }
+  override def genOperateExit: IntermediateRepresentation = inner.genOperateExit
 
   override def genLocalVariables: Seq[LocalVariable] = Seq.empty
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue

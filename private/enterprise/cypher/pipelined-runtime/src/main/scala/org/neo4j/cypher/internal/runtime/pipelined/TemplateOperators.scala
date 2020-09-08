@@ -561,7 +561,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               endNameOrToken,
               ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
 
-        // Special case for limit when not nested under an apply and with serial execution
+        // Only support fusing distinct in serial execution
         case plan@Distinct(_, grouping) if serialExecutionOnly =>
           ctx: TemplateContext =>
             val physicalDistinctOp = findDistinctPhysicalOp(grouping, Seq.empty)
