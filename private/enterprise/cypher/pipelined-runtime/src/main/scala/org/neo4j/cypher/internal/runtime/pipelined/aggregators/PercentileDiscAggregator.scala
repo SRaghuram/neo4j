@@ -130,6 +130,8 @@ abstract class PercentileConcurrentReducer() extends Reducer {
       percent.set(doubleToLongBits(localPercent))
       count.addAndGet(localCount)
       tmp.addAll(localCollection)
+      localCount = 0
+      localCollection.clear()
     }
   }
 }
