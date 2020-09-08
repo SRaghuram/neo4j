@@ -45,8 +45,8 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
            (3, "avg", "n.prop2", "n.prop2", false, true),
            (4, "stDev", "n.prop2", "n.prop2", false, true),
            (5, "stDevP", "n.prop2", "n.prop2", false, true),
-           (6, "percentileDisc", "n.prop1, 0.25", "n.prop1", false, false),
-           (7, "percentileCont", "n.prop1, 0.75", "n.prop1", false, false),
+           (6, "percentileDisc", "n.prop1, 0.25", "n.prop1", false, true),
+           (7, "percentileCont", "n.prop1, 0.75", "n.prop1", false, true),
            (8, "count", "n.prop1", "n.prop1", true, true),
            (9, "count", "DISTINCT n.prop2", "n.prop2", true, true)
          )

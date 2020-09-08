@@ -1,4 +1,3 @@
-Feature "AggregationAcceptance": Scenario "percentileDisc on empty data should return null"
 Feature "ConstraintAcceptance": Scenario "Failing when creation would violate constraint"
 Feature "ConstraintAcceptance": Scenario "Merge node with prop and label and unique index when no match"
 Feature "ConstraintAcceptance": Scenario "Merge node with prop and label and unique index"
