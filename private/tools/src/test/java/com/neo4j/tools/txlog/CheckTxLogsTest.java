@@ -22,10 +22,10 @@ import org.neo4j.function.ThrowingConsumer;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.PhysicalFlushableChecksumChannel;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.memory.HeapScopedBuffer;
+import org.neo4j.kernel.database.DbmsLogEntryWriterFactory;
 import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.PropertyType;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
@@ -38,8 +38,8 @@ import org.neo4j.kernel.impl.transaction.SimpleTransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.PhysicalLogVersionedStoreChannel;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
+import org.neo4j.kernel.impl.transaction.log.PositionAwarePhysicalFlushableChecksumChannel;
 import org.neo4j.kernel.impl.transaction.log.TransactionLogWriter;
-import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 import org.neo4j.kernel.impl.transaction.log.entry.LogHeader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
@@ -61,7 +61,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.internal.kernel.api.security.AuthSubject.AUTH_DISABLED;
-import static org.neo4j.kernel.impl.transaction.log.entry.LogEntryParserSetV4_0.V4_0;
+import static org.neo4j.kernel.impl.transaction.log.entry.LogEntryParserSetVersion.LogEntryV4_0;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeaderWriter.writeLogHeader;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
 import static org.neo4j.kernel.impl.transaction.log.files.ChannelNativeAccessor.EMPTY_ACCESSOR;
@@ -887,12 +887,12 @@ class CheckTxLogsTest
         ensureLogExists( log );
         try ( StoreChannel channel = fs.write( log );
               var versionedChannel = new PhysicalLogVersionedStoreChannel( channel, 0, (byte) 0, log, EMPTY_ACCESSOR );
-              var writableLogChannel = new PhysicalFlushableChecksumChannel( versionedChannel, new HeapScopedBuffer( 100, INSTANCE ) ) )
+              var writableLogChannel = new PositionAwarePhysicalFlushableChecksumChannel( versionedChannel, new HeapScopedBuffer( 100, INSTANCE ) ) )
         {
             long offset = channel.size();
             channel.position( offset );
 
-            consumer.accept( new TransactionLogWriter( new LogEntryWriter( writableLogChannel, V4_0 ) ) );
+            consumer.accept( new TransactionLogWriter( writableLogChannel, new DbmsLogEntryWriterFactory( LogEntryV4_0::getVersionByte ) ) );
         }
     }
 

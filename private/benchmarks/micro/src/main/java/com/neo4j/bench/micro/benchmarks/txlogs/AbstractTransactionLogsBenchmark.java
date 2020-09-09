@@ -40,6 +40,6 @@ public abstract class AbstractTransactionLogsBenchmark extends BaseDatabaseBench
         DependencyResolver dependencyResolver = ((GraphDatabaseAPI) db()).getDependencyResolver();
         LogFiles logFiles = dependencyResolver.resolveDependency( LogFiles.class );
         logFile = logFiles.getLogFile();
-        channel = logFile.getTransactionLogWriter().getWriter().getChannel();
+        channel = logFile.getTransactionLogWriter().getChannel();
     }
 }
