@@ -10,14 +10,15 @@ import java.util.concurrent.Executors
 
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.GraphDatabaseInternalSettings
-import org.neo4j.cypher.CypherInterpretedPipesFallbackOption
-import org.neo4j.cypher.CypherOperatorEngineOption
-import org.neo4j.cypher.internal.ConfigMemoryTrackingController
 import org.neo4j.cypher.internal.CypherRuntimeConfiguration
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.NoSchedulerTracing
 import org.neo4j.cypher.internal.RuntimeEnvironment
 import org.neo4j.cypher.internal.cache.ExecutorBasedCaffeineCacheFactory
+import org.neo4j.cypher.internal.config.ConfigMemoryTrackingController
+import org.neo4j.cypher.internal.options.CypherDebugOptions
+import org.neo4j.cypher.internal.options.CypherInterpretedPipesFallbackOption
+import org.neo4j.cypher.internal.options.CypherOperatorEngineOption
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerCache
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerTracer
@@ -29,7 +30,7 @@ import org.neo4j.kernel.lifecycle.LifeSupport
 import org.neo4j.logging.NullLog
 import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.scheduler.JobScheduler
-import org.scalatest.mock.MockitoSugar
+import org.scalatest.mockito.MockitoSugar
 
 object ContextHelper extends MockitoSugar {
 
@@ -51,7 +52,7 @@ object ContextHelper extends MockitoSugar {
   )
 
   def create(planContext: PlanContext,
-             debugOptions: Set[String] = Set.empty,
+             debugOptions: CypherDebugOptions = CypherDebugOptions.default,
              clock: Clock = Clock.systemUTC(),
              useCompiledExpressions: Boolean = false,
              jobScheduler: JobScheduler,

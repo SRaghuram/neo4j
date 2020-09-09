@@ -16,7 +16,6 @@ import com.neo4j.bench.micro.benchmarks.BaseRegularBenchmark
 import com.neo4j.bench.micro.benchmarks.cypher.QueryCacheHitThreadState.CacheValue
 import com.neo4j.bench.micro.benchmarks.cypher.QueryCacheHitThreadState.DataPoint
 import com.neo4j.bench.micro.benchmarks.cypher.QueryCacheHitThreadState.NeverStale
-import org.neo4j.cypher.CypherReplanOption
 import org.neo4j.cypher.internal.CacheTracer
 import org.neo4j.cypher.internal.CacheabilityInfo
 import org.neo4j.cypher.internal.CompilerWithExpressionCodeGenOption
@@ -26,6 +25,7 @@ import org.neo4j.cypher.internal.QueryCache
 import org.neo4j.cypher.internal.QueryCache.ParameterTypeMap
 import org.neo4j.cypher.internal.Staleness
 import org.neo4j.cypher.internal.cache.ExecutorBasedCaffeineCacheFactory
+import org.neo4j.cypher.internal.options.CypherReplanOption
 import org.neo4j.cypher.internal.util.InternalNotification
 import org.neo4j.internal.helpers.collection.Pair
 import org.neo4j.kernel.impl.query.TransactionalContext

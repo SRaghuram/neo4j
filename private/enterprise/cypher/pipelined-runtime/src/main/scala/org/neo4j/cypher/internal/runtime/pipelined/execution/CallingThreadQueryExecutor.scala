@@ -5,13 +5,12 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
+import org.neo4j.cypher.internal.config.CUSTOM_MEMORY_TRACKING
+import org.neo4j.cypher.internal.config.MEMORY_TRACKING
+import org.neo4j.cypher.internal.config.MemoryTracking
+import org.neo4j.cypher.internal.config.NO_TRACKING
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
-import org.neo4j.cypher.internal.runtime.CUSTOM_MEMORY_TRACKING
 import org.neo4j.cypher.internal.runtime.InputDataStream
-import org.neo4j.cypher.internal.runtime.MEMORY_TRACKING
-import org.neo4j.cypher.internal.runtime.MemoryTracking
-import org.neo4j.cypher.internal.runtime.MemoryTrackingController.MemoryTrackerDecorator
-import org.neo4j.cypher.internal.runtime.NO_TRACKING
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutablePipeline
@@ -26,6 +25,7 @@ import org.neo4j.cypher.result.QueryProfile
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 
 /**
@@ -63,7 +63,7 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
       memoryTracking match {
         case NO_TRACKING => new StandardStateFactory
         case MEMORY_TRACKING => new MemoryTrackingStandardStateFactory(transactionMemoryTracker)
-        case CUSTOM_MEMORY_TRACKING(decorator: MemoryTrackerDecorator) => new MemoryTrackingStandardStateFactory(decorator(transactionMemoryTracker));
+        case CUSTOM_MEMORY_TRACKING(decorator) => new MemoryTrackingStandardStateFactory(decorator(transactionMemoryTracker));
       }
 
     val transaction = queryContext.transactionalContext.transaction

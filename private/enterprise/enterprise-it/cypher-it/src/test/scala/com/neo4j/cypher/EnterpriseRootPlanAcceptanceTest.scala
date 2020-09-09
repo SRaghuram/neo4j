@@ -5,13 +5,13 @@
  */
 package com.neo4j.cypher
 
-import org.neo4j.cypher.CypherVersion
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.InterpretedRuntimeName
 import org.neo4j.cypher.internal.PipelinedRuntimeName
 import org.neo4j.cypher.internal.RuntimeName
 import org.neo4j.cypher.internal.SlottedRuntimeName
 import org.neo4j.cypher.internal.frontend.PlannerName
+import org.neo4j.cypher.internal.options.CypherVersion
 import org.neo4j.cypher.internal.planner.spi.CostBasedPlannerName
 import org.neo4j.cypher.internal.planner.spi.DPPlannerName
 import org.neo4j.cypher.internal.planner.spi.IDPPlannerName

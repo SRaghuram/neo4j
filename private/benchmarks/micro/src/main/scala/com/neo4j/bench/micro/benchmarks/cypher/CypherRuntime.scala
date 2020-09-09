@@ -5,6 +5,8 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import org.neo4j.cypher.internal.options.CypherDebugOptions
+
 object CypherRuntime {
   def from(cypherRuntimeString: String): CypherRuntime =
     cypherRuntimeString match {
@@ -18,22 +20,22 @@ object CypherRuntime {
 }
 
 sealed trait CypherRuntime {
-  val debugOptions: Set[String]
+  val debugOptions: CypherDebugOptions
 }
 
 case object Interpreted extends CypherRuntime {
   final val NAME = "interpreted"
-  override val debugOptions: Set[String] = Set()
+  override val debugOptions: CypherDebugOptions = CypherDebugOptions.default
 }
 
 case object Slotted extends CypherRuntime {
   final val NAME = "slotted"
-  override val debugOptions: Set[String] = Set()
+  override val debugOptions: CypherDebugOptions = CypherDebugOptions.default
 }
 
 case object Pipelined extends CypherRuntime {
   final val NAME = "pipelined"
-  override val debugOptions: Set[String] = Set()
+  override val debugOptions: CypherDebugOptions = CypherDebugOptions.default
 }
 
 case object PipelinedSourceCode extends CypherRuntime {
@@ -43,5 +45,5 @@ case object PipelinedSourceCode extends CypherRuntime {
 
 case object Parallel extends CypherRuntime {
   final val NAME = "parallel"
-  override val debugOptions: Set[String] = Set()
+  override val debugOptions: CypherDebugOptions = CypherDebugOptions.default
 }

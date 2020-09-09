@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined
 
-import org.neo4j.cypher.CypherInterpretedPipesFallbackOption
 import org.neo4j.cypher.internal.logical.plans.Aggregation
 import org.neo4j.cypher.internal.logical.plans.AllNodesScan
 import org.neo4j.cypher.internal.logical.plans.Anti
@@ -66,6 +65,7 @@ import org.neo4j.cypher.internal.logical.plans.UnwindCollection
 import org.neo4j.cypher.internal.logical.plans.UpdatingPlan
 import org.neo4j.cypher.internal.logical.plans.ValueHashJoin
 import org.neo4j.cypher.internal.logical.plans.VarExpand
+import org.neo4j.cypher.internal.options.CypherInterpretedPipesFallbackOption
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
 import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
@@ -278,7 +278,8 @@ object InterpretedPipesFallbackPolicy {
       case CypherInterpretedPipesFallbackOption.disabled =>
         INTERPRETED_PIPES_FALLBACK_DISABLED(runtimeName)
 
-      case CypherInterpretedPipesFallbackOption.whitelistedPlansOnly =>
+      case CypherInterpretedPipesFallbackOption.default |
+           CypherInterpretedPipesFallbackOption.whitelistedPlansOnly =>
         INTERPRETED_PIPES_FALLBACK_FOR_WHITELISTED_PLANS_ONLY(parallelExecution, runtimeName)
 
       case CypherInterpretedPipesFallbackOption.allPossiblePlans =>

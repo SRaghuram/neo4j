@@ -6,8 +6,7 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.InterpretedRuntimeOption
-import org.neo4j.cypher.internal.SlottedRuntimeOption
+import org.neo4j.cypher.internal.options.CypherRuntimeOption
 import org.neo4j.graphdb.Result
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.kernel.impl.query.QuerySubscriber.DO_NOTHING_SUBSCRIBER
@@ -34,7 +33,7 @@ class ExecutionResultAcceptanceTest extends ExecutionEngineFunSuite{
 
   test("without PROFILE it shouldn't be needed to iterate over the results before calling getExecutionPlanDescription in interpreted runtime") {
     val query = "MATCH (n) WHERE n.prop = 1 RETURN n"
-    val runtime = InterpretedRuntimeOption.name
+    val runtime = CypherRuntimeOption.interpreted.name
 
     val description1 = executeQueryAndGetExecutionPlanDescription(query, runtime, iterateOverResult = false)
     val description2 = executeQueryAndGetExecutionPlanDescription(query, runtime, iterateOverResult = true)
@@ -43,7 +42,7 @@ class ExecutionResultAcceptanceTest extends ExecutionEngineFunSuite{
 
   test("without PROFILE it shouldn't be needed to iterate over the results before calling getExecutionPlanDescription in slotted runtime") {
     val query = "MATCH (n) WHERE n.prop = 1 RETURN n"
-    val runtime = SlottedRuntimeOption.name
+    val runtime = CypherRuntimeOption.slotted.name
 
     val description1 = executeQueryAndGetExecutionPlanDescription(query, runtime, iterateOverResult = false)
     val description2 = executeQueryAndGetExecutionPlanDescription(query, runtime, iterateOverResult = true)

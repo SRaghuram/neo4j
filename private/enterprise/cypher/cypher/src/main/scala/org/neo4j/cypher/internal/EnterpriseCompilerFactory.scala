@@ -7,17 +7,18 @@ package org.neo4j.cypher.internal
 
 import java.time.Clock
 
-import org.neo4j.cypher.CypherInterpretedPipesFallbackOption
-import org.neo4j.cypher.CypherOperatorEngineOption
-import org.neo4j.cypher.CypherPlannerOption
-import org.neo4j.cypher.CypherRuntimeOption
-import org.neo4j.cypher.CypherUpdateStrategy
-import org.neo4j.cypher.CypherVersion
 import org.neo4j.cypher.internal.cache.ExecutorBasedCaffeineCacheFactory
 import org.neo4j.cypher.internal.compiler.CypherPlannerConfiguration
 import org.neo4j.cypher.internal.compiler.phases.Compatibility3_5
 import org.neo4j.cypher.internal.compiler.phases.Compatibility4_2
 import org.neo4j.cypher.internal.compiler.phases.Compatibility4_3
+import org.neo4j.cypher.internal.options.CypherDebugOptions
+import org.neo4j.cypher.internal.options.CypherInterpretedPipesFallbackOption
+import org.neo4j.cypher.internal.options.CypherOperatorEngineOption
+import org.neo4j.cypher.internal.options.CypherPlannerOption
+import org.neo4j.cypher.internal.options.CypherRuntimeOption
+import org.neo4j.cypher.internal.options.CypherUpdateStrategy
+import org.neo4j.cypher.internal.options.CypherVersion
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.planning.CypherPlanner
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerTracer
@@ -104,7 +105,7 @@ case class EnterpriseRuntimeContext(tokenContext: TokenContext,
                                     schemaRead: SchemaRead,
                                     log: Log,
                                     clock: Clock,
-                                    debugOptions: Set[String],
+                                    debugOptions: CypherDebugOptions,
                                     config: CypherRuntimeConfiguration,
                                     runtimeEnvironment: RuntimeEnvironment,
                                     compileExpressions: Boolean,
@@ -124,7 +125,7 @@ case class EnterpriseRuntimeContextManager(log: Log,
   override def create(tokenContext: TokenContext,
                       schemaRead: SchemaRead,
                       clock: Clock,
-                      debugOptions: Set[String],
+                      debugOptions: CypherDebugOptions,
                       compileExpressions: Boolean,
                       materializedEntitiesMode: Boolean,
                       operatorEngine: CypherOperatorEngineOption,

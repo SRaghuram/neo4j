@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.frontend.PlannerName
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
 import org.neo4j.cypher.internal.planner.spi.DPPlannerName
 import org.neo4j.cypher.internal.planner.spi.IDPPlannerName
+import org.neo4j.exceptions.InvalidArgumentException
 import org.scalatest.matchers.Matcher
 
 class PreParsingAcceptanceTest extends ExecutionEngineFunSuite with EnterpriseGraphDatabaseTestSupport {
@@ -81,6 +82,17 @@ class PreParsingAcceptanceTest extends ExecutionEngineFunSuite with EnterpriseGr
 
     execute(query1).executionPlanDescription() should haveRuntime("PIPELINED")
     execute(query2).executionPlanDescription() shouldNot haveRuntime("PIPELINED")
+  }
+
+  test("should allow known debug options") {
+    val query = "CYPHER debug=tostring RETURN 1"
+    execute(query)
+  }
+
+  test("should fail on unknown debug options") {
+    val query = "CYPHER debug=iamunknown RETURN 1"
+    the[InvalidArgumentException].thrownBy(execute(query)).getMessage
+                                 .should(include("iamunknown"))
   }
 
   for (runtime <- Seq("interpreted", "slotted", "pipelined", "parallel")) {

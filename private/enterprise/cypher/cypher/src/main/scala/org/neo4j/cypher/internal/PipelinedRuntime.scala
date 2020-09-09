@@ -6,12 +6,14 @@
 package org.neo4j.cypher.internal
 
 import org.neo4j.codegen.api.CodeGeneration
-import org.neo4j.cypher.CypherInterpretedPipesFallbackOption
-import org.neo4j.cypher.CypherOperatorEngineOption
 import org.neo4j.cypher.internal.PipelinedRuntime.CODE_GEN_FAILED_MESSAGE
 import org.neo4j.cypher.internal.compiler.CodeGenerationFailedNotification
 import org.neo4j.cypher.internal.compiler.ExperimentalFeatureNotification
+import org.neo4j.cypher.internal.config.MemoryTracking
+import org.neo4j.cypher.internal.config.MemoryTrackingController
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.options.CypherInterpretedPipesFallbackOption
+import org.neo4j.cypher.internal.options.CypherOperatorEngineOption
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefiner
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphVisualizer
@@ -28,8 +30,6 @@ import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ExecutionMode
 import org.neo4j.cypher.internal.runtime.InputDataStream
-import org.neo4j.cypher.internal.runtime.MemoryTracking
-import org.neo4j.cypher.internal.runtime.MemoryTrackingController
 import org.neo4j.cypher.internal.runtime.ParameterMapping
 import org.neo4j.cypher.internal.runtime.ProfileMode
 import org.neo4j.cypher.internal.runtime.QueryContext
@@ -116,7 +116,11 @@ class PipelinedRuntime private(parallelExecution: Boolean,
       if (query.periodicCommitInfo.isDefined)
         throw new CantCompileQueryException("Periodic commit is not supported by Pipelined runtime")
 
-      val shouldFuseOperators = context.operatorEngine == CypherOperatorEngineOption.compiled
+      val shouldFuseOperators = context.operatorEngine match {
+        case CypherOperatorEngineOption.default |
+             CypherOperatorEngineOption.compiled => true
+        case _                                   => false
+      }
       val operatorFusionPolicy = TemplateOperatorPolicy(shouldFuseOperators,
                                                         fusionOverPipelinesEnabled = !parallelExecution,
                                                         fusionOverPipelineLimit = context.config.operatorFusionOverPipelineLimit,
@@ -216,7 +220,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
         converters,
         query.leveragedOrders)
 
-    if (context.debugOptions.contains("visualizepipelines")) {
+    if (context.debugOptions.visualizePipelinesEnabled) {
       return ExecutionGraphVisualizer.getExecutionPlan(executionGraphDefinition)
     }
 
