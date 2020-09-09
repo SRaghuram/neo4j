@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.catchup.v3;
 
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
+import com.neo4j.causalclustering.catchup.ServerInboundRequestsLogger;
 import com.neo4j.causalclustering.catchup.RequestDecoderDispatcher;
 import com.neo4j.causalclustering.catchup.RequestMessageTypeEncoder;
 import com.neo4j.causalclustering.catchup.ResponseMessageTypeEncoder;
@@ -115,7 +116,8 @@ public class CatchupProtocolServerInstallerV3 implements ProtocolInstaller<Orien
 
     protected ServerNettyPipelineBuilder handlers( ServerNettyPipelineBuilder builder, CatchupServerProtocol state )
     {
-        return builder.add( "hnd_req_database_id", catchupServerHandler.getDatabaseIdRequestHandler( state ) )
+        return builder.add( "log_inbound_req", new ServerInboundRequestsLogger( logProvider ) )
+                .add( "hnd_req_database_id", catchupServerHandler.getDatabaseIdRequestHandler( state ) )
                 .add( "hnd_req_tx", catchupServerHandler.txPullRequestHandler( state ) )
                 .add( "hnd_req_store_id", catchupServerHandler.getStoreIdRequestHandler( state ) )
                 .add( "hnd_req_store_listing", catchupServerHandler.storeListingRequestHandler( state ) )
