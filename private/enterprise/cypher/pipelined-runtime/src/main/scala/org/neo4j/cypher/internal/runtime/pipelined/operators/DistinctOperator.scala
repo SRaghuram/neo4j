@@ -22,6 +22,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.not
 import org.neo4j.codegen.api.IntermediateRepresentation.or
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
@@ -41,6 +42,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.operators.BaseDistinctOperatorTaskTemplate.seen
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperator.ConcurrentDistinctState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperator.DistinctState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperator.DistinctStateFactory
@@ -53,7 +55,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.peekState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.setMemoryTracker
-import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDistinctOperatorTaskTemplate.seen
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
@@ -185,69 +186,7 @@ object DistinctOperator {
   }
 }
 
-class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate,
-                                                 override val id: Id,
-                                                 argumentStateMapId: ArgumentStateMapId,
-                                                 groupings: Seq[(Slot, Expression)])
-                                                (protected val codeGen: OperatorExpressionCompiler)
-  extends OperatorTaskTemplate {
-
-  private var groupingExpression: IntermediateGroupingExpression = _
-
-  private val distinctStateField = field[DistinctState](codeGen.namer.nextVariableName("distinctState"),
-                                                                      peekState[DistinctState](argumentStateMapId))
-  private val memoryTrackerField = field[MemoryTracker](codeGen.namer.nextVariableName("memoryTracker"))
-
-  override def genInit: IntermediateRepresentation = inner.genInit
-
-  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
-
-  override protected def genOperate: IntermediateRepresentation = {
-    val compiled = groupings.map {
-      case (s, e) =>
-        s -> codeGen.compileExpression(e).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $e"))
-    }
-    //note that this key ir read later also by project
-    val keyVar = codeGen.namer.nextVariableName("groupingKey")
-    groupingExpression = codeGen.compileGroupingExpression(compiled, keyVar)
-
-    /**
-      * val key = [computeKey]
-      * if (distinctState.seen(key)) {
-      *   [project key]
-      *   <<inner.generate>>
-      * }
-      */
-    block(
-      declareAndAssign(typeRefOf[AnyValue], keyVar, nullCheckIfRequired(groupingExpression.computeKey)),
-      condition(or(innerCanContinue, seen(loadField(distinctStateField), load(keyVar)))) {
-        block(
-          nullCheckIfRequired(groupingExpression.projectKey),
-          inner.genOperateWithExpressions,
-          doIfInnerCantContinue(profileRow(id))
-        )
-      })
-  }
-
-  override def genCreateState: IntermediateRepresentation = block(
-    setMemoryTracker(memoryTrackerField, id.x),
-    invoke(loadField(distinctStateField),
-           method[DistinctState, Unit, MemoryTracker]("setMemoryTracker"),
-           loadField(memoryTrackerField)),
-    inner.genCreateState)
-
-  override def genExpressions: Seq[IntermediateExpression] = Seq(groupingExpression.computeKey, groupingExpression.projectKey)
-
-  override def genFields: Seq[Field] = Seq(distinctStateField, memoryTrackerField)
-
-  override def genLocalVariables: Seq[LocalVariable] = Seq.empty
-
-  override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
-
-  override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
-}
-
-object SerialTopLevelDistinctOperatorTaskTemplate {
+object DistinctOperatorState {
   object DistinctStateFactory extends ArgumentStateFactory[DistinctState] {
     override def newStandardArgumentState(argumentRowId: Long,
                                           argumentMorsel: MorselReadCursor,
@@ -261,51 +200,26 @@ object SerialTopLevelDistinctOperatorTaskTemplate {
       new ConcurrentDistinctState(argumentRowId, argumentRowIdsForReducers)
     }
   }
-
-  def seen(state: IntermediateRepresentation, key: IntermediateRepresentation): IntermediateRepresentation =
-    invoke(state, method[DistinctState, Boolean, AnyValue]("seen"), key)
 }
 
-class SerialDistinctOnRhsOfApplyOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
-                                                     override val id: Id,
-                                                     argumentStateMapId: ArgumentStateMapId,
-                                                     groupings: Seq[(Slot, Expression)])
-                                                    (val codeGen: OperatorExpressionCompiler)
+abstract class BaseDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate,
+                                                override val id: Id,
+                                                groupings: Seq[(Slot, Expression)],
+                                                val codeGen: OperatorExpressionCompiler)
   extends OperatorTaskTemplate {
-  private val argumentMaps: InstanceField = field[ArgumentStateMaps](codeGen.namer.nextVariableName("stateMaps"),
-    load(ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name))
-  private val localArgument = codeGen.namer.nextVariableName("argument")
+
   private var groupingExpression: IntermediateGroupingExpression = _
-  private val distinctStateField = field[DistinctState](codeGen.namer.nextVariableName("distinctState"), constant(null))
-  private val memoryTrackerField = field[MemoryTracker](codeGen.namer.nextVariableName("memoryTracker"))
+  protected val distinctStateField: InstanceField = field[DistinctState](codeGen.namer.nextVariableName("distinctState"), initializeState)
+  protected val memoryTrackerField: InstanceField = field[MemoryTracker](codeGen.namer.nextVariableName("memoryTracker"))
+
+  protected def initializeState: IntermediateRepresentation
+  protected def beginOperate: IntermediateRepresentation
+  protected def createState: IntermediateRepresentation
+  protected def genMoreFields: Seq[Field]
 
   override def genInit: IntermediateRepresentation = inner.genInit
-
-  override def genExpressions: Seq[IntermediateExpression] = Seq(groupingExpression.computeKey, groupingExpression.projectKey)
-
-  override def genFields: Seq[Field] = Seq(argumentMaps, memoryTrackerField, distinctStateField, field[Int](argumentSlotOffsetFieldName(argumentStateMapId), getArgumentSlotOffset(argumentStateMapId)))
-
-  override def genOperateEnter: IntermediateRepresentation = {
-    block(
-      declareAndAssign(typeRefOf[Long], localArgument, constant(-1L)),
-      inner.genOperateEnter
-    )
-  }
-
-  /**
-   * {{{
-   *   val key = [computeKey]
-   *   if (localArgument != inputCursor.getLongAt(argSlot)) {
-   *     localArgument = inputCursor.getLongAt(argSlot)
-   *     this.distinctState = [get new state from ArgumentStateMap]
-   *   }
-   *   if (distinctState.seen(key)) {
-   *    *   [project key]
-   *    *   <<inner.generate>>
-   *   }
-   * }}}
-   */
-  override def genOperate: IntermediateRepresentation = {
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
+  override protected def genOperate: IntermediateRepresentation = {
     val compiled = groupings.map {
       case (s, e) =>
         s -> codeGen.compileExpression(e).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $e"))
@@ -313,15 +227,17 @@ class SerialDistinctOnRhsOfApplyOperatorTaskTemplate(override val inner: Operato
     //note that this key ir read later also by project
     val keyVar = codeGen.namer.nextVariableName("groupingKey")
     groupingExpression = codeGen.compileGroupingExpression(compiled, keyVar)
+
+    /**
+     * val key = [computeKey]
+     * if (distinctState.seen(key)) {
+     *   [project key]
+     *   <<inner.generate>>
+     * }
+     */
     block(
+      beginOperate,
       declareAndAssign(typeRefOf[AnyValue], keyVar, nullCheckIfRequired(groupingExpression.computeKey)),
-      declareAndAssign(typeRefOf[Long], argumentVarName(argumentStateMapId), getArgument(argumentStateMapId)),
-      condition(not(equal(load(argumentVarName(argumentStateMapId)), load(localArgument)))) {
-        block(
-          assign(localArgument, load(argumentVarName(argumentStateMapId))),
-          newState,
-        )
-      },
       condition(or(innerCanContinue, seen(loadField(distinctStateField), load(keyVar)))) {
         block(
           nullCheckIfRequired(groupingExpression.projectKey),
@@ -331,20 +247,66 @@ class SerialDistinctOnRhsOfApplyOperatorTaskTemplate(override val inner: Operato
       })
   }
 
-  override def genOperateExit: IntermediateRepresentation = inner.genOperateExit
-
+  override def genCreateState: IntermediateRepresentation = block(setMemoryTracker(memoryTrackerField, id.x), createState, inner.genCreateState)
+  override def genExpressions: Seq[IntermediateExpression] = Seq(groupingExpression.computeKey, groupingExpression.projectKey)
+  override def genFields: Seq[Field] = Seq(distinctStateField, memoryTrackerField) ++ genMoreFields
   override def genLocalVariables: Seq[LocalVariable] = Seq.empty
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
   override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
-  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
-  override def genCreateState: IntermediateRepresentation = block(
-    setMemoryTracker(memoryTrackerField, id.x),
-    inner.genCreateState)
+}
 
-  private def newState: IntermediateRepresentation = block(
-    setField(distinctStateField, cast[DistinctState](OperatorCodeGenHelperTemplates.fetchState(loadField(argumentMaps), argumentStateMapId))),
+object BaseDistinctOperatorTaskTemplate {
+  def seen(state: IntermediateRepresentation, key: IntermediateRepresentation): IntermediateRepresentation =
+    invoke(state, method[DistinctState, Boolean, AnyValue]("seen"), key)
+}
+
+class SerialTopLevelDistinctOperatorTaskTemplate(inner: OperatorTaskTemplate,
+                                                 id: Id,
+                                                 argumentStateMapId: ArgumentStateMapId,
+                                                 groupings: Seq[(Slot, Expression)])
+                                                (codeGen: OperatorExpressionCompiler)
+  extends BaseDistinctOperatorTaskTemplate(inner, id, groupings, codeGen) {
+  override protected def initializeState: IntermediateRepresentation =  peekState[DistinctState](argumentStateMapId)
+  override protected def beginOperate: IntermediateRepresentation = noop()
+  override protected def createState: IntermediateRepresentation =
     invoke(loadField(distinctStateField),
+      method[DistinctState, Unit, MemoryTracker]("setMemoryTracker"),
+      loadField(memoryTrackerField))
+  override protected def genMoreFields: Seq[Field] = Seq.empty
+}
+
+class SerialDistinctOnRhsOfApplyOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
+                                                     override val id: Id,
+                                                     argumentStateMapId: ArgumentStateMapId,
+                                                     groupings: Seq[(Slot, Expression)])
+                                                    (codeGen: OperatorExpressionCompiler)
+  extends BaseDistinctOperatorTaskTemplate(inner, id, groupings, codeGen) {
+  private val argumentMaps: InstanceField = field[ArgumentStateMaps](codeGen.namer.nextVariableName("stateMaps"),
+    load(ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name))
+  private val localArgument = codeGen.namer.nextVariableName("argument")
+
+  override def genOperateEnter: IntermediateRepresentation = {
+    block(
+      declareAndAssign(typeRefOf[Long], localArgument, constant(-1L)),
+      inner.genOperateEnter
+    )
+  }
+  override protected def initializeState: IntermediateRepresentation = constant(null)
+  override protected def beginOperate: IntermediateRepresentation =
+    block(
+      declareAndAssign(typeRefOf[Long], argumentVarName(argumentStateMapId), getArgument(argumentStateMapId)),
+      condition(not(equal(load(argumentVarName(argumentStateMapId)), load(localArgument)))) {
+        block(
+          assign(localArgument, load(argumentVarName(argumentStateMapId))),
+          setField(distinctStateField, cast[DistinctState](OperatorCodeGenHelperTemplates.fetchState(loadField(argumentMaps), argumentStateMapId))),
+          invoke(loadField(distinctStateField),
             method[DistinctState, Unit, MemoryTracker]("setMemoryTracker"),
             loadField(memoryTrackerField))
-  )
+        )
+      })
+
+  override def createState: IntermediateRepresentation = noop()
+
+  override def genMoreFields: Seq[Field] =
+   Seq(argumentMaps, field[Int](argumentSlotOffsetFieldName(argumentStateMapId), getArgumentSlotOffset(argumentStateMapId)))
 }

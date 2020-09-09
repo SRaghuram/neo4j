@@ -58,6 +58,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.CachePropertiesOper
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CompositeNodeIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ConditionalOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DelegateOperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperatorState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctSinglePrimitiveState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandIntoOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.FilterOperatorTemplate
@@ -91,11 +93,11 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipByIdSee
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipCountFromCountStoreOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SeekExpression
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialDistinctOnRhsOfApplyOperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialDistinctOnRhsOfApplyPrimitiveOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialDistinctOnRhsOfApplySinglePrimitiveOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialLimitOnRhsOfApplyOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDistinctOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDistinctPrimitiveOperatorTaskTemplate
-import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDistinctPrimitiveOperatorTaskTemplate.SerialDistinctOnRhsOfApplyPrimitiveOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDistinctSinglePrimitiveOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate.SerialLimitStateFactory
@@ -581,7 +583,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                     toSlot,
                     offsets.head,
                     ctx.compileExpression(expression))(ctx.expressionCompiler),
-                  Some(argumentStateMapId -> SerialTopLevelDistinctSinglePrimitiveOperatorTaskTemplate.DistinctStateFactory))
+                  Some(argumentStateMapId -> DistinctSinglePrimitiveState.DistinctStateFactory))
                 } else {
                   TemplateAndArgumentStateFactory(
                     new SerialDistinctOnRhsOfApplySinglePrimitiveOperatorTaskTemplate(ctx.inner,
@@ -590,7 +592,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                       toSlot,
                       offsets.head,
                       ctx.compileExpression(expression))(ctx.expressionCompiler),
-                    Some(argumentStateMapId -> SerialTopLevelDistinctSinglePrimitiveOperatorTaskTemplate.DistinctStateFactory))
+                    Some(argumentStateMapId -> DistinctSinglePrimitiveState.DistinctStateFactory))
                 }
               case DistinctAllPrimitive(offsets, _) =>
                 if (hasNoNestedArguments) {
@@ -600,7 +602,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                       argumentStateMapId,
                       offsets.sorted.toArray,
                       groupMapping)(ctx.expressionCompiler),
-                    Some(argumentStateMapId -> SerialTopLevelDistinctOperatorTaskTemplate.DistinctStateFactory))
+                    Some(argumentStateMapId -> DistinctOperatorState.DistinctStateFactory))
                 } else {
                   TemplateAndArgumentStateFactory(
                     new SerialDistinctOnRhsOfApplyPrimitiveOperatorTaskTemplate(ctx.inner,
@@ -608,7 +610,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                       argumentStateMapId,
                       offsets.sorted.toArray,
                       groupMapping)(ctx.expressionCompiler),
-                    Some(argumentStateMapId -> SerialTopLevelDistinctOperatorTaskTemplate.DistinctStateFactory))
+                    Some(argumentStateMapId -> DistinctOperatorState.DistinctStateFactory))
                 }
 
               case DistinctWithReferences =>
@@ -618,14 +620,14 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                       plan.id,
                       argumentStateMapId,
                       groupMapping)(ctx.expressionCompiler),
-                    Some(argumentStateMapId -> SerialTopLevelDistinctOperatorTaskTemplate.DistinctStateFactory))
+                    Some(argumentStateMapId -> DistinctOperatorState.DistinctStateFactory))
                 } else {
                   TemplateAndArgumentStateFactory(
                     new SerialDistinctOnRhsOfApplyOperatorTaskTemplate(ctx.inner,
                       plan.id,
                       argumentStateMapId,
                       groupMapping)(ctx.expressionCompiler),
-                    Some(argumentStateMapId -> SerialTopLevelDistinctOperatorTaskTemplate.DistinctStateFactory))
+                    Some(argumentStateMapId -> DistinctOperatorState.DistinctStateFactory))
                 }
             }
 
