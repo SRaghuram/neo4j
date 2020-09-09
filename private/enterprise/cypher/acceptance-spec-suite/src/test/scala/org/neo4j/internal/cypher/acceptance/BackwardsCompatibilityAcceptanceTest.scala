@@ -167,22 +167,6 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
   }
 
   // Additions in 4.0 and 4.1
-  test("Creating a user with an encrypted password should not work with Cypher 3.5") {
-    // WHEN
-    val exception = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 CREATE USER foo SET ENCRYPTED PASSWORD 'bar'")
-    }
-    exception.getMessage should include("Creating a user with an encrypted password is not supported in this Cypher version.")
-  }
-
-  test("Updating a user with an encrypted password should not work with Cypher 3.5") {
-    // WHEN
-    val exception = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 ALTER USER foo SET ENCRYPTED PASSWORD 'bar'")
-    }
-    exception.getMessage should include("Updating a user with an encrypted password is not supported in this Cypher version.")
-  }
-
   test("The USE clause should not work with CYPHER 3.5") {
     // WHEN
     val exception = the[SyntaxException] thrownBy {
@@ -317,6 +301,22 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
   }
 
   // Additions 4.2
+
+  test("Creating a user with an encrypted password should not work with Cypher 4.1") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.1 CREATE USER foo SET ENCRYPTED PASSWORD 'bar'")
+    }
+    exception.getMessage should include("Creating a user with an encrypted password is not supported in this Cypher version.")
+  }
+
+  test("Updating a user with an encrypted password should not work with Cypher 4.1") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.1 ALTER USER foo SET ENCRYPTED PASSWORD 'bar'")
+    }
+    exception.getMessage should include("Updating a user with an encrypted password is not supported in this Cypher version.")
+  }
 
   test("should not be able to specify multiple roles for SHOW ROLE PRIVILEGES in 4.1") {
     // GIVEN

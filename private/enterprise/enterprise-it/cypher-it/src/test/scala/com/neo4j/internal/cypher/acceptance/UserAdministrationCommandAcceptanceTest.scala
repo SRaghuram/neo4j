@@ -701,6 +701,8 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       execute(s"CREATE USER $username SET ENCRYPTED PASSWORD '$unmaskedEncryptedPassword'")
       // THEN
     } should have message "Incorrect format of encrypted password. Correct format is '<encryption-version>,<hash>,<salt>'."
+
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
   }
 
   test("should fail to create user with encrypted password and unsupported version number") {
@@ -713,6 +715,8 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       execute(s"CREATE USER $username SET ENCRYPTED PASSWORD '$incorrectlyEncryptedPassword'")
       // THEN
     } should have message "The encryption version specified is not available."
+
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
   }
 
   test("should fail to create user with encrypted password and missing salt/hash") {
@@ -725,6 +729,8 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       execute(s"CREATE USER $username SET ENCRYPTED PASSWORD '$incorrectlyEncryptedPassword'")
       // THEN
     } should have message "Incorrect format of encrypted password. Correct format is '<encryption-version>,<hash>,<salt>'."
+
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
   }
 
   test("should fail to create user with empty encrypted password") {
@@ -744,10 +750,10 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val encryptedPassword = getMaskedEncodedPassword(password)
 
     // WHEN
-    execute("CREATE USER foo SET ENCRYPTED PASSWORD $password CHANGE REQUIRED", Map("password" -> encryptedPassword))
+    execute(s"CREATE USER $username SET ENCRYPTED PASSWORD $$password CHANGE REQUIRED", Map("password" -> encryptedPassword))
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo"))
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user(username))
     testUserLogin(username, "wrong", AuthenticationResult.FAILURE)
     testUserLogin(username, encryptedPassword, AuthenticationResult.FAILURE)
     testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
@@ -1368,6 +1374,27 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       execute("ALTER USER foo SET ENCRYPTED PASSWORD ''")
       // THEN
     } should have message "Incorrect format of encrypted password. Correct format is '<encryption-version>,<hash>,<salt>'."
+
+    testUserLogin(username, "", AuthenticationResult.FAILURE)
+    testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+  }
+
+  test("should fail to alter user with incorrectly encrypted password") {
+    // GIVEN
+    val username = "foo"
+    val password = "bar"
+    val incorrectlyEncryptedPassword = "0b1ca6d4016160782ab"
+
+    execute(s"CREATE USER $username SET PASSWORD '$password'")
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute(s"ALTER USER $username SET ENCRYPTED PASSWORD '$incorrectlyEncryptedPassword'")
+      // THEN
+    } should have message "Incorrect format of encrypted password. Correct format is '<encryption-version>,<hash>,<salt>'."
+
+    testUserLogin(username, incorrectlyEncryptedPassword, AuthenticationResult.FAILURE)
+    testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
   test("should alter user with encrypted password as parameter") {
@@ -1380,24 +1407,12 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute(s"CREATE USER $username SET PASSWORD '$oldPassword'")
 
     // WHEN
-    execute("ALTER USER foo SET ENCRYPTED PASSWORD $password CHANGE REQUIRED", Map("password" -> encryptedPassword))
+    execute(s"ALTER USER $username SET ENCRYPTED PASSWORD $$password CHANGE REQUIRED", Map("password" -> encryptedPassword))
 
     // THEN
     testUserLogin(username, oldPassword, AuthenticationResult.FAILURE)
     testUserLogin(username, encryptedPassword, AuthenticationResult.FAILURE)
     testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
-  }
-
-  test("should fail to alter user with incorrectly encrypted password") {
-    // GIVEN
-    val username = "foo"
-    val incorrectlyEncryptedPassword = "0b1ca6d4016160782ab"
-
-    the[InvalidArgumentsException] thrownBy {
-      // WHEN
-      execute(s"CREATE USER $username SET ENCRYPTED PASSWORD '$incorrectlyEncryptedPassword'")
-      // THEN
-    } should have message "Incorrect format of encrypted password. Correct format is '<encryption-version>,<hash>,<salt>'."
   }
 
   // Tests for changing own password
