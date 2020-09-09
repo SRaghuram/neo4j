@@ -5,14 +5,13 @@
  */
 package com.neo4j.causalclustering.discovery.member;
 
+import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.identity.ServerId;
-import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static java.util.stream.Collectors.toUnmodifiableSet;
@@ -35,16 +34,19 @@ public class DefaultDiscoveryMemberFactory implements DiscoveryMemberFactory
         return new DefaultDiscoveryMember( id, startedDatabases );
     }
 
-    private Set<DatabaseId> startedDatabases()
+    private Set<NamedDatabaseId> startedDatabases()
     {
-        return databaseManager.registeredDatabases()
-                .values()
-                .stream()
-                .map( DatabaseContext::database )
-                .filter( db -> !hasFailed( db.getNamedDatabaseId() ) && db.isStarted() )
-                .map( Database::getNamedDatabaseId )
-                .map( NamedDatabaseId::databaseId )
-                .collect( toUnmodifiableSet() );
+        return databaseManager.registeredDatabases().entrySet().stream()
+                              .filter( this::startedNotFailed )
+                              .map( Map.Entry::getKey )
+                              .collect( toUnmodifiableSet() );
+    }
+
+    private boolean startedNotFailed( Map.Entry<NamedDatabaseId, ? extends DatabaseContext> entry )
+    {
+        var ctx = entry.getValue();
+        var id = entry.getKey();
+        return !hasFailed( id ) && ctx.database().isStarted();
     }
 
     private boolean hasFailed( NamedDatabaseId namedDatabaseId )

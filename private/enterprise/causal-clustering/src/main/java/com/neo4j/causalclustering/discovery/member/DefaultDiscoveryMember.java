@@ -8,14 +8,14 @@ package com.neo4j.causalclustering.discovery.member;
 import java.util.Set;
 
 import org.neo4j.dbms.identity.ServerId;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 class DefaultDiscoveryMember implements DiscoveryMember
 {
     private final ServerId id;
-    private final Set<DatabaseId> startedDatabases;
+    private final Set<NamedDatabaseId> startedDatabases;
 
-    DefaultDiscoveryMember( ServerId id, Set<DatabaseId> startedDatabases )
+    DefaultDiscoveryMember( ServerId id, Set<NamedDatabaseId> startedDatabases )
     {
         this.id = id;
         this.startedDatabases = startedDatabases;
@@ -28,7 +28,7 @@ class DefaultDiscoveryMember implements DiscoveryMember
     }
 
     @Override
-    public Set<DatabaseId> startedDatabases()
+    public Set<NamedDatabaseId> startedDatabases()
     {
         return startedDatabases;
     }

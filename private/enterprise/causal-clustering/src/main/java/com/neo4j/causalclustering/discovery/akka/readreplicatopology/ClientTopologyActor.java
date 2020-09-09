@@ -29,9 +29,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -105,7 +107,10 @@ public class ClientTopologyActor extends AbstractActorWithTimers
     public void preStart()
     {
         getTimers().startPeriodicTimer( REFRESH, TopologiesRefresh.INSTANCE, refreshDuration );
-        startedDatabases.addAll( myself.startedDatabases() );
+        var databaseIds = myself.startedDatabases().stream()
+                                .map( NamedDatabaseId::databaseId )
+                                .collect( Collectors.toSet() );
+        startedDatabases.addAll( databaseIds );
         sendReadReplicaInfo();
     }
 

@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Set;
 
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -19,8 +20,8 @@ class DefaultDiscoveryMemberTest
 {
     private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
-    private final DatabaseId databaseId1 = databaseIdRepository.getRaw( "one" ).databaseId();
-    private final DatabaseId databaseId2 = databaseIdRepository.getRaw( "two" ).databaseId();
+    private final NamedDatabaseId databaseId1 = databaseIdRepository.getRaw( "one" );
+    private final NamedDatabaseId databaseId2 = databaseIdRepository.getRaw( "two" );
 
     @Test
     void shouldReturnMemberId()

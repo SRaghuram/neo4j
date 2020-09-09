@@ -57,7 +57,7 @@ class DefaultDiscoveryMemberFactoryTest
 
         var discoveryMember = discoveryMemberFactory.create( id );
 
-        assertEquals( Set.of( namedDatabaseId1.databaseId(), namedDatabaseId3.databaseId() ), discoveryMember.startedDatabases() );
+        assertEquals( Set.of( namedDatabaseId1, namedDatabaseId3 ), discoveryMember.startedDatabases() );
     }
 
     @Test
@@ -70,7 +70,7 @@ class DefaultDiscoveryMemberFactoryTest
 
         var discoveryMember = discoveryMemberFactory.create( id );
 
-        assertEquals( Set.of( namedDatabaseId2.databaseId(), namedDatabaseId3.databaseId() ), discoveryMember.startedDatabases() );
+        assertEquals( Set.of( namedDatabaseId2, namedDatabaseId3 ), discoveryMember.startedDatabases() );
     }
 
     @Test
@@ -80,6 +80,6 @@ class DefaultDiscoveryMemberFactoryTest
 
         assertSame( discoveryMember.startedDatabases(), discoveryMember.startedDatabases() );
         assertThat( discoveryMember.startedDatabases(), is( empty() ) );
-        assertThrows( UnsupportedOperationException.class, () -> discoveryMember.startedDatabases().add( namedDatabaseId1.databaseId() ) );
+        assertThrows( UnsupportedOperationException.class, () -> discoveryMember.startedDatabases().add( namedDatabaseId1 ) );
     }
 }

@@ -8,11 +8,11 @@ package com.neo4j.causalclustering.discovery.member;
 import java.util.Set;
 
 import org.neo4j.dbms.identity.ServerId;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 public interface DiscoveryMember
 {
     ServerId id();
 
-    Set<DatabaseId> startedDatabases();
+    Set<NamedDatabaseId> startedDatabases();
 }

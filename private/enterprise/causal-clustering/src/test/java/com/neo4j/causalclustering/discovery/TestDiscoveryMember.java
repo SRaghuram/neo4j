@@ -12,7 +12,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.neo4j.dbms.identity.ServerId;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
@@ -44,8 +43,8 @@ public class TestDiscoveryMember implements DiscoveryMember
     }
 
     @Override
-    public Set<DatabaseId> startedDatabases()
+    public Set<NamedDatabaseId> startedDatabases()
     {
-        return startedDatabases.stream().map( NamedDatabaseId::databaseId ).collect( Collectors.toSet() );
+        return startedDatabases;
     }
 }

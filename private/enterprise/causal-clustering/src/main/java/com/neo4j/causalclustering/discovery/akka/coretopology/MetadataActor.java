@@ -21,9 +21,11 @@ import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.METADATA;
 
@@ -75,7 +77,10 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
     @Override
     public void sendInitialDataToReplicator()
     {
-        startedDatabases.addAll( myself.startedDatabases() );
+        var databaseIds = myself.startedDatabases().stream()
+                                  .map( NamedDatabaseId::databaseId )
+                                  .collect( Collectors.toSet() );
+        startedDatabases.addAll( databaseIds );
         sendCoreServerInfo();
     }
 
