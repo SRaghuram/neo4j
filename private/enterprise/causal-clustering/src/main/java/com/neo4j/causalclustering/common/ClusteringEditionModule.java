@@ -5,6 +5,8 @@
  */
 package com.neo4j.causalclustering.common;
 
+import com.neo4j.dbms.ClusterDbmsRuntimeRepository;
+import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
 import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
@@ -21,7 +23,9 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.DatabaseOperationCounts;
+import org.neo4j.dbms.database.DbmsRuntimeRepository;
 import org.neo4j.function.Predicates;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
@@ -31,6 +35,7 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.SystemNanoClock;
 
+import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 import static org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper.DEFAULT_FILENAME_PREDICATE;
 
 public abstract class ClusteringEditionModule extends AbstractEditionModule
@@ -77,5 +82,16 @@ public abstract class ClusteringEditionModule extends AbstractEditionModule
             // thread factories can only be configured once, before the group's executor is started
             jobScheduler.setThreadFactory( group, NettyThreadFactory::new );
         }
+    }
+
+    @Override
+    public DbmsRuntimeRepository createAndRegisterDbmsRuntimeRepository( GlobalModule globalModule,
+            DatabaseManager<?> databaseManager,
+            Dependencies dependencies )
+    {
+        var dbmsRuntimeRepository = new ClusterDbmsRuntimeRepository( databaseManager );
+        var replicatedDatabaseEventService = dependencies.resolveDependency( ReplicatedDatabaseEventService.class );
+        replicatedDatabaseEventService.registerListener( NAMED_SYSTEM_DATABASE_ID, dbmsRuntimeRepository );
+        return dbmsRuntimeRepository;
     }
 }

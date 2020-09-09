@@ -106,6 +106,9 @@ class SystemGraphComponentsTest
         UserRepository adminRepo = new InMemoryUserRepository();
         enterpriseComponent = new EnterpriseSecurityGraphComponent( NullLog.getInstance(), oldRoleRepo, adminRepo, Config.defaults() );
         systemGraphComponents.register( enterpriseComponent );
+
+        // removing DBMS runtime component as it is not a subject of this test
+        systemGraphComponents.deregister( "dbms-runtime" );
     }
 
     @BeforeEach
