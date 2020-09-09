@@ -165,7 +165,7 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
     )
 
   test("measure aggregation: count(...)") {
-    measureAggregation(grouped = false, "count(x)", tolerance = DEFAULT_TOLERANCE)
+    measureAggregation(grouped = false, "count(x)", tolerance = AbsoluteErrorTolerance(100, ByteUnit.KibiByte))
   }
 
   test("measure aggregation: collect(...)") {
@@ -482,7 +482,8 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
     measureExpandInto(1, logicalQuery, tolerance = ErrorFractionTolerance(0.5))
   }
 
-  test("measure expand-into big") {
+  // This test takes over 5 min on TC
+  ignore("measure expand-into big") {
     val logicalQuery: LogicalQuery = new LogicalQueryBuilder(this)
       .produceResults("r", "b")
       .expandInto("(a)<-[r:IN]-(b)")
@@ -505,7 +506,8 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
     measureExpandInto(1, logicalQuery, tolerance = ErrorFractionTolerance(0.5))
   }
 
-  test("measure optional expand-into big") {
+  // This test takes over 5 min on TC
+  ignore("measure optional expand-into big") {
     val logicalQuery: LogicalQuery = new LogicalQueryBuilder(this)
       .produceResults("r", "b")
       .optionalExpandInto("(a)<-[r:IN]-(b)")
@@ -842,7 +844,7 @@ trait FullSupportMemoryMeasurementTestBase [CONTEXT <: RuntimeContext] {
       input = withRandom(random => finiteGeneratedInput(DEFAULT_INPUT_SIZE.toInt)(i => Array[Any](random.nextInt(10000), Math.round(i /30)))),
       measuringStrategy = HeapDumpAtEstimateHighWaterMarkInputOffset,
       baselineStrategy = Some(HeapDumpAtInputOffset(DEFAULT_INPUT_SIZE / 2)),
-      tolerance = DEFAULT_TOLERANCE,
+      tolerance = ErrorFractionTolerance(0.3),
     )
   }
 
@@ -872,7 +874,7 @@ trait FullSupportMemoryMeasurementTestBase [CONTEXT <: RuntimeContext] {
       input = withRandom(random => finiteGeneratedInput(DEFAULT_INPUT_SIZE.toInt)(i => Array[Any](random.nextInt(10000), Math.round(i / 30)))),
       measuringStrategy = HeapDumpAtEstimateHighWaterMarkInputOffset,
       baselineStrategy = Some(HeapDumpAtInputOffset(DEFAULT_INPUT_SIZE / 2)),
-      tolerance = DEFAULT_TOLERANCE,
+      tolerance = ErrorFractionTolerance(0.3),
     )
   }
 
