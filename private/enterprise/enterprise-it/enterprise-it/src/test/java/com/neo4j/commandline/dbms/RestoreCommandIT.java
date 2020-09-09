@@ -46,10 +46,9 @@ class RestoreCommandIT extends AbstractCommandIT
     void restoreStoppedDatabase() throws IOException
     {
         String databaseName = databaseAPI.databaseName();
+        managementService.shutdownDatabase( databaseName );
         Path testBackup = testDirectory.directoryPath( "testbackup2" );
         FileUtils.copyDirectory( databaseAPI.databaseLayout().databaseDirectory(), testBackup );
-
-        managementService.shutdownDatabase( databaseName );
 
         assertDoesNotThrow( () ->
                             {
@@ -62,10 +61,9 @@ class RestoreCommandIT extends AbstractCommandIT
     @Test
     void shouldUseLastNameOfFromPathIfDatabaseNameParameterIsNotPassed() throws IOException
     {
+        managementService.shutdownDatabase( databaseAPI.databaseName() );
         Path testBackup = testDirectory.directoryPath( "testbackup2" );
         FileUtils.copyDirectory( databaseAPI.databaseLayout().databaseDirectory(), testBackup );
-
-        managementService.shutdownDatabase( databaseAPI.databaseName() );
 
         assertDoesNotThrow( () ->
                             {
@@ -83,11 +81,10 @@ class RestoreCommandIT extends AbstractCommandIT
     @Test
     void shouldRestoreTwoDatabaseDefinedAsAList() throws IOException
     {
+        managementService.shutdownDatabase( databaseAPI.databaseName() );
         final List<Path> databaseDirs = List.of( testDirectory.directoryPath( "db1", "testDir" ),
                                                  testDirectory.directoryPath( "db2", "testDir" ) );
         databaseDirs.forEach( dir -> copy( databaseAPI.databaseLayout().databaseDirectory(), dir ) );
-
-        managementService.shutdownDatabase( databaseAPI.databaseName() );
 
         //when
         assertDoesNotThrow( () ->
@@ -112,12 +109,11 @@ class RestoreCommandIT extends AbstractCommandIT
     @Test
     void shouldRestoreAllDatabasesThatMatchTheFilter() throws IOException
     {
+        managementService.shutdownDatabase( databaseAPI.databaseName() );
         final List<Path> databaseDirs = List.of( testDirectory.directoryPath( "db1", "testDir" ),
                                                  testDirectory.directoryPath( "db2", "testDir" ),
                                                  testDirectory.directoryPath( "mongo", "testDir" ) );
         databaseDirs.forEach( dir -> copy( databaseAPI.databaseLayout().databaseDirectory(), dir ) );
-
-        managementService.shutdownDatabase( databaseAPI.databaseName() );
 
         var fromPath = databaseDirs.get( 0 ).getParent().toAbsolutePath().toString(); // point to testDir folder
 
@@ -144,11 +140,11 @@ class RestoreCommandIT extends AbstractCommandIT
     @Test
     void shouldNotThrowExceptionWhenMultiDatabaseAreRestoreWithMoveFlag()
     {
+        managementService.shutdownDatabase( databaseAPI.databaseName() );
         final List<Path> databaseDirs = List.of( testDirectory.directoryPath( "db1", "testDir" ),
                                                  testDirectory.directoryPath( "db2", "testDir" ) );
         databaseDirs.forEach( dir -> copy( databaseAPI.databaseLayout().databaseDirectory(), dir ) );
 
-        managementService.shutdownDatabase( databaseAPI.databaseName() );
         var homeDir = testDirectory.directoryPath( "home", "restoreHome" );
 
         //when
