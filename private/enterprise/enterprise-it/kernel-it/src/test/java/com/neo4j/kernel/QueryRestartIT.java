@@ -66,9 +66,9 @@ class QueryRestartIT
     @Test
     void executeQueryWithSingleRetryOnDefaultDatabase()
     {
-        prepareCursorContext( DEFAULT_DATABASE_NAME );
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         createData( database );
+        prepareCursorContext( DEFAULT_DATABASE_NAME );
         try ( Transaction transaction = database.beginTx() )
         {
             var result = transaction.execute( "MATCH (n) RETURN n.c" );
@@ -86,9 +86,9 @@ class QueryRestartIT
     {
         var databaseName = "futurama";
         managementService.createDatabase( databaseName );
-        prepareCursorContext( databaseName );
         GraphDatabaseService database = managementService.database( databaseName );
         createData( database );
+        prepareCursorContext( databaseName );
         try ( Transaction transaction = database.beginTx() )
         {
             var result = transaction.execute( "MATCH (n) RETURN n.c" );
@@ -104,7 +104,7 @@ class QueryRestartIT
     private void prepareCursorContext( String databaseName )
     {
         testCursorContext = TestVersionContext.testCursorContext( managementService, databaseName );
-        testContextSupplier.setCursorContext( testCursorContext );
+        testContextSupplier.setTestVersionContext( testCursorContext );
     }
 
     private static void createData( GraphDatabaseService database )

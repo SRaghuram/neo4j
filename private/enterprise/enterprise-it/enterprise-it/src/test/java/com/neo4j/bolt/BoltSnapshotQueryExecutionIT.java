@@ -72,14 +72,14 @@ class BoltSnapshotQueryExecutionIT
                 .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0  ) )
                 .setConfig( GraphDatabaseInternalSettings.snapshot_query, true )
                 //  The global metrics extension and page cache warmer issue queries that can make our version contexts dirty.
-                // If we don't remove these extensions, we might geb a count of 0 or more than 1 for `testCursorContext.getAdditionalAttempts()`,
+                // If we don't remove these extensions, we might get a count of 0 or more than 1 for `testCursorContext.getAdditionalAttempts()`,
                 // depending on when the extension marks it as dirty
                 .removeExtensions( extension -> extension instanceof GlobalMetricsExtensionFactory ||
                                                 extension instanceof PageCacheWarmerExtensionFactory )
                 .build();
-        prepareCursorContext();
         db = managementService.database( DEFAULT_DATABASE_NAME );
         createData( db );
+        prepareCursorContext();
         connectDriver();
     }
 
@@ -146,7 +146,7 @@ class BoltSnapshotQueryExecutionIT
     private void prepareCursorContext()
     {
         testCursorContext = TestVersionContext.testCursorContext( managementService, DEFAULT_DATABASE_NAME );
-        testContextSupplier.setCursorContext( testCursorContext );
+        testContextSupplier.setTestVersionContext( testCursorContext );
     }
 
     private static void createData( GraphDatabaseService database )
