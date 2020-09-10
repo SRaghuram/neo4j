@@ -144,6 +144,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
   private val communityCommandRuntime: CommunityAdministrationCommandRuntime = CommunityAdministrationCommandRuntime(normalExecutionEngine, resolver, logicalToExecutable)
   private val config: Config = resolver.resolveDependency(classOf[Config])
   private val maxDBLimit: Long = config.get(EnterpriseEditionSettings.max_number_of_databases)
+  private val restrict_upgrade = config.get(GraphDatabaseInternalSettings.restrict_upgrade)
   private val create_drop_database_is_blocked = config.get(GraphDatabaseInternalSettings.block_create_drop_database)
   private val start_stop_database_is_blocked = config.get(GraphDatabaseInternalSettings.block_start_stop_database)
   private val operator_name = config.get(GraphDatabaseInternalSettings.upgrade_username)
@@ -187,11 +188,12 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         case DropDatabaseAction => (create_drop_database_is_blocked, "DROP")
         case StartDatabaseAction => (start_stop_database_is_blocked, "START")
         case StopDatabaseAction => (start_stop_database_is_blocked, "STOP")
+        case _ => throw new IllegalStateException( "AssertNotBlocked should only be executed on create, drop, start and stop database." )
       }
 
       val errorMessage = s"$actionString DATABASE is not supported, for more info see https://aura.support.neo4j.com/hc/en-us/articles/360050567093"
 
-      new PredicateExecutionPlan((_, sc) => !blocked || sc.subject().hasUsername(operator_name),
+      new PredicateExecutionPlan((_, sc) => !blocked || restrict_upgrade && sc.subject().hasUsername(operator_name),
         onViolation = (_, _) => new UnsupportedOperationException(errorMessage),
         source = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
       )

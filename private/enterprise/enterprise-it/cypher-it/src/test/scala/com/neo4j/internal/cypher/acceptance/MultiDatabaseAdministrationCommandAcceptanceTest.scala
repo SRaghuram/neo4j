@@ -123,7 +123,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     exception2.getMessage should include("CREATE DATABASE is not supported")
   }
 
-    test("should fail CREATE DATABASE IF NOT EXISTS when config setting block_create_drop_database is set to true ") {
+  test("should fail CREATE DATABASE IF NOT EXISTS when config setting block_create_drop_database is set to true ") {
     // GIVEN
     val config = Config.defaults()
     config.set(block_create_drop_database, java.lang.Boolean.TRUE)

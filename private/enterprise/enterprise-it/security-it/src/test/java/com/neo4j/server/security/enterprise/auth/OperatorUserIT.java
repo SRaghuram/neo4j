@@ -283,6 +283,22 @@ class OperatorUserIT
     }
 
     @Test
+    void shouldNotAllowUserWithOperatorNameToCreateDatabase() throws InvalidAuthTokenException
+    {
+        // GIVEN
+        GraphDatabaseAPI database = setupUserWithOperatorNameAndSystemDatabase();
+        LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
+
+        // WHEN .. THEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            assertThatThrownBy( () -> tx.execute( "CREATE DATABASE operational" ) )
+                    .isInstanceOf( UnsupportedOperationException.class )
+                    .hasMessageContaining( "CREATE DATABASE is not supported" );
+        }
+    }
+
+    @Test
     void shouldAllowOperatorUserToCreateDatabaseIfNotExists() throws InvalidAuthTokenException
     {
         // GIVEN
@@ -305,6 +321,31 @@ class OperatorUserIT
             Result result = tx.execute( "SHOW DATABASES" );
             final Set<Object> names = result.columnAs( "name" ).stream().collect( Collectors.toSet() );
             assertEquals( Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME, "operational" ), names );
+        }
+    }
+
+    @Test
+    void shouldNotAllowUserWithOperatorNameToCreateDatabaseIfNotExists() throws InvalidAuthTokenException
+    {
+        // GIVEN
+        GraphDatabaseAPI database = setupUserWithOperatorNameAndSystemDatabase();
+        LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
+
+        // WHEN .. THEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            // Existing database
+            assertThatThrownBy( () -> tx.execute( String.format( "CREATE DATABASE %s IF NOT EXISTS", DEFAULT_DATABASE_NAME ) ) )
+                    .isInstanceOf( UnsupportedOperationException.class )
+                    .hasMessageContaining( "CREATE DATABASE is not supported" );
+        }
+
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            // Non-existing database
+            assertThatThrownBy( () -> tx.execute( "CREATE DATABASE operational IF NOT EXISTS" ) )
+                    .isInstanceOf( UnsupportedOperationException.class )
+                    .hasMessageContaining( "CREATE DATABASE is not supported" );
         }
     }
 
@@ -335,6 +376,31 @@ class OperatorUserIT
     }
 
     @Test
+    void shouldNotAllowUserWithOperatorNameToCreateOrReplaceDatabase() throws InvalidAuthTokenException
+    {
+        // GIVEN
+        GraphDatabaseAPI database = setupUserWithOperatorNameAndSystemDatabase();
+        LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
+
+        // WHEN .. THEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            // Existing database
+            assertThatThrownBy( () -> tx.execute( String.format( "CREATE OR REPLACE DATABASE %s", DEFAULT_DATABASE_NAME ) ) )
+                    .isInstanceOf( UnsupportedOperationException.class )
+                    .hasMessageContaining( "CREATE DATABASE is not supported" );
+        }
+
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            // Non-existing database
+            assertThatThrownBy( () -> tx.execute( "CREATE OR REPLACE DATABASE operational" ) )
+                    .isInstanceOf( UnsupportedOperationException.class )
+                    .hasMessageContaining( "CREATE DATABASE is not supported" );
+        }
+    }
+
+    @Test
     void shouldAllowOperatorUserToDropDatabase() throws InvalidAuthTokenException
     {
         // GIVEN
@@ -354,6 +420,22 @@ class OperatorUserIT
             Result result = tx.execute( "SHOW DATABASES" );
             final Set<Object> names = result.columnAs( "name" ).stream().collect( Collectors.toSet() );
             assertEquals( Set.of( SYSTEM_DATABASE_NAME ), names );
+        }
+    }
+
+    @Test
+    void shouldNotAllowUserWithOperatorNameToDropDatabase() throws InvalidAuthTokenException
+    {
+        // GIVEN
+        GraphDatabaseAPI database = setupUserWithOperatorNameAndSystemDatabase();
+        LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
+
+        // WHEN .. THEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            assertThatThrownBy( () -> tx.execute( String.format( "DROP DATABASE %s", DEFAULT_DATABASE_NAME ) ) )
+                    .isInstanceOf( UnsupportedOperationException.class )
+                    .hasMessageContaining( "DROP DATABASE is not supported" );
         }
     }
 
@@ -379,6 +461,31 @@ class OperatorUserIT
             Result result = tx.execute( "SHOW DATABASES" );
             final Set<Object> names = result.columnAs( "name" ).stream().collect( Collectors.toSet() );
             assertEquals( Set.of( SYSTEM_DATABASE_NAME ), names );
+        }
+    }
+
+    @Test
+    void shouldNotAllowUserWithOperatorNameToDropDatabaseIfExists() throws InvalidAuthTokenException
+    {
+        // GIVEN
+        GraphDatabaseAPI database = setupUserWithOperatorNameAndSystemDatabase();
+        LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
+
+        // WHEN .. THEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            // Existing database
+            assertThatThrownBy( () -> tx.execute( String.format( "DROP DATABASE %s IF EXISTS", DEFAULT_DATABASE_NAME ) ) )
+                    .isInstanceOf( UnsupportedOperationException.class )
+                    .hasMessageContaining( "DROP DATABASE is not supported" );
+        }
+
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            // Non-existing database
+            assertThatThrownBy( () -> tx.execute( "DROP DATABASE operational IF EXISTS" ) )
+                    .isInstanceOf( UnsupportedOperationException.class )
+                    .hasMessageContaining( "DROP DATABASE is not supported" );
         }
     }
 
@@ -451,6 +558,38 @@ class OperatorUserIT
             Result result = tx.execute( "SHOW DEFAULT DATABASE" );
             final Set<Object> status = result.columnAs( "currentStatus" ).stream().collect( Collectors.toSet() );
             assertEquals( Set.of( "online" ), status );
+        }
+    }
+
+    @Test
+    void shouldNotAllowUserWithOperatorNameToStartDatabase() throws InvalidAuthTokenException
+    {
+        // GIVEN
+        GraphDatabaseAPI database = setupUserWithOperatorNameAndSystemDatabase();
+        LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
+
+        // WHEN .. THEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            assertThatThrownBy( () -> tx.execute( String.format( "START DATABASE %s", DEFAULT_DATABASE_NAME ) ) )
+                    .isInstanceOf( UnsupportedOperationException.class )
+                    .hasMessageContaining( "START DATABASE is not supported" );
+        }
+    }
+
+    @Test
+    void shouldNotAllowUserWithOperatorNameToStopDatabase() throws InvalidAuthTokenException
+    {
+        // GIVEN
+        GraphDatabaseAPI database = setupUserWithOperatorNameAndSystemDatabase();
+        LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
+
+        // WHEN .. THEN
+        try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
+        {
+            assertThatThrownBy( () -> tx.execute( String.format( "STOP DATABASE %s", DEFAULT_DATABASE_NAME ) ) )
+                    .isInstanceOf( UnsupportedOperationException.class )
+                    .hasMessageContaining( "STOP DATABASE is not supported" );
         }
     }
 
@@ -530,6 +669,16 @@ class OperatorUserIT
 
     private GraphDatabaseAPI setupOperatorUserAndSystemDatabase( boolean restrictUpgrade )
     {
+        return setupOperatorUserAndSystemDatabase( restrictUpgrade, false );
+    }
+
+    private GraphDatabaseAPI setupUserWithOperatorNameAndSystemDatabase()
+    {
+        return setupOperatorUserAndSystemDatabase( false, true );
+    }
+
+    private GraphDatabaseAPI setupOperatorUserAndSystemDatabase( boolean restrictUpgrade, boolean nonOperatorWithOperatorName )
+    {
         setOperatorPassword( "bar" );
         final Map<Setting<?>, Object> config =
                 Map.of( GraphDatabaseInternalSettings.restrict_upgrade, restrictUpgrade,
@@ -537,7 +686,23 @@ class OperatorUserIT
                         GraphDatabaseInternalSettings.block_start_stop_database, true );
 
         enterpriseDbms = getEnterpriseManagementService( config );
-        return (GraphDatabaseAPI) enterpriseDbms.database( SYSTEM_DATABASE_NAME );
+        GraphDatabaseAPI database = (GraphDatabaseAPI) enterpriseDbms.database( SYSTEM_DATABASE_NAME );
+
+        if ( nonOperatorWithOperatorName )
+        {
+            // create user with same name as upgrade_username setting and grant it all database related privileges
+            try ( Transaction tx = database.beginTx() )
+            {
+                tx.execute( String.format( "CREATE USER %s SET PASSWORD 'bar' CHANGE NOT REQUIRED", UPGRADE_USERNAME ) );
+                tx.execute( "CREATE role databaseOperator" );
+                tx.execute( "GRANT DATABASE MANAGEMENT ON DBMS TO databaseOperator" );
+                tx.execute( "GRANT START ON DATABASE * TO databaseOperator" );
+                tx.execute( "GRANT STOP ON DATABASE * TO databaseOperator" );
+                tx.execute( String.format( "GRANT ROLE databaseOperator TO %s", UPGRADE_USERNAME ) );
+                tx.commit();
+            }
+        }
+        return database;
     }
 
     private void setInitialPassword( String password )
