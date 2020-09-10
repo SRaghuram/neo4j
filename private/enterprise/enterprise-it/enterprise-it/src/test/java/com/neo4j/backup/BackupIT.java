@@ -76,7 +76,6 @@ import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.MetaDataStore.Position;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
@@ -144,6 +143,7 @@ import static org.neo4j.kernel.impl.MyRelTypes.TEST;
 import static org.neo4j.kernel.impl.store.record.Record.NO_LABELS_FIELD;
 import static org.neo4j.kernel.impl.store.record.Record.NO_NEXT_PROPERTY;
 import static org.neo4j.kernel.impl.store.record.Record.NO_NEXT_RELATIONSHIP;
+import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
 import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
@@ -1005,15 +1005,16 @@ class BackupIT
                      .forLevel( INFO )
                      .containsMessageWithArguments( "databaseName=%s, backupStatus=%s, reason=%s",
                                                     defaultDB.databaseName(), "successful", "" );
+
         LogAssertions.assertThat( userLogProvider ).forClass( OnlineBackupExecutor.class )
                      .forLevel( INFO )
-                     .containsMessages(
-                             "refused as intended database " + ((GraphDatabaseFacade) managementService.database( natureDB )).databaseId().databaseId() +
-                             " is shutdown" );
+                     .containsMessageWithArguments( "databaseName=%s, backupStatus=%s, reason=%s",
+                                                    natureDB, "failed", "Request returned an error [Status: 'E_STORE_UNAVAILABLE' " +
+                                                                        "Message: 'Database 'nature' is stopped. Start the database before backup']" );
 
         LogAssertions.assertThat( errorLogProvider ).forClass( OnlineBackupExecutor.class )
-                     .forLevel( INFO )
-                     .doesNotHaveAnyLogs();
+                     .forLevel( ERROR )
+                     .containsMessages( "Error in database " + natureDB );
 
         managementService.shutdown();
     }
