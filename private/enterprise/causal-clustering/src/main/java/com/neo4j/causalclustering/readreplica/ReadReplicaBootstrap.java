@@ -123,7 +123,7 @@ class ReadReplicaBootstrap
         }
         catch ( UpstreamDatabaseSelectionException e )
         {
-            debugLog.warn( "Unable to find upstream member for database " + databaseContext.databaseId().name() );
+            debugLog.warn( "Unable to find upstream member for " + databaseContext.databaseId() );
         }
         return List.of();
     }
@@ -192,8 +192,8 @@ class ReadReplicaBootstrap
         if ( !localStoreId.equals( remoteStoreId ) )
         {
             throw new IllegalStateException(
-                    format( "This read replica cannot join the cluster. " + "The local version of database %s is not empty and has a mismatching storeId: " +
-                            "expected %s actual %s.", databaseContext.databaseId().name(), remoteStoreId, localStoreId ) );
+                    format( "This read replica cannot join the cluster. " + "The local version of %s is not empty and has a mismatching storeId: " +
+                            "expected %s actual %s.", databaseContext.databaseId(), remoteStoreId, localStoreId ) );
         }
     }
 }

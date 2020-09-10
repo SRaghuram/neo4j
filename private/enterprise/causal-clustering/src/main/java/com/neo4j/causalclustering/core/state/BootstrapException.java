@@ -11,6 +11,6 @@ class BootstrapException extends RuntimeException
 {
     BootstrapException( NamedDatabaseId namedDatabaseId, Exception cause )
     {
-        super( "Failed to bootstrap database " + namedDatabaseId.name(), cause );
+        super( "Failed to bootstrap " + namedDatabaseId, cause );
     }
 }

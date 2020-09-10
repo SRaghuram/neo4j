@@ -60,7 +60,7 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
         try
         {
             context = recreateContextIfNeeded( namedDatabaseId, context );
-            log.info( "Starting '%s' database.", namedDatabaseId.name() );
+            log.info( "Starting '%s'.", namedDatabaseId );
             context.clusteredDatabase().start();
         }
         catch ( Throwable t )
@@ -87,7 +87,7 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
     {
         try
         {
-            log.info( "Stopping '%s' database.", namedDatabaseId.name() );
+            log.info( "Stopping '%s'.", namedDatabaseId );
             context.clusteredDatabase().stop();
         }
         catch ( Throwable t )
@@ -109,12 +109,12 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
         {
             try
             {
-                log.info( "Stopping '%s' database for store copy.", namedDatabaseId.name() );
+                log.info( "Stopping '%s' for store copy.", namedDatabaseId );
                 context.database().stop();
             }
             catch ( Throwable t )
             {
-                throw new DatabaseManagementException( format( "Unable to stop database '%s' for store copy.", namedDatabaseId.name() ), t );
+                throw new DatabaseManagementException( format( "Unable to stop '%s' for store copy.", namedDatabaseId ), t );
             }
         } );
     }
@@ -125,12 +125,12 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
         {
             try
             {
-                log.info( "Starting '%s' database after store copy.", namedDatabaseId.name() );
+                log.info( "Starting '%s' after store copy.", namedDatabaseId );
                 context.database().start();
             }
             catch ( Throwable t )
             {
-                throw new DatabaseManagementException( format( "Unable to start database '%s' after store copy.", namedDatabaseId.name() ), t );
+                throw new DatabaseManagementException( format( "Unable to start '%s' after store copy.", namedDatabaseId ), t );
             }
         } );
     }

@@ -20,6 +20,7 @@ import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -336,7 +337,8 @@ class MultiDatabaseManagerIT
         String logTestDb = "logTestDb";
         managementService.createDatabase( logTestDb );
         managementService.shutdownDatabase( logTestDb );
-        assertThat( logProvider ).containsMessages( "Creating 'logtestdb' database.", "Stop 'logtestdb' database." );
+        var databaseId = ((GraphDatabaseAPI) managementService.database( logTestDb )).databaseId();
+        assertThat( logProvider ).containsMessages( "Creating '" + databaseId + "'.", "Stopping '" + databaseId + "'." );
     }
 
     @Test

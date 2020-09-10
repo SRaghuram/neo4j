@@ -35,7 +35,7 @@ public class PanicService
     {
         var newHandlers = new DatabasePanicEventHandlers( handlers );
         var oldHandlers = handlersByDatabase.putIfAbsent( namedDatabaseId, newHandlers );
-        checkState( oldHandlers == null, "Panic handlers for database %s are already installed", namedDatabaseId.name() );
+        checkState( oldHandlers == null, "Panic handlers for %s are already installed", namedDatabaseId );
     }
 
     public void removePanicEventHandlers( NamedDatabaseId namedDatabaseId )
@@ -55,7 +55,7 @@ public class PanicService
 
     private void panic( NamedDatabaseId namedDatabaseId, Throwable error )
     {
-        log.error( "Clustering components for database '" + namedDatabaseId.name() + "' have encountered a critical error", error );
+        log.error( "Clustering components for '" + namedDatabaseId + "' have encountered a critical error", error );
 
         var handlers = handlersByDatabase.get( namedDatabaseId );
         if ( handlers != null )

@@ -71,7 +71,7 @@ public class ClusterSystemGraphDbmsModel extends EnterpriseSystemGraphDbmsModel
     {
         return Optional.ofNullable( tx.findNode( DATABASE_LABEL, DATABASE_UUID_PROPERTY, databaseId.databaseId().uuid().toString() ) )
                 .or( () -> Optional.ofNullable( tx.findNode( DELETED_DATABASE_LABEL, DATABASE_UUID_PROPERTY, databaseId.databaseId().uuid().toString() ) ) )
-                .orElseThrow( () -> new IllegalStateException( "System database must contain a node for database " + databaseId.name() ) );
+                .orElseThrow( () -> new IllegalStateException( "System database must contain a node for " + databaseId ) );
     }
 
     public static void clearClusterProperties( GraphDatabaseService system )

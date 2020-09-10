@@ -392,7 +392,7 @@ public class DbmsReconciler
         }
 
         var attempt = retries + 1;
-        log.warn( "Retrying reconciliation of database %s to state '%s'. This is attempt %d.", namedDatabaseId.name(),
+        log.warn( "Retrying reconciliation of %s to state '%s'. This is attempt %d.", namedDatabaseId,
                 desiredState.operatorState().description(), attempt );
 
         var remainingSteps = getLifecycleTransitionSteps( result.state(), desiredState );

@@ -91,7 +91,7 @@ class PanicServiceTest
         assertThat( assertableLogProvider )
                 .forClass( panicService.getClass() )
                 .forLevel( ERROR )
-                .containsMessageWithException( format( "Clustering components for database '%s' have encountered a critical error", namedDatabaseId2.name() ),
+                .containsMessageWithException( format( "Clustering components for '%s' have encountered a critical error", namedDatabaseId2 ),
                         error );
     }
 

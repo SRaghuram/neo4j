@@ -35,7 +35,7 @@ class RaftIdCheck
             {
                 throw new IllegalStateException( format( "Pre-existing cluster state found with an unexpected id %s. The id for this database is %s. " +
                         "This may indicate a previous DROP operation for %s did not complete.",
-                        raftId.uuid(), namedDatabaseId.databaseId().uuid(), namedDatabaseId.name() ) );
+                        raftId.uuid(), namedDatabaseId.databaseId().uuid(), namedDatabaseId ) );
             }
         }
         else

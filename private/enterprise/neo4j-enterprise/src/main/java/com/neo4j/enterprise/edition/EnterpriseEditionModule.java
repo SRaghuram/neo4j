@@ -154,7 +154,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
             Supplier<Kernel> kernelSupplier = () ->
             {
                 DatabaseContext databaseContext = databaseManager.getDatabaseContext( databaseId )
-                        .orElseThrow( () -> new IllegalStateException( format( "Database %s not found.", databaseId.name() ) ) );
+                        .orElseThrow( () -> new IllegalStateException( format( "Database for %s not found.", databaseId ) ) );
                 return databaseContext.dependencies().resolveDependency( Kernel.class );
             };
             return new TokenHolders(

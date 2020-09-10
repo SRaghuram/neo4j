@@ -50,7 +50,7 @@ public class StandaloneInternalDbmsOperator extends DbmsOperator implements Inte
     {
         if ( causeOfPanic == null )
         {
-            log.warn( "Panic event received for the database %s but the provided cause is null, so this event was ignored.", databaseId.name() );
+            log.warn( "Panic event received for %s but the provided cause is null, so this event was ignored.", databaseId );
             return;
         }
 

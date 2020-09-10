@@ -114,7 +114,7 @@ public class RaftBootstrapper
     {
         try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( RAFT_BOOTSTRAP_TAG ) )
         {
-            log.info( "Bootstrapping database " + bootstrapContext.databaseId().name() + " for members " + raftMembers );
+            log.info( "Bootstrapping " + bootstrapContext.databaseId() + " for members " + raftMembers );
             if ( isStorePresent() )
             {
                 ensureRecoveredOrThrow( bootstrapContext, config, memoryTracker );
@@ -130,7 +130,7 @@ public class RaftBootstrapper
             }
             appendNullTransactionLogEntryToSetRaftIndexToMinusOne( bootstrapContext, cursorTracer );
             CoreSnapshot snapshot = buildCoreSnapshot( raftMembers );
-            log.info( "Bootstrapping of the database " + bootstrapContext.databaseId().name() + " completed " + snapshot );
+            log.info( "Bootstrapping of " + bootstrapContext.databaseId() + " completed " + snapshot );
             return snapshot;
         }
         catch ( Exception e )
@@ -186,8 +186,7 @@ public class RaftBootstrapper
     {
         try ( var bootstrapRootDir = TempBootstrapDir.cleanBeforeAndAfter( fs, bootstrapContext.databaseLayout() ) )
         {
-            String databaseName = bootstrapContext.databaseId().name();
-            log.info( "Initializing the store for database " + databaseName + " using a temporary database in " + bootstrapRootDir );
+            log.info( "Initializing the store for " + bootstrapContext.databaseId() + " using a temporary database in " + bootstrapRootDir );
             DatabaseLayout bootstrapDatabaseLayout = initializeStoreUsingTempDatabase( bootstrapRootDir.get(), isSystemDatabase );
             if ( storeId != null )
             {
@@ -221,7 +220,7 @@ public class RaftBootstrapper
     {
         if ( Recovery.isRecoveryRequired( fs, bootstrapContext.databaseLayout(), config, memoryTracker ) )
         {
-            String message = "Cannot bootstrap database " + bootstrapContext.databaseId().name() + ". " +
+            String message = "Cannot bootstrap " + bootstrapContext.databaseId() + ". " +
                              "Recovery is required. " +
                              "Please ensure that the store being seeded comes from a cleanly shutdown instance of Neo4j or a Neo4j backup";
             log.error( message );

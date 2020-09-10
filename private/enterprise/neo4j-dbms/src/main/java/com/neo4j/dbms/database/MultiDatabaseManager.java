@@ -63,7 +63,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
         DB databaseContext;
         try
         {
-            log.info( "Creating '%s' database.", namedDatabaseId.name() );
+            log.info( "Creating '%s'.", namedDatabaseId );
             databaseContext = createDatabaseContext( namedDatabaseId );
         }
         catch ( Exception e )
@@ -178,7 +178,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
     {
         try
         {
-            log.info( "Drop '%s' database.", namedDatabaseId.name() );
+            log.info( "Drop '%s'.", namedDatabaseId );
             if ( dumpData )
             {
                 dropDumpJob().dump( context );
@@ -198,7 +198,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
     {
         if ( !databaseManagerStarted )
         {
-            throw new IllegalStateException( format( "The database manager must be started in order to operate on database `%s`", namedDatabaseId.name() ) );
+            throw new IllegalStateException( format( "The database manager must be started in order to operate on `%s`", namedDatabaseId ) );
         }
     }
 }

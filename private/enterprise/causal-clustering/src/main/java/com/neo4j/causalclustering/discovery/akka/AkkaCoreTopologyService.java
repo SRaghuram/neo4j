@@ -352,7 +352,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         var currentLeaderInfo = getLocalLeader( namedDatabaseId );
         if ( currentLeaderInfo.term() < newLeaderInfo.term() )
         {
-            log.info( "I am member %s. Updating leader info to member %s database %s and term %s", memberId(), newLeaderInfo.memberId(), namedDatabaseId.name(),
+            log.info( "I am member %s. Updating leader info to member %s %s and term %s", memberId(), newLeaderInfo.memberId(), namedDatabaseId,
                     newLeaderInfo.term() );
             localLeadersByDatabaseId.put( namedDatabaseId, newLeaderInfo );
             sendLeaderInfoIfNeeded( newLeaderInfo, namedDatabaseId );
@@ -370,8 +370,8 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
 
         if ( wasLeaderForTerm )
         {
-            log.info( "Step down event detected. This topology member, with MemberId %s, was leader for database %s in term %s, now moving " +
-                      "to follower.", memberId(), namedDatabaseId.name(), currentLeaderInfo.term() );
+            log.info( "Step down event detected. This topology member, with MemberId %s, was leader for %s in term %s, now moving " +
+                      "to follower.", memberId(), namedDatabaseId, currentLeaderInfo.term() );
 
             var newLeaderInfo = currentLeaderInfo.stepDown();
             localLeadersByDatabaseId.put( namedDatabaseId, newLeaderInfo );

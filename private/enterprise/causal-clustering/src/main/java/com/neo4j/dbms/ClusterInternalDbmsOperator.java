@@ -107,7 +107,7 @@ public class ClusterInternalDbmsOperator extends DbmsOperator
     {
         if ( causeOfPanic == null )
         {
-            log.warn( "Panic event received for the database %s but the provided cause is null, so this event was ignored.", namedDatabaseId.name() );
+            log.warn( "Panic event received for %s but the provided cause is null, so this event was ignored.", namedDatabaseId );
             return;
         }
 
