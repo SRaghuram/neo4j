@@ -5,8 +5,6 @@
  */
 package com.neo4j.backup.stresstests;
 
-import com.neo4j.backup.impl.BackupExecutionException;
-import com.neo4j.backup.impl.ConsistencyCheckExecutionException;
 import com.neo4j.backup.impl.OnlineBackupContext;
 import com.neo4j.backup.impl.OnlineBackupExecutor;
 import com.neo4j.causalclustering.stresstests.Control;
@@ -93,8 +91,7 @@ class BackupLoad extends Workload
         assertThat( "Did not manage to take a successful backup", successfulBackups, greaterThan( 0 ) );
     }
 
-    private static void executeBackup( String host, int port, Path targetDir, OutputStream outputStream )
-            throws BackupExecutionException, ConsistencyCheckExecutionException
+    private static void executeBackup( String host, int port, Path targetDir, OutputStream outputStream ) throws Exception
     {
         var contextBuilder = OnlineBackupContext.builder()
                                                 .withAddress( host, port )

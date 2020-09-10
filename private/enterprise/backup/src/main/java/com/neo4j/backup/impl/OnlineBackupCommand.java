@@ -53,8 +53,8 @@ import static picocli.CommandLine.Help.Visibility.ALWAYS;
 )
 public class OnlineBackupCommand extends AbstractCommand
 {
-    private static final int STATUS_CONSISTENCY_CHECK_ERROR = 2;
-    private static final int STATUS_CONSISTENCY_CHECK_INCONSISTENT = 3;
+    protected static final int STATUS_CONSISTENCY_CHECK_ERROR = 2;
+    protected static final int STATUS_CONSISTENCY_CHECK_INCONSISTENT = 3;
 
     @Option( names = "--backup-dir", paramLabel = "<path>", required = true, description = "Directory to place backup in." )
     private Path backupDir;
@@ -113,11 +113,13 @@ public class OnlineBackupCommand extends AbstractCommand
                 .withConsistencyCheckRelationshipTypeScanStore( consistencyCheckOptions.isCheckRelationshipTypeScanStore() );
 
         final var userLogProvider = Util.configuredLogProvider( config, ctx.out() );
+        final var errorLogProvider = Util.configuredLogProvider( config, ctx.err() );
         final var internalLogProvider = verbose ? userLogProvider : NullLogProvider.getInstance();
         final var backupExecutor = OnlineBackupExecutor.builder()
                                                        .withFileSystem( ctx.fs() )
                                                        .withInternalLogProvider( internalLogProvider )
                                                        .withUserLogProvider( userLogProvider )
+                                                       .withErrorLogProvider( errorLogProvider)
                                                        .withClock( Clocks.nanoClock() )
                                                        .withProgressMonitorFactory( ProgressMonitorFactory.textual( ctx.err() ) )
                                                        .build();
@@ -128,8 +130,7 @@ public class OnlineBackupCommand extends AbstractCommand
         }
         catch ( ConsistencyCheckExecutionException e )
         {
-            int exitCode = e.consistencyCheckFailedToExecute() ? STATUS_CONSISTENCY_CHECK_ERROR : STATUS_CONSISTENCY_CHECK_INCONSISTENT;
-            throw new CommandFailedException( e.getMessage(), e, exitCode );
+            throw new CommandFailedException( e.getMessage(), e, e.getExitCode() );
         }
         catch ( Exception e )
         {

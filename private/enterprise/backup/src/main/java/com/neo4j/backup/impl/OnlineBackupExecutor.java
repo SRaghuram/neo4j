@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.com.storecopy.FileMoveProvider;
 
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -23,20 +24,24 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.Lifespan;
+import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.SystemNanoClock;
 
 import static java.lang.String.format;
+import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 
 public final class OnlineBackupExecutor
 {
     private final FileSystemAbstraction fs;
     private final LogProvider userLogProvider;
     private final LogProvider internalLogProvider;
+    private final LogProvider errorLogProvider;
     private final ProgressMonitorFactory progressMonitorFactory;
     private final Monitors monitors;
     private final BackupSupportingClassesFactory backupSupportingClassesFactory;
@@ -48,6 +53,7 @@ public final class OnlineBackupExecutor
         this.fs = builder.fs;
         this.userLogProvider = builder.userLogProvider;
         this.internalLogProvider = builder.internalLogProvider;
+        this.errorLogProvider = builder.errorLogProvider;
         this.progressMonitorFactory = builder.progressMonitorFactory;
         this.monitors = builder.monitors;
         this.backupSupportingClassesFactory = builder.supportingClassesFactory;
@@ -64,13 +70,47 @@ public final class OnlineBackupExecutor
         return new Builder();
     }
 
-    public void executeBackups( OnlineBackupContext.Builder contextBuilder ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    public void executeBackups( OnlineBackupContext.Builder contextBuilder ) throws Exception
     {
         final var allDatabaseNames =
                 getAllDatabaseNames( contextBuilder.getConfig(), contextBuilder.getDatabaseNamePattern(), contextBuilder.getAddress() );
-        for ( OnlineBackupContext context : contextBuilder.build( allDatabaseNames ) )
+        final var userLog = userLogProvider.getLog( getClass() );
+        final var errorLog = errorLogProvider.getLog( getClass() );
+        final var backupResults = contextBuilder.build( allDatabaseNames )
+                                                .stream()
+                                                .map( context ->
+                                                      {
+                                                          try
+                                                          {
+                                                              executeBackup( context );
+                                                              return new BackupResult( context );
+                                                          }
+                                                          catch ( Exception ex )
+                                                          {
+                                                              errorLog.error( "Error in database " + context.getDatabaseName(), ex );
+                                                              return new BackupResult( context, ex );
+                                                          }
+                                                      } ).collect( Collectors.toList() );
+
+        final var inputContainsPattern = contextBuilder.getDatabaseNamePattern().containsPattern();
+        if ( !inputContainsPattern )
         {
-            executeBackup( context );
+            //if there is no pattern in the name, there should be only one DB that matches the name on the server side
+            final var exception = backupResults.stream().findFirst().flatMap( r -> r.exception ).orElse( null );
+            if ( exception != null )
+            {
+                throw exception;
+            }
+        }
+        else
+        {
+            backupResults.forEach( r -> printBackupResult( userLog, r ) );
+            final var oneFailedBackup = backupResults.stream()
+                                                     .anyMatch( r -> r.exception.isPresent() );
+            if ( oneFailedBackup )
+            {
+                throw new BackupExecutionException( "Not all databases are backed up" );
+            }
         }
     }
 
@@ -138,11 +178,30 @@ public final class OnlineBackupExecutor
         }
     }
 
+    private void printBackupResult( Log log, BackupResult backupResult )
+    {
+        final var reason = backupResult.exception.map( ex ->
+                                                       {
+                                                           if ( ex instanceof ConsistencyCheckExecutionException )
+                                                           {
+                                                               return ex.getMessage();
+                                                           }
+                                                           else
+                                                           {
+                                                               return getRootCause( ex ).getMessage();
+                                                           }
+                                                       } ).orElse( "" );
+        final var status = backupResult.exception.isPresent() ? "failed" : "successful";
+        final var databaseName = backupResult.context.getDatabaseName();
+        log.info( "databaseName=%s, backupStatus=%s, reason=%s", databaseName, status, reason );
+    }
+
     public static final class Builder
     {
         private FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
         private LogProvider userLogProvider = NullLogProvider.getInstance();
         private LogProvider internalLogProvider = NullLogProvider.getInstance();
+        private LogProvider errorLogProvider = NullLogProvider.getInstance();
         private ProgressMonitorFactory progressMonitorFactory = ProgressMonitorFactory.NONE;
         private Monitors monitors = new Monitors();
         private BackupSupportingClassesFactory supportingClassesFactory;
@@ -168,6 +227,12 @@ public final class OnlineBackupExecutor
         public Builder withInternalLogProvider( LogProvider internalLogProvider )
         {
             this.internalLogProvider = internalLogProvider;
+            return this;
+        }
+
+        public Builder withErrorLogProvider( LogProvider errorLogProvider )
+        {
+            this.errorLogProvider = errorLogProvider;
             return this;
         }
 
@@ -209,6 +274,24 @@ public final class OnlineBackupExecutor
             }
 
             return new OnlineBackupExecutor( this );
+        }
+    }
+
+    private static final class BackupResult
+    {
+        public final OnlineBackupContext context;
+        public final Optional<Exception> exception;
+
+        private BackupResult( OnlineBackupContext context, Exception exception )
+        {
+            this.context = context;
+            this.exception = Optional.of( exception );
+        }
+
+        private BackupResult( OnlineBackupContext context )
+        {
+            this.context = context;
+            this.exception = Optional.empty();
         }
     }
 }

@@ -76,6 +76,7 @@ import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.MetaDataStore.Position;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
@@ -91,6 +92,8 @@ import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
 import org.neo4j.kernel.impl.transaction.tracing.LogAppendEvent;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.internal.locker.FileLockException;
+import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.logging.LogAssertions;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -141,6 +144,7 @@ import static org.neo4j.kernel.impl.MyRelTypes.TEST;
 import static org.neo4j.kernel.impl.store.record.Record.NO_LABELS_FIELD;
 import static org.neo4j.kernel.impl.store.record.Record.NO_NEXT_PROPERTY;
 import static org.neo4j.kernel.impl.store.record.Record.NO_NEXT_RELATIONSHIP;
+import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 
@@ -210,7 +214,7 @@ class BackupIT
     }
 
     @TestWithRecordFormats
-    void makeSureFullWorksWhenNoDb( String recordFormatName ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    void makeSureFullWorksWhenNoDb( String recordFormatName ) throws Exception
     {
         DbRepresentation initialDataSet = createInitialDataSet( serverHomeDir, recordFormatName );
         GraphDatabaseService db = startDb( serverHomeDir );
@@ -387,16 +391,17 @@ class BackupIT
 
         // start thread that continuously writes to indexes
         executor.submit( () ->
-        {
-            while ( !end.get() )
-            {
-                try ( Transaction tx = db.beginTx() )
-                {
-                    tx.createNode( indexedLabels.get( random.nextInt( numberOfIndexedLabels ) ) ).setProperty( "prop", random.nextValueAsObject() );
-                    tx.commit();
-                }
-            }
-        } );
+                         {
+                             while ( !end.get() )
+                             {
+                                 try ( Transaction tx = db.beginTx() )
+                                 {
+                                     tx.createNode( indexedLabels.get( random.nextInt( numberOfIndexedLabels ) ) )
+                                       .setProperty( "prop", random.nextValueAsObject() );
+                                     tx.commit();
+                                 }
+                             }
+                         } );
         executor.shutdown();
 
         // create backup
@@ -467,8 +472,8 @@ class BackupIT
 
         StorageEngineFactory storageEngineFactory = ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( StorageEngineFactory.class );
         LogFiles backupLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( backupDatabasePath, fs )
-                .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
-                .build();
+                                                 .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
+                                                 .build();
 
         executeBackup( db );
         assertThat( backupLogFiles.logFiles() ).hasSize( 1 );
@@ -493,12 +498,12 @@ class BackupIT
 
             ExecutorService executor = newSingleThreadedExecutor();
             Future<Object> serverAcceptFuture = executor.submit( () ->
-            {
-                // accept a connection and immediately close it
-                Socket socket = serverSocket.accept();
-                socket.close();
-                return null;
-            } );
+                                                                 {
+                                                                     // accept a connection and immediately close it
+                                                                     Socket socket = serverSocket.accept();
+                                                                     socket.close();
+                                                                     return null;
+                                                                 } );
             executor.shutdown();
 
             BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackup( "localhost", port ) );
@@ -583,7 +588,7 @@ class BackupIT
             else
             {
                 if ( DatabaseFile.RELATIONSHIP_TYPE_SCAN_STORE.getName().equals( storeFile.getFileName().toString() ) &&
-                        !Config.defaults().get( enable_relationship_type_scan_store ) )
+                     !Config.defaults().get( enable_relationship_type_scan_store ) )
                 {
                     // Skip relationship type scan store file if feature is not enabled
                     continue;
@@ -837,7 +842,7 @@ class BackupIT
         Path[] dirs;
         try ( Stream<Path> list = Files.list( backupsDir ) )
         {
-            dirs = list.toArray( Path[]::new);
+            dirs = list.toArray( Path[]::new );
         }
         assertNotNull( dirs );
         assertEquals( singletonList( backupsDir.resolve( DEFAULT_DATABASE_NAME ) ), Arrays.asList( dirs ) );
@@ -917,7 +922,7 @@ class BackupIT
     }
 
     @TestWithRecordFormats
-    void shouldBackupMultipleDatabasesIfPatternMatch( String recordFormatName ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    void shouldBackupMultipleDatabasesIfPatternMatch( String recordFormatName ) throws Exception
     {
         //given
         var defaultDBRepresentation = createInitialDataSet( serverHomeDir, recordFormatName );
@@ -925,11 +930,20 @@ class BackupIT
         var natureDB = "nature";
         var natureDBExpectedRepresentation = createDatabase( natureDB );
 
+        //given log providers
+        final var userLogProvider = new AssertableLogProvider();
+        final var errorLogProvider = new AssertableLogProvider();
+
         //when
         var contextBuilder = defaultBackupContextBuilder( backupAddress( defaultDB ) )
                 .withDatabaseNamePattern( new DatabaseNamePattern( "n*" ) );
 
-        executeBackup( contextBuilder );
+        executeBackup( contextBuilder,
+                       new Monitors(),
+                       userLogProvider,
+                       errorLogProvider,
+                       new Log4jLogProvider( System.out )
+        );
 
         //then
         assertEquals( defaultDBRepresentation, getBackupDbRepresentation() );
@@ -937,11 +951,75 @@ class BackupIT
         var natureDBRepresentation = DbRepresentation.of( DatabaseLayout.ofFlat( backupsDir.resolve( natureDB ) ), getConfig() );
         assertEquals( natureDBExpectedRepresentation, natureDBRepresentation );
 
+        //then verify user and error logs
+        LogAssertions.assertThat( userLogProvider ).forClass( OnlineBackupExecutor.class )
+                     .forLevel( INFO )
+                     .containsMessageWithArguments( "databaseName=%s, backupStatus=%s, reason=%s",
+                                                    defaultDB.databaseName(), "successful", "" );
+
+        LogAssertions.assertThat( userLogProvider ).forClass( OnlineBackupExecutor.class )
+                     .forLevel( INFO )
+                     .containsMessageWithArguments( "databaseName=%s, backupStatus=%s, reason=%s", natureDB, "successful", "" );
+        LogAssertions.assertThat( errorLogProvider ).forClass( OnlineBackupExecutor.class ).doesNotHaveAnyLogs();
+
         managementService.shutdown();
     }
 
     @TestWithRecordFormats
-    void shouldntBackupAnyDatabaseIfPatternNotMatch( String recordFormatName ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    void shouldThrowExceptionIfBackupIsNotSuccessfulForAllDBs( String recordFormatName ) throws Exception
+    {
+        //given
+        var defaultDBRepresentation = createInitialDataSet( serverHomeDir, recordFormatName );
+        var defaultDB = startDb( serverHomeDir );
+        var natureDB = "nature";
+        createDatabase( natureDB );
+        managementService.shutdownDatabase( natureDB );
+
+        //given log providers
+        final var userLogProvider = new AssertableLogProvider();
+        final var errorLogProvider = new AssertableLogProvider();
+
+        //when
+        var contextBuilder = defaultBackupContextBuilder( backupAddress( defaultDB ) )
+                .withDatabaseNamePattern( new DatabaseNamePattern( "n*" ) );
+
+        final var exception = assertThrows( BackupExecutionException.class,
+                                            () -> executeBackup( contextBuilder,
+                                                                 new Monitors(),
+                                                                 userLogProvider,
+                                                                 errorLogProvider,
+                                                                 new Log4jLogProvider( System.out )
+                                            ) );
+
+        //then exception is thrown
+        assertThat( getRootCause( exception ).getMessage() ).contains( "Not all databases are backed up" );
+
+        //then db representation is the same
+        assertEquals( defaultDBRepresentation, getBackupDbRepresentation() );
+
+        //then nature db doesn't exist on file system
+        assertFalse( backupsDir.resolve( natureDB ).toFile().exists() );
+
+        //then verify user and error logs
+        LogAssertions.assertThat( userLogProvider ).forClass( OnlineBackupExecutor.class )
+                     .forLevel( INFO )
+                     .containsMessageWithArguments( "databaseName=%s, backupStatus=%s, reason=%s",
+                                                    defaultDB.databaseName(), "successful", "" );
+        LogAssertions.assertThat( userLogProvider ).forClass( OnlineBackupExecutor.class )
+                     .forLevel( INFO )
+                     .containsMessages(
+                             "refused as intended database " + ((GraphDatabaseFacade) managementService.database( natureDB )).databaseId().databaseId() +
+                             " is shutdown" );
+
+        LogAssertions.assertThat( errorLogProvider ).forClass( OnlineBackupExecutor.class )
+                     .forLevel( INFO )
+                     .doesNotHaveAnyLogs();
+
+        managementService.shutdown();
+    }
+
+    @TestWithRecordFormats
+    void shouldntBackupAnyDatabaseIfPatternNotMatch( String recordFormatName ) throws Exception
     {
         DbRepresentation initialDataSetRepresentation = createInitialDataSet( serverHomeDir, recordFormatName );
         GraphDatabaseService db = startDb( serverHomeDir );
@@ -1060,9 +1138,9 @@ class BackupIT
     private static ConsistencyCheckService.Result checkConsistency( DatabaseLayout layout ) throws ConsistencyCheckIncompleteException
     {
         Config config = Config.newBuilder()
-                .set( pagecache_memory, "8m" )
-                .set( neo4j_home, layout.getNeo4jLayout().homeDirectory() )
-                .build();
+                              .set( pagecache_memory, "8m" )
+                              .set( neo4j_home, layout.getNeo4jLayout().homeDirectory() )
+                              .build();
 
         ConsistencyCheckService consistencyCheckService = new ConsistencyCheckService();
 
@@ -1087,18 +1165,18 @@ class BackupIT
 
         ExecutorService executor = newSingleThreadedExecutor();
         Future<Void> midBackupTransactionsFuture = executor.submit( () ->
-        {
-            barrier.awaitUninterruptibly();
+                                                                    {
+                                                                        barrier.awaitUninterruptibly();
 
-            for ( int i = 0; i < transactionsDuringBackup; i++ )
-            {
-                createNode( db );
-            }
+                                                                        for ( int i = 0; i < transactionsDuringBackup; i++ )
+                                                                        {
+                                                                            createNode( db );
+                                                                        }
 
-            flushAndForce( db );
-            barrier.release();
-            return null;
-        } );
+                                                                        flushAndForce( db );
+                                                                        barrier.release();
+                                                                        return null;
+                                                                    } );
 
         executeBackup( db, monitors );
 
@@ -1128,7 +1206,7 @@ class BackupIT
     private void assertStoreIsLocked( Path path )
     {
         RuntimeException error = assertThrows( RuntimeException.class, () -> startDb( path ),
-                "Could build up database in same process, store not locked" );
+                                               "Could build up database in same process, store not locked" );
 
         assertThat( error.getCause().getCause() ).isInstanceOf( FileLockException.class );
     }
@@ -1179,8 +1257,8 @@ class BackupIT
     private GraphDatabaseService startDbWithoutOnlineBackup( Path path )
     {
         Map<Setting<?>,Object> settings = Maps.mutable.of( online_backup_enabled, false,
-                record_format, record_format.defaultValue(),
-                transaction_logs_root_path, path.toAbsolutePath() );
+                                                           record_format, record_format.defaultValue(),
+                                                           transaction_logs_root_path, path.toAbsolutePath() );
         return startDb( path, settings );
     }
 
@@ -1229,48 +1307,50 @@ class BackupIT
         return representation;
     }
 
-    private void executeBackup( GraphDatabaseService db ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    private void executeBackup( GraphDatabaseService db ) throws Exception
     {
         executeBackup( backupAddress( db ), new Monitors(), true );
     }
 
-    private void executeBackupWithoutFallbackToFull( GraphDatabaseService db ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    private void executeBackupWithoutFallbackToFull( GraphDatabaseService db ) throws Exception
     {
         executeBackup( backupAddress( db ), new Monitors(), false );
     }
 
-    private void executeBackup( GraphDatabaseService db, Monitors monitors ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    private void executeBackup( GraphDatabaseService db, Monitors monitors ) throws Exception
     {
         executeBackup( backupAddress( db ), monitors, true );
     }
 
-    private void executeBackup( String hostname, int port ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    private void executeBackup( String hostname, int port ) throws Exception
     {
         executeBackup( new SocketAddress( hostname, port ), new Monitors(), true );
     }
 
-    private void executeBackup( SocketAddress address, Monitors monitors, boolean fallbackToFull )
-            throws BackupExecutionException, ConsistencyCheckExecutionException
+    private void executeBackup( SocketAddress address, Monitors monitors, boolean fallbackToFull ) throws Exception
     {
         final var contextBuilder = defaultBackupContextBuilder( address )
                 .withFallbackToFullBackup( fallbackToFull );
-
-        executeBackup( contextBuilder, monitors );
-    }
-
-    private static void executeBackup( OnlineBackupContext.Builder contextBuilder ) throws BackupExecutionException, ConsistencyCheckExecutionException
-    {
-        executeBackup( contextBuilder, new Monitors() );
-    }
-
-    private static void executeBackup( OnlineBackupContext.Builder contextBuilder, Monitors monitors )
-            throws BackupExecutionException, ConsistencyCheckExecutionException
-    {
         LogProvider logProvider = new Log4jLogProvider( System.out );
 
+        executeBackup( contextBuilder, monitors, logProvider, logProvider, logProvider );
+    }
+
+    private static void executeBackup( OnlineBackupContext.Builder contextBuilder ) throws Exception
+    {
+        LogProvider logProvider = new Log4jLogProvider( System.out );
+        executeBackup( contextBuilder, new Monitors(), logProvider, logProvider, logProvider );
+    }
+
+    private static void executeBackup( OnlineBackupContext.Builder contextBuilder,
+                                       Monitors monitors,
+                                       LogProvider userLog,
+                                       LogProvider errorLog, LogProvider internalLog ) throws Exception
+    {
         OnlineBackupExecutor executor = OnlineBackupExecutor.builder()
-                                                            .withUserLogProvider( logProvider )
-                                                            .withInternalLogProvider( logProvider )
+                                                            .withUserLogProvider( userLog )
+                                                            .withInternalLogProvider( internalLog )
+                                                            .withErrorLogProvider( errorLog )
                                                             .withMonitors( monitors )
                                                             .withClock( Clocks.nanoClock() )
                                                             .build();
@@ -1405,8 +1485,8 @@ class BackupIT
     {
         // Assert header of specified log version containing correct txId
         LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( backupDatabaseLayout.databaseDirectory(), fs )
-                .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
-                .build();
+                                           .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
+                                           .build();
         LogHeader logHeader = LogHeaderReader.readLogHeader( fs, logFiles.getLogFile().getLogFileForVersion( logVersion ), INSTANCE );
         assertEquals( txId, logHeader.getLastCommittedTxId() );
     }
@@ -1416,9 +1496,9 @@ class BackupIT
         try ( Stream<Path> list = Files.list( backupsDir ) )
         {
             return list.map( Path::getFileName )
-                    .map( Path::toString )
-                    .filter( name -> name.contains( "inconsistencies" ) && name.contains( "report" ) )
-                    .toArray( String[]::new );
+                       .map( Path::toString )
+                       .filter( name -> name.contains( "inconsistencies" ) && name.contains( "report" ) )
+                       .toArray( String[]::new );
         }
     }
 
@@ -1470,7 +1550,7 @@ class BackupIT
         public void finishReceivingStoreFile( String file )
         {
             if ( file.endsWith( databaseLayout.nodeStore().getFileName().toString() ) ||
-                    file.endsWith( databaseLayout.relationshipStore().getFileName().toString() ) )
+                 file.endsWith( databaseLayout.relationshipStore().getFileName().toString() ) )
             {
                 barrier.reached(); // multiple calls to this barrier will not block
             }

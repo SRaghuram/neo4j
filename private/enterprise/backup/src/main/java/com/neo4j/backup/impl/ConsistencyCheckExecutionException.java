@@ -5,6 +5,9 @@
  */
 package com.neo4j.backup.impl;
 
+import static com.neo4j.backup.impl.OnlineBackupCommand.STATUS_CONSISTENCY_CHECK_ERROR;
+import static com.neo4j.backup.impl.OnlineBackupCommand.STATUS_CONSISTENCY_CHECK_INCONSISTENT;
+
 public class ConsistencyCheckExecutionException extends Exception
 {
     private final boolean consistencyCheckFailedToExecute;
@@ -20,8 +23,8 @@ public class ConsistencyCheckExecutionException extends Exception
         this.consistencyCheckFailedToExecute = consistencyCheckFailedToExecute;
     }
 
-    boolean consistencyCheckFailedToExecute()
+    int getExitCode()
     {
-        return consistencyCheckFailedToExecute;
+        return consistencyCheckFailedToExecute ? STATUS_CONSISTENCY_CHECK_ERROR : STATUS_CONSISTENCY_CHECK_INCONSISTENT;
     }
 }

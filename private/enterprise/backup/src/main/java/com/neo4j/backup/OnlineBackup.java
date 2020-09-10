@@ -5,7 +5,6 @@
  */
 package com.neo4j.backup;
 
-import com.neo4j.backup.impl.BackupExecutionException;
 import com.neo4j.backup.impl.ConsistencyCheckExecutionException;
 import com.neo4j.backup.impl.OnlineBackupContext;
 import com.neo4j.backup.impl.OnlineBackupExecutor;
@@ -157,19 +156,18 @@ public final class OnlineBackup
             executeBackup( databaseName, targetDirectory, logProvider );
             return new Result( consistencyCheck );
         }
-        catch ( BackupExecutionException e )
-        {
-            throw new RuntimeException( "Backup failed", e );
-        }
         catch ( ConsistencyCheckExecutionException e )
         {
             logProvider.getLog( getClass() ).error( "Consistency check failed", e );
             return new Result( false );
         }
+        catch ( Exception e )
+        {
+            throw new RuntimeException( "Backup failed", e );
+        }
     }
 
-    private void executeBackup( String databaseName, Path targetDirectory, LogProvider logProvider )
-            throws BackupExecutionException, ConsistencyCheckExecutionException
+    private void executeBackup( String databaseName, Path targetDirectory, LogProvider logProvider ) throws Exception
     {
         OnlineBackupExecutor backupExecutor = OnlineBackupExecutor.builder()
                                                                   .withUserLogProvider( logProvider )
