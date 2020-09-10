@@ -33,7 +33,6 @@ import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseCreationContext;
-import org.neo4j.kernel.database.DatabaseNameLogContext;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -60,7 +59,7 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
     {
         LifeSupport clusterComponents = new LifeSupport();
         Dependencies coreDatabaseDependencies = new Dependencies( globalModule.getGlobalDependencies() );
-        DatabaseLogService coreDatabaseLogService = new DatabaseLogService( new DatabaseNameLogContext( namedDatabaseId ), globalModule.getLogService() );
+        DatabaseLogService coreDatabaseLogService = new DatabaseLogService( namedDatabaseId, globalModule.getLogService() );
         Monitors coreDatabaseMonitors = RaftMonitors.create( globalModule.getGlobalMonitors(), coreDatabaseDependencies );
 
         var pageCacheTracer = globalModule.getTracers().getPageCacheTracer();

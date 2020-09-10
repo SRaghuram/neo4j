@@ -16,7 +16,6 @@ import java.util.Optional;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.kernel.database.DatabaseIdFactory;
-import org.neo4j.kernel.database.DatabaseNameLogContext;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogProvider;
@@ -87,6 +86,6 @@ public class ClusteredDbmsReconciler extends DbmsReconciler
 
     private DatabaseLogProvider databaseLogProvider( NamedDatabaseId namedDatabaseId )
     {
-       return new DatabaseLogProvider( new DatabaseNameLogContext( namedDatabaseId ), this.logProvider );
+       return new DatabaseLogProvider( namedDatabaseId, this.logProvider );
     }
 }

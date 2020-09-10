@@ -16,7 +16,6 @@ import org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder;
 import org.neo4j.io.fs.watcher.DatabaseLayoutWatcher;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.IOLimiter;
-import org.neo4j.kernel.database.DatabaseNameLogContext;
 import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
@@ -51,7 +50,7 @@ public class ReadReplicaDatabaseComponents implements EditionDatabaseComponents
         this.editionModule = editionModule;
         this.locksManager = new ReadReplicaLockManager();
         Config globalConfig = globalModule.getGlobalConfig();
-        DatabaseLogService databaseLogService = new DatabaseLogService( new DatabaseNameLogContext( namedDatabaseId ), globalModule.getLogService() );
+        DatabaseLogService databaseLogService = new DatabaseLogService( namedDatabaseId, globalModule.getLogService() );
         this.statementLocksFactory = new StatementLocksFactorySelector( locksManager, globalConfig, databaseLogService ).select();
 
         IdContextFactory idContextFactory = IdContextFactoryBuilder.of( globalModule.getFileSystem(), globalModule.getJobScheduler(),

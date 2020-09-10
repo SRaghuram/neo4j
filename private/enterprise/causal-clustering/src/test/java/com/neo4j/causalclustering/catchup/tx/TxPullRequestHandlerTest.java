@@ -24,13 +24,11 @@ import java.util.stream.LongStream;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.cursor.Cursor;
-import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.DescriptiveAvailabilityRequirement;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseNameLogContext;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TestCommand;
@@ -108,7 +106,7 @@ class TxPullRequestHandlerTest
         when( database.getDatabaseAvailabilityGuard() ).thenReturn( availabilityGuard );
         when( database.getMonitors() ).thenReturn( new Monitors() );
         when( database.getStoreId() ).thenReturn( storeId );
-        var databaseLogService = new DatabaseLogService( new DatabaseNameLogContext( NAMED_DATABASE_ID ), new SimpleLogService( logProvider ) );
+        var databaseLogService = new DatabaseLogService( NAMED_DATABASE_ID, new SimpleLogService( logProvider ) );
         when( database.getInternalLogProvider() ).thenReturn( databaseLogService.getInternalLogProvider() );
         final var protocol = new CatchupServerProtocol();
         txPullRequestHandler = new TxPullRequestHandler( protocol, database );

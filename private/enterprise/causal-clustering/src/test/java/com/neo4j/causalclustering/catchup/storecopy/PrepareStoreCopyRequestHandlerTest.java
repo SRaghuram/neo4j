@@ -22,7 +22,6 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseNameLogContext;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
@@ -69,7 +68,7 @@ class PrepareStoreCopyRequestHandlerTest
         when( availabilityGuard.isAvailable() ).thenReturn( true );
         when( db.getDatabaseAvailabilityGuard() ).thenReturn( availabilityGuard );
         when( db.getNamedDatabaseId() ).thenReturn( NAMED_DATABASE_ID );
-        DatabaseLogService databaseLogService = new DatabaseLogService( new DatabaseNameLogContext( NAMED_DATABASE_ID ), new SimpleLogService( logProvider ) );
+        DatabaseLogService databaseLogService = new DatabaseLogService( NAMED_DATABASE_ID, new SimpleLogService( logProvider ) );
         when( db.getInternalLogProvider() ).thenReturn( databaseLogService.getInternalLogProvider() );
         embeddedChannel = new EmbeddedChannel( createHandler() );
     }
