@@ -57,6 +57,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.getArgumentSlotOffset
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.peekState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.removeState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.setMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
@@ -314,6 +315,9 @@ class SerialDistinctOnRhsOfApplySinglePrimitiveOperatorTaskTemplate(inner: Opera
       declareAndAssign(typeRefOf[Long], argumentVarName(argumentStateMapId), getArgument(argumentStateMapId)),
       condition(not(equal(load(argumentVarName(argumentStateMapId)), load(localArgument)))) {
         block(
+          condition(IntermediateRepresentation.isNotNull(loadField(distinctStateField))){
+            removeState(loadField(argumentMaps), argumentStateMapId, load(localArgument))
+          },
           assign(localArgument, load(argumentVarName(argumentStateMapId))),
           setField(distinctStateField, cast[DistinctSinglePrimitiveState](OperatorCodeGenHelperTemplates.fetchState(loadField(argumentMaps), argumentStateMapId))),
           invoke(loadField(distinctStateField),

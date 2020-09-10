@@ -50,10 +50,12 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperator.St
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.argumentSlotOffsetFieldName
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.argumentVarName
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.fetchState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.getArgument
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.getArgumentSlotOffset
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.peekState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.removeState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.setMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
@@ -297,8 +299,11 @@ class SerialDistinctOnRhsOfApplyOperatorTaskTemplate(override val inner: Operato
       declareAndAssign(typeRefOf[Long], argumentVarName(argumentStateMapId), getArgument(argumentStateMapId)),
       condition(not(equal(load(argumentVarName(argumentStateMapId)), load(localArgument)))) {
         block(
+          condition(IntermediateRepresentation.isNotNull(loadField(distinctStateField))){
+            removeState(loadField(argumentMaps), argumentStateMapId, load(localArgument))
+          },
           assign(localArgument, load(argumentVarName(argumentStateMapId))),
-          setField(distinctStateField, cast[DistinctState](OperatorCodeGenHelperTemplates.fetchState(loadField(argumentMaps), argumentStateMapId))),
+          setField(distinctStateField, cast[DistinctState](fetchState(loadField(argumentMaps), argumentStateMapId))),
           invoke(loadField(distinctStateField),
             method[DistinctState, Unit, MemoryTracker]("setMemoryTracker"),
             loadField(memoryTrackerField))

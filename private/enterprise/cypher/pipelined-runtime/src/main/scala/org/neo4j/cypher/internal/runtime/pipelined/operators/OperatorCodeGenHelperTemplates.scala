@@ -278,6 +278,17 @@ object OperatorCodeGenHelperTemplates {
         method[ArgumentStateMap[_ <: ArgumentState], ArgumentState, Long]("peek"),
         load(argumentVarName(argumentStateMapId)))
 
+  def removeState(argumentStateMaps: IntermediateRepresentation,
+                  argumentStateMapId: ArgumentStateMapId,
+                  argument: IntermediateRepresentation): IntermediateRepresentation =
+    invoke(
+      cast[ArgumentStateMap[_ <: ArgumentState]](
+        invoke(argumentStateMaps,
+          method[ArgumentStateMaps, ArgumentStateMap[_ <: ArgumentState], Int]("applyByIntId"),
+          constant(argumentStateMapId.x))),
+      method[ArgumentStateMap[_ <: ArgumentState], ArgumentState, Long]("remove"),
+      argument)
+
   def argumentSlotOffsetFieldName(argumentStateMapId: ArgumentStateMapId): String =
     "argumentSlotOffset_asm" + argumentStateMapId.x
 
