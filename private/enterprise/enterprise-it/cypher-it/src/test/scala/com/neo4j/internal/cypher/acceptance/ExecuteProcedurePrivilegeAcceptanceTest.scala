@@ -7,6 +7,7 @@ package com.neo4j.internal.cypher.acceptance
 
 import java.lang.Boolean.TRUE
 
+import com.neo4j.server.security.enterprise.auth.PrivilegeResolver.EXECUTE_BOOSTED_FROM_CONFIG
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
@@ -22,7 +23,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute(s"REVOKE ACCESS ON DEFAULT DATABASE FROM ${PredefinedRoles.PUBLIC}")
     execute(s"REVOKE EXECUTE PROCEDURES * ON DBMS FROM ${PredefinedRoles.PUBLIC}")
-    execute("SHOW ROLE PUBLIC PRIVILEGES").toList should be(List(granted(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("PUBLIC").map))
+    execute("SHOW ROLE PUBLIC PRIVILEGES").toList should be(List(granted(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("PUBLIC").map))
   }
 
   //noinspection ScalaDeprecation
@@ -132,12 +133,12 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW ROLE procRole, default PRIVILEGES").toSet should be(Set(
-      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").map,
-      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("default").map,
-      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").map,
-      granted(adminAction("execute_boosted_temp")).procedure("*").role("default").map,
-      denied(adminAction("execute_boosted_temp")).procedure("db.property*").role("default").map,
-      denied(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("default").map
+      granted(executeBoostedFromConfig).procedure("db.labels").role("procRole").map,
+      granted(executeBoostedFromConfig).procedure("db.labels").role("default").map,
+      granted(executeBoostedFromConfig).procedure("db.property*").role("procRole").map,
+      granted(executeBoostedFromConfig).procedure("*").role("default").map,
+      denied(executeBoostedFromConfig).procedure("db.property*").role("default").map,
+      denied(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("default").map
     ))
   }
 
@@ -147,11 +148,11 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW USER joe PRIVILEGES").toSet should be(Set(
-      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").user("joe").map,
-      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").user("joe").map,
+      granted(executeBoostedFromConfig).procedure("db.labels").role("procRole").user("joe").map,
+      granted(executeBoostedFromConfig).procedure("db.property*").role("procRole").user("joe").map,
       granted(access).role("procRole").user("joe").map,
 
-      granted(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("PUBLIC").user("joe").map
+      granted(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("PUBLIC").user("joe").map
     ))
 
     // WHEN
@@ -161,13 +162,13 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW USER joe PRIVILEGES").toSet should be(Set(
-      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").user("joe").map,
-      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").user("joe").map,
+      granted(executeBoostedFromConfig).procedure("db.labels").role("procRole").user("joe").map,
+      granted(executeBoostedFromConfig).procedure("db.property*").role("procRole").user("joe").map,
       granted(access).role("procRole").user("joe").map,
       granted(executeProcedure).procedure("dbms.*").role("procRole").user("joe").map,
       denied(executeBoosted).procedure("apoc.*").role("procRole").user("joe").map,
 
-      granted(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("PUBLIC").user("joe").map
+      granted(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("PUBLIC").user("joe").map
     ))
   }
 
@@ -182,28 +183,28 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW USER joe, $user, bob, charlie PRIVILEGES", Map("user" -> "alice")).toSet should be(Set(
-      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").user("joe").map,
-      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").user("joe").map,
+      granted(executeBoostedFromConfig).procedure("db.labels").role("procRole").user("joe").map,
+      granted(executeBoostedFromConfig).procedure("db.property*").role("procRole").user("joe").map,
       granted(access).role("procRole").user("joe").map,
-      granted(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("PUBLIC").user("joe").map,
+      granted(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("PUBLIC").user("joe").map,
 
-      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("default").user("alice").map,
-      granted(adminAction("execute_boosted_temp")).procedure("*").role("default").user("alice").map,
-      denied(adminAction("execute_boosted_temp")).procedure("db.property*").role("default").user("alice").map,
-      denied(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("default").user("alice").map,
-      granted(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("PUBLIC").user("alice").map,
+      granted(executeBoostedFromConfig).procedure("db.labels").role("default").user("alice").map,
+      granted(executeBoostedFromConfig).procedure("*").role("default").user("alice").map,
+      denied(executeBoostedFromConfig).procedure("db.property*").role("default").user("alice").map,
+      denied(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("default").user("alice").map,
+      granted(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("PUBLIC").user("alice").map,
 
       granted(access).role("custom").user("bob").map,
-      granted(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("PUBLIC").user("bob").map,
+      granted(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("PUBLIC").user("bob").map,
 
-      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").user("charlie").map,
-      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").user("charlie").map,
+      granted(executeBoostedFromConfig).procedure("db.labels").role("procRole").user("charlie").map,
+      granted(executeBoostedFromConfig).procedure("db.property*").role("procRole").user("charlie").map,
       granted(access).role("procRole").user("charlie").map,
-      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("default").user("charlie").map,
-      granted(adminAction("execute_boosted_temp")).procedure("*").role("default").user("charlie").map,
-      denied(adminAction("execute_boosted_temp")).procedure("db.property*").role("default").user("charlie").map,
-      denied(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("default").user("charlie").map,
-      granted(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("PUBLIC").user("charlie").map
+      granted(executeBoostedFromConfig).procedure("db.labels").role("default").user("charlie").map,
+      granted(executeBoostedFromConfig).procedure("*").role("default").user("charlie").map,
+      denied(executeBoostedFromConfig).procedure("db.property*").role("default").user("charlie").map,
+      denied(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("default").user("charlie").map,
+      granted(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("PUBLIC").user("charlie").map
     ))
   }
 
@@ -212,10 +213,10 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     setupUserWithCustomRole(rolename = "procRole")
 
     val expected = Set(
-      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").user("joe").map,
-      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").user("joe").map,
+      granted(executeBoostedFromConfig).procedure("db.labels").role("procRole").user("joe").map,
+      granted(executeBoostedFromConfig).procedure("db.property*").role("procRole").user("joe").map,
       granted(access).role("procRole").user("joe").map,
-      granted(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("PUBLIC").user("joe").map
+      granted(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("PUBLIC").user("joe").map
     )
 
     val result = new mutable.HashSet[Map[String, AnyRef]]
@@ -232,14 +233,14 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW ALL PRIVILEGES WHERE role IN ['procRole', 'default', 'custom']").toSet should be(Set(
-      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").map,
-      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").map,
+      granted(executeBoostedFromConfig).procedure("db.labels").role("procRole").map,
+      granted(executeBoostedFromConfig).procedure("db.property*").role("procRole").map,
       granted(access).role("procRole").map,
 
-      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("default").map,
-      granted(adminAction("execute_boosted_temp")).procedure("*").role("default").map,
-      denied(adminAction("execute_boosted_temp")).procedure("db.property*").role("default").map,
-      denied(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("default").map
+      granted(executeBoostedFromConfig).procedure("db.labels").role("default").map,
+      granted(executeBoostedFromConfig).procedure("*").role("default").map,
+      denied(executeBoostedFromConfig).procedure("db.property*").role("default").map,
+      denied(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("default").map
     ))
 
     // WHEN restore PUBLIC role
@@ -248,16 +249,16 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW ALL PRIVILEGES").toSet should be(defaultRolePrivileges ++ Set(
-      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").map,
-      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").map,
+      granted(executeBoostedFromConfig).procedure("db.labels").role("procRole").map,
+      granted(executeBoostedFromConfig).procedure("db.property*").role("procRole").map,
       granted(access).role("procRole").map,
 
-      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("default").map,
-      granted(adminAction("execute_boosted_temp")).procedure("*").role("default").map,
-      denied(adminAction("execute_boosted_temp")).procedure("db.property*").role("default").map,
-      denied(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("default").map,
+      granted(executeBoostedFromConfig).procedure("db.labels").role("default").map,
+      granted(executeBoostedFromConfig).procedure("*").role("default").map,
+      denied(executeBoostedFromConfig).procedure("db.property*").role("default").map,
+      denied(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("default").map,
 
-      granted(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("PUBLIC").map
+      granted(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("PUBLIC").map
     ))
   }
 
@@ -269,14 +270,14 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW ALL PRIVILEGES YIELD segment, action, role, access WHERE role IN ['procRole', 'default', 'custom']").toSet should be(Set(
-      Map("segment" -> "PROCEDURE(db.labels)", "action" -> "execute_boosted_temp", "role" -> "procRole", "access" -> "GRANTED"),
-      Map("segment" -> "PROCEDURE(db.property*)", "action" -> "execute_boosted_temp", "role" -> "procRole", "access" -> "GRANTED"),
+      Map("segment" -> "PROCEDURE(db.labels)", "action" -> EXECUTE_BOOSTED_FROM_CONFIG, "role" -> "procRole", "access" -> "GRANTED"),
+      Map("segment" -> "PROCEDURE(db.property*)", "action" -> EXECUTE_BOOSTED_FROM_CONFIG, "role" -> "procRole", "access" -> "GRANTED"),
       Map("segment" -> "database", "action" -> "access", "role" -> "procRole", "access" -> "GRANTED"),
 
-      Map("segment" -> "PROCEDURE(db.labels)", "action" -> "execute_boosted_temp", "role" -> "default", "access" -> "GRANTED"),
-      Map("segment" -> "PROCEDURE(*)", "action" -> "execute_boosted_temp", "role" -> "default", "access" -> "GRANTED"),
-      Map("segment" -> "PROCEDURE(db.property*)", "action" -> "execute_boosted_temp", "role" -> "default", "access" -> "DENIED"),
-      Map("segment" -> "PROCEDURE(dbms.security.listUsers)", "action" -> "execute_boosted_temp", "role" -> "default", "access" -> "DENIED"),
+      Map("segment" -> "PROCEDURE(db.labels)", "action" -> EXECUTE_BOOSTED_FROM_CONFIG, "role" -> "default", "access" -> "GRANTED"),
+      Map("segment" -> "PROCEDURE(*)", "action" -> EXECUTE_BOOSTED_FROM_CONFIG, "role" -> "default", "access" -> "GRANTED"),
+      Map("segment" -> "PROCEDURE(db.property*)", "action" -> EXECUTE_BOOSTED_FROM_CONFIG, "role" -> "default", "access" -> "DENIED"),
+      Map("segment" -> "PROCEDURE(dbms.security.listUsers)", "action" -> EXECUTE_BOOSTED_FROM_CONFIG, "role" -> "default", "access" -> "DENIED"),
 
       Map("segment" -> "database", "action" -> "access", "role" -> "custom", "access" -> "GRANTED")
     ))
@@ -292,14 +293,14 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW ROLE procRole, default PRIVILEGES").toSet should be(Set(
-      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").map,
-      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").map,
+      granted(executeBoostedFromConfig).procedure("db.labels").role("procRole").map,
+      granted(executeBoostedFromConfig).procedure("db.property*").role("procRole").map,
       granted(executeBoosted).procedure("dbms.showCurrentUser").role("procRole").map,
 
-      granted(adminAction("execute_boosted_temp")).procedure("*").role("default").map,
-      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("default").map,
-      denied(adminAction("execute_boosted_temp")).procedure("db.property*").role("default").map,
-      denied(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("default").map,
+      granted(executeBoostedFromConfig).procedure("*").role("default").map,
+      granted(executeBoostedFromConfig).procedure("db.labels").role("default").map,
+      denied(executeBoostedFromConfig).procedure("db.property*").role("default").map,
+      denied(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("default").map,
       granted(executeBoosted).procedure("dbms.showCurrentUser").role("default").map
     ))
 
@@ -308,13 +309,13 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW ROLE procRole, default PRIVILEGES").toSet should be(Set(
-      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").map,
-      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").map,
+      granted(executeBoostedFromConfig).procedure("db.labels").role("procRole").map,
+      granted(executeBoostedFromConfig).procedure("db.property*").role("procRole").map,
 
-      granted(adminAction("execute_boosted_temp")).procedure("*").role("default").map,
-      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("default").map,
-      denied(adminAction("execute_boosted_temp")).procedure("db.property*").role("default").map,
-      denied(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("default").map
+      granted(executeBoostedFromConfig).procedure("*").role("default").map,
+      granted(executeBoostedFromConfig).procedure("db.labels").role("default").map,
+      denied(executeBoostedFromConfig).procedure("db.property*").role("default").map,
+      denied(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("default").map
     ))
   }
 
@@ -328,14 +329,14 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW ROLE procRole, default PRIVILEGES").toSet should be(Set(
-      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").map,
-      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").map,
+      granted(executeBoostedFromConfig).procedure("db.labels").role("procRole").map,
+      granted(executeBoostedFromConfig).procedure("db.property*").role("procRole").map,
       granted(executeBoosted).procedure("db.labels").role("procRole").map,
 
-      granted(adminAction("execute_boosted_temp")).procedure("*").role("default").map,
-      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("default").map,
-      denied(adminAction("execute_boosted_temp")).procedure("db.property*").role("default").map,
-      denied(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("default").map,
+      granted(executeBoostedFromConfig).procedure("*").role("default").map,
+      granted(executeBoostedFromConfig).procedure("db.labels").role("default").map,
+      denied(executeBoostedFromConfig).procedure("db.property*").role("default").map,
+      denied(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("default").map,
       granted(executeBoosted).procedure("db.labels").role("default").map
     ))
 
@@ -344,13 +345,13 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW ROLE procRole, default PRIVILEGES").toSet should be(Set(
-      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").map,
-      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").map,
+      granted(executeBoostedFromConfig).procedure("db.labels").role("procRole").map,
+      granted(executeBoostedFromConfig).procedure("db.property*").role("procRole").map,
 
-      granted(adminAction("execute_boosted_temp")).procedure("*").role("default").map,
-      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("default").map,
-      denied(adminAction("execute_boosted_temp")).procedure("db.property*").role("default").map,
-      denied(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("default").map
+      granted(executeBoostedFromConfig).procedure("*").role("default").map,
+      granted(executeBoostedFromConfig).procedure("db.labels").role("default").map,
+      denied(executeBoostedFromConfig).procedure("db.property*").role("default").map,
+      denied(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("default").map
     ))
   }
 
@@ -367,8 +368,8 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW ROLE procRole PRIVILEGES").toSet should be(Set(
-      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("procRole").map,
-      granted(adminAction("execute_boosted_temp")).procedure("db.property*").role("procRole").map,
+      granted(executeBoostedFromConfig).procedure("db.labels").role("procRole").map,
+      granted(executeBoostedFromConfig).procedure("db.property*").role("procRole").map,
     ))
   }
 
@@ -385,10 +386,10 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW ROLE default PRIVILEGES").toSet should be(Set(
-      granted(adminAction("execute_boosted_temp")).procedure("*").role("default").map,
-      granted(adminAction("execute_boosted_temp")).procedure("db.labels").role("default").map,
-      denied(adminAction("execute_boosted_temp")).procedure("db.property*").role("default").map,
-      denied(adminAction("execute_boosted_temp")).procedure("dbms.security.listUsers").role("default").map
+      granted(executeBoostedFromConfig).procedure("*").role("default").map,
+      granted(executeBoostedFromConfig).procedure("db.labels").role("default").map,
+      denied(executeBoostedFromConfig).procedure("db.property*").role("default").map,
+      denied(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("default").map
     ))
   }
 

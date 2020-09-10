@@ -124,8 +124,8 @@ public class InClusterAuthManager extends EnterpriseAuthManager
     }
 
     @Override
-    public List<Map<String,String>> getTemporaryPrivileges()
+    public List<Map<String,String>> getPrivilegesGrantedThroughConfig()
     {
-        return privilegeResolver.getTemporaryPrivileges();
+        return privilegeResolver.getPrivilegesGrantedThroughConfig();
     }
 }

@@ -83,8 +83,8 @@ public class FabricAuthManagerWrapper extends EnterpriseAuthManager
     }
 
     @Override
-    public List<Map<String,String>> getTemporaryPrivileges()
+    public List<Map<String,String>> getPrivilegesGrantedThroughConfig()
     {
-        return wrappedAuthManager.getTemporaryPrivileges();
+        return wrappedAuthManager.getPrivilegesGrantedThroughConfig();
     }
 }

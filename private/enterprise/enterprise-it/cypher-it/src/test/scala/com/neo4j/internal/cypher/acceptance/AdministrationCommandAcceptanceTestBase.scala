@@ -15,6 +15,7 @@ import com.neo4j.cypher.EnterpriseGraphDatabaseTestSupport
 import com.neo4j.dbms.EnterpriseSystemGraphComponent
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager
 import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository
+import com.neo4j.server.security.enterprise.auth.PrivilegeResolver
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent
@@ -259,6 +260,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
 
   val executeProcedure: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "execute", "segment" -> "PROCEDURE(*)")
   val executeBoosted: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "execute_boosted", "segment" -> "PROCEDURE(*)")
+  val executeBoostedFromConfig: Map[String, String] = adminAction(PrivilegeResolver.EXECUTE_BOOSTED_FROM_CONFIG)
 
   val startDatabase: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "start_database")
   val stopDatabase: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "stop_database")

@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.AuthToken;
@@ -21,7 +22,20 @@ public abstract class EnterpriseAuthManager extends AuthManager
     @Override
     public abstract EnterpriseLoginContext login( Map<String,Object> authToken ) throws InvalidAuthTokenException;
 
-    public abstract List<Map<String,String>> getTemporaryPrivileges();
+    /**
+     * Get privileges granted from configuration settings {@link GraphDatabaseSettings#default_allowed } and {@link GraphDatabaseSettings#procedure_roles }.
+     *
+     * The maps are structured as the result of show privilege commands
+     * {
+     *     "role": roleName,
+     *     "graph": "*",
+     *     "segment": PROCEDURE(name),
+     *     "resource": "database",
+     *     "action": "execute_boosted_from_config",
+     *     "access": GRANTED|DENIED
+     * }
+     */
+    public abstract List<Map<String,String>> getPrivilegesGrantedThroughConfig();
 
     /**
      * Implementation that does no authentication.
@@ -46,7 +60,7 @@ public abstract class EnterpriseAuthManager extends AuthManager
         }
 
         @Override
-        public List<Map<String,String>> getTemporaryPrivileges()
+        public List<Map<String,String>> getPrivilegesGrantedThroughConfig()
         {
             return Collections.emptyList();
         }

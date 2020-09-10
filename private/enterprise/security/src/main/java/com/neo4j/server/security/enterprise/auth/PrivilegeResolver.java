@@ -36,6 +36,8 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.STOP_DATABA
 
 public class PrivilegeResolver
 {
+    public static final String EXECUTE_BOOSTED_FROM_CONFIG = "execute_boosted_from_config";
+
     private final SystemGraphRealm systemGraphRealm;
     private final String upgradeUsername;
     private final Boolean restrictUpgrade;
@@ -50,7 +52,6 @@ public class PrivilegeResolver
 
     private final Map<String, Set<ResourcePrivilege>> roleToPrivilege = new HashMap<>();
 
-    @SuppressWarnings( "removal" )
     public PrivilegeResolver( SystemGraphRealm systemGraphRealm, Config config )
     {
         this.systemGraphRealm = systemGraphRealm;
@@ -177,7 +178,7 @@ public class PrivilegeResolver
         systemGraphRealm.clearCacheForRoles();
     }
 
-    List<Map<String,String>> getTemporaryPrivileges()
+    List<Map<String,String>> getPrivilegesGrantedThroughConfig()
     {
         ArrayList<Map<String,String>> result = new ArrayList<>();
         for ( var entry : roleToPrivilege.entrySet() )
@@ -192,7 +193,7 @@ public class PrivilegeResolver
                         "graph", "*",
                         "segment", segmentString,
                         "resource", "database",
-                        "action", "execute_boosted_temp",
+                        "action", EXECUTE_BOOSTED_FROM_CONFIG,
                         "access", privilege.getPrivilegeType().relType
                 ) );
             }

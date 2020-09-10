@@ -11,6 +11,7 @@ import java.util.concurrent.ThreadLocalRandom
 import com.neo4j.causalclustering.core.consensus.RaftMachine
 import com.neo4j.configuration.EnterpriseEditionSettings
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager
+import com.neo4j.server.security.enterprise.auth.PrivilegeResolver
 import com.neo4j.server.security.enterprise.auth.Resource
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.DENY
@@ -481,7 +482,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         """.stripMargin
       val innerReturn = "RETURN access, action, resource, graph, segment, role"
 
-      val temporaryPrivileges = VirtualValues.list(authManager.getTemporaryPrivileges.asScala.map(m => VirtualValues.map(m.asScala.keys.toArray, m.asScala.values.map(Values.of).toArray)): _*)
+      // These privileges aren't present in the system graph but should still be presented to the user. They will be appended with a UNION on the privileges from the system graph
+      val temporaryPrivileges = VirtualValues.list(authManager.getPrivilegesGrantedThroughConfig.asScala.map(m => VirtualValues.map(m.asScala.keys.toArray, m.asScala.values.map(Values.of).toArray)): _*)
       val temporaryPrivilegesKey = internalKey("temporaryPrivileges")
 
       val filtering = AdministrationShowCommandUtils.generateWhereClause(where)
@@ -1077,10 +1079,10 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         "graph", "*",
         "segment", s"PROCEDURE($qualifierString)",
         "resource", "database",
-        "action", "execute_boosted_temp",
+        "action", PrivilegeResolver.EXECUTE_BOOSTED_FROM_CONFIG,
         "access", revokeType
       )
-      authManager.getTemporaryPrivileges.contains(notFoundPrivilege)
+      authManager.getPrivilegesGrantedThroughConfig.contains(notFoundPrivilege)
     }
     else {
       false

@@ -14,10 +14,10 @@ import java.util.Map;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 
+import static com.neo4j.server.security.enterprise.auth.PrivilegeResolver.EXECUTE_BOOSTED_FROM_CONFIG;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
-@SuppressWarnings( "removal" )
 class PrivilegeResolverTest
 {
     private SystemGraphRealm systemGraphRealm;
@@ -35,7 +35,7 @@ class PrivilegeResolverTest
         PrivilegeResolver privilegeResolver = new PrivilegeResolver( systemGraphRealm, Config.defaults() );
 
         // THEN
-        assertThat( privilegeResolver.getTemporaryPrivileges() ).isEmpty();
+        assertThat( privilegeResolver.getPrivilegesGrantedThroughConfig() ).isEmpty();
     }
 
     @Test
@@ -49,7 +49,7 @@ class PrivilegeResolverTest
         PrivilegeResolver privilegeResolver = new PrivilegeResolver( systemGraphRealm, config );
 
         // THEN
-        assertThat( privilegeResolver.getTemporaryPrivileges() ).isEmpty();
+        assertThat( privilegeResolver.getPrivilegesGrantedThroughConfig() ).isEmpty();
     }
 
     @Test
@@ -60,7 +60,7 @@ class PrivilegeResolverTest
         PrivilegeResolver privilegeResolver = new PrivilegeResolver( systemGraphRealm, config );
 
         // THEN
-        assertThat( privilegeResolver.getTemporaryPrivileges() ).containsExactlyInAnyOrder(
+        assertThat( privilegeResolver.getPrivilegesGrantedThroughConfig() ).containsExactlyInAnyOrder(
                 privilegeFor( "role", "*", true )
         );
     }
@@ -76,7 +76,7 @@ class PrivilegeResolverTest
         PrivilegeResolver privilegeResolver = new PrivilegeResolver( systemGraphRealm, config );
 
         // THEN
-        assertThat( privilegeResolver.getTemporaryPrivileges() ).containsExactlyInAnyOrder(
+        assertThat( privilegeResolver.getPrivilegesGrantedThroughConfig() ).containsExactlyInAnyOrder(
                 privilegeFor( "role", "*", true ),
                 privilegeFor( "role", "xyz", false ),
                 privilegeFor( "anotherRole", "xyz", true )
@@ -94,7 +94,7 @@ class PrivilegeResolverTest
         PrivilegeResolver privilegeResolver = new PrivilegeResolver( systemGraphRealm, config );
 
         // THEN
-        assertThat( privilegeResolver.getTemporaryPrivileges() ).containsExactlyInAnyOrder(
+        assertThat( privilegeResolver.getPrivilegesGrantedThroughConfig() ).containsExactlyInAnyOrder(
                 privilegeFor( "role", "*", true ),
                 privilegeFor( "role", "x?z*", false ),
                 privilegeFor( "anotherRole", "x?z*", true )
@@ -109,7 +109,7 @@ class PrivilegeResolverTest
         PrivilegeResolver privilegeResolver = new PrivilegeResolver( systemGraphRealm, config );
 
         // THEN
-        assertThat( privilegeResolver.getTemporaryPrivileges() ).containsExactlyInAnyOrder(
+        assertThat( privilegeResolver.getPrivilegesGrantedThroughConfig() ).containsExactlyInAnyOrder(
                 privilegeFor( "role", "xyz*", true )
         );
     }
@@ -122,7 +122,7 @@ class PrivilegeResolverTest
         PrivilegeResolver privilegeResolver = new PrivilegeResolver( systemGraphRealm, config );
 
         // THEN
-        assertThat( privilegeResolver.getTemporaryPrivileges() ).isEmpty();
+        assertThat( privilegeResolver.getPrivilegesGrantedThroughConfig() ).isEmpty();
     }
 
     @Test
@@ -134,7 +134,7 @@ class PrivilegeResolverTest
         PrivilegeResolver privilegeResolver = new PrivilegeResolver( systemGraphRealm, config );
 
         // THEN
-        assertThat( privilegeResolver.getTemporaryPrivileges() ).containsExactlyInAnyOrder(
+        assertThat( privilegeResolver.getPrivilegesGrantedThroughConfig() ).containsExactlyInAnyOrder(
                 privilegeFor( "apoc_reader", "apoc.convert.*", true ),
                 privilegeFor( "apoc_writer", "apoc.load.json", true ),
                 privilegeFor( "TriggerHappy", "apoc.trigger.add", true )
@@ -149,7 +149,7 @@ class PrivilegeResolverTest
         PrivilegeResolver privilegeResolver = new PrivilegeResolver( systemGraphRealm, config );
 
         // THEN
-        assertThat( privilegeResolver.getTemporaryPrivileges() ).containsExactlyInAnyOrder(
+        assertThat( privilegeResolver.getPrivilegesGrantedThroughConfig() ).containsExactlyInAnyOrder(
                 privilegeFor( "role1", "xyz*", true ),
                 privilegeFor( "role2", "xyz*", true ),
                 privilegeFor( "role3", "xyz*", true ),
@@ -170,7 +170,7 @@ class PrivilegeResolverTest
         PrivilegeResolver privilegeResolver = new PrivilegeResolver( systemGraphRealm, config );
 
         // THEN
-        assertThat( privilegeResolver.getTemporaryPrivileges() ).containsExactlyInAnyOrder(
+        assertThat( privilegeResolver.getPrivilegesGrantedThroughConfig() ).containsExactlyInAnyOrder(
                 privilegeFor( "apoc", "apoc.*", true ),
                 privilegeFor( "loader", "apoc.load.*", true ),
                 privilegeFor( "trigger", "apoc.trigger.*", true ),
@@ -188,7 +188,7 @@ class PrivilegeResolverTest
                 "graph", "*",
                 "segment", String.format( "PROCEDURE(%s)", procedure ),
                 "resource", "database",
-                "action", "execute_boosted_temp",
+                "action", EXECUTE_BOOSTED_FROM_CONFIG,
                 "access", granted ? "GRANTED" : "DENIED" );
     }
 }
