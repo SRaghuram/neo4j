@@ -38,6 +38,16 @@ trait ArgumentStateMapCreator {
                                                  factory: ArgumentStateFactory[S],
                                                  ordered: Boolean = false): ArgumentStateMap[S]
 
+  /**
+   * Returns an [[ArgumentStateMap]] with id `argumentStateMapId` or creates a new one.
+   *
+   * @param argumentStateMapId the id of the [[ArgumentStateMap]]
+   * @param factory            a factory to create argument states
+   * @param ordered            if `true`, use an ordered [[ArgumentStateMap]], otherwise use an unordered [[ArgumentStateMap]]
+   */
+  def createOrGetArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
+                                                      factory: ArgumentStateFactory[S],
+                                                      ordered: Boolean = false): ArgumentStateMap[S]
 }
 
 /**

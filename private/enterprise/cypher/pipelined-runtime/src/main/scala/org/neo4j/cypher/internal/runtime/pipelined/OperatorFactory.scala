@@ -121,6 +121,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SortMergeOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SortPreOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.TopOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.TriadicBuildOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.TriadicFilterOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedRelationshipByIdSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnionOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnwindOperator
@@ -578,6 +580,40 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           prefixComparator,
           suffixComparator,
           converters.toCommandExpression(id, limit),
+          id)
+
+
+      case plans.TriadicBuild(_, sourceId, seenId, triadicSelectionId) =>
+        val bufferAsmId = executionGraphDefinition.findArgumentStateMapForPlan(plan.id)
+        val triadicStateAsmId = executionGraphDefinition.findArgumentStateMapForPlan(triadicSelectionId.value)
+
+        val applyPlanId = physicalPlan.applyPlans(id)
+        val argumentSlotOffset = slots.getArgumentLongOffsetFor(applyPlanId)
+
+        new TriadicBuildOperator(
+          WorkIdentity.fromPlan(plan),
+          bufferAsmId,
+          triadicStateAsmId,
+          slots.getLongOffsetFor(sourceId),
+          slots.getLongOffsetFor(seenId),
+          argumentSlotOffset,
+          id)
+
+      case plans.TriadicFilter(_, positivePredicate, sourceId, targetId, triadicSelectionId) =>
+        val bufferAsmId = executionGraphDefinition.findArgumentStateMapForPlan(plan.id)
+        val triadicStateAsmId = executionGraphDefinition.findArgumentStateMapForPlan(triadicSelectionId.value)
+
+        val applyPlanId = physicalPlan.applyPlans(id)
+        val argumentSlotOffset = slots.getArgumentLongOffsetFor(applyPlanId)
+
+        new TriadicFilterOperator(
+          WorkIdentity.fromPlan(plan),
+          bufferAsmId,
+          triadicStateAsmId,
+          positivePredicate,
+          slots.getLongOffsetFor(sourceId),
+          slots.getLongOffsetFor(targetId),
+          argumentSlotOffset,
           id)
 
       case plans.Aggregation(_, groupingExpressions, aggregationExpression) if groupingExpressions.isEmpty =>

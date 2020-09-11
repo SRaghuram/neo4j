@@ -108,6 +108,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.SortTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SubscriberErrorTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ThreadUnsafeExpressionTests
 import org.neo4j.cypher.internal.runtime.spec.tests.TopTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.TriadicSelectionTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UndirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UnionTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UnwindTestBase
@@ -409,6 +410,10 @@ class PipelinedRollupApplyNoFusingTest extends RollupApplyTestBase(NO_FUSING, PI
 // DROP RESULT
 class PipelinedDropResultTest extends DropResultTestBase(FUSING, PIPELINED, SIZE_HINT)
 class PipelinedDropResultNoFusingTest extends DropResultTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+
+// TRIADIC SELECTION
+class PipelinedTriadicSelectionTest extends TriadicSelectionTestBase(FUSING, PIPELINED, SIZE_HINT)
+class PipelinedTriadicSelectionNoFusingTest extends TriadicSelectionTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
 
 // GENERAL
 class PipelinedMiscTest extends MiscTestBase(FUSING, PIPELINED) with PipelinedSpecSuite

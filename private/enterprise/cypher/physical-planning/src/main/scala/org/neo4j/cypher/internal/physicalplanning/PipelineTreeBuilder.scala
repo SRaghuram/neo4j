@@ -31,6 +31,8 @@ import org.neo4j.cypher.internal.logical.plans.RightOuterHashJoin
 import org.neo4j.cypher.internal.logical.plans.Skip
 import org.neo4j.cypher.internal.logical.plans.Sort
 import org.neo4j.cypher.internal.logical.plans.Top
+import org.neo4j.cypher.internal.logical.plans.TriadicBuild
+import org.neo4j.cypher.internal.logical.plans.TriadicFilter
 import org.neo4j.cypher.internal.logical.plans.ValueHashJoin
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.ApplyPlans
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.ArgumentSizes
@@ -659,6 +661,27 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         //we want to propagate starting with source and then all upstream pipelines
         onPipeline(pipeline)
         markCancellerInUpstreamBuffers(pipeline.inputBuffer, argument, workCancellerAsmId, onPipeline)
+        pipeline
+
+      case triadicBuild: TriadicBuild =>
+        if (!breakingPolicy.breakOn(plan, applyPlans(plan.id)))
+          throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
+
+        val triadicStateAsm = stateDefiner.newArgumentStateMap(triadicBuild.triadicSelectionId.value, argument.argumentSlotOffset)
+        argument.downstreamStatesOnRHS += triadicStateAsm.id
+
+        val buffer = outputToArgumentStreamBuffer(source, plan, argument, argument.argumentSlotOffset)
+        val pipeline = newPipeline(plan, buffer)
+        pipeline.lhs = source.id
+        pipeline
+
+      case _: TriadicFilter =>
+        if (!breakingPolicy.breakOn(plan, applyPlans(plan.id)))
+          throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
+
+        val buffer = outputToArgumentStreamBuffer(source, plan, argument, argument.argumentSlotOffset)
+        val pipeline = newPipeline(plan, buffer)
+        pipeline.lhs = source.id
         pipeline
 
       case _: Optional |

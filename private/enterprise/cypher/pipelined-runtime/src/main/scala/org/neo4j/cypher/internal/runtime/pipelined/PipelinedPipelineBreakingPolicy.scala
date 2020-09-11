@@ -58,6 +58,8 @@ import org.neo4j.cypher.internal.logical.plans.Selection
 import org.neo4j.cypher.internal.logical.plans.Skip
 import org.neo4j.cypher.internal.logical.plans.Sort
 import org.neo4j.cypher.internal.logical.plans.Top
+import org.neo4j.cypher.internal.logical.plans.TriadicBuild
+import org.neo4j.cypher.internal.logical.plans.TriadicFilter
 import org.neo4j.cypher.internal.logical.plans.UndirectedRelationshipByIdSeek
 import org.neo4j.cypher.internal.logical.plans.Union
 import org.neo4j.cypher.internal.logical.plans.UnwindCollection
@@ -120,7 +122,9 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
            _: OrderedAggregation |
            _: Optional |
            _: Anti |
-           _: VarExpand
+           _: VarExpand |
+           _: TriadicBuild |
+           _: TriadicFilter
       => !canFuseOneChildOperator(lp, outerApplyPlanId)
 
       case ProcedureCall(_, call) if !parallelExecution && call.containsNoUpdates

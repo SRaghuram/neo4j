@@ -250,6 +250,16 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     asm
   }
 
+  override def createOrGetArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
+                                                               factory: ArgumentStateFactory[S],
+                                                               ordered: Boolean): ArgumentStateMap[S] = {
+    val asm = argumentStateMaps(argumentStateMapId)
+    if (asm == null)
+      createArgumentStateMap(argumentStateMapId, factory, ordered)
+    else
+      asm.asInstanceOf[ArgumentStateMap[S]]
+  }
+
   /**
    * Mark this query as failed, and close any outstanding work.
    *
