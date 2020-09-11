@@ -43,7 +43,7 @@ class CheckEmptyStandardReducer(shouldBeEmpty: Boolean) extends DirectStandardRe
   override def result: AnyValue = Values.booleanValue(isEmpty == shouldBeEmpty)
 
   // Updater
-  override def add(value: Array[AnyValue]): Unit =
+  override def add(value: AnyValue): Unit =
     isEmpty = false
 }
 
@@ -55,7 +55,7 @@ class CheckEmptyConcurrentReducer(shouldBeEmpty: Boolean) extends Reducer {
   override def result: AnyValue = Values.booleanValue(isEmpty == shouldBeEmpty)
 
   class Upd() extends Updater {
-    override def add(value: Array[AnyValue]): Unit =
+    override def add(value: AnyValue): Unit =
       isEmpty = false
 
     override def applyUpdates(): Unit = {}

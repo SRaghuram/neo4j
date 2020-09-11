@@ -45,10 +45,20 @@ object Aggregator {
  * without synchronization.
  */
 trait Updater {
+
   /**
    * Update this updater with a new value.
+   *
+   * NOTE: this is a specialization and should
+   * only be used for aggregations functions taking
+   * a single input value
    */
-  def add(value: Array[AnyValue]): Unit
+  def add(value: AnyValue): Unit
+
+  /**
+   * Update this updater with new values.
+   */
+  def add(values: Array[AnyValue]): Unit = add(values(0))
 
   /**
    * Apply the current state of this updater to it's parent [[Reducer]].

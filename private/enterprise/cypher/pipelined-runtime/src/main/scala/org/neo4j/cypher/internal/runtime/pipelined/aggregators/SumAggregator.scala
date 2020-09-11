@@ -97,7 +97,7 @@ class SumStandardReducer() extends SumBase with DirectStandardReducer {
     }
 
   // Updater
-  override def add(value: Array[AnyValue]): Unit = update(value(0))
+  override def add(value: AnyValue): Unit = update(value)
 }
 
 class SumConcurrentReducer extends Reducer {
@@ -130,7 +130,7 @@ class SumConcurrentReducer extends Reducer {
     }
 
   class Upd() extends SumBase with Updater {
-    override def add(value: Array[AnyValue]): Unit = update(value(0))
+    override def add(value: AnyValue): Unit = update(value)
     override def applyUpdates(): Unit = {
       if (seenNumber) {
         onNumber(sumNumber)

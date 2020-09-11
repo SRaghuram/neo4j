@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 import org.neo4j.cypher.internal.expressions
 import org.neo4j.cypher.internal.expressions.CountStar
 import org.neo4j.cypher.internal.expressions.FunctionInvocation
+import org.neo4j.cypher.internal.expressions.Null
 import org.neo4j.cypher.internal.expressions.functions
 import org.neo4j.cypher.internal.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
@@ -31,10 +32,10 @@ case class AggregatorFactory(physicalPlan: PhysicalPlan) {
       case e if !e.isDeterministic =>
         throw new SyntaxException("Can't use non-deterministic (random) functions inside of aggregate functions.")
 
-      case _: CountStar => (CountStarAggregator, Array.empty)
+      case _: CountStar => (CountStarAggregator, Array(Null.NULL))
       case CollectAll(expr) => (CollectAllAggregator, Array(expr))
-      case NonEmpty() => (NonEmptyAggregator, Array.empty)
-      case IsEmpty() => (IsEmptyAggregator, Array.empty)
+      case NonEmpty() => (NonEmptyAggregator, Array(Null.NULL))
+      case IsEmpty() => (IsEmptyAggregator, Array(Null.NULL))
 
       case c: FunctionInvocation =>
         c.function match {

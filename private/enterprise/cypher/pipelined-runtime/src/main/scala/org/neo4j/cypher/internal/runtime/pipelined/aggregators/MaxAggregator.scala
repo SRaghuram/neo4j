@@ -42,7 +42,7 @@ class MaxStandardReducer() extends MaxUpdater with DirectStandardReducer {
   override def result: AnyValue = max
 
   // Updater
-  override def add(value: Array[AnyValue]): Unit = update(value(0))
+  override def add(value: AnyValue): Unit = update(value)
 }
 
 class MaxConcurrentReducer() extends Reducer {
@@ -54,7 +54,7 @@ class MaxConcurrentReducer() extends Reducer {
 
   // Updater
   class Upd() extends MaxUpdater with Updater {
-    override def add(value: Array[AnyValue]): Unit = update(value(0))
+    override def add(value: AnyValue): Unit = update(value)
     override def applyUpdates(): Unit =
       maxAR.updateAndGet(oldMax => if (MaxAggregator.shouldUpdate(oldMax, max)) max else oldMax)
   }

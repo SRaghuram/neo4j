@@ -149,7 +149,7 @@ class AvgStandardReducer() extends AvgBase with StandardReducer {
     }
 
   // Updater
-  override def add(value: Array[AnyValue]): Unit = update(value(0))
+  override def add(value: AnyValue): Unit = update(value)
   override def applyUpdates(): Unit = {
     // do nothing if number
     if (seenDuration) {
@@ -227,7 +227,7 @@ class AvgConcurrentReducer() extends Reducer {
 
   class Upd() extends AvgBase with Updater {
 
-    override def add(value: Array[AnyValue]): Unit = update(value(0))
+    override def add(value: AnyValue): Unit = update(value)
     override def applyUpdates(): Unit = {
       if (seenNumber) {
         onNumberUpdate(avgNumber, partCount)

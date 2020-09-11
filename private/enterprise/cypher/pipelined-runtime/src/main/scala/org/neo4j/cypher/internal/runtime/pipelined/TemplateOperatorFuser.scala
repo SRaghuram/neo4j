@@ -40,6 +40,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.DelegateOperatorTas
 import org.neo4j.cypher.internal.runtime.pipelined.operators.Operator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProduceResultOperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleArgumentAggregationMapperOperatorNoGroupingTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleArgumentAggregationMapperOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -172,24 +174,44 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
                 aggregationExpressions += innerAstExpression
             }
             val aggregationAstExpressions: Array[Array[Expression]] = aggregationExpressions.result()
-            val aggregationExpressionsCreator = () => aggregationAstExpressions.map(a => a.map(e => ctx.compileExpression(e)()))
             if (groupingExpressions.nonEmpty) {
-              new AggregationMapperOperatorTaskTemplate(ctx.innermost,
-                p.id,
-                argumentSlotOffset,
-                aggregators.result(),
-                argumentStateMapId,
-                aggregationExpressionsCreator,
-                compileGroupingKey(groupingExpressions, outputSlots, orderToLeverage = Seq.empty),
-                serialExecutionOnly)(ctx.expressionCompiler)
+              if (aggregationAstExpressions.forall(_.length == 1)) {
+                new SingleArgumentAggregationMapperOperatorTaskTemplate(ctx.innermost,
+                  p.id,
+                  argumentSlotOffset,
+                  aggregators.result(),
+                  argumentStateMapId,
+                  () => aggregationAstExpressions.flatMap(a => a.map(e => ctx.compileExpression(e)())),
+                  compileGroupingKey(groupingExpressions, outputSlots, orderToLeverage = Seq.empty),
+                  serialExecutionOnly)(ctx.expressionCompiler)
+              } else {
+                new AggregationMapperOperatorTaskTemplate(ctx.innermost,
+                  p.id,
+                  argumentSlotOffset,
+                  aggregators.result(),
+                  argumentStateMapId,
+                  () => aggregationAstExpressions.map(a => a.map(e => ctx.compileExpression(e)())),
+                  compileGroupingKey(groupingExpressions, outputSlots, orderToLeverage = Seq.empty),
+                  serialExecutionOnly)(ctx.expressionCompiler)
+              }
             } else {
-              new AggregationMapperOperatorNoGroupingTaskTemplate(ctx.innermost,
-                p.id,
-                argumentSlotOffset,
-                aggregators.result(),
-                argumentStateMapId,
-                aggregationExpressionsCreator,
-                serialExecutionOnly)(ctx.expressionCompiler)
+              if (aggregationAstExpressions.forall(_.length == 1)) {
+                new SingleArgumentAggregationMapperOperatorNoGroupingTaskTemplate(ctx.innermost,
+                  p.id,
+                  argumentSlotOffset,
+                  aggregators.result(),
+                  argumentStateMapId,
+                  () => aggregationAstExpressions.flatMap(a => a.map(e => ctx.compileExpression(e)())),
+                  serialExecutionOnly)(ctx.expressionCompiler)
+              } else {
+                new AggregationMapperOperatorNoGroupingTaskTemplate(ctx.innermost,
+                  p.id,
+                  argumentSlotOffset,
+                  aggregators.result(),
+                  argumentStateMapId,
+                  () => aggregationAstExpressions.map(a => a.map(e => ctx.compileExpression(e)())),
+                  serialExecutionOnly)(ctx.expressionCompiler)
+              }
             }
           })
         case _ => None

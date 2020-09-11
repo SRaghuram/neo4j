@@ -81,8 +81,7 @@ class CollectStandardReducer(preserveNulls: Boolean, memoryTracker: MemoryTracke
   override def result: AnyValue = collection.build()
 
   // Updater
-  override def add(values: Array[AnyValue]): Unit = {
-    val value = values(0)
+  override def add(value: AnyValue): Unit = {
     if (collect(value)) {
       CollectAggregator.registerCollectedItem(value, memoryTracker)
     }
@@ -96,7 +95,7 @@ class CollectConcurrentReducer(preserveNulls: Boolean) extends Reducer {
   override def result: AnyValue = VirtualValues.concat(collections.toArray(new Array[ListValue](0)):_*)
 
   class Upd() extends CollectUpdater(preserveNulls) with Updater {
-    override def add(value: Array[AnyValue]): Unit = collect(value(0))
+    override def add(value: AnyValue): Unit = collect(value)
     override def applyUpdates(): Unit = {
       collections.add(collection.build())
       reset()
@@ -117,8 +116,7 @@ class CollectDistinctStandardReducer(memoryTracker: MemoryTracker) extends Direc
   }
 
   // Updater
-  override def add(values: Array[AnyValue]): Unit = {
-    val value = values(0)
+  override def add(value: AnyValue): Unit = {
     if (!(value eq Values.NO_VALUE)) {
       val isUnique = seenSet.add(value)
       if (isUnique) {
@@ -142,8 +140,7 @@ class CollectDistinctConcurrentReducer() extends Reducer {
   class Upd() extends Updater {
     private val partSeenSet: DistinctSet[AnyValue] = DistinctSet.createDistinctSet[AnyValue](EmptyMemoryTracker.INSTANCE)
 
-    override def add(values: Array[AnyValue]): Unit = {
-      val value = values(0)
+    override def add(value: AnyValue): Unit = {
       if (!(value eq Values.NO_VALUE))
         partSeenSet.add(value)
     }

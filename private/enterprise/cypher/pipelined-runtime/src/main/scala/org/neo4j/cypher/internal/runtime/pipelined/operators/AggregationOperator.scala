@@ -88,6 +88,11 @@ import org.neo4j.values.AnyValue
 case class AggregationOperator(workIdentity: WorkIdentity,
                                aggregations: Array[Aggregator],
                                groupings: GroupingExpression) {
+  def mapper(argumentSlotOffset: Int,
+             argumentStateMapId: ArgumentStateMapId,
+             expressionValues: Array[Expression],
+             operatorId: Id) =
+    new SingleArgumentAggregationMapperOperator(argumentSlotOffset, argumentStateMapId, expressionValues)(operatorId)
 
   def mapper(argumentSlotOffset: Int,
              argumentStateMapId: ArgumentStateMapId,
@@ -105,6 +110,62 @@ case class AggregationOperator(workIdentity: WorkIdentity,
    * data in a single morsel at a time, before putting these local aggregations into the
    * [[ExecutionState]] buffer which perform the final global aggregation.
    */
+  class SingleArgumentAggregationMapperOperator(argumentSlotOffset: Int,
+                                  argumentStateMapId: ArgumentStateMapId,
+                                  expressionValues: Array[Expression])
+                                 (val id: Id = Id.INVALID_ID) extends OutputOperator {
+    override def workIdentity: WorkIdentity = AggregationOperator.this.workIdentity
+    override def outputBuffer: Option[BufferId] = None
+    override def createState(executionState: ExecutionState, stateFactory: StateFactory): OutputOperatorState = {
+      new State(executionState.argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMap[AggregatedRowMap]])
+    }
+
+    class State(aggregationMaps: ArgumentStateMap[AggregatedRowMap]) extends OutputOperatorState {
+
+      override def trackTime: Boolean = true
+
+      override def workIdentity: WorkIdentity = AggregationOperator.this.workIdentity
+
+      override def prepareOutput(morsel: Morsel,
+                                 state: PipelinedQueryState,
+                                 resources: QueryResources,
+                                 operatorExecutionEvent: OperatorProfileEvent): PreparedOutput = {
+        val queryState = state.queryStateForExpressionEvaluation(resources)
+
+        var argumentRowId = -1L
+        var aggregationMap: AggregatedRowMap = null
+        val readCursor = morsel.readCursor()
+        while (readCursor.next()) {
+          val arg = ArgumentSlots.getArgumentAt(readCursor, argumentSlotOffset)
+          if (arg != argumentRowId) {
+            if (aggregationMap != null) {
+              aggregationMap.applyUpdates(resources.workerId)
+            }
+            aggregationMap = aggregationMaps.peek(arg)
+            argumentRowId = arg
+          }
+
+          val groupingValue = groupings.computeGroupingKey(readCursor, queryState)
+          val aggregatorRow = aggregationMap.get(groupingValue)
+          val update = aggregatorRow.updaters(resources.workerId)
+          var i = 0
+          while (i < aggregations.length) {
+            val value = expressionValues(i)(readCursor, queryState)
+            update.addUpdate(i, value)
+            i += 1
+          }
+        }
+
+        if (aggregationMap != null) {
+          aggregationMap.applyUpdates(resources.workerId)
+        }
+
+        NoOutputOperator
+      }
+    }
+  }
+
+
   class AggregationMapperOperator(argumentSlotOffset: Int,
                                   argumentStateMapId: ArgumentStateMapId,
                                   expressionValues: Array[Array[Expression]])
@@ -264,15 +325,14 @@ object AggregationMapperOperatorTaskTemplate {
   }
 }
 
-class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
+abstract class BaseAggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
                                             override val id: Id,
                                             argumentSlotOffset: Int,
                                             aggregators: Array[Aggregator],
                                             argumentStateMapId: ArgumentStateMapId,
-                                            aggregationExpressionsCreator : () => Array[Array[IntermediateExpression]],
                                             groupingKeyExpressionCreator: () => IntermediateExpression,
-                                            serialExecutionOnly: Boolean = false)
-                                           (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
+                                            serialExecutionOnly: Boolean,
+                                            codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
 
   override def toString: String = "AggregationMapperOperatorTaskTemplate"
 
@@ -280,15 +340,18 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
 
   private val asmField: Field =
     field[ArgumentStateMap[AggregatedRowMap]](codeGen.namer.nextVariableName("aggregatedRowMaps"),
-                                              argumentStateMap[AggregatedRowMap](argumentStateMapId))
+      argumentStateMap[AggregatedRowMap](argumentStateMapId))
 
   private val aggregatorsVar = variable[Array[Aggregator]](codeGen.namer.nextVariableName("aggregators"), createAggregators(aggregators))
   private val argVar = variable[Long](codeGen.namer.nextVariableName("arg"), constant(-1L))
   private val aggregatedRowMapVar = variable[AggregatedRowMap](codeGen.namer.nextVariableName("aggregatedRowMap"), constant(null))
   private val workerIdVar = variable[Int](codeGen.namer.nextVariableName("workerId"), constant(-1))
 
-  private var compiledAggregationExpressions: Array[Array[IntermediateExpression]] = _
   private var compiledGroupingExpression: IntermediateExpression = _
+
+  protected def setupAggregation(): Unit
+  protected def addUpdates(updaters: IntermediateRepresentation): IntermediateRepresentation
+  protected def genMoreExpressions: Seq[IntermediateExpression]
 
   // constructor
   override def genInit: IntermediateRepresentation = inner.genInit
@@ -302,8 +365,8 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
 
   // this operates on a single row only
   override def genOperate: IntermediateRepresentation = {
-    if (null == compiledAggregationExpressions) {
-      compiledAggregationExpressions = aggregationExpressionsCreator()
+    setupAggregation()
+    if (null == compiledGroupingExpression) {
       compiledGroupingExpression = groupingKeyExpressionCreator()
     }
 
@@ -395,14 +458,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
        * ...
        * updaters.addUpdate(n-1, aggregationExpression[n-1]())
        */
-      block(
-        compiledAggregationExpressions.indices.map(i => {
-          invokeSideEffect(load(updaters), method[AggregatedRowUpdaters, Unit, Int, Array[AnyValue]]("addUpdate"),
-                           constant(i),
-                           arrayOf[AnyValue](compiledAggregationExpressions(i).map(e => nullCheckIfRequired(e)):_*))
-        }): _ *
-      ),
-
+      addUpdates(load(updaters)),
       inner.genOperateWithExpressions
     )
   }
@@ -423,6 +479,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
       noop()
     }
   }
+  override def genExpressions: Seq[IntermediateExpression] = genMoreExpressions ++ Seq(compiledGroupingExpression)
 
   override def genOutputBuffer: Option[IntermediateRepresentation] = None
 
@@ -430,11 +487,63 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(argVar, aggregatorsVar, aggregatedRowMapVar, workerIdVar)
 
-  override def genExpressions: Seq[IntermediateExpression] = compiledAggregationExpressions.flatten ++ Seq(compiledGroupingExpression)
-
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
 
   override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
+}
+
+class SingleArgumentAggregationMapperOperatorTaskTemplate(inner: OperatorTaskTemplate,
+                                            id: Id,
+                                            argumentSlotOffset: Int,
+                                            aggregators: Array[Aggregator],
+                                            argumentStateMapId: ArgumentStateMapId,
+                                            aggregationExpressionsCreator : () => Array[IntermediateExpression],
+                                            groupingKeyExpressionCreator: () => IntermediateExpression,
+                                            serialExecutionOnly: Boolean = false)
+                                           (protected val codeGen: OperatorExpressionCompiler)
+  extends BaseAggregationMapperOperatorTaskTemplate(inner, id, argumentSlotOffset, aggregators, argumentStateMapId, groupingKeyExpressionCreator, serialExecutionOnly, codeGen) {
+
+  private var compiledAggregationExpressions: Array[IntermediateExpression] = _
+
+  override protected def setupAggregation(): Unit = if (null == compiledAggregationExpressions) {
+    compiledAggregationExpressions = aggregationExpressionsCreator()
+  }
+
+  override protected def addUpdates(updaters: IntermediateRepresentation): IntermediateRepresentation = block(
+    compiledAggregationExpressions.indices.map(i => {
+      invokeSideEffect(updaters, method[AggregatedRowUpdaters, Unit, Int, AnyValue]("addUpdate"),
+        constant(i),
+        nullCheckIfRequired(compiledAggregationExpressions(i)))
+    }): _ *
+  )
+  override def genMoreExpressions: Seq[IntermediateExpression] = compiledAggregationExpressions.toSeq
+}
+
+class AggregationMapperOperatorTaskTemplate(inner: OperatorTaskTemplate,
+                                            id: Id,
+                                            argumentSlotOffset: Int,
+                                            aggregators: Array[Aggregator],
+                                            argumentStateMapId: ArgumentStateMapId,
+                                            aggregationExpressionsCreator : () => Array[Array[IntermediateExpression]],
+                                            groupingKeyExpressionCreator: () => IntermediateExpression,
+                                            serialExecutionOnly: Boolean = false)
+                                           (protected val codeGen: OperatorExpressionCompiler)
+  extends BaseAggregationMapperOperatorTaskTemplate(inner, id, argumentSlotOffset, aggregators, argumentStateMapId, groupingKeyExpressionCreator, serialExecutionOnly, codeGen) {
+
+  private var compiledAggregationExpressions: Array[Array[IntermediateExpression]] = _
+
+  override protected def setupAggregation(): Unit = if (null == compiledAggregationExpressions) {
+    compiledAggregationExpressions = aggregationExpressionsCreator()
+  }
+
+  override protected def addUpdates(updaters: IntermediateRepresentation): IntermediateRepresentation = block(
+    compiledAggregationExpressions.indices.map(i => {
+      invokeSideEffect(updaters, method[AggregatedRowUpdaters, Unit, Int, Array[AnyValue]]("addUpdate"),
+        constant(i),
+        arrayOf[AnyValue](compiledAggregationExpressions(i).map(e => nullCheckIfRequired(e)):_*))
+    }): _ *
+  )
+  override def genMoreExpressions: Seq[IntermediateExpression] = compiledAggregationExpressions.flatten.toSeq
 }

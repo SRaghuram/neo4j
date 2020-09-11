@@ -52,6 +52,7 @@ abstract class PercentileStandardReducer(memoryTracker: MemoryTracker) extends D
 
 
   // Updater
+  override def add(value: AnyValue): Unit = throw new IllegalStateException("Percentile functions takes two arguments")
   override def add(values: Array[AnyValue]): Unit = {
     val value = values(0)
     if (value eq Values.NO_VALUE) {
@@ -133,6 +134,7 @@ abstract class PercentileConcurrentReducer() extends Reducer {
       localCount = 0
       localCollection.clear()
     }
+    override def add(value: AnyValue): Unit = throw new IllegalStateException("Percentile functions takes two arguments")
   }
 }
 

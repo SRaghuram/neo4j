@@ -862,15 +862,25 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
           case plans.Aggregation(_, groupingExpressions, aggregationExpression) if groupingExpressions.isEmpty =>
             val (aggregators, expressions) = buildAggregators(id, aggregationExpression)
-            AggregationOperatorNoGrouping(WorkIdentity.fromPlan(plan, "Pre"), aggregators)
-              .mapper(argumentSlotOffset, argumentStateMapId, expressions, id)
+            if (expressions.forall(_.length == 1)) {
+              AggregationOperatorNoGrouping(WorkIdentity.fromPlan(plan, "Pre"), aggregators)
+                .mapper(argumentSlotOffset, argumentStateMapId, expressions.flatten, id)
+            } else {
+              AggregationOperatorNoGrouping(WorkIdentity.fromPlan(plan, "Pre"), aggregators)
+                .mapper(argumentSlotOffset, argumentStateMapId, expressions, id)
+            }
 
           case plans.Aggregation(_, groupingExpressions, aggregationExpression) =>
             val groupings = converters.toGroupingExpression(id, groupingExpressions, Seq.empty)
             val (aggregators, expressions) = buildAggregators(id, aggregationExpression)
+            if (expressions.forall(_.length == 1)) {
+              AggregationOperator(WorkIdentity.fromPlan(plan, "Pre"), aggregators, groupings)
+                .mapper(argumentSlotOffset, argumentStateMapId, expressions.flatten, id)
+            } else {
+              AggregationOperator(WorkIdentity.fromPlan(plan, "Pre"), aggregators, groupings)
+                .mapper(argumentSlotOffset, argumentStateMapId, expressions, id)
+            }
 
-            AggregationOperator(WorkIdentity.fromPlan(plan, "Pre"), aggregators, groupings)
-              .mapper(argumentSlotOffset, argumentStateMapId, expressions, id)
 
         }
     }
