@@ -32,6 +32,8 @@ public class PageCacheWarmerLoggingMonitor extends PageCacheWarmerMonitorAdapter
     @Override
     public void warmupCompleted( NamedDatabaseId namedDatabaseId, long pagesLoaded )
     {
-        log.info( "Page cache warmup completed. %d pages loaded. Duration: %s.", pagesLoaded, duration( warmupStart.elapsed( MILLISECONDS ) ) );
+        long millis = warmupStart.elapsed( MILLISECONDS );
+        double pagesPerMilli = (double) pagesLoaded / millis;
+        log.info( "Page cache warmup completed. %d pages loaded. Duration: %s. %.2f pages/ms", pagesLoaded, duration( millis ), pagesPerMilli );
     }
 }
