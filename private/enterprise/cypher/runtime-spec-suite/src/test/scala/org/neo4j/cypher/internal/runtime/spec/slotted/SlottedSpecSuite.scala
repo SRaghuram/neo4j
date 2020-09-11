@@ -96,6 +96,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.SortTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SubscriberErrorTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ThreadUnsafeExpressionTests
 import org.neo4j.cypher.internal.runtime.spec.tests.TopTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.TriadicSelectionTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UndirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UnionTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UnwindTestBase
@@ -204,4 +205,5 @@ class SlottedNestedPlanExpressionTest extends NestedPlanExpressionTestBase(ENTER
 class SlottedRollupApplyTest extends RollupApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedCacheFromCursorTest extends CacheFromCursorTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedDropResultTest extends DropResultTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedTriadicSelectionTest extends TriadicSelectionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 
