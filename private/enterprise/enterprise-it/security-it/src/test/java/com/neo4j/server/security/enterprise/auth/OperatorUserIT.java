@@ -93,7 +93,7 @@ class OperatorUserIT
     @Test
     void shouldCreateOperatorUserWhenRestrictUpgradeIsEnabled() throws InvalidAuthTokenException
     {
-        GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( true );
+        GraphDatabaseAPI database = setupRestricted();
         LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
         SecurityContext securityContext = loginContext.authorize( LoginContext.IdLookup.EMPTY, SYSTEM_DATABASE_NAME );
         assertThat( securityContext.roles() ).isEmpty();
@@ -106,14 +106,14 @@ class OperatorUserIT
     @Test
     void shouldNotCreateOperatorUserWhenRestrictUpgradeIsDisabled() throws InvalidAuthTokenException
     {
-        GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( false );
+        GraphDatabaseAPI database = setupUnrestricted();
         assertLoginFailure( database, UPGRADE_USERNAME, "bar" );
     }
 
     @Test
     void shouldNotReserveUpgradeUsernameWhenRestrictUpgradeIsDisabled() throws InvalidAuthTokenException
     {
-        GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( false );
+        GraphDatabaseAPI database = setupUnrestricted();
 
         try ( Transaction tx = database.beginTx() )
         {
@@ -137,7 +137,7 @@ class OperatorUserIT
     @Test
     void shouldReserveUpgradeUsernameWhenRestrictUpgradeIsEnabled()
     {
-        GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( true );
+        GraphDatabaseAPI database = setupRestricted();
 
         try ( Transaction tx = database.beginTx() )
         {
@@ -149,7 +149,7 @@ class OperatorUserIT
     @Test
     void shouldNotStartDatabaseIfUpgradeUsernameIsTakenByAnotherUser()
     {
-        GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( false );
+        GraphDatabaseAPI database = setupUnrestricted();
 
         try ( Transaction tx = database.beginTx() )
         {
@@ -186,7 +186,7 @@ class OperatorUserIT
     {
         String query = String.format( "CALL %s()", procedureName );
         setInitialPassword( "foo" );
-        GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( true );
+        GraphDatabaseAPI database = setupRestricted();
         LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
 
         try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
@@ -208,16 +208,7 @@ class OperatorUserIT
     {
         String query = String.format( "CALL %s()", procedureName );
         setInitialPassword( "foo" );
-        enterpriseDbms = getEnterpriseManagementService( Map.of( GraphDatabaseInternalSettings.restrict_upgrade, false ) );
-        GraphDatabaseAPI database = (GraphDatabaseAPI) enterpriseDbms.database( SYSTEM_DATABASE_NAME );
-
-        // create user with same name as upgrade_username setting
-        try ( Transaction tx = database.beginTx() )
-        {
-            tx.execute( String.format( "CREATE USER %s SET PASSWORD 'bar' CHANGE NOT REQUIRED", UPGRADE_USERNAME ) );
-            tx.commit();
-        }
-
+        GraphDatabaseAPI database = setupUserWithOperatorNameAndSystemDatabase();
         LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
 
         try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
@@ -236,7 +227,7 @@ class OperatorUserIT
     @Test
     void shouldAllowOperatorUserToShowDatabases() throws InvalidAuthTokenException
     {
-        GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( true );
+        GraphDatabaseAPI database = setupRestricted();
         LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
 
         try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
@@ -259,11 +250,12 @@ class OperatorUserIT
         }
     }
 
-    @Test
-    void shouldAllowOperatorUserToCreateDatabase() throws InvalidAuthTokenException
+    @ParameterizedTest
+    @ValueSource( booleans = { true, false } )
+    void shouldAllowOperatorUserToCreateDatabase( boolean blocked ) throws InvalidAuthTokenException
     {
         // GIVEN
-        GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( true );
+        GraphDatabaseAPI database = setupRestricted( blocked );
         LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
 
         // WHEN
@@ -298,11 +290,12 @@ class OperatorUserIT
         }
     }
 
-    @Test
-    void shouldAllowOperatorUserToCreateDatabaseIfNotExists() throws InvalidAuthTokenException
+    @ParameterizedTest
+    @ValueSource( booleans = { true, false } )
+    void shouldAllowOperatorUserToCreateDatabaseIfNotExists( boolean blocked ) throws InvalidAuthTokenException
     {
         // GIVEN
-        GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( true );
+        GraphDatabaseAPI database = setupRestricted( blocked );
         LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
 
         // WHEN
@@ -349,11 +342,12 @@ class OperatorUserIT
         }
     }
 
-    @Test
-    void shouldAllowOperatorUserToCreateOrReplaceDatabase() throws InvalidAuthTokenException
+    @ParameterizedTest
+    @ValueSource( booleans = { true, false } )
+    void shouldAllowOperatorUserToCreateOrReplaceDatabase( boolean blocked ) throws InvalidAuthTokenException
     {
         // GIVEN
-        GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( true );
+        GraphDatabaseAPI database = setupRestricted( blocked );
         LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
 
         // WHEN
@@ -400,11 +394,12 @@ class OperatorUserIT
         }
     }
 
-    @Test
-    void shouldAllowOperatorUserToDropDatabase() throws InvalidAuthTokenException
+    @ParameterizedTest
+    @ValueSource( booleans = { true, false } )
+    void shouldAllowOperatorUserToDropDatabase( boolean blocked ) throws InvalidAuthTokenException
     {
         // GIVEN
-        GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( true );
+        GraphDatabaseAPI database = setupRestricted( blocked );
         LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
 
         // WHEN
@@ -439,11 +434,12 @@ class OperatorUserIT
         }
     }
 
-    @Test
-    void shouldAllowOperatorUserToDropDatabaseIfExists() throws InvalidAuthTokenException
+    @ParameterizedTest
+    @ValueSource( booleans = { true, false } )
+    void shouldAllowOperatorUserToDropDatabaseIfExists( boolean blocked ) throws InvalidAuthTokenException
     {
         // GIVEN
-        GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( true );
+        GraphDatabaseAPI database = setupRestricted( blocked );
         LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
 
         // WHEN
@@ -489,11 +485,12 @@ class OperatorUserIT
         }
     }
 
-    @Test
-    void shouldAllowOperatorUserToStartAndStopDatabase() throws InvalidAuthTokenException
+    @ParameterizedTest
+    @ValueSource( booleans = { true, false } )
+    void shouldAllowOperatorUserToStartAndStopDatabase( boolean blocked ) throws InvalidAuthTokenException
     {
         // GIVEN
-        GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( true );
+        GraphDatabaseAPI database = setupRestricted( blocked );
         LoginContext loginContext = assertLoginSuccess( database, UPGRADE_USERNAME, "bar" );
 
         // WHEN
@@ -597,7 +594,7 @@ class OperatorUserIT
     void shouldNotListUpgradeUser() throws InvalidAuthTokenException
     {
         setInitialPassword( "baz" );
-        GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( true );
+        GraphDatabaseAPI database = setupRestricted();
 
         LoginContext loginContext = login( database, INITIAL_USER_NAME, "baz" );
 
@@ -612,7 +609,7 @@ class OperatorUserIT
     void shouldFailGrantRoleToUpgradeUser() throws InvalidAuthTokenException
     {
         setInitialPassword( "baz" );
-        GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( true );
+        GraphDatabaseAPI database = setupRestricted();
 
         LoginContext loginContext = login( database, INITIAL_USER_NAME, "baz" );
 
@@ -626,7 +623,7 @@ class OperatorUserIT
     @Test
     void shouldFailAlterPasswordUpgradeUser() throws InvalidAuthTokenException
     {
-        GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( true );
+        GraphDatabaseAPI database = setupRestricted();
         LoginContext loginContext = login( database, UPGRADE_USERNAME, "bar" );
 
         try ( Transaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
@@ -667,42 +664,49 @@ class OperatorUserIT
                 .build();
     }
 
-    private GraphDatabaseAPI setupOperatorUserAndSystemDatabase( boolean restrictUpgrade )
+    private GraphDatabaseAPI setupRestricted()
     {
-        return setupOperatorUserAndSystemDatabase( restrictUpgrade, false );
+        return setupOperatorUserAndSystemDatabase( true, true );
+    }
+
+    private GraphDatabaseAPI setupRestricted( boolean blocked )
+    {
+        return setupOperatorUserAndSystemDatabase( true, blocked );
+    }
+
+    private GraphDatabaseAPI setupUnrestricted( )
+    {
+        return setupOperatorUserAndSystemDatabase( false, false );
     }
 
     private GraphDatabaseAPI setupUserWithOperatorNameAndSystemDatabase()
     {
-        return setupOperatorUserAndSystemDatabase( false, true );
+        GraphDatabaseAPI database = setupOperatorUserAndSystemDatabase( false, true );
+
+        // create user with same name as upgrade_username setting and grant it all database related privileges
+        try ( Transaction tx = database.beginTx() )
+        {
+            tx.execute( String.format( "CREATE USER %s SET PASSWORD 'bar' CHANGE NOT REQUIRED", UPGRADE_USERNAME ) );
+            tx.execute( "CREATE role databaseOperator" );
+            tx.execute( "GRANT DATABASE MANAGEMENT ON DBMS TO databaseOperator" );
+            tx.execute( "GRANT START ON DATABASE * TO databaseOperator" );
+            tx.execute( "GRANT STOP ON DATABASE * TO databaseOperator" );
+            tx.execute( String.format( "GRANT ROLE databaseOperator TO %s", UPGRADE_USERNAME ) );
+            tx.commit();
+        }
+        return database;
     }
 
-    private GraphDatabaseAPI setupOperatorUserAndSystemDatabase( boolean restrictUpgrade, boolean nonOperatorWithOperatorName )
+    private GraphDatabaseAPI setupOperatorUserAndSystemDatabase( boolean restrictUpgrade, boolean blockDatabase )
     {
         setOperatorPassword( "bar" );
         final Map<Setting<?>, Object> config =
                 Map.of( GraphDatabaseInternalSettings.restrict_upgrade, restrictUpgrade,
-                        GraphDatabaseInternalSettings.block_create_drop_database, true,
-                        GraphDatabaseInternalSettings.block_start_stop_database, true );
+                        GraphDatabaseInternalSettings.block_create_drop_database, blockDatabase,
+                        GraphDatabaseInternalSettings.block_start_stop_database, blockDatabase );
 
         enterpriseDbms = getEnterpriseManagementService( config );
-        GraphDatabaseAPI database = (GraphDatabaseAPI) enterpriseDbms.database( SYSTEM_DATABASE_NAME );
-
-        if ( nonOperatorWithOperatorName )
-        {
-            // create user with same name as upgrade_username setting and grant it all database related privileges
-            try ( Transaction tx = database.beginTx() )
-            {
-                tx.execute( String.format( "CREATE USER %s SET PASSWORD 'bar' CHANGE NOT REQUIRED", UPGRADE_USERNAME ) );
-                tx.execute( "CREATE role databaseOperator" );
-                tx.execute( "GRANT DATABASE MANAGEMENT ON DBMS TO databaseOperator" );
-                tx.execute( "GRANT START ON DATABASE * TO databaseOperator" );
-                tx.execute( "GRANT STOP ON DATABASE * TO databaseOperator" );
-                tx.execute( String.format( "GRANT ROLE databaseOperator TO %s", UPGRADE_USERNAME ) );
-                tx.commit();
-            }
-        }
-        return database;
+        return (GraphDatabaseAPI) enterpriseDbms.database( SYSTEM_DATABASE_NAME );
     }
 
     private void setInitialPassword( String password )
