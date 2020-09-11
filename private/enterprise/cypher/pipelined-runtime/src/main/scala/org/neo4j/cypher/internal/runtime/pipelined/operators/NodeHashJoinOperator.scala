@@ -115,15 +115,16 @@ object NodeHashJoinOperator {
    * MorselAccumulator which groups rows by a tuple of node ids.
    */
   abstract class HashTable extends MorselAccumulator[Morsel] {
-    def lhsRows(nodeIds: LongArray): java.util.Iterator[Morsel]
-
+    def lhsRows(nodeIds: Value): java.util.Iterator[Morsel]
+    def keys: util.Set[Value]
   }
 
   class StandardHashTable(override val argumentRowId: Long,
                           lhsKeyOffsets: KeyOffsets,
                           override val argumentRowIdsForReducers: Array[Long],
-                          memoryTracker: MemoryTracker) extends HashTable {
-    private val table = ProbeTable.createProbeTable[LongArray, Morsel]( memoryTracker )
+                          memoryTracker: MemoryTracker,
+                          acceptNulls: Boolean = false) extends HashTable {
+    private val table: ProbeTable[Value, Morsel] = ProbeTable.createProbeTable[Value, Morsel]( memoryTracker )
 
     private val lhsOffsets: Array[Int] = lhsKeyOffsets.offsets
     private val lhsIsReference: Array[Boolean] = lhsKeyOffsets.isReference
@@ -134,7 +135,7 @@ object NodeHashJoinOperator {
       while (cursor.next()) {
         val key = new Array[Long](lhsOffsets.length)
         fillKeyArray(cursor, key, lhsOffsets, lhsIsReference)
-        if (!NullChecker.entityIsNull(key(0))) {
+        if (acceptNulls || !NullChecker.entityIsNull(key(0))) {
           // TODO optimize this to something like this
           //        val lastMorsel = morselsForKey.last
           //        if (!lastMorsel.hasNextRow) {
@@ -143,14 +144,16 @@ object NodeHashJoinOperator {
           //        lastMorsel.moveToNextRow()
           //        lastMorsel.copyFrom(morsel)
           val view = morsel.view(cursor.row, cursor.row + 1)
-          table.put(Values.longArray(key), view) // NOTE: ProbeTable will also track estimated heap usage of the view until the table is closed
+          val keyValue = if (NullChecker.entityIsNull(key(0))) Values.NO_VALUE else Values.longArray(key)
+          table.put(keyValue, view) // NOTE: ProbeTable will also track estimated heap usage of the view until the table is closed
         }
       }
     }
 
-    override def lhsRows(nodeIds: LongArray): util.Iterator[Morsel] = {
+    override def lhsRows(nodeIds: Value): util.Iterator[Morsel] = {
       table.get(nodeIds)
     }
+    override def keys: util.Set[Value] = table.keySet()
 
     override def close(): Unit = {
       table.close()
@@ -161,7 +164,7 @@ object NodeHashJoinOperator {
   class ConcurrentHashTable(override val argumentRowId: Long,
                             lhsKeyOffsets: KeyOffsets,
                             override val argumentRowIdsForReducers: Array[Long]) extends HashTable {
-    private val table = new ConcurrentHashMap[LongArray, ConcurrentLinkedQueue[Morsel]]()
+    private val table = new ConcurrentHashMap[Value, ConcurrentLinkedQueue[Morsel]]()
 
     private val lhsOffsets: Array[Int] = lhsKeyOffsets.offsets
     private val lhsIsReference: Array[Boolean] = lhsKeyOffsets.isReference
@@ -186,12 +189,14 @@ object NodeHashJoinOperator {
       }
     }
 
-    override def lhsRows(nodeIds: LongArray): util.Iterator[Morsel] = {
+    override def lhsRows(nodeIds: Value): util.Iterator[Morsel] = {
       val lhsRows = table.get(nodeIds)
       if (lhsRows == null)
         util.Collections.emptyIterator()
       else
         lhsRows.iterator()
     }
+
+    override def keys: util.Set[Value] = table.keySet()
   }
 }
