@@ -36,6 +36,7 @@ case object pipelinedPrePhysicalPlanRewriter {
       letAntiSemiApplyVariantsToAggregationLimitApply(cardinalities, providedOrders, idGen),
       letSemiApplyVariantsToAggregationLimitApply(cardinalities, providedOrders, idGen),
       dropResultToLimitZero(cardinalities, providedOrders, idGen),
+      triadicSelectionToBuildApplyFilter(cardinalities, providedOrders, idGen),
     )
   }
 
