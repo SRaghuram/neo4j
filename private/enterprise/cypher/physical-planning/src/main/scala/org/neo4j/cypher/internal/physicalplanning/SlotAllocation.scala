@@ -91,6 +91,8 @@ import org.neo4j.cypher.internal.logical.plans.SetRelationshipProperty
 import org.neo4j.cypher.internal.logical.plans.Skip
 import org.neo4j.cypher.internal.logical.plans.Sort
 import org.neo4j.cypher.internal.logical.plans.Top
+import org.neo4j.cypher.internal.logical.plans.TriadicBuild
+import org.neo4j.cypher.internal.logical.plans.TriadicFilter
 import org.neo4j.cypher.internal.logical.plans.TriadicSelection
 import org.neo4j.cypher.internal.logical.plans.UndirectedRelationshipByIdSeek
 import org.neo4j.cypher.internal.logical.plans.Union
@@ -553,7 +555,9 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
            _: Top |
            _: PartialTop |
            _: CacheProperties |
-           _: NonFuseable
+           _: NonFuseable |
+           _: TriadicBuild |
+           _: TriadicFilter
       =>
 
       case p: ProjectingPlan =>
