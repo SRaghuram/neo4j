@@ -50,7 +50,6 @@ abstract class PercentileStandardReducer(memoryTracker: MemoryTracker) extends D
   // Reducer
   override def newUpdater(): Updater = this
 
-
   // Updater
   override def add(value: AnyValue): Unit = throw new IllegalStateException("Percentile functions takes two arguments")
   override def add(values: Array[AnyValue]): Unit = {
@@ -59,10 +58,12 @@ abstract class PercentileStandardReducer(memoryTracker: MemoryTracker) extends D
       return
     }
     val number = CypherCoercions.asNumberValue(value)
-    percent = CypherCoercions.asNumberValue(values(1)).doubleValue()
-    if (percent < 0 || percent > 1.0) {
-      throw new InvalidArgumentException(
-        s"Invalid input '$percent' is not a valid argument, must be a number in the range 0.0 to 1.0")
+    if (count < 1) {
+      percent = CypherCoercions.asNumberValue(values(1)).doubleValue()
+      if (percent < 0 || percent > 1.0) {
+        throw new InvalidArgumentException(
+          s"Invalid input '$percent' is not a valid argument, must be a number in the range 0.0 to 1.0")
+      }
     }
     count += 1
     tmp.add(number)
@@ -118,12 +119,14 @@ abstract class PercentileConcurrentReducer() extends Reducer {
         return
       }
       val number = CypherCoercions.asNumberValue(value)
-      val p = CypherCoercions.asNumberValue(values(1)).doubleValue()
-      if (p < 0 || p > 1.0) {
-        throw new InvalidArgumentException(
-          s"Invalid input '$percent' is not a valid argument, must be a number in the range 0.0 to 1.0")
+      if (localCount < 1) {
+        val p = CypherCoercions.asNumberValue(values(1)).doubleValue()
+        if (p < 0 || p > 1.0) {
+          throw new InvalidArgumentException(
+            s"Invalid input '$percent' is not a valid argument, must be a number in the range 0.0 to 1.0")
+        }
+        localPercent = p
       }
-      localPercent = p
       localCount += 1
       localCollection.add(number)
     }
