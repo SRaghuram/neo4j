@@ -28,6 +28,7 @@ import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantO
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CONSTRAINT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DATABASE_ACTIONS;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DBMS_ACTIONS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE_ADMIN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.INDEX;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_LABEL;
@@ -329,7 +330,11 @@ class StandardAccessModeBuilder
                 addPrivilegeAction( privilege );
             }
 
-            if ( action.satisfies( EXECUTE_ADMIN ) )
+            if ( action.satisfies( DBMS_ACTIONS ) )
+            {
+                executeBoostedAllProcedures.put( privilegeType, true );
+            }
+            else if ( action.satisfies( EXECUTE_ADMIN ) )
             {
                 for ( int procId : resolver.getAdminProcedureIds() )
                 {

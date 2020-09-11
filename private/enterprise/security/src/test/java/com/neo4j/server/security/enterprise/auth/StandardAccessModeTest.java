@@ -40,6 +40,7 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.WRITE;
 import static org.neo4j.token.api.TokenConstants.ANY_LABEL;
 import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 
+@SuppressWarnings( "Convert2MethodRef" )
 class StandardAccessModeTest
 {
     private static final long A = 0;
@@ -2329,15 +2330,15 @@ class StandardAccessModeTest
 
         // EXECUTE PROCEDURES
         assertThat( mode.allowsExecuteProcedure( PROC1 ) ).isTrue();
-        assertThat( mode.allowsExecuteProcedure( PROC2 ) ).isFalse();
+        assertThat( mode.allowsExecuteProcedure( PROC2 ) ).isTrue();
         assertThat( mode.allowsExecuteProcedure( PROC3 ) ).isTrue();
-        assertThat( mode.allowsExecuteProcedure( PROC4 ) ).isFalse();
+        assertThat( mode.allowsExecuteProcedure( PROC4 ) ).isTrue();
 
         // BOOST
         assertThat( mode.shouldBoostProcedure( PROC1 ) ).isTrue();
-        assertThat( mode.shouldBoostProcedure( PROC2 ) ).isFalse();
+        assertThat( mode.shouldBoostProcedure( PROC2 ) ).isTrue();
         assertThat( mode.shouldBoostProcedure( PROC3 ) ).isTrue();
-        assertThat( mode.shouldBoostProcedure( PROC4 ) ).isFalse();
+        assertThat( mode.shouldBoostProcedure( PROC4 ) ).isTrue();
     }
 
     // EXECUTE PROCEDURE
