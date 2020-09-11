@@ -79,6 +79,24 @@ trait ProfilePipelinedMemoryTestBase extends ProfileMemoryTestBase[EnterpriseRun
     // then
     assertOnMemory(logicalQuery, NO_INPUT, 3, 1)
   }
+
+  test("should profile memory of triadic selection") {
+    // given
+    given { chainGraphs(3, "A", "B") }
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x", "y", "z")
+      .triadicSelection(positivePredicate = false, "x", "y", "z")
+      .|.expandAll("(y)-->(z)")
+      .|.argument("x", "y")
+      .expandAll("(x)-->(y)")
+      .allNodeScan("x")
+      .build()
+
+    // then
+    assertOnMemory(logicalQuery, NO_INPUT, 8, 6, 8) // operator ids are shifted because of rewriting
+  }
 }
 
 trait ProfilePipelinedNoFusingMemoryTestBase extends ProfilePipelinedMemoryTestBase {
