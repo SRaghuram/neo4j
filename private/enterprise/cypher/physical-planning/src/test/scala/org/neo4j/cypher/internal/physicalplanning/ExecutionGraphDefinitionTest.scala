@@ -25,6 +25,8 @@ import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.logical.plans.Projection
 import org.neo4j.cypher.internal.logical.plans.Selection
 import org.neo4j.cypher.internal.logical.plans.Sort
+import org.neo4j.cypher.internal.logical.plans.TriadicBuild
+import org.neo4j.cypher.internal.logical.plans.TriadicFilter
 import org.neo4j.cypher.internal.logical.plans.Union
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinitionMatcher.newGraph
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinitionMatcher.plan
@@ -585,6 +587,34 @@ class ExecutionGraphDefinitionTest extends CypherFunSuite {
 
       start(graph).applyBuffer(2).canceller(0, 2, 1)
       start(graph).morselBuffer(3).canceller(0)
+    }
+  }
+
+  test("should plan triadic build/filter") {
+    new ExecutionGraphDefinitionBuilder()
+      .produceResults("n")
+      .triadicFilter(42, positivePredicate = true, "n", "n").withBreak()
+      .triadicBuild(42, "n", "n").withBreak()
+      .allNodeScan("n").withBreak()
+      .build() should plan {
+      val graph = newGraph
+
+      start(graph)
+        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, planId = 3)
+        .delegateToMorselBuffer(1, 3)
+        .pipeline(0, Seq(classOf[AllNodesScan]))
+        .argumentStreamBuffer(2, -1, asmId = 1, planId = 2)
+        .pipeline(1, Seq(classOf[TriadicBuild]))
+        .argumentStreamBuffer(3, -1, asmId = 2, planId = 1)
+        .pipeline(2, Seq(classOf[TriadicFilter], classOf[ProduceResult]), serial = true)
+        .end
+
+      start(graph).applyBuffer(0).downstreamStateOnRHS(0, 42)
+      start(graph).applyBuffer(0).reducerOnRHS(1, 2)
+      start(graph).applyBuffer(0).reducerOnRHS(2, 1)
+      start(graph).morselBuffer(1).reducer(1, 2)
+      start(graph).morselBuffer(1).reducer(2, 1)
+      start(graph).morselBuffer(2).reducer(2, 1)
     }
   }
 
