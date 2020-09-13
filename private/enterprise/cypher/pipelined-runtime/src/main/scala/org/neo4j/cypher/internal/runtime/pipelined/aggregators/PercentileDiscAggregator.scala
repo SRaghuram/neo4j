@@ -5,11 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
-import java.lang.Double.doubleToLongBits
-import java.lang.Double.longBitsToDouble
 import java.util
 import java.util.Collections
-import java.util.concurrent.atomic.AtomicLong
 
 import org.neo4j.collection.trackable.HeapTrackingArrayList
 import org.neo4j.collection.trackable.HeapTrackingCollections
@@ -33,7 +30,7 @@ case object PercentileDiscAggregator extends Aggregator {
 }
 
 /**
- * Aggregator for percentileDisc(...).
+ * Aggregator for percentileCont(...).
  */
 case object PercentileContAggregator extends Aggregator {
   override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new PercentileContStandardReducer(memoryTracker)
@@ -45,8 +42,7 @@ case object PercentileContAggregator extends Aggregator {
 
 abstract class PercentileStandardReducer(memoryTracker: MemoryTracker) extends DirectStandardReducer {
   protected val tmp: HeapTrackingArrayList[NumberValue] = HeapTrackingCollections.newArrayList[NumberValue](memoryTracker)
-  protected var count: Int = 0
-  protected var percent: Double = 0.0
+  protected var percent: Double = -1
   // Reducer
   override def newUpdater(): Updater = this
 
@@ -58,22 +54,22 @@ abstract class PercentileStandardReducer(memoryTracker: MemoryTracker) extends D
       return
     }
     val number = CypherCoercions.asNumberValue(value)
-    if (count < 1) {
+    if (percent < 0) {
       percent = CypherCoercions.asNumberValue(values(1)).doubleValue()
       if (percent < 0 || percent > 1.0) {
         throw new InvalidArgumentException(
           s"Invalid input '$percent' is not a valid argument, must be a number in the range 0.0 to 1.0")
       }
     }
-    count += 1
     tmp.add(number)
   }
 }
 class PercentileContStandardReducer(memoryTracker: MemoryTracker) extends PercentileStandardReducer(memoryTracker) {
   override def result: AnyValue = {
     tmp.sort((o1: NumberValue, o2: NumberValue) => java.lang.Double.compare(o1.doubleValue(), o2.doubleValue()))
+    val count = tmp.size
     if (percent == 1.0 || count == 1) {
-      tmp.get(tmp.size() - 1)
+      tmp.get(count - 1)
     } else if (count > 1) {
       val floatIdx = percent * (count - 1)
       val floor = floatIdx.toInt
@@ -89,13 +85,13 @@ class PercentileContStandardReducer(memoryTracker: MemoryTracker) extends Percen
 class PercentileDiscStandardReducer(memoryTracker: MemoryTracker) extends PercentileStandardReducer(memoryTracker) {
   override def result: AnyValue = {
     tmp.sort((o1: NumberValue, o2: NumberValue) => java.lang.Double.compare(o1.doubleValue(), o2.doubleValue()))
+    val count = tmp.size
     if (percent == 1.0 || count == 1) {
-      tmp.get(tmp.size() - 1)
+      tmp.get(count - 1)
     } else if (count > 1) {
       val floatIdx = percent * count
-      var idx = floatIdx.toInt
-      idx = if (floatIdx != idx || idx == 0) idx
-      else idx - 1
+      val toInt = floatIdx.toInt
+      val idx = if (floatIdx != toInt || toInt == 0) toInt else toInt - 1
       tmp.get(idx)
     } else {
       Values.NO_VALUE
@@ -104,39 +100,34 @@ class PercentileDiscStandardReducer(memoryTracker: MemoryTracker) extends Percen
 }
 
 abstract class PercentileConcurrentReducer() extends Reducer {
-  protected val count: AtomicLong = new AtomicLong(0L)
-  protected val percent: AtomicLong = new AtomicLong(0L)
+  @volatile protected var percent: Double = -1
   protected val tmp: util.List[NumberValue] = Collections.synchronizedList(new util.ArrayList[NumberValue])
 
   override def newUpdater(): Updater = new Upd
   class Upd() extends Updater {
     private val localCollection = new util.ArrayList[NumberValue]
-    private var localCount = 0
-    private var localPercent = 0.0
     override def add(values: Array[AnyValue]): Unit = {
       val value = values(0)
       if (value eq Values.NO_VALUE) {
         return
       }
       val number = CypherCoercions.asNumberValue(value)
-      if (localCount < 1) {
+      if (percent < 0) {
         val p = CypherCoercions.asNumberValue(values(1)).doubleValue()
         if (p < 0 || p > 1.0) {
           throw new InvalidArgumentException(
             s"Invalid input '$percent' is not a valid argument, must be a number in the range 0.0 to 1.0")
         }
-        localPercent = p
+        percent = p
       }
-      localCount += 1
       localCollection.add(number)
     }
+
     override def applyUpdates(): Unit = {
-      percent.set(doubleToLongBits(localPercent))
-      count.addAndGet(localCount)
       tmp.addAll(localCollection)
-      localCount = 0
       localCollection.clear()
     }
+
     override def add(value: AnyValue): Unit = throw new IllegalStateException("Percentile functions takes two arguments")
   }
 }
@@ -145,11 +136,13 @@ class PercentileContConcurrentReducer() extends PercentileConcurrentReducer {
   override def result: AnyValue = {
     tmp.sort((o1: NumberValue, o2: NumberValue) => java.lang.Double.compare(o1.doubleValue(), o2.doubleValue()))
 
-    val perc = longBitsToDouble(percent.get())
-    if (perc == 1.0 || count.get() == 1) {
-      tmp.get(tmp.size() - 1)
-    } else if (count.get() > 1) {
-      val c = count.get()
+    val count = tmp.size()
+    //volatile read, just do it once
+    val perc = percent
+    if (perc == 1.0 || count == 1) {
+      tmp.get(count - 1)
+    } else if (count > 1) {
+      val c = count
       val floatIdx = perc * (c - 1)
       val floor = floatIdx.toInt
       val ceil = math.ceil(floatIdx).toInt
@@ -164,15 +157,15 @@ class PercentileContConcurrentReducer() extends PercentileConcurrentReducer {
 class PercentileDiscConcurrentReducer() extends PercentileConcurrentReducer {
   override def result: AnyValue = {
     tmp.sort((o1: NumberValue, o2: NumberValue) => java.lang.Double.compare(o1.doubleValue(), o2.doubleValue()))
-
-    val perc = longBitsToDouble(percent.get())
-    if (perc == 1.0 || count.get() == 1) {
-      tmp.get(tmp.size() - 1)
-    } else if (count.get() > 1) {
-      val floatIdx = perc * count.get()
-      var idx = floatIdx.toInt
-      idx = if (floatIdx != idx || idx == 0) idx
-      else idx - 1
+    val count = tmp.size()
+    //volatile read, just do it once
+    val perc = percent
+    if (perc == 1.0 || count == 1) {
+      tmp.get(count - 1)
+    } else if (count > 1) {
+      val floatIdx = perc * count
+      val toInt = floatIdx.toInt
+      val idx = if (floatIdx != toInt || toInt == 0) toInt else toInt - 1
       tmp.get(idx)
     } else {
       Values.NO_VALUE

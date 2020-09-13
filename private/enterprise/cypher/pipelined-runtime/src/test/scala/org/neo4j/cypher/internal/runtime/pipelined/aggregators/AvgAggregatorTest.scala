@@ -15,7 +15,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AvgAggregatorTest
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AvgAggregatorTest.cutNanos
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.memory.EmptyMemoryTracker
-import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.DurationValue
 import org.neo4j.values.storable.NumberValue
 import org.neo4j.values.storable.Values
@@ -74,12 +73,12 @@ class FunctionAvgDistinctAggregatorTest extends AvgDistinctAggregatorTest with F
 abstract class AvgDistinctAggregatorTest extends CypherFunSuite with AggregatorTest {
 
   test("should avg DISTINCT numbers") {
-    val result = runStandardAggregator(AvgDistinctAggregator, randomIntValuesWithNulls.map(Array[AnyValue](_))).asInstanceOf[NumberValue].doubleValue()
+    val result = runSingleAggregation(randomIntValuesWithNulls).asInstanceOf[NumberValue].doubleValue()
     result should be(avg(randomInts.distinct) +- 0.0001)
   }
 
   test("should avg DISTINCT durations") {
-    val result = runStandardAggregator(AvgDistinctAggregator, randomDurationsWithNulls.map(Array[AnyValue](_))).asInstanceOf[DurationValue]
+    val result = runSingleAggregation(randomDurationsWithNulls).asInstanceOf[DurationValue]
     cutNanos(result) should be(cutNanos(avg(randomDurations.distinct)))
   }
 }

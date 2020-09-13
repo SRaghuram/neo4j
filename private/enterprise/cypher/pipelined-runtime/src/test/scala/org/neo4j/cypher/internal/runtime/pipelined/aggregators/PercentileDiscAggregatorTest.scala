@@ -47,7 +47,8 @@ class FunctionPercentileDiscAggregatorTest extends PercentileDiscAggregatorTest 
   override def getAggregationFunction(e: Array[Expression]): AggregationFunction =
     new PercentileDiscFunction(e(0), e(1), EmptyMemoryTracker.INSTANCE)
 
-  override def getAggregationFunction(e: Expression): AggregationFunction = ???
+  override def getAggregationFunction(e: Expression): AggregationFunction =
+    throw new IllegalStateException("Use `getAggregationFunction(Array[Expression])` instead")
 }
 
 abstract class PercentileDiscAggregatorTest extends CypherFunSuite with AggregatorTest {

@@ -47,13 +47,14 @@ class FunctionPercentileContAggregatorTest extends PercentileContAggregatorTest 
   override def getAggregationFunction(e: Array[Expression]): AggregationFunction =
     new PercentileContFunction(e(0), e(1), EmptyMemoryTracker.INSTANCE)
 
-  override def getAggregationFunction(e: Expression): AggregationFunction = ???
+  override def getAggregationFunction(e: Expression): AggregationFunction =
+    throw new IllegalStateException("Use `getAggregationFunction(Array[Expression])` instead")
 }
 
 abstract class PercentileContAggregatorTest extends CypherFunSuite with AggregatorTest {
   test("should compute percentile cont of numbers") {
     val input = randomIntValuesWithNulls.map(i => Array[AnyValue](i, Values.doubleValue(percentile)))
     val result = runAggregation(input).asInstanceOf[NumberValue].doubleValue()
-    result should be(percentileCont(randomInts))
+    result should be(percentileCont(randomInts) +- 0.0001)
   }
 }

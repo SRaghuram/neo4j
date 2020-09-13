@@ -44,7 +44,7 @@ class FunctionCollectAggregatorTest extends CollectAggregatorTest with FunctionA
 
 abstract class CollectAggregatorTest extends CypherFunSuite with AggregatorTest {
   test("should collect") {
-    val result = runAggregation(randomIntValuesWithNulls.map(Array[AnyValue](_)))
+    val result = runSingleAggregation(randomIntValuesWithNulls)
     result should be(VirtualValues.list(randomIntValues: _*))
   }
 }
@@ -68,7 +68,7 @@ class FunctionCollectDistinctAggregatorTest extends CollectDistinctAggregatorTes
 
 abstract class CollectDistinctAggregatorTest extends CypherFunSuite with AggregatorTest {
   test("should collect DISTINCT") {
-    val result = runAggregation(randomIntValuesWithNulls.map(Array[AnyValue](_)))
+    val result = runSingleAggregation(randomIntValuesWithNulls)
     result should be(VirtualValues.list(randomIntValues.distinct: _*))
   }
 }

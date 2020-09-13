@@ -48,7 +48,6 @@ trait AggregatorTest {
   }
 
   def runAggregationFunction(getFunction: Array[Expression] => AggregationFunction, values: Seq[Array[AnyValue]]): AnyValue = {
-    //require()
     val inputSize = if (values.isEmpty) 0 else values.head.length
     val args = (0 until inputSize).map(i => Variable(s"x$i"))
     val func = getFunction(args.toArray)
