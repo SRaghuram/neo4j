@@ -380,16 +380,18 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         acc: Accumulator => SkipChildren(acc)
 
       case e: Expression =>
-        allocateExpressionsInternal(e, slots, semanticTable, plan.id)
-        acc: Accumulator => SkipChildren(acc)
+        acc: Accumulator =>
+          allocateExpressionsInternal(e, slots, semanticTable, plan.id, acc)
+          SkipChildren(acc)
     }
   }
 
   private def allocateExpressionsInternal(expression: Expression,
                                           slots: SlotConfiguration,
                                           semanticTable: SemanticTable,
-                                          planId: Id): Unit = {
-    expression.treeFold[Accumulator](Accumulator(doNotTraverseExpression = None)) {
+                                          planId: Id,
+                                          acc: Accumulator = Accumulator(doNotTraverseExpression = None)): Unit = {
+    expression.treeFold[Accumulator](acc) {
       case otherPlan: LogicalPlan if otherPlan.id != planId =>
         acc: Accumulator => SkipChildren(acc) // Do not traverse the logical plan tree! We are only looking at the given lp
 
