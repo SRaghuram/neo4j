@@ -138,18 +138,29 @@ case class ArgumentStateBufferVariant(argumentStateMapId: ArgumentStateMapId) ex
 /**
  * This buffer maps to a LHSAccumulatingSink. It sits after a hash join build.
  */
-case class LHSAccumulatingBufferVariant(lhsArgumentStateMapId: ArgumentStateMapId, rhsArgumentStateMapId: ArgumentStateMapId) extends BufferVariant
+sealed trait JoinVariant
+case object CartesianProductVariant extends JoinVariant
+case object InnerVariant extends JoinVariant
+case object RightOuterVariant extends JoinVariant
+case object LeftOuterVariant extends JoinVariant
+
+case class LHSAccumulatingBufferVariant(lhsArgumentStateMapId: ArgumentStateMapId,
+                                        rhsArgumentStateMapId: ArgumentStateMapId,
+                                        joinVariant: JoinVariant) extends BufferVariant
 /**
  * This buffer maps to a RHSStreamingSink. It sits after a hash join 'pre-probe' (buffering data for later probe).
  */
-case class RHSStreamingBufferVariant(lhsArgumentStateMapId: ArgumentStateMapId, rhsArgumentStateMapId: ArgumentStateMapId) extends BufferVariant
+case class RHSStreamingBufferVariant(lhsArgumentStateMapId: ArgumentStateMapId,
+                                     rhsArgumentStateMapId: ArgumentStateMapId,
+                                     joinVariant: JoinVariant) extends BufferVariant
 /**
   * This buffer maps to a LHSAccumulatingRHSStreamingSource. It sits before a hash join probe.
  */
 case class LHSAccumulatingRHSStreamingBufferVariant(lhsSink: BufferDefinition,
                                                     rhsSink: BufferDefinition,
                                                     lhsArgumentStateMapId: ArgumentStateMapId,
-                                                    rhsArgumentStateMapId: ArgumentStateMapId) extends BufferVariant
+                                                    rhsArgumentStateMapId: ArgumentStateMapId,
+                                                    joinVariant: JoinVariant) extends BufferVariant
 
 // -- OUTPUT
 sealed trait OutputDefinition

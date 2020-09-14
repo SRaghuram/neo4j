@@ -85,7 +85,7 @@ object ExecutionGraphVisualizer {
           bufs(id) = new VirtualNodeHack(Map("name" -> s"LHSAccBuffer[$id]", "id" -> (id: Integer)),  "Buffer")
         case _: RHSStreamingBufferVariant =>
           bufs(id) = new VirtualNodeHack(Map("name" -> s"RHSStrBuffer[$id]", "id" -> (id: Integer)),  "Buffer")
-        case LHSAccumulatingRHSStreamingBufferVariant(_, _, _, _) =>
+        case LHSAccumulatingRHSStreamingBufferVariant(_, _, _, _, _) =>
           bufs(id) = new VirtualNodeHack(Map("name" -> s"MrBuff[$id]", "id" -> (id: Integer)),  "Buffer")
         case ArgumentStateBufferVariant(_) =>
           bufs(id) = new VirtualNodeHack(Map("name" -> s"ArgumentStateBuffer[$id]", "id" -> (id: Integer)),  "Buffer")
@@ -124,7 +124,7 @@ object ExecutionGraphVisualizer {
             case BufferId(delegateId) =>
               rels += new VirtualRelationshipHack(bufs(id), bufs(delegateId), Map.empty, "DELEGATES_TO")
           }
-        case LHSAccumulatingRHSStreamingBufferVariant(lhsSink, rhsSink, _, _) =>
+        case LHSAccumulatingRHSStreamingBufferVariant(lhsSink, rhsSink, _, _, _) =>
           rels += new VirtualRelationshipHack(bufs(lhsSink.id.x), bufs(id), Map.empty, "DELEGATES_TO")
           rels += new VirtualRelationshipHack(bufs(rhsSink.id.x), bufs(id), Map.empty, "DELEGATES_TO")
         case buf: LHSAccumulatingBufferVariant =>

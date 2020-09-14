@@ -16,18 +16,22 @@ import org.neo4j.cypher.internal.logical.plans.Aggregation
 import org.neo4j.cypher.internal.logical.plans.Anti
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
 import org.neo4j.cypher.internal.logical.plans.Distinct
+import org.neo4j.cypher.internal.logical.plans.LeftOuterHashJoin
 import org.neo4j.cypher.internal.logical.plans.Limit
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.LogicalPlans
+import org.neo4j.cypher.internal.logical.plans.NodeHashJoin
 import org.neo4j.cypher.internal.logical.plans.Optional
 import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
 import org.neo4j.cypher.internal.logical.plans.OrderedDistinct
 import org.neo4j.cypher.internal.logical.plans.PartialSort
 import org.neo4j.cypher.internal.logical.plans.PartialTop
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
+import org.neo4j.cypher.internal.logical.plans.RightOuterHashJoin
 import org.neo4j.cypher.internal.logical.plans.Skip
 import org.neo4j.cypher.internal.logical.plans.Sort
 import org.neo4j.cypher.internal.logical.plans.Top
+import org.neo4j.cypher.internal.logical.plans.ValueHashJoin
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.ApplyPlans
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.ArgumentSizes
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
@@ -265,8 +269,9 @@ object PipelineTreeBuilder {
                                      val lhsArgumentStateMapId: ArgumentStateMapId,
                                      rhsArgumentStateMapId: ArgumentStateMapId,
                                      val producingPipelineId: PipelineId,
-                                     bufferSlotConfiguration: SlotConfiguration) extends BufferDefiner(id, memoryTrackingOperatorId, bufferSlotConfiguration) {
-    override protected def variant: BufferVariant = LHSAccumulatingBufferVariant(lhsArgumentStateMapId, rhsArgumentStateMapId)
+                                     bufferSlotConfiguration: SlotConfiguration,
+                                     joinVariant: JoinVariant) extends BufferDefiner(id, memoryTrackingOperatorId, bufferSlotConfiguration) {
+    override protected def variant: BufferVariant = LHSAccumulatingBufferVariant(lhsArgumentStateMapId, rhsArgumentStateMapId, joinVariant)
   }
 
   class RHSStreamingBufferDefiner(id: BufferId,
@@ -274,8 +279,9 @@ object PipelineTreeBuilder {
                                   lhsArgumentStateMapId: ArgumentStateMapId,
                                   val rhsArgumentStateMapId: ArgumentStateMapId,
                                   val producingPipelineId: PipelineId,
-                                  bufferSlotConfiguration: SlotConfiguration) extends BufferDefiner(id, memoryTrackingOperatorId, bufferSlotConfiguration) {
-    override protected def variant: BufferVariant = RHSStreamingBufferVariant(lhsArgumentStateMapId, rhsArgumentStateMapId)
+                                  bufferSlotConfiguration: SlotConfiguration,
+                                  joinVariant: JoinVariant) extends BufferDefiner(id, memoryTrackingOperatorId, bufferSlotConfiguration) {
+    override protected def variant: BufferVariant = RHSStreamingBufferVariant(lhsArgumentStateMapId, rhsArgumentStateMapId, joinVariant)
   }
 
   class LHSAccumulatingRHSStreamingBufferDefiner(id: BufferId,
@@ -284,9 +290,10 @@ object PipelineTreeBuilder {
                                                  val rhsSink: RHSStreamingBufferDefiner,
                                                  val lhsArgumentStateMapId: ArgumentStateMapId,
                                                  val rhsArgumentStateMapId: ArgumentStateMapId,
-                                                 bufferSlotConfiguration: SlotConfiguration) extends BufferDefiner(id, memoryTrackingOperatorId, bufferSlotConfiguration) {
+                                                 bufferSlotConfiguration: SlotConfiguration,
+                                                 joinVariant: JoinVariant) extends BufferDefiner(id, memoryTrackingOperatorId, bufferSlotConfiguration) {
     override protected def variant: BufferVariant =
-      LHSAccumulatingRHSStreamingBufferVariant(lhsSink.result, rhsSink.result, lhsArgumentStateMapId, rhsArgumentStateMapId)
+      LHSAccumulatingRHSStreamingBufferVariant(lhsSink.result, rhsSink.result, lhsArgumentStateMapId, rhsArgumentStateMapId, joinVariant)
   }
 
   /**
@@ -402,14 +409,16 @@ object PipelineTreeBuilder {
                                              memoryTrackingOperatorId: Id,
                                              lhsArgumentStateMapId: ArgumentStateMapId,
                                              rhsArgumentStateMapId: ArgumentStateMapId,
-                                             bufferSlotConfiguration: SlotConfiguration): LHSAccumulatingRHSStreamingBufferDefiner = {
+                                             bufferSlotConfiguration: SlotConfiguration,
+                                             joinVariant: JoinVariant): LHSAccumulatingRHSStreamingBufferDefiner = {
       val lhsAccId = BufferId(buffers.size)
       val lhsAcc = new LHSAccumulatingBufferDefiner(lhsAccId,
                                                     memoryTrackingOperatorId,
                                                     lhsArgumentStateMapId,
                                                     rhsArgumentStateMapId,
                                                     lhsProducingPipelineId,
-                                                    bufferSlotConfiguration = null) // left null because buffer is never used as source
+                                                    bufferSlotConfiguration = null, // left null because buffer is never used as source
+                                                    joinVariant)
       buffers += lhsAcc
 
       val rhsAccId = BufferId(buffers.size)
@@ -418,7 +427,8 @@ object PipelineTreeBuilder {
                                                  lhsArgumentStateMapId,
                                                  rhsArgumentStateMapId,
                                                  rhsProducingPipelineId,
-                                                 bufferSlotConfiguration = null) // left null because buffer is never used as source
+                                                 bufferSlotConfiguration = null, // left null because buffer is never used as source
+                                                 joinVariant)
       buffers += rhsAcc
 
       val x = buffers.size
@@ -428,7 +438,8 @@ object PipelineTreeBuilder {
                                                                 rhsAcc,
                                                                 lhsArgumentStateMapId,
                                                                 rhsArgumentStateMapId,
-                                                                bufferSlotConfiguration)
+                                                                bufferSlotConfiguration,
+                                                                joinVariant)
       buffers += buffer
       buffer
     }
@@ -563,11 +574,12 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
                                                         rhs: PipelineDefiner,
                                                         planId: Id,
                                                         applyBuffer: ApplyBufferDefiner,
-                                                        argumentSlotOffset: Int): LHSAccumulatingRHSStreamingBufferDefiner = {
+                                                        argumentSlotOffset: Int,
+                                                        joinVariant: JoinVariant): LHSAccumulatingRHSStreamingBufferDefiner = {
     val lhsAsm = stateDefiner.newArgumentStateMap(planId, argumentSlotOffset)
     val rhsAsm = stateDefiner.newArgumentStateMap(planId, argumentSlotOffset)
     val lhsId = maybeLhs.map(_.id).getOrElse(PipelineId.NO_PIPELINE)
-    val output = stateDefiner.newLhsAccumulatingRhsStreamingBuffer(lhsId, rhs.id, planId, lhsAsm.id, rhsAsm.id, slotConfigurations(rhs.headPlan.id))
+    val output = stateDefiner.newLhsAccumulatingRhsStreamingBuffer(lhsId, rhs.id, planId, lhsAsm.id, rhsAsm.id, slotConfigurations(rhs.headPlan.id), joinVariant)
     maybeLhs match {
       case Some(lhs) =>
         lhs.fuseOrInterpret(MorselArgumentStateBufferOutput(output.lhsSink.id, argumentSlotOffset, planId))
@@ -634,9 +646,9 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         }
 
       case _: PartialTop =>
-        if (!breakingPolicy.breakOn(plan, applyPlans(plan.id)))
+        if (!breakingPolicy.breakOn(plan, applyPlans(plan.id))) {
           throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
-
+        }
         val buffer = outputToArgumentStreamBuffer(source, plan, argument, argument.argumentSlotOffset)
         val pipeline = newPipeline(plan, buffer)
         pipeline.lhs = source.id
@@ -801,7 +813,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
 
       case _: CartesianProduct =>
         if (breakingPolicy.breakOn(plan, applyPlans(plan.id))) {
-          val buffer = outputToLhsAccumulatingRhsStreamingBuffer(None, rhs, plan.id, argument, argument.argumentSlotOffset)
+          val buffer = outputToLhsAccumulatingRhsStreamingBuffer(None, rhs, plan.id, argument, argument.argumentSlotOffset, CartesianProductVariant)
           val pipeline = newPipeline(plan, buffer)
           pipeline.lhs = lhs.id
           pipeline.rhs = rhs.id
@@ -810,9 +822,15 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
           throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
         }
 
-      case _: plans.NodeHashJoin | _: plans.ValueHashJoin | _:plans.RightOuterHashJoin =>
+      case _: plans.NodeHashJoin | _: plans.ValueHashJoin | _:plans.RightOuterHashJoin | _:plans.LeftOuterHashJoin =>
         if (breakingPolicy.breakOn(plan, applyPlans(plan.id))) {
-          val buffer = outputToLhsAccumulatingRhsStreamingBuffer(Some(lhs), rhs, plan.id, argument, argument.argumentSlotOffset)
+          val joinVariant = plan match {
+            case _: NodeHashJoin => InnerVariant
+            case _: ValueHashJoin => InnerVariant
+            case _: RightOuterHashJoin => RightOuterVariant
+            case _: LeftOuterHashJoin => LeftOuterVariant
+          }
+          val buffer = outputToLhsAccumulatingRhsStreamingBuffer(Some(lhs), rhs, plan.id, argument, argument.argumentSlotOffset, joinVariant)
           val pipeline = newPipeline(plan, buffer)
           pipeline.lhs = lhs.id
           pipeline.rhs = rhs.id
@@ -992,11 +1010,13 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
   }
 
   private def createPropagateTopLevelLimitCallback(argument: ApplyBufferDefiner, workCancellerAsmId: ArgumentStateMapId): PipelineDefiner => Unit =
-    if (argument.argumentSlotOffset == TopLevelArgument.SLOT_OFFSET)
+    if (argument.argumentSlotOffset == TopLevelArgument.SLOT_OFFSET) {
       p => {
-        if (p.workCanceller.isEmpty)
+        if (p.workCanceller.isEmpty) {
           p.workCanceller = Some(workCancellerAsmId)
+        }
       }
-    else
+    } else {
       _ => ()
+    }
 }
