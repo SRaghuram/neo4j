@@ -296,8 +296,6 @@ abstract class BaseAggregationMapperOperatorNoGroupingTaskTemplate(val inner: Op
   protected val updatersVar: LocalVariable = variable[AggregatedRowUpdaters](codeGen.namer.nextVariableName("updaters"), constant(null))
   private val workerIdVar = variable[Int](codeGen.namer.nextVariableName("workerId"), constant(-1))
 
-  //private var compiledAggregationExpressions: Array[Array[IntermediateExpression]] = _
-
   protected def setupAggregation(): Unit
   protected def addUpdates: IntermediateRepresentation
 

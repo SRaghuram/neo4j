@@ -14,7 +14,7 @@ import org.neo4j.memory.Measurable
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 
-class DistinctStandardReducer(inner: StandardReducer, memoryTracker: MemoryTracker) extends StandardReducer {
+class DistinctStandardReducer(inner: StandardReducer, memoryTracker: MemoryTracker, distinctColumn: Int = 0) extends StandardReducer {
   // NOTE: The owner is responsible for closing the given memory tracker in the right scope, so we do not need to close the seenSet explicitly
   private val seenSet: DistinctSet[AnyValue] = DistinctSet.createDistinctSet(memoryTracker)
 
@@ -33,7 +33,7 @@ class DistinctStandardReducer(inner: StandardReducer, memoryTracker: MemoryTrack
    * Note we always assume the distinct is on the first column
    */
   override def add(values: Array[AnyValue]): Unit = {
-    if (seenSet.add(values(0))) {
+    if (seenSet.add(values(distinctColumn))) {
       inner.add(values)
     }
   }
