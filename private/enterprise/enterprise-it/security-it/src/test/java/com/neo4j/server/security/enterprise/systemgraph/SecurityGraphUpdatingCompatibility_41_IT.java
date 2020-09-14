@@ -16,9 +16,9 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.KernelTransaction;
 
-import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41;
 
 class SecurityGraphUpdatingCompatibility_41_IT extends SecurityGraphCompatibilityTestBase
 {

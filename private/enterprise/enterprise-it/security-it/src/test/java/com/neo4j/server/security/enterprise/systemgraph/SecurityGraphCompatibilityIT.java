@@ -30,16 +30,16 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
-import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_36;
-import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_40;
-import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41;
-import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41D1;
-import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_42D4;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_36;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_40;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41D1;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D4;
 
 class SecurityGraphCompatibilityIT extends SecurityGraphCompatibilityTestBase
 {

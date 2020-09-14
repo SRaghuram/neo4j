@@ -59,11 +59,6 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
-import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_36;
-import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_40;
-import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41;
-import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_41D1;
-import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.VERSION_42D4;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -80,6 +75,11 @@ import static org.neo4j.dbms.database.SystemGraphComponent.Status.REQUIRES_UPGRA
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.UNSUPPORTED_BUT_CAN_UPGRADE;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.UNSUPPORTED_FUTURE;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_36;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_40;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41D1;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D4;
 
 @TestDirectoryExtension
 @TestInstance( PER_CLASS )

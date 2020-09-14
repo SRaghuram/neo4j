@@ -28,6 +28,7 @@ import org.neo4j.server.security.systemgraph.ComponentVersion;
 import org.neo4j.server.security.systemgraph.KnownSystemComponentVersion;
 
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.UNKNOWN_VERSION;
 
 public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSystemComponentVersion
 {

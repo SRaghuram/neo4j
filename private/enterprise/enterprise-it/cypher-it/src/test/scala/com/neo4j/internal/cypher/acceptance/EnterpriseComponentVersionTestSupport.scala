@@ -21,10 +21,10 @@ import org.neo4j.dbms.database.SystemGraphComponent
 import org.neo4j.dbms.database.SystemGraphComponents
 import org.neo4j.logging.Log
 import org.neo4j.server.security.auth.InMemoryUserRepository
-import org.neo4j.server.security.systemgraph.KnownSystemComponentVersion.VERSION_40
-import org.neo4j.server.security.systemgraph.KnownSystemComponentVersion.VERSION_41
-import org.neo4j.server.security.systemgraph.KnownSystemComponentVersion.VERSION_41D1
-import org.neo4j.server.security.systemgraph.KnownSystemComponentVersion.VERSION_42D4
+import org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_40
+import org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41
+import org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41D1
+import org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D4
 import org.neo4j.server.security.systemgraph.UserSecurityGraphComponent
 import org.neo4j.test.TestDatabaseManagementServiceBuilder
 import org.scalactic.source

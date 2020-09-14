@@ -42,7 +42,7 @@ import org.neo4j.server.security.systemgraph.UserSecurityGraphComponent;
 import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.ROLE_LABEL;
 import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.USER_LABEL;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
-import static org.neo4j.server.security.systemgraph.KnownSystemComponentVersion.UNKNOWN_VERSION;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.UNKNOWN_VERSION;
 
 /**
  * This component contains roles and privileges and is an enterprise-only component.
