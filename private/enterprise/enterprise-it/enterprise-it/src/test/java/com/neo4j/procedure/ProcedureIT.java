@@ -67,6 +67,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -109,6 +110,7 @@ public class ProcedureIT
         new JarBuilder().createJarFor( plugins.createFile( "myProcedures.jar" ), ClassWithProcedures.class );
         new JarBuilder().createJarFor( plugins.createFile( "myProceduresWithKernelTransaction.jar" ), ClassWithProceduresUsingKernelTransaction.class );
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
+        new JarBuilder().createJarFor( plugins.createFile( "myWriteFunctions.jar" ), WriteInFunction.class );
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder()
                 .impermanent()
                 .setConfig( plugin_dir, plugins.absolutePath() )
@@ -1699,6 +1701,93 @@ public class ProcedureIT
         }
     }
 
+    @Test
+    void shouldNotWriteInFunction()
+    {
+        // Given
+        try ( Transaction tx = db.beginTx() )
+        {
+            tx.execute( "CREATE (f:Foo {key: 'initialValue'})" );
+            tx.commit();
+        }
+
+        assertThatThrownBy( () ->
+        {
+            try ( Transaction tx = db.beginTx() )
+            {
+                // When
+                tx.execute( "MATCH (f:Foo) RETURN com.neo4j.procedure.setProp(f, 'key', 'val')" ).accept( row -> true );
+                tx.commit();
+            }
+        } ).hasMessageStartingWith( "Set property for property 'key' is not allowed" );
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            Result result = tx.execute( "MATCH (f:Foo) RETURN f.key" );
+            assertThat( result.hasNext() ).isTrue();
+            assertThat( result.next().get( "f.key" ) ).isEqualTo( "initialValue" );
+            tx.commit();
+        }
+    }
+
+    @Test
+    void shouldNotWriteInUpdateInAggregationFunction()
+    {
+        // Given
+        try ( Transaction tx = db.beginTx() )
+        {
+            tx.execute( "CREATE (f:Foo {key: 'initialValue'})" );
+            tx.commit();
+        }
+
+        assertThatThrownBy( () ->
+        {
+            try ( Transaction tx = db.beginTx() )
+            {
+                // When
+                tx.execute( "MATCH (f:Foo) RETURN com.neo4j.procedure.writeInUpdate(f)" ).accept( row -> true );
+                tx.commit();
+            }
+        } ).hasMessageStartingWith( "Set property for property 'key' is not allowed" );
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            Result result = tx.execute( "MATCH (f:Foo) RETURN f.key" );
+            assertThat( result.hasNext() ).isTrue();
+            assertThat( result.next().get( "f.key" ) ).isEqualTo( "initialValue" );
+            tx.commit();
+        }
+    }
+
+    @Test
+    void shouldNotWriteInResultInAggregationFunction()
+    {
+        // Given
+        try ( Transaction tx = db.beginTx() )
+        {
+            tx.execute( "CREATE (f:Foo {key: 'initialValue'})" );
+            tx.commit();
+        }
+
+        assertThatThrownBy( () ->
+        {
+            try ( Transaction tx = db.beginTx() )
+            {
+                // When
+                tx.execute( "MATCH (f:Foo) RETURN com.neo4j.procedure.writeInResult(f)" ).accept( row -> true );
+                tx.commit();
+            }
+        } ).hasMessageStartingWith( "Set property for property 'key' is not allowed" );
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            Result result = tx.execute( "MATCH (f:Foo) RETURN f.key" );
+            assertThat( result.hasNext() ).isTrue();
+            assertThat( result.next().get( "f.key" ) ).isEqualTo( "initialValue" );
+            tx.commit();
+        }
+    }
+
     @SuppressWarnings( "WeakerAccess" )
     public static class Output
     {
@@ -2346,6 +2435,74 @@ public class ProcedureIT
             public byte[] result()
             {
                 return aggregated == null ? new byte[0] : aggregated;
+            }
+        }
+    }
+
+    public static class WriteInFunction
+    {
+        @Context
+        public Transaction transaction;
+
+        @UserFunction
+        public String setProp( @Name( "node" ) Node node, @Name( "name" ) String name, @Name( "value" ) String value )
+        {
+            node.setProperty( name, value );
+            return value;
+        }
+
+        @UserAggregationFunction
+        public WriteInUpdateAggregation writeInUpdate()
+        {
+            return new WriteInUpdateAggregation();
+        }
+
+        public static class WriteInUpdateAggregation
+        {
+            private long count;
+
+            @UserAggregationUpdate
+            public void aggregate( @Name( "node" ) Node node )
+            {
+                node.setProperty( "key", "val" );
+                count++;
+            }
+
+            @UserAggregationResult
+            public Long result()
+            {
+                return count;
+            }
+        }
+
+        @UserAggregationFunction
+        public WriteInResultAggregation writeInResult()
+        {
+            return new WriteInResultAggregation( transaction );
+        }
+
+        public static class WriteInResultAggregation
+        {
+
+            private Transaction transaction;
+            private long count;
+
+            WriteInResultAggregation( Transaction transaction )
+            {
+                this.transaction = transaction;
+            }
+
+            @UserAggregationUpdate
+            public void aggregate( @Name( "node" ) Node node )
+            {
+                count++;
+            }
+
+            @UserAggregationResult
+            public Long result()
+            {
+                transaction.execute( "MATCH (f:Foo) SET f.key = 'val'" );
+                return count;
             }
         }
     }
