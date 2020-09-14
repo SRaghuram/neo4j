@@ -33,8 +33,8 @@ class RestoreDatabaseCliTest
                 "USAGE%n" +
                 "%n" +
                 "restore [--force] [--move] [--verbose] [--database=<database>]%n" +
-                "        [--filter=<pattern>] --from=<path>[,<path>...]%n" +
-                "        [--neo4j-home-directory=<path>]%n" +
+                "        [--to-data-directory=<path>] [--to-data-tx-directory=<path>]%n" +
+                "        --from=<path>[,<path>...]...%n" +
                 "%n" +
                 "DESCRIPTION%n" +
                 "%n" +
@@ -42,19 +42,24 @@ class RestoreDatabaseCliTest
                 "%n" +
                 "OPTIONS%n" +
                 "%n" +
-                "      --verbose            Enable verbose output.%n" +
-                "      --from=<path>[,<path>...]%n" +
-                "                           Path from where to do a backup.%n" +
+                "      --verbose   Enable verbose output.%n" +
+                "      --from=<path>[,<path>...]...%n" +
+                "                  Path or paths from which to restore. Every path can contain%n" +
+                "                    asterisks or question marks in the last subpath. Multiple%n" +
+                "                    paths may be separated by a comma, but paths themselves%n" +
+                "                    must not contain commas.%n" +
                 "      --database=<database>%n" +
-                "                           Name of the database to restore. Cannot be combined%n" +
-                "                             with --filter%n" +
-                "      --filter=<pattern>   Filter --from folders based on the passed pattern.%n" +
-                "                             Cannot be combined with --database%n" +
-                "      --force              If an existing database should be replaced.%n" +
-                "      --move               Moves the backup files to the destination, rather%n" +
-                "                             than copying.%n" +
-                "      --neo4j-home-directory=<path>%n" +
-                "                           Home directory of restored database."
+                "                  Name of the database after restore. Use of this option is%n" +
+                "                    only allowed if a single is provided to the --from option%n" +
+                "      --force     If an existing database should be replaced.%n" +
+                "      --move      Moves the backup files to the destination, rather than%n" +
+                "                    copying.%n" +
+                "      --to-data-directory=<path>%n" +
+                "                  Base directory for databases. Use of this option is only%n" +
+                "                    allowed if a single is provided to the --from option%n" +
+                "      --to-data-tx-directory=<path>%n" +
+                "                  Base directory for transaction logs. Use of this option is%n" +
+                "                    only allowed if a single is provided to the --from option"
         ) ) );
     }
 }

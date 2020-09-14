@@ -7,8 +7,8 @@ package com.neo4j.commandline.dbms;
 
 import com.neo4j.restore.RestoreDatabaseCli;
 import org.junit.jupiter.api.Test;
-import picocli.CommandLine;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
@@ -17,12 +17,16 @@ import java.util.StringJoiner;
 import java.util.stream.Collectors;
 
 import org.neo4j.cli.CommandFailedException;
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.layout.Neo4jLayout;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static picocli.CommandLine.ParameterException;
+import static picocli.CommandLine.populateCommand;
 
 class RestoreCommandIT extends AbstractCommandIT
 {
@@ -36,8 +40,8 @@ class RestoreCommandIT extends AbstractCommandIT
                                                          () ->
                                                          {
                                                              final String fromPath = testBackup.toAbsolutePath().toString();
-                                                             restoreDatabase( Optional.of( databaseName ), fromPath, Optional.empty(),
-                                                                              Optional.empty(), Optional.empty() );
+                                                             restoreDatabase( Optional.of( databaseName ), fromPath,
+                                                                              Optional.empty(), Optional.empty(), Optional.empty() );
                                                          } );
         assertThat( exception.getCause().getMessage() ).startsWith( "The database is in use. Stop database" );
     }
@@ -53,8 +57,8 @@ class RestoreCommandIT extends AbstractCommandIT
         assertDoesNotThrow( () ->
                             {
                                 final String fromPath = testBackup.toAbsolutePath().toString();
-                                restoreDatabase( Optional.of( databaseName ), fromPath, Optional.empty(), Optional.empty(),
-                                                 Optional.empty() );
+                                restoreDatabase( Optional.of( databaseName ), fromPath,
+                                                 Optional.empty(), Optional.empty(), Optional.empty() );
                             } );
     }
 
@@ -107,7 +111,7 @@ class RestoreCommandIT extends AbstractCommandIT
     }
 
     @Test
-    void shouldRestoreAllDatabasesThatMatchTheFilter() throws IOException
+    void shouldRestoreAllDatabasesThatMatchTheFilter()
     {
         managementService.shutdownDatabase( databaseAPI.databaseName() );
         final List<Path> databaseDirs = List.of( testDirectory.directoryPath( "db1", "testDir" ),
@@ -118,7 +122,8 @@ class RestoreCommandIT extends AbstractCommandIT
         var fromPath = databaseDirs.get( 0 ).getParent().toAbsolutePath().toString(); // point to testDir folder
 
         //when
-        assertDoesNotThrow( () -> restoreDatabase( Optional.empty(), fromPath, Optional.empty(), Optional.of( "d*" ), Optional.empty() ) );
+        assertDoesNotThrow(
+                () -> restoreDatabase( Optional.empty(), concatenateSubPath( fromPath, "d*" ), Optional.empty(), Optional.empty(), Optional.empty() ) );
 
         //then db1 and db2 are created
         databaseDirs.subList( 0, 2 ).stream()
@@ -138,14 +143,14 @@ class RestoreCommandIT extends AbstractCommandIT
     }
 
     @Test
-    void shouldNotThrowExceptionWhenMultiDatabaseAreRestoreWithMoveFlag()
+    void shouldRestoreDatabaseInCustomDatabaseDirectory()
     {
         managementService.shutdownDatabase( databaseAPI.databaseName() );
-        final List<Path> databaseDirs = List.of( testDirectory.directoryPath( "db1", "testDir" ),
-                                                 testDirectory.directoryPath( "db2", "testDir" ) );
+
+        final List<Path> databaseDirs = List.of( testDirectory.directoryPath( "db1", "testDir" ) );
         databaseDirs.forEach( dir -> copy( databaseAPI.databaseLayout().databaseDirectory(), dir ) );
 
-        var homeDir = testDirectory.directoryPath( "home", "restoreHome" );
+        final var databaseRootFolder = testDirectory.directoryPath( "databases", "restoreResult" );
 
         //when
         assertDoesNotThrow( () ->
@@ -153,13 +158,18 @@ class RestoreCommandIT extends AbstractCommandIT
                                 final String fromPath = databaseDirs.stream()
                                                                     .map( dir -> dir.toAbsolutePath().toString() )
                                                                     .collect( Collectors.joining( "," ) );
-                                restoreDatabase( Optional.empty(), fromPath, Optional.of( homeDir ), Optional.empty(), Optional.of( true ) );
+                                restoreDatabase( Optional.empty(), fromPath, Optional.empty(), Optional.of( databaseRootFolder ), Optional.empty() );
                             } );
 
-        //then db1 and db2 are created
+        //then db1
         databaseDirs.stream()
                     .map( db -> db.getName( db.getNameCount() - 1 ).toString() )
-                    .map( path -> Neo4jLayout.of( homeDir ).databaseLayout( path ).databaseDirectory() )
+                    .map( path ->
+                          {
+                              final var newConfig = Config.newBuilder().fromConfig( config );
+                              newConfig.set( GraphDatabaseInternalSettings.databases_root_path, databaseRootFolder );
+                              return Neo4jLayout.of( newConfig.build() ).databaseLayout( path ).databaseDirectory();
+                          } )
                     .forEach( restoredDatabaseFolder ->
                               {
                                   assertThat( restoredDatabaseFolder.toFile() ).isDirectory();
@@ -168,71 +178,95 @@ class RestoreCommandIT extends AbstractCommandIT
     }
 
     @Test
-    void throwExceptionWhenBothDatabaseAndFilterAreDefined()
-    {
-        CommandFailedException exception = assertThrows( CommandFailedException.class,
-                                                         () ->
-                                                         {
-                                                             final String fromPath = Path.of( "/root" ).toAbsolutePath().toString();
-                                                             restoreDatabase( Optional.of( "test" ), fromPath, Optional.empty(),
-                                                                              Optional.of( "t*" ), Optional.empty() );
-                                                         } );
-
-        assertThat( exception.getMessage() ).contains( "Can't define database name and filter parameters together" );
-    }
-
-    @Test
     void throwExceptionWhenFromContainsListOfValuesAndDatabaseParameterIsDefined()
     {
         CommandFailedException exception = assertThrows( CommandFailedException.class,
                                                          () ->
                                                          {
-                                                             final String first = Path.of( "/root" ).toAbsolutePath().toString();
-                                                             final String second = Path.of( "/system" ).toAbsolutePath().toString();
+                                                             final String first = Path.of( "root" ).toString();
+                                                             final String second = Path.of( "system" ).toString();
 
-                                                             restoreDatabase( Optional.of( "test" ), first + "," + second, Optional.empty(),
-                                                                              Optional.empty(), Optional.empty() );
+                                                             restoreDatabase( Optional.of( "test" ), first + "," + second,
+                                                                              Optional.empty(), Optional.empty(), Optional.empty() );
                                                          } );
 
-        assertThat( exception.getMessage() ).contains( "Database parameter can be applied only when --fromPaths is single value" );
+        assertThat( exception.getMessage() ).contains( "--database parameter can be applied only when --from match single path" );
     }
 
     @Test
     void throwExceptionWhenFromPathPointToTheRootOfTheFileSystem()
     {
+        final var roots = File.listRoots();
+        if ( roots.length == 0 )
+        {
+            return;
+        }
+        ParameterException exception = assertThrows( ParameterException.class,
+                                                     () ->
+                                                     {
+
+                                                         final String fromPath = roots[0].toString();
+                                                         restoreDatabase( Optional.empty(), fromPath,
+                                                                          Optional.empty(), Optional.empty(), Optional.empty() );
+                                                     } );
+        assertThat( exception.getCause().getMessage() ).contains( "should not point to the root of the file system" );
+    }
+
+    @Test
+    void throwExceptionWhenFromContainsListOfValuesAndDatabaseRootIsNotEmpty()
+    {
         CommandFailedException exception = assertThrows( CommandFailedException.class,
                                                          () ->
                                                          {
-                                                             final String fromPath = Path.of( "/" ).toAbsolutePath().toString();
-                                                             restoreDatabase( Optional.empty(), fromPath, Optional.empty(),
-                                                                              Optional.empty(), Optional.empty() );
+                                                             final String first = Path.of( "a", "b" ).toAbsolutePath().toString();
+                                                             final String second = Path.of( "c", "d" ).toAbsolutePath().toString();
+
+                                                             restoreDatabase( Optional.empty(), first + "," + second,
+                                                                              Optional.empty(), Optional.of( Path.of( "k" ) ), Optional.empty() );
                                                          } );
-        assertThat( exception.getMessage() ).contains( "Error in executing restore for path" );
+
+        assertThat( exception.getMessage() ).contains( "--to-data-directory parameter can be applied only when --from match single path" );
     }
 
-    private void restoreDatabase( Optional<String> database, String fromPath, Optional<Path> homeDirectory,
-                                  Optional<String> filter, Optional<Boolean> move )
+    @Test
+    void throwExceptionWhenFromContainsListOfValuesAndTransactionRootIsNotEmpty()
+    {
+        CommandFailedException exception = assertThrows( CommandFailedException.class,
+                                                         () ->
+                                                         {
+                                                             final String first = Path.of( "a", "b" ).toAbsolutePath().toString();
+                                                             final String second = Path.of( "c", "d" ).toAbsolutePath().toString();
+
+                                                             restoreDatabase( Optional.empty(), first + "," + second,
+                                                                              Optional.empty(), Optional.empty(), Optional.of( Path.of( "k" ) ) );
+                                                         } );
+
+        assertThat( exception.getMessage() ).contains( "--to-data-tx-directory parameter can be applied only when --from match single path" );
+    }
+
+    private void restoreDatabase( Optional<String> database, String fromPath, Optional<Boolean> move,
+                                  Optional<Path> databaseRootFolder, Optional<Path> transactionRootFolder )
             throws IOException
     {
         var command = new RestoreDatabaseCli( getExtensionContext() );
 
-        String[] args = buildArgs( database, fromPath, homeDirectory, filter, move );
-        CommandLine.populateCommand( command, args );
+        String[] args = buildArgs( database, fromPath, move, databaseRootFolder, transactionRootFolder );
+        populateCommand( command, args );
 
         command.execute();
     }
 
     private String[] buildArgs( Optional<String> database,
                                 String fromPath,
-                                Optional<Path> homeDirectory,
-                                Optional<String> filter,
-                                Optional<Boolean> move )
+                                Optional<Boolean> move,
+                                Optional<Path> databaseRootFolder,
+                                Optional<Path> transactionsRootFolder )
     {
         StringJoiner args = new StringJoiner( "!!!" );
         database.ifPresent( v -> args.add( "--database=" + v ) );
         args.add( "--from=" + fromPath );
-        homeDirectory.ifPresent( v -> args.add( "--neo4j-home-directory=" + v ) );
-        filter.ifPresent( v -> args.add( "--filter=" + v ) );
+        databaseRootFolder.ifPresent( v -> args.add( "--to-data-directory=" + v ) );
+        transactionsRootFolder.ifPresent( v -> args.add( "--to-data-tx-directory=" + v ) );
         move.ifPresent( v -> args.add( "--move" ) );
 
         args.add( "--force" );
@@ -250,5 +284,15 @@ class RestoreCommandIT extends AbstractCommandIT
         {
             throw new RuntimeException( ex );
         }
+    }
+
+    private String concatenateSubPath( String... paths )
+    {
+        StringJoiner result = new StringJoiner( File.separator );
+        for ( String path : paths )
+        {
+            result.add( path );
+        }
+        return result.toString();
     }
 }

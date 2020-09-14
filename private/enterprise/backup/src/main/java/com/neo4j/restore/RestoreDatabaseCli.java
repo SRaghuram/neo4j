@@ -21,14 +21,13 @@ import org.neo4j.cli.Converters.DatabaseNameConverter;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.ConfigUtils;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.helpers.DatabaseNamePattern;
 import org.neo4j.configuration.helpers.FromPaths;
 import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.io.layout.Neo4jLayout;
 
-import static org.neo4j.cli.Converters.DatabaseNamePatternConverter;
-import static org.neo4j.cli.Converters.FromPathConverter;
+import static org.neo4j.cli.Converters.FromPathsConverter;
 import static picocli.CommandLine.Help.Visibility.NEVER;
 
 @Command(
@@ -40,18 +39,16 @@ public class RestoreDatabaseCli extends AbstractCommand
     @Option( names = "--from",
             paramLabel = "<path>[,<path>...]",
             required = true,
-            description = "Path from where to do a backup.",
-            converter = FromPathConverter.class )
+            arity = "1..*",
+            description = "Path or paths from which to restore. Every path can contain asterisks or question marks in the last subpath. " +
+                          "Multiple paths may be separated by a comma, but paths themselves must not contain commas.",
+            converter = FromPathsConverter.class )
     private FromPaths fromPaths;
     @Option( names = "--database",
-            description = "Name of the database to restore. Cannot be combined with --filter",
+            description = "Name of the database after restore. Use of this option is only allowed if a single is provided to the --from option",
             showDefaultValue = NEVER,
             converter = DatabaseNameConverter.class )
     private NormalizedDatabaseName database;
-    @Option( names = "--filter",
-            description = "Filter --from folders based on the passed pattern. Cannot be combined with --database",
-            converter = DatabaseNamePatternConverter.class )
-    private DatabaseNamePattern pattern;
     @Option( names = "--force",
             arity = "0",
             description = "If an existing database should be replaced." )
@@ -60,12 +57,19 @@ public class RestoreDatabaseCli extends AbstractCommand
             arity = "0",
             description = "Moves the backup files to the destination, rather than copying." )
     private boolean move;
+
     @Option(
-            names = "--neo4j-home-directory",
-            description = "Home directory of restored database.",
+            names = "--to-data-directory",
+            description = "Base directory for databases. Use of this option is only allowed if a single is provided to the --from option",
             paramLabel = "<path>"
     )
-    private Path toHome;
+    private Path databaseRootDirectory;
+    @Option(
+            names = "--to-data-tx-directory",
+            description = "Base directory for transaction logs. Use of this option is only allowed if a single is provided to the --from option",
+            paramLabel = "<path>"
+    )
+    private Path txRootDirectory;
 
     public RestoreDatabaseCli( ExecutionContext ctx )
     {
@@ -74,11 +78,13 @@ public class RestoreDatabaseCli extends AbstractCommand
 
     private Config loadNeo4jConfig( Path homeDir, Path configDir )
     {
-        final var config = Config.newBuilder()
-                                 .fromFile( configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME ).toFile() )
-                                 .set( GraphDatabaseSettings.neo4j_home, homeDir )
-                                 .build();
+        final var builder = Config.newBuilder()
+                                  .fromFile( configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME ).toFile() )
+                                  .set( GraphDatabaseSettings.neo4j_home, homeDir );
+        Optional.ofNullable( databaseRootDirectory ).ifPresent( v -> builder.set( GraphDatabaseInternalSettings.databases_root_path, v ) );
+        Optional.ofNullable( txRootDirectory ).ifPresent( v -> builder.set( GraphDatabaseSettings.transaction_logs_root_path, v ) );
 
+        final var config = builder.build();
         ConfigUtils.disableAllConnectors( config );
         return config;
     }
@@ -90,8 +96,8 @@ public class RestoreDatabaseCli extends AbstractCommand
 
         final var config = loadNeo4jConfig( ctx.homeDir(), ctx.confDir() );
 
-        final var paths = fromPaths.paths( Optional.ofNullable( pattern ) );
-        final var neo4jLayout = toHome != null ? Neo4jLayout.of( toHome ) : Neo4jLayout.of( config );
+        final var paths = fromPaths.getPaths();
+        final var neo4jLayout = Neo4jLayout.of( config );
         final var exceptions = execute( paths, neo4jLayout );
 
         exceptions.collect( Collectors.toList() )
@@ -133,26 +139,33 @@ public class RestoreDatabaseCli extends AbstractCommand
         {
             return database.name();
         }
-        else if ( fromPath.getNameCount() > 0 )
+        else
         {
             final String name = fromPath.getName( fromPath.getNameCount() - 1 ).toString();
-            if ( !name.isEmpty() )
+            if ( !name.trim().isEmpty() )
             {
                 return name;
             }
+            else
+            {
+                throw new IllegalArgumentException( "Last subpath of " + fromPath + " is empty" );
+            }
         }
-        throw new IllegalArgumentException( "From path with value=" + fromPath + " should not point to the root of the file system" );
     }
 
     private void validateArguments()
     {
-        if ( pattern != null && database != null )
-        {
-            throw new CommandFailedException( "Can't define database name and filter parameters together" );
-        }
         if ( database != null && !fromPaths.isSingle() )
         {
-            throw new CommandFailedException( "Database parameter can be applied only when --fromPaths is single value" );
+            throw new CommandFailedException( "--database parameter can be applied only when --from match single path" );
+        }
+        if ( databaseRootDirectory != null && !fromPaths.isSingle() )
+        {
+            throw new CommandFailedException( "--to-data-directory parameter can be applied only when --from match single path" );
+        }
+        if ( txRootDirectory != null && !fromPaths.isSingle() )
+        {
+            throw new CommandFailedException( "--to-data-tx-directory parameter can be applied only when --from match single path" );
         }
     }
 }
