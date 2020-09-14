@@ -234,6 +234,10 @@ class OptionalExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
         block(
           setUpCursors(fromNode,toNode),
           setField(canContinue, cursorNext[RelationshipTraversalCursor](loadField(relationshipsField))),
+          condition(not(loadField(canContinue))) {
+            setField(relationshipsField,
+              getStatic[RelationshipTraversalCursor, RelationshipTraversalCursor]("EMPTY"))
+          }
         )
       }{//else
         setField(relationshipsField,
