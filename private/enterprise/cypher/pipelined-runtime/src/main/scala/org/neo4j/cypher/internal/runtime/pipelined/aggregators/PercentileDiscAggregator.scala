@@ -30,6 +30,17 @@ case object PercentileDiscAggregator extends Aggregator {
 }
 
 /**
+ * Aggregator for percentileDisc(DISTINCT...).
+ */
+case object PercentileDiscDistinctAggregator extends Aggregator {
+  override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new DistinctStandardReducer(new PercentileDiscStandardReducer(memoryTracker), memoryTracker)
+  override def newConcurrentReducer: Reducer = new DistinctConcurrentMultiArgumentReducer(new PercentileDiscConcurrentReducer(), 0)
+
+  override val standardShallowSize: Long =
+    HeapEstimator.shallowSizeOfInstance(classOf[PercentileDiscStandardReducer])
+}
+
+/**
  * Aggregator for percentileCont(...).
  */
 case object PercentileContAggregator extends Aggregator {
@@ -38,6 +49,17 @@ case object PercentileContAggregator extends Aggregator {
 
   override val standardShallowSize: Long =
     HeapEstimator.shallowSizeOfInstance(classOf[PercentileContStandardReducer])
+}
+
+/**
+ * Aggregator for percentileCont(DISTINCT...).
+ */
+case object PercentileContDistinctAggregator extends Aggregator {
+  override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new DistinctStandardReducer(new PercentileContStandardReducer(memoryTracker), memoryTracker)
+  override def newConcurrentReducer: Reducer = new DistinctConcurrentMultiArgumentReducer(new PercentileContConcurrentReducer(), 0)
+
+  override val standardShallowSize: Long =
+    HeapEstimator.shallowSizeOfInstance(classOf[PercentileDiscStandardReducer])
 }
 
 abstract class PercentileStandardReducer(memoryTracker: MemoryTracker) extends DirectStandardReducer {

@@ -81,8 +81,14 @@ case class AggregatorFactory(physicalPlan: PhysicalPlan) {
           case functions.StdDevP =>
             (StdevPAggregator, Array(c.arguments.head))
 
+          case functions.PercentileDisc if c.distinct =>
+            (PercentileDiscDistinctAggregator, Array(c.arguments.head, c.arguments(1)))
+
           case functions.PercentileDisc =>
             (PercentileDiscAggregator, Array(c.arguments.head, c.arguments(1)))
+
+          case functions.PercentileCont if c.distinct =>
+            (PercentileContDistinctAggregator, Array(c.arguments.head, c.arguments(1)))
 
           case functions.PercentileCont =>
             (PercentileContAggregator, Array(c.arguments.head, c.arguments(1)))

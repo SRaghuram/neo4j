@@ -52,7 +52,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.aggregators.MaxAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.MinAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.NonEmptyAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.PercentileContAggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.PercentileContDistinctAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.PercentileDiscAggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.PercentileDiscDistinctAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.StdevAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.StdevDistinctAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.StdevPAggregator
@@ -317,7 +319,9 @@ object AggregationMapperOperatorTaskTemplate {
       case StdevPAggregator => getStatic[Aggregators,Aggregator]("STDEVP")
       case StdevPDistinctAggregator => getStatic[Aggregators,Aggregator]("STDEVP_DISTINCT")
       case PercentileContAggregator => getStatic[Aggregators,Aggregator]("PERCENTILE_CONT")
+      case PercentileContDistinctAggregator => getStatic[Aggregators,Aggregator]("PERCENTILE_CONT_DISTINCT")
       case PercentileDiscAggregator => getStatic[Aggregators,Aggregator]("PERCENTILE_DISC")
+      case PercentileDiscDistinctAggregator => getStatic[Aggregators,Aggregator]("PERCENTILE_DISC_DISTINCT")
       case aggregator =>
         throw new SyntaxException(s"Unexpected Aggregator: ${aggregator.getClass.getName}")
     }
