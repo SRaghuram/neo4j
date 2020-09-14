@@ -53,7 +53,7 @@ public class LabelSegment implements Segment
     @Override
     public String toString()
     {
-        return label == null ? "All labels" : "label: '" + label + "'";
+        return String.format( "NODE %s", label == null ? "*" : label );
     }
 
     @Override

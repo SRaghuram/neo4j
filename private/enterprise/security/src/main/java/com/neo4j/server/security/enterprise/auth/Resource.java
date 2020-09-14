@@ -42,7 +42,7 @@ public interface Resource
         @Override
         public String toString()
         {
-            return "graph";
+            return "";
         }
 
         @Override
@@ -78,7 +78,7 @@ public interface Resource
         @Override
         public String toString()
         {
-            return "database";
+            return "";
         }
 
         @Override
@@ -119,7 +119,7 @@ public interface Resource
         @Override
         public String toString()
         {
-            return "all properties ";
+            return "*";
         }
 
         @Override
@@ -163,7 +163,7 @@ public interface Resource
         @Override
         public String toString()
         {
-            return "property " + property;
+            return property;
         }
 
         @Override
@@ -218,7 +218,7 @@ public interface Resource
         @Override
         public String toString()
         {
-            return "all labels ";
+            return "*";
         }
 
         @Override
@@ -261,7 +261,7 @@ public interface Resource
         @Override
         public String toString()
         {
-            return "label " + label;
+            return label;
         }
 
         @Override

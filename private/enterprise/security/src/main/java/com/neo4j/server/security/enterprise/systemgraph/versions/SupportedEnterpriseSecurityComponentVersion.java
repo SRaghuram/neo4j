@@ -10,16 +10,19 @@ import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
@@ -315,5 +318,39 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
         {
             throw unsupportedAction();
         }
+    }
+
+    public List<String> getPrivilegesAsCommands( Transaction tx, String databaseName, boolean saveUsers )
+    {
+        ArrayList<String> result = new ArrayList<>();
+
+        try ( ResourceIterator<Node> roleNodes = tx.findNodes( ROLE_LABEL ) )
+        {
+            List<String> roles = roleNodes.stream().map( r -> r.getProperty( "name" ).toString() ).collect( Collectors.toList() );
+            for ( String role : roles )
+            {
+                Set<ResourcePrivilege> privileges = currentGetPrivilegeForRole( tx, role );
+                Set<ResourcePrivilege> relevantPrivileges = privileges.stream()
+                        .filter( p -> p.appliesToAll() || p.getDbName().equals( databaseName ) ).collect( Collectors.toSet() );
+                if ( !relevantPrivileges.isEmpty() )
+                {
+                    // TODO handle ` inside of role name
+                    result.add( String.format( "CREATE ROLE `%s` IF NOT EXISTS", role ) );
+                    for ( ResourcePrivilege privilege : relevantPrivileges )
+                    {
+                        result.add( privilege.asGrantFor( role, databaseName ) );
+                    }
+
+                    if ( saveUsers )
+                    {
+                        // CREATE USER user IF NOT EXISTS SET ENCRYPTED PASSWORD pass CHANGE REQUIRED
+                        // find all users connected to this role and save
+                    }
+                }
+            }
+        }
+
+
+        return result;
     }
 }

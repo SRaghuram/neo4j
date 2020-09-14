@@ -78,6 +78,12 @@ public class EnterpriseSecurityComponentVersion_0_35 extends KnownEnterpriseSecu
     }
 
     @Override
+    public List<String> getPrivilegesAsCommands( Transaction tx, String databaseName, boolean saveUsers )
+    {
+        throw unsupported();
+    }
+
+    @Override
     public void assignDefaultPrivileges( Node role, String predefinedRole )
     {
         throw unsupported();

@@ -34,12 +34,14 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
 {
     static final Label DATABASE_ALL_LABEL = Label.label( "DatabaseAll" );
     static final Label DATABASE_DEFAULT_LABEL = Label.label( "DatabaseDefault" );
+    static final Label DATABASE_LABEL = Label.label( "Database" );
 
     public static final Label USER_LABEL = Label.label( "User" );
     public static final Label ROLE_LABEL = Label.label( "Role" );
     static final Label PRIVILEGE_LABEL = Label.label( "Privilege" );
 
     public static final RelationshipType GRANTED = RelationshipType.withName( "GRANTED" );
+    public static final RelationshipType DENIED = RelationshipType.withName( "DENIED" );
     private static final RelationshipType USER_TO_ROLE = RelationshipType.withName( "HAS_ROLE" );
     public static final RelationshipType SCOPE = RelationshipType.withName( "SCOPE" );
     static final RelationshipType APPLIES_TO = RelationshipType.withName( "APPLIES_TO" );
@@ -79,6 +81,8 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
         throw unsupported();
     }
 
+    public abstract List<String> getPrivilegesAsCommands( Transaction tx, String databaseName, boolean saveUsers );
+    
     public boolean isEmpty()
     {
         return roleNodes.isEmpty();

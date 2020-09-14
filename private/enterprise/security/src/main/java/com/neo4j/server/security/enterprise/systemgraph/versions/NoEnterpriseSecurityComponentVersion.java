@@ -7,6 +7,8 @@ package com.neo4j.server.security.enterprise.systemgraph.versions;
 
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 
+import java.util.List;
+
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
@@ -34,6 +36,12 @@ public class NoEnterpriseSecurityComponentVersion extends KnownEnterpriseSecurit
 
     @Override
     public void assertUpdateWithAction( PrivilegeAction action, SpecialDatabase specialDatabase ) throws UnsupportedOperationException
+    {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public List<String> getPrivilegesAsCommands( Transaction tx, String databaseName, boolean saveUsers )
     {
         throw new UnsupportedOperationException();
     }

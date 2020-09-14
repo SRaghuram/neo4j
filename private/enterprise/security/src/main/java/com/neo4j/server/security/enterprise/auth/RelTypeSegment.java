@@ -53,7 +53,7 @@ public class RelTypeSegment implements Segment
     @Override
     public String toString()
     {
-        return relType == null ? "All relationships" : "relType: '" + relType + "'";
+        return String.format( "RELATIONSHIP %s", relType == null ? "*" : relType );
     }
 
     @Override

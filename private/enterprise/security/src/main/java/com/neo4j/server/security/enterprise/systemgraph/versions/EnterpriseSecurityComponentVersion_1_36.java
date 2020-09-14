@@ -64,6 +64,12 @@ public class EnterpriseSecurityComponentVersion_1_36 extends KnownEnterpriseSecu
     }
 
     @Override
+    public List<String> getPrivilegesAsCommands( Transaction tx, String databaseName, boolean saveUsers )
+    {
+        throw unsupported();
+    }
+
+    @Override
     public void setUpDefaultPrivileges( Transaction tx )
     {
         if ( !nodesWithLabelExist( tx, databaseLabel ) )
