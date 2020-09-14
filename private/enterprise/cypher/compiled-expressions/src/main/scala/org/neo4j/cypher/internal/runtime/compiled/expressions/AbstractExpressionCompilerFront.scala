@@ -2409,7 +2409,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
     //these are the temp variables used
     val returnValue = namer.nextVariableName()
-    val local = variable[AnyValue](returnValue, constant(null))
+    val local = variable[Value](returnValue, constant(null))
     val seenNull = namer.nextVariableName()
     val error = namer.nextVariableName()
     //this is setting up  a `if (returnValue != breakValue)`

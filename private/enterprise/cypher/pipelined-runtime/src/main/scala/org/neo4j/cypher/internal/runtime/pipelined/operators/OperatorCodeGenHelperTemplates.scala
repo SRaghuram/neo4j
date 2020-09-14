@@ -30,6 +30,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.noValue
+import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.param
 import org.neo4j.codegen.api.IntermediateRepresentation.self
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
@@ -547,9 +548,9 @@ object OperatorCodeGenHelperTemplates {
   def closeEvent(id: Id): IntermediateRepresentation =
     condition(isNotNull(event(id)))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit]("close")))
 
-  def dbHit(event: IntermediateRepresentation): IntermediateRepresentation = condition(isNotNull(event))(invoke(event, TRACE_DB_HIT))
-  def dbHits(event: IntermediateRepresentation, nHits: IntermediateRepresentation): IntermediateRepresentation = condition(isNotNull(event))(invoke(event, TRACE_DB_HITS, nHits))
-  def onNode(event: IntermediateRepresentation, node: IntermediateRepresentation): IntermediateRepresentation = condition(isNotNull(event))(invoke(event, TRACE_ON_NODE, node))
+  def dbHit(event: IntermediateRepresentation): IntermediateRepresentation = if (event == constant(null)) noop() else condition(isNotNull(event))(invoke(event, TRACE_DB_HIT))
+  def dbHits(event: IntermediateRepresentation, nHits: IntermediateRepresentation): IntermediateRepresentation = if (event == constant(null)) noop() else condition(isNotNull(event))(invoke(event, TRACE_DB_HITS, nHits))
+  def onNode(event: IntermediateRepresentation, node: IntermediateRepresentation): IntermediateRepresentation = if (event == constant(null)) noop() else condition(isNotNull(event))(invoke(event, TRACE_ON_NODE, node))
   def indexReadSession(offset: Int): IntermediateRepresentation =
     arrayLoad(invoke(QUERY_STATE, method[PipelinedQueryState, Array[IndexReadSession]]("queryIndexes")), offset)
 
