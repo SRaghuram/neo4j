@@ -9,6 +9,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
+import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -324,21 +325,30 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
     {
         ArrayList<String> result = new ArrayList<>();
 
+        String defaultDatabaseName = getDefaultDatabaseName( tx );
+
         try ( ResourceIterator<Node> roleNodes = tx.findNodes( ROLE_LABEL ) )
         {
-            List<String> roles = roleNodes.stream().map( r -> r.getProperty( "name" ).toString() ).collect( Collectors.toList() );
+            List<String> roles = roleNodes.stream()
+                                          .map( r -> r.getProperty( "name" ).toString() )
+                                          .filter( r -> !r.equals( PUBLIC ) )
+                                          .collect( Collectors.toList() );
             for ( String role : roles )
             {
                 Set<ResourcePrivilege> privileges = currentGetPrivilegeForRole( tx, role );
                 Set<ResourcePrivilege> relevantPrivileges = privileges.stream()
-                        .filter( p -> p.appliesToAll() || p.getDbName().equals( databaseName ) ).collect( Collectors.toSet() );
+                                                                      .filter( p ->
+                                                                              p.appliesToAll() ||
+                                                                              p.getDbName().equals( databaseName ) ||
+                                                                              databaseName.equals( defaultDatabaseName ) && p.appliesToDefault() )
+                                                                      .collect( Collectors.toSet() );
+
                 if ( !relevantPrivileges.isEmpty() )
                 {
-                    // TODO handle ` inside of role name
                     result.add( String.format( "CREATE ROLE `%s` IF NOT EXISTS", role ) );
                     for ( ResourcePrivilege privilege : relevantPrivileges )
                     {
-                        result.add( privilege.asGrantFor( role, databaseName ) );
+                        result.addAll( privilege.asGrantFor( role, databaseName ) );
                     }
 
                     if ( saveUsers )
@@ -352,5 +362,16 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
 
 
         return result;
+    }
+
+    private String getDefaultDatabaseName( Transaction tx )
+    {
+        String defaultDatabaseName = "";
+        Node defaultDatabase = tx.findNode( DATABASE_LABEL, "default", true );
+        if ( defaultDatabase != null )
+        {
+            defaultDatabaseName = defaultDatabase.getProperty( "name", "" ).toString();
+        }
+        return defaultDatabaseName;
     }
 }

@@ -5,6 +5,9 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import java.util.Collections;
+import java.util.List;
+
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
@@ -65,10 +68,10 @@ public class ResourcePrivilege
                 return true;
             }
         }
-        return allDatabases || database.equals( dbName ) || TRANSACTION_MANAGEMENT.satisfies(action);
+        return allDatabases || database.equals( dbName ) || TRANSACTION_MANAGEMENT.satisfies( action );
     }
 
-    boolean appliesToDefault()
+    public boolean appliesToDefault()
     {
         return defaultDatabase;
     }
@@ -103,17 +106,17 @@ public class ResourcePrivilege
         return allDatabases;
     }
 
-    public String asGrantFor( String role )
+    public List<String> asGrantFor( String role )
     {
-        return asGrantFor( role, "", false );
+        return asGrantFor( role, "", false, true );
     }
 
-    public String asGrantFor( String role, String database )
+    public List<String> asGrantFor( String role, String database )
     {
-        return asGrantFor( role, database, true );
+        return asGrantFor( role, database, true, false );
     }
 
-    private String asGrantFor( String role, String database, boolean replaceDbName )
+    private List<String> asGrantFor( String role, String database, boolean replaceDbName, boolean keepDbmsActions )
     {
         String databaseName;
         if ( replaceDbName )
@@ -128,73 +131,78 @@ public class ResourcePrivilege
         switch ( action )
         {
         case ACCESS:
-            return String.format( "%s ACCESS ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role );
+            return List.of( String.format( "%s ACCESS ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role ) );
 
         case TRAVERSE:
-            return String.format( "%s TRAVERSE ON GRAPH %s %s TO `%s`", privilegeType.prefix, databaseName, segment.toString(), role );
+            return List.of( String.format( "%s TRAVERSE ON GRAPH %s %s TO `%s`", privilegeType.prefix, databaseName, segment.toString(), role ) );
         case READ:
-            return String.format( "%s READ {%s} ON GRAPH %s %s TO `%s`", privilegeType.prefix, resource.toString(), databaseName, segment.toString(), role );
+            return List.of( String.format( "%s READ {%s} ON GRAPH %s %s TO `%s`", privilegeType.prefix, resource.toString(), databaseName, segment.toString(),
+                                           role ) );
         case MATCH:
-            return String.format( "%s MATCH {%s} ON GRAPH %s %s TO `%s`", privilegeType.prefix, resource.toString(), databaseName, segment.toString(), role );
+            return List.of( String.format( "%s MATCH {%s} ON GRAPH %s %s TO `%s`", privilegeType.prefix, resource.toString(), databaseName, segment.toString(),
+                                           role ) );
 
         case MERGE:
-            return String.format( "%s MERGE {%s} ON GRAPH %s %s TO `%s`", privilegeType.prefix, resource.toString(), databaseName, segment.toString(), role );
+            return List.of( String.format( "%s MERGE {%s} ON GRAPH %s %s TO `%s`", privilegeType.prefix, resource.toString(), databaseName, segment.toString(),
+                                           role ) );
 
         case WRITE:
-            return String.format( "%s WRITE ON GRAPH %s TO `%s`", privilegeType.prefix, databaseName, role );
+            return List.of( String.format( "%s WRITE ON GRAPH %s TO `%s`", privilegeType.prefix, databaseName, role ) );
 
         case SET_LABEL:
-            return String.format( "%s SET LABEL %s ON GRAPH %s TO `%s`", privilegeType.prefix, resource.toString(), databaseName, role );
+            return List.of( String.format( "%s SET LABEL %s ON GRAPH %s TO `%s`", privilegeType.prefix, resource.toString(), databaseName, role ) );
         case REMOVE_LABEL:
-            return String.format( "%s REMOVE LABEL %s ON GRAPH %s TO `%s`", privilegeType.prefix, resource.toString(), databaseName, role );
+            return List.of( String.format( "%s REMOVE LABEL %s ON GRAPH %s TO `%s`", privilegeType.prefix, resource.toString(), databaseName, role ) );
         case CREATE_ELEMENT:
-            return String.format( "%s CREATE ON GRAPH %s %s TO `%s`", privilegeType.prefix, databaseName, segment.toString(), role );
+            return List.of( String.format( "%s CREATE ON GRAPH %s %s TO `%s`", privilegeType.prefix, databaseName, segment.toString(), role ) );
         case DELETE_ELEMENT:
-            return String.format( "%s DELETE ON GRAPH %s %s TO `%s`", privilegeType.prefix, databaseName, segment.toString(), role );
+            return List.of( String.format( "%s DELETE ON GRAPH %s %s TO `%s`", privilegeType.prefix, databaseName, segment.toString(), role ) );
         case SET_PROPERTY:
-            return String.format( "%s SET PROPERTY {%s} ON GRAPH %s %s TO `%s`", privilegeType.prefix, resource.toString(), databaseName, segment.toString(), role );
+            return List.of( String.format( "%s SET PROPERTY {%s} ON GRAPH %s %s TO `%s`", privilegeType.prefix, resource.toString(), databaseName,
+                                           segment.toString(), role ) );
 
         case GRAPH_ACTIONS:
-            return String.format( "%s ALL GRAPH PRIVILEGES ON GRAPH %s TO `%s`", privilegeType.prefix, databaseName, role );
+            return List.of( String.format( "%s ALL GRAPH PRIVILEGES ON GRAPH %s TO `%s`", privilegeType.prefix, databaseName, role ) );
 
         case CREATE_LABEL:
-            return String.format( "%s CREATE NEW NODE LABEL ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role );
+            return List.of( String.format( "%s CREATE NEW NODE LABEL ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role ) );
         case CREATE_RELTYPE:
-            return String.format( "%s CREATE NEW RELATIONSHIP TYPE ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role );
+            return List.of( String.format( "%s CREATE NEW RELATIONSHIP TYPE ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role ) );
         case CREATE_PROPERTYKEY:
-            return String.format( "%s CREATE NEW PROPERTY NAME ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role );
+            return List.of( String.format( "%s CREATE NEW PROPERTY NAME ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role ) );
         case TOKEN:
-            return String.format( "%s NAME MANAGEMENT ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role );
+            return List.of( String.format( "%s NAME MANAGEMENT ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role ) );
 
         case CREATE_INDEX:
-            return String.format( "%s CREATE INDEX ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role );
+            return List.of( String.format( "%s CREATE INDEX ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role ) );
         case DROP_INDEX:
-            return String.format( "%s DROP INDEX ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role );
+            return List.of( String.format( "%s DROP INDEX ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role ) );
         case INDEX:
-            return String.format( "%s INDEX MANAGEMENT ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role );
+            return List.of( String.format( "%s INDEX MANAGEMENT ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role ) );
         case CREATE_CONSTRAINT:
-            return String.format( "%s CREATE CONSTRAINT ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role );
+            return List.of( String.format( "%s CREATE CONSTRAINT ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role ) );
         case DROP_CONSTRAINT:
-            return String.format( "%s DROP CONSTRAINT ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role );
+            return List.of( String.format( "%s DROP CONSTRAINT ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role ) );
         case CONSTRAINT:
-            return String.format( "%s CONSTRAINT MANAGEMENT ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role );
+            return List.of( String.format( "%s CONSTRAINT MANAGEMENT ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role ) );
 
         case START_DATABASE:
-            return String.format( "%s START ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role );
+            return List.of( String.format( "%s START ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role ) );
         case STOP_DATABASE:
-            return String.format( "%s STOP ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role );
+            return List.of( String.format( "%s STOP ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role ) );
 
         case CREATE_DATABASE:
-            return String.format( "%s CREATE DATABASE ON DBMS TO `%s`", privilegeType.prefix, role );
+            return keepDbmsActions ? List.of( String.format( "%s CREATE DATABASE ON DBMS TO `%s`", privilegeType.prefix, role ) ) : Collections.emptyList();
         case DROP_DATABASE:
-            return String.format( "%s DROP DATABASE ON DBMS TO `%s`", privilegeType.prefix, role );
+            return List.of( String.format( "%s DROP DATABASE ON DBMS TO `%s`", privilegeType.prefix, role ) );
         case DATABASE_MANAGEMENT:
-            return String.format( "%s DATABASE MANAGEMENT ON DBMS TO `%s`", privilegeType.prefix, role );
+            return List.of( String.format( "%s DATABASE MANAGEMENT ON DBMS TO `%s`", privilegeType.prefix, role ) );
 
         case SHOW_TRANSACTION:
-            return String.format( "%s SHOW TRANSACTION (%s) ON DATABASE %s TO `%s`", privilegeType.prefix, segment.toString(), databaseName, role );
+            return List.of( String.format( "%s SHOW TRANSACTION (%s) ON DATABASE %s TO `%s`", privilegeType.prefix, segment.toString(), databaseName, role ) );
         case TERMINATE_TRANSACTION:
-            return String.format( "%s TERMINATE TRANSACTION (%s) ON DATABASE %s TO `%s`", privilegeType.prefix, segment.toString(), databaseName, role );
+            return List.of( String.format( "%s TERMINATE TRANSACTION (%s) ON DATABASE %s TO `%s`", privilegeType.prefix, segment.toString(), databaseName,
+                                           role ) );
         case SHOW_CONNECTION:
             // NOT USED
             break;
@@ -202,62 +210,67 @@ public class ResourcePrivilege
             // NOT USED
             break;
         case TRANSACTION_MANAGEMENT:
-            return String.format( "%s TRANSACTION MANAGEMENT (%s) ON DATABASE %s TO `%s`", privilegeType.prefix, segment.toString(), databaseName, role );
-
+            return List.of( String.format( "%s TRANSACTION MANAGEMENT (%s) ON DATABASE %s TO `%s`", privilegeType.prefix, segment.toString(), databaseName,
+                                           role ) );
 
         case SHOW_USER:
-            break;
+            return List.of( String.format( "%s SHOW USER ON DBMS TO `%s`", privilegeType.prefix, role ) );
         case CREATE_USER:
-            break;
+            return List.of( String.format( "%s CREATE USER ON DBMS TO `%s`", privilegeType.prefix, role ) );
         case SET_USER_STATUS:
-            break;
+            return List.of( String.format( "%s SET USER STATUS ON DBMS TO `%s`", privilegeType.prefix, role ) );
         case SET_PASSWORDS:
-            break;
+            return List.of( String.format( "%s SET PASSWORD ON DBMS TO `%s`", privilegeType.prefix, role ) );
         case DROP_USER:
-            break;
+            return List.of( String.format( "%s DROP USER ON DBMS TO `%s`", privilegeType.prefix, role ) );
         case ALTER_USER:
-            break;
+            return List.of( String.format( "%s ALTER USER ON DBMS TO `%s`", privilegeType.prefix, role ) );
         case USER_MANAGEMENT:
-            break;
+            return List.of( String.format( "%s USER MANAGEMENT ON DBMS TO `%s`", privilegeType.prefix, role ) );
 
         case SHOW_ROLE:
-            break;
+            return List.of( String.format( "%s SHOW ROLE ON DBMS TO `%s`", privilegeType.prefix, role ) );
         case CREATE_ROLE:
-            break;
+            return List.of( String.format( "%s CREATE ROLE ON DBMS TO `%s`", privilegeType.prefix, role ) );
         case DROP_ROLE:
-            break;
+            return List.of( String.format( "%s DROP ROLE ON DBMS TO `%s`", privilegeType.prefix, role ) );
         case ASSIGN_ROLE:
-            break;
+            return List.of( String.format( "%s ASSIGN ROLE ON DBMS TO `%s`", privilegeType.prefix, role ) );
         case REMOVE_ROLE:
-            break;
+            return List.of( String.format( "%s REMOVE ROLE ON DBMS TO `%s`", privilegeType.prefix, role ) );
         case ROLE_MANAGEMENT:
-            break;
+            return List.of( String.format( "%s ROLE MANAGEMENT ON DBMS TO `%s`", privilegeType.prefix, role ) );
 
         case SHOW_PRIVILEGE:
-            break;
+            return List.of( String.format( "%s SHOW PRIVILEGE ON DBMS TO `%s`", privilegeType.prefix, role ) );
         case ASSIGN_PRIVILEGE:
-            break;
+            return List.of( String.format( "%s ASSIGN PRIVILEGE ON DBMS TO `%s`", privilegeType.prefix, role ) );
         case REMOVE_PRIVILEGE:
-            break;
+            return List.of( String.format( "%s REMOVE PRIVILEGE ON DBMS TO `%s`", privilegeType.prefix, role ) );
         case PRIVILEGE_MANAGEMENT:
-            break;
+            return List.of( String.format( "%s PRIVILEGE MANAGEMENT ON DBMS TO `%s`", privilegeType.prefix, role ) );
 
         case ADMIN:
-            break;
-
+            return List.of(
+                    String.format( "%s ALL DBMS PRIVILEGES ON DBMS TO `%s`", privilegeType.prefix, role ),
+                    String.format( "%s TRANSACTION MANAGEMENT (*) ON DATABASE %s TO `%s`", privilegeType.prefix, database, role ),
+                    String.format( "%s START ON DATABASE %s TO `%s`", privilegeType.prefix, database, role ),
+                    String.format( "%s STOP ON DATABASE %s TO `%s`", privilegeType.prefix, database, role )
+            );
 
         case DATABASE_ACTIONS:
-            break;
+            return List.of( String.format( "%s ALL DATABASE PRIVILEGES ON %s TO `%s`", privilegeType.prefix, database, role ) );
         case DBMS_ACTIONS:
-            break;
+            return List.of( String.format( "%s ALL DBMS PRIVILEGES ON DBMS TO `%s`", privilegeType.prefix, role ) );
 
         case EXECUTE:
-            return String.format( "%s EXECUTE PROCEDURE %s ON DBMS TO `%s`", privilegeType.prefix, segment.toString(), role );
+            return List.of( String.format( "%s EXECUTE PROCEDURE %s ON DBMS TO `%s`", privilegeType.prefix, segment.toString(), role ) );
+        //case EXECUTE_BOOSTED:
+        //return List.of(String.format( "%s EXECUTE BOOSTED PROCEDURE %s ON DBMS TO `%s`", privilegeType.prefix, segment.toString(), role ));
         case ADMIN_PROCEDURE:
-            break;
-
+            return List.of( String.format( "%s EXECUTE ADMIN PROCEDURES ON DBMS TO `%s`", privilegeType.prefix, role ) );
         }
-        return "";
+        return Collections.emptyList();
     }
 
     @Override
