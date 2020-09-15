@@ -32,6 +32,7 @@ import static java.lang.Runtime.getRuntime;
 import static java.time.Duration.ofMinutes;
 import static java.time.Duration.ofSeconds;
 import static java.util.Collections.emptyList;
+import static org.neo4j.configuration.GraphDatabaseSettings.data_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_advertised_address;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_listen_address;
 import static org.neo4j.configuration.SettingConstraints.ifCluster;
@@ -57,9 +58,14 @@ import static org.neo4j.io.ByteUnit.mebiBytes;
 @PublicApi
 public class CausalClusteringSettings implements SettingsDeclaration
 {
+    public static final String DEFAULT_CLUSTER_STATE_DIRECTORY_NAME = "cluster-state";
     private static final int DEFAULT_DISCOVERY_PORT = 5000;
     private static final int DEFAULT_TRANSACTION_PORT = 6000;
     private static final int DEFAULT_RAFT_PORT = 7000;
+
+    @Description( "Directory to hold cluster state including Raft log" )
+    public static final Setting<Path> cluster_state_directory = newBuilder( "causal_clustering.cluster_state_directory", PATH,
+            Path.of( DEFAULT_CLUSTER_STATE_DIRECTORY_NAME ) ).setDependency( data_directory ).immutable().build();
 
     @Description( "Time out for a new member to catch up" )
     public static final Setting<Duration> join_catch_up_timeout =

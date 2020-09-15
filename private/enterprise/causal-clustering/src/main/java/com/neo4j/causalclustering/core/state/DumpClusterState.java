@@ -22,6 +22,7 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.memory.EmptyMemoryTracker;
 
+import static com.neo4j.configuration.CausalClusteringSettings.DEFAULT_CLUSTER_STATE_DIRECTORY_NAME;
 import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
 
 public class DumpClusterState
@@ -135,7 +136,7 @@ public class DumpClusterState
 
     private static ClusterStateStorageFactory newCoreStateStorageService( FileSystemAbstraction fs, Path dataDirectory )
     {
-        ClusterStateLayout layout = ClusterStateLayout.of( dataDirectory );
+        ClusterStateLayout layout = ClusterStateLayout.of( dataDirectory.resolve( DEFAULT_CLUSTER_STATE_DIRECTORY_NAME ) );
         return new ClusterStateStorageFactory( fs, layout, NullLogProvider.getInstance(), Config.defaults(), EmptyMemoryTracker.INSTANCE );
     }
 }

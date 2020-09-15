@@ -29,11 +29,13 @@ import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.configuration.CausalClusteringSettings.DEFAULT_CLUSTER_STATE_DIRECTORY_NAME;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATA_DIR_NAME;
 import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
@@ -52,8 +54,9 @@ class DumpClusterStateTest
     @BeforeEach
     void setup()
     {
-        dataDir = testDirectory.directoryPath( "data" );
-        storageFactory = new ClusterStateStorageFactory( testDirectory.getFileSystem(), ClusterStateLayout.of( dataDir ),
+        dataDir = testDirectory.directoryPath( DEFAULT_DATA_DIR_NAME );
+        var clusterStateLayout = ClusterStateLayout.of( dataDir.resolve( DEFAULT_CLUSTER_STATE_DIRECTORY_NAME ) );
+        storageFactory = new ClusterStateStorageFactory( testDirectory.getFileSystem(), clusterStateLayout,
                 NullLogProvider.getInstance(), Config.defaults(), INSTANCE );
     }
 

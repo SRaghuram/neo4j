@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.diagnostics;
 
 import com.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
+import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -17,7 +18,6 @@ import java.util.SortedMap;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.diagnostics.DiagnosticsOfflineReportProvider;
 import org.neo4j.kernel.diagnostics.DiagnosticsReportSource;
@@ -42,7 +42,7 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
     public void init( FileSystemAbstraction fs, String defaultDatabaseName, Config config, Path storeDirectory )
     {
         this.fs = fs;
-        this.clusterStateLayout = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ) );
+        this.clusterStateLayout = ClusterStateLayout.of( config.get( CausalClusteringSettings.cluster_state_directory ) );
         this.defaultDatabaseName = defaultDatabaseName;
     }
 

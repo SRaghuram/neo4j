@@ -6,6 +6,7 @@
 package com.neo4j.commandline.dbms;
 
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
+import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
@@ -16,7 +17,6 @@ import java.nio.file.Path;
 import org.neo4j.cli.CommandFailedException;
 import org.neo4j.commandline.dbms.LoadCommand;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.archive.Dumper;
 import org.neo4j.dbms.archive.Loader;
 import org.neo4j.graphdb.Label;
@@ -197,8 +197,8 @@ class LoadCommandIT extends AbstractCommandIT
 
     private void createRaftGroupDirectoryFor( Config config, String databaseName ) throws IOException
     {
-        var raftGroupDir = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ) ).raftGroupDir( databaseName );
-        fs.mkdirs( raftGroupDir );
+        var clusterStateLayout = ClusterStateLayout.of( config.get( CausalClusteringSettings.cluster_state_directory ) );
+        fs.mkdirs( clusterStateLayout.raftGroupDir( databaseName ) );
     }
 
     private Config configWith( Neo4jLayout layout )

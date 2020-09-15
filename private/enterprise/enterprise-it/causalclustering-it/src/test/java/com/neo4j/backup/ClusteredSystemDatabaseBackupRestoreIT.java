@@ -8,6 +8,8 @@ package com.neo4j.backup;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreDatabaseManager;
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
+import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.configuration.SecuritySettings;
 import com.neo4j.restore.RestoreDatabaseCommand;
@@ -174,8 +176,10 @@ class ClusteredSystemDatabaseBackupRestoreIT
     {
         Config restoreCommandConfig = Config.newBuilder().fromConfig( memberConfig ).build();
         var databaseName = GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+        final var clusterStateLayout = ClusterStateLayout.of( restoreCommandConfig.get( CausalClusteringSettings.cluster_state_directory ) );
+        final var raftGroupDirectory = clusterStateLayout.raftGroupDir( databaseName );
         final var databaseLayout = Neo4jLayout.of( restoreCommandConfig ).databaseLayout( databaseName );
-        new RestoreDatabaseCommand( fs, backupLocation.resolve( databaseName ), databaseLayout, true, false ).execute();
+        new RestoreDatabaseCommand( fs, backupLocation.resolve( databaseName ), databaseLayout, raftGroupDirectory, true, false ).execute();
     }
 
     private static boolean runBackupSameJvm( Path neo4jHome, String host, String databaseName )

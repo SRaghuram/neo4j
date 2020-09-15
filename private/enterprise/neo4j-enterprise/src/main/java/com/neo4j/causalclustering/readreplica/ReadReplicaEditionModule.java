@@ -137,8 +137,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
 
         final FileSystemAbstraction fileSystem = globalModule.getFileSystem();
 
-        final Path dataDir = globalConfig.get( GraphDatabaseSettings.data_directory );
-        clusterStateLayout = ClusterStateLayout.of( dataDir );
+        final Path clusterStateDir = globalConfig.get( CausalClusteringSettings.cluster_state_directory );
+        clusterStateLayout = ClusterStateLayout.of( clusterStateDir );
         storageFactory = new ClusterStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig,
                 globalModule.getOtherMemoryPool().getPoolMemoryTracker() );
 

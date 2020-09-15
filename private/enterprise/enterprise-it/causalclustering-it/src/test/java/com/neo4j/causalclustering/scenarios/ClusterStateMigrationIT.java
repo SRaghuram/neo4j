@@ -6,8 +6,8 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
+import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 import com.neo4j.test.causalclustering.ClusterExtension;
@@ -77,7 +77,7 @@ class ClusterStateMigrationIT
         // collect all version files
         var clusterStateVersionFiles = cluster.coreMembers()
                 .stream()
-                .map( ClusterStateMigrationIT::clusterStateLayout )
+                .map( CoreClusterMember::clusterStateLayout )
                 .map( ClusterStateLayout::clusterStateVersionFile )
                 .collect( toList() );
 
@@ -117,22 +117,15 @@ class ClusterStateMigrationIT
         assertThat( getRootCause( error ).getMessage(), containsString( "Illegal cluster state version" ) );
     }
 
-    private static SimpleStorage<ClusterStateVersion> clusterStateVersionStorage( ClusterMember member )
+    private static SimpleStorage<ClusterStateVersion> clusterStateVersionStorage( CoreClusterMember member )
     {
         var storageFactory = storageFactory( member );
         return storageFactory.createClusterStateVersionStorage();
     }
 
-    private static ClusterStateStorageFactory storageFactory( ClusterMember member )
+    private static ClusterStateStorageFactory storageFactory( CoreClusterMember member )
     {
-        var clusterStateLayout = clusterStateLayout( member );
         var fs = member.defaultDatabase().getDependencyResolver().resolveDependency( FileSystemAbstraction.class );
-        return new ClusterStateStorageFactory( fs, clusterStateLayout, nullLogProvider(), Config.defaults(), INSTANCE );
-    }
-
-    private static ClusterStateLayout clusterStateLayout( ClusterMember member )
-    {
-        var dataDir = member.homePath().resolve(  "data" );
-        return ClusterStateLayout.of( dataDir );
+        return new ClusterStateStorageFactory( fs, member.clusterStateLayout(), nullLogProvider(), Config.defaults(), INSTANCE );
     }
 }

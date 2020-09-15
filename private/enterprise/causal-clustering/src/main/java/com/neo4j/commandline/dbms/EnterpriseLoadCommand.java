@@ -6,13 +6,13 @@
 package com.neo4j.commandline.dbms;
 
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
+import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.nio.file.Path;
 
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.commandline.dbms.LoadCommand;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.archive.Loader;
 import org.neo4j.io.fs.FileSystemAbstraction;
 
@@ -48,6 +48,6 @@ public class EnterpriseLoadCommand extends LoadCommand
 
     private Path getRaftGroupDirectory( String databaseName, Config config )
     {
-        return ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ) ).raftGroupDir( databaseName );
+        return ClusterStateLayout.of( config.get( CausalClusteringSettings.cluster_state_directory ) ).raftGroupDir( databaseName );
     }
 }

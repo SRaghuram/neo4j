@@ -15,7 +15,10 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.configuration.CausalClusteringSettings.DEFAULT_CLUSTER_STATE_DIRECTORY_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATA_DIR_NAME;
 import static org.neo4j.internal.helpers.collection.Iterators.set;
 
 @TestDirectoryExtension
@@ -26,88 +29,88 @@ class ClusterStateLayoutTest
     @Inject
     private TestDirectory testDirectory;
 
-    private Path dataDir;
+    private Path clusterStateDir;
     private ClusterStateLayout layout;
 
     @BeforeEach
     void setUp()
     {
-        dataDir = testDirectory.directoryPath( "data" );
-        layout = ClusterStateLayout.of( dataDir );
+        clusterStateDir = testDirectory.directoryPath( DEFAULT_DATA_DIR_NAME ).resolve( DEFAULT_CLUSTER_STATE_DIRECTORY_NAME );
+        layout = ClusterStateLayout.of( clusterStateDir );
     }
 
     @Test
     void shouldExposeVersionStateFile()
     {
-        assertEquals( dataDir.resolve( "cluster-state" ).resolve( "version-state" ).resolve( "version" ), layout.clusterStateVersionFile() );
+        assertEquals( clusterStateDir.resolve( "version-state" ).resolve( "version" ), layout.clusterStateVersionFile() );
     }
 
     @Test
     void shouldExposeMemberIdStateFile()
     {
-        assertEquals( dataDir.resolve( "cluster-state" ).resolve( "core-member-id-state" ).resolve( "core-member-id" ), layout.memberIdStateFile() );
+        assertEquals( clusterStateDir.resolve( "core-member-id-state" ).resolve( "core-member-id" ), layout.memberIdStateFile() );
     }
 
     @Test
     void shouldExposeRaftIdStateFile()
     {
-        assertEquals( dataDir.resolve( "cluster-state" ).resolve( "db" ).resolve( DATABASE_NAME ).resolve( "raft-id-state" ).resolve( "raft-id" ),
+        assertEquals( clusterStateDir.resolve( "db" ).resolve( DATABASE_NAME ).resolve( "raft-id-state" ).resolve( "raft-id" ),
                 layout.raftIdStateFile( DATABASE_NAME ) );
     }
 
     @Test
     void shouldExposeQuarantineMarkerStateFile()
     {
-        assertEquals( dataDir.resolve( "cluster-state" ).resolve( "db" ).resolve( DATABASE_NAME ).resolve( "quarantine-marker-state" )
+        assertEquals( clusterStateDir.resolve( "db" ).resolve( DATABASE_NAME ).resolve( "quarantine-marker-state" )
                         .resolve( "quarantine-marker" ), layout.quarantineMarkerStateFile( DATABASE_NAME ) );
     }
 
     @Test
     void shouldExposeLeaseStateDirectory()
     {
-        assertEquals( dataDir.resolve( "cluster-state" ).resolve( "db" ).resolve( DATABASE_NAME ).resolve( "lease-state" ),
+        assertEquals( clusterStateDir.resolve( "db" ).resolve( DATABASE_NAME ).resolve( "lease-state" ),
                 layout.leaseStateDirectory( DATABASE_NAME ) );
     }
 
     @Test
     void shouldExposeLastFlushedStateDirectory()
     {
-        assertEquals( dataDir.resolve( "cluster-state" ).resolve( "db" ).resolve( DATABASE_NAME ).resolve( "last-flushed-state" ),
+        assertEquals( clusterStateDir.resolve( "db" ).resolve( DATABASE_NAME ).resolve( "last-flushed-state" ),
                 layout.lastFlushedStateDirectory( DATABASE_NAME ) );
     }
 
     @Test
     void shouldExposeRaftMembershipStateDirectory()
     {
-        assertEquals( dataDir.resolve( "cluster-state" ).resolve( "db" ).resolve( DATABASE_NAME ).resolve( "membership-state" ),
+        assertEquals( clusterStateDir.resolve( "db" ).resolve( DATABASE_NAME ).resolve( "membership-state" ),
                 layout.raftMembershipStateDirectory( DATABASE_NAME ) );
     }
 
     @Test
     void shouldExposeRaftLogDirectory()
     {
-        assertEquals( dataDir.resolve( "cluster-state" ).resolve( "db" ).resolve( DATABASE_NAME ).resolve( "raft-log" ),
+        assertEquals( clusterStateDir.resolve( "db" ).resolve( DATABASE_NAME ).resolve( "raft-log" ),
                 layout.raftLogDirectory( DATABASE_NAME ) );
     }
 
     @Test
     void shouldExposeSessionTrackerDirectory()
     {
-        assertEquals( dataDir.resolve( "cluster-state" ).resolve( "db" ).resolve( DATABASE_NAME ).resolve( "session-tracker-state" ),
+        assertEquals( clusterStateDir.resolve( "db" ).resolve( DATABASE_NAME ).resolve( "session-tracker-state" ),
                 layout.sessionTrackerDirectory( DATABASE_NAME ) );
     }
 
     @Test
     void shouldExposeRaftTermStateDirectory()
     {
-        assertEquals( dataDir.resolve( "cluster-state" ).resolve( "db" ).resolve( DATABASE_NAME ).resolve( "term-state" ),
+        assertEquals( clusterStateDir.resolve( "db" ).resolve( DATABASE_NAME ).resolve( "term-state" ),
                 layout.raftTermStateDirectory( DATABASE_NAME ) );
     }
 
     @Test
     void shouldExposeRaftVoteStateDirectory()
     {
-        assertEquals( dataDir.resolve( "cluster-state" ).resolve( "db" ).resolve( DATABASE_NAME ).resolve( "vote-state" ),
+        assertEquals( clusterStateDir.resolve( "db" ).resolve( DATABASE_NAME ).resolve( "vote-state" ),
                 layout.raftVoteStateDirectory( DATABASE_NAME ) );
     }
 
@@ -123,17 +126,31 @@ class ClusterStateLayoutTest
                 CoreStateFiles.RAFT_LOG );
 
         Set<Path> expected = set(
-                dataDir.resolve( "cluster-state" ).resolve( "core-member-id-state" ),
-                dataDir.resolve( "cluster-state" ).resolve( "db" ).resolve( DATABASE_NAME ).resolve( "raft-id-state" ),
-                dataDir.resolve( "cluster-state" ).resolve( "db" ).resolve( DATABASE_NAME ).resolve( "quarantine-marker-state" ),
-                dataDir.resolve( "cluster-state" ).resolve( "db" ).resolve( DATABASE_NAME ).resolve( "session-tracker-state" ),
-                dataDir.resolve( "cluster-state" ).resolve( "db" ).resolve( DATABASE_NAME ).resolve( "session-tracker-state" ),
-                dataDir.resolve( "cluster-state" ).resolve( "db" ).resolve( DATABASE_NAME ).resolve( "term-state" ),
-                dataDir.resolve( "cluster-state" ).resolve( "db" ).resolve( DATABASE_NAME ).resolve( "raft-log" )
+                clusterStateDir.resolve( "core-member-id-state" ),
+                clusterStateDir.resolve( "db" ).resolve( DATABASE_NAME ).resolve( "raft-id-state" ),
+                clusterStateDir.resolve( "db" ).resolve( DATABASE_NAME ).resolve( "quarantine-marker-state" ),
+                clusterStateDir.resolve( "db" ).resolve( DATABASE_NAME ).resolve( "session-tracker-state" ),
+                clusterStateDir.resolve( "db" ).resolve( DATABASE_NAME ).resolve( "session-tracker-state" ),
+                clusterStateDir.resolve( "db" ).resolve( DATABASE_NAME ).resolve( "term-state" ),
+                clusterStateDir.resolve( "db" ).resolve( DATABASE_NAME ).resolve( "raft-log" )
         );
 
         Set<Path> actual = layout.listGlobalAndDatabaseDirectories( DATABASE_NAME, types::contains );
 
         assertEquals( expected, actual );
+    }
+
+    @Test
+    void shouldWorkNonDefaultDirectory()
+    {
+        var clusterStateDir = testDirectory.directoryPath( "different" );
+        var layout = ClusterStateLayout.of( clusterStateDir );
+
+        assertEquals( clusterStateDir.resolve( "version-state" ).resolve( "version" ), layout.clusterStateVersionFile() );
+        assertEquals( clusterStateDir.resolve( "db" ).resolve( DATABASE_NAME ).resolve( "raft-id-state" ).resolve( "raft-id" ),
+                layout.raftIdStateFile( DATABASE_NAME ) );
+
+        assertNotEquals( layout.clusterStateVersionFile(), this.layout.clusterStateVersionFile() );
+        assertNotEquals( layout.raftIdStateFile( DATABASE_NAME ), this.layout.raftIdStateFile( DATABASE_NAME ) );
     }
 }

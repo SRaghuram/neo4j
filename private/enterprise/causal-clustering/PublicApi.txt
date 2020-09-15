@@ -16,12 +16,14 @@ com.neo4j.configuration.CausalClusteringSettings.SelectionStrategies::NO_BALANCI
 com.neo4j.configuration.CausalClusteringSettings.SelectionStrategies::valueOf(java.lang.String) com.neo4j.configuration.CausalClusteringSettings.SelectionStrategies public static
 com.neo4j.configuration.CausalClusteringSettings.SelectionStrategies::values() com.neo4j.configuration.CausalClusteringSettings.SelectionStrategies[] public static
 com.neo4j.configuration.CausalClusteringSettings::CausalClusteringSettings() void public
+com.neo4j.configuration.CausalClusteringSettings::DEFAULT_CLUSTER_STATE_DIRECTORY_NAME java.lang.String public static final = cluster-state
 com.neo4j.configuration.CausalClusteringSettings::catch_up_client_inactivity_timeout org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
 com.neo4j.configuration.CausalClusteringSettings::catchup_batch_size org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
 com.neo4j.configuration.CausalClusteringSettings::catchup_implementations org.neo4j.graphdb.config.Setting<java.util.List<com.neo4j.configuration.ApplicationProtocolVersion>> public static final
 com.neo4j.configuration.CausalClusteringSettings::cluster_allow_reads_on_followers org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
 com.neo4j.configuration.CausalClusteringSettings::cluster_allow_reads_on_leader org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
 com.neo4j.configuration.CausalClusteringSettings::cluster_binding_timeout org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.CausalClusteringSettings::cluster_state_directory org.neo4j.graphdb.config.Setting<java.nio.file.Path> public static final
 com.neo4j.configuration.CausalClusteringSettings::cluster_topology_refresh org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
 com.neo4j.configuration.CausalClusteringSettings::command_applier_parallelism org.neo4j.graphdb.config.Setting<java.lang.Integer> public static
 com.neo4j.configuration.CausalClusteringSettings::compression_implementations org.neo4j.graphdb.config.Setting<java.util.List<java.lang.String>> public static final

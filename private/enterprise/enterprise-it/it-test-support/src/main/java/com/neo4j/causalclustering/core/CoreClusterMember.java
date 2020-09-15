@@ -57,7 +57,6 @@ import org.neo4j.monitoring.Monitors;
 import static com.neo4j.causalclustering.common.Cluster.TOPOLOGY_REFRESH_INTERVAL;
 import static com.neo4j.configuration.CausalClusteringSettings.SelectionStrategies.NO_BALANCING;
 import static java.lang.Boolean.TRUE;
-import static org.neo4j.configuration.GraphDatabaseSettings.data_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
 import static org.neo4j.configuration.helpers.SocketAddress.format;
@@ -165,7 +164,7 @@ public class CoreClusterMember implements ClusterMember
         memberConfig = config.build();
 
         this.discoveryServiceFactory = discoveryServiceFactory;
-        clusterStateLayout = ClusterStateLayout.of( memberConfig.get( data_directory ) );
+        clusterStateLayout = ClusterStateLayout.of( memberConfig.get( CausalClusteringSettings.cluster_state_directory ) );
 
         threadGroup = new ThreadGroup( toString() );
         this.neo4jLayout = Neo4jLayout.of( memberConfig );

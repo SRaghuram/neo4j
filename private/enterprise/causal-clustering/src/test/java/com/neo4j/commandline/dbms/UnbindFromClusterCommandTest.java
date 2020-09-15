@@ -6,6 +6,7 @@
 package com.neo4j.commandline.dbms;
 
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
+import com.neo4j.configuration.CausalClusteringSettings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -151,7 +152,8 @@ class UnbindFromClusterCommandTest
     private Path createClusterStateDir() throws IOException
     {
         var dataDir = neo4jLayout.homeDirectory().resolve( DEFAULT_DATA_DIR_NAME );
-        var clusterStateDirectory = ClusterStateLayout.of( dataDir ).getClusterStateDirectory();
+        var clusterStateDirectory = ClusterStateLayout.of( dataDir.resolve( CausalClusteringSettings.DEFAULT_CLUSTER_STATE_DIRECTORY_NAME ) )
+                .getClusterStateDirectory();
         fs.mkdirs( clusterStateDirectory );
         return clusterStateDirectory;
     }

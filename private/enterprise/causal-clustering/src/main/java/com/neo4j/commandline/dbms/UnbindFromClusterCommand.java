@@ -6,6 +6,7 @@
 package com.neo4j.commandline.dbms;
 
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
+import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.io.Closeable;
 import java.io.File;
@@ -53,7 +54,7 @@ public class UnbindFromClusterCommand extends AbstractCommand
 
             try ( Closeable ignored = LockChecker.checkDbmsLock( neo4jLayout ) )
             {
-                Path clusterStateDirectory = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ) ).getClusterStateDirectory();
+                Path clusterStateDirectory = ClusterStateLayout.of( config.get( CausalClusteringSettings.cluster_state_directory ) ).getClusterStateDirectory();
 
                 if ( ctx.fs().fileExists( clusterStateDirectory ) )
                 {

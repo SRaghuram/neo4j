@@ -8,6 +8,8 @@ package com.neo4j.backup;
 import com.neo4j.backup.impl.OnlineBackupCommand;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
+import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.restore.RestoreDatabaseCommand;
 import picocli.CommandLine;
 
@@ -54,8 +56,10 @@ public final class BackupTestUtil
     {
         Config config = Config.newBuilder().fromConfig( clusterMember.config() ).build();
         ConfigUtils.disableAllConnectors( config );
+        final var clusterStateLayout = ClusterStateLayout.of( config.get( CausalClusteringSettings.cluster_state_directory ) );
+        final var raftGroupDirectory = clusterStateLayout.raftGroupDir( databaseName );
         final var databaseLayout = Neo4jLayout.of( config ).databaseLayout( databaseName );
-        RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( fsa, fromDatabasePath, databaseLayout, true, false );
+        RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( fsa, fromDatabasePath, databaseLayout, raftGroupDirectory, true, false );
         restoreDatabaseCommand.execute();
     }
 

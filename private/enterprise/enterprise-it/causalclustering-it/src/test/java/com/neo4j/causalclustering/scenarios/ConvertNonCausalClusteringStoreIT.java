@@ -7,7 +7,9 @@ package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.helpers.ClassicNeo4jDatabase;
+import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.restore.RestoreDatabaseCommand;
 import com.neo4j.test.causalclustering.ClusterExtension;
@@ -65,8 +67,10 @@ class ConvertNonCausalClusteringStoreIT
         for ( CoreClusterMember core : cluster.coreMembers() )
         {
             var databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+            final var clusterStateLayout = ClusterStateLayout.of( core.config().get( CausalClusteringSettings.cluster_state_directory ) );
+            final var raftGroupDirectory = clusterStateLayout.raftGroupDir( databaseName );
             final var databaseLayout = Neo4jLayout.of( core.config() ).databaseLayout( databaseName );
-            new RestoreDatabaseCommand( testDirectory.getFileSystem(), classicNeo4jDatabase, databaseLayout, true, false ).execute();
+            new RestoreDatabaseCommand( testDirectory.getFileSystem(), classicNeo4jDatabase, databaseLayout, raftGroupDirectory, true, false ).execute();
         }
 
         cluster.start();

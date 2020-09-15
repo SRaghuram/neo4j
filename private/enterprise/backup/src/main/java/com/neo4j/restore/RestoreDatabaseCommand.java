@@ -5,8 +5,6 @@
  */
 package com.neo4j.restore;
 
-import com.neo4j.causalclustering.core.state.ClusterStateLayout;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,11 +12,8 @@ import java.nio.file.Path;
 import org.neo4j.cli.CommandFailedException;
 import org.neo4j.commandline.dbms.CannotWriteException;
 import org.neo4j.commandline.dbms.LockChecker;
-import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.impl.util.Validators;
 import org.neo4j.kernel.internal.locker.FileLockException;
@@ -35,15 +30,15 @@ public class RestoreDatabaseCommand
     private final boolean forceOverwrite;
     private final boolean moveFiles;
 
-    public RestoreDatabaseCommand( FileSystemAbstraction fs, Path fromDatabasePath, DatabaseLayout targetDatabaseLayout, boolean forceOverwrite,
-                                   boolean moveFiles )
+    public RestoreDatabaseCommand( FileSystemAbstraction fs, Path fromDatabasePath, DatabaseLayout targetDatabaseLayout, Path raftGroupDirectory,
+                                   boolean forceOverwrite, boolean moveFiles )
     {
         this.fs = fs;
         this.fromDatabasePath = fromDatabasePath;
         this.forceOverwrite = forceOverwrite;
         this.moveFiles = moveFiles;
         this.targetDatabaseLayout = targetDatabaseLayout;
-        this.raftGroupDirectory = getRaftGroupDirectory( targetDatabaseLayout.getDatabaseName(), targetDatabaseLayout.getNeo4jLayout().dataDirectory() );
+        this.raftGroupDirectory = raftGroupDirectory;
     }
 
     public void execute() throws IOException
@@ -163,10 +158,5 @@ public class RestoreDatabaseCommand
                 fs.deleteRecursively( fromDatabasePath );
             }
         }
-    }
-
-    private Path getRaftGroupDirectory( String databaseName, Path dataDirectory )
-    {
-        return ClusterStateLayout.of( dataDirectory ).raftGroupDir( databaseName );
     }
 }

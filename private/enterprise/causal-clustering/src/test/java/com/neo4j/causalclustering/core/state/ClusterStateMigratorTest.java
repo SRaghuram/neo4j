@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.configuration.CausalClusteringSettings;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,11 +31,13 @@ import org.neo4j.test.rule.TestDirectory;
 import static com.neo4j.causalclustering.core.state.CoreStateFiles.CORE_MEMBER_ID;
 import static com.neo4j.causalclustering.core.state.CoreStateFiles.RAFT_ID;
 import static com.neo4j.causalclustering.core.state.CoreStateFiles.VERSION;
+import static com.neo4j.configuration.CausalClusteringSettings.DEFAULT_CLUSTER_STATE_DIRECTORY_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATA_DIR_NAME;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @TestDirectoryExtension
@@ -57,7 +60,7 @@ class ClusterStateMigratorTest
     {
         logProvider = new Log4jLogProvider( System.out );
 
-        clusterStateLayout = ClusterStateLayout.of( testDirectory.directoryPath( "data" ) );
+        clusterStateLayout = ClusterStateLayout.of( testDirectory.directoryPath( DEFAULT_DATA_DIR_NAME ).resolve( DEFAULT_CLUSTER_STATE_DIRECTORY_NAME ) );
         writeRandomClusterId( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_NAME ) );
 
         clusterStateVersionStorage = new SimpleFileStorage<>( fs, clusterStateLayout.clusterStateVersionFile(), VERSION.marshal(), INSTANCE );

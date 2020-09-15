@@ -194,8 +194,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         final FileSystemAbstraction fileSystem = globalModule.getFileSystem();
 
         final MemoryTracker memoryTracker = globalModule.getOtherMemoryPool().getPoolMemoryTracker();
-        final Path dataDir = globalConfig.get( GraphDatabaseSettings.data_directory );
-        clusterStateLayout = ClusterStateLayout.of( dataDir );
+        final Path clusterStateDir = globalConfig.get( CausalClusteringSettings.cluster_state_directory );
+        clusterStateLayout = ClusterStateLayout.of( clusterStateDir );
         globalDependencies.satisfyDependency( clusterStateLayout );
         storageFactory = new ClusterStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig, memoryTracker );
 

@@ -5,6 +5,8 @@
  */
 package com.neo4j.restore;
 
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
+import com.neo4j.configuration.CausalClusteringSettings;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
@@ -98,7 +100,8 @@ public class RestoreDatabaseCli extends AbstractCommand
 
         final var paths = fromPaths.getPaths();
         final var neo4jLayout = Neo4jLayout.of( config );
-        final var exceptions = execute( paths, neo4jLayout );
+        final var clusterStateLayout = ClusterStateLayout.of( config.get( CausalClusteringSettings.cluster_state_directory ) );
+        final var exceptions = execute( paths, neo4jLayout, clusterStateLayout );
 
         exceptions.collect( Collectors.toList() )
                   .stream()
@@ -109,17 +112,18 @@ public class RestoreDatabaseCli extends AbstractCommand
                               } );
     }
 
-    private Stream<CommandFailedException> execute( Set<Path> filteredPaths, Neo4jLayout neo4jLayout )
+    private Stream<CommandFailedException> execute( Set<Path> filteredPaths, Neo4jLayout neo4jLayout, ClusterStateLayout clusterStateLayout )
     {
 
         return filteredPaths.stream().map( fromPath ->
                                            {
                                                try
                                                {
-                                                   var databaseName = new NormalizedDatabaseName( getDatabaseName( fromPath, database ) ).name();
+                                                   final var databaseName = new NormalizedDatabaseName( getDatabaseName( fromPath, database ) ).name();
                                                    final var databaseLayout = neo4jLayout.databaseLayout( databaseName );
+                                                   final var raftGroupDirectory = clusterStateLayout.raftGroupDir( databaseName );
                                                    RestoreDatabaseCommand restoreDatabaseCommand =
-                                                           new RestoreDatabaseCommand( ctx.fs(), fromPath, databaseLayout, force, move );
+                                                           new RestoreDatabaseCommand( ctx.fs(), fromPath, databaseLayout, raftGroupDirectory, force, move );
                                                    restoreDatabaseCommand.execute();
 
                                                    ctx.out().printf( "Database with path %s was restored", fromPath );

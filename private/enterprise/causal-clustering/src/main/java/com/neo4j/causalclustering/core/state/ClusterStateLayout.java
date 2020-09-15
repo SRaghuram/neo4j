@@ -5,6 +5,8 @@
  */
 package com.neo4j.causalclustering.core.state;
 
+import com.neo4j.configuration.CausalClusteringSettings;
+
 import java.nio.file.Path;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -23,11 +25,12 @@ import static org.neo4j.util.Preconditions.checkArgument;
  *
  *    root state        $NEO4J_HOME/data/cluster-state
  *    database state    $NEO4J_HOME/data/cluster-state/db/neo4j
+ *
+ *  Where $NEO4J_HOME/data/cluster-state is configurable with 'causal_clustering.cluster_state_directory'
  * </pre>
  */
 public class ClusterStateLayout
 {
-    private static final String CLUSTER_STATE_DIRECTORY_NAME = "cluster-state";
     private static final String DB_DIRECTORY_NAME = "db";
     private static final String STATE_DIRECTORY_SUFFIX = "-state";
 
@@ -38,9 +41,14 @@ public class ClusterStateLayout
         this.clusterStateDirectory = clusterStateDirectory;
     }
 
-    public static ClusterStateLayout of( Path parentDirectory )
+    public static ClusterStateLayout defaultForDataDir( Path dataDir )
     {
-        return new ClusterStateLayout( parentDirectory.resolve( CLUSTER_STATE_DIRECTORY_NAME ) );
+        return new ClusterStateLayout( dataDir.resolve( CausalClusteringSettings.DEFAULT_CLUSTER_STATE_DIRECTORY_NAME ) );
+    }
+
+    public static ClusterStateLayout of( Path clusterStateDirectory )
+    {
+        return new ClusterStateLayout( clusterStateDirectory );
     }
 
     public Path getClusterStateDirectory()
