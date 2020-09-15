@@ -54,7 +54,6 @@ public class StoreInfoCommandIT extends AbstractCommandIT
                        "Database in use:              false" + System.lineSeparator() +
                        "Store format version:         " + format.storeVersion() + System.lineSeparator() +
                        "Store format introduced in:   " + format.introductionVersion() + System.lineSeparator() +
-                       "Store format superseded in:   N/A" + System.lineSeparator() +
                        "Last committed transaction id:2" + System.lineSeparator() +
                        "Store needs recovery:         true";
 
