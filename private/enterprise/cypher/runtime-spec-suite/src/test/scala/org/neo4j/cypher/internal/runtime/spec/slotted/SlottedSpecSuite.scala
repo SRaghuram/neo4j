@@ -99,6 +99,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.TopTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UndirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UnionTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UnwindTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.UserDefinedAggregationSupport
 import org.neo4j.cypher.internal.runtime.spec.tests.ValueHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.VarLengthExpandTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.WriteProcedureCallTestBase
@@ -114,7 +115,7 @@ class SlottedDirectedRelationshipByIdSeekTest extends DirectedRelationshipByIdSe
 class SlottedUndirectedRelationshipByIdSeekTest extends UndirectedRelationshipByIdSeekTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedNodeCountFromCountStoreTest extends NodeCountFromCountStoreTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
 class SlottedRelationshipCountFromCountStoreTest extends RelationshipCountFromCountStoreTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
-class SlottedAggregationTest extends AggregationTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedAggregationTest extends AggregationTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT) with UserDefinedAggregationSupport[EnterpriseRuntimeContext]
 class SlottedOrderedAggregationTest extends OrderedAggregationTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedExpandAllTest extends ExpandAllTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
                            with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
