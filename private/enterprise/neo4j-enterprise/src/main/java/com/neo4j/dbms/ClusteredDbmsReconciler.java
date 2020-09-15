@@ -28,18 +28,27 @@ public class ClusteredDbmsReconciler extends DbmsReconciler
 {
     private final LogProvider logProvider;
     private final ClusterStateStorageFactory stateStorageFactory;
+    private final QuarantineOperator quarantineOperator;
 
     ClusteredDbmsReconciler( ClusteredMultiDatabaseManager databaseManager, Config config, LogProvider logProvider, JobScheduler scheduler,
-                            ClusterStateStorageFactory stateStorageFactory, TransitionsTable transitionsTable )
+                            ClusterStateStorageFactory stateStorageFactory, TransitionsTable transitionsTable, QuarantineOperator quarantineOperator )
     {
         super( databaseManager, config, logProvider, scheduler, transitionsTable );
         this.logProvider = logProvider;
         this.stateStorageFactory = stateStorageFactory;
+        this.quarantineOperator = quarantineOperator;
     }
 
     @Override
     protected EnterpriseDatabaseState initialReconcilerEntry( NamedDatabaseId namedDatabaseId )
     {
+        var maybeQuarantined = quarantineOperator.checkQuarantineMarker( namedDatabaseId );
+        if ( maybeQuarantined.isPresent() )
+        {
+            log.warn( format( "Quarantine marker found for %s. Quarantine was set: %s. Database won't reach desired state but remain in quarantine.",
+                              namedDatabaseId, maybeQuarantined.get().failure().orElseThrow().getMessage() ) );
+            return maybeQuarantined.get();
+        }
         var raftIdOpt = readRaftIdForDatabase( namedDatabaseId, databaseLogProvider( namedDatabaseId ) );
         if ( raftIdOpt.isPresent() )
         {

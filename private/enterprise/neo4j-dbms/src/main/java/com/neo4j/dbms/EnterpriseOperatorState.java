@@ -28,7 +28,8 @@ public enum EnterpriseOperatorState implements OperatorState
     STORE_COPYING( "store copying", 200 ),
     STARTED( "online", 300 ),
     DROPPED( "dropped", 50 ),
-    DROPPED_DUMPED( "dropped", 0 ),
+    DROPPED_DUMPED( "dropped", 25 ),
+    QUARANTINED( "quarantined", 0 ),
 
     // States which should never be desired by an operator
     UNKNOWN( "unknown", 400 ),

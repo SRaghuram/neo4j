@@ -19,7 +19,8 @@ public enum CoreStateType
     RAFT_TERM( 8 ),
     RAFT_VOTE( 9 ),
     RAFT_MEMBERSHIP( 10 ),
-    LAST_FLUSHED( 11 );
+    LAST_FLUSHED( 11 ),
+    QUARANTINE_MARKER( 12 );
 
     private final int typeId;
 

@@ -120,6 +120,13 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
         operationCounts.increaseStartCount();
     }
 
+    public void removeFromCache( NamedDatabaseId namedDatabaseId )
+    {
+        databaseIdRepository().invalidate( namedDatabaseId );
+        databaseMap.remove( namedDatabaseId );
+        operationCounts.increaseDropCount();
+    }
+
     protected final void forSingleDatabase( NamedDatabaseId namedDatabaseId, BiConsumer<NamedDatabaseId,DB> consumer )
     {
         requireStarted( namedDatabaseId );

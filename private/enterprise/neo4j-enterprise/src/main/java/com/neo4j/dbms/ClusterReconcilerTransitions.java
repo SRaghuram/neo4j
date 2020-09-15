@@ -12,7 +12,8 @@ import java.util.function.Consumer;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.DIRTY;
-import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
+import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.QUARANTINED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
@@ -25,11 +26,13 @@ import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
 final class ClusterReconcilerTransitions extends ReconcilerTransitions
 {
     private final ClusteredMultiDatabaseManager databaseManager;
+    private final QuarantineOperator quarantineOperator;
 
-    ClusterReconcilerTransitions( ClusteredMultiDatabaseManager databaseManager )
+    ClusterReconcilerTransitions( ClusteredMultiDatabaseManager databaseManager, QuarantineOperator quarantineOperator )
     {
         super( databaseManager );
         this.databaseManager = databaseManager;
+        this.quarantineOperator = quarantineOperator;
     }
 
     private static Transition startAfterStoreCopyFactory( ClusteredMultiDatabaseManager databaseManager )
@@ -64,6 +67,25 @@ final class ClusterReconcilerTransitions extends ReconcilerTransitions
                          .ifFailedThenDo( ReconcilerTransitions.nothing, DIRTY );
     }
 
+    private static Transition setQuarantineMarkerFactory( ClusteredMultiDatabaseManager databaseManager, QuarantineOperator quarantineOperator )
+    {
+        return Transition.from( STOPPED, DIRTY )
+                .doTransition( namedDatabaseId -> {
+                    quarantineOperator.setQuarantineMarker( namedDatabaseId );
+                    databaseManager.removeFromCache( namedDatabaseId );
+                } )
+                .ifSucceeded( QUARANTINED )
+                .ifFailedThenDo( nothing, QUARANTINED );
+    }
+
+    private static Transition removeQuarantineMarkerFactory( QuarantineOperator quarantineOperator )
+    {
+        return Transition.from( QUARANTINED )
+                .doTransition( quarantineOperator::removeQuarantineMarker )
+                .ifSucceeded( DROPPED )
+                .ifFailedThenDo( nothing, DIRTY );
+    }
+
     Transition ensureDirtyDatabaseExists()
     {
         return ensureDirtyDatabaseExists( databaseManager );
@@ -77,5 +99,15 @@ final class ClusterReconcilerTransitions extends ReconcilerTransitions
     Transition stopBeforeStoreCopy()
     {
         return stopBeforeStoreCopyFactory( databaseManager );
+    }
+
+    Transition setQuarantine()
+    {
+        return setQuarantineMarkerFactory( databaseManager, quarantineOperator );
+    }
+
+    Transition removeQuarantine()
+    {
+        return removeQuarantineMarkerFactory( quarantineOperator );
     }
 }

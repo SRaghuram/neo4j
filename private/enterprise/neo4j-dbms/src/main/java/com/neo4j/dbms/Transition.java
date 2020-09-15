@@ -63,7 +63,7 @@ public class Transition
 
         if ( previous != to )
         {
-            throw new IllegalArgumentException( String.format( "Chain is invalid, it requires result %s, last transition gives %s", to, from ) );
+            throw new IllegalArgumentException( String.format( "Chain is invalid, it requires result %s, last transition gives %s", to, previous ) );
         }
     }
 

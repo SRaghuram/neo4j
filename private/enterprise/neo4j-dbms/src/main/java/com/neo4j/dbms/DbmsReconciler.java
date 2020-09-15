@@ -168,9 +168,9 @@ public class DbmsReconciler
                 .reduce( new HashMap<>(), ( l, r ) -> DbmsReconciler.combineDesiredStates( l, r, precedence ) );
     }
 
-    EnterpriseDatabaseState getReconcilerEntryOrDefault( NamedDatabaseId namedDatabaseId, EnterpriseDatabaseState initial )
+    EnterpriseDatabaseState getReconcilerEntryOrDefault( NamedDatabaseId namedDatabaseId, Supplier<EnterpriseDatabaseState> initial )
     {
-        return currentStates.getOrDefault( namedDatabaseId.name(), initial );
+        return Optional.ofNullable( currentStates.get( namedDatabaseId.name() ) ).orElseGet( initial );
     }
 
     protected EnterpriseDatabaseState initialReconcilerEntry( NamedDatabaseId namedDatabaseId )
@@ -284,7 +284,7 @@ public class DbmsReconciler
 
     private CompletableFuture<ReconcilerStepResult> doTransitions( String databaseName, EnterpriseDatabaseState desiredState, ReconcilerRequest request )
     {
-        var currentState = getReconcilerEntryOrDefault( desiredState.databaseId(), initialReconcilerEntry( desiredState.databaseId() ) );
+        var currentState = getReconcilerEntryOrDefault( desiredState.databaseId(), () -> initialReconcilerEntry( desiredState.databaseId() ) );
         var initialResult = new ReconcilerStepResult( currentState, null, desiredState );
 
         if ( currentState.equals( desiredState ) )
@@ -384,6 +384,10 @@ public class DbmsReconciler
         boolean isFatalError = result.error() != null && isFatalError( result.error() );
         if ( result.error() == null || isFatalError )
         {
+            if ( (result.error() == null) && desiredState.failure().isPresent() )
+            {
+                return CompletableFuture.completedFuture( result.withState( desiredState ) );
+            }
             return CompletableFuture.completedFuture( result );
         }
 

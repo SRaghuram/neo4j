@@ -58,6 +58,11 @@ public class ClusterStateLayout
         return databaseClusterStateFile( CoreStateFiles.RAFT_ID, databaseName );
     }
 
+    public Path quarantineMarkerStateFile( String databaseName )
+    {
+        return databaseClusterStateFile( CoreStateFiles.QUARANTINE_MARKER, databaseName );
+    }
+
     public Path memberIdStateFile()
     {
         return globalClusterStateFile( CoreStateFiles.CORE_MEMBER_ID );

@@ -16,6 +16,7 @@ import com.neo4j.causalclustering.core.state.storage.DurableStateStorage;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.dbms.QuarantineMarker;
 
 import java.nio.file.Path;
 
@@ -55,6 +56,11 @@ public class ClusterStateStorageFactory
     public SimpleStorage<MemberId> createMemberIdStorage()
     {
         return createSimpleStorage( layout.memberIdStateFile(), CoreStateFiles.CORE_MEMBER_ID, globalLogProvider );
+    }
+
+    public SimpleStorage<QuarantineMarker> createQuarantineMarkerStorage( String databaseName )
+    {
+        return createSimpleStorage( layout.quarantineMarkerStateFile( databaseName ), CoreStateFiles.QUARANTINE_MARKER, globalLogProvider );
     }
 
     public SimpleStorage<RaftId> createRaftIdStorage( String databaseName, DatabaseLogProvider logProvider )

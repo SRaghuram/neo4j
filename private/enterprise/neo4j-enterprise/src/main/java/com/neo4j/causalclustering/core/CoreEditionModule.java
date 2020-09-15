@@ -71,9 +71,11 @@ import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
 import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.EnterpriseSystemGraphComponent;
+import com.neo4j.dbms.QuarantineOperator;
 import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.dbms.procedures.ClusteredDatabaseStateProcedure;
+import com.neo4j.dbms.procedures.QuarantineProcedure;
 import com.neo4j.enterprise.edition.AbstractEnterpriseEditionModule;
 import com.neo4j.fabric.bootstrap.EnterpriseFabricServicesBootstrap;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
@@ -167,6 +169,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     private CoreDatabaseFactory coreDatabaseFactory;
     private CoreTopologyService topologyService;
     private DatabaseStartAborter databaseStartAborter;
+    private QuarantineOperator quarantineOperator;
     private ClusteredDbmsReconcilerModule reconcilerModule;
     private LeaderService leaderService;
 
@@ -287,6 +290,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         globalProcedures.register( new CoreRoleProcedure( databaseManager ) );
         globalProcedures.register( new ClusteredDatabaseStateProcedure( databaseManager.databaseIdRepository(), topologyService ) );
         globalProcedures.register( new InstalledProtocolsProcedure( clientInstalledProtocols, serverInstalledProtocols ) );
+        globalProcedures.register( new QuarantineProcedure( quarantineOperator,
+                globalModule.getGlobalClock(), globalConfig.get( GraphDatabaseSettings.db_timezone ).getZoneId() ) );
         // TODO: Figure out how the replication benchmark procedure should work.
 //        globalProcedures.registerComponent( Replicator.class, x -> replicationModule.getReplicator(), false );
 //        globalProcedures.registerProcedure( ReplicationBenchmarkProcedure.class );
@@ -328,8 +333,9 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         Supplier<GraphDatabaseService> systemDbSupplier = () -> databaseManager.getDatabaseContext( NAMED_SYSTEM_DATABASE_ID ).orElseThrow().databaseFacade();
         var dbmsModel = new ClusterSystemGraphDbmsModel( systemDbSupplier );
 
+        quarantineOperator = new QuarantineOperator( logProvider, databaseManager.databaseIdRepository(), storageFactory );
         reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, databaseEventService, storageFactory,
-                reconciledTxTracker, dbmsModel );
+                reconciledTxTracker, dbmsModel, quarantineOperator );
 
         databaseStartAborter = new DatabaseStartAborter( globalModule.getGlobalAvailabilityGuard(), dbmsModel, globalModule.getGlobalClock(),
                 Duration.ofSeconds( 5 ) );

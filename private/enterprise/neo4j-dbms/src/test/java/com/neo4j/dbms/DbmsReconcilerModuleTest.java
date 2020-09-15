@@ -567,7 +567,7 @@ class DbmsReconcilerModuleTest
 
         // wait for reconciliation be over
         assertEventually( "Foo is stopped", () ->
-                reconciler.getReconcilerEntryOrDefault( foo, initial ).operatorState() == STOPPED, TRUE, 10, SECONDS );
+                reconciler.getReconcilerEntryOrDefault( foo, () -> initial ).operatorState() == STOPPED, TRUE, 10, SECONDS );
 
         // then
         // no error is logged for the panicked database

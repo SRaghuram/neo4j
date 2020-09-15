@@ -12,10 +12,12 @@ import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
+import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersionMarshal;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.dbms.QuarantineMarker;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -23,7 +25,6 @@ import java.util.List;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.Setting;
-import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 
 import static com.neo4j.causalclustering.core.state.CoreStateFiles.Scope.DATABASE;
 import static com.neo4j.causalclustering.core.state.CoreStateFiles.Scope.GLOBAL;
@@ -75,6 +76,8 @@ public class CoreStateFiles<STATE>
             new CoreStateFiles<>( "membership", DATABASE, new RaftMembershipState.Marshal(), raft_membership_state_size, CoreStateType.RAFT_MEMBERSHIP );
     public static final CoreStateFiles<Long> LAST_FLUSHED =
             new CoreStateFiles<>( "last-flushed", DATABASE, new LongIndexMarshal(), last_flushed_state_size, CoreStateType.LAST_FLUSHED );
+    public static final CoreStateFiles<QuarantineMarker> QUARANTINE_MARKER =
+            new CoreStateFiles<>( "quarantine-marker", DATABASE, new QuarantineMarker.Marshal(), CoreStateType.QUARANTINE_MARKER );
 
     // for testing purposes
     public static <S> CoreStateFiles<S> DUMMY( SafeStateMarshal<S> marshal )
@@ -87,7 +90,7 @@ public class CoreStateFiles<STATE>
     static
     {
         List<CoreStateFiles<?>> all = asList( VERSION, LEASE, RAFT_ID, CORE_MEMBER_ID, RAFT_LOG, RAFT_TERM, RAFT_VOTE, RAFT_MEMBERSHIP, RAFT_CORE_STATE,
-                LAST_FLUSHED, SESSION_TRACKER );
+                LAST_FLUSHED, SESSION_TRACKER, QUARANTINE_MARKER );
         all.sort( Comparator.comparingInt( CoreStateFiles::typeId ) );
         VALUES = Collections.unmodifiableList( all );
     }

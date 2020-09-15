@@ -16,6 +16,7 @@ import org.neo4j.graphdb.factory.module.GlobalModule;
 import static com.neo4j.dbms.EnterpriseOperatorState.DIRTY;
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED_DUMPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.QUARANTINED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
@@ -26,15 +27,18 @@ public final class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcile
     private final ReplicatedDatabaseEventService databaseEventService;
     private final ClusterInternalDbmsOperator internalOperator;
     private final SystemOperatingDatabaseEventListener operatorEventListener;
+    private final QuarantineOperator quarantineOperator;
 
     public ClusteredDbmsReconcilerModule( GlobalModule globalModule, ClusteredMultiDatabaseManager databaseManager,
                                          ReplicatedDatabaseEventService databaseEventService, ClusterStateStorageFactory stateStorageFactory,
-                                         ReconciledTransactionTracker reconciledTxTracker, ClusterSystemGraphDbmsModel dbmsModel )
+                                         ReconciledTransactionTracker reconciledTxTracker, ClusterSystemGraphDbmsModel dbmsModel,
+                                         QuarantineOperator quarantineOperator )
     {
         super( globalModule, databaseManager, reconciledTxTracker,
-                createReconciler( globalModule, databaseManager, stateStorageFactory ), dbmsModel );
+                createReconciler( globalModule, databaseManager, stateStorageFactory, quarantineOperator ), dbmsModel );
         this.databaseEventService = databaseEventService;
         this.internalOperator = databaseManager.internalDbmsOperator();
+        this.quarantineOperator = quarantineOperator;
         this.operatorEventListener = new SystemOperatingDatabaseEventListener( systemOperator );
     }
 
@@ -46,7 +50,7 @@ public final class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcile
     @Override
     protected Stream<DbmsOperator> operators()
     {
-        return Stream.concat( super.operators(), Stream.of( internalOperator ) );
+        return Stream.concat( super.operators(), Stream.of( internalOperator, quarantineOperator ) );
     }
 
     @Override
@@ -74,19 +78,26 @@ public final class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcile
                 .from( STORE_COPYING ).to( STOPPED ).doTransitions( t.stop() )
                 .from( STORE_COPYING ).to( STARTED ).doTransitions( t.startAfterStoreCopy() )
                 .from( STARTED ).to( STORE_COPYING ).doTransitions( t.stopBeforeStoreCopy() )
+                // Quarantine
+                .from( STOPPED ).to( QUARANTINED ).doTransitions( t.setQuarantine() )
+                .from( STARTED ).to( QUARANTINED ).doTransitions( t.stop(), t.setQuarantine() )
+                .from( STORE_COPYING ).to( QUARANTINED ).doTransitions( t.stop(), t.setQuarantine() )
+                .from( DIRTY ).to( QUARANTINED ).doTransitions( t.setQuarantine() )
+                .from( QUARANTINED ).to( STARTED ).doTransitions( t.removeQuarantine(), t.validate(), t.create(), t.start() )
+                .from( QUARANTINED ).to( STOPPED ).doTransitions( t.removeQuarantine(), t.validate(), t.create() )
+                .from( QUARANTINED ).to( DROPPED ).doTransitions( t.removeQuarantine(), t.create(), t.drop() )
+                .from( QUARANTINED ).to( DROPPED_DUMPED ).doTransitions( t.removeQuarantine(), t.create(), t.dropDumpData() )
                 .build();
 
         return standaloneTransitionsTable.extendWith( clusteredTransitionsTable );
     }
 
     private static ClusteredDbmsReconciler createReconciler( GlobalModule globalModule, ClusteredMultiDatabaseManager databaseManager,
-                                                            ClusterStateStorageFactory stateStorageFactory )
+                                                            ClusterStateStorageFactory stateStorageFactory, QuarantineOperator quarantineOperator )
     {
-
         var logProvider = globalModule.getLogService().getInternalLogProvider();
-        var transitionsTable = createTransitionsTable( new ClusterReconcilerTransitions( databaseManager ) );
-
+        var transitionsTable = createTransitionsTable( new ClusterReconcilerTransitions( databaseManager, quarantineOperator ) );
         return new ClusteredDbmsReconciler( databaseManager, globalModule.getGlobalConfig(), logProvider, globalModule.getJobScheduler(),
-                stateStorageFactory, transitionsTable );
+                stateStorageFactory, transitionsTable, quarantineOperator );
     }
 }

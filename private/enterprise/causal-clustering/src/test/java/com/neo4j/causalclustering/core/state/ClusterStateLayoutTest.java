@@ -56,6 +56,13 @@ class ClusterStateLayoutTest
     }
 
     @Test
+    void shouldExposeQuarantineMarkerStateFile()
+    {
+        assertEquals( dataDir.resolve( "cluster-state" ).resolve( "db" ).resolve( DATABASE_NAME ).resolve( "quarantine-marker-state" )
+                        .resolve( "quarantine-marker" ), layout.quarantineMarkerStateFile( DATABASE_NAME ) );
+    }
+
+    @Test
     void shouldExposeLeaseStateDirectory()
     {
         assertEquals( dataDir.resolve( "cluster-state" ).resolve( "db" ).resolve( DATABASE_NAME ).resolve( "lease-state" ),
@@ -109,6 +116,7 @@ class ClusterStateLayoutTest
     {
         Set<CoreStateFiles<?>> types = set(
                 CoreStateFiles.RAFT_ID,
+                CoreStateFiles.QUARANTINE_MARKER,
                 CoreStateFiles.CORE_MEMBER_ID,
                 CoreStateFiles.SESSION_TRACKER,
                 CoreStateFiles.RAFT_TERM,
@@ -117,6 +125,7 @@ class ClusterStateLayoutTest
         Set<Path> expected = set(
                 dataDir.resolve( "cluster-state" ).resolve( "core-member-id-state" ),
                 dataDir.resolve( "cluster-state" ).resolve( "db" ).resolve( DATABASE_NAME ).resolve( "raft-id-state" ),
+                dataDir.resolve( "cluster-state" ).resolve( "db" ).resolve( DATABASE_NAME ).resolve( "quarantine-marker-state" ),
                 dataDir.resolve( "cluster-state" ).resolve( "db" ).resolve( DATABASE_NAME ).resolve( "session-tracker-state" ),
                 dataDir.resolve( "cluster-state" ).resolve( "db" ).resolve( DATABASE_NAME ).resolve( "session-tracker-state" ),
                 dataDir.resolve( "cluster-state" ).resolve( "db" ).resolve( DATABASE_NAME ).resolve( "term-state" ),

@@ -30,9 +30,11 @@ import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
 import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.EnterpriseSystemGraphComponent;
+import com.neo4j.dbms.QuarantineOperator;
 import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.dbms.procedures.ClusteredDatabaseStateProcedure;
+import com.neo4j.dbms.procedures.QuarantineProcedure;
 import com.neo4j.enterprise.edition.AbstractEnterpriseEditionModule;
 import com.neo4j.fabric.bootstrap.EnterpriseFabricServicesBootstrap;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
@@ -98,6 +100,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
 
     private TopologyService topologyService;
     private ReadReplicaDatabaseFactory readReplicaDatabaseFactory;
+    private QuarantineOperator quarantineOperator;
     private ClusteredDbmsReconcilerModule reconcilerModule;
     private DatabaseStartAborter databaseStartAborter;
     private final ClusterStateStorageFactory storageFactory;
@@ -178,6 +181,9 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         globalProcedures.register( new ReadReplicaToggleProcedure( databaseManager ) );
         globalProcedures.register( new ClusterOverviewProcedure( topologyService, databaseManager.databaseIdRepository() ) );
         globalProcedures.register( new ClusteredDatabaseStateProcedure( databaseManager.databaseIdRepository(), topologyService ) );
+        globalProcedures.register( new QuarantineProcedure( quarantineOperator,
+                globalModule.getGlobalClock(), globalConfig.get( GraphDatabaseSettings.db_timezone ).getZoneId() ) );
+
     }
 
     @Override
@@ -223,8 +229,9 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
                 .orElseThrow()
                 .databaseFacade();
         var dbmsModel = new ClusterSystemGraphDbmsModel( systemDbSupplier );
+        quarantineOperator = new QuarantineOperator( logProvider, databaseManager.databaseIdRepository(), storageFactory );
         reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager,
-                databaseEventService, storageFactory, reconciledTxTracker, dbmsModel );
+                databaseEventService, storageFactory, reconciledTxTracker, dbmsModel, quarantineOperator );
 
         topologyService = createTopologyService( databaseManager, reconcilerModule.databaseStateService(), globalLogService );
         reconcilerModule.registerDatabaseStateChangedListener( topologyService );

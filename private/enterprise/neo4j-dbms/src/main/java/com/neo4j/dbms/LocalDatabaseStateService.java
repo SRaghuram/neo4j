@@ -23,12 +23,12 @@ public class LocalDatabaseStateService implements DatabaseStateService
     @Override
     public OperatorState stateOfDatabase( NamedDatabaseId namedDatabaseId )
     {
-        return reconciler.getReconcilerEntryOrDefault( namedDatabaseId, EnterpriseDatabaseState.unknown( namedDatabaseId ) ).operatorState();
+        return reconciler.getReconcilerEntryOrDefault( namedDatabaseId, () -> EnterpriseDatabaseState.unknown( namedDatabaseId ) ).operatorState();
     }
 
     @Override
     public Optional<Throwable> causeOfFailure( NamedDatabaseId namedDatabaseId )
     {
-        return reconciler.getReconcilerEntryOrDefault( namedDatabaseId, EnterpriseDatabaseState.unknown( namedDatabaseId ) ).failure();
+        return reconciler.getReconcilerEntryOrDefault( namedDatabaseId, () -> EnterpriseDatabaseState.unknown( namedDatabaseId ) ).failure();
     }
 }

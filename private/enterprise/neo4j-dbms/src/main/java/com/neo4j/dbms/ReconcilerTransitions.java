@@ -39,7 +39,7 @@ class ReconcilerTransitions
 
     private static Transition validateFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager )
     {
-        return Transition.from( INITIAL )
+        return Transition.from( DROPPED, INITIAL )
                 .doTransition( databaseManager::validateDatabaseCreation )
                 .ifSucceeded( INITIAL )
                 .ifFailedThenDo( nothing, INITIAL );
@@ -47,7 +47,7 @@ class ReconcilerTransitions
 
     private static Transition createFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager )
     {
-        return Transition.from( INITIAL )
+        return Transition.from( DROPPED, INITIAL )
                          .doTransition( databaseManager::createDatabase )
                          .ifSucceeded( STOPPED )
                          .ifFailedThenDo( nothing, DIRTY );
