@@ -14,6 +14,7 @@ import com.neo4j.bench.infra.ArtifactStorage;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.JobId;
+import com.neo4j.bench.infra.InfraNamesHelper;
 import com.neo4j.bench.infra.JobParams;
 import com.neo4j.bench.infra.JobScheduler;
 import com.neo4j.bench.infra.JobStatus;
@@ -23,7 +24,6 @@ import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
 import com.neo4j.bench.model.util.JsonUtil;
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -143,7 +143,7 @@ public class BenchmarkJobScheduler
 
         // job name should follow these restrictions, https://docs.aws.amazon.com/cli/latest/reference/batch/submit-job.html
         // The first character must be alphanumeric, and up to 128 letters (uppercase and lowercase), numbers, hyphens, and underscores are allowed.
-        String sanitizedJobName = StringUtils.substring( jobName.replaceAll( "[^\\p{Alnum}|^_-]", "_" ), 0, 127 );
+        String sanitizedJobName = InfraNamesHelper.sanitizeJobName( jobName );
 
         JobId jobId = jobScheduler.schedule( artifactWorkerUri, artifactBaseURI, sanitizedJobName );
         LOG.info( "job scheduled, with id {}", jobId.id() );
