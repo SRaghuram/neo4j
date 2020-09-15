@@ -9,15 +9,17 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
-import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.neo4j.cypher.internal.security.SystemGraphCredential;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -327,12 +329,15 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
 
         String defaultDatabaseName = getDefaultDatabaseName( tx );
 
+        List<String> relevantRoles = new ArrayList<>();
+
         try ( ResourceIterator<Node> roleNodes = tx.findNodes( ROLE_LABEL ) )
         {
             List<String> roles = roleNodes.stream()
                                           .map( r -> r.getProperty( "name" ).toString() )
                                           .filter( r -> !r.equals( PUBLIC ) )
                                           .collect( Collectors.toList() );
+
             for ( String role : roles )
             {
                 Set<ResourcePrivilege> privileges = currentGetPrivilegeForRole( tx, role );
@@ -342,27 +347,65 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
                                                                               p.getDbName().equals( databaseName ) ||
                                                                               databaseName.equals( defaultDatabaseName ) && p.appliesToDefault() )
                                                                       .collect( Collectors.toSet() );
-
                 if ( !relevantPrivileges.isEmpty() )
                 {
+                    relevantRoles.add( role );
                     result.add( String.format( "CREATE ROLE `%s` IF NOT EXISTS", role ) );
                     for ( ResourcePrivilege privilege : relevantPrivileges )
                     {
                         result.addAll( privilege.asGrantFor( role, databaseName ) );
                     }
 
-                    if ( saveUsers )
-                    {
-                        // CREATE USER user IF NOT EXISTS SET ENCRYPTED PASSWORD pass CHANGE REQUIRED
-                        // find all users connected to this role and save
-                    }
                 }
             }
         }
 
+        if ( saveUsers )
+        {
+            result.addAll( getUsersAsCommands( tx, relevantRoles ));
+        }
 
         return result;
     }
+
+    private List<String> getUsersAsCommands( Transaction tx, List<String> relevantRoles )
+    {
+        Map<String, String> users = new HashMap<>();
+        Map<String, List<String>> userToRoles = new HashMap<>();
+
+        for ( String role : relevantRoles ) {
+            Node roleNode = tx.findNode( Label.label( "Role" ), "name", role );
+            roleNode.getRelationships(Direction.INCOMING, RelationshipType.withName( "HAS_ROLE" ) ).forEach( rel ->
+            {
+                Node startNode = rel.getStartNode();
+                Map<String,Object> properties = startNode.getAllProperties();
+                String username = (String) properties.get( "name" );
+                String changeRequired = "CHANGE " + ((boolean) properties.get( "passwordChangeRequired" ) ? "" : "NOT ") + "REQUIRED";
+                String setStatus = "SET STATUS " + ((boolean) properties.get( "suspended" ) ? "SUSPENDED" : "ACTIVE");
+                try
+                {
+                    String maskedCredentials = SystemGraphCredential.maskSerialized( (String) properties.get( "credentials" ) );
+                    users.put( username, String.format( "CREATE USER `%s` IF NOT EXISTS SET ENCRYPTED PASSWORD '%s' %s %s",
+                                                        username, maskedCredentials, changeRequired, setStatus )
+                    );
+                    userToRoles.computeIfAbsent( username, u -> new ArrayList<>() ).add( String.format( "GRANT ROLE `%s` TO `%s`", role, username ) );
+                }
+                catch ( InvalidArgumentsException e )
+                {
+                    log.warn( "Failed to write restore command for user '%s': %s", username, e.getMessage() );
+                }
+            } );
+        }
+
+        List<String> commands = new ArrayList<>();
+        users.forEach( (user, command) -> {
+            commands.add(command);
+            commands.addAll(userToRoles.get(user));
+        });
+
+        return commands;
+    }
+
 
     private String getDefaultDatabaseName( Transaction tx )
     {
