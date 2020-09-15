@@ -81,6 +81,10 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
     null
   }
 
+  override def takeIfCompletedOrElsePeek(argumentId: Long): ArgumentStateWithCompleted[STATE] = {
+    takeOneIfCompletedOrElsePeek()
+  }
+
   override def takeOneIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {
     if (hasController) {
       if (controller.tryTake()) {
@@ -109,11 +113,8 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
   }
 
   override def peek(argumentId: Long): STATE = {
-    if (hasController && argumentId == TopLevelArgument.VALUE) {
-      controller.state
-    } else {
-      null.asInstanceOf[STATE]
-    }
+    TopLevelArgument.assertTopLevelArgument(argumentId)
+    controller.state
   }
 
   override def hasCompleted: Boolean = {
@@ -121,17 +122,15 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
   }
 
   override def hasCompleted(argument: Long): Boolean = {
-    argument == TopLevelArgument.VALUE && controller != null && controller.isZero
+    TopLevelArgument.assertTopLevelArgument(argument)
+    controller != null && controller.isZero
   }
 
   override def remove(argument: Long): STATE = {
+    TopLevelArgument.assertTopLevelArgument(argument)
     DebugSupport.ASM.log("ASM %s rem %03d", argumentStateMapId, argument)
-    if (argument == TopLevelArgument.VALUE) {
-      hasController = false
-      controller.state
-    } else {
-      null.asInstanceOf[STATE]
-    }
+    hasController = false
+    controller.state
   }
 
   override def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int): Unit = {

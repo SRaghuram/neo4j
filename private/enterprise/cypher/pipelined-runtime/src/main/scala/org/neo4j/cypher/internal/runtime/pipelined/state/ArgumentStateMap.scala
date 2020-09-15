@@ -147,6 +147,11 @@ trait ArgumentStateMap[S <: ArgumentState] {
   def takeOneIfCompletedOrElsePeek(): ArgumentStateWithCompleted[S]
 
   /**
+   * Like [[takeOneIfCompletedOrElsePeek]] but restricted to a single, specific argument.
+   */
+  def takeIfCompletedOrElsePeek(argumentId: Long): ArgumentStateWithCompleted[S]
+
+  /**
    * The semantics of this call differ depending on whether this ASM is ordered.
    *
    * Ordered:
