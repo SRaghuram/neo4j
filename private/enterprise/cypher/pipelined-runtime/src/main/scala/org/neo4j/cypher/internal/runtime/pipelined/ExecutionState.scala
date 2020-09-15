@@ -18,8 +18,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.AntiMorselBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStreamMorselBuffer
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndMorsel
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.LHSAccumulatingRHSStreamingSource
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndData
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
 import org.neo4j.util.CalledFromGeneratedCode
 
@@ -79,11 +78,11 @@ trait ExecutionState extends ArgumentStateMapCreator {
   def takeAccumulators[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId, n: Int): IndexedSeq[ACC]
 
   /**
-   * Take one accumulator that is ready (LHS) and a morsel (RHS) together from the [[LHSAccumulatingRHSStreamingSource]] with id `bufferId`.
+   * Take one accumulator that is ready (LHS) and a payload (e.g., Morsel) (RHS) together from the [[MrBuff]] with id `bufferId`.
    *
    * @return the ready morsel accumulator, or `null` if no accumulator is ready
    */
-  def takeAccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId): AccumulatorAndMorsel[DATA, ACC]
+  def takeAccumulatorAndData[DATA <: AnyRef, ACC <: MorselAccumulator[DATA], PAYLOAD <: AnyRef](bufferId: BufferId): AccumulatorAndData[DATA, ACC, PAYLOAD]
 
   /**
    * Take data from a [[ArgumentStreamMorselBuffer]] or [[AntiMorselBuffer]] buffer with id `bufferId`.
@@ -128,15 +127,15 @@ trait ExecutionState extends ArgumentStateMapCreator {
   def closeAccumulatorsTask(pipeline: ExecutablePipeline, accumulators: IndexedSeq[MorselAccumulator[_]]): Unit
 
   /**
-   * Close a pipeline task which was executing over some input morsel accumulator (LHS) and a morsel (RHS) from a [[LHSAccumulatingRHSStreamingSource]].
+   * Close a pipeline task which was executing over some input morsel accumulator (LHS) and a payload (e.g., morsel) (RHS) from a [[MrBuff]].
    *
    * @param pipeline the executing pipeline
-   * @param inputMorsel the input morsel
+   * @param payload e.g., an input morsel
    * @param accumulator the input morsel accumulator
    */
-  def closeMorselAndAccumulatorTask(pipeline: ExecutablePipeline,
-                                    inputMorsel: Morsel,
-                                    accumulator: MorselAccumulator[_]): Unit
+  def closeDataAndAccumulatorTask[PAYLOAD <: AnyRef](pipeline: ExecutablePipeline,
+                                                     payload: PAYLOAD,
+                                                     accumulator: MorselAccumulator[_]): Unit
 
   /**
    * Remove all rows related to cancelled argumentRowIds from `morsel`.

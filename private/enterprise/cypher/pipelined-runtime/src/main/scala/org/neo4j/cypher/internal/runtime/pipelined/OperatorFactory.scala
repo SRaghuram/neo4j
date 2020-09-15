@@ -94,6 +94,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexContainsSc
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexEndsWithScanOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexScanOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexSeekOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeLeftOuterHashJoinOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeLeftOuterHashJoinOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeRightOuterHashJoinOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NonFuseableOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.Operator
@@ -461,6 +463,31 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           rhsKeyOffsets,
           lhsSlots,
           lhsSlotMappings)(id)
+
+      case joinPlan: plans.LeftOuterHashJoin =>
+
+        val slotConfigs = physicalPlan.slotConfigurations
+        val argumentSize = physicalPlan.argumentSizes(id)
+        val keyVariables = joinPlan.nodes.toArray
+
+        val lhsSlots = slotConfigs(joinPlan.left.id)
+        val rhsSlots = slotConfigs(joinPlan.right.id)
+
+        val lhsKeyOffsets = KeyOffsets.create(lhsSlots, keyVariables)
+        val rhsKeyOffsets = KeyOffsets.create(rhsSlots, keyVariables)
+
+        val lhsSlotMappings = computeSlotMappings(lhsSlots, argumentSize, slots)
+        val rhsSlotMappings = computeSlotMappings(rhsSlots, argumentSize, slots)
+
+        val buffer = inputBuffer.variant.asInstanceOf[LHSAccumulatingRHSStreamingBufferVariant]
+        new NodeLeftOuterHashJoinOperator(
+          WorkIdentity.fromPlan(plan),
+          buffer.lhsArgumentStateMapId,
+          buffer.rhsArgumentStateMapId,
+          lhsKeyOffsets,
+          rhsKeyOffsets,
+          rhsSlots,
+          rhsSlotMappings)(id)
 
       case _: ConditionalApply |
            _: AntiConditionalApply |

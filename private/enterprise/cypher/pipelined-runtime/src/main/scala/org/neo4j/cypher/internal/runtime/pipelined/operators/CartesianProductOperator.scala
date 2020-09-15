@@ -17,7 +17,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CartesianProductOperator.LHSMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
-import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers
@@ -30,7 +29,7 @@ class CartesianProductOperator(val workIdentity: WorkIdentity,
                                rhsArgumentStateMapId: ArgumentStateMapId,
                                argumentSize: SlotConfiguration.Size)
                               (val id: Id = Id.INVALID_ID)
-  extends Operator with AccumulatorsAndMorselInputOperatorState[Morsel, LHSMorsel] {
+  extends Operator with AccumulatorsAndMorselInputOperatorState[Morsel, LHSMorsel, Morsel] {
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
@@ -41,8 +40,8 @@ class CartesianProductOperator(val workIdentity: WorkIdentity,
     this
   }
 
-  override def nextTasks(input: Buffers.AccumulatorAndMorsel[Morsel, LHSMorsel]): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[Morsel, LHSMorsel]] =
-    Array(new OTask(input.acc, input.morsel))
+  override def nextTasks(input: Buffers.AccumulatorAndData[Morsel, LHSMorsel, Morsel]): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[Morsel, LHSMorsel]] =
+    Array(new OTask(input.acc, input.payload))
 
   // Extending InputLoopTask first to get the correct producingWorkUnitEvent implementation
   class OTask(override val accumulator: LHSMorsel, rhsMorsel: Morsel)

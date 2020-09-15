@@ -49,6 +49,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ExpressionWithTxStateChanges
 import org.neo4j.cypher.internal.runtime.spec.tests.FilterTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.InputTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LabelScanTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.LeftOuterHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LetAntiSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LetSelectOrAntiSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LetSelectOrSemiApplyTestBase
@@ -311,6 +312,10 @@ class PipelinedNodeHashJoinNoFusingTest extends NodeHashJoinTestBase(NO_FUSING, 
 // NODE RIGHT OUTER HASH JOIN
 class PipelinedNodeRightOuterHashJoinTest extends RightOuterHashJoinTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedNodeRightOuterHashJoinNoFusingTest extends RightOuterHashJoinTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
+// NODE LEFT OUTER HASH JOIN
+class PipelinedNodeLeftOuterHashJoinTest extends LeftOuterHashJoinTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedNodeLeftOuterHashJoinNoFusingTest extends LeftOuterHashJoinTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // VALUE HASH JOIN
 class PipelinedValueHashJoinTest extends ValueHashJoinTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite

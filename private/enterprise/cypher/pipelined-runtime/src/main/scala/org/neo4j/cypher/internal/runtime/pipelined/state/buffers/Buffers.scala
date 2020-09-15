@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.physicalplanning.ConditionalBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.Initialization
 import org.neo4j.cypher.internal.physicalplanning.LHSAccumulatingBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.LHSAccumulatingRHSStreamingBufferVariant
+import org.neo4j.cypher.internal.physicalplanning.LeftOuterVariant
 import org.neo4j.cypher.internal.physicalplanning.RHSStreamingBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.ReadOnlyArray
 import org.neo4j.cypher.internal.physicalplanning.RegularBufferVariant
@@ -98,6 +99,10 @@ class Buffers(numBuffers: Int,
           return x
         case x: RHSStreamingSink if x.rhsArgumentStateMapId == argumentStateMapId =>
           return x
+        case x: LeftOuterLhsAccumulatingSink[_, _] if x.lhsArgumentStateMapId == argumentStateMapId =>
+          return x
+        case x: LeftOuterRhsStreamingSink if x.rhsArgumentStateMapId == argumentStateMapId =>
+          return x
         case x: MorselArgumentStateBuffer[_, _] if x.argumentStateMapId == argumentStateMapId =>
           return x
         case x: ArgumentStreamMorselBuffer if x.argumentStateMapId == argumentStateMapId =>
@@ -161,16 +166,34 @@ class Buffers(numBuffers: Int,
             x.argumentStateMapId)
 
         case x: LHSAccumulatingBufferVariant =>
-          new LHSAccumulatingSink(x.lhsArgumentStateMapId,
-                                  x.rhsArgumentStateMapId,
-                                  reducers,
-                                  argumentStateMaps)
+          x.joinVariant match {
+            case LeftOuterVariant =>
+              new LeftOuterLhsAccumulatingSink(x.lhsArgumentStateMapId,
+                                                 reducers,
+                                                 argumentStateMaps,
+                                                 tracker)
+            case _ =>
+              new LHSAccumulatingSink(x.lhsArgumentStateMapId,
+                                      x.rhsArgumentStateMapId,
+                                      reducers,
+                                      argumentStateMaps)
+          }
+
         case x: RHSStreamingBufferVariant =>
-          new RHSStreamingSink(x.lhsArgumentStateMapId,
-                               x.rhsArgumentStateMapId,
-                               reducers,
-                               argumentStateMaps,
-                               tracker)
+          x.joinVariant match {
+            case LeftOuterVariant =>
+              new LeftOuterRhsStreamingSink(x.rhsArgumentStateMapId,
+                                              reducers,
+                                              argumentStateMaps,
+                                              tracker)
+            case _ =>
+              new RHSStreamingSink(x.lhsArgumentStateMapId,
+                                   x.rhsArgumentStateMapId,
+                                   reducers,
+                                   argumentStateMaps,
+                                   tracker)
+          }
+
         case x: LHSAccumulatingRHSStreamingBufferVariant =>
           /*
           Explicit construction of sinks is necessary due to the combination of:
@@ -179,11 +202,20 @@ class Buffers(numBuffers: Int,
            */
           constructBuffer(x.lhsSink, queryState)
           constructBuffer(x.rhsSink, queryState)
-          new LHSAccumulatingRHSStreamingSource(tracker,
-                                                reducers,
-                                                argumentStateMaps,
-                                                x.lhsArgumentStateMapId,
-                                                x.rhsArgumentStateMapId)
+          x.joinVariant match {
+            case LeftOuterVariant =>
+              new LHSAccumulatingRHSArgumentStreamingSource(tracker,
+                                                               reducers,
+                                                               argumentStateMaps,
+                                                               x.lhsArgumentStateMapId,
+                                                               x.rhsArgumentStateMapId)
+            case _ =>
+              new LHSAccumulatingRHSStreamingSource(tracker,
+                                                    reducers,
+                                                    argumentStateMaps,
+                                                    x.lhsArgumentStateMapId,
+                                                    x.rhsArgumentStateMapId)
+          }
 
         case ArgumentStreamBufferVariant(argumentStateMapId, ArgumentStreamType) =>
           new ArgumentStreamMorselBuffer(bufferDefinition.id,
@@ -263,10 +295,10 @@ class Buffers(numBuffers: Int,
     buffers(bufferId.x).asInstanceOf[MorselArgumentStateBuffer[_, _]]
 
   /**
-   * Get the buffer with the given id casted as a [[LHSAccumulatingRHSStreamingSource]].
+   * Get the buffer with the given id casted as a [[JoinBuffer]].
    */
-  def lhsAccumulatingRhsStreamingBuffer(bufferId: BufferId): LHSAccumulatingRHSStreamingSource[_, _] =
-    buffers(bufferId.x).asInstanceOf[LHSAccumulatingRHSStreamingSource[_, _]]
+  def joinBuffer[PAYLOAD <: AnyRef](bufferId: BufferId): JoinBuffer[_, _, PAYLOAD] =
+    buffers(bufferId.x).asInstanceOf[JoinBuffer[_, _, PAYLOAD]]
 
   /**
    * Clear all data from all buffers.
@@ -369,5 +401,5 @@ object Buffers {
   /**
    * Output of lhsAccumulatingRhsStreamingBuffers.
    */
-  case class AccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](acc: ACC, morsel: Morsel)
+  case class AccumulatorAndData[DATA <: AnyRef, ACC <: MorselAccumulator[DATA], PAYLOAD <: AnyRef](acc: ACC, payload: PAYLOAD)
 }

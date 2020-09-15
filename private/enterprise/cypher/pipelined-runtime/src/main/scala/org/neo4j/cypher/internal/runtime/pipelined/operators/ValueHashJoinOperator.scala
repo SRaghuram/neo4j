@@ -43,7 +43,7 @@ class ValueHashJoinOperator(val workIdentity: WorkIdentity,
                             lhsExpression: Expression,
                             rhsExpression: Expression,
                             rhsSlotMappings: SlotMappings)
-                           (val id: Id = Id.INVALID_ID) extends Operator with AccumulatorsAndMorselInputOperatorState[Morsel, HashTable] {
+                           (val id: Id = Id.INVALID_ID) extends Operator with AccumulatorsAndMorselInputOperatorState[Morsel, HashTable, Morsel] {
 
   private val rhsLongMappings: Array[(Int, Int)] = rhsSlotMappings.longMappings
   private val rhsRefMappings: Array[(Int, Int)] = rhsSlotMappings.refMappings
@@ -62,8 +62,8 @@ class ValueHashJoinOperator(val workIdentity: WorkIdentity,
     this
   }
 
-  override def nextTasks(accAndMorsel: Buffers.AccumulatorAndMorsel[Morsel, HashTable]): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[Morsel, HashTable]] =
-    Array(new OTask(accAndMorsel.acc, accAndMorsel.morsel))
+  override def nextTasks(accAndMorsel: Buffers.AccumulatorAndData[Morsel, HashTable, Morsel]): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[Morsel, HashTable]] =
+    Array(new OTask(accAndMorsel.acc, accAndMorsel.payload))
 
   class OTask(override val accumulator: HashTable, rhsMorsel: Morsel)
     extends InputLoopTask(rhsMorsel)

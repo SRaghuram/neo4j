@@ -27,7 +27,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndMorsel
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndData
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.JoinBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
 import org.neo4j.util.Preconditions
 
@@ -142,8 +143,8 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     buffers.source[ACC](bufferId).take(n)
   }
 
-  override def takeAccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId): AccumulatorAndMorsel[DATA, ACC] = {
-    buffers.source[AccumulatorAndMorsel[DATA, ACC]](bufferId).take()
+  override def takeAccumulatorAndData[DATA <: AnyRef, ACC <: MorselAccumulator[DATA], PAYLOAD <: AnyRef](bufferId: BufferId): AccumulatorAndData[DATA, ACC, PAYLOAD] = {
+    buffers.source[AccumulatorAndData[DATA, ACC, PAYLOAD]](bufferId).take()
   }
 
   override def takeData[DATA <: AnyRef](bufferId: BufferId): DATA = {
@@ -175,12 +176,12 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     }
   }
 
-  override def closeMorselAndAccumulatorTask(pipeline: ExecutablePipeline,
-                                             inputMorsel: Morsel,
-                                             accumulator: MorselAccumulator[_]): Unit = {
+  override def closeDataAndAccumulatorTask[PAYLOAD <: AnyRef](pipeline: ExecutablePipeline,
+                                                              payload: PAYLOAD,
+                                                              accumulator: MorselAccumulator[_]): Unit = {
     closeWorkUnit(pipeline)
-    val buffer = buffers.lhsAccumulatingRhsStreamingBuffer(pipeline.inputBuffer.id)
-    buffer.close(accumulator, inputMorsel)
+    val buffer: JoinBuffer[_, _, PAYLOAD] = buffers.joinBuffer(pipeline.inputBuffer.id)
+    buffer.close(accumulator, payload)
   }
 
   override def filterCancelledArguments(pipeline: ExecutablePipeline,
@@ -196,7 +197,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   override def filterCancelledArguments(pipeline: ExecutablePipeline,
                                         inputMorsel: Morsel,
                                         accumulator: MorselAccumulator[_]): Boolean = {
-    val buffer = buffers.lhsAccumulatingRhsStreamingBuffer(pipeline.inputBuffer.id)
+    val buffer = buffers.joinBuffer(pipeline.inputBuffer.id)
     buffer.filterCancelledArguments(accumulator, inputMorsel)
   }
 
@@ -236,7 +237,9 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   override def unlock(pipeline: ExecutablePipeline): Unit = pipelineLocks(pipeline.id.x).unlock()
 
   override def canContinueOrTake(pipeline: ExecutablePipeline): Boolean = {
-    val hasWork = continuations(pipeline.id.x).hasData || buffers.hasData(pipeline.inputBuffer.id)
+    val hasContinuation = continuations(pipeline.id.x).hasData
+    val hasData = buffers.hasData(pipeline.inputBuffer.id)
+    val hasWork = hasContinuation || hasData
     hasWork && queryState.flowControl.hasDemand
   }
 

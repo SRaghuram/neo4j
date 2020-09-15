@@ -21,7 +21,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QuerySchedulingPolicy
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndMorsel
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndData
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
 class WorkerTest extends CypherFunSuite {
@@ -137,7 +137,7 @@ class WorkerTest extends CypherFunSuite {
     val cause = new Exception
     val acc = mock[MorselAccumulator[AnyRef]]
     val morsel = mock[Morsel]
-    val input = AccumulatorAndMorsel[AnyRef, MorselAccumulator[AnyRef]](acc, morsel)
+    val input = AccumulatorAndData[AnyRef, MorselAccumulator[AnyRef], Morsel](acc, morsel)
     val pipeline = mock[ExecutablePipeline]
 
     val schedulingPolicy: QuerySchedulingPolicy =
@@ -152,7 +152,7 @@ class WorkerTest extends CypherFunSuite {
     val worker = new Worker(1, mock[QueryManager], mock[Sleeper])
     worker.scheduleNextTask(query, resources) shouldBe SchedulingResult(null, someTaskWasFilteredOut = true)
 
-    verify(executionState).closeMorselAndAccumulatorTask(pipeline, morsel, acc)
+    verify(executionState).closeDataAndAccumulatorTask(pipeline, morsel, acc)
     verify(executionState).failQuery(cause, resources, pipeline)
   }
 

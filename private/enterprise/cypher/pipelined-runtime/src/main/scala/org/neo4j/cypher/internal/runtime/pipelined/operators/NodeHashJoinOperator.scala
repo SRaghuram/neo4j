@@ -10,7 +10,6 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
@@ -29,14 +28,13 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
-import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.KeyOffsets
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.copyDataFromRow
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.fillKeyArray
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.util.collection.ProbeTable
 import org.neo4j.memory.MemoryTracker
-import org.neo4j.values.storable.LongArray
+import org.neo4j.values.storable.Value
 import org.neo4j.values.storable.Values
 
 class NodeHashJoinOperator(val workIdentity: WorkIdentity,
@@ -45,7 +43,7 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
                            lhsKeyOffsets: KeyOffsets,
                            rhsKeyOffsets: KeyOffsets,
                            rhsSlotMappings: SlotMappings)
-                          (val id: Id = Id.INVALID_ID) extends Operator with AccumulatorsAndMorselInputOperatorState[Morsel, HashTable] {
+                          (val id: Id = Id.INVALID_ID) extends Operator with AccumulatorsAndMorselInputOperatorState[Morsel, HashTable, Morsel] {
 
   private val rhsLongMappings: Array[(Int, Int)] = rhsSlotMappings.longMappings
   private val rhsRefMappings: Array[(Int, Int)] = rhsSlotMappings.refMappings
@@ -67,8 +65,8 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
     this
   }
 
-  override def nextTasks(accAndMorsel: Buffers.AccumulatorAndMorsel[Morsel, HashTable]): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[Morsel, HashTable]] =
-    singletonIndexedSeq(new OTask(accAndMorsel.acc, accAndMorsel.morsel))
+  override def nextTasks(accAndMorsel: Buffers.AccumulatorAndData[Morsel, HashTable, Morsel]): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[Morsel, HashTable]] =
+    singletonIndexedSeq(new OTask(accAndMorsel.acc, accAndMorsel.payload))
 
   // Extending InputLoopTask first to get the correct producingWorkUnitEvent implementation
   class OTask(override val accumulator: HashTable, rhsMorsel: Morsel)

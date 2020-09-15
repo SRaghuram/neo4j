@@ -37,7 +37,7 @@ class NodeRightOuterHashJoinOperator(val workIdentity: WorkIdentity,
                                      rhsKeyOffsets: KeyOffsets,
                                      lhsSlots: SlotConfiguration,
                                      lhsSlotMappings: SlotMappings)
-                          (val id: Id = Id.INVALID_ID) extends Operator with AccumulatorsAndMorselInputOperatorState[Morsel, HashTable] {
+                          (val id: Id = Id.INVALID_ID) extends Operator with AccumulatorsAndMorselInputOperatorState[Morsel, HashTable, Morsel] {
 
   private val lhsLongMappings: Array[(Int, Int)] = lhsSlotMappings.longMappings
   private val lhsRefMappings: Array[(Int, Int)] = lhsSlotMappings.refMappings
@@ -73,8 +73,8 @@ class NodeRightOuterHashJoinOperator(val workIdentity: WorkIdentity,
     this
   }
 
-  override def nextTasks(accAndMorsel: Buffers.AccumulatorAndMorsel[Morsel, HashTable]): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[Morsel, HashTable]] =
-    singletonIndexedSeq(new OTask(accAndMorsel.acc, accAndMorsel.morsel))
+  override def nextTasks(accAndMorsel: Buffers.AccumulatorAndData[Morsel, HashTable, Morsel]): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[Morsel, HashTable]] =
+    singletonIndexedSeq(new OTask(accAndMorsel.acc, accAndMorsel.payload))
 
   // Extending InputLoopTask first to get the correct producingWorkUnitEvent implementation
   class OTask(override val accumulator: HashTable, rhsMorsel: Morsel)
