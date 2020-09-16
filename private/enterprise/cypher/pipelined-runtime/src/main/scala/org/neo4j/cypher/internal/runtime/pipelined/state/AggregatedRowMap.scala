@@ -10,6 +10,7 @@ import java.util.Map
 import java.util.concurrent.ConcurrentHashMap
 
 import org.eclipse.collections.api.block.function.Function2
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Reducer
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.StandardReducer
@@ -38,6 +39,7 @@ trait AggregatedRow {
  * The [[AggregatedRowUpdaters]] holds all the aggregators for one aggregation output row.
  */
 trait AggregatedRowUpdaters {
+  def initialize(n: Int, state: QueryState): Unit
   def updater(index: Int): Updater
   def addUpdate(index: Int, value: AnyValue): Unit
   def addUpdate(index: Int, value: Array[AnyValue]): Unit
@@ -127,6 +129,9 @@ class StandardAggregators(reducers: Array[StandardReducer]) extends AggregatedRo
   override def result(n: Int): AnyValue = reducers(n).result
 
   // Update
+
+  override def initialize(n: Int, state: QueryState): Unit = reducers(n).initialize(state)
+
   override def updater(n: Int): Updater = reducers(n)
   override def addUpdate(n: Int, value: AnyValue): Unit = reducers(n).add(value)
   override def addUpdate(n: Int, value: Array[AnyValue]): Unit = reducers(n).add(value)
@@ -146,6 +151,7 @@ class StandardDirectAggregators(reducers: Array[StandardReducer]) extends Aggreg
   override def result(n: Int): AnyValue = reducers(n).result
 
   // Update
+  override def initialize(n: Int, state: QueryState): Unit = reducers(n).initialize(state)
   override def updater(n: Int): Updater = reducers(n)
   override def addUpdate(n: Int, value: AnyValue): Unit = reducers(n).add(value)
   override def addUpdate(n: Int, value: Array[AnyValue]): Unit = reducers(n).add(value)
@@ -200,4 +206,6 @@ class ConcurrentUpdaters(updaters: Array[Updater]) extends AggregatedRowUpdaters
   def applyUpdates(): Unit = {
     updaters.foreach(_.applyUpdates())
   }
+
+  override def initialize(n: Int, state: QueryState): Unit = updaters(n).initialize(state)
 }

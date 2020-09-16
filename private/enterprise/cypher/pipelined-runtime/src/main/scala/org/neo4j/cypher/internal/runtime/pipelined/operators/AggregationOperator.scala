@@ -12,6 +12,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
 import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.constructor
 import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
 import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.getStatic
@@ -21,6 +22,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.isNotNull
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
 import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
@@ -34,6 +36,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilat
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
@@ -61,11 +64,13 @@ import org.neo4j.cypher.internal.runtime.pipelined.aggregators.StdevPAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.StdevPDistinctAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.SumAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.SumDistinctAggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.UserDefinedAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ArgumentSlots
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate.createAggregators
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATE
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.argumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.AggregatedRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.AggregatedRowMap
@@ -152,6 +157,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
           val update = aggregatorRow.updaters(resources.workerId)
           var i = 0
           while (i < aggregations.length) {
+            update.initialize(i, queryState)
             val value = expressionValues(i)(readCursor, queryState)
             update.addUpdate(i, value)
             i += 1
@@ -212,6 +218,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
           val update = aggregatorRow.updaters(resources.workerId)
           var i = 0
           while (i < aggregations.length) {
+            update.initialize(i, queryState)
             val arguments = expressionValues(i)
             val input = new Array[AnyValue](arguments.length)
             var j = 0
@@ -299,7 +306,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
 object AggregationMapperOperatorTaskTemplate {
   def createAggregators(aggregators: Array[Aggregator]): IntermediateRepresentation = {
-    val newAggregators = aggregators.map {
+    val newAggregators: Array[IntermediateRepresentation] = aggregators.map {
       case CountStarAggregator => getStatic[Aggregators,Aggregator]("COUNT_STAR")
       case CountAggregator => getStatic[Aggregators,Aggregator]("COUNT")
       case CountDistinctAggregator => getStatic[Aggregators,Aggregator]("COUNT_DISTINCT")
@@ -322,6 +329,8 @@ object AggregationMapperOperatorTaskTemplate {
       case PercentileContDistinctAggregator => getStatic[Aggregators,Aggregator]("PERCENTILE_CONT_DISTINCT")
       case PercentileDiscAggregator => getStatic[Aggregators,Aggregator]("PERCENTILE_DISC")
       case PercentileDiscDistinctAggregator => getStatic[Aggregators,Aggregator]("PERCENTILE_DISC_DISTINCT")
+      case UserDefinedAggregator(token, allowed) =>
+        newInstance(constructor[UserDefinedAggregator, Int, Array[String]], constant(token), arrayOf[String](allowed.map(constant):_*))
       case aggregator =>
         throw new SyntaxException(s"Unexpected Aggregator: ${aggregator.getClass.getName}")
     }
@@ -517,9 +526,12 @@ class SingleArgumentAggregationMapperOperatorTaskTemplate(inner: OperatorTaskTem
 
   override protected def addUpdates(updaters: IntermediateRepresentation): IntermediateRepresentation = block(
     compiledAggregationExpressions.indices.map(i => {
-      invokeSideEffect(updaters, method[AggregatedRowUpdaters, Unit, Int, AnyValue]("addUpdate"),
-        constant(i),
-        nullCheckIfRequired(compiledAggregationExpressions(i)))
+      block(
+        invokeSideEffect(updaters, method[AggregatedRowUpdaters, Unit, Int, QueryState]("initialize"), constant(i), QUERY_STATE),
+        invokeSideEffect(updaters, method[AggregatedRowUpdaters, Unit, Int, AnyValue]("addUpdate"),
+          constant(i),
+          nullCheckIfRequired(compiledAggregationExpressions(i)))
+      )
     }): _ *
   )
   override def genMoreExpressions: Seq[IntermediateExpression] = compiledAggregationExpressions.toSeq
@@ -544,9 +556,12 @@ class AggregationMapperOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   override protected def addUpdates(updaters: IntermediateRepresentation): IntermediateRepresentation = block(
     compiledAggregationExpressions.indices.map(i => {
+      block(
+      invokeSideEffect(updaters, method[AggregatedRowUpdaters, Unit, Int, QueryState]("initialize"),constant(i), QUERY_STATE),
       invokeSideEffect(updaters, method[AggregatedRowUpdaters, Unit, Int, Array[AnyValue]]("addUpdate"),
         constant(i),
         arrayOf[AnyValue](compiledAggregationExpressions(i).map(e => nullCheckIfRequired(e)):_*))
+      )
     }): _ *
   )
   override def genMoreExpressions: Seq[IntermediateExpression] = compiledAggregationExpressions.flatten.toSeq

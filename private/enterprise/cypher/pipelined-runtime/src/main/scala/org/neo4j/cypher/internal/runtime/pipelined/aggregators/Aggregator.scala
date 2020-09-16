@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
@@ -46,6 +47,7 @@ object Aggregator {
  */
 trait Updater {
 
+  def initialize(state: QueryState): Unit = {}
   /**
    * Update this updater with a new value.
    *

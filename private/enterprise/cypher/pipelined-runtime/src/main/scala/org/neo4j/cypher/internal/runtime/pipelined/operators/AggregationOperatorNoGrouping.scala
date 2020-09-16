@@ -30,6 +30,7 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
@@ -40,6 +41,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate.createAggregators
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_RESOURCES
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATE
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.argumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.AggregatedRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.AggregatedRowAccumulator
@@ -133,6 +135,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
 
           var i = 0
           while (i < aggregations.length) {
+            update.initialize(i, queryState)
             val value = expressionValues(i)(readCursor, queryState)
             update.addUpdate(i, value)
             i += 1
@@ -195,6 +198,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
 
           var i = 0
           while (i < aggregations.length) {
+            update.initialize(i, queryState)
             val arguments = expressionValues(i)
             val input = new Array[AnyValue](arguments.length)
             var j = 0
@@ -445,9 +449,12 @@ class SingleArgumentAggregationMapperOperatorNoGroupingTaskTemplate(inner: Opera
 
   override protected def addUpdates: IntermediateRepresentation = block(
     compiledAggregationExpressions.indices.map(i => {
+      block(
+        invokeSideEffect(load(updatersVar), method[AggregatedRowUpdaters, Unit, Int, QueryState]("initialize"),constant(i), QUERY_STATE),
       invokeSideEffect(load(updatersVar), method[AggregatedRowUpdaters, Unit, Int, AnyValue]("addUpdate"),
         constant(i),
         nullCheckIfRequired(compiledAggregationExpressions(i)))
+      )
     }): _ *
   )
 
@@ -476,9 +483,12 @@ class AggregationMapperOperatorNoGroupingTaskTemplate(inner: OperatorTaskTemplat
 
   override protected def addUpdates: IntermediateRepresentation = block(
     compiledAggregationExpressions.indices.map(i => {
+      block(
+        invokeSideEffect(load(updatersVar), method[AggregatedRowUpdaters, Unit, Int, QueryState]("initialize"),constant(i), QUERY_STATE),
       invokeSideEffect(load(updatersVar), method[AggregatedRowUpdaters, Unit, Int, Array[AnyValue]]("addUpdate"),
         constant(i),
         arrayOf[AnyValue](compiledAggregationExpressions(i).map(e => nullCheckIfRequired(e)): _*))
+      )
     }): _ *
   )
 

@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.expressions.Null
 import org.neo4j.cypher.internal.expressions.functions
 import org.neo4j.cypher.internal.expressions.functions.AggregatingFunction
+import org.neo4j.cypher.internal.logical.plans.ResolvedFunctionInvocation
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.physicalplanning.ast.CollectAll
 import org.neo4j.cypher.internal.physicalplanning.ast.IsEmpty
@@ -99,7 +100,10 @@ case class AggregatorFactory(physicalPlan: PhysicalPlan) {
           case _ =>
             throw new SyntaxException(s"Unexpected function in aggregating function position: ${c.name}")
         }
-      case unsupported =>
+
+      case ResolvedFunctionInvocation(_, Some(signature), callArguments) if => (UserDefinedAggregator(signature), callArguments.toArray)
+
+        case unsupported =>
         throw new SyntaxException(s"Unexpected expression in aggregating function position: $unsupported")
     }
 }
