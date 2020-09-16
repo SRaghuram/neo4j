@@ -35,7 +35,7 @@ public class EnterpriseCheckPointThresholdTest extends CheckPointThresholdTestSu
             }
 
             @Override
-            public boolean mightHaveLogsToPrune()
+            public boolean mightHaveLogsToPrune( long upperVersion )
             {
                 return haveLogsToPrune;
             }
@@ -55,7 +55,7 @@ public class EnterpriseCheckPointThresholdTest extends CheckPointThresholdTestSu
         haveLogsToPrune = true;
         CheckPointThreshold threshold = createThreshold();
         threshold.initialize( 2 );
-        assertTrue( threshold.isCheckPointingNeeded( 2, triggered ) );
+        assertTrue( threshold.isCheckPointingNeeded( 2, ARBITRARY_LOG_VERSION, triggered ) );
         verifyTriggered( "log pruning", "test pruning strategy" );
         verifyNoMoreTriggers();
     }
@@ -67,7 +67,7 @@ public class EnterpriseCheckPointThresholdTest extends CheckPointThresholdTestSu
         haveLogsToPrune = false;
         CheckPointThreshold threshold = createThreshold();
         threshold.initialize( 2 );
-        assertFalse( threshold.isCheckPointingNeeded( 2, notTriggered ) );
+        assertFalse( threshold.isCheckPointingNeeded( 2, ARBITRARY_LOG_VERSION, notTriggered ) );
         verifyNoMoreTriggers();
     }
 
@@ -80,10 +80,10 @@ public class EnterpriseCheckPointThresholdTest extends CheckPointThresholdTestSu
 
         assertThat( threshold.checkFrequencyMillis() ).isLessThan( CheckPointThreshold.DEFAULT_CHECKING_FREQUENCY_MILLIS );
 
-        assertFalse( threshold.isCheckPointingNeeded( 2, triggered ) );
+        assertFalse( threshold.isCheckPointingNeeded( 2, ARBITRARY_LOG_VERSION, triggered ) );
         threshold.checkPointHappened( 3 );
-        assertFalse( threshold.isCheckPointingNeeded( 3, triggered ) );
-        assertTrue( threshold.isCheckPointingNeeded( 4, triggered ) );
+        assertFalse( threshold.isCheckPointingNeeded( 3, ARBITRARY_LOG_VERSION, triggered ) );
+        assertTrue( threshold.isCheckPointingNeeded( 4, ARBITRARY_LOG_VERSION, triggered ) );
         verifyTriggered( "continuous" );
         verifyNoMoreTriggers();
     }

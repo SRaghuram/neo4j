@@ -18,11 +18,11 @@ class ContinuousCheckPointThresholdTest
     {
         ContinuousCheckPointThreshold threshold = new ContinuousCheckPointThreshold();
         threshold.initialize( 10 );
-        assertFalse( threshold.thresholdReached( 10 ) );
-        assertTrue( threshold.thresholdReached( 11 ) );
-        assertTrue( threshold.thresholdReached( 11 ) );
+        assertFalse( threshold.thresholdReached( 10, 99 ) );
+        assertTrue( threshold.thresholdReached( 11, 99 ) );
+        assertTrue( threshold.thresholdReached( 11, 99 ) );
         threshold.checkPointHappened( 12 );
-        assertFalse( threshold.thresholdReached( 12 ) );
+        assertFalse( threshold.thresholdReached( 12, 99 ) );
     }
 
     @Test

@@ -12,7 +12,7 @@ public class VolumetricCheckPointThreshold extends AbstractCheckPointThreshold
 {
     private final LogPruning logPruning;
 
-    VolumetricCheckPointThreshold( LogPruning logPruning )
+    public VolumetricCheckPointThreshold( LogPruning logPruning )
     {
         super( "volumetric checkpoint threshold, based on log pruning strategy" );
         this.logPruning = logPruning;
@@ -26,9 +26,9 @@ public class VolumetricCheckPointThreshold extends AbstractCheckPointThreshold
     }
 
     @Override
-    protected boolean thresholdReached( long lastCommittedTransactionId )
+    protected boolean thresholdReached( long lastCommittedTransactionId, long lastCommittedTransactionLogVersion )
     {
-        return logPruning.mightHaveLogsToPrune();
+        return logPruning.mightHaveLogsToPrune( lastCommittedTransactionLogVersion );
     }
 
     @Override
