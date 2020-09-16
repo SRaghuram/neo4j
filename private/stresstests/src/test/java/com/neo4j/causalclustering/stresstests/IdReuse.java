@@ -14,8 +14,8 @@ import org.assertj.core.api.Condition;
 import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.graphdb.Node;
@@ -58,25 +58,40 @@ class IdReuse
         }
 
         @Override
-        protected void validate()
+        protected void validate() throws Exception
         {
             var members = cluster.allMembers();
 
+            var lastTxId = getLastTxId( cluster.awaitLeader() );
             for ( ClusterMember member : members )
             {
-                assertEventually( () -> getLastTxId( member ), new Condition<>( value ->
-                {
-                    try
-                    {
-                        return value.equals( getLastTxId( cluster.awaitLeader() ) );
-                    }
-                    catch ( TimeoutException e )
-                    {
-                        return false;
-                    }
-                }, "Last tx id condition." ), 1, MINUTES );
+                assertEventually( () -> getLastTxId( member ),
+                                  new Condition<>( value -> value.equals( lastTxId ), "Last tx id condition." ),
+                                  1, MINUTES );
             }
 
+            var usedIdsPerMember = getUsedIdsPerMember( members );
+            if ( usedIdsPerMember.values().stream().distinct().count() == 1 )
+            {
+                log.info( "Total of " + usedIdsPerMember.values().iterator().next() + " used ids found" );
+                return;
+            }
+            log.warn( "Mismatching used id count found in cluster members: %s\nChecking highest written ids...", usedIdsPerMember );
+
+            usedIdsPerMember = getWrittenIdsPerMember( members );
+            if ( usedIdsPerMember.values().stream().distinct().count() == 1 )
+            {
+                log.info( "Total of " + usedIdsPerMember.values().iterator().next() + " written ids found" );
+                return;
+            }
+            else
+            {
+                throw new IllegalStateException( "Members don't have the same used id count" );
+            }
+        }
+
+        private Map<ServerId,Long> getUsedIdsPerMember( Set<ClusterMember> members )
+        {
             Map<ServerId,Long> usedIdsPerMember = new HashMap<>();
 
             for ( ClusterMember member : members )
@@ -88,14 +103,23 @@ class IdReuse
                         .get( IdType.NODE )
                         .getNumberOfIdsInUse() );
             }
+            return usedIdsPerMember;
+        }
 
-            if ( usedIdsPerMember.values().stream().distinct().count() != 1 )
+        private Map<ServerId,Long> getWrittenIdsPerMember( Set<ClusterMember> members )
+        {
+            Map<ServerId,Long> usedIdsPerMember = new HashMap<>();
+
+            for ( ClusterMember member: members )
             {
-                log.error( "Mismatching used id count found in cluster members: %s", usedIdsPerMember );
-                throw new IllegalStateException( "Members don't have the same used id count" );
+                usedIdsPerMember.put( member.serverId(), member
+                        .defaultDatabase()
+                        .getDependencyResolver()
+                        .resolveDependency( IdGeneratorFactory.class )
+                        .get( IdType.NODE )
+                        .getHighestWritten() );
             }
-
-            log.info( "Total of " + usedIdsPerMember.values().iterator().next() + " used ids found" );
+            return usedIdsPerMember;
         }
 
         private long getLastTxId( ClusterMember member )
@@ -185,7 +209,7 @@ class IdReuse
     {
         private final long reelectIntervalSeconds;
         private final Log log;
-        private Cluster cluster;
+        private final Cluster cluster;
 
         ReelectionWorkload( Control control, Resources resources, Config config )
         {
