@@ -169,7 +169,7 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
             val aggregationExpressions = Array.newBuilder[Array[Expression]]
             aggregationExpressionsMap.foreach {
               case (_, astExpression) =>
-                val (aggregator, innerAstExpression) = aggregatorFactory.newAggregator(astExpression)
+                val (aggregator, innerAstExpression) = aggregatorFactory.newAggregator(astExpression, parallelExecution)
                 aggregators += aggregator
                 aggregationExpressions += innerAstExpression
             }

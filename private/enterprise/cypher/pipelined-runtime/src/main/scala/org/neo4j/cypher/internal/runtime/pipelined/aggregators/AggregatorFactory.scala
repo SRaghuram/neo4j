@@ -25,7 +25,7 @@ case class AggregatorFactory(physicalPlan: PhysicalPlan) {
    * Creates a new [[Aggregator]] from an input AST Expression. Will also return the command [[expressions.Expression]]
    * required to compute the aggregator input value.
    */
-  def newAggregator(expression: expressions.Expression): (Aggregator, Array[expressions.Expression]) =
+  def newAggregator(expression: expressions.Expression, parallelExecution: Boolean): (Aggregator, Array[expressions.Expression]) =
     expression match {
       // TODO move somewhere else
       case e if e.arguments.exists(_.containsAggregate) =>
@@ -101,7 +101,7 @@ case class AggregatorFactory(physicalPlan: PhysicalPlan) {
             throw new SyntaxException(s"Unexpected function in aggregating function position: ${c.name}")
         }
 
-      case ResolvedFunctionInvocation(_, Some(signature), callArguments) if => (UserDefinedAggregator(signature), callArguments.toArray)
+      case ResolvedFunctionInvocation(_, Some(signature), callArguments) if !parallelExecution => (UserDefinedAggregator(signature), callArguments.toArray)
 
         case unsupported =>
         throw new SyntaxException(s"Unexpected expression in aggregating function position: $unsupported")

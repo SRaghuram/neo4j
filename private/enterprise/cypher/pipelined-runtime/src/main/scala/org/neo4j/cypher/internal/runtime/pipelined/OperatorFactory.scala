@@ -562,7 +562,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         aggregationExpression.foreach {
           case (key, astExpression) =>
             val outputSlot = slots(key)
-            val (aggregator, _) = aggregatorFactory.newAggregator(astExpression)
+            val (aggregator, _) = aggregatorFactory.newAggregator(astExpression, parallelExecution)
             aggregators += aggregator
             outputSlots += outputSlot.offset
         }
@@ -580,7 +580,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         aggregationExpression.foreach {
           case (key, astExpression) =>
             val outputSlot = slots(key)
-            val (aggregator, _) = aggregatorFactory.newAggregator(astExpression)
+            val (aggregator, _) = aggregatorFactory.newAggregator(astExpression, parallelExecution)
             aggregators += aggregator
             outputSlots += outputSlot.offset
         }
@@ -891,7 +891,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
     val expressions = Array.newBuilder[Array[Expression]]
     aggregationExpression.foreach {
       case (_, astExpression) =>
-        val (aggregator, arguments) = aggregatorFactory.newAggregator(astExpression)
+        val (aggregator, arguments) = aggregatorFactory.newAggregator(astExpression, parallelExecution)
         aggregators += aggregator
         expressions += arguments.map(converters.toCommandExpression(operatorId, _))
     }
