@@ -92,6 +92,68 @@ class PrivilegesAsCommandsIT
     }
 
     @Test
+    void shouldSaveDenies()
+    {
+        // GIVEN
+        GraphDatabaseService system = getCleanSystemDB();
+        try ( Transaction tx = system.beginTx() )
+        {
+            tx.execute( "CREATE ROLE role" );
+            tx.execute( "DENY TRAVERSE ON GRAPH * NODES A TO role" );
+            tx.execute( "DENY START ON DATABASE neo4j TO role" );
+            tx.commit();
+        }
+
+        // WHEN
+        var privileges = getPrivilegesAsCommands( system, DEFAULT_DATABASE_NAME, true );
+
+        // THEN
+        assertThat( privileges ).hasSize( 3 );
+        assertRecreatesOriginal( privileges, DEFAULT_DATABASE_NAME, true );
+    }
+
+    @Test
+    void shouldNotSaveUserWithNoRelevantRole()
+    {
+        // GIVEN
+        GraphDatabaseService system = getCleanSystemDB();
+        try ( Transaction tx = system.beginTx() )
+        {
+            tx.execute( "CREATE USER user SET PASSWORD 'abc123'" );
+            tx.execute( "CREATE ROLE role" );
+            tx.commit();
+        }
+
+        // WHEN
+        var privileges = getPrivilegesAsCommands( system, DEFAULT_DATABASE_NAME, true );
+
+        // THEN
+        assertThat( privileges ).isEmpty();
+    }
+
+    @Test
+    void shouldSaveUserWithRelevantRole()
+    {
+        // GIVEN
+        GraphDatabaseService system = getCleanSystemDB();
+        try ( Transaction tx = system.beginTx() )
+        {
+            tx.execute( "CREATE ROLE role" );
+            tx.execute( "GRANT TRAVERSE ON GRAPH * NODES * TO role" );
+            tx.execute( "CREATE USER user SET PASSWORD 'abc123'" );
+            tx.execute( "GRANT ROLE role TO user" );
+            tx.commit();
+        }
+
+        // WHEN
+        var privileges = getPrivilegesAsCommands( system, DEFAULT_DATABASE_NAME, true );
+
+        // THEN
+        assertThat( privileges ).hasSize(4);
+        assertRecreatesOriginal( privileges, DEFAULT_DATABASE_NAME, true );
+    }
+
+    @Test
     void shouldNotSaveDbmsPrivileges()
     {
         // GIVEN

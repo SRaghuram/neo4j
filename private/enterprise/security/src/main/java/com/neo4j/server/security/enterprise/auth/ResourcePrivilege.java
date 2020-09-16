@@ -14,6 +14,8 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DBMS_ACTIONS;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRANSACTION_MANAGEMENT;
 
 public class ResourcePrivilege
@@ -191,18 +193,10 @@ public class ResourcePrivilege
         case STOP_DATABASE:
             return List.of( String.format( "%s STOP ON DATABASE %s TO `%s`", privilegeType.prefix, databaseName, role ) );
 
-        case CREATE_DATABASE:
-            return keepDbmsActions ? List.of( String.format( "%s CREATE DATABASE ON DBMS TO `%s`", privilegeType.prefix, role ) ) : Collections.emptyList();
-        case DROP_DATABASE:
-            return List.of( String.format( "%s DROP DATABASE ON DBMS TO `%s`", privilegeType.prefix, role ) );
-        case DATABASE_MANAGEMENT:
-            return List.of( String.format( "%s DATABASE MANAGEMENT ON DBMS TO `%s`", privilegeType.prefix, role ) );
-
         case SHOW_TRANSACTION:
             return List.of( String.format( "%s SHOW TRANSACTION (%s) ON DATABASE %s TO `%s`", privilegeType.prefix, segment.toString(), databaseName, role ) );
         case TERMINATE_TRANSACTION:
-            return List.of( String.format( "%s TERMINATE TRANSACTION (%s) ON DATABASE %s TO `%s`", privilegeType.prefix, segment.toString(), databaseName,
-                                           role ) );
+            return List.of( String.format( "%s TERMINATE TRANSACTION (%s) ON DATABASE %s TO `%s`", privilegeType.prefix, segment.toString(), databaseName, role ) );
         case SHOW_CONNECTION:
             // NOT USED
             break;
@@ -210,8 +204,17 @@ public class ResourcePrivilege
             // NOT USED
             break;
         case TRANSACTION_MANAGEMENT:
-            return List.of( String.format( "%s TRANSACTION MANAGEMENT (%s) ON DATABASE %s TO `%s`", privilegeType.prefix, segment.toString(), databaseName,
-                                           role ) );
+            return List.of( String.format( "%s TRANSACTION MANAGEMENT (%s) ON DATABASE %s TO `%s`", privilegeType.prefix, segment.toString(), databaseName, role ) );
+
+        case DATABASE_ACTIONS:
+            return List.of( String.format( "%s ALL DATABASE PRIVILEGES ON %s TO `%s`", privilegeType.prefix, database, role ) );
+
+        case CREATE_DATABASE:
+            return keepDbmsActions ? List.of( String.format( "%s CREATE DATABASE ON DBMS TO `%s`", privilegeType.prefix, role ) ) : Collections.emptyList();
+        case DROP_DATABASE:
+            return List.of( String.format( "%s DROP DATABASE ON DBMS TO `%s`", privilegeType.prefix, role ) );
+        case DATABASE_MANAGEMENT:
+            return List.of( String.format( "%s DATABASE MANAGEMENT ON DBMS TO `%s`", privilegeType.prefix, role ) );
 
         case SHOW_USER:
             return List.of( String.format( "%s SHOW USER ON DBMS TO `%s`", privilegeType.prefix, role ) );
@@ -258,8 +261,6 @@ public class ResourcePrivilege
                     String.format( "%s STOP ON DATABASE %s TO `%s`", privilegeType.prefix, database, role )
             );
 
-        case DATABASE_ACTIONS:
-            return List.of( String.format( "%s ALL DATABASE PRIVILEGES ON %s TO `%s`", privilegeType.prefix, database, role ) );
         case DBMS_ACTIONS:
             return List.of( String.format( "%s ALL DBMS PRIVILEGES ON DBMS TO `%s`", privilegeType.prefix, role ) );
 
@@ -299,6 +300,11 @@ public class ResourcePrivilege
                    && other.allDatabases == this.allDatabases;
         }
         return false;
+    }
+
+    public boolean isDbmsPrivilege()
+    {
+        return DBMS_ACTIONS.satisfies( action ) || EXECUTE.satisfies( action );
     }
 
     public enum GrantOrDeny

@@ -346,6 +346,7 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
                                                                               p.appliesToAll() ||
                                                                               p.getDbName().equals( databaseName ) ||
                                                                               databaseName.equals( defaultDatabaseName ) && p.appliesToDefault() )
+                                                                      .filter( p -> !p.isDbmsPrivilege() )
                                                                       .collect( Collectors.toSet() );
                 if ( !relevantPrivileges.isEmpty() )
                 {
