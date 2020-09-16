@@ -34,7 +34,7 @@ class HintAcceptanceTest
                   |USING JOIN ON a
                   |RETURN a.name, b.name""".stripMargin
 
-    executeWith(Configs.InterpretedAndSlotted, query,
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = ComparePlansWithAssertion( p => {
         p should includeSomewhere.aPlan("NodeLeftOuterHashJoin")
         p should not(includeSomewhere.aPlan("NodeHashJoin"))

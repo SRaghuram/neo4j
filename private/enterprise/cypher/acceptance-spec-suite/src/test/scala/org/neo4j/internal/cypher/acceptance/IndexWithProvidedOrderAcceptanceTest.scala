@@ -2004,7 +2004,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
   // Only tested in ASC mode because it's hard to make compatibility check out otherwise
   test("ASC: Order by index backed property in a plan with an outer join") {
     // Be careful with what is created in createSomeNodes. It underwent careful cardinality tuning to get exactly the plan we want here.
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       """MATCH (b:B {foo:1, bar:1})
         |OPTIONAL MATCH (a:Awesome)-[r]->(b) USING JOIN ON b
         |WHERE a.prop3 > 'foo'
