@@ -361,13 +361,20 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   )
   val transactionCommands: Iterable[String] = transactionPrivileges.keys
 
-  // Collection of all kinds of graph privileges
-
+  // Collection of all kinds of graph privileges,
+  // except MERGE since that is not valid for (REVOKE) DENY
   val graphPrivileges: Map[String, Set[Map[String, String]]] = Map(
     "TRAVERSE ON GRAPH * NODES A" ->  Set(traverse ++ Map("segment" -> "NODE(A)")),
     "READ {prop} ON GRAPH * NODES *" -> Set(read ++ Map("segment" -> "NODE(*)", "resource" -> "property(prop)")),
     "MATCH {prop} ON GRAPH * NODES A " -> Set(matchPrivilege ++ Map("segment" -> "NODE(A)", "resource" -> "property(prop)")),
-    "WRITE ON GRAPH *" -> Set(write ++ Map("segment" -> "NODE(*)"), write ++ Map("segment" -> "RELATIONSHIP(*)"))
+    "WRITE ON GRAPH *" -> Set(write ++ Map("segment" -> "NODE(*)"), write ++ Map("segment" -> "RELATIONSHIP(*)")),
+    "SET LABEL foo ON DEFAULT GRAPH" -> Set(setLabel ++ Map("resource" -> "label(foo)", "graph" -> "DEFAULT")),
+    "REMOVE LABEL * ON GRAPH neo4j" -> Set(removeLabel ++ Map("resource" -> "all_labels", "graph" -> "neo4j")),
+    "CREATE ON GRAPH * RELATIONSHIPS *" -> Set(create ++ Map("segment" -> "RELATIONSHIP(*)")),
+    "DELETE ON GRAPHS * NODE A" -> Set(delete ++ Map("segment" -> "NODE(A)")),
+    "SET PROPERTY {prop} ON DEFAULT GRAPH" -> Set(setProperty ++ Map("segment" -> "NODE(*)", "resource" -> "property(prop)", "graph" -> "DEFAULT"),
+                                                  setProperty ++ Map("segment" -> "RELATIONSHIP(*)", "resource" -> "property(prop)", "graph" -> "DEFAULT")),
+    "ALL GRAPH PRIVILEGES ON GRAPH *" -> Set(allGraphPrivileges)
   )
   val graphCommands: Iterable[String] = graphPrivileges.keys
 
@@ -379,6 +386,9 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     } ++
     dbmsPrivileges.map {
       case (command, action) => (command + " ON DBMS", Set(action))
+    } ++
+    executePrivileges.map {
+      case (command, action) => (command + " * ON DBMS", Set(action))
     } ++
     graphPrivileges.map {
       case (command, action) => (command, action)
