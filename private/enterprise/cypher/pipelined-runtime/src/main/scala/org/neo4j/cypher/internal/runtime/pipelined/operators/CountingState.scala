@@ -12,15 +12,21 @@ import org.neo4j.codegen.api.InstanceField
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.cast
 import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
+import org.neo4j.codegen.api.IntermediateRepresentation.equal
 import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
+import org.neo4j.codegen.api.IntermediateRepresentation.isNotNull
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.not
 import org.neo4j.codegen.api.IntermediateRepresentation.subtract
+import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
@@ -32,8 +38,14 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Numeri
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.argumentSlotOffsetFieldName
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.argumentVarName
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.fetchState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.getArgumentSlotOffset
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.peekState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.util.Preconditions
@@ -228,3 +240,99 @@ abstract class SerialTopLevelCountingOperatorTaskTemplate(val inner: OperatorTas
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
 }
+
+abstract class SerialCountingOperatorOnRhsOfApplyOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
+                                                                      override val id: Id,
+                                                                      argumentStateMapId: ArgumentStateMapId,
+                                                                      generateCountExpression: () => IntermediateExpression,
+                                                                      val codeGen: OperatorExpressionCompiler)
+  extends OperatorTaskTemplate {
+  private val argumentMaps: InstanceField = field[ArgumentStateMaps](codeGen.namer.nextVariableName("stateMaps"),
+    load(ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name))
+
+  private var countExpression: IntermediateExpression = _
+  protected val countLeftVar: LocalVariable = variable[Int](codeGen.namer.nextVariableName("countLeft"), constant(0))
+  private val reservedVar: LocalVariable = variable[Int](codeGen.namer.nextVariableName("reserved"), constant(0))
+  private val state = codeGen.namer.nextVariableName("state")
+  private val localArgument = codeGen.namer.nextVariableName("argument")
+  private val expressionVariable = codeGen.namer.nextVariableName("limit")
+
+  protected def beginOperate: IntermediateRepresentation
+  protected def innerOperate: IntermediateRepresentation
+
+  override def genInit: IntermediateRepresentation = inner.genInit
+
+  override def genExpressions: Seq[IntermediateExpression] = Seq(countExpression)
+
+  override def genFields: Seq[Field] = Seq(argumentMaps, field[Int](argumentSlotOffsetFieldName(argumentStateMapId), getArgumentSlotOffset(argumentStateMapId)))
+
+  override def genOperateEnter: IntermediateRepresentation = {
+    if (countExpression == null) {
+      countExpression = generateCountExpression()
+    }
+    block(
+      declareAndAssign(typeRefOf[Long], expressionVariable,
+        invokeStatic(method[CountingState, Long, AnyValue]("evaluateCountValue"),
+          nullCheckIfRequired(countExpression))),
+      declareAndAssign(typeRefOf[SerialCountingState], state, constant(null)),
+      declareAndAssign(typeRefOf[Long], localArgument, constant(-1L)),
+      inner.genOperateEnter
+    )
+  }
+
+  /**
+   * {{{
+   *   if (localArgument != inputCursor.getLongAt(argSlot)) {
+   *     if (null != state) {
+   *       state.update(reserved - countLeft) //update progress before switching state
+   *     }
+   *     localArgument = inputCursor.getLongAt(argSlot)
+   *     state = [get new state from ArgumentStateMap and initialize if necessary]
+   *   }
+   *   [inner operation]
+   * }}}
+   */
+  override def genOperate: IntermediateRepresentation = {
+    block(
+      beginOperate,
+      condition(not(equal(load(argumentVarName(argumentStateMapId)), load(localArgument)))) {
+        block(
+          // the first time we come here 'state' will be null
+          condition(isNotNull(load(state))) {
+            invoke(load(state), method[SerialCountingState, Unit, Int]("update"),
+              subtract(load(reservedVar), load(countLeftVar)))
+          },
+          assign(localArgument, load(argumentVarName(argumentStateMapId))),
+          newState,
+        )
+      },
+      innerOperate
+    )
+  }
+
+  override def genOperateExit: IntermediateRepresentation = {
+    block(
+      condition(isNotNull(load(state))) {
+        invoke(load(state), method[SerialCountingState, Unit, Int]("update"),
+          subtract(load(reservedVar), load(countLeftVar)))
+      },
+      inner.genOperateExit)
+  }
+
+  override def genLocalVariables: Seq[LocalVariable] = Seq(countLeftVar, reservedVar)
+
+  override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
+
+  override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
+
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
+
+  private def newState: IntermediateRepresentation = block(
+    assign(state, cast[SerialCountingState](fetchState(loadField(argumentMaps), argumentStateMapId))),
+    condition(invoke(load(state), method[SerialCountingState, Boolean]("isUninitialized")))(
+      invoke(load(state), method[SerialCountingState, Unit, Long]("initialize"), load(expressionVariable))
+    ),
+    assign(reservedVar, invoke(load(state), method[SerialCountingState, Int, Int]("reserve"), constant(Int.MaxValue))),
+    assign(countLeftVar, load(reservedVar))
+  )
+  }

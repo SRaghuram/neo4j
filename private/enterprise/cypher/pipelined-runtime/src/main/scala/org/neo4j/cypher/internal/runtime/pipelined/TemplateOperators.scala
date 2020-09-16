@@ -96,13 +96,14 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialDistinctOnRhs
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialDistinctOnRhsOfApplyPrimitiveOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialDistinctOnRhsOfApplySinglePrimitiveOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialLimitOnRhsOfApplyOperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialSkipOnRhsOfApplyOperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialSkipState.SerialSkipStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDistinctOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDistinctPrimitiveOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDistinctSinglePrimitiveOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate.SerialLimitStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelSkipOperatorTaskTemplate
-import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelSkipOperatorTaskTemplate.SerialTopLevelSkipStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleExactSeekQueryNodeIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleNodeByIdSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleRangeSeekQueryNodeIndexSeekTaskTemplate
@@ -650,7 +651,6 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               TemplateAndArgumentStateFactory(
                 new SerialLimitOnRhsOfApplyOperatorTaskTemplate(ctx.inner,
                   plan.id,
-                  ctx.innermost,
                   argumentStateMapId,
                   ctx.compileExpression(countExpression))(ctx.expressionCompiler),
                 Some(argumentStateMapId -> SerialLimitStateFactory)
@@ -658,17 +658,27 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
             }
 
         // Special case for skip when not nested under an apply and with serial execution
-        case plan@Skip(_, countExpression) if hasNoNestedArguments && serialExecutionOnly =>
+        case plan@Skip(_, countExpression) if serialExecutionOnly =>
           ctx: TemplateContext =>
             val argumentStateMapId = ctx.executionGraphDefinition.findArgumentStateMapForPlan(plan.id)
-            TemplateAndArgumentStateFactory(
-              new SerialTopLevelSkipOperatorTaskTemplate(ctx.inner,
-                plan.id,
-                ctx.innermost,
-                argumentStateMapId,
-                ctx.compileExpression(countExpression))(ctx.expressionCompiler),
-              Some(argumentStateMapId -> SerialTopLevelSkipStateFactory)
-            )
+            if (hasNoNestedArguments) {
+              TemplateAndArgumentStateFactory(
+                new SerialTopLevelSkipOperatorTaskTemplate(ctx.inner,
+                  plan.id,
+                  ctx.innermost,
+                  argumentStateMapId,
+                  ctx.compileExpression(countExpression))(ctx.expressionCompiler),
+                Some(argumentStateMapId -> SerialSkipStateFactory)
+              )
+            } else {
+              TemplateAndArgumentStateFactory(
+                new SerialSkipOnRhsOfApplyOperatorTaskTemplate(ctx.inner,
+                  plan.id,
+                  argumentStateMapId,
+                  ctx.compileExpression(countExpression))(ctx.expressionCompiler),
+                Some(argumentStateMapId -> SerialSkipStateFactory)
+              )
+            }
 
         case plan@plans.Union(lhs ,rhs) if isHeadOperator =>
           ctx: TemplateContext =>

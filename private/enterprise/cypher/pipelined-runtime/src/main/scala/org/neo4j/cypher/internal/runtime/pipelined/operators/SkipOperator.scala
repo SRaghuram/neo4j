@@ -9,10 +9,12 @@ import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
 import org.neo4j.codegen.api.IntermediateRepresentation.equal
 import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.subtract
+import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -26,6 +28,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.ConcurrentCountingState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.StandardCountingState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.evaluateCountValue
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.argumentVarName
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.getArgument
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SkipOperator.SkipStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
@@ -99,10 +103,10 @@ class SerialTopLevelSkipOperatorTaskTemplate(inner: OperatorTaskTemplate,
   }
 }
 
-object SerialTopLevelSkipOperatorTaskTemplate {
+object SerialSkipState {
 
   // This is used by fused skip in a serial pipeline, i.e. only safe to use in single-threaded execution or by a serial pipeline in parallel execution
-  object SerialTopLevelSkipStateFactory extends ArgumentStateFactory[SerialCountingState] {
+  object SerialSkipStateFactory extends ArgumentStateFactory[SerialCountingState] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): SerialCountingState =
       new StandardSerialSkipState(argumentRowId, argumentRowIdsForReducers)
 
@@ -134,5 +138,29 @@ object SerialTopLevelSkipOperatorTaskTemplate {
     override protected def getCount: Long = countLeft
     override protected def setCount(count: Long): Unit = countLeft = count
     override def toString: String = s"VolatileSerialTopLevelSkipState($argumentRowId, countLeft=$countLeft)"
+  }
+}
+
+class SerialSkipOnRhsOfApplyOperatorTaskTemplate(inner: OperatorTaskTemplate,
+                                                 id: Id,
+                                                 argumentStateMapId: ArgumentStateMapId,
+                                                 generateCountExpression: () => IntermediateExpression)
+                                                (codeGen: OperatorExpressionCompiler)
+  extends SerialCountingOperatorOnRhsOfApplyOperatorTaskTemplate(inner, id, argumentStateMapId, generateCountExpression, codeGen) {
+
+  override protected def beginOperate: IntermediateRepresentation =
+    declareAndAssign(typeRefOf[Long], argumentVarName(argumentStateMapId), getArgument(argumentStateMapId))
+
+  override protected def innerOperate: IntermediateRepresentation = {
+    ifElse(equal(load(countLeftVar), constant(0)))(
+      block(
+        inner.genOperateWithExpressions,
+        doIfInnerCantContinue(
+          block(
+            profileRow(id)
+          )
+        )))(
+      doIfInnerCantContinue(assign(countLeftVar, subtract(load(countLeftVar), constant(1))))
+    )
   }
 }
