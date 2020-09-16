@@ -13,7 +13,6 @@ import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -132,7 +131,7 @@ class CCIdReuseBySwitchAndRollbackIT
     private void doIdMaintenance( CoreClusterMember instance )
     {
         var db = (GraphDatabaseAPI) instance.managementService().database( DEFAULT_DATABASE_NAME );
-        db.getDependencyResolver().resolveDependency( IdController.class ).maintenance();
+        db.getDependencyResolver().resolveDependency( IdController.class ).maintenance( true );
     }
 
     private CoreClusterMember switchLeader( Cluster cluster,

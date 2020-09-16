@@ -131,7 +131,7 @@ class IdReuseTest
 
         deleteRelationshipByLabelAndRelationshipType( marker );
 
-        idController.maintenance();
+        idController.maintenance( true );
 
         assertEquals( relationship1, createRelationship( marker ), "Relationships have reused id" );
         assertEquals( relationship2, createRelationship( marker ), "Relationships have reused id" );
@@ -157,7 +157,7 @@ class IdReuseTest
                 }
             }
 
-            idController.maintenance();
+            idController.maintenance( true );
 
             Node node1 = transaction.createNode( testLabel );
             Node node2 = transaction.createNode( testLabel );

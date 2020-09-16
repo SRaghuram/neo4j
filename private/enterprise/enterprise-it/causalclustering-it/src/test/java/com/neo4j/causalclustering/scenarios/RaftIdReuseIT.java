@@ -189,7 +189,7 @@ class RaftIdReuseIT
     private static void idMaintenanceOnLeader( CoreClusterMember leader )
     {
         IdController idController = resolveDependency( leader, IdController.class );
-        idController.maintenance();
+        idController.maintenance( true );
     }
 
     private static <T> T resolveDependency( CoreClusterMember leader, Class<T> clazz )

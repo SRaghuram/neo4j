@@ -101,8 +101,8 @@ class MultiDatabaseIdGeneratorIT
             }
         }
 
-        getDatabaseIdController( firstDatabase ).maintenance();
-        getDatabaseIdController( secondDatabase ).maintenance();
+        getDatabaseIdController( firstDatabase ).maintenance( true );
+        getDatabaseIdController( secondDatabase ).maintenance( true );
 
         assertEquals( 0, secondNodeIdGenerator.getDefragCount() );
         assertEquals( idsToReuse, firstNodeIdGenerator.getDefragCount() );

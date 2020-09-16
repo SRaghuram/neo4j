@@ -90,7 +90,7 @@ class RelationshipIdReuseStressIT
         do
         {
             TimeUnit.MILLISECONDS.sleep( 500 );
-            idController.maintenance(); // just to make sure maintenance happens
+            idController.maintenance( true ); // just to make sure maintenance happens
             currentTime = currentTimeMillis();
             createdRelationships = relationshipsCreator.getCreatedRelationships();
             removedRelationships = relationshipRemover.getRemovedRelationships();
