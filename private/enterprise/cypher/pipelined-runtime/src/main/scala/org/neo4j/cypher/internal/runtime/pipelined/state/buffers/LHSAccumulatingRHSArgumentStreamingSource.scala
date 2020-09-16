@@ -111,13 +111,18 @@ class LHSAccumulatingRHSArgumentStreamingSource[DATA <: AnyRef,
   }
 
   override def clearAll(): Unit = {
-    // Since the RHS controls downstream execution, it is enough to empty the RHS to stop
-    // further work from happening. The LHS will be cleared shortly as the query is stopped
-    // and left to be garbage collected.
+    lhsArgumentStateMap.clearAll((buffer: LHS_ACC) => {
+      if (!rhsArgumentStateMap.peek(buffer.argumentRowId).hasData) {
+        // If the RHS is empty, we need to decrement away the extra increment that came from LHSSink.decrement()
+        // Count Type: Empty RHS
+        tracker.decrement()
+      }
+    })
     rhsArgumentStateMap.clearAll(buffer => {
       var morsel = buffer.take()
       while (morsel != null) {
         forAllArgumentReducers(downstreamArgumentReducers, buffer.argumentRowIdsForReducers, _.decrement(_))
+        // Count Type: RHS Put per Morsel
         tracker.decrement()
         morsel = buffer.take()
       }
@@ -265,8 +270,8 @@ class LeftOuterRhsStreamingSink(val rhsArgumentStateMapId: ArgumentStateMapId,
     val completedBuffer = rhsArgumentStateMap.decrement(argumentRowId)
     if (completedBuffer != null) {
 
-      if (completedBuffer.didReceiveData && completedBuffer.hasData) {
-        // If the RHS is NOT empty at the time of decrement, we need to decrement away the extra increment that came from LHSSink.decrement()
+      if (completedBuffer.hasData) {
+        // If the RHS is NOT empty at the time of reaching zero, we need to decrement away the extra increment that came from LHSSink.decrement()
         // Count Type: Empty RHS
         tracker.decrement()
       }
