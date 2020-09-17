@@ -15,6 +15,7 @@ import org.neo4j.cypher.internal.logical.plans.ConditionalApply
 import org.neo4j.cypher.internal.logical.plans.Distinct
 import org.neo4j.cypher.internal.logical.plans.Expand
 import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
+import org.neo4j.cypher.internal.logical.plans.LeftOuterHashJoin
 import org.neo4j.cypher.internal.logical.plans.Limit
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NodeByLabelScan
@@ -140,6 +141,35 @@ class ExecutionGraphDefinitionTest extends CypherFunSuite {
         .pipeline(1, Seq(classOf[NodeByLabelScan]))
         .rightOfJoinBuffer(lhsId = 3, rhsId = 4, sourceId = 5, TopLevelArgument.SLOT_OFFSET, lhsAsmId = 0, rhsAsmId = 1, planId = 1, InnerVariant)
         .pipeline(2, Seq(classOf[NodeHashJoin], classOf[ProduceResult]), serial = true)
+        .end
+
+      start(graph).applyBuffer(0).reducerOnRHS(0, 1, TopLevelArgument.SLOT_OFFSET)
+      start(graph).morselBuffer(1).reducer(0)
+      start(graph).applyBuffer(0).reducerOnRHS(1, 1, TopLevelArgument.SLOT_OFFSET)
+      start(graph).morselBuffer(2).reducer(1)
+    }
+  }
+
+  test("should plan left outer hash join") {
+    new ExecutionGraphDefinitionBuilder()
+      .produceResults("n")
+      .leftOuterHashJoin("n").withBreak()
+      .|.nodeByLabelScan("n", "N", IndexOrderNone).withBreak()
+      .allNodeScan("n").withBreak()
+      .build() should plan {
+      val graph = newGraph
+      start(graph)
+        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 3)
+        .delegateToMorselBuffer(1, 3)
+        .pipeline(0, Seq(classOf[AllNodesScan]))
+        .leftOfJoinBuffer(id = 3, TopLevelArgument.SLOT_OFFSET, asmId = 0, planId = 1, rhsAsmId = 1, LeftOuterVariant)
+
+      start(graph)
+        .applyBuffer(0)
+        .delegateToMorselBuffer(2, 2)
+        .pipeline(1, Seq(classOf[NodeByLabelScan]))
+        .rightOfJoinBuffer(lhsId = 3, rhsId = 4, sourceId = 5, TopLevelArgument.SLOT_OFFSET, lhsAsmId = 0, rhsAsmId = 1, planId = 1, LeftOuterVariant)
+        .pipeline(2, Seq(classOf[LeftOuterHashJoin], classOf[ProduceResult]), serial = true)
         .end
 
       start(graph).applyBuffer(0).reducerOnRHS(0, 1, TopLevelArgument.SLOT_OFFSET)

@@ -64,6 +64,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ExpandIntoWithOtherOperators
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpressionTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.FilterTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LabelScanTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.LeftOuterHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LimitTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementDisabledTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MiscTestBase
@@ -87,6 +88,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.PruningVarLengthExpandTestBa
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultStressTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipCountFromCountStoreTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.RightOuterHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RollupApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ShortestPathTestBase
@@ -292,6 +294,14 @@ class ParallelRuntimeAggregationStressTest extends AggregationStressTestBase(FUS
 // NODE HASH JOIN
 class ParallelRuntimeNodeHashJoinTest extends NodeHashJoinTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 class ParallelRuntimeNodeHashJoinNoFusingTest extends NodeHashJoinTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+
+// NODE RIGHT OUTER HASH JOIN
+class ParallelRuntimeNodeRightOuterHashJoinTest extends RightOuterHashJoinTestBase(FUSING, PIPELINED, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeNodeRightOuterHashJoinNoFusingTest extends RightOuterHashJoinTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with ParallelRuntimeSpecSuite
+
+// NODE LEFT OUTER HASH JOIN
+class ParallelRuntimeNodeLeftOuterHashJoinTest extends LeftOuterHashJoinTestBase(FUSING, PIPELINED, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeNodeLeftOuterHashJoinNoFusingTest extends LeftOuterHashJoinTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with ParallelRuntimeSpecSuite
 
 // VALUE HASH JOIN
 class ParallelRuntimeValueHashJoinTest extends ValueHashJoinTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite

@@ -103,7 +103,7 @@ class NodeLeftOuterHashJoinOperator(val workIdentity: WorkIdentity,
       val input = operatorInput.takeAccumulatorAndData[Morsel, HashTableAndSet, MorselData]()
       if (input != null) {
         try {
-          singletonIndexedSeq(new TheNewTask(input.acc, input.payload))
+          singletonIndexedSeq(new OTask(input.acc, input.payload))
         } catch {
           case NonFatalCypherError(t) =>
             throw SchedulingInputException(AccumulatorAndMorselInput(input), t)
@@ -114,7 +114,7 @@ class NodeLeftOuterHashJoinOperator(val workIdentity: WorkIdentity,
     }
   }
 
-  class TheNewTask(override val accumulator: HashTableAndSet, morselData: MorselData)
+  class OTask(override val accumulator: HashTableAndSet, morselData: MorselData)
     extends InputLoopWithMorselDataTask(morselData)
     with ContinuableOperatorTaskWithDataAndAccumulator[Morsel, HashTableAndSet] {
 
