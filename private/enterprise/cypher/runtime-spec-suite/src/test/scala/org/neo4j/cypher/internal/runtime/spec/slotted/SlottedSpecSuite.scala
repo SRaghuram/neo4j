@@ -100,6 +100,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.TriadicSelectionTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UndirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UnionTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UnwindTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.UpdatingProfilePageCacheStatsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UserDefinedAggregationSupport
 import org.neo4j.cypher.internal.runtime.spec.tests.ValueHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.VarLengthExpandTestBase
@@ -168,6 +169,7 @@ class SlottedProfileDbHitsTest extends LegacyDbHitsTestBase(ENTERPRISE.DEFAULT, 
                                with ProcedureCallDbHitsTestBase[EnterpriseRuntimeContext]
                                with NestedPlanDbHitsTestBase[EnterpriseRuntimeContext]
 class SlottedProfilePageCacheStatsTest extends ProfilePageCacheStatsTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
+                                       with UpdatingProfilePageCacheStatsTestBase[EnterpriseRuntimeContext]
 class SlottedProfileMemoryTest extends ProfileMemoryTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
                                with FullSupportProfileMemoryTestBase[EnterpriseRuntimeContext]
                                with ProfileSlottedMemoryTestBase
