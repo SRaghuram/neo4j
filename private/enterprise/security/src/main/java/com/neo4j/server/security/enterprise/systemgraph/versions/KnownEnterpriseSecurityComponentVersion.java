@@ -81,7 +81,7 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
         throw unsupported();
     }
 
-    public abstract List<String> getPrivilegesAsCommands( Transaction tx, String databaseName, boolean saveUsers );
+    public abstract List<String> getPrivilegesAsCommands( Transaction tx, String databaseName, boolean saveUsers, boolean saveRoles );
     
     public boolean isEmpty()
     {

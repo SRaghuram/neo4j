@@ -323,7 +323,7 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
         }
     }
 
-    public List<String> getPrivilegesAsCommands( Transaction tx, String databaseName, boolean saveUsers )
+    public List<String> getPrivilegesAsCommands( Transaction tx, String databaseName, boolean saveUsers, boolean saveRoles )
     {
         ArrayList<String> result = new ArrayList<>();
 

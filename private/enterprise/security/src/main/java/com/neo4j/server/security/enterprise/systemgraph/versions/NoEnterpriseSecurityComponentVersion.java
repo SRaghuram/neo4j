@@ -41,7 +41,7 @@ public class NoEnterpriseSecurityComponentVersion extends KnownEnterpriseSecurit
     }
 
     @Override
-    public List<String> getPrivilegesAsCommands( Transaction tx, String databaseName, boolean saveUsers )
+    public List<String> getPrivilegesAsCommands( Transaction tx, String databaseName, boolean saveUsers, boolean saveRoles )
     {
         throw new UnsupportedOperationException();
     }
