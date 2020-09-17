@@ -332,6 +332,7 @@ class StandardAccessModeBuilder
 
             if ( action.satisfies( DBMS_ACTIONS ) )
             {
+                executeAllProcedures.put( privilegeType, true );
                 executeBoostedAllProcedures.put( privilegeType, true );
             }
             else if ( action.satisfies( EXECUTE_ADMIN ) )

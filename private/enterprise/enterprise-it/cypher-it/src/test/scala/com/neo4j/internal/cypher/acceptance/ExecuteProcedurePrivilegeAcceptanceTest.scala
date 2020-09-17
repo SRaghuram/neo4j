@@ -576,6 +576,21 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 
+  test("should fail execute procedure when denied and granted execute boosted") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+    execute("GRANT EXECUTE BOOSTED PROCEDURE * ON DBMS TO custom")
+    execute("DENY EXECUTE BOOSTED PROCEDURE db.labels ON DBMS TO custom")
+
+    // THEN
+    (the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("foo", "bar", "CALL db.labels")
+    }).getMessage should include(FAIL_EXECUTE_PROC)
+  }
+
   // EXECUTE ADMIN PROCEDURES
 
   test("should execute admin procedure with EXECUTE ADMIN PROCEDURES") {
@@ -704,17 +719,6 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
   // Executing @Admin procedures
 
-  test("should execute admin procedure with ALL ON DBMS") {
-    // GIVEN
-    setupUserAndGraph("foo", "bar")
-
-    // WHEN
-    execute("GRANT ALL ON DBMS TO custom")
-
-    // THEN
-    executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')") should be(1)
-  }
-
   test("should fail execute admin procedure with execute procedure") {
     // GIVEN
     setupUserAndGraph("foo", "bar")
@@ -750,6 +754,65 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     // THEN
     (the[AuthorizationViolationException] thrownBy {
       executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
+    }).getMessage should include(FAIL_EXECUTE_PROC)
+  }
+
+  // ALL ON DBMS
+
+  test("should execute any procedure boosted with ALL ON DBMS") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+    execute("GRANT ALL ON DBMS TO custom")
+
+    // THEN
+    val expected = Seq("A", "B")
+    // THEN
+    executeOnDefault("foo", "bar", "CALL db.labels() YIELD label RETURN label ORDER BY label ASC", resultHandler = (row, idx) => {
+      row.get("label") should equal(expected(idx))
+    }) should be(2)
+  }
+
+  test("should execute admin procedure with ALL ON DBMS") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT ALL ON DBMS TO custom")
+
+    // THEN
+    executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')") should be(1)
+  }
+
+  test("should execute procedure without boosting when granted all on dbms denied execute boosted") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+    execute("GRANT ALL ON DBMS TO custom")
+    execute("DENY EXECUTE BOOSTED PROCEDURE db.labels ON DBMS TO custom")
+
+    // THEN
+    executeOnDefault("foo", "bar", "CALL db.labels", resultHandler = (row, _) => {
+      row.get("label") should equal("A")
+    }) should be(1)
+  }
+
+  test("should fail execute procedure when denied all on dbms granted execute") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+    execute("GRANT EXECUTE PROCEDURE db.labels ON DBMS TO custom")
+    execute("DENY ALL ON DBMS TO custom")
+
+    // THEN
+    (the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("foo", "bar", "CALL db.labels")
     }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 

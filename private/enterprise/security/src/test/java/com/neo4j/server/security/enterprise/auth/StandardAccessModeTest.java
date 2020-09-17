@@ -2532,6 +2532,28 @@ class StandardAccessModeTest
     }
 
     @Test
+    void grantAllOnDbmsAndDenyBoostedNamedProcedure() throws Exception
+    {
+        var privilege1 = new ResourcePrivilege( GRANT, DBMS_ACTIONS, new Resource.DatabaseResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 =
+                new ResourcePrivilege( DENY, EXECUTE_BOOSTED, new Resource.DatabaseResource(), new ProcedureSegment( "math.proc4" ), DEFAULT_DATABASE_NAME );
+
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+
+        // EXECUTE
+        assertThat( mode.allowsExecuteProcedure( PROC1 ) ).isTrue();
+        assertThat( mode.allowsExecuteProcedure( PROC2 ) ).isTrue();
+        assertThat( mode.allowsExecuteProcedure( PROC3 ) ).isTrue();
+        assertThat( mode.allowsExecuteProcedure( PROC4 ) ).isTrue();
+
+        // BOOST
+        assertThat( mode.shouldBoostProcedure( PROC1 ) ).isTrue();
+        assertThat( mode.shouldBoostProcedure( PROC2 ) ).isTrue();
+        assertThat( mode.shouldBoostProcedure( PROC3 ) ).isTrue();
+        assertThat( mode.shouldBoostProcedure( PROC4 ) ).isFalse();
+    }
+
+    @Test
     void grantExecuteAdminProcedure()  throws Exception
     {
         var privilege = new ResourcePrivilege( GRANT, EXECUTE_ADMIN, new Resource.DatabaseResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
