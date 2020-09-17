@@ -225,6 +225,7 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
    *    this.hasWritten = false
    *    if (fromNode != -1L) {
    *      [setUpCursors]
+   *      this.canContinue = relationship.next
    *    }
    *    true
    * }}}
