@@ -17,6 +17,7 @@ import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
 import java.util.function.Consumer;
+
 import org.neo4j.dbms.database.DbmsRuntimeRepository;
 import org.neo4j.dbms.database.DbmsRuntimeVersion;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -25,6 +26,7 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
@@ -51,8 +53,8 @@ class TransactionLogUpgradeIT
         cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
 
-        var systemLeader = cluster.awaitLeader( "system" );
-        systemDb = systemLeader.managementService().database( "system" );
+        var systemLeader = cluster.awaitLeader( SYSTEM_DATABASE_NAME );
+        systemDb = systemLeader.managementService().database( SYSTEM_DATABASE_NAME );
     }
 
     @AfterAll

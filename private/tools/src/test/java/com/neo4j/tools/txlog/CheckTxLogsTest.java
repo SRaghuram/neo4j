@@ -892,7 +892,7 @@ class CheckTxLogsTest
             long offset = channel.size();
             channel.position( offset );
 
-            consumer.accept( new TransactionLogWriter( writableLogChannel, new DbmsLogEntryWriterFactory( LogEntryV4_0::getVersionByte ) ) );
+            consumer.accept( new TransactionLogWriter( writableLogChannel, new DbmsLogEntryWriterFactory( () -> LogEntryV4_0 ) ) );
         }
     }
 
