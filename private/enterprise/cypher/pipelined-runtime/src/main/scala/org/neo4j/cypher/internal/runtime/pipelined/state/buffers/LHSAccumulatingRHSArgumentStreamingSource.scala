@@ -22,7 +22,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArg
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndData
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.JoinBuffer.removeArgumentStatesIfRhsBufferIsEmpty
 
 class LHSAccumulatingRHSArgumentStreamingSource[DATA <: AnyRef,
                                                    LHS_ACC <: MorselAccumulator[DATA]]
@@ -130,25 +129,23 @@ class LHSAccumulatingRHSArgumentStreamingSource[DATA <: AnyRef,
   }
 
   override def close(accumulator: MorselAccumulator[_], morselData: MorselData): Unit = {
-    val numberOfDecrements =  morselData.argumentStream match {
-      case _: EndOfStream if morselData.morsels.isEmpty =>
-        1
+    val argumentRowIdsForReducers = accumulator.argumentRowIdsForReducers
+    val argumentRowId = accumulator.argumentRowId
+
+    val numberOfDecrements = morselData.argumentStream match {
+      case _: EndOfStream =>
+        val nullRhsAcc = rhsArgumentStateMap.peek(argumentRowId)
+        checkOnlyWhenAssertionsAreEnabled(nullRhsAcc == null, "RHS accumulator should have already been removed in take()")
+        // No more data will ever arrive for this argument
+        val lhsAccumulator = lhsArgumentStateMap.remove(argumentRowId)
+        lhsAccumulator.close()
+        Math.max(1, morselData.morsels.size)
       case _ =>
         morselData.morsels.size
     }
 
-    val argumentRowIdsForReducers = accumulator.argumentRowIdsForReducers
-    val argumentRowId = accumulator.argumentRowId
-
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[close] $this -X- ${morselData.argumentStream} , $numberOfDecrements , $argumentRowIdsForReducers")
-    }
-
-    // Check if the argument count is zero -- in the case of the RHS, that means that no more data will ever arrive
-    if (rhsArgumentStateMap.hasCompleted(argumentRowId)) {
-      val rhsAcc = rhsArgumentStateMap.peek(argumentRowId)
-      // All data from the RHS has arrived
-      removeArgumentStatesIfRhsBufferIsEmpty(lhsArgumentStateMap, rhsArgumentStateMap, rhsAcc, argumentRowId)
     }
 
     // Count Type: RHS Put per Morsel
