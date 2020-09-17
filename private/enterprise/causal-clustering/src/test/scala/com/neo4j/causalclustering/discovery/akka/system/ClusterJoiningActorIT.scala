@@ -89,7 +89,7 @@ class ClusterJoiningActorIT extends BaseAkkaIT("ClusterJoining") {
     val initialDiscoveryMembers = Seq(seed1, seed2, seed3)
     val initialDiscoveryMembersAsAddresses = Seq(seed1, seed2, seed3)
       .sorted(Ordering.comparatorToOrdering(InitialDiscoveryMembersResolver.advertisedSocketAddressComparator()))
-      .map(resolvedAddress => Address("akka", system.name, resolvedAddress.getHostname, resolvedAddress.getPort))
+      .map(resolvedAddress => Address("akka", system.name, TypesafeConfigService.hostname( resolvedAddress ), resolvedAddress.getPort))
 
     val config = Config.newBuilder()
       .set(CausalClusteringSettings.initial_discovery_members, initialDiscoveryMembers.asJava)

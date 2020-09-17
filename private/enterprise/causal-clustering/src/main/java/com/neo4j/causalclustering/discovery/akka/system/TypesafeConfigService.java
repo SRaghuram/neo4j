@@ -229,7 +229,7 @@ public final class TypesafeConfigService
         }
         else
         {
-            return socketAddress.getHostname();
+            return socketAddress.getHostname().toLowerCase();
         }
     }
 
