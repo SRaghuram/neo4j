@@ -389,59 +389,20 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     exception.getMessage should include("EXECUTE ADMIN PROCEDURES is not supported in this Cypher version.")
   }
 
-  test("create index with OR REPLACE and/or IF NOT EXISTS syntax should not work with CYPHER 3.5-4.1") {
-    // CREATE OR REPLACE INDEX name FOR ...
+  test("create index with IF NOT EXISTS syntax should not work with CYPHER 4.1") {
     // WHEN
-    val replace35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 CREATE OR REPLACE INDEX my_index FOR (n:Label) ON (n.prop)")
+    val exception41 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.1 CREATE INDEX my_index IF NOT EXISTS FOR (n:Label) ON (n.prop)")
     }
-    replace35.getMessage should include("Creating index using this syntax is not supported in this Cypher version.")
-
-    // WHEN
-    val replace41 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 CREATE OR REPLACE INDEX my_index FOR (n:Label) ON (n.prop)")
-    }
-    replace41.getMessage should include("Creating index using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
-
-    // CREATE OR REPLACE INDEX name IF NOT EXISTS FOR ...
-    // WHEN
-    val invalid35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 CREATE OR REPLACE INDEX my_index IF NOT EXISTS FOR (n:Label) ON (n.prop)")
-    }
-    invalid35.getMessage should include("Creating index using this syntax is not supported in this Cypher version.")
-
-    // WHEN
-    val invalid41 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 CREATE OR REPLACE INDEX my_index IF NOT EXISTS FOR (n:Label) ON (n.prop)")
-    }
-    invalid41.getMessage should include("Creating index using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
-
-    // CREATE INDEX name IF NOT EXISTS FOR ...
-    // WHEN
-    val notExists35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 CREATE OR REPLACE INDEX my_index FOR (n:Label) ON (n.prop)")
-    }
-    notExists35.getMessage should include("Creating index using this syntax is not supported in this Cypher version.")
-
-    // WHEN
-    val notExists41 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 CREATE OR REPLACE INDEX my_index FOR (n:Label) ON (n.prop)")
-    }
-    notExists41.getMessage should include("Creating index using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
+    exception41.getMessage should include("Creating index using `IF NOT EXISTS` is not supported in this Cypher version.")
 
     // THEN
     graph.getMaybeIndex("Label", Seq("prop")).isEmpty should be(true)
   }
 
-  test("drop index syntax with IF EXISTS should not work with CYPHER 3.5-4.1") {
+  test("drop index syntax with IF EXISTS should not work with CYPHER 4.1") {
     // GIVEN
     graph.createIndexWithName("my_index", "Label", "prop")
-
-    // WHEN
-    val exception35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 DROP INDEX my_index IF EXISTS")
-    }
-    exception35.getMessage should include("Dropping index by name is not supported in this Cypher version.")
 
     // WHEN
     val exception41 = the[SyntaxException] thrownBy {
@@ -453,191 +414,77 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     graph.getMaybeIndex("Label", Seq("prop")).isDefined should be(true)
   }
 
-  test("create node key constraint with OR REPLACE and/or IF NOT EXISTS should not work with CYPHER 3.5-4.1") {
-    // CREATE OR REPLACE CONSTRAINT name ON ...
+  test("create node key constraint with IF NOT EXISTS should not work with CYPHER 3.5-4.1") {
     // WHEN
-    val replace35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 CREATE OR REPLACE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NODE KEY")
+    val exception35 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 CREATE CONSTRAINT IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS NODE KEY")
     }
-    replace35.getMessage should include("Creating node key constraint using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
+    exception35.getMessage should include("Creating node key constraint using `IF NOT EXISTS` is not supported in this Cypher version.")
 
     // WHEN
-    val replace41 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 CREATE OR REPLACE CONSTRAINT my_constraint ON (n:Label) ASSERT (n.prop) IS NODE KEY")
+    val exception41 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.1 CREATE CONSTRAINT my_constraint IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS NODE KEY")
     }
-    replace41.getMessage should include("Creating node key constraint using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
-
-    // CREATE OR REPLACE CONSTRAINT name IF NOT EXISTS ON ...
-    // WHEN
-    val invalid35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 CREATE OR REPLACE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NODE KEY")
-    }
-    invalid35.getMessage should include("Creating node key constraint using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
-
-    // WHEN
-    val invalid41 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 CREATE OR REPLACE CONSTRAINT my_constraint ON (n:Label) ASSERT (n.prop) IS NODE KEY")
-    }
-    invalid41.getMessage should include("Creating node key constraint using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
-
-    // CREATE CONSTRAINT name IF NOT EXISTS ON ...
-    // WHEN
-    val notExists35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 CREATE OR REPLACE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NODE KEY")
-    }
-    notExists35.getMessage should include("Creating node key constraint using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
-
-    // WHEN
-    val notExists41 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 CREATE OR REPLACE CONSTRAINT my_constraint ON (n:Label) ASSERT (n.prop) IS NODE KEY")
-    }
-    notExists41.getMessage should include("Creating node key constraint using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
+    exception41.getMessage should include("Creating node key constraint using `IF NOT EXISTS` is not supported in this Cypher version.")
 
     // THEN
     graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
   }
 
-  test("create uniqueness constraint with OR REPLACE and/or IF NOT EXISTS should not work with CYPHER 3.5-4.1") {
-    // CREATE OR REPLACE CONSTRAINT name ON ...
+  test("create uniqueness constraint with IF NOT EXISTS should not work with CYPHER 3.5-4.1") {
     // WHEN
-    val replace35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 CREATE OR REPLACE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS UNIQUE")
+    val exception35 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 CREATE CONSTRAINT IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS UNIQUE")
     }
-    replace35.getMessage should include("Creating uniqueness constraint using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
+    exception35.getMessage should include("Creating uniqueness constraint using `IF NOT EXISTS` is not supported in this Cypher version.")
 
     // WHEN
-    val replace41 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 CREATE OR REPLACE CONSTRAINT my_constraint ON (n:Label) ASSERT (n.prop) IS UNIQUE")
+    val exception41 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.1 CREATE CONSTRAINT IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS UNIQUE")
     }
-    replace41.getMessage should include("Creating uniqueness constraint using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
-
-    // CREATE OR REPLACE CONSTRAINT name IF NOT EXISTS ON ...
-    // WHEN
-    val invalid35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 CREATE OR REPLACE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS UNIQUE")
-    }
-    invalid35.getMessage should include("Creating uniqueness constraint using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
-
-    // WHEN
-    val invalid41 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 CREATE OR REPLACE CONSTRAINT my_constraint ON (n:Label) ASSERT (n.prop) IS UNIQUE")
-    }
-    invalid41.getMessage should include("Creating uniqueness constraint using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
-
-    // CREATE CONSTRAINT name IF NOT EXISTS ON ...
-    // WHEN
-    val notExists35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 CREATE OR REPLACE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS UNIQUE")
-    }
-    notExists35.getMessage should include("Creating uniqueness constraint using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
-
-    // WHEN
-    val notExists41 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 CREATE OR REPLACE CONSTRAINT my_constraint ON (n:Label) ASSERT (n.prop) IS UNIQUE")
-    }
-    notExists41.getMessage should include("Creating uniqueness constraint using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
+    exception41.getMessage should include("Creating uniqueness constraint using `IF NOT EXISTS` is not supported in this Cypher version.")
 
     // THEN
     graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
   }
 
-  test("create node existence constraint with OR REPLACE and/or IF NOT EXISTS should not work with CYPHER 3.5-4.1") {
-    // CREATE OR REPLACE CONSTRAINT name ON ...
+  test("create node existence constraint with IF NOT EXISTS should not work with CYPHER 3.5-4.1") {
     // WHEN
-    val replace35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 CREATE OR REPLACE CONSTRAINT my_constraint ON (n:Label) ASSERT EXISTS(n.prop)")
+    val exception35 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 CREATE CONSTRAINT IF NOT EXISTS ON (n:Label) ASSERT EXISTS(n.prop)")
     }
-    replace35.getMessage should include("Creating named node existence constraint is not supported in this Cypher version.")
+    exception35.getMessage should include("Creating node existence constraint using `IF NOT EXISTS` is not supported in this Cypher version.")
 
     // WHEN
-    val replace41 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 CREATE OR REPLACE CONSTRAINT my_constraint ON (n:Label) ASSERT EXISTS(n.prop)")
+    val exception41 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.1 CREATE CONSTRAINT my_constraint IF NOT EXISTS ON (n:Label) ASSERT EXISTS(n.prop)")
     }
-    replace41.getMessage should include("Creating node existence constraint using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
-
-    // CREATE OR REPLACE CONSTRAINT name IF NOT EXISTS ON ...
-    // WHEN
-    val invalid35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 CREATE OR REPLACE CONSTRAINT my_constraint ON (n:Label) ASSERT EXISTS(n.prop)")
-    }
-    invalid35.getMessage should include("Creating named node existence constraint is not supported in this Cypher version.")
-
-    // WHEN
-    val invalid41 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 CREATE OR REPLACE CONSTRAINT my_constraint ON (n:Label) ASSERT EXISTS(n.prop)")
-    }
-    invalid41.getMessage should include("Creating node existence constraint using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
-
-    // CREATE CONSTRAINT name IF NOT EXISTS ON ...
-    // WHEN
-    val notExists35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 CREATE OR REPLACE CONSTRAINT my_constraint ON (n:Label) ASSERT EXISTS(n.prop)")
-    }
-    notExists35.getMessage should include("Creating named node existence constraint is not supported in this Cypher version.")
-
-    // WHEN
-    val notExists41 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 CREATE OR REPLACE CONSTRAINT my_constraint ON (n:Label) ASSERT EXISTS(n.prop)")
-    }
-    notExists41.getMessage should include("Creating node existence constraint using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
+    exception41.getMessage should include("Creating node existence constraint using `IF NOT EXISTS` is not supported in this Cypher version.")
 
     // THEN
     graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
   }
 
-  test("create relationship existence constraint with OR REPLACE and/or IF NOT EXISTS should not work with CYPHER 3.5-4.1") {
-    // CREATE OR REPLACE CONSTRAINT name ON ...
+  test("create relationship existence constraint with IF NOT EXISTS should not work with CYPHER 3.5-4.1") {
     // WHEN
-    val replace35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 CREATE OR REPLACE CONSTRAINT my_constraint ON ()-[r:Label]-() ASSERT EXISTS(n.prop)")
+    val exception35 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS(n.prop)")
     }
-    replace35.getMessage should include("Creating named relationship existence constraint is not supported in this Cypher version.")
+    exception35.getMessage should include("Creating relationship existence constraint using `IF NOT EXISTS` is not supported in this Cypher version.")
 
     // WHEN
-    val replace41 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 CREATE OR REPLACE CONSTRAINT my_constraint ON ()-[r:Label]-() ASSERT EXISTS(n.prop)")
+    val exception41 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.1 CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS(n.prop)")
     }
-    replace41.getMessage should include("Creating relationship existence constraint using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
-
-    // CREATE OR REPLACE CONSTRAINT name IF NOT EXISTS ON ...
-    // WHEN
-    val invalid35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 CREATE OR REPLACE CONSTRAINT my_constraint ON ()-[r:Label]-() ASSERT EXISTS(n.prop)")
-    }
-    invalid35.getMessage should include("Creating named relationship existence constraint is not supported in this Cypher version.")
-
-    // WHEN
-    val invalid41 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 CREATE OR REPLACE CONSTRAINT my_constraint ON ()-[r:Label]-() ASSERT EXISTS(n.prop)")
-    }
-    invalid41.getMessage should include("Creating relationship existence constraint using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
-
-    // CREATE CONSTRAINT name IF NOT EXISTS ON ...
-    // WHEN
-    val notExists35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 CREATE OR REPLACE CONSTRAINT my_constraint ON ()-[r:Label]-() ASSERT EXISTS(n.prop)")
-    }
-    notExists35.getMessage should include("Creating named relationship existence constraint is not supported in this Cypher version.")
-
-    // WHEN
-    val notExists41 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 CREATE OR REPLACE CONSTRAINT my_constraint ON ()-[r:Label]-() ASSERT EXISTS(n.prop)")
-    }
-    notExists41.getMessage should include("Creating relationship existence constraint using `OR REPLACE` or `IF NOT EXISTS` is not supported in this Cypher version.")
+    exception41.getMessage should include("Creating relationship existence constraint using `IF NOT EXISTS` is not supported in this Cypher version.")
 
     // THEN
     graph.getMaybeRelationshipConstraint("Label", "prop").isEmpty should be(true)
   }
 
-  test("drop constraint syntax with IF EXISTS should not work with CYPHER 3.5-4.1") {
+  test("drop constraint syntax with IF EXISTS should not work with CYPHER 4.1") {
     // GIVEN
     graph.createNodeKeyConstraintWithName("my_constraint", "Label", "prop")
-
-    // WHEN
-    val exception35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 DROP CONSTRAINT my_constraint IF EXISTS")
-    }
-    exception35.getMessage should include("Dropping constraint by name is not supported in this Cypher version.")
 
     // WHEN
     val exception41 = the[SyntaxException] thrownBy {
