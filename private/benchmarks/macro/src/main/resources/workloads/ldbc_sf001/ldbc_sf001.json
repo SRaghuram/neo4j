@@ -104,49 +104,49 @@
       "name": "Short Read 1",
       "queryFile": "queries/short_read_1.cypher",
       "parameters": {
-        "file": "parameters/short_read_1.txt"
+        "file": "personIds.txt"
       }
     },
     {
       "name": "Short Read 2",
       "queryFile": "queries/short_read_2.cypher",
       "parameters": {
-        "file": "parameters/short_read_2.txt"
+        "file": "personIds.txt"
       }
     },
     {
       "name": "Short Read 3",
       "queryFile": "queries/short_read_3.cypher",
       "parameters": {
-        "file": "parameters/short_read_3.txt"
+        "file": "personIds.txt"
       }
     },
     {
       "name": "Short Read 4",
       "queryFile": "queries/short_read_4.cypher",
       "parameters": {
-        "file": "parameters/short_read_4.txt"
+        "file": "messageIds.txt"
       }
     },
     {
       "name": "Short Read 5",
       "queryFile": "queries/short_read_5.cypher",
       "parameters": {
-        "file": "parameters/short_read_5.txt"
+        "file": "messageIds.txt"
       }
     },
     {
       "name": "Short Read 6",
       "queryFile": "queries/short_read_6.cypher",
       "parameters": {
-        "file": "parameters/short_read_6.txt"
+        "file": "messageIds.txt"
       }
     },
     {
       "name": "Short Read 7",
       "queryFile": "queries/short_read_7.cypher",
       "parameters": {
-        "file": "parameters/short_read_7.txt"
+        "file": "messageIds.txt"
       }
     }
   ]
