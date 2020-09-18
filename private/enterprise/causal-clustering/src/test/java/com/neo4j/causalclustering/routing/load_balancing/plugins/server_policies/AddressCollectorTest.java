@@ -34,6 +34,7 @@ import static com.neo4j.causalclustering.discovery.TestTopology.addressesForRead
 import static com.neo4j.causalclustering.identity.RaftTestMember.leader;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static com.neo4j.configuration.CausalClusteringSettings.cluster_allow_reads_on_followers;
+import static com.neo4j.configuration.CausalClusteringSettings.cluster_allow_reads_on_leader;
 import static com.neo4j.configuration.CausalClusteringSettings.load_balancing_shuffle;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
@@ -55,7 +56,7 @@ class AddressCollectorTest
     void shouldProvideReaderAndRouterForSingleCoreSetup() throws Exception
     {
         // given
-        var addressCollector = setup( true, true, 1, 0, -1 );
+        var addressCollector = setup( true, false, true, 1, 0, -1 );
         var address0 = addressesForCore( 0, false ).boltAddress();
 
         // when
@@ -73,7 +74,7 @@ class AddressCollectorTest
     void shouldReturnSelfIfOnlyMemberOfTheCluster() throws Exception
     {
         // given
-        var addressCollector = setup( true, true, 1, 0, 0 );
+        var addressCollector = setup( true, false, true, 1, 0, 0 );
         var address0 = addressesForCore( 0, false ).boltAddress();
 
         // when
@@ -92,7 +93,7 @@ class AddressCollectorTest
     void shouldReturnCoreServersWithRouteAllCoresButLeaderAsReadAndSingleWriteActions() throws Exception
     {
         // given
-        var addressCollector = setup( true, true, 3, 0, 0 );
+        var addressCollector = setup( true, false, true, 3, 0, 0 );
         var address0 = addressesForCore( 0, false ).boltAddress();
         var address1 = addressesForCore( 1, false ).boltAddress();
         var address2 = addressesForCore( 2, false ).boltAddress();
@@ -109,10 +110,30 @@ class AddressCollectorTest
     }
 
     @Test
+    void shouldReturnCoreServersWithRouteAndReadAllCores() throws Exception
+    {
+        // given
+        var addressCollector = setup( true, true, true, 3, 0, 0 );
+        var address0 = addressesForCore( 0, false ).boltAddress();
+        var address1 = addressesForCore( 1, false ).boltAddress();
+        var address2 = addressesForCore( 2, false ).boltAddress();
+        // when
+        var routingResult = addressCollector.createRoutingResult( namedDatabaseId, null );
+
+        // then
+        assertThat( routingResult.routeEndpoints(), hasSize( 3 ) );
+        assertThat( routingResult.routeEndpoints(), containsInAnyOrder( address0, address1, address2 ) );
+        assertThat( routingResult.writeEndpoints(), hasSize( 1 ) );
+        assertThat( routingResult.writeEndpoints(), contains( address0 ) );
+        assertThat( routingResult.readEndpoints(), hasSize( 3 ) );
+        assertThat( routingResult.readEndpoints(), containsInAnyOrder( address0, address1, address2 ) );
+    }
+
+    @Test
     void shouldReturnReadReplicasAndFollowersAsReaders() throws Exception
     {
         // given
-        var addressCollector = setup( true, true, 3, 3, 0 );
+        var addressCollector = setup( true, false, true, 3, 3, 0 );
         var address0 = addressesForCore( 0, false ).boltAddress();
         var address1 = addressesForCore( 1, false ).boltAddress();
         var address2 = addressesForCore( 2, false ).boltAddress();
@@ -132,10 +153,56 @@ class AddressCollectorTest
     }
 
     @Test
+    void shouldReturnReadReplicasAndLeaderAsReaders() throws Exception
+    {
+        // given
+        var addressCollector = setup( false, true, true, 3, 3, 0 );
+        var address0 = addressesForCore( 0, false ).boltAddress();
+        var address1 = addressesForCore( 1, false ).boltAddress();
+        var address2 = addressesForCore( 2, false ).boltAddress();
+        var address3 = addressesForReadReplica( 3 ).boltAddress();
+        var address4 = addressesForReadReplica( 4 ).boltAddress();
+        var address5 = addressesForReadReplica( 5 ).boltAddress();
+        // when
+        var routingResult = addressCollector.createRoutingResult( namedDatabaseId, null );
+
+        // then
+        assertThat( routingResult.routeEndpoints(), hasSize( 3 ) );
+        assertThat( routingResult.routeEndpoints(), containsInAnyOrder( address0, address1, address2 ) );
+        assertThat( routingResult.writeEndpoints(), hasSize( 1 ) );
+        assertThat( routingResult.writeEndpoints(), contains( address0 ) );
+        assertThat( routingResult.readEndpoints(), hasSize( 4 ) );
+        assertThat( routingResult.readEndpoints(), containsInAnyOrder( address0, address3, address4, address5 ) );
+    }
+
+    @Test
+    void shouldReturnReadReplicasAndFollowersAndLeaderAsReaders() throws Exception
+    {
+        // given
+        var addressCollector = setup( true, true, true, 3, 3, 0 );
+        var address0 = addressesForCore( 0, false ).boltAddress();
+        var address1 = addressesForCore( 1, false ).boltAddress();
+        var address2 = addressesForCore( 2, false ).boltAddress();
+        var address3 = addressesForReadReplica( 3 ).boltAddress();
+        var address4 = addressesForReadReplica( 4 ).boltAddress();
+        var address5 = addressesForReadReplica( 5 ).boltAddress();
+        // when
+        var routingResult = addressCollector.createRoutingResult( namedDatabaseId, null );
+
+        // then
+        assertThat( routingResult.routeEndpoints(), hasSize( 3 ) );
+        assertThat( routingResult.routeEndpoints(), containsInAnyOrder( address0, address1, address2 ) );
+        assertThat( routingResult.writeEndpoints(), hasSize( 1 ) );
+        assertThat( routingResult.writeEndpoints(), contains( address0 ) );
+        assertThat( routingResult.readEndpoints(), hasSize( 6 ) );
+        assertThat( routingResult.readEndpoints(), containsInAnyOrder( address0, address1, address2, address3, address4, address5 ) );
+    }
+
+    @Test
     void shouldReturnOnlyReadReplicasAsReaders() throws Exception
     {
         // given
-        var addressCollector = setup( false, true, 3, 3, 0 );
+        var addressCollector = setup( false, false, true, 3, 3, 0 );
         var address0 = addressesForCore( 0, false ).boltAddress();
         var address1 = addressesForCore( 1, false ).boltAddress();
         var address2 = addressesForCore( 2, false ).boltAddress();
@@ -158,7 +225,7 @@ class AddressCollectorTest
     void shouldApplyPolicy() throws Exception
     {
         // given
-        var addressCollector = setup( true, true, 3, 3, 0 );
+        var addressCollector = setup( true, false, true, 3, 3, 0 );
         var address0 = addressesForCore( 0, false ).boltAddress();
         var address1 = addressesForCore( 1, false ).boltAddress();
         var address2 = addressesForCore( 2, false ).boltAddress();
@@ -189,8 +256,8 @@ class AddressCollectorTest
     void shouldNotShuffleWithPolicy() throws Exception
     {
         // given
-        var addressCollectorShuffled = setup( false, true, 1, 10, 0 );
-        var addressCollectorNotShuffled = setup( false, false, 1, 10, 0 );
+        var addressCollectorShuffled = setup( false, false, true, 1, 10, 0 );
+        var addressCollectorNotShuffled = setup( false, false, false, 1, 10, 0 );
         // policy does nothing
         var policy = new Policy()
         {
@@ -220,7 +287,7 @@ class AddressCollectorTest
         var cores = createCores( 1 );
         var readReplicas = createReadReplicas( 1, 1 );
 
-        var config = getConfig( true, true );
+        var config = getConfig( true, false,true );
 
         var topologyService = new FakeTopologyService( cores.keySet(), readReplicas.keySet(), member( 0 ), Set.of( namedDatabaseId ) );
         var leaderService = new DefaultLeaderService( topologyService, nullLogProvider() );
@@ -252,7 +319,7 @@ class AddressCollectorTest
         var readReplicas = createReadReplicas( 1, 2 );
         var readMembers = new ArrayList<>( readReplicas.keySet() );
 
-        var config = getConfig( false, true );
+        var config = getConfig( false, false,true );
 
         var topologyService = new FakeTopologyService( cores.keySet(), readReplicas.keySet(), member( 0 ), Set.of( namedDatabaseId ) );
         var leaderService = new DefaultLeaderService( topologyService, nullLogProvider() );
@@ -278,15 +345,17 @@ class AddressCollectorTest
         assertThat( routingResult.readEndpoints(), contains( address1 ) );
     }
 
-    private AddressCollector setup( boolean allowReads, boolean shuffle, int numberOfCores, int numberOnReplicas, int leaderIndex )
+    private AddressCollector setup( boolean allowReadsOnFollowers, boolean allowReadsOnLeader, boolean shuffle,
+                                    int numberOfCores, int numberOnReplicas, int leaderIndex )
     {
         var cores = createCores( numberOfCores );
         var readReplicas = createReadReplicas( numberOfCores, numberOnReplicas );
 
-        return setup( allowReads, shuffle, leaderIndex, cores, readReplicas );
+        return setup( allowReadsOnFollowers, allowReadsOnLeader, shuffle, leaderIndex, cores, readReplicas );
     }
 
-    private AddressCollector setup( boolean allowReads,
+    private AddressCollector setup( boolean allowReadsOnFollowers,
+                                    boolean allowReadsOnLeader,
                                     boolean shuffle,
                                     int leaderIndex,
                                     Map<MemberId,CoreServerInfo> cores,
@@ -314,15 +383,16 @@ class AddressCollectorTest
             topologyService.removeLeader();
         }
 
-        Config config = getConfig( allowReads, shuffle );
+        Config config = getConfig( allowReadsOnFollowers, allowReadsOnLeader, shuffle );
 
         return new AddressCollector( topologyService, leaderService, config, log );
     }
 
-    private Config getConfig( boolean allowReads, boolean shuffle )
+    private Config getConfig( boolean allowReadsOnFollowers, boolean allowReadsOnLeader, boolean shuffle )
     {
         var config = Config.defaults();
-        config.set( cluster_allow_reads_on_followers, allowReads );
+        config.set( cluster_allow_reads_on_followers, allowReadsOnFollowers );
+        config.set( cluster_allow_reads_on_leader, allowReadsOnLeader );
         config.set( load_balancing_shuffle, shuffle );
         return config;
     }

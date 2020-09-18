@@ -64,6 +64,7 @@ import static com.neo4j.causalclustering.discovery.TestTopology.readReplicaInfoM
 import static com.neo4j.causalclustering.identity.RaftTestMember.leader;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static com.neo4j.configuration.CausalClusteringSettings.cluster_allow_reads_on_followers;
+import static com.neo4j.configuration.CausalClusteringSettings.cluster_allow_reads_on_leader;
 import static java.util.Collections.emptyMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -111,8 +112,10 @@ class GetRoutingTableProcedureForSingleDCTest
     private static Stream<Arguments> routingConfigs()
     {
         return Stream.of(
-                Arguments.of( Config.defaults( cluster_allow_reads_on_followers, true ) ),
-                Arguments.of( Config.defaults( cluster_allow_reads_on_followers, false ) )
+                Arguments.of( Config.defaults( Map.of( cluster_allow_reads_on_followers, true, cluster_allow_reads_on_leader, false ) ) ),
+                Arguments.of( Config.defaults( Map.of( cluster_allow_reads_on_followers, false, cluster_allow_reads_on_leader, false ) ) ),
+                Arguments.of( Config.defaults( Map.of( cluster_allow_reads_on_followers, true, cluster_allow_reads_on_leader, true ) ) ),
+                Arguments.of( Config.defaults( Map.of( cluster_allow_reads_on_followers, false, cluster_allow_reads_on_leader, true ) ) )
         );
     }
 
@@ -215,6 +218,10 @@ class GetRoutingTableProcedureForSingleDCTest
         builder.writeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
         builder.readAddress( addressesForCore( 1, false ).connectors().clientBoltAddress() );
         builder.readAddress( addressesForCore( 2, false ).connectors().clientBoltAddress() );
+        if ( config.get( cluster_allow_reads_on_leader ) )
+        {
+            builder.readAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
+        }
         builder.routeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
         builder.routeAddress( addressesForCore( 1, false ).connectors().clientBoltAddress() );
         builder.routeAddress( addressesForCore( 2, false ).connectors().clientBoltAddress() );
@@ -251,7 +258,8 @@ class GetRoutingTableProcedureForSingleDCTest
         // given
         var theLeader = getLeaderForId( 0 );
         leaderService.setLeader( theLeader );
-        var coreMembers = Map.of( member( 0 ), addressesForCore( 0, false ) );
+        var coreMembers = Map.of( member( 0 ), addressesForCore( 0, false ),
+                                  member( 1 ), addressesForCore( 1, false ) );
 
         setupCoreTopologyService( coreTopologyService, coreMembers, readReplicaInfoMap( 1 ) );
 
@@ -261,18 +269,25 @@ class GetRoutingTableProcedureForSingleDCTest
         var clusterView = run( procedure, config );
 
         // then
-        var coreBoltAddress = addressesForCore( 0, false ).connectors().clientBoltAddress();
+        var coreBoltAddress0 = addressesForCore( 0, false ).connectors().clientBoltAddress();
+        var coreBoltAddress1 = addressesForCore( 1, false ).connectors().clientBoltAddress();
         var readReplicaBoltAddress = addressesForReadReplica( 1 ).connectors().clientBoltAddress();
 
         var builder = new ClusterView.Builder();
-        builder.writeAddress( coreBoltAddress );
+        builder.writeAddress( coreBoltAddress0 );
         if ( config.get( cluster_allow_reads_on_followers ) )
         {
-            builder.readAddress( coreBoltAddress );
+            builder.readAddress( coreBoltAddress1 );
+        }
+        if ( config.get( cluster_allow_reads_on_leader ) )
+        {
+            builder.readAddress( coreBoltAddress0 );
         }
 
         builder.readAddress( readReplicaBoltAddress );
-        builder.routeAddress( coreBoltAddress );
+        builder.routeAddress( coreBoltAddress0 );
+        builder.routeAddress( coreBoltAddress1 );
+        System.out.println( clusterView );
 
         assertEquals( builder.build(), clusterView );
     }
@@ -429,8 +444,8 @@ class GetRoutingTableProcedureForSingleDCTest
         assertEquals( Status.Database.DatabaseNotFound, error.status() );
     }
 
-    @Test
-    void shouldNotThrowWhenDatabaseIsStopped() throws Exception
+    @RoutingConfigsTest
+    void shouldNotThrowWhenDatabaseIsStopped( Config config ) throws Exception
     {
         var databaseManager = new StubClusteredDatabaseManager();
         var databaseId = databaseManager.databaseIdRepository().getByName( "stopped database" ).get();
@@ -444,13 +459,16 @@ class GetRoutingTableProcedureForSingleDCTest
 
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap(), databaseId, raftId );
 
-        Config defaults = Config.defaults();
-        var proc = newProcedure( coreTopologyService, leaderService, databaseManager );
+        var proc = newProcedure( coreTopologyService, leaderService, databaseManager, config );
 
-        var clusterView = run( proc, databaseId, defaults );
+        var clusterView = run( proc, databaseId, config );
 
         var builder = new ClusterView.Builder();
         builder.writeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
+        if ( config.get( cluster_allow_reads_on_leader ) )
+        {
+            builder.readAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
+        }
         builder.readAddress( addressesForCore( 1, false ).connectors().clientBoltAddress() );
         builder.readAddress( addressesForCore( 2, false ).connectors().clientBoltAddress() );
         builder.routeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );

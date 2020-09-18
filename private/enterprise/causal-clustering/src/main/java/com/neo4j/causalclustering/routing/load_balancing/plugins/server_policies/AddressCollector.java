@@ -28,6 +28,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 
 import static com.neo4j.configuration.CausalClusteringSettings.cluster_allow_reads_on_followers;
+import static com.neo4j.configuration.CausalClusteringSettings.cluster_allow_reads_on_leader;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -112,14 +113,16 @@ public class AddressCollector
                                                boolean shouldShuffle,
                                                NamedDatabaseId dbId )
     {
+        var allowReadOnFollowers = config.get( cluster_allow_reads_on_followers );
+        var allowReadOnLeader = config.get( cluster_allow_reads_on_leader );
         var possibleReaders = rrTopology.servers().entrySet().stream().map( AddressCollector::newServerInfo ).collect( toSet() );
 
-        if ( config.get( cluster_allow_reads_on_followers ) || possibleReaders.isEmpty() )
+        if ( allowReadOnFollowers || possibleReaders.isEmpty() )
         {
             var coreMembers = coreTopology.servers().entrySet().stream().map( AddressCollector::newServerInfo ).collect( toSet() );
 
-            // if the leader is present and it is not alone filter it out from the read end points
-            if ( optionalLeaderId.isPresent() && coreMembers.size() > 1 )
+            // if the leader is present and it is not alone filter it out from the read end points unless it should be included always
+            if ( !allowReadOnLeader && coreMembers.size() > 1 && optionalLeaderId.isPresent() )
             {
                 var leaderId = optionalLeaderId.get();
                 coreMembers = coreMembers.stream().filter( serverInfo -> !serverInfo.memberId().equals( leaderId ) ).collect( toSet() );
@@ -128,6 +131,11 @@ public class AddressCollector
             // or if we cannot locate the leader return all cores as read end points
             possibleReaders.addAll( coreMembers );
             // leader might become available a bit later and we might end up using it for reading during this ttl, should be fine in general
+        }
+        else if ( allowReadOnLeader && optionalLeaderId.isPresent() )
+        {
+            coreTopology.servers().entrySet().stream().filter( e ->  e.getKey().equals( optionalLeaderId.get() ) )
+                    .map( AddressCollector::newServerInfo ).findFirst().ifPresent( possibleReaders::add );
         }
 
         var readers = new ArrayList<>( policy == null ? possibleReaders :

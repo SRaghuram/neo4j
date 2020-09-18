@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import java.time.Duration;
-import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
@@ -29,6 +29,7 @@ import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.asse
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStopped;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.createDatabase;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.stopDatabase;
+import static com.neo4j.configuration.CausalClusteringSettings.cluster_allow_reads_on_leader;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -153,31 +154,50 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
                 .map( member -> () -> assertNotPossibleToWriteUsingRoutingDriver( member.boltAdvertisedAddress() ) ) );
     }
 
+    @Test
+    void allowingLeaderAsReadEndpointDynamicallyShouldReturnAllMembersAsReadEndpoints()
+    {
+        setAllowReadFromLeader( true );
+        assertAll( cluster.coreMembers().stream().map( this::assertRoutingProceduresAvailableWithAllowReadFromLeader ) );
+        setAllowReadFromLeader( false );
+        assertAll( cluster.coreMembers().stream().map( this::assertRoutingProceduresAvailable ) );
+    }
+
     private Executable assertRoutingProceduresAvailable( CoreClusterMember coreMember )
     {
         return assertRoutingProceduresAvailable( coreMember, null );
     }
 
+    private Executable assertRoutingProceduresAvailableWithAllowReadFromLeader( CoreClusterMember coreMember )
+    {
+        return assertRoutingProceduresAvailable( coreMember, null, true );
+    }
+
     private Executable assertRoutingProceduresAvailable( CoreClusterMember coreMember, String databaseName )
+    {
+        return assertRoutingProceduresAvailable( coreMember, databaseName, false );
+    }
+
+    private Executable assertRoutingProceduresAvailable( CoreClusterMember coreMember, String databaseName, boolean allowReadFromLeader )
     {
         return () ->
         {
-            CoreClusterMember leader = cluster.awaitLeader();
+            var leader = cluster.awaitLeader();
 
-            List<SocketAddress> writers = singletonList( boltAddress( leader ) );
+            var writers = singletonList( boltAddress( leader ) );
 
-            List<SocketAddress> readers = Stream.concat( cluster.coreMembers().stream(), cluster.readReplicas().stream() )
-                    .filter( member -> !member.equals( leader ) ) // leader is a writer and router, not a reader
+            var readers = Stream.concat( cluster.coreMembers().stream(), cluster.readReplicas().stream() )
+                    .filter( member -> allowReadFromLeader || !member.equals( leader ) ) // leader is a writer and router, not a reader (unless enabled)
                     .map( this::boltAddress )
                     .collect( toList() );
 
-            List<SocketAddress> routers = cluster.coreMembers()
+            var routers = cluster.coreMembers()
                     .stream()
                     .map( this::boltAddress )
                     .collect( toList() );
 
-            Duration ttl = Config.defaults().get( routing_ttl );
-            RoutingResult expectedResult = new RoutingResult( routers, writers, readers, ttl.getSeconds() );
+            var ttl = Config.defaults().get( routing_ttl );
+            var expectedResult = new RoutingResult( routers, writers, readers, ttl.getSeconds() );
 
             if ( databaseName != null )
             {
@@ -218,5 +238,13 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
     private SocketAddress boltAddress( ClusterMember member )
     {
         return socketAddress( member.boltAdvertisedAddress(), SocketAddress::new );
+    }
+
+    private void setAllowReadFromLeader( boolean allowReadFromLeader )
+    {
+        cluster.allMembers().forEach( member -> {
+            member.defaultDatabase().executeTransactionally( "CALL dbms.setConfigValue($key,$value)",
+                    Map.of("key", cluster_allow_reads_on_leader.name(), "value", Boolean.toString( allowReadFromLeader ) ) );
+        } );
     }
 }

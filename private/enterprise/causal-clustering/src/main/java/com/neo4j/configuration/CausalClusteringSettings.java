@@ -355,6 +355,11 @@ public class CausalClusteringSettings implements SettingsDeclaration
     public static final Setting<Boolean> cluster_allow_reads_on_followers =
             newBuilder( "causal_clustering.cluster_allow_reads_on_followers", BOOL,  true  ).build();
 
+    @Description( "Configure if the `dbms.routing.getRoutingTable()` procedure should include the leader as read " +
+                  "endpoint or return only read replicas/followers. Note: leader is returned as read endpoint if no other member is present all. " )
+    public static final Setting<Boolean> cluster_allow_reads_on_leader =
+            newBuilder( "causal_clustering.cluster_allow_reads_on_leader", BOOL, false ).dynamic().build();
+
     @Description( "Time between scanning the cluster to refresh current server's view of topology" )
     public static final Setting<Duration> cluster_topology_refresh =
             newBuilder( "causal_clustering.cluster_topology_refresh", DURATION, ofSeconds( 5 ) ).addConstraint( min( ofSeconds( 1 ) ) ).build();
