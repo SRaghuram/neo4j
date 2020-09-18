@@ -173,10 +173,10 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         return knownSecurityComponentVersions.findSecurityGraphVersion( substring );
     }
 
-    public List<String> getPrivilegesAsCommands( Transaction tx, String databaseName, boolean saveUsers, boolean saveRoles )
+    public BackupCommands getBackupCommands( Transaction tx, String databaseName, boolean saveUsers, boolean saveRoles )
     {
         KnownEnterpriseSecurityComponentVersion component = knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx );
-        return component.getPrivilegesAsCommands( tx, databaseName, saveUsers, saveRoles );
+        return component.getBackupCommands( tx, databaseName, saveUsers, saveRoles );
     }
 
     Set<ResourcePrivilege> getPrivilegeForRoles( Transaction tx, List<String> roles, Cache<String,Set<ResourcePrivilege>> privilegeCache )

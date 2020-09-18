@@ -6,6 +6,7 @@
 package com.neo4j.server.security.enterprise.systemgraph.versions;
 
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
+import com.neo4j.server.security.enterprise.systemgraph.BackupCommands;
 
 import java.util.List;
 
@@ -71,7 +72,7 @@ public class EnterpriseSecurityComponentVersion_Future extends KnownEnterpriseSe
     }
 
     @Override
-    public List<String> getPrivilegesAsCommands( Transaction tx, String databaseName, boolean saveUsers, boolean saveRoles )
+    public BackupCommands getBackupCommands( Transaction tx, String databaseName, boolean saveUsers, boolean saveRoles )
     {
         throw unsupported();
     }

@@ -8,6 +8,7 @@ package com.neo4j.server.security.enterprise.systemgraph.versions;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
+import com.neo4j.server.security.enterprise.systemgraph.BackupCommands;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -81,7 +82,7 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
         throw unsupported();
     }
 
-    public abstract List<String> getPrivilegesAsCommands( Transaction tx, String databaseName, boolean saveUsers, boolean saveRoles );
+    public abstract BackupCommands getBackupCommands( Transaction tx, String databaseName, boolean saveUsers, boolean saveRoles );
     
     public boolean isEmpty()
     {

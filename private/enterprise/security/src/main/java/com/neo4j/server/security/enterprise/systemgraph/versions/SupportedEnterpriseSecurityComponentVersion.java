@@ -9,6 +9,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
+import com.neo4j.server.security.enterprise.systemgraph.BackupCommands;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -17,6 +18,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import org.neo4j.cypher.internal.security.SystemGraphCredential;
@@ -323,14 +325,26 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
         }
     }
 
-    public List<String> getPrivilegesAsCommands( Transaction tx, String databaseName, boolean saveUsers, boolean saveRoles )
+    public BackupCommands getBackupCommands( Transaction tx, String databaseName, boolean saveUsers, boolean saveRoles )
     {
-        ArrayList<String> result = new ArrayList<>();
+        final String PARAM = "database";
+        ArrayList<String> roleSetup = new ArrayList<>();
+        ArrayList<String> userSetup = new ArrayList<>();
 
         String defaultDatabaseName = getDefaultDatabaseName( tx );
 
-        List<String> relevantRoles = new ArrayList<>();
+        if ( !databaseName.equals( defaultDatabaseName ) )
+        {
+            roleSetup.add( String.format( "CREATE DATABASE $%s IF NOT EXISTS", PARAM ) );
 
+            Node databaseNode = tx.findNode( Label.label("Database"), "name", databaseName.toLowerCase() );
+            if ( databaseNode != null && databaseNode.getProperty( "status" ).equals( "offline" ) )
+            {
+                roleSetup.add( String.format( "STOP DATABASE $%s", PARAM ) );
+            }
+        }
+
+        List<String> relevantRoles = new ArrayList<>();
         try ( ResourceIterator<Node> roleNodes = tx.findNodes( ROLE_LABEL ) )
         {
             List<String> roles = roleNodes.stream()
@@ -351,25 +365,27 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
                 if ( !relevantPrivileges.isEmpty() )
                 {
                     relevantRoles.add( role );
-                    result.add( String.format( "CREATE ROLE `%s` IF NOT EXISTS", role ) );
-                    for ( ResourcePrivilege privilege : relevantPrivileges )
-                    {
-                        result.addAll( privilege.asGrantFor( role, databaseName ) );
-                    }
 
+                    if (saveRoles) {
+                        roleSetup.add( String.format( "CREATE ROLE `%s` IF NOT EXISTS", role ) );
+                        for ( ResourcePrivilege privilege : relevantPrivileges )
+                        {
+                            roleSetup.addAll( privilege.asGrantFor( role, PARAM ) );
+                        }
+                    }
                 }
             }
         }
 
         if ( saveUsers )
         {
-            result.addAll( getUsersAsCommands( tx, relevantRoles ));
+            userSetup.addAll( getUsersAsCommands( tx, relevantRoles, saveRoles ) );
         }
 
-        return result;
+        return new BackupCommands( roleSetup, userSetup );
     }
 
-    private List<String> getUsersAsCommands( Transaction tx, List<String> relevantRoles )
+    private List<String> getUsersAsCommands( Transaction tx, List<String> relevantRoles, Boolean withRoleGrants )
     {
         Map<String, String> users = new HashMap<>();
         Map<String, List<String>> userToRoles = new HashMap<>();
@@ -389,7 +405,11 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
                     users.put( username, String.format( "CREATE USER `%s` IF NOT EXISTS SET ENCRYPTED PASSWORD '%s' %s %s",
                                                         username, maskedCredentials, changeRequired, setStatus )
                     );
-                    userToRoles.computeIfAbsent( username, u -> new ArrayList<>() ).add( String.format( "GRANT ROLE `%s` TO `%s`", role, username ) );
+
+                    userToRoles.computeIfAbsent( username, u -> new ArrayList<>() );
+                    if (withRoleGrants) {
+                        userToRoles.get( username ).add( String.format( "GRANT ROLE `%s` TO `%s`", role, username ) );
+                    }
                 }
                 catch ( InvalidArgumentsException e )
                 {
@@ -406,7 +426,6 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
 
         return commands;
     }
-
 
     private String getDefaultDatabaseName( Transaction tx )
     {

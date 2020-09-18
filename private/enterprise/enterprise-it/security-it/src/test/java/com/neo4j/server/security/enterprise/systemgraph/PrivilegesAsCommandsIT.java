@@ -5,13 +5,11 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
-import com.neo4j.test.extension.ImpermanentEnterpriseDbmsExtension;
+import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -20,36 +18,30 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
-@ImpermanentEnterpriseDbmsExtension
 class PrivilegesAsCommandsIT
 {
-    @Inject
-    DatabaseManagementService dbms;
-
-    @Inject
-    GraphDatabaseAPI gdb;
+    DatabaseManagementService dbms = new TestEnterpriseDatabaseManagementServiceBuilder().impermanent().build();
+    GraphDatabaseAPI gdb = (GraphDatabaseAPI) dbms.database(SYSTEM_DATABASE_NAME);
 
     @Test
     void shouldReplicateInitialState()
     {
-        //TODO this test fails when run individually, but passes when entire class is run
         // GIVEN
         GraphDatabaseService system = dbms.database( SYSTEM_DATABASE_NAME );
 
         // WHEN
-        var privileges = getPrivilegesAsCommands( system, DEFAULT_DATABASE_NAME, true, true);
+        var commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true);
 
         // THEN
-        assertThat( privileges ).isNotEmpty();
-        assertRecreatesOriginal( privileges, DEFAULT_DATABASE_NAME, true, true);
-        assertIsOrdered( privileges );
+        assertThat( commands.roleSetup ).isNotEmpty();
+        assertThat( commands.userSetup ).isNotEmpty();
+        assertRecreatesOriginal( commands, DEFAULT_DATABASE_NAME, true );
     }
 
     @Test
@@ -66,10 +58,11 @@ class PrivilegesAsCommandsIT
         }
 
         // WHEN
-        var privileges = getPrivilegesAsCommands( system, "graph.db", true, true);
+        var commands = getBackupCommands( system, "graph.db", true, true);
 
         // THEN
-        assertThat( privileges ).isEmpty();
+        assertThat( commands.roleSetup ).filteredOn( c -> !c.startsWith( "CREATE DATABASE" ) ).isEmpty();
+        assertThat( commands.userSetup ).isEmpty();
     }
 
     @Test
@@ -85,15 +78,15 @@ class PrivilegesAsCommandsIT
         }
 
         // WHEN
-        var privileges = getPrivilegesAsCommands( system, DEFAULT_DATABASE_NAME, true, true);
+        var commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true);
 
         // THEN
-        assertThat( privileges ).containsExactly(
+        assertThat( commands.roleSetup ).containsExactly(
                 "CREATE ROLE `role` IF NOT EXISTS",
-                "GRANT ACCESS ON DATABASE neo4j TO `role`"
+                "GRANT ACCESS ON DATABASE $database TO `role`"
         );
-        assertRecreatesOriginal( privileges, DEFAULT_DATABASE_NAME, true, true);
-        assertIsOrdered( privileges );
+        assertThat( commands.userSetup ).isEmpty();
+        assertRecreatesOriginal( commands, DEFAULT_DATABASE_NAME, true );
     }
 
     //system database
@@ -112,12 +105,12 @@ class PrivilegesAsCommandsIT
         }
 
         // WHEN
-        var privileges = getPrivilegesAsCommands( system, DEFAULT_DATABASE_NAME, true, true);
+        var commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true);
 
         // THEN
-        assertThat( privileges ).hasSize( 3 );
-        assertRecreatesOriginal( privileges, DEFAULT_DATABASE_NAME, true, true);
-        assertIsOrdered( privileges );
+        assertThat( commands.roleSetup ).hasSize( 3 );
+        assertThat( commands.userSetup ).isEmpty();
+        assertRecreatesOriginal( commands, DEFAULT_DATABASE_NAME, true );
     }
 
     @Test
@@ -133,10 +126,11 @@ class PrivilegesAsCommandsIT
         }
 
         // WHEN
-        var privileges = getPrivilegesAsCommands( system, DEFAULT_DATABASE_NAME, true, true);
+        var commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true);
 
         // THEN
-        assertThat( privileges ).isEmpty();
+        assertThat( commands.roleSetup ).isEmpty();
+        assertThat( commands.userSetup ).isEmpty();
     }
 
     @Test
@@ -154,12 +148,12 @@ class PrivilegesAsCommandsIT
         }
 
         // WHEN
-        var privileges = getPrivilegesAsCommands( system, DEFAULT_DATABASE_NAME, true, true);
+        var commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true);
 
         // THEN
-        assertThat( privileges ).hasSize(4);
-        assertRecreatesOriginal( privileges, DEFAULT_DATABASE_NAME, true, true);
-        assertIsOrdered( privileges );
+        assertThat( commands.roleSetup ).hasSize(2);
+        assertThat( commands.userSetup ).hasSize(2);
+        assertRecreatesOriginal( commands, DEFAULT_DATABASE_NAME, true );
     }
 
     @Test
@@ -179,10 +173,9 @@ class PrivilegesAsCommandsIT
             tx.commit();
         }
 
-        var privileges = getPrivilegesAsCommands( system, DEFAULT_DATABASE_NAME, true, true);
-        assertThat( privileges).filteredOn( p -> p.startsWith( "CREATE USER `user`" ) ).hasSize( 1 );
-        assertRecreatesOriginal( privileges, DEFAULT_DATABASE_NAME, true, true);
-        assertIsOrdered( privileges );
+        var commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true);
+        assertThat( commands.userSetup ).filteredOn( s -> s.startsWith( "CREATE USER" ) ).hasSize( 1 );
+        assertRecreatesOriginal( commands, DEFAULT_DATABASE_NAME, true );
     }
 
     @Test
@@ -202,12 +195,96 @@ class PrivilegesAsCommandsIT
             tx.commit();
         }
 
-        var privileges = getPrivilegesAsCommands( system, DEFAULT_DATABASE_NAME, false, true );
-        assertThat( privileges.stream().filter( p -> p.startsWith( "CREATE USER" ) ) ).isEmpty();
-        assertRecreatesOriginal( privileges, DEFAULT_DATABASE_NAME, true, true);
-        assertIsOrdered( privileges );
+        var commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, false, true );
+        assertThat( commands.userSetup).isEmpty();
+        assertRecreatesOriginal( commands, DEFAULT_DATABASE_NAME, true );
     }
 
+    @Test
+    void shouldNotSaveRolesWhenToldNotTo()
+    {
+        // GIVEN
+        GraphDatabaseService system = dbms.database( SYSTEM_DATABASE_NAME );
+        try ( Transaction tx = system.beginTx() )
+        {
+            tx.execute( "CREATE ROLE role" );
+            tx.execute( "GRANT TRAVERSE ON GRAPH * NODES * TO role" );
+            tx.execute( "CREATE USER foo SET PASSWORD 'abc123'" );
+            tx.execute( "CREATE USER bar SET PASSWORD 'abc123'" );
+
+            tx.execute( "GRANT ROLE role TO foo" );
+            tx.execute( "GRANT ROLE role TO bar" );
+            tx.commit();
+        }
+
+        var commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, false );
+        assertThat( commands.roleSetup).isEmpty();
+        assertRecreatesOriginal( commands, DEFAULT_DATABASE_NAME, false );
+    }
+
+    @Test
+    void shouldNotSaveUsersOrRolesWhenToldNotTo()
+    {
+        // GIVEN
+        GraphDatabaseService system = dbms.database( SYSTEM_DATABASE_NAME );
+        try ( Transaction tx = system.beginTx() )
+        {
+            tx.execute( "CREATE ROLE role" );
+            tx.execute( "GRANT TRAVERSE ON GRAPH * NODES * TO role" );
+            tx.execute( "CREATE USER foo SET PASSWORD 'abc123'" );
+            tx.execute( "CREATE USER bar SET PASSWORD 'abc123'" );
+
+            tx.execute( "GRANT ROLE role TO foo" );
+            tx.execute( "GRANT ROLE role TO bar" );
+            tx.commit();
+        }
+
+        var commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, false, false );
+        assertThat( commands.roleSetup).isEmpty();
+        assertRecreatesOriginal( commands, DEFAULT_DATABASE_NAME, false );
+    }
+
+    @Test
+    void shouldRecreateDatabase()
+    {
+        // GIVEN
+        GraphDatabaseService system = getCleanSystemDB();
+        try ( Transaction tx = system.beginTx() )
+        {
+            tx.execute( "CREATE DATABASE newDb" );
+            tx.execute( "CREATE ROLE role" );
+            tx.execute( "GRANT TRAVERSE ON GRAPH newDb NODES * TO role" );
+            tx.execute( "CREATE USER foo SET PASSWORD 'abc123'" );
+            tx.execute( "GRANT ROLE role TO foo" );
+            tx.commit();
+        }
+
+        var commands = getBackupCommands( system, "newDb", true, true );
+        assertThat( commands.roleSetup ).filteredOn( c -> c.startsWith( "CREATE DATABASE" ) ).hasSize( 1 );
+        assertThat( commands.roleSetup ).filteredOn( c -> c.startsWith( "STOP DATABASE" ) ).hasSize( 0 );
+        assertRecreatesOriginal( commands, "newDb", true);
+    }
+
+    @Test
+    void shouldRecreateOfflineDatabaseAsOffline()
+    {
+        // GIVEN
+        GraphDatabaseService system = getCleanSystemDB();
+        try ( Transaction tx = system.beginTx() )
+        {
+            tx.execute( "CREATE DATABASE newDb" );
+            tx.execute( "CREATE ROLE role" );
+            tx.execute( "GRANT TRAVERSE ON GRAPH newDb NODES * TO role" );
+            tx.execute( "CREATE USER foo SET PASSWORD 'abc123'" );
+            tx.execute( "GRANT ROLE role TO foo" );
+            tx.execute( "STOP DATABASE newDb" );
+            tx.commit();
+        }
+
+        var commands = getBackupCommands( system, "newDb", true, true );
+        assertThat( commands.roleSetup ).filteredOn( c -> c.startsWith( "STOP DATABASE" ) ).hasSize( 1 );
+        assertRecreatesOriginal( commands, "newDb", true);
+    }
 
     @Test
     void shouldNotSaveDbmsPrivileges()
@@ -224,10 +301,11 @@ class PrivilegesAsCommandsIT
         }
 
         // WHEN
-        var privileges = getPrivilegesAsCommands( system, DEFAULT_DATABASE_NAME, true, true);
+        var commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true);
 
         // THEN
-        assertThat( privileges ).isEmpty();
+        assertThat( commands.roleSetup ).isEmpty();
+        assertThat( commands.userSetup ).isEmpty();
     }
 
     /**
@@ -240,16 +318,16 @@ class PrivilegesAsCommandsIT
         {
             for ( Node node : tx.getAllNodes() )
             {
-                if ( !(node.hasLabel( Label.label( "Database" ) ) || node.hasLabel( Label.label( "Version" ) )) )
+                for ( Relationship rel : node.getRelationships() )
                 {
-                    for ( Relationship rel : node.getRelationships() )
-                    {
-                        rel.delete();
-                    }
-                    if ( !(node.hasLabel( Label.label( "Role" ) ) && node.getProperty( "name" ).equals( PUBLIC )) )
-                    {
-                        node.delete();
-                    }
+                    rel.delete();
+                }
+                if ( !(node.hasLabel( Label.label( "Database" )) && node.getProperty( "name" ).equals( DEFAULT_DATABASE_NAME )) &&
+                     !(node.hasLabel( Label.label( "Database" )) && node.getProperty( "name" ).equals( SYSTEM_DATABASE_NAME )) &&
+                     !node.hasLabel( Label.label( "Version" ) ) &&
+                     !(node.hasLabel( Label.label( "Role" ) ) && node.getProperty( "name" ).equals( PUBLIC ) ) )
+                {
+                    node.delete();
                 }
             }
             tx.commit();
@@ -257,47 +335,38 @@ class PrivilegesAsCommandsIT
         return system;
     }
 
-    private List<String> getPrivilegesAsCommands( GraphDatabaseService system, String databaseName, boolean saveUsers, boolean saveRoles )
+    private BackupCommands getBackupCommands( GraphDatabaseService system, String databaseName, boolean saveUsers, boolean saveRoles )
     {
         var component = gdb.getDependencyResolver().resolveDependency( EnterpriseSecurityGraphComponent.class );
         try ( Transaction tx = system.beginTx() )
         {
-            return component.getPrivilegesAsCommands( tx, databaseName, saveUsers, saveRoles );
+            return component.getBackupCommands( tx, databaseName, saveUsers, saveRoles );
         }
     }
 
-    private void assertRecreatesOriginal( List<String> privileges, String databaseName, boolean saveUsers, boolean saveRoles)
+    private void assertRecreatesOriginal( BackupCommands backup, String databaseName, boolean saveRoles )
     {
         GraphDatabaseService system = getCleanSystemDB();
         try ( Transaction tx = system.beginTx() )
         {
-            for ( String privilege : privileges )
+            for ( String roleCommand : backup.roleSetup )
             {
-                tx.execute( privilege );
+                tx.execute( roleCommand, Map.of("database", databaseName) );
+            }
+            for ( String userCommand : backup.userSetup )
+            {
+                tx.execute( userCommand );
             }
             tx.commit();
         }
-        assertThat( getPrivilegesAsCommands( system, databaseName, saveUsers, saveRoles) ).containsExactlyInAnyOrderElementsOf( privileges );
+        BackupCommands newBackup = getBackupCommands( system, databaseName, true, true);
+        assertThat( newBackup.roleSetup ).containsExactlyInAnyOrderElementsOf( backup.roleSetup );
+
+        if ( saveRoles ) {
+            assertThat( newBackup.userSetup ).containsExactlyInAnyOrderElementsOf( backup.userSetup );
+        } else {
+            assertThat( newBackup.userSetup ).isEmpty();
+        }
     }
 
-    private void assertIsOrdered( List<String> privileges )
-    {
-
-        Pattern p = Pattern.compile(
-                "^" +
-                "(?:" + // ROLES
-                    "CREATE ROLE `(?<role>.*)` .*" + // create a role 'x'
-                    "(?:\\n(?:GRANT|DENY) .* `\\k<role>`)*" + // grant/deny any number of privileges to only role 'x'
-                ")*" + // repeat for any number of roles
-                "(?:" + // USERS
-                    "\\nCREATE USER `(?<user>.*)` .*" + // create a user 'y'
-                    "(?:\\nGRANT .*`\\k<user>`)*" + // grant any number of roles to only user 'y'
-                ")*" + // repeat for any number of users
-                "$"
-        );
-
-        Matcher m = p.matcher( String.join("\n" , privileges));
-
-        assertThat(m.matches()).isTrue();
-    }
 }
