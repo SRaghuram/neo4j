@@ -13,6 +13,7 @@ import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.api.txstate.TransactionState;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.StorageEngine;
@@ -22,9 +23,9 @@ public class ReplicatedLabelTokenHolder extends ReplicatedTokenHolder
 {
     public ReplicatedLabelTokenHolder( NamedDatabaseId namedDatabaseId, TokenRegistry registry, Replicator replicator,
             IdGeneratorFactory idGeneratorFactory, Supplier<StorageEngine> storageEngineSupplier, PageCacheTracer pageCacheTracer,
-            MemoryTracker memoryTracker )
+            MemoryTracker memoryTracker, LogEntryWriterFactory logEntryWriterFactory )
     {
         super( namedDatabaseId, registry, replicator, idGeneratorFactory, IdType.LABEL_TOKEN, storageEngineSupplier,
-                TokenType.LABEL, TransactionState::labelDoCreateForName, pageCacheTracer, memoryTracker );
+                TokenType.LABEL, TransactionState::labelDoCreateForName, pageCacheTracer, memoryTracker, logEntryWriterFactory );
     }
 }

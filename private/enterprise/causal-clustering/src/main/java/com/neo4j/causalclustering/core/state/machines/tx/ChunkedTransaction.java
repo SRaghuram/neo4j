@@ -18,6 +18,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 
 public class ChunkedTransaction implements ChunkedInput<ByteBuf>
 {
@@ -27,9 +28,9 @@ public class ChunkedTransaction implements ChunkedInput<ByteBuf>
     private ChunkingNetworkChannel channel;
     private final Queue<ByteBuf> chunks = new LinkedList<>();
 
-    ChunkedTransaction( TransactionRepresentationReplicatedTransaction tx )
+    ChunkedTransaction( TransactionRepresentationReplicatedTransaction tx, LogEntryWriterFactory logEntryWriterFactory )
     {
-        this.txWriter = ReplicatedTransactionFactory.transactionalRepresentationWriter( tx.tx() );
+        this.txWriter = ReplicatedTransactionFactory.transactionalRepresentationWriter( tx.tx(), logEntryWriterFactory );
         this.databaseId = tx.databaseId();
     }
 

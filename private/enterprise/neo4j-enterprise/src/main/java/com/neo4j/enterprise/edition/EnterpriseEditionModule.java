@@ -18,6 +18,7 @@ import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.EnterpriseSystemGraphDbmsModel;
 import com.neo4j.dbms.StandaloneDbmsReconcilerModule;
 import com.neo4j.dbms.database.EnterpriseMultiDatabaseManager;
+import com.neo4j.dbms.database.DbmsLogEntryWriterProvider;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.dbms.procedures.wait.WaitProcedure;
 import com.neo4j.fabric.auth.FabricAuthManagerWrapper;
@@ -281,7 +282,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         return fabricServicesBootstrap.createBoltDatabaseManagementServiceProvider( kernelDatabaseManagementService, managementService, monitors, clock );
     }
 
-    private void initBackupIfNeeded( GlobalModule globalModule, Config config, DatabaseManager<StandaloneDatabaseContext> databaseManager )
+    private void initBackupIfNeeded( GlobalModule globalModule, Config config, MultiDatabaseManager<StandaloneDatabaseContext> databaseManager )
     {
         FileSystemAbstraction fs = globalModule.getFileSystem();
         JobScheduler jobScheduler = globalModule.getJobScheduler();
@@ -300,8 +301,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
                 new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fs, maxChunkSize, internalLogProvider,
                                                        globalModule.getGlobalDependencies() ),
                 new InstalledProtocolHandler(),
-                jobScheduler,
-                portRegister );
+                jobScheduler, portRegister );
 
         Optional<Server> backupServer = backupServiceProvider.resolveIfBackupEnabled( config );
 

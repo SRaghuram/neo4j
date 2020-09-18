@@ -13,6 +13,7 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
@@ -36,7 +37,7 @@ class CoreCommitProcessFactoryTest
     private final Config config = Config.defaults();
 
     private final CoreCommitProcessFactory commitProcessFactory =
-            new CoreCommitProcessFactory( namedDatabaseId, replicator, coreStateMachines, leaseCoordinator );
+            new CoreCommitProcessFactory( namedDatabaseId, replicator, coreStateMachines, leaseCoordinator, LogEntryWriterFactory.LATEST );
 
     @Test
     void shouldCreateReplicatedCommitProcess()

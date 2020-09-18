@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.catchup.v3.tx;
 
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
+import com.neo4j.causalclustering.catchup.tx.WritableTxPullResponse;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.AfterEach;
@@ -13,6 +14,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import org.neo4j.internal.recordstorage.Command;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
@@ -32,6 +34,7 @@ import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 class TxPullResponseEncodeDecodeV3Test
 {
     private static final int TX_SIZE = sizeOfSingleDecodedTransaction();
+
     private EmbeddedChannel channel;
     private enum ChunkSize
     {
@@ -124,9 +127,9 @@ class TxPullResponseEncodeDecodeV3Test
     {
         for ( TxPullResponse txPullResponse : sent )
         {
-            channel.writeOutbound( txPullResponse );
+            channel.writeOutbound( writable( txPullResponse ) );
         }
-        channel.writeOutbound( TxPullResponse.EMPTY );
+        channel.writeOutbound( writable( TxPullResponse.EMPTY ) );
         ByteBuf chunk;
         while ( (chunk = channel.readOutbound()) != null )
         {
@@ -137,13 +140,18 @@ class TxPullResponseEncodeDecodeV3Test
     private static int sizeOfSingleDecodedTransaction()
     {
         EmbeddedChannel embeddedChannel = new EmbeddedChannel( new TxPullResponseEncoder() );
-        embeddedChannel.writeOutbound( new TxPullResponse( new StoreId( 1, 2, 3 ), newCommittedTransactionRepresentation() ),
-                TxPullResponse.EMPTY );
+        var txPullResopnse = new TxPullResponse( new StoreId( 1, 2, 3 ), newCommittedTransactionRepresentation() );
+        embeddedChannel.writeOutbound( writable( txPullResopnse ), writable( TxPullResponse.EMPTY ) );
         ByteBuf byteBuf = embeddedChannel.readOutbound();
         // remove tailing metadata
         var txSize = byteBuf.writerIndex() - Integer.BYTES;
         byteBuf.release();
         return txSize;
+    }
+
+    private static WritableTxPullResponse writable( TxPullResponse txPullResponse )
+    {
+        return new WritableTxPullResponse( txPullResponse, LogEntryWriterFactory.LATEST );
     }
 
     private static CommittedTransactionRepresentation newCommittedTransactionRepresentation()

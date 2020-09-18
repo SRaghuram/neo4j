@@ -18,6 +18,7 @@ import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.fs.WritableChecksumChannel;
 import org.neo4j.io.marshal.EndOfStreamException;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 
 public class ReplicatedTransactionMarshalV2
@@ -44,7 +45,8 @@ public class ReplicatedTransactionMarshalV2
         return ReplicatedTransaction.from( txBytes, databaseId );
     }
 
-    public static void marshal( WritableChannel writableChannel, TransactionRepresentationReplicatedTransaction replicatedTransaction ) throws IOException
+    public static void marshal( WritableChannel writableChannel, TransactionRepresentationReplicatedTransaction replicatedTransaction,
+                                LogEntryWriterFactory logEntryWriterFactory ) throws IOException
     {
         DatabaseIdWithoutNameMarshal.INSTANCE.marshal( replicatedTransaction.databaseId(), writableChannel );
         if ( (writableChannel instanceof ByteBufBacked) && (writableChannel instanceof WritableChecksumChannel) )
@@ -58,7 +60,7 @@ public class ReplicatedTransactionMarshalV2
             int txStartIndex = metaDataIndex + Integer.BYTES;
             // leave room for length to be set later.
             buffer.writerIndex( txStartIndex );
-            writeTx( (WritableChecksumChannel) writableChannel, replicatedTransaction.tx() );
+            writeTx( (WritableChecksumChannel) writableChannel, replicatedTransaction.tx(), logEntryWriterFactory );
             int txLength = buffer.writerIndex() - txStartIndex;
             buffer.setInt( metaDataIndex, txLength );
         }
@@ -70,16 +72,18 @@ public class ReplicatedTransactionMarshalV2
              */
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream( 1024 );
             OutputStreamWritableChannel outputStreamWritableChannel = new OutputStreamWritableChannel( outputStream );
-            writeTx( outputStreamWritableChannel, replicatedTransaction.tx() );
+            writeTx( outputStreamWritableChannel, replicatedTransaction.tx(), logEntryWriterFactory );
             int length = outputStream.size();
             writableChannel.putInt( length );
             writableChannel.put( outputStream.toByteArray(), length );
         }
     }
 
-    private static void writeTx( WritableChecksumChannel writableChannel, TransactionRepresentation tx ) throws IOException
+    private static void writeTx( WritableChecksumChannel writableChannel, TransactionRepresentation tx,
+                                 LogEntryWriterFactory logEntryWriterFactory ) throws IOException
     {
-        ReplicatedTransactionFactory.TransactionRepresentationWriter txWriter = ReplicatedTransactionFactory.transactionalRepresentationWriter( tx );
+        ReplicatedTransactionFactory.TransactionRepresentationWriter txWriter =
+                ReplicatedTransactionFactory.transactionalRepresentationWriter( tx, logEntryWriterFactory );
         while ( txWriter.canWrite() )
         {
             txWriter.write( writableChannel );

@@ -12,6 +12,7 @@ import io.netty.handler.stream.ChunkedInput;
 import java.io.IOException;
 
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 
 /**
@@ -21,12 +22,14 @@ public class TransactionRepresentationReplicatedTransaction extends ReplicatedTr
 {
     private final TransactionRepresentation tx;
     private final DatabaseId databaseId;
+    private final LogEntryWriterFactory logEntryWriterFactory;
 
-    public TransactionRepresentationReplicatedTransaction( TransactionRepresentation tx, DatabaseId databaseId )
+    public TransactionRepresentationReplicatedTransaction( TransactionRepresentation tx, DatabaseId databaseId, LogEntryWriterFactory logEntryWriterFactory )
     {
         super( databaseId );
         this.tx = tx;
         this.databaseId = databaseId;
+        this.logEntryWriterFactory = logEntryWriterFactory;
     }
 
     @Override
@@ -38,7 +41,7 @@ public class TransactionRepresentationReplicatedTransaction extends ReplicatedTr
     @Override
     public ChunkedInput<ByteBuf> encode()
     {
-        return new ChunkedTransaction( this );
+        return new ChunkedTransaction( this, logEntryWriterFactory );
     }
 
     @Override

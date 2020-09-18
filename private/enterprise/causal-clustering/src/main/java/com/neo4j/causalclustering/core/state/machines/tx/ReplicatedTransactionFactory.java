@@ -16,11 +16,11 @@ import java.util.List;
 
 import org.neo4j.function.ThrowingConsumer;
 import org.neo4j.io.fs.WritableChecksumChannel;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
-import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 import org.neo4j.storageengine.api.StorageCommand;
 
 import static org.neo4j.internal.kernel.api.security.AuthSubject.AUTH_DISABLED;
@@ -38,9 +38,10 @@ public class ReplicatedTransactionFactory
         return transactionCommand.extract( new TransactionRepresentationReader( extraHeader, reader ) );
     }
 
-    static TransactionRepresentationWriter transactionalRepresentationWriter( TransactionRepresentation transactionCommand )
+    static TransactionRepresentationWriter transactionalRepresentationWriter( TransactionRepresentation transactionCommand,
+                                                                              LogEntryWriterFactory logEntryWriterFactory )
     {
-        return new TransactionRepresentationWriter( transactionCommand );
+        return new TransactionRepresentationWriter( transactionCommand, logEntryWriterFactory );
     }
 
     private static class TransactionRepresentationReader implements TransactionRepresentationExtractor
@@ -116,10 +117,12 @@ public class ReplicatedTransactionFactory
     {
         private final Iterator<StorageCommand> commands;
         private ThrowingConsumer<WritableChecksumChannel,IOException> nextJob;
+        private LogEntryWriterFactory logEntryWriterFactory;
 
-        private TransactionRepresentationWriter( TransactionRepresentation tx )
+        private TransactionRepresentationWriter( TransactionRepresentation tx, LogEntryWriterFactory logEntryWriterFactory )
         {
-            nextJob = channel ->
+            this.logEntryWriterFactory = logEntryWriterFactory;
+            this.nextJob = channel ->
             {
                 channel.putLong( tx.getLatestCommittedTxWhenStarted() );
                 channel.putLong( tx.getTimeStarted() );
@@ -137,7 +140,7 @@ public class ReplicatedTransactionFactory
                     channel.putInt( 0 );
                 }
             };
-            commands = tx.iterator();
+            this.commands = tx.iterator();
         }
 
         void write( WritableChecksumChannel channel ) throws IOException
@@ -146,7 +149,7 @@ public class ReplicatedTransactionFactory
             if ( commands.hasNext() )
             {
                 StorageCommand storageCommand = commands.next();
-                nextJob = c -> new LogEntryWriter( c ).serialize( storageCommand );
+                nextJob = c -> logEntryWriterFactory.createEntryWriter( c ).serialize( storageCommand );
             }
             else
             {

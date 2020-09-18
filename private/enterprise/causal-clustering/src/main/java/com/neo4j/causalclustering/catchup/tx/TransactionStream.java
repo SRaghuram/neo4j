@@ -163,7 +163,7 @@ public class TransactionStream implements ChunkedInput<Object>
             {
                 pending.add( ResponseMessageType.TX );
             }
-            pending.add( new TxPullResponse( storeId, tx ) );
+            pending.add( new WritableTxPullResponse( new TxPullResponse( storeId, tx ), txPullingContext.logEntryWriterFactory() ) );
         }
     }
 
@@ -175,7 +175,7 @@ public class TransactionStream implements ChunkedInput<Object>
         if ( lastTxId != 0 )
         {
             // only send if at least one tx was sent. This lets the encoder know that all txs have been sent.
-            pending.add( TxPullResponse.EMPTY );
+            pending.add( new WritableTxPullResponse( TxPullResponse.EMPTY, txPullingContext.logEntryWriterFactory() ) );
         }
 
         CatchupResult result;

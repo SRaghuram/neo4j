@@ -10,12 +10,14 @@ import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol.State;
 import com.neo4j.causalclustering.catchup.ResponseMessageType;
 import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequest;
+import com.neo4j.dbms.database.DbmsLogEntryWriterProvider;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.io.IOException;
 
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.NoSuchTransactionException;
 import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
@@ -37,6 +39,7 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
     private final Database db;
     private final TransactionIdStore transactionIdStore;
     private final LogicalTransactionStore logicalTransactionStore;
+    private final LogEntryWriterFactory logEntryWriterFactory;
     private final TxPullRequestsMonitor monitor;
     private final Log log;
 
@@ -46,6 +49,7 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
         this.db = db;
         this.transactionIdStore = transactionIdStore( db );
         this.logicalTransactionStore = logicalTransactionStore( db );
+        this.logEntryWriterFactory = DbmsLogEntryWriterProvider.resolveEntryWriterFactory( db );
         this.monitor = db.getMonitors().newMonitor( TxPullRequestsMonitor.class );
         this.log = db.getInternalLogProvider().getLog( getClass() );
     }
@@ -132,7 +136,8 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
         try
         {
             TransactionCursor transactions = logicalTransactionStore.getTransactions( firstTxId );
-            return Prepare.readyToSend( new TxPullingContext( transactions, localStoreId, firstTxId, txIdPromise, transactionIdStore ) );
+            return Prepare.readyToSend( new TxPullingContext( transactions, localStoreId, db.getNamedDatabaseId(),
+                                                              firstTxId, txIdPromise, transactionIdStore, logEntryWriterFactory ) );
         }
         catch ( NoSuchTransactionException e )
         {

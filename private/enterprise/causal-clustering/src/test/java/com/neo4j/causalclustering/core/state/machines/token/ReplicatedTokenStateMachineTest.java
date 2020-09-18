@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.core.state.machines.token;
 import com.neo4j.causalclustering.core.state.machines.DummyStateMachineCommitHelper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.nio.charset.StandardCharsets;
@@ -32,6 +31,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
@@ -81,6 +81,7 @@ class ReplicatedTokenStateMachineTest
     private final int UNEXPECTED_TOKEN_ID = 1024;
     private final DatabaseId databaseId = TestDatabaseIdRepository.randomNamedDatabaseId().databaseId();
     private final AssertableLogProvider logProvider = new AssertableLogProvider( true );
+    private final LogEntryWriterFactory logEntryWriterFactory = LogEntryWriterFactory.LATEST;
 
     private NeoStores stores;
 
@@ -110,7 +111,7 @@ class ReplicatedTokenStateMachineTest
         stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
 
         // when
-        var commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, false ) );
+        var commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, false ), logEntryWriterFactory );
         stateMachine.applyCommand( new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandBytes ), 1, r -> {} );
 
         // then
@@ -126,7 +127,7 @@ class ReplicatedTokenStateMachineTest
         stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
 
         // when
-        var commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, true ) );
+        var commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, true ), logEntryWriterFactory );
         stateMachine.applyCommand( new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandBytes ), 1, r -> {} );
 
         // then
@@ -144,9 +145,11 @@ class ReplicatedTokenStateMachineTest
         stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
 
         var winningRequest =
-                new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, false ) ) );
+                new ReplicatedTokenRequest( databaseId, LABEL, "Person",
+                                            commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, false ), logEntryWriterFactory ) );
         var losingRequest =
-                new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandsToBytes( tokenCommands( UNEXPECTED_TOKEN_ID, false ) ) );
+                new ReplicatedTokenRequest( databaseId, LABEL, "Person",
+                                            commandsToBytes( tokenCommands( UNEXPECTED_TOKEN_ID, false ), logEntryWriterFactory ) );
 
         // when
         stateMachine.applyCommand( winningRequest, 1, r -> {} );
@@ -166,9 +169,11 @@ class ReplicatedTokenStateMachineTest
         stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
 
         var winningRequest =
-                new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, true ) ) );
+                new ReplicatedTokenRequest( databaseId, LABEL, "Person",
+                                            commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, true ), logEntryWriterFactory ) );
         var losingRequest =
-                new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandsToBytes( tokenCommands( UNEXPECTED_TOKEN_ID, true ) ) );
+                new ReplicatedTokenRequest( databaseId, LABEL, "Person",
+                                            commandsToBytes( tokenCommands( UNEXPECTED_TOKEN_ID, true ), logEntryWriterFactory ) );
 
         // when
         stateMachine.applyCommand( winningRequest, 1, r -> {} );
@@ -190,7 +195,7 @@ class ReplicatedTokenStateMachineTest
         stateMachine.installCommitProcess( commitProcess, -1 );
 
         // when
-        var commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, false ) );
+        var commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, false ), logEntryWriterFactory );
         stateMachine.applyCommand( new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandBytes ), logIndex, r -> {} );
 
         // then

@@ -80,6 +80,7 @@ import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
+import com.neo4j.dbms.database.DbmsLogEntryWriterProvider;
 
 import java.time.Duration;
 import java.util.UUID;
@@ -107,6 +108,7 @@ import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.io.state.SimpleStorage;
 import org.neo4j.io.state.StateStorage;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
 import org.neo4j.kernel.impl.factory.AccessCapabilityFactory;
@@ -170,14 +172,15 @@ class CoreDatabaseFactory
     private final ClusterSystemGraphDbmsModel dbmsModel;
     private final DatabaseStartAborter databaseStartAborter;
     private final BootstrapSaver bootstrapSaver;
+    private final DbmsLogEntryWriterProvider dbmsLogEntryWriterProvider;
 
     CoreDatabaseFactory( GlobalModule globalModule, PanicService panicService, DatabaseManager<ClusteredDatabaseContext> databaseManager,
                          CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, TemporaryDatabaseFactory temporaryDatabaseFactory,
                          ClusteringIdentityModule identityModule, RaftGroupFactory raftGroupFactory,
                          RaftMessageDispatcher raftMessageDispatcher, CatchupComponentsProvider catchupComponentsProvider, RecoveryFacade recoveryFacade,
                          RaftMessageLogger<RaftMemberId> raftLogger, Outbound<SocketAddress,RaftMessages.OutboundRaftMessageContainer<?>> raftSender,
-                         ReplicatedDatabaseEventService databaseEventService,
-                         ClusterSystemGraphDbmsModel dbmsModel, DatabaseStartAborter databaseStartAborter )
+                         ReplicatedDatabaseEventService databaseEventService, ClusterSystemGraphDbmsModel dbmsModel,
+                         DatabaseStartAborter databaseStartAborter, DbmsLogEntryWriterProvider dbmsLogEntryWriterProvider )
     {
         this.config = globalModule.getGlobalConfig();
         this.clock = globalModule.getGlobalClock();
@@ -207,6 +210,7 @@ class CoreDatabaseFactory
         this.dbmsModel = dbmsModel;
         this.databaseStartAborter = databaseStartAborter;
         this.bootstrapSaver = new BootstrapSaver( fileSystem, globalModule.getLogService().getInternalLogProvider() );
+        this.dbmsLogEntryWriterProvider = dbmsLogEntryWriterProvider;
     }
 
     CoreRaftContext createRaftContext( NamedDatabaseId namedDatabaseId, LifeSupport life, Monitors monitors, Dependencies dependencies,
@@ -252,6 +256,7 @@ class CoreDatabaseFactory
                                                         CoreKernelResolvers kernelResolvers, DatabaseLogService logService,
                                                         VersionContextSupplier versionContextSupplier, MemoryTracker memoryTracker )
     {
+        LogEntryWriterFactory logEntryWriterFactory = this.dbmsLogEntryWriterProvider.getEntryWriterFactory( namedDatabaseId );
         RaftGroup raftGroup = raftContext.raftGroup();
         Replicator replicator = raftContext.replicator();
         DatabaseLogProvider debugLog = logService.getInternalLogProvider();
@@ -268,17 +273,18 @@ class CoreDatabaseFactory
                                                                                                                        replicator,
                                                                                                                        idContext.getIdGeneratorFactory(),
                                                                                                                        storageEngineSupplier, pageCacheTracer,
-                                                                                                                       memoryTracker );
+                                                                                                                       memoryTracker, logEntryWriterFactory );
 
         TokenRegistry propertyKeyTokenRegistry = new TokenRegistry( TokenHolder.TYPE_PROPERTY_KEY );
         ReplicatedPropertyKeyTokenHolder propertyKeyTokenHolder = new ReplicatedPropertyKeyTokenHolder( namedDatabaseId, propertyKeyTokenRegistry, replicator,
                                                                                                         idContext.getIdGeneratorFactory(),
-                                                                                                        storageEngineSupplier, pageCacheTracer, memoryTracker );
+                                                                                                        storageEngineSupplier, pageCacheTracer, memoryTracker,
+                                                                                                        logEntryWriterFactory );
 
         TokenRegistry labelTokenRegistry = new TokenRegistry( TokenHolder.TYPE_LABEL );
         ReplicatedLabelTokenHolder labelTokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, labelTokenRegistry, replicator,
                                                                                       idContext.getIdGeneratorFactory(), storageEngineSupplier, pageCacheTracer,
-                                                                                      memoryTracker );
+                                                                                      memoryTracker, logEntryWriterFactory );
 
         ReplicatedDatabaseEventDispatch databaseEventDispatch = databaseEventService.getDatabaseEventDispatch( namedDatabaseId );
         StateMachineCommitHelper commitHelper = new StateMachineCommitHelper( raftContext.commandIndexTracker(), versionContextSupplier,
@@ -309,7 +315,8 @@ class CoreDatabaseFactory
         ClusterLeaseCoordinator leaseCoordinator = new ClusterLeaseCoordinator(
                 identityModule.memberId( namedDatabaseId ), replicator, raftGroup.raftMachine(), replicatedLeaseStateMachine, namedDatabaseId );
 
-        CommitProcessFactory commitProcessFactory = new CoreCommitProcessFactory( namedDatabaseId, replicator, stateMachines, leaseCoordinator );
+        CommitProcessFactory commitProcessFactory = new CoreCommitProcessFactory( namedDatabaseId, replicator, stateMachines, leaseCoordinator,
+                                                                                  dbmsLogEntryWriterProvider.getEntryWriterFactory( namedDatabaseId ) );
 
         AccessCapabilityFactory accessCapabilityFactory = AccessCapabilityFactory.fixed( new LeaderCanWrite( raftGroup.raftMachine() ) );
 

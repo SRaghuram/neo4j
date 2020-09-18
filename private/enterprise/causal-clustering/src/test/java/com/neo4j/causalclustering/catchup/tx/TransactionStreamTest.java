@@ -18,7 +18,11 @@ import org.mockito.stubbing.Answer;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.UUID;
 
+import org.neo4j.kernel.database.DatabaseIdFactory;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
@@ -47,6 +51,7 @@ class TransactionStreamTest
     private final CatchupServerProtocol protocol = mock( CatchupServerProtocol.class );
 
     private final StoreId storeId = StoreId.UNKNOWN;
+    private final NamedDatabaseId databaseId = DatabaseIdFactory.from( "foo", UUID.randomUUID() );
     private final ByteBufAllocator allocator = mock( ByteBufAllocator.class );
     private final TransactionCursor cursor = mock( TransactionCursor.class );
     private final int baseTxId = (int) BASE_TX_ID;
@@ -108,7 +113,8 @@ class TransactionStreamTest
 
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( (long) lastTxId + 1 );
 
-        var txStream = new TransactionStream( log, new TxPullingContext( cursor, storeId, firstTxId, lastTxId, transactionIdStore ), protocol );
+        var txStream = new TransactionStream( log, new TxPullingContext( cursor, storeId, databaseId, firstTxId,
+                                                                         lastTxId, transactionIdStore, LogEntryWriterFactory.LATEST ), protocol );
         var expectedChucks = prepareExpectedElements( firstTxId, lastTxId, txs, E_GENERAL_ERROR );
 
         // end of input is only false because thrown exception is also queued as chunk, just to be thrown is reached
@@ -130,7 +136,8 @@ class TransactionStreamTest
 
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( (long) lastTxId + 1 );
 
-        var txStream = new TransactionStream( log, new TxPullingContext( cursor, storeId, firstTxId, lastTxId, transactionIdStore ), protocol );
+        var txStream = new TransactionStream( log, new TxPullingContext( cursor, storeId, databaseId, firstTxId,
+                                                                         lastTxId, transactionIdStore, LogEntryWriterFactory.LATEST ), protocol );
         var expectedChucks = prepareExpectedElements( firstTxId, lastTxId, txs, E_GENERAL_ERROR );
 
         // end of input is only false because thrown exception is also queued as chunk, just to be thrown is reached
@@ -153,9 +160,10 @@ class TransactionStreamTest
 
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( (long) lastTxId );
 
-        var txStream = new TransactionStream( log, new TxPullingContext( cursor, storeId, lastTxId - 1, lastTxId, transactionIdStore ), protocol );
-        var expectedChucks = List.of( ResponseMessageType.TX, new TxPullResponse( storeId, tx1 ),
-                ResponseMessageType.TX_STREAM_FINISHED, new TxStreamFinishedResponse( E_GENERAL_ERROR, lastTxId + 1 ) );
+        var txStream = new TransactionStream( log, new TxPullingContext( cursor, storeId, databaseId, lastTxId - 1,
+                                                                         lastTxId, transactionIdStore, LogEntryWriterFactory.LATEST ), protocol );
+        var expectedChucks = List.of( ResponseMessageType.TX, writable( new TxPullResponse( storeId, tx1 ) ),
+                                      ResponseMessageType.TX_STREAM_FINISHED, new TxStreamFinishedResponse( E_GENERAL_ERROR, lastTxId + 1 ) );
 
         // end of input is only false because thrown exception is also queued as chunk, just to be thrown is reached
         assertExpectedElements( txStream, expectedChucks, false );
@@ -176,7 +184,9 @@ class TransactionStreamTest
         when( cursor.get() ).thenReturn( tx1 ).thenReturn( tx2 ).thenThrow( new IllegalStateException( "Should never try to get this transaction" ) );
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( (long) lastTxId );
 
-        var transactionStream = new TransactionStream( log, new TxPullingContext( cursor, storeId, firstTxId, txPromise, transactionIdStore ), protocol );
+        var transactionStream =
+                new TransactionStream( log, new TxPullingContext( cursor, storeId, databaseId, firstTxId,
+                                                                  txPromise, transactionIdStore, LogEntryWriterFactory.LATEST ), protocol );
         var expectedChucks = prepareExpectedElements( firstTxId, lastTxId, List.of( tx1, tx2 ), SUCCESS_END_OF_STREAM );
 
         assertExpectedElements( transactionStream, expectedChucks, true );
@@ -187,7 +197,8 @@ class TransactionStreamTest
     {
         // given
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( (long) lastTxId );
-        var txStream = new TransactionStream( log, new TxPullingContext( cursor, storeId, firstTxId, txIdPromise, transactionIdStore ), protocol );
+        var txStream = new TransactionStream( log, new TxPullingContext( cursor, storeId, databaseId, firstTxId,
+                                                                         txIdPromise, transactionIdStore, LogEntryWriterFactory.LATEST ), protocol );
         var txs = prepareCursor( firstTxId, lastTxId );
         var expectedElements = prepareExpectedElements( firstTxId, lastTxId, txs, expectedResult );
 
@@ -233,11 +244,11 @@ class TransactionStreamTest
             {
                 expectedElements.add( ResponseMessageType.TX );
             }
-            expectedElements.add( new TxPullResponse( storeId, txs.get( txId - firstTxId ) ) );
+            expectedElements.add( writable( new TxPullResponse( storeId, txs.get( txId - firstTxId ) ) ) );
         }
         if ( firstTxId <= lastTxId && expectedResult != E_GENERAL_ERROR )
         {
-            expectedElements.add( TxPullResponse.EMPTY );
+            expectedElements.add( writable( TxPullResponse.EMPTY ) );
         }
         expectedElements.add( ResponseMessageType.TX_STREAM_FINISHED );
         expectedElements.add( new TxStreamFinishedResponse( expectedResult, lastTxId ) );
@@ -259,6 +270,10 @@ class TransactionStreamTest
         var tx = mock( CommittedTransactionRepresentation.class );
         when( tx.getCommitEntry() ).thenReturn( new LogEntryCommit( txId, 0, BASE_TX_CHECKSUM ) );
         return tx;
+    }
+    private WritableTxPullResponse writable( TxPullResponse txPullResponse )
+    {
+        return new WritableTxPullResponse( txPullResponse, LogEntryWriterFactory.LATEST );
     }
 
     private static class ReturnOrThrowElementsOf implements Answer<Object>

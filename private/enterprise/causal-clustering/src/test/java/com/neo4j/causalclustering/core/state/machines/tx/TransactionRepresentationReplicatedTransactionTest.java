@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.Collections;
 
 import org.neo4j.internal.recordstorage.Command;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
@@ -37,15 +38,15 @@ class TransactionRepresentationReplicatedTransactionTest
                 new PhysicalTransactionRepresentation( Collections.singleton( new Command.NodeCommand( new NodeRecord( 1 ), new NodeRecord( 2 ) ) ) );
 
         expectedTx.setHeader( new byte[0], 3, 4, 5, 6, ANONYMOUS );
-        var replicatedTransaction = ReplicatedTransaction.from( expectedTx, new TestDatabaseIdRepository().defaultDatabase() );
+        var replicatedTransaction = ReplicatedTransaction.from( expectedTx, new TestDatabaseIdRepository().defaultDatabase(), LogEntryWriterFactory.LATEST );
 
         var stream = new ByteArrayOutputStream();
         var buffer = buffers.buffer();
         var outputStreamWritableChannel = new OutputStreamWritableChannel( stream );
         var networkWritableChannel = new NetworkWritableChannel( buffer );
 
-        ReplicatedTransactionMarshalV2.marshal( outputStreamWritableChannel, replicatedTransaction );
-        ReplicatedTransactionMarshalV2.marshal( networkWritableChannel, replicatedTransaction );
+        ReplicatedTransactionMarshalV2.marshal( outputStreamWritableChannel, replicatedTransaction, LogEntryWriterFactory.LATEST );
+        ReplicatedTransactionMarshalV2.marshal( networkWritableChannel, replicatedTransaction, LogEntryWriterFactory.LATEST );
 
         var bufferArray = Arrays.copyOf( buffer.array(), buffer.writerIndex() );
 

@@ -13,13 +13,13 @@ import java.util.Collection;
 import java.util.function.Supplier;
 
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.graphdb.TransientTransactionFailureException;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.api.state.TxState;
 import org.neo4j.kernel.impl.util.collection.OnHeapCollectionsFactory;
@@ -47,11 +47,13 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
     private final DatabaseId databaseId;
     private final PageCacheTracer pageCacheTracer;
     private final MemoryTracker memoryTracker;
+    private final LogEntryWriterFactory logEntryWriterFactory;
 
     ReplicatedTokenHolder( NamedDatabaseId namedDatabaseId, TokenRegistry tokenRegistry, Replicator replicator,
-                           IdGeneratorFactory idGeneratorFactory, IdType tokenIdType,
-                           Supplier<StorageEngine> storageEngineSupplier, TokenType type,
-                           ReplicatedTokenCreator tokenCreator, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
+            IdGeneratorFactory idGeneratorFactory, IdType tokenIdType,
+            Supplier<StorageEngine> storageEngineSupplier, TokenType type,
+            ReplicatedTokenCreator tokenCreator, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker,
+            LogEntryWriterFactory logEntryWriterFactory )
     {
         super( tokenRegistry );
         this.replicator = replicator;
@@ -63,6 +65,7 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
         this.databaseId = namedDatabaseId.databaseId();
         this.pageCacheTracer = pageCacheTracer;
         this.memoryTracker = memoryTracker;
+        this.logEntryWriterFactory = logEntryWriterFactory;
     }
 
     @Override
@@ -136,6 +139,6 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
             }
         }
 
-        return StorageCommandMarshal.commandsToBytes( commands );
+        return StorageCommandMarshal.commandsToBytes( commands, logEntryWriterFactory );
     }
 }

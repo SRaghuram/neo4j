@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 import com.neo4j.configuration.ServerGroupsSupplier;
+import com.neo4j.dbms.database.DbmsLogEntryWriterProvider;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -36,11 +37,12 @@ public class RaftGroupFactory
     private final Function<NamedDatabaseId,LeaderListener> listenerFactory;
     private final MemoryTracker memoryTracker;
     private final ServerGroupsSupplier serverGroupsSupplier;
+    private final DbmsLogEntryWriterProvider dbmsLogEntryWriterProvider;
 
     public RaftGroupFactory( ClusteringIdentityModule identityModule, GlobalModule globalModule, ClusterStateLayout clusterState,
             CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, LeaderTransferService leaderTransferService,
             Function<NamedDatabaseId,LeaderListener> listenerFactory, MemoryTracker memoryTracker,
-            ServerGroupsSupplier serverGroupsSupplier )
+            ServerGroupsSupplier serverGroupsSupplier, DbmsLogEntryWriterProvider dbmsLogEntryWriterProvider )
     {
         this.identityModule = identityModule;
         this.globalModule = globalModule;
@@ -51,6 +53,7 @@ public class RaftGroupFactory
         this.listenerFactory = listenerFactory;
         this.memoryTracker = memoryTracker;
         this.serverGroupsSupplier = serverGroupsSupplier;
+        this.dbmsLogEntryWriterProvider = dbmsLogEntryWriterProvider;
     }
 
     public RaftGroup create( NamedDatabaseId namedDatabaseId, Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound, LifeSupport life, Monitors monitors,
@@ -58,8 +61,9 @@ public class RaftGroupFactory
     {
         // TODO: Consider if additional services are per raft group, e.g. config, log-service.
         return new RaftGroup( globalModule.getGlobalConfig(), logService, globalModule.getFileSystem(), globalModule.getJobScheduler(),
-                globalModule.getGlobalClock(), identityModule.memberId( namedDatabaseId ), life, monitors, dependencies, outbound, clusterState,
-                topologyService, storageFactory, namedDatabaseId, leaderTransferService, listenerFactory.apply( namedDatabaseId ), memoryTracker,
-                serverGroupsSupplier, globalModule.getGlobalAvailabilityGuard(), statusResponseConsumer );
+                              globalModule.getGlobalClock(), identityModule.memberId( namedDatabaseId ), life, monitors, dependencies, outbound, clusterState,
+                              topologyService, storageFactory, namedDatabaseId, leaderTransferService, listenerFactory.apply( namedDatabaseId ), memoryTracker,
+                              serverGroupsSupplier, globalModule.getGlobalAvailabilityGuard(), statusResponseConsumer,
+                              dbmsLogEntryWriterProvider.getEntryWriterFactory( namedDatabaseId ) );
     }
 }

@@ -22,6 +22,7 @@ import java.nio.file.Path;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.OnDemandJobScheduler;
@@ -59,7 +60,7 @@ class SegmentedRaftLogPartialEntryRecoveryTest
         LogProvider logProvider = getInstance();
         CoreLogPruningStrategy pruningStrategy =
                 new CoreLogPruningStrategyFactory( "100 entries", logProvider ).newInstance();
-        return new SegmentedRaftLog( fs, logDirectory, rotateAtSize, ignored -> new CoreReplicatedContentMarshal(),
+        return new SegmentedRaftLog( fs, logDirectory, rotateAtSize, ignored -> new CoreReplicatedContentMarshal( LogEntryWriterFactory.LATEST ),
                 logProvider, 8, Clocks.fakeClock(), new OnDemandJobScheduler(), pruningStrategy, INSTANCE );
     }
 
@@ -67,7 +68,7 @@ class SegmentedRaftLogPartialEntryRecoveryTest
     {
         FileNames fileNames = new FileNames( logDirectory );
         return new RecoveryProtocol( fs, fileNames, new ReaderPool( 8, getInstance(), fileNames, fs, Clocks.fakeClock() ),
-                ignored -> new CoreReplicatedContentMarshal(), getInstance(), INSTANCE );
+                ignored -> new CoreReplicatedContentMarshal( LogEntryWriterFactory.LATEST ), getInstance(), INSTANCE );
     }
 
     @Test

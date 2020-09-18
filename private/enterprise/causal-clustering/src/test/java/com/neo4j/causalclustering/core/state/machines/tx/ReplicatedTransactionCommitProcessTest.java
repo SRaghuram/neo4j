@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionToApply;
@@ -44,7 +45,7 @@ class ReplicatedTransactionCommitProcessTest
     void tx()
     {
         when( tx.additionalHeader() ).thenReturn( new byte[]{} );
-        commitProcess = new ReplicatedTransactionCommitProcess( replicator, DATABASE_ID, leaseCoordinator );
+        commitProcess = new ReplicatedTransactionCommitProcess( replicator, DATABASE_ID, leaseCoordinator, LogEntryWriterFactory.LATEST );
     }
 
     @Test

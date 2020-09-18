@@ -27,6 +27,7 @@ import java.util.Collections;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.io.marshal.ChannelMarshal;
 import org.neo4j.io.marshal.EndOfStreamException;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.api.TestCommandReaderFactory;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
@@ -43,7 +44,8 @@ import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedData
 
 class CoreReplicatedContentMarshalTest
 {
-    private final ChannelMarshal<ReplicatedContent> marshal = new CoreReplicatedContentMarshal();
+    private final LogEntryWriterFactory logEntryWriterFactory = LogEntryWriterFactory.LATEST;
+    private final ChannelMarshal<ReplicatedContent> marshal = new CoreReplicatedContentMarshal( logEntryWriterFactory );
     private static final NamedDatabaseId DATABASE_ID = randomNamedDatabaseId();
 
     @Test
@@ -54,7 +56,7 @@ class CoreReplicatedContentMarshalTest
                 new PhysicalTransactionRepresentation( Collections.emptyList() );
         representation.setHeader( new byte[]{0}, 1, 1, 1, 1, ANONYMOUS );
 
-        TransactionRepresentationReplicatedTransaction replicatedTx = ReplicatedTransaction.from( representation, DATABASE_ID );
+        TransactionRepresentationReplicatedTransaction replicatedTx = ReplicatedTransaction.from( representation, DATABASE_ID, logEntryWriterFactory );
 
         assertMarshalingEquality( buffer, replicatedTx );
     }
@@ -66,7 +68,7 @@ class CoreReplicatedContentMarshalTest
         PhysicalTransactionRepresentation representation =
                 new PhysicalTransactionRepresentation( Collections.emptyList() );
 
-        TransactionRepresentationReplicatedTransaction replicatedTx = ReplicatedTransaction.from( representation, DATABASE_ID );
+        TransactionRepresentationReplicatedTransaction replicatedTx = ReplicatedTransaction.from( representation, DATABASE_ID, logEntryWriterFactory );
 
         assertMarshalingEquality( buffer, replicatedTx );
     }
@@ -96,7 +98,7 @@ class CoreReplicatedContentMarshalTest
         after.setNameId( 3232 );
         commands.add( new Command.LabelTokenCommand( before, after ) );
         ReplicatedContent message = new ReplicatedTokenRequest( randomNamedDatabaseId().databaseId(),
-                TokenType.LABEL, "theLabel", StorageCommandMarshal.commandsToBytes( commands ) );
+                TokenType.LABEL, "theLabel", StorageCommandMarshal.commandsToBytes( commands, logEntryWriterFactory ) );
         assertMarshalingEquality( buffer, message );
     }
 

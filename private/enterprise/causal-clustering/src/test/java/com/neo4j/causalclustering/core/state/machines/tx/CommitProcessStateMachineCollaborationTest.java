@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TestCommandReaderFactory;
@@ -48,7 +49,7 @@ class CommitProcessStateMachineCollaborationTest
 
         DirectReplicator<ReplicatedTransaction> replicator = new DirectReplicator<>( stateMachine );
         ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, nameDatabaseId,
-                mock( ClusterLeaseCoordinator.class ) );
+                mock( ClusterLeaseCoordinator.class ), LogEntryWriterFactory.LATEST );
 
         // when
         assertThrows( TransactionFailureException.class, () -> commitProcess.commit( transactionToApply, NULL, EXTERNAL ) );

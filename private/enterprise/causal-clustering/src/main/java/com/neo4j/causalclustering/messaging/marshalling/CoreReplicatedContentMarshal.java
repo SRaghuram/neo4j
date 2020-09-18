@@ -26,13 +26,21 @@ import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.marshal.EndOfStreamException;
 import org.neo4j.io.marshal.SafeChannelMarshal;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 
 public class CoreReplicatedContentMarshal extends SafeChannelMarshal<ReplicatedContent>
 {
+    private final LogEntryWriterFactory logEntryWriterFactory;
+
+    public CoreReplicatedContentMarshal( LogEntryWriterFactory logEntryWriterFactory )
+    {
+        this.logEntryWriterFactory = logEntryWriterFactory;
+    }
+
     @Override
     public void marshal( ReplicatedContent replicatedContent, WritableChannel channel ) throws IOException
     {
-        replicatedContent.dispatch( new MarshallingHandler( channel ) );
+        replicatedContent.dispatch( new MarshallingHandler( channel, logEntryWriterFactory ) );
     }
 
     @Override
@@ -51,10 +59,12 @@ public class CoreReplicatedContentMarshal extends SafeChannelMarshal<ReplicatedC
     private static class MarshallingHandler implements ReplicatedContentHandler
     {
         private final WritableChannel writableChannel;
+        private final LogEntryWriterFactory logEntryWriterFactory;
 
-        MarshallingHandler( WritableChannel writableChannel )
+        MarshallingHandler( WritableChannel writableChannel, LogEntryWriterFactory logEntryWriterFactory )
         {
             this.writableChannel = writableChannel;
+            this.logEntryWriterFactory = logEntryWriterFactory;
         }
 
         @Override
@@ -68,7 +78,7 @@ public class CoreReplicatedContentMarshal extends SafeChannelMarshal<ReplicatedC
         public void handle( TransactionRepresentationReplicatedTransaction tx ) throws IOException
         {
             writableChannel.put( ContentCodes.TX_CONTENT_TYPE );
-            ReplicatedTransactionMarshalV2.marshal( writableChannel, tx );
+            ReplicatedTransactionMarshalV2.marshal( writableChannel, tx, logEntryWriterFactory );
         }
 
         @Override

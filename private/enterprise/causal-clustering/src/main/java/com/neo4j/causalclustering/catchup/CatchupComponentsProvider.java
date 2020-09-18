@@ -20,6 +20,7 @@ import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
+import com.neo4j.dbms.database.DbmsLogEntryWriterProvider;
 
 import java.util.List;
 import java.util.Optional;

@@ -72,6 +72,7 @@ import com.neo4j.dbms.EnterpriseSystemGraphComponent;
 import com.neo4j.dbms.QuarantineOperator;
 import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
+import com.neo4j.dbms.database.DbmsLogEntryWriterProvider;
 import com.neo4j.dbms.procedures.ClusterSetDefaultDatabaseProcedure;
 import com.neo4j.dbms.procedures.ClusteredDatabaseStateProcedure;
 import com.neo4j.dbms.procedures.QuarantineProcedure;
@@ -251,13 +252,12 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
                 .setParallelism( Group.RAFT_HANDLER, globalConfig.get( CausalClusteringSettings.raft_handler_parallelism ) );
     }
 
-    private void createCoreServers( LifeSupport life, DatabaseManager<?> databaseManager, DatabaseStateService databaseStateService,
-            FileSystemAbstraction fileSystem )
+    private void createCoreServers( LifeSupport life, DatabaseManager<?> databaseManager,
+            DatabaseStateService databaseStateService, FileSystemAbstraction fileSystem )
     {
         int maxChunkSize = globalConfig.get( CausalClusteringSettings.store_copy_chunk_size );
-        CatchupServerHandler catchupServerHandler =
-                new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fileSystem, maxChunkSize, logProvider,
-                                                       globalModule.getGlobalDependencies() );
+        CatchupServerHandler catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fileSystem,
+                                                                                           maxChunkSize, logProvider, globalModule.getGlobalDependencies() );
         Server catchupServer = catchupComponentsProvider.createCatchupServer( serverInstalledProtocolHandler, catchupServerHandler );
         life.add( catchupServer );
         // used by ReadReplicaHierarchicalCatchupIT
@@ -370,9 +370,11 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var leaderTransferService = new LeaderTransferService( globalModule.getJobScheduler(), globalConfig, leaderTransferInterval, databaseManager,
                 raftMessageDispatcher, identityModule, leaderTransferBackoff, logProvider, globalModule.getGlobalClock(), leaderService, serverGroupsSupplier );
 
+        var logEntryWriterFactory = new DbmsLogEntryWriterProvider( databaseManager );
+
         RaftGroupFactory raftGroupFactory = new RaftGroupFactory( identityModule, globalModule, clusterStateLayout, topologyService, storageFactory,
                 leaderTransferService, namedDatabaseId -> ((DefaultLeaderService) leaderService).createListener( namedDatabaseId ), globalOtherTracker,
-                serverGroupsSupplier );
+                serverGroupsSupplier, logEntryWriterFactory );
 
         RecoveryFacade recoveryFacade = recoveryFacade( globalModule.getFileSystem(), globalModule.getPageCache(), globalModule.getTracers(), globalConfig,
                 globalModule.getStorageEngineFactory(), globalOtherTracker );
@@ -381,7 +383,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
         this.coreDatabaseFactory = new CoreDatabaseFactory( globalModule, panicService, databaseManager, topologyService, storageFactory,
                 temporaryDatabaseFactory, identityModule, raftGroupFactory, raftMessageDispatcher, catchupComponentsProvider,
-                recoveryFacade, raftLogger, raftSender, databaseEventService, dbmsModel, databaseStartAborter );
+                recoveryFacade, raftLogger, raftSender, databaseEventService, dbmsModel, databaseStartAborter, logEntryWriterFactory );
 
         RaftServerFactory raftServerFactory = new RaftServerFactory( globalModule, identityModule, pipelineBuilders.server(), raftLogger,
                 supportedRaftProtocols, supportedModifierProtocols, databaseManager.databaseIdRepository() );

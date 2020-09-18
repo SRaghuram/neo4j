@@ -16,23 +16,23 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
-import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.storageengine.api.CommandReaderFactory;
 import org.neo4j.storageengine.api.StorageCommand;
 
 public class StorageCommandMarshal
 {
-    public static byte[] commandsToBytes( Collection<StorageCommand> commands )
+    public static byte[] commandsToBytes( Collection<StorageCommand> commands, LogEntryWriterFactory logEntryWriterFactory )
     {
         ByteBuf commandBuffer = Unpooled.buffer();
         BoundedNetworkWritableChannel channel = new BoundedNetworkWritableChannel( commandBuffer );
 
         try
         {
-            new LogEntryWriter( channel ).serialize( commands );
+            logEntryWriterFactory.createEntryWriter( channel ).serialize( commands );
         }
         catch ( IOException e )
         {

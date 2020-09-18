@@ -49,6 +49,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.marshal.ChannelMarshal;
 import org.neo4j.io.state.StateStorage;
 import org.neo4j.kernel.availability.AvailabilityGuard;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
@@ -78,12 +79,12 @@ public class RaftGroup
                ClusterStateLayout clusterState, CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, NamedDatabaseId namedDatabaseId,
                LeaderTransferService leaderTransferService, LeaderListener leaderListener, MemoryTracker memoryTracker,
                ServerGroupsSupplier serverGroupsSupplier, AvailabilityGuard globalAvailabilityGuard,
-               Consumer<RaftMessages.StatusResponse> statusResponseConsumer )
+               Consumer<RaftMessages.StatusResponse> statusResponseConsumer, LogEntryWriterFactory logEntryWriterFactory )
     {
         DatabaseLogProvider logProvider = logService.getInternalLogProvider();
         TimerService timerService = new TimerService( jobScheduler, logProvider );
 
-        Map<Integer,ChannelMarshal<ReplicatedContent>> marshals = Map.of( 2, new CoreReplicatedContentMarshal() );
+        Map<Integer,ChannelMarshal<ReplicatedContent>> marshals = Map.of( 2, new CoreReplicatedContentMarshal( logEntryWriterFactory ) );
         RaftLog underlyingLog =
                 createRaftLog( config, life, fileSystem, clusterState, marshals, logProvider, jobScheduler, namedDatabaseId, memoryTracker, clock );
         raftLog = new MonitoredRaftLog( underlyingLog, monitors );

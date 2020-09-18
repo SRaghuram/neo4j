@@ -30,6 +30,7 @@ import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
 import org.neo4j.kernel.api.security.provider.NoAuthSecurityProvider;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
@@ -120,9 +121,9 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
                 try
                 {
                     TransactionRepresentationReplicatedTransaction txRepresentation =
-                            ReplicatedTransaction.from( batch.transactionRepresentation(), NAMED_DATABASE_ID );
+                            ReplicatedTransaction.from( batch.transactionRepresentation(), NAMED_DATABASE_ID, LogEntryWriterFactory.LATEST );
 
-                    ReplicatedTransactionMarshalV2.marshal( countingChannel, txRepresentation );
+                    ReplicatedTransactionMarshalV2.marshal( countingChannel, txRepresentation, LogEntryWriterFactory.LATEST );
 
                     clusterTxStack.add( new ClusterTx( txId, batch.transactionRepresentation(), countingChannel.totalSize ) );
                 }

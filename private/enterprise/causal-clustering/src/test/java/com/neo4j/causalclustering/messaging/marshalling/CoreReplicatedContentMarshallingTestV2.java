@@ -26,6 +26,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.util.Set;
 import java.util.UUID;
 
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.test.extension.Inject;
 
@@ -53,7 +54,7 @@ class CoreReplicatedContentMarshallingTestV2
     @MethodSource( "data" )
     public void shouldSerializeAndDeserialize( ReplicatedContent replicatedContent ) throws Exception
     {
-        var coreReplicatedContentMarshal = new CoreReplicatedContentMarshal();
+        var coreReplicatedContentMarshal = new CoreReplicatedContentMarshal( LogEntryWriterFactory.LATEST );
         var buffer = buffers.buffer();
         var channel = new BoundedNetworkWritableChannel( buffer );
         coreReplicatedContentMarshal.marshal( replicatedContent, channel );

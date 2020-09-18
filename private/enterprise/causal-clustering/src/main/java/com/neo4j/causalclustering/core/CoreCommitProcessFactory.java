@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.core.state.machines.lease.ClusterLeaseCoordina
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionCommitProcess;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
@@ -24,21 +25,23 @@ public class CoreCommitProcessFactory implements CommitProcessFactory
     private final Replicator replicator;
     private final CoreStateMachines coreStateMachines;
     private final ClusterLeaseCoordinator leaseCoordinator;
+    private final LogEntryWriterFactory logEntryWriterFactory;
 
     CoreCommitProcessFactory( NamedDatabaseId namedDatabaseId, Replicator replicator, CoreStateMachines coreStateMachines,
-            ClusterLeaseCoordinator leaseCoordinator )
+                              ClusterLeaseCoordinator leaseCoordinator, LogEntryWriterFactory logEntryWriterFactory )
     {
         this.namedDatabaseId = namedDatabaseId;
         this.replicator = replicator;
         this.coreStateMachines = coreStateMachines;
         this.leaseCoordinator = leaseCoordinator;
+        this.logEntryWriterFactory = logEntryWriterFactory;
     }
 
     @Override
     public TransactionCommitProcess create( TransactionAppender appender, StorageEngine storageEngine, Config config )
     {
         initializeCommitProcessForStateMachines( appender, storageEngine );
-        return new ReplicatedTransactionCommitProcess( replicator, namedDatabaseId, leaseCoordinator );
+        return new ReplicatedTransactionCommitProcess( replicator, namedDatabaseId, leaseCoordinator, logEntryWriterFactory );
     }
 
     /**

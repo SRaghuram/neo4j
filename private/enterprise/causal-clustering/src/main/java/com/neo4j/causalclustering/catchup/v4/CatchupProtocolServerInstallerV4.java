@@ -33,8 +33,8 @@ public class CatchupProtocolServerInstallerV4 extends CatchupProtocolServerInsta
     {
         public Factory( NettyPipelineBuilderFactory pipelineBuilderFactory, LogProvider logProvider, CatchupServerHandler catchupServerHandler )
         {
-            super( APPLICATION_PROTOCOL,
-                   modifiers -> new CatchupProtocolServerInstallerV4( pipelineBuilderFactory, modifiers, logProvider, catchupServerHandler ) );
+            super( APPLICATION_PROTOCOL, modifiers ->
+                    new CatchupProtocolServerInstallerV4( pipelineBuilderFactory, modifiers, logProvider, catchupServerHandler ) );
         }
     }
 

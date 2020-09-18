@@ -40,8 +40,10 @@ public class TransactionBackupServiceProvider
     private final ConnectorPortRegister portRegister;
 
     public TransactionBackupServiceProvider( LogProvider logProvider, ApplicationSupportedProtocols catchupProtocols,
-            Collection<ModifierSupportedProtocols> supportedModifierProtocols, NettyPipelineBuilderFactory serverPipelineBuilderFactory,
-            CatchupServerHandler catchupServerHandler, ChannelInboundHandler parentHandler, JobScheduler scheduler, ConnectorPortRegister portRegister )
+                                             Collection<ModifierSupportedProtocols> supportedModifierProtocols,
+                                             NettyPipelineBuilderFactory serverPipelineBuilderFactory,
+                                             CatchupServerHandler catchupServerHandler, ChannelInboundHandler parentHandler,
+                                             JobScheduler scheduler, ConnectorPortRegister portRegister )
     {
         this.logProvider = logProvider;
         this.parentHandler = parentHandler;

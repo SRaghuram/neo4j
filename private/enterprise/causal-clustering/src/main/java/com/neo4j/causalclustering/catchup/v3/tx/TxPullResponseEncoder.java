@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.catchup.v3.tx;
 
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
+import com.neo4j.causalclustering.catchup.tx.WritableTxPullResponse;
 import com.neo4j.causalclustering.helper.ErrorHandler;
 import com.neo4j.causalclustering.messaging.ChunkingNetworkChannel;
 import com.neo4j.causalclustering.messaging.marshalling.storeid.StoreIdMarshal;
@@ -19,7 +20,6 @@ import java.io.IOException;
 import java.util.LinkedList;
 
 import org.neo4j.io.ByteUnit;
-import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 import org.neo4j.util.VisibleForTesting;
 
 public class TxPullResponseEncoder extends ChannelOutboundHandlerAdapter
@@ -39,17 +39,17 @@ public class TxPullResponseEncoder extends ChannelOutboundHandlerAdapter
 
     public TxPullResponseEncoder()
     {
-        this.chunkSize = DEFAULT_CHUNK_SIZE;
+        this( DEFAULT_CHUNK_SIZE );
     }
 
     @Override
     public void write( ChannelHandlerContext ctx, Object msg, ChannelPromise promise ) throws Exception
     {
-        if ( msg instanceof TxPullResponse )
+        if ( msg instanceof WritableTxPullResponse )
         {
             try
             {
-                writeResponse( ctx, (TxPullResponse) msg, promise );
+                writeResponse( ctx, (WritableTxPullResponse) msg, promise );
             }
             catch ( Exception e )
             {
@@ -77,25 +77,27 @@ public class TxPullResponseEncoder extends ChannelOutboundHandlerAdapter
     }
 
     /**
-     * Writes the {@link TxPullResponse} to the pending buffer queue and then flushes any pending chunks to network.
+     * Writes a {@link TxPullResponse} to the pending buffer queue and then flushes any pending chunks to network.
      */
-    private void writeResponse( ChannelHandlerContext ctx, TxPullResponse msg, ChannelPromise promise ) throws IOException
+    private void writeResponse( ChannelHandlerContext ctx, WritableTxPullResponse msg, ChannelPromise promise ) throws IOException
     {
+        var txPullResponse = msg.txPullResponse();
+        var logEntryWriterFactory = msg.logEntryWriterFactory();
         assert pendingChunks.isEmpty();
         if ( isFirstTx() )
         {
-            handleFirstTx( ctx, msg );
+            handleFirstTx( ctx, txPullResponse );
         }
         var metadataIndex = channel.currentIndex();
         channel.putInt( PLACEHOLDER_TX_INFO );
-        if ( isEndOfTxStream( msg ) )
+        if ( isEndOfTxStream( txPullResponse ) )
         {
             channel.close();
             channel = null;
         }
         else
         {
-            new LogEntryWriter( channel ).serialize( msg.tx() );
+            logEntryWriterFactory.createEntryWriter( channel ).serialize( txPullResponse.tx() );
         }
         // the size is only required if the tx stretches over multiple chunks
         if ( !pendingChunks.isEmpty() )

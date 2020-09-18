@@ -59,8 +59,8 @@ public final class CatchupServerBuilder
     }
 
     private static class StepBuilder implements NeedsCatchupServerHandler, NeedsCatchupProtocols, NeedsModifierProtocols,
-            NeedsPipelineBuilder, NeedsInstalledProtocolsHandler, NeedsListenAddress, NeedsScheduler, NeedsConfig, NeedsBootstrapConfig,
-            NeedsPortRegister, AcceptsOptionalParams
+            NeedsPipelineBuilder, NeedsInstalledProtocolsHandler, NeedsListenAddress, NeedsScheduler,
+            NeedsConfig, NeedsBootstrapConfig, NeedsPortRegister, AcceptsOptionalParams
     {
         private CatchupServerHandler catchupServerHandler;
         private NettyPipelineBuilderFactory pipelineBuilder;
@@ -211,19 +211,18 @@ public final class CatchupServerBuilder
                 CatchupServerHandler catchupServerHandler )
         {
             final var maximumProtocol = config.get( experimental_catchup_protocol ) ? CATCHUP_4_0 : CATCHUP_3_0;
-            final var protocolMap = createApplicationProtocolMap( pipelineBuilder, serverNameService.getInternalLogProvider(), catchupServerHandler
-            );
+            final var protocolMap =
+                    createApplicationProtocolMap( pipelineBuilder, serverNameService.getInternalLogProvider(), catchupServerHandler );
             checkInstallersExhaustive( protocolMap.keySet(), CATCHUP );
 
             return buildServerInstallers( protocolMap, maximumProtocol );
         }
 
         private static Map<ApplicationProtocol,ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> createApplicationProtocolMap(
-                NettyPipelineBuilderFactory pipelineBuilder, LogProvider debugLogProvider,
-                CatchupServerHandler catchupServerHandler )
+                NettyPipelineBuilderFactory pipelineBuilder, LogProvider debugLogProvider, CatchupServerHandler catchupServerHandler )
         {
             return Map.of( CATCHUP_3_0, new CatchupProtocolServerInstallerV3.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler ),
-                    CATCHUP_4_0, new CatchupProtocolServerInstallerV4.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler ) );
+                           CATCHUP_4_0, new CatchupProtocolServerInstallerV4.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler ) );
         }
     }
 

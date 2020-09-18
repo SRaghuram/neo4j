@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TestCommandReaderFactory;
@@ -51,7 +52,7 @@ class ReplicatedTransactionStateMachineTest
         // given
         int leaseId = 23;
 
-        ReplicatedTransaction tx = ReplicatedTransaction.from( physicalTx( leaseId ), DATABASE_ID );
+        ReplicatedTransaction tx = ReplicatedTransaction.from( physicalTx( leaseId ), DATABASE_ID, LogEntryWriterFactory.LATEST );
 
         TransactionCommitProcess localCommitProcess = mock( TransactionCommitProcess.class );
 
@@ -74,7 +75,7 @@ class ReplicatedTransactionStateMachineTest
         int txLeaseId = 23;
         int currentLeaseId = 24;
 
-        ReplicatedTransaction tx = ReplicatedTransaction.from( physicalTx( txLeaseId ), DATABASE_ID );
+        ReplicatedTransaction tx = ReplicatedTransaction.from( physicalTx( txLeaseId ), DATABASE_ID, LogEntryWriterFactory.LATEST );
 
         TransactionCommitProcess localCommitProcess = mock( TransactionCommitProcess.class );
 
@@ -103,7 +104,7 @@ class ReplicatedTransactionStateMachineTest
         int currentLockSessionId = 24;
         long txId = 42L;
 
-        ReplicatedTransaction tx = ReplicatedTransaction.from( physicalTx( txLockSessionId ), DATABASE_ID );
+        ReplicatedTransaction tx = ReplicatedTransaction.from( physicalTx( txLockSessionId ), DATABASE_ID, LogEntryWriterFactory.LATEST );
 
         TransactionCommitProcess localCommitProcess = createFakeTransactionCommitProcess( txId );
 
@@ -136,7 +137,7 @@ class ReplicatedTransactionStateMachineTest
         // and
         ReplicatedTransactionStateMachine stateMachine = newTransactionStateMachine( leaseState( txLockSessionId ) );
 
-        ReplicatedTransaction replicatedTransaction = ReplicatedTransaction.from( physicalTx( txLockSessionId ), DATABASE_ID );
+        ReplicatedTransaction replicatedTransaction = ReplicatedTransaction.from( physicalTx( txLockSessionId ), DATABASE_ID, LogEntryWriterFactory.LATEST );
 
         // and
         TransactionCommitProcess localCommitProcess = createFakeTransactionCommitProcess( anyTransactionId );

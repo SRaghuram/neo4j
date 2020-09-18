@@ -29,6 +29,7 @@ import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.DescriptiveAvailabilityRequirement;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TestCommand;
@@ -283,7 +284,8 @@ class TxPullRequestHandlerTest
             }
 
             var chunk2 = txStream.readChunk( allocator );
-            assertEquals( new TxPullResponse( storeId, tx ), chunk2 );
+            var writableTxPullResponse = new WritableTxPullResponse( new TxPullResponse( storeId, tx ), LogEntryWriterFactory.LATEST );
+            assertEquals( writableTxPullResponse, chunk2 );
         }
     }
 

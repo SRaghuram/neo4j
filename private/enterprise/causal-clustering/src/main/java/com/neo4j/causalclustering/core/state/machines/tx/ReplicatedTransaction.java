@@ -13,6 +13,7 @@ import io.netty.handler.stream.ChunkedInput;
 import java.util.function.Consumer;
 
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 
@@ -25,9 +26,10 @@ public abstract class ReplicatedTransaction implements CoreReplicatedContent
         this.databaseId = databaseId;
     }
 
-    public static TransactionRepresentationReplicatedTransaction from( TransactionRepresentation tx, NamedDatabaseId namedDatabaseId )
+    public static TransactionRepresentationReplicatedTransaction from( TransactionRepresentation tx, NamedDatabaseId namedDatabaseId,
+                                                                       LogEntryWriterFactory logEntryWriterFactory )
     {
-        return new TransactionRepresentationReplicatedTransaction( tx, namedDatabaseId.databaseId() );
+        return new TransactionRepresentationReplicatedTransaction( tx, namedDatabaseId.databaseId(), logEntryWriterFactory );
     }
 
     public static ByteArrayReplicatedTransaction from( byte[] bytes, DatabaseId databaseId )

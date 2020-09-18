@@ -12,6 +12,7 @@ import java.util.function.Supplier;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.api.txstate.TransactionState;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.StorageEngine;
@@ -23,9 +24,10 @@ public class ReplicatedRelationshipTypeTokenHolder extends ReplicatedTokenHolder
 {
     public ReplicatedRelationshipTypeTokenHolder( NamedDatabaseId namedDatabaseId, TokenRegistry registry,
             Replicator replicator, IdGeneratorFactory idGeneratorFactory,
-            Supplier<StorageEngine> storageEngineSupplier, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
+            Supplier<StorageEngine> storageEngineSupplier, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker,
+            LogEntryWriterFactory logEntryWriterFactory )
     {
         super( namedDatabaseId, registry, replicator, idGeneratorFactory, RELATIONSHIP_TYPE_TOKEN, storageEngineSupplier, TokenType.RELATIONSHIP,
-                TransactionState::relationshipTypeDoCreateForName, pageCacheTracer, memoryTracker );
+                TransactionState::relationshipTypeDoCreateForName, pageCacheTracer, memoryTracker, logEntryWriterFactory );
     }
 }

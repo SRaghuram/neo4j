@@ -30,8 +30,8 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdFactory;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StoreId;
@@ -55,7 +55,7 @@ class BareServer implements CatchupServerHandler
     private final Log log;
     private final BareFilesHolder fileHolder;
     private final BareTransactionProvider transactionProvider;
-    private DatabaseId databaseId;
+    private NamedDatabaseId databaseId;
     private StoreId storeId;
     private long lastTxId;
 
@@ -66,7 +66,7 @@ class BareServer implements CatchupServerHandler
         this.transactionProvider = transactionProvider;
 
         var rnd = new Random();
-        databaseId = DatabaseIdFactory.from( UUID.randomUUID() );
+        databaseId = DatabaseIdFactory.from( "bare", UUID.randomUUID() );
         storeId = new StoreId( rnd.nextInt( 1000 ), rnd.nextInt( 1000 ) + 1000, rnd.nextInt( 1000 ) + 2000 );
         lastTxId = rnd.nextInt( 1000 ) + 3000;
 

@@ -19,6 +19,7 @@ import org.neo4j.internal.helpers.Args;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.marshal.ChannelMarshal;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.memory.EmptyMemoryTracker;
@@ -90,7 +91,7 @@ class DumpSegmentedRaftLog
 
                 try ( DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
                 {
-                    new DumpSegmentedRaftLog( fileSystem, new CoreReplicatedContentMarshal(), EmptyMemoryTracker.INSTANCE )
+                    new DumpSegmentedRaftLog( fileSystem, new CoreReplicatedContentMarshal( LogEntryWriterFactory.LATEST ), EmptyMemoryTracker.INSTANCE )
                             .dump( fileAsString, printer.getFor( fileAsString ) );
                 }
                 catch ( IOException | DisposedException | DamagedLogStorageException e )
