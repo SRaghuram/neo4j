@@ -64,7 +64,7 @@ public class CausalClusteringSettings implements SettingsDeclaration
     private static final int DEFAULT_RAFT_PORT = 7000;
 
     @Description( "Directory to hold cluster state including Raft log" )
-    public static final Setting<Path> cluster_state_directory = newBuilder( "causal_clustering.cluster_state_directory", PATH,
+    public static final Setting<Path> cluster_state_directory = newBuilder( "dbms.directories.cluster_state", PATH,
             Path.of( DEFAULT_CLUSTER_STATE_DIRECTORY_NAME ) ).setDependency( data_directory ).immutable().build();
 
     @Description( "Time out for a new member to catch up" )

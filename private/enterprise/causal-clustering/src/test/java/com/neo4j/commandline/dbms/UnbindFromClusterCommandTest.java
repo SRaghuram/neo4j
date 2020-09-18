@@ -6,10 +6,11 @@
 package com.neo4j.commandline.dbms;
 
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
-import com.neo4j.configuration.CausalClusteringSettings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import picocli.CommandLine;
 
 import java.io.ByteArrayOutputStream;
@@ -19,9 +20,12 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileLock;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
+import java.util.stream.Stream;
 
 import org.neo4j.cli.CommandFailedException;
 import org.neo4j.cli.ExecutionContext;
+import org.neo4j.configuration.Config;
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
@@ -30,6 +34,9 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.configuration.CausalClusteringSettings.DEFAULT_CLUSTER_STATE_DIRECTORY_NAME;
+import static com.neo4j.configuration.CausalClusteringSettings.cluster_state_directory;
+import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -53,6 +60,11 @@ class UnbindFromClusterCommandTest
     private ExecutionContext ctx;
 
     private StoreChannel channel;
+
+    private static Stream<String> data()
+    {
+        return Stream.of( DEFAULT_DATA_DIR_NAME + "/" + DEFAULT_CLUSTER_STATE_DIRECTORY_NAME, "different_place" );
+    }
 
     @BeforeEach
     void setup()
@@ -119,12 +131,13 @@ class UnbindFromClusterCommandTest
         }
     }
 
-    @Test
-    void shouldRemoveClusterStateDirectoryAndServerId() throws Exception
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldRemoveClusterStateDirectoryAndServerId( String clusterStateDirectory ) throws Exception
     {
         // given
         createUnlockedFakeDbDir();
-        var clusterStateDir = createClusterStateDir();
+        var clusterStateDir = createClusterStateDirAndSetInConfig( clusterStateDirectory );
         var serverIdStore = createServerIdStore();
         var command = new UnbindFromClusterCommand( ctx );
 
@@ -149,12 +162,16 @@ class UnbindFromClusterCommandTest
         verify( err ).println( "This instance was not bound. No work performed." );
     }
 
-    private Path createClusterStateDir() throws IOException
+    private Path createClusterStateDirAndSetInConfig( String def ) throws IOException
     {
-        var dataDir = neo4jLayout.homeDirectory().resolve( DEFAULT_DATA_DIR_NAME );
-        var clusterStateDirectory = ClusterStateLayout.of( dataDir.resolve( CausalClusteringSettings.DEFAULT_CLUSTER_STATE_DIRECTORY_NAME ) )
-                .getClusterStateDirectory();
+        var path = neo4jLayout.homeDirectory().resolve( def );
+        var clusterStateDirectory = ClusterStateLayout.of( path ).getClusterStateDirectory();
         fs.mkdirs( clusterStateDirectory );
+
+        var setting = format( "%s=%s", cluster_state_directory.name(), path.toString().replace( '\\', '/' ) );
+        fs.mkdirs( ctx.confDir() );
+        Files.write( ctx.confDir().resolve( Config.DEFAULT_CONFIG_FILE_NAME ), Collections.singleton( setting ) );
+
         return clusterStateDirectory;
     }
 

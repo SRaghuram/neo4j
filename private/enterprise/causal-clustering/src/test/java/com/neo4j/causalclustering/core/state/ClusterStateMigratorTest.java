@@ -7,16 +7,17 @@ package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 import com.neo4j.causalclustering.identity.IdFactory;
-import com.neo4j.configuration.CausalClusteringSettings;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
+import java.util.stream.Stream;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.state.SimpleFileStorage;
@@ -55,29 +56,34 @@ class ClusterStateMigratorTest
     private SimpleStorage<ClusterStateVersion> clusterStateVersionStorage;
     private ClusterStateMigrator migrator;
 
+    private static Stream<String> data()
+    {
+        return Stream.of( DEFAULT_DATA_DIR_NAME + "/" + DEFAULT_CLUSTER_STATE_DIRECTORY_NAME, "different_place" );
+    }
+
     @BeforeEach
     void beforeEach() throws Exception
     {
         logProvider = new Log4jLogProvider( System.out );
-
-        clusterStateLayout = ClusterStateLayout.of( testDirectory.directoryPath( DEFAULT_DATA_DIR_NAME ).resolve( DEFAULT_CLUSTER_STATE_DIRECTORY_NAME ) );
-        writeRandomClusterId( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_NAME ) );
-
-        clusterStateVersionStorage = new SimpleFileStorage<>( fs, clusterStateLayout.clusterStateVersionFile(), VERSION.marshal(), INSTANCE );
-        migrator = new ClusterStateMigrator( fs, clusterStateLayout, clusterStateVersionStorage, logProvider );
     }
 
-    @Test
-    void shouldDeleteClusterStateDirWhenVersionStorageDoesNotExist() throws Exception
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldDeleteClusterStateDirWhenVersionStorageDoesNotExist( String clusterStateDirectory ) throws Exception
     {
+        setup( clusterStateDirectory );
+
         runMigration();
 
         assertMigrationHappened();
     }
 
-    @Test
-    void shouldThrowWhenVersionStorageExistsButIsUnreadable() throws Exception
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldThrowWhenVersionStorageExistsButIsUnreadable( String clusterStateDirectory ) throws Exception
     {
+        setup( clusterStateDirectory );
+
         // create an empty file so that reading a version from it fails
         fs.mkdirs( clusterStateLayout.clusterStateVersionFile().getParent() );
         fs.write( clusterStateLayout.clusterStateVersionFile() ).close();
@@ -87,9 +93,12 @@ class ClusterStateMigratorTest
         assertMigrationDidNotHappen();
     }
 
-    @Test
-    void shouldNotMigrateWhenVersionStorageExistsAndHasExpectedVersion() throws Exception
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldNotMigrateWhenVersionStorageExistsAndHasExpectedVersion( String clusterStateDirectory ) throws Exception
     {
+        setup( clusterStateDirectory );
+
         clusterStateVersionStorage.writeState( new ClusterStateVersion( 1, 0 ) );
 
         runMigration();
@@ -97,9 +106,12 @@ class ClusterStateMigratorTest
         assertMigrationDidNotHappen();
     }
 
-    @Test
-    void shouldThrowWhenVersionStorageExistsButContainsUnknownVersion() throws Exception
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldThrowWhenVersionStorageExistsButContainsUnknownVersion( String clusterStateDirectory ) throws Exception
     {
+        setup( clusterStateDirectory );
+
         clusterStateVersionStorage.writeState( new ClusterStateVersion( 42, 3 ) );
 
         assertThrows( IllegalStateException.class, this::runMigration );
@@ -107,9 +119,12 @@ class ClusterStateMigratorTest
         assertMigrationDidNotHappen();
     }
 
-    @Test
-    void shouldKeepMemberIdStorage() throws Exception
+    @ParameterizedTest
+    @MethodSource( "data" )
+    void shouldKeepMemberIdStorage( String clusterStateDirectory ) throws Exception
     {
+        setup( clusterStateDirectory );
+
         var memberId = IdFactory.randomMemberId();
         var memberIdFile = clusterStateLayout.memberIdStateFile();
         assertFalse( fs.fileExists( memberIdFile ) );
@@ -121,6 +136,15 @@ class ClusterStateMigratorTest
 
         assertMigrationHappened();
         assertEquals( memberId, memberIdStorage.readState() );
+    }
+
+    private void setup( String clusterStateDirectory ) throws IOException
+    {
+        clusterStateLayout = ClusterStateLayout.of( testDirectory.directoryPath( clusterStateDirectory ) );
+        writeRandomClusterId( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_NAME ) );
+
+        clusterStateVersionStorage = new SimpleFileStorage<>( fs, clusterStateLayout.clusterStateVersionFile(), VERSION.marshal(), INSTANCE );
+        migrator = new ClusterStateMigrator( fs, clusterStateLayout, clusterStateVersionStorage, logProvider );
     }
 
     private void runMigration()

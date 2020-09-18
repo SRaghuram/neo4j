@@ -41,11 +41,6 @@ public class ClusterStateLayout
         this.clusterStateDirectory = clusterStateDirectory;
     }
 
-    public static ClusterStateLayout defaultForDataDir( Path dataDir )
-    {
-        return new ClusterStateLayout( dataDir.resolve( CausalClusteringSettings.DEFAULT_CLUSTER_STATE_DIRECTORY_NAME ) );
-    }
-
     public static ClusterStateLayout of( Path clusterStateDirectory )
     {
         return new ClusterStateLayout( clusterStateDirectory );
