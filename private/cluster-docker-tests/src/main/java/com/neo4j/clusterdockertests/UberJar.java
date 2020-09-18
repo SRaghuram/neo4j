@@ -64,9 +64,9 @@ final class UberJar implements AutoCloseable
         String path = source.getPath();
         try
         {
-            Pattern pattern = Pattern.compile( ".*/target/(test-)?classes/" );
+            Pattern pattern = Pattern.compile( ".*[/\\\\]target[/\\\\](test-)?classes[/\\\\]" );
             MatchResult result = pattern.matcher( path ).results().collect( Collectors.toList() ).get( 0 );
-            if ( skipTestClasses && result.group().endsWith( "/test-classes/" ) )
+            if ( skipTestClasses && result.group().replaceAll("\\\\", "/").endsWith( "/test-classes/" ) )
             {
                 return;
             }
@@ -82,7 +82,7 @@ final class UberJar implements AutoCloseable
                     serviceDeclarations.get( f.getName() ).addAll( Files.readAllLines( f.toPath() ) );
                 }
             }
-            String location = path.split( "/target/(test-)?classes/" )[1].replace( "\\", "/" );
+            String location = path.split( "[/\\\\]target[/\\\\](test-)?classes[/\\\\]" )[1];
             FileInputStream inputStream = new FileInputStream( source );
 
             writeJarEntry( source.lastModified(), target, location, inputStream );
@@ -159,7 +159,7 @@ final class UberJar implements AutoCloseable
 
     private static void writeJarEntry( long time, JarOutputStream target, String location, InputStream inputStream ) throws IOException
     {
-        JarEntry entry = new JarEntry( location );
+        JarEntry entry = new JarEntry( location.replace( "\\", "/" ) );
         entry.setTime( time );
 
         target.putNextEntry( entry );
