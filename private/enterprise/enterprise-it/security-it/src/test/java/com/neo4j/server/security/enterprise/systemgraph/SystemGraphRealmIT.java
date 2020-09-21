@@ -62,6 +62,8 @@ import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 import static org.neo4j.cypher.security.BasicSystemGraphRealmTestHelper.assertAuthenticationFails;
 import static org.neo4j.cypher.security.BasicSystemGraphRealmTestHelper.assertAuthenticationSucceeds;
 import static org.neo4j.cypher.security.BasicSystemGraphRealmTestHelper.createUser;
+import static org.neo4j.dbms.database.AbstractSystemGraphComponent.SECURITY_USER_COMPONENT;
+import static org.neo4j.dbms.database.SystemGraphComponent.Status.CURRENT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ACCESS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CONSTRAINT;
@@ -75,6 +77,7 @@ import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
 import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
 import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
 import static org.neo4j.logging.LogAssertions.assertThat;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.LATEST_COMMUNITY_SECURITY_COMPONENT_VERSION;
 
 @TestDirectoryExtension
 class SystemGraphRealmIT
@@ -85,7 +88,6 @@ class SystemGraphRealmIT
     private SecurityLog securityLog;
     private Config defaultConfig;
 
-    @SuppressWarnings( "unused" )
     @Inject
     private TestDirectory testDirectory;
 
@@ -199,6 +201,7 @@ class SystemGraphRealmIT
         assertAuthenticationSucceeds( realmHelper, INITIAL_USER_NAME, INITIAL_PASSWORD, true );
 
         initialPassword.create( createUser( INITIAL_USER_NAME, "abc123", false ) );
+        logProvider.clear();
 
         // When
         systemGraphInitializer.start();
@@ -206,6 +209,10 @@ class SystemGraphRealmIT
         // Then
         assertAuthenticationFails( realmHelper, INITIAL_USER_NAME, INITIAL_PASSWORD );
         assertAuthenticationSucceeds( realmHelper, INITIAL_USER_NAME, "abc123" );
+        assertThat( logProvider ).forLevel( INFO )
+                                 .containsMessageWithArguments( "Updating the initial password in component '%s'  ",
+                                         SECURITY_USER_COMPONENT, LATEST_COMMUNITY_SECURITY_COMPONENT_VERSION, CURRENT )
+                                 .containsMessageWithArguments( "Updating initial user password from `auth.ini` file: %s", INITIAL_USER_NAME );
     }
 
     @Test
@@ -221,12 +228,18 @@ class SystemGraphRealmIT
         // When
         initialPassword.clear();
         initialPassword.create( createUser( INITIAL_USER_NAME, "bar", false ) );
+        logProvider.clear();
         systemGraphInitializer.start();
 
         // Then
         assertAuthenticationFails( realmHelper, INITIAL_USER_NAME, INITIAL_PASSWORD );
         assertAuthenticationSucceeds( realmHelper, INITIAL_USER_NAME, "foo" );
         assertAuthenticationFails( realmHelper, INITIAL_USER_NAME, "bar" );
+
+        assertThat( logProvider ).forLevel( INFO )
+                                 .containsMessageWithArguments( "Updating the initial password in component '%s'  ",
+                                         SECURITY_USER_COMPONENT, LATEST_COMMUNITY_SECURITY_COMPONENT_VERSION, CURRENT )
+                                 .doesNotContainMessageWithArguments( "Updating initial user password from `auth.ini` file: %s", INITIAL_USER_NAME );
     }
 
     @Test
