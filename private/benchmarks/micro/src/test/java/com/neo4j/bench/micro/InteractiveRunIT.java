@@ -210,10 +210,10 @@ class InteractiveRunIT extends AnnotationsFixture
         // (1) JFR recordings are created
         // (2) only executions for the enabled benchmark is actually run
         // (3) for each JFR recording file a FlameGraph should be created
-        int jfrCount = ProfilerTestUtil.recordingCountIn( workDir, RecordingType.JFR );
+        int jfrCount = ProfilerTestUtil.recordingCountIn( workDir.toPath(), RecordingType.JFR );
         assertThat( jfrCount, equalTo( expectedBenchmarkCount ) );
         // in 4.0 we do NOT generate Flamegraphs
-        int jfrFlameGraphCount = ProfilerTestUtil.recordingCountIn( workDir, RecordingType.JFR_FLAMEGRAPH );
+        int jfrFlameGraphCount = ProfilerTestUtil.recordingCountIn( workDir.toPath(), RecordingType.JFR_FLAMEGRAPH );
         assertThat( jfrFlameGraphCount, equalTo( 0 ) );
 
         // expected number of stores are present

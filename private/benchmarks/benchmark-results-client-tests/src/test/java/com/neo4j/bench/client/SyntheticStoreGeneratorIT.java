@@ -143,7 +143,7 @@ public class SyntheticStoreGeneratorIT
 
     private SyntheticStoreGenerator.GenerationResult generateStoreUsing( SyntheticStoreGenerator generator ) throws Exception
     {
-        Main.main( ReIndexStoreCommand.argsFor( USERNAME, PASSWORD, neo4j.boltURI() ) );
+        Main.main( ReIndexStoreCommand.argsFor( USERNAME, PASSWORD, boltUri ) );
 
         try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {

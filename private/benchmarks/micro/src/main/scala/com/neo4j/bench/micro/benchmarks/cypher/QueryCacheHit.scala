@@ -139,7 +139,6 @@ object QueryCacheHitThreadState {
 
   def main(args: Array[String]): Unit = {
     val storesDir = Paths.get( "benchmark_stores" );
-    val profilerRecordingsOutputDir = Paths.get( "profiler_recordings" );
     val forkCount = 1;
     val profilers = ParameterizedProfiler.defaultProfilers();
     val errorPolicy = ErrorReporter.ErrorPolicy.FAIL;
@@ -150,7 +149,6 @@ object QueryCacheHitThreadState {
              TimeValue.seconds(3),
              profilers,
              storesDir,
-             profilerRecordingsOutputDir,
              errorPolicy,
              jvmFile );
   }
