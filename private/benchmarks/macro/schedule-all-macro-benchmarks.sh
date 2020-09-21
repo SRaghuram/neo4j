@@ -89,7 +89,7 @@ for i in "${workloads[@]}"; do
   workload_name=${workload[0]}
   instance_type=${workload[1]}
   db_name=${workload[2]}
-
+P
   #making copy of workspace
   cp -R "$workspace_dir" "macro-workspace-$workload_name"
 

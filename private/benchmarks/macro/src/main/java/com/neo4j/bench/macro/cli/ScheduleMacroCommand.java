@@ -24,9 +24,9 @@ import com.neo4j.bench.infra.BenchmarkingTool;
 import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.JobParams;
 import com.neo4j.bench.infra.PasswordManager;
+import com.neo4j.bench.infra.ResultStoreCredentials;
 import com.neo4j.bench.infra.URIHelper;
 import com.neo4j.bench.infra.Workspace;
-import com.neo4j.bench.infra.aws.AWSPasswordManager;
 import com.neo4j.bench.infra.macro.MacroToolRunner;
 import com.neo4j.bench.infra.scheduler.BenchmarkJobScheduler;
 import com.neo4j.bench.macro.workload.Query;
@@ -58,84 +58,84 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
 
     // job queue name in CloudFormation stack
     @Option( type = OptionType.COMMAND,
-             name = InfraParams.CMD_JOB_QUEUE,
-             title = "AWS Batch Job Queue Name",
-             description = "job queue name in CloudFormation stack" )
+            name = InfraParams.CMD_JOB_QUEUE,
+            title = "AWS Batch Job Queue Name",
+            description = "job queue name in CloudFormation stack" )
     private String jobQueue = "macro-benchmark-run-queue";
 
     // job definition in CloudFormation stack
     @Option( type = OptionType.COMMAND,
-             name = InfraParams.CMD_JOB_DEFINITION,
-             title = "AWS Batch Job Definition Name",
-             description = "job definition in CloudFormation stack" )
+            name = InfraParams.CMD_JOB_DEFINITION,
+            title = "AWS Batch Job Definition Name",
+            description = "job definition in CloudFormation stack" )
     private String jobDefinition = "macro-benchmark-job-definition";
 
     // name of stack in CloudFormation
     @Option( type = OptionType.COMMAND,
-             name = InfraParams.CMD_BATCH_STACK,
-             title = "AWS Batch Stack Name",
-             description = "name of stack in CloudFormation" )
+            name = InfraParams.CMD_BATCH_STACK,
+            title = "AWS Batch Stack Name",
+            description = "name of stack in CloudFormation" )
     private String batchStack = "benchmarking";
 
     @Option( type = OptionType.COMMAND,
-             name = InfraParams.CMD_WORKSPACE_DIR,
-             description = "Local directory containing artifacts to be uploaded to S3, which the worker requires",
-             title = "Local workspace" )
+            name = InfraParams.CMD_WORKSPACE_DIR,
+            description = "Local directory containing artifacts to be uploaded to S3, which the worker requires",
+            title = "Local workspace" )
     private File workspaceDir;
 
     @Option( type = OptionType.COMMAND,
-             name = {InfraParams.CMD_RESULTS_STORE_USER},
-             description = "Username for Neo4j database server that stores benchmarking results",
-             title = "Results Store Username" )
+            name = {InfraParams.CMD_RESULTS_STORE_USER},
+            description = "Username for Neo4j database server that stores benchmarking results",
+            title = "Results Store Username" )
     @Required
     private String resultsStoreUsername;
 
     @Option( type = OptionType.COMMAND,
-             name = {InfraParams.CMD_RESULTS_STORE_PASSWORD_SECRET_NAME},
-             description = "Secret name in AWS Secrets Manager with password for Neo4j database server that stores benchmarking results",
-             title = "Results Store Password Secret Name" )
+            name = {InfraParams.CMD_RESULTS_STORE_PASSWORD_SECRET_NAME},
+            description = "Secret name in AWS Secrets Manager with password for Neo4j database server that stores benchmarking results",
+            title = "Results Store Password Secret Name" )
     @Required
     private String resultsStorePasswordSecretName;
 
     @Option( type = OptionType.COMMAND,
-             name = {InfraParams.CMD_RESULTS_STORE_URI},
-             description = "URI to Neo4j database server for storing benchmarking results",
-             title = "Results Store" )
+            name = {InfraParams.CMD_RESULTS_STORE_URI},
+            description = "URI to Neo4j database server for storing benchmarking results",
+            title = "Results Store" )
     @Required
     private URI resultsStoreUri;
     @Option( type = OptionType.COMMAND,
-             name = InfraParams.CMD_AWS_SECRET,
-             title = "AWS Secret" )
+            name = InfraParams.CMD_AWS_SECRET,
+            title = "AWS Secret" )
     private String awsSecret;
 
     @Option( type = OptionType.COMMAND,
-             name = InfraParams.CMD_AWS_KEY,
-             title = "AWS Key" )
+            name = InfraParams.CMD_AWS_KEY,
+            title = "AWS Key" )
     private String awsKey;
 
     @Option( type = OptionType.COMMAND,
-             name = InfraParams.CMD_AWS_REGION,
-             title = "AWS Region" )
+            name = InfraParams.CMD_AWS_REGION,
+            title = "AWS Region" )
     private String awsRegion = "eu-north-1";
 
     @Option( type = OptionType.COMMAND,
-             name = {RunMacroWorkloadParams.CMD_DB_NAME},
-             description = "Store name, e.g., for s3://benchmarking.neo4j.com/datasets/macro/3.5-enterprise-datasets/pokec.tgz it would be 'pokec'",
-             title = "Store name" )
+            name = {RunMacroWorkloadParams.CMD_DB_NAME},
+            description = "Store name, e.g., for s3://benchmarking.neo4j.com/datasets/macro/3.5-enterprise-datasets/pokec.tgz it would be 'pokec'",
+            title = "Store name" )
     @Required
     private String storeName;
 
     @Option( type = OptionType.COMMAND,
-             name = {CMD_ERROR_POLICY},
-             description = "Specify if execution should terminate on error, or skip and continue",
-             title = "Error handling policy" )
+            name = {CMD_ERROR_POLICY},
+            description = "Specify if execution should terminate on error, or skip and continue",
+            title = "Error handling policy" )
     private ErrorReportingPolicy errorReportingPolicy = ErrorReportingPolicy.IGNORE;
 
     @Option( type = OptionType.COMMAND,
-             name = InfraParams.CMD_ARTIFACT_BASE_URI,
-             description = "Location of worker jar and other artifacts needed " +
-                           "(e.g., s3://benchmarking.neo4j.com/artifacts/macro/<triggered_by>/<build_id>/<workload>/<query>/<uuid>) in S3",
-             title = "Location of worker jar" )
+            name = InfraParams.CMD_ARTIFACT_BASE_URI,
+            description = "Location of worker jar and other artifacts needed " +
+                          "(e.g., s3://benchmarking.neo4j.com/artifacts/macro/<triggered_by>/<build_id>/<workload>/<query>/<uuid>) in S3",
+            title = "Location of worker jar" )
     @Required
     private URI artifactBaseUri;
 
@@ -173,7 +173,13 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                                                          .resolve( URIHelper.toURIPart( runMacroWorkloadParams.workloadName() ) );
 
             CompletableFuture<Void> awaitFinished = CompletableFuture.runAsync( benchmarkJobScheduler::awaitFinished );
-
+            InfraParams infraParams = new InfraParams( awsCredentials,
+                                                       resultsStoreUsername,
+                                                       resultsStorePasswordSecretName,
+                                                       resultsStoreUri,
+                                                       null,
+                                                       errorReportingPolicy,
+                                                       workspace );
             try ( Resources resources = new Resources( Paths.get( "." ) ) )
             {
                 Workload workload = Workload.fromName( runMacroWorkloadParams.workloadName(), resources, runMacroWorkloadParams.deployment() );
@@ -187,13 +193,7 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                     URI artifactBaseQueryRunURI = artifactBaseWorkloadURI.resolve( URIHelper.toURIPart( uuid.toString() ) );
                     URI artifactWorkerQueryRunURI = artifactBaseQueryRunURI.resolve( "benchmark-infra-worker.jar" );
                     // then store job params as JSON
-                    InfraParams infraParams = new InfraParams( awsCredentials,
-                                                               resultsStoreUsername,
-                                                               resultsStorePasswordSecretName,
-                                                               resultsStoreUri,
-                                                               artifactBaseQueryRunURI,
-                                                               errorReportingPolicy,
-                                                               workspace );
+                    infraParams = infraParams.withArtifactBaseUri( artifactBaseQueryRunURI );
                     String testRunId = UUID.randomUUID().toString();
                     JobParams jobParams = new JobParams( infraParams,
                                                          new BenchmarkingRun(
@@ -218,9 +218,10 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
             }
             finally
             {
-                PasswordManager passwordManager = AWSPasswordManager.create( awsRegion );
-                String resultStorePassword = passwordManager.getSecret( resultsStorePasswordSecretName );
-                try ( StoreClient storeClient = StoreClient.connect( resultsStoreUri, resultsStoreUsername, resultStorePassword ) )
+                ResultStoreCredentials resultStoreCredentials = PasswordManager.getResultStoreCredentials( infraParams );
+                try ( StoreClient storeClient = StoreClient.connect( resultStoreCredentials.uri(),
+                                                                     resultStoreCredentials.username(),
+                                                                     resultStoreCredentials.password() ) )
                 {
                     benchmarkJobScheduler.reportJobsTo( storeClient );
                 }

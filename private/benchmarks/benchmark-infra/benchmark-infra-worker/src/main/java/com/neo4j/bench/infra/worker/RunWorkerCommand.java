@@ -17,8 +17,8 @@ import com.neo4j.bench.infra.BenchmarkingToolRunner;
 import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.JobParams;
 import com.neo4j.bench.infra.PasswordManager;
+import com.neo4j.bench.infra.ResultStoreCredentials;
 import com.neo4j.bench.infra.Workspace;
-import com.neo4j.bench.infra.aws.AWSPasswordManager;
 import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
 import com.neo4j.bench.model.util.JsonUtil;
 import org.apache.commons.lang3.StringUtils;
@@ -26,6 +26,8 @@ import org.apache.commons.lang3.StringUtils;
 import java.io.File;
 import java.net.URI;
 import java.nio.file.Path;
+
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
 @Command( name = "run-worker" )
 public class RunWorkerCommand implements Runnable
@@ -96,16 +98,7 @@ public class RunWorkerCommand implements Runnable
             Workspace.assertWorkspaceAreEqual( artifactsWorkspace, deserializeWorkspace );
 
             // fetch result db password
-            String resultsStorePassword;
-            if ( StringUtils.isNotEmpty( infraParams.resultsStorePasswordSecretName() ) )
-            {
-                PasswordManager awsSecretsManager = AWSPasswordManager.create( infraParams.awsCredentials().awsRegion() );
-                resultsStorePassword = awsSecretsManager.getSecret( infraParams.resultsStorePasswordSecretName() );
-            }
-            else
-            {
-                resultsStorePassword = infraParams.resultsStorePassword();
-            }
+            ResultStoreCredentials resultStoreCredentials = PasswordManager.getResultStoreCredentials( infraParams );
 
             BenchmarkingRun benchmarkingRun = jobParams.benchmarkingRun();
             BenchmarkingTool benchmarkingTool = benchmarkingRun.benchmarkingTool();
@@ -114,7 +107,7 @@ public class RunWorkerCommand implements Runnable
                                 artifactStorage,
                                 workspacePath,
                                 artifactsWorkspace,
-                                resultsStorePassword,
+                                resultStoreCredentials,
                                 artifactBaseUri );
         }
         catch ( Exception e )

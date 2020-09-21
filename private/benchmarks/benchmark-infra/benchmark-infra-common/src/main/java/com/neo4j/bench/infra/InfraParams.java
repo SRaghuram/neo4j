@@ -128,6 +128,18 @@ public class InfraParams
         return workspaceStructure;
     }
 
+    public InfraParams withArtifactBaseUri( URI newArtifactBaseUri )
+    {
+        return new InfraParams( awsCredentials,
+                                resultsStoreUsername,
+                                resultsStorePasswordSecretName,
+                                resultsStorePassword,
+                                resultsStoreUri,
+                                newArtifactBaseUri,
+                                errorPolicy,
+                                workspaceStructure );
+    }
+
     @Override
     public boolean equals( Object that )
     {

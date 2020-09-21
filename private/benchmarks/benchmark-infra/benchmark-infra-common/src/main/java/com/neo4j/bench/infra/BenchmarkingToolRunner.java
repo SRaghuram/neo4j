@@ -21,7 +21,7 @@ public interface BenchmarkingToolRunner<P>
                   ArtifactStorage artifactStorage,
                   Path workspacePath,
                   Workspace artifactsWorkspace,
-                  String resultsStorePassword,
+                  ResultStoreCredentials resultsStoreCredentials,
                   URI artifactBaseUri )
             throws Exception;
 }

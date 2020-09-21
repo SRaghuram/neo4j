@@ -20,6 +20,7 @@ import com.neo4j.bench.infra.JobParams;
 import com.neo4j.bench.infra.JobScheduler;
 import com.neo4j.bench.infra.JobStatus;
 import com.neo4j.bench.infra.Workspace;
+import com.neo4j.bench.infra.ResultStoreCredentials;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -237,7 +238,7 @@ public class BenchmarkJobSchedulerTest
                              ArtifactStorage artifactStorage,
                              Path workspacePath,
                              Workspace artifactsWorkspace,
-                             String resultsStorePassword,
+                             ResultStoreCredentials resultStoreCredentials,
                              URI artifactBaseUri )
         {
         }

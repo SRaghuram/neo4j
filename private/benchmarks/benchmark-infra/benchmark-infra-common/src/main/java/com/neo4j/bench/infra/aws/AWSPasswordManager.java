@@ -9,6 +9,7 @@ import com.amazonaws.services.secretsmanager.AWSSecretsManager;
 import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder;
 import com.amazonaws.services.secretsmanager.model.GetSecretValueRequest;
 import com.neo4j.bench.infra.PasswordManager;
+import com.neo4j.bench.infra.ResultStoreCredentials;
 
 import java.util.Objects;
 
@@ -33,7 +34,15 @@ public class AWSPasswordManager implements PasswordManager
     {
         Objects.requireNonNull( secretName );
         String secretString = awsSecretsManager.getSecretValue( new GetSecretValueRequest().withSecretId( secretName ) ).getSecretString();
-        SecretsManagerUsernamePassword usernamePassword = SecretsManagerUsernamePassword.from( secretString );
-        return usernamePassword.password();
+        ResultStoreCredentials credentials = ResultStoreCredentials.from( secretString );
+        return credentials.password();
+    }
+
+    @Override
+    public ResultStoreCredentials getCredentials( String secretName )
+    {
+        Objects.requireNonNull( secretName );
+        String secretString = awsSecretsManager.getSecretValue( new GetSecretValueRequest().withSecretId( secretName ) ).getSecretString();
+        return ResultStoreCredentials.from( secretString );
     }
 }

@@ -20,6 +20,7 @@ import com.neo4j.bench.infra.IgnoreProfilerFileFilter;
 import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.JobParams;
 import com.neo4j.bench.infra.Workspace;
+import com.neo4j.bench.infra.ResultStoreCredentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +45,7 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunToolMacroWorkl
                          ArtifactStorage artifactStorage,
                          Path workspacePath,
                          Workspace artifactsWorkspace,
-                         String resultsStorePassword,
+                         ResultStoreCredentials resultsStoreCredentials,
                          URI artifactBaseUri )
             throws IOException, InterruptedException, ArtifactStoreException
     {
@@ -101,7 +102,7 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunToolMacroWorkl
                                      workDir,
                                      storeDir,
                                      neo4jConfigFile,
-                                     resultsStorePassword,
+                                     resultsStoreCredentials,
                                      jobParams.benchmarkingRun().testRunId() ) );
 
         LOG.info( "starting run report benchmark process, {}", join( " ", runReportCommands ) );
@@ -127,7 +128,7 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunToolMacroWorkl
                                                      Path workDir,
                                                      Path storeDir,
                                                      Path neo4jConfigFile,
-                                                     String resultsStorePassword,
+                                                     ResultStoreCredentials resultStoreCredentials,
                                                      String testRunId )
     {
         return Lists.newArrayList( runMacroWorkloadParams.workloadName(),
@@ -141,9 +142,9 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunToolMacroWorkl
                                    ParameterizedProfiler.serialize( runMacroWorkloadParams.profilers() ),
                                    Integer.toString( runMacroWorkloadParams.measurementForkCount() ),
                                    runMacroWorkloadParams.unit().name(),
-                                   infraParams.resultsStoreUri().toString(),
-                                   infraParams.resultsStoreUsername(),
-                                   resultsStorePassword,
+                                   resultStoreCredentials.uri().toString(),
+                                   resultStoreCredentials.username(),
+                                   resultStoreCredentials.password(),
                                    runMacroWorkloadParams.neo4jCommit(),
                                    runMacroWorkloadParams.neo4jVersion().patchVersion(),
                                    runMacroWorkloadParams.neo4jBranch(),

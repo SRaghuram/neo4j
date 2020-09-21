@@ -12,9 +12,9 @@ import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.infra.ArtifactStorage;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.BenchmarkingToolRunner;
-import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.JobParams;
 import com.neo4j.bench.infra.Workspace;
+import com.neo4j.bench.infra.ResultStoreCredentials;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +38,7 @@ public class MicroToolRunner implements BenchmarkingToolRunner<RunMicroWorkloadP
                          ArtifactStorage artifactStorage,
                          Path workspacePath,
                          Workspace artifactsWorkspace,
-                         String resultsStorePassword,
+                         ResultStoreCredentials resultsStoreCredentials,
                          URI artifactBaseUri )
             throws IOException, InterruptedException, ArtifactStoreException
     {
@@ -76,11 +76,10 @@ public class MicroToolRunner implements BenchmarkingToolRunner<RunMicroWorkloadP
              */
         RunMicroWorkloadParams runMicroWorkloadParams = jobParams.benchmarkingRun().benchmarkingTool().getToolParameters();
         List<String> runReportCommands = createRunReportArgs( runMicroWorkloadParams,
-                                                              jobParams.infraParams(),
                                                               neo4jConfigFile,
                                                               configFile,
                                                               workDir,
-                                                              resultsStorePassword );
+                                                              resultsStoreCredentials );
 
         LOG.info( "starting run report benchmark process, {}", join( " ", runReportCommands ) );
         Process process = new ProcessBuilder( runReportCommands )
@@ -101,11 +100,10 @@ public class MicroToolRunner implements BenchmarkingToolRunner<RunMicroWorkloadP
     }
 
     private static List<String> createRunReportArgs( RunMicroWorkloadParams runMicroWorkloadParams,
-                                                     InfraParams infraParams,
                                                      Path neo4jConfigFile,
                                                      Path configFile,
                                                      Path workDir,
-                                                     String resultsStorePassword )
+                                                     ResultStoreCredentials resultStoreCredentials )
     {
         return Lists.newArrayList(
                 "./run-report-benchmarks.sh",
@@ -116,9 +114,9 @@ public class MicroToolRunner implements BenchmarkingToolRunner<RunMicroWorkloadP
                 runMicroWorkloadParams.toolBranch(),
                 runMicroWorkloadParams.toolBranchOwner(),
                 runMicroWorkloadParams.toolCommit(),
-                infraParams.resultsStoreUri().toString(),
-                infraParams.resultsStoreUsername(),
-                resultsStorePassword,
+                resultStoreCredentials.uri().toString(),
+                resultStoreCredentials.username(),
+                resultStoreCredentials.password(),
                 configFile.toString(),
                 Long.toString( runMicroWorkloadParams.build() ),
                 Long.toString( runMicroWorkloadParams.parentBuild() ),
