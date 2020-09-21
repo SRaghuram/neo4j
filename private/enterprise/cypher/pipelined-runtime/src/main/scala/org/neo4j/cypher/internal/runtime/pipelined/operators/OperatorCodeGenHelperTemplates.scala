@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import org.neo4j.codegen.api.GetStatic
 import org.neo4j.codegen.api.InstanceField
 import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.and
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayLoad
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayOf
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
@@ -535,6 +536,10 @@ object OperatorCodeGenHelperTemplates {
   }
   def profileRow(id: Id): IntermediateRepresentation = {
     condition(isNotNull(event(id)))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit]("row")))
+  }
+
+  def conditionallyProfileRow(predicate: IntermediateRepresentation, id: Id): IntermediateRepresentation = {
+    condition(and(isNotNull(event(id)), predicate))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit]("row")))
   }
 
   def profileRow(id: Id, hasRow: IntermediateRepresentation): IntermediateRepresentation = {

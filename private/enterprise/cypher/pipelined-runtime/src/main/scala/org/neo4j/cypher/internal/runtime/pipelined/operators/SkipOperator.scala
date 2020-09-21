@@ -29,6 +29,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.Concu
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.StandardCountingState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.evaluateCountValue
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.argumentVarName
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.conditionallyProfileRow
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.getArgument
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SkipOperator.SkipStateFactory
@@ -95,7 +96,7 @@ class SerialTopLevelSkipOperatorTaskTemplate(inner: OperatorTaskTemplate,
     block(
       ifElse(equal(load(countLeftVar), constant(0)))(block(
         inner.genOperateWithExpressions,
-        doIfInnerCantContinue(profileRow(id))
+        conditionallyProfileRow(innerCantContinue, id)
       ))(
         doIfInnerCantContinue(assign(countLeftVar, subtract(load(countLeftVar), constant(1))))
       )

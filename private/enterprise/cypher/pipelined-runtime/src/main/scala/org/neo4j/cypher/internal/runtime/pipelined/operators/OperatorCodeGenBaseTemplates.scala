@@ -460,6 +460,9 @@ trait OperatorTaskTemplate {
   protected def innerCanContinue: IntermediateRepresentation =
     inner.genCanContinue.getOrElse(constant(false))
 
+  protected def innerCantContinue: IntermediateRepresentation =
+    inner.genCanContinue.map(not).getOrElse(constant(true))
+
   protected def genOperate: IntermediateRepresentation
 
   /**

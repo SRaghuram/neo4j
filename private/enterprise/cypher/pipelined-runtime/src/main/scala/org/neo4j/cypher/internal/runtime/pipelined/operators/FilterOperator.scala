@@ -19,7 +19,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.conditionallyProfileRow
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.storable.Values
@@ -73,7 +73,7 @@ class FilterOperatorTemplate(val inner: OperatorTaskTemplate,
     condition(equal(nullCheckIfRequired(predicate), trueValue)) (
       block(
         inner.genOperateWithExpressions,
-        doIfInnerCantContinue(profileRow(id))
+        conditionallyProfileRow(innerCantContinue, id),
       )
     )
   }

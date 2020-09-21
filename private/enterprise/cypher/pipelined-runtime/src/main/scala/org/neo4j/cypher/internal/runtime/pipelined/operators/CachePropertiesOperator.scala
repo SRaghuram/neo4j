@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.conditionallyProfileRow
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
@@ -57,7 +57,7 @@ class CachePropertiesOperatorTemplate(override val inner: OperatorTaskTemplate,
           .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $p"))
         )
     }
-    val irs = properties.map(_.ir) ++ Seq(inner.genOperateWithExpressions, doIfInnerCantContinue(profileRow(id)))
+    val irs = properties.map(_.ir) ++ Seq(inner.genOperateWithExpressions, conditionallyProfileRow(innerCantContinue, id))
     block(irs:_*)
   }
 

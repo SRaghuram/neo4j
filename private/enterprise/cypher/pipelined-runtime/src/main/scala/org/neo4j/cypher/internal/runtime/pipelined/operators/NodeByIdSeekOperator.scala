@@ -46,9 +46,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeByIdSeekOperato
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeByIdSeekOperator.isValidNode
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.conditionallyProfileRow
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.cursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.onNode
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
@@ -188,7 +188,7 @@ class SingleNodeByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, load(idVariable)),
         inner.genOperateWithExpressions,
-        doIfInnerCantContinue(profileRow(id)),
+        conditionallyProfileRow(innerCantContinue, id),
         innermost.setUnlessPastLimit(canContinue, constant(false)),
         endInnerLoop),
     )
@@ -266,7 +266,7 @@ class ManyNodeByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
             codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
             codeGen.setLongAt(offset, load(idVariable)),
             inner.genOperateWithExpressions,
-            doIfInnerCantContinue(profileRow(id))
+            conditionallyProfileRow(innerCantContinue, id)
           )),
         doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, cursorNext[IteratorCursor](loadField(idCursor)))),
         endInnerLoop)
