@@ -27,6 +27,7 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.exceptions.TransientException;
+import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -98,7 +99,7 @@ class BoltSnapshotQueryExecutionIT
     {
         try ( Session session = driver.session() )
         {
-            session.readTransaction( tx ->
+            var counters = session.readTransaction( tx ->
             {
                 Result result =  tx.run( "MATCH (n) RETURN n.c" );
                 while ( result.hasNext() )
@@ -106,9 +107,11 @@ class BoltSnapshotQueryExecutionIT
                     assertEquals( "d", result.next().get( "n.c" ).asString() );
                 }
 
-                return null;
+                return result.consume().counters();
             } );
 
+            assertEquals( 0, counters.nodesCreated() );
+            assertEquals( 0, counters.nodesDeleted() );
             assertEquals( 1, testCursorContext.getAdditionalAttempts() );
         }
     }
