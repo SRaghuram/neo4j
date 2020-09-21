@@ -26,6 +26,7 @@ import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
+import org.neo4j.lock.LockTracer;
 import org.neo4j.lock.ResourceLocker;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.CommandCreationContext;
@@ -178,8 +179,9 @@ class ReplicatedTokenHolderTest
                       return null;
                   } ).when( storageEngine ).createCommands( anyCollection(), any( ReadableTransactionState.class ),
                                                             any( StorageReader.class ), any( CommandCreationContext.class ),
-                                                            any( ResourceLocker.class ), anyLong(), any( TxStateVisitor.Decorator.class ),
-                                                            any( PageCursorTracer.class ), any( MemoryTracker.class ) );
+                                                            any( ResourceLocker.class ), any( LockTracer.class ), anyLong(), any( TxStateVisitor.Decorator.class ),
+                                                            any( PageCursorTracer.class ),
+                any( MemoryTracker.class ) );
 
         StorageReader readLayer = mock( StorageReader.class );
         when( storageEngine.newReader() ).thenReturn( readLayer );

@@ -22,11 +22,11 @@ import java.util.function.Function;
 
 import org.neo4j.common.TokenNameLookup;
 import org.neo4j.internal.kernel.api.CursorFactory;
-import org.neo4j.internal.kernel.api.TokenSet;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
+import org.neo4j.internal.kernel.api.TokenSet;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.LabelSchemaDescriptor;
@@ -40,6 +40,7 @@ import org.neo4j.kernel.api.exceptions.schema.RelationshipPropertyExistenceExcep
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.StorageReader;
+import org.neo4j.storageengine.api.txstate.RelationshipModifications;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 
 import static java.lang.Math.toIntExact;
@@ -184,11 +185,11 @@ class PropertyExistenceEnforcer
         }
 
         @Override
-        public void visitCreatedRelationship( long id, int type, long startNode, long endNode )
+        public void visitRelationshipModifications( RelationshipModifications modifications )
                 throws ConstraintValidationException
         {
-            validateRelationship( id );
-            super.visitCreatedRelationship( id, type, startNode, endNode );
+            modifications.creations().forEach( ( id, type, startNode, endNode ) -> validateRelationship( id ) );
+            super.visitRelationshipModifications( modifications );
         }
 
         @Override

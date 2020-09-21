@@ -24,6 +24,7 @@ import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.api.state.TxState;
 import org.neo4j.kernel.impl.util.collection.OnHeapCollectionsFactory;
+import org.neo4j.lock.LockTracer;
 import org.neo4j.lock.ResourceLocker;
 import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.storageengine.api.CommandCreationContext;
@@ -145,8 +146,8 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
             try ( StorageReader reader = storageEngine.newReader();
                     CommandCreationContext creationContext = storageEngine.newCommandCreationContext( cursorTracer,memoryTracker ) )
             {
-                storageEngine.createCommands( commands, txState, reader, creationContext, ResourceLocker.PREVENT, Long.MAX_VALUE, NO_DECORATION, cursorTracer,
-                        memoryTracker );
+                storageEngine.createCommands( commands, txState, reader, creationContext, ResourceLocker.PREVENT, LockTracer.NONE, Long.MAX_VALUE,
+                        NO_DECORATION, cursorTracer, memoryTracker );
             }
             catch ( KernelException e )
             {

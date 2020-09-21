@@ -43,6 +43,8 @@ import static org.neo4j.configuration.GraphDatabaseSettings.cypher_hints_error;
 import static org.neo4j.configuration.GraphDatabaseSettings.track_query_allocation;
 import static org.neo4j.configuration.GraphDatabaseSettings.track_query_cpu_time;
 import static org.neo4j.graphdb.Label.label;
+import static org.neo4j.lock.LockType.EXCLUSIVE;
+import static org.neo4j.lock.ResourceTypes.NODE_RELATIONSHIP_GROUP_DELETE;
 import static org.neo4j.test.rule.concurrent.ThreadingRule.waitingWhileIn;
 
 @EnterpriseDbmsExtension( configurationCallback = "configure" )
@@ -90,8 +92,8 @@ public class EnterpriseListQueriesProcedureTest
             @SuppressWarnings( "unchecked" )
             Map<String,Object> resourceInformation = (Map<String,Object>) ri;
             assertEquals( "waiting", data.get( "status" ) );
-            assertEquals( "EXCLUSIVE", resourceInformation.get( "lockMode" ) );
-            assertEquals( "NODE", resourceInformation.get( "resourceType" ) );
+            assertEquals( EXCLUSIVE.name(), resourceInformation.get( "lockMode" ) );
+            assertEquals( NODE_RELATIONSHIP_GROUP_DELETE.name(), resourceInformation.get( "resourceType" ) );
             assertArrayEquals( new long[] {test.resource().getId()}, (long[]) resourceInformation.get( "resourceIds" ) );
             assertThat( data ).containsKey( "waitTimeMillis" );
             Object waitTime1 = data.get( "waitTimeMillis" );
