@@ -657,7 +657,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               )
             }
 
-        // Special case for skip when not nested under an apply and with serial execution
+        // Special case for skip with serial execution
         case plan@Skip(_, countExpression) if serialExecutionOnly =>
           ctx: TemplateContext =>
             val argumentStateMapId = ctx.executionGraphDefinition.findArgumentStateMapForPlan(plan.id)
