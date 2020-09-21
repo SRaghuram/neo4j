@@ -38,20 +38,22 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     graph.createIndex("Awesome", "prop4")
     graph.createIndex("DateString", "ds")
     graph.createIndex("DateDate", "d")
+    graph.createIndex("Amazing", "prop2")
+    graph.createNodeExistenceConstraint("Amazing", "prop2")
   }
 
   // Invoked once before the Tx and once in the same Tx
   def createSomeNodes(tx: InternalTransaction): Unit = {
     tx.execute(
-      """CREATE (:Awesome {prop1: 40, prop2: 5, prop2Copy: 5})-[:R]->(:B)
-        |CREATE (:Awesome {prop1: 41, prop2: 2, prop2Copy: 2})-[:R]->(:B)
-        |CREATE (:Awesome {prop1: 42, prop2: 3, prop2Copy: 3})-[:R]->(:B)
-        |CREATE (:Awesome {prop1: 43, prop2: 1, prop2Copy: 1})-[:R]->(:B)
-        |CREATE (:Awesome {prop1: 44, prop2: 3, prop2Copy: 3})-[:R]->(:B)
-        |CREATE (:Awesome {prop2: 7, prop2Copy: 7})-[:R]->(:B)
-        |CREATE (:Awesome {prop2: 9, prop2Copy: 9})-[:R]->(:B)
-        |CREATE (:Awesome {prop2: 8, prop2Copy: 8})-[:R]->(:B)
-        |CREATE (:Awesome {prop2: 7, prop2Copy: 7})-[:R]->(:B)
+      """CREATE (:Awesome:Amazing  {prop1: 40, prop2: 5, prop2Copy: 5})-[:R]->(:B)
+        |CREATE (:Awesome:Amazing  {prop1: 41, prop2: 2, prop2Copy: 2})-[:R]->(:B)
+        |CREATE (:Awesome:Amazing  {prop1: 42, prop2: 3, prop2Copy: 3})-[:R]->(:B)
+        |CREATE (:Awesome:Amazing  {prop1: 43, prop2: 1, prop2Copy: 1})-[:R]->(:B)
+        |CREATE (:Awesome:Amazing  {prop1: 44, prop2: 3, prop2Copy: 3})-[:R]->(:B)
+        |CREATE (:Awesome:Amazing {prop2: 7, prop2Copy: 7})-[:R]->(:B)
+        |CREATE (:Awesome:Amazing {prop2: 9, prop2Copy: 9})-[:R]->(:B)
+        |CREATE (:Awesome:Amazing {prop2: 8, prop2Copy: 8})-[:R]->(:B)
+        |CREATE (:Awesome:Amazing {prop2: 7, prop2Copy: 7})-[:R]->(:B)
         |CREATE (:Awesome {prop3: 'footurama', prop4:'bar'})-[:R]->(:B {foo:1, bar:1})
         |CREATE (:Awesome {prop3: 'fooism', prop4:'rab'})-[:R]->(:B {foo:1, bar:1})
         |CREATE (:Awesome {prop3: 'aismfama', prop4:'rab'})-[:R]->(:B {foo:1, bar:1})
@@ -66,10 +68,10 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
         |CREATE (:DateDate {d: date('2018-02-10')})
         |CREATE (:DateDate {d: date('2018-01-10')})
         |
-        |CREATE (:Awesome {prop2: point({x:-500000, y:-500000}), prop2Copy: point({x:-500000, y:-500000})})
-        |CREATE (:Awesome {prop2: point({x:-500000, y:500000}), prop2Copy: point({x:-500000, y:500000})})
-        |CREATE (:Awesome {prop2: point({x:500000, y:-500000}), prop2Copy: point({x:500000, y:-500000})})
-        |CREATE (:Awesome {prop2: point({x:500000, y:500000}),  prop2Copy: point({x:500000, y:500000})})
+        |CREATE (:Awesome:Amazing {prop2: point({x:-500000, y:-500000}), prop2Copy: point({x:-500000, y:-500000})})
+        |CREATE (:Awesome:Amazing {prop2: point({x:-500000, y:500000}), prop2Copy: point({x:-500000, y:500000})})
+        |CREATE (:Awesome:Amazing {prop2: point({x:500000, y:-500000}), prop2Copy: point({x:500000, y:-500000})})
+        |CREATE (:Awesome:Amazing {prop2: point({x:500000, y:500000}),  prop2Copy: point({x:500000, y:500000})})
       """.stripMargin)
   }
 
@@ -99,6 +101,28 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
     test(s"$cypherToken: should use index order for IS NOT NULL predicate when returning that property") {
       val result = executeWith(Configs.CachedProperty, s"MATCH (n:Awesome) WHERE n.prop2 IS NOT NULL RETURN n.prop2 ORDER BY n.prop2 $cypherToken",
+        executeBefore = createSomeNodes)
+
+      result.executionPlanDescription() should not (includeSomewhere.aPlan("Sort"))
+      result.toList should be(expectedOrder(List(
+        Map("n.prop2" -> pointValue(Cartesian, -500000, -500000)), Map("n.prop2" -> pointValue(Cartesian, -500000, -500000)),
+        Map("n.prop2" -> pointValue(Cartesian, -500000, 500000)), Map("n.prop2" -> pointValue(Cartesian, -500000, 500000)),
+        Map("n.prop2" -> pointValue(Cartesian, 500000, -500000)), Map("n.prop2" -> pointValue(Cartesian, 500000, -500000)),
+        Map("n.prop2" -> pointValue(Cartesian, 500000, 500000)), Map("n.prop2" -> pointValue(Cartesian, 500000, 500000)),
+        Map("n.prop2" -> 1), Map("n.prop2" -> 1),
+        Map("n.prop2" -> 2), Map("n.prop2" -> 2),
+        Map("n.prop2" -> 3), Map("n.prop2" -> 3),
+        Map("n.prop2" -> 3), Map("n.prop2" -> 3),
+        Map("n.prop2" -> 5), Map("n.prop2" -> 5),
+        Map("n.prop2" -> 7), Map("n.prop2" -> 7),
+        Map("n.prop2" -> 7), Map("n.prop2" -> 7),
+        Map("n.prop2" -> 8), Map("n.prop2" -> 8),
+        Map("n.prop2" -> 9), Map("n.prop2" -> 9)
+      )))
+    }
+
+    test(s"$cypherToken: should use index order for existance constraint when returning that property") {
+      val result = executeWith(Configs.CachedProperty, s"MATCH (n:Amazing) RETURN n.prop2 ORDER BY n.prop2 $cypherToken",
         executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should not (includeSomewhere.aPlan("Sort"))
