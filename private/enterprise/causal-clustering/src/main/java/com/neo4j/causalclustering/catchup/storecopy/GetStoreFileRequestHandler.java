@@ -54,7 +54,6 @@ public class GetStoreFileRequestHandler extends SimpleChannelInboundHandler<GetS
     @Override
     protected final void channelRead0( ChannelHandlerContext ctx, GetStoreFileRequest request ) throws Exception
     {
-        log.debug( "Handling request %s", request );
         StoreCopyFinishedResponse.Status responseStatus = StoreCopyFinishedResponse.Status.E_UNKNOWN;
         long lastCheckpointedTx = -1;
         try
