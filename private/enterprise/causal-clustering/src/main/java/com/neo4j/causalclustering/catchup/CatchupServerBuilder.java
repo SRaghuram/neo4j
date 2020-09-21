@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstallerV3;
 import com.neo4j.causalclustering.catchup.v4.CatchupProtocolServerInstallerV4;
+import com.neo4j.causalclustering.core.ServerLogService;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
@@ -185,36 +186,44 @@ public final class CatchupServerBuilder
                     applicationProtocolRepository = new ApplicationProtocolRepository( values(), catchupProtocols );
             ModifierProtocolRepository modifierProtocolRepository = new ModifierProtocolRepository( ModifierProtocols.values(), modifierProtocols );
 
-            List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> protocolInstallers = buildProtocolList();
+            var serverLogService = new ServerLogService( debugLogProvider, userLogProvider, serverName );
+
+            List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> protocolInstallers =
+                    buildProtocolList( serverLogService, config, pipelineBuilder, catchupServerHandler );
 
             ProtocolInstallerRepository<ProtocolInstaller.Orientation.Server> protocolInstallerRepository = new ProtocolInstallerRepository<>(
                     protocolInstallers, ModifierProtocolInstaller.allServerInstallers );
 
             HandshakeServerInitializer handshakeInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
-                                                                                              protocolInstallerRepository, pipelineBuilder, debugLogProvider,
-                                                                                              config );
+                    protocolInstallerRepository, pipelineBuilder, serverLogService.getInternalLogProvider(),
+                    config );
             ServerChannelInitializer channelInitializer = new ServerChannelInitializer( handshakeInitializer, pipelineBuilder, handshakeTimeout,
-                                                                                        debugLogProvider, config );
+                    serverLogService.getInternalLogProvider(), config );
 
             Executor executor = scheduler.executor( Group.CATCHUP_SERVER );
 
-            return new Server( channelInitializer, parentHandler, debugLogProvider, userLogProvider, listenAddress, serverName, executor, portRegister,
-                               bootstrapConfiguration );
+            return new Server( channelInitializer, parentHandler, serverLogService, listenAddress, serverName, executor, portRegister,
+                    bootstrapConfiguration );
         }
 
-        private List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> buildProtocolList()
+        private static List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> buildProtocolList(
+                ServerLogService serverLogService, Config config, NettyPipelineBuilderFactory pipelineBuilder,
+                CatchupServerHandler catchupServerHandler )
         {
             final var maximumProtocol = config.get( experimental_catchup_protocol ) ? CATCHUP_4_0 : CATCHUP_3_0;
-            final var protocolMap = createApplicationProtocolMap();
+            final var protocolMap = createApplicationProtocolMap( pipelineBuilder, serverLogService.getInternalLogProvider(), catchupServerHandler
+            );
             checkInstallersExhaustive( protocolMap.keySet(), CATCHUP );
 
             return buildServerInstallers( protocolMap, maximumProtocol );
         }
 
-        private Map<ApplicationProtocol,ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> createApplicationProtocolMap()
+        private static Map<ApplicationProtocol,ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> createApplicationProtocolMap(
+                NettyPipelineBuilderFactory pipelineBuilder, LogProvider debugLogProvider,
+                CatchupServerHandler catchupServerHandler )
         {
             return Map.of( CATCHUP_3_0, new CatchupProtocolServerInstallerV3.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler ),
-                           CATCHUP_4_0, new CatchupProtocolServerInstallerV4.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler ) );
+                    CATCHUP_4_0, new CatchupProtocolServerInstallerV4.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler ) );
         }
     }
 

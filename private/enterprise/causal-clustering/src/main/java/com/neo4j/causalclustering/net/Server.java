@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.net;
 
+import com.neo4j.causalclustering.core.ServerLogService;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInboundHandler;
@@ -21,7 +22,6 @@ import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
 
 import static java.lang.String.format;
 
@@ -41,15 +41,15 @@ public class Server extends LifecycleAdapter
     private Channel channel;
     private SocketAddress listenAddress;
 
-    public Server( ChildInitializer childInitializer, ChannelInboundHandler parentHandler, LogProvider debugLogProvider, LogProvider userLogProvider,
+    public Server( ChildInitializer childInitializer, ChannelInboundHandler parentHandler, ServerLogService serverLogService,
             SocketAddress listenAddress, String serverName, Executor executor, ConnectorPortRegister portRegister,
             BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration )
     {
         this.childInitializer = childInitializer;
         this.parentHandler = parentHandler;
         this.listenAddress = listenAddress;
-        this.debugLog = debugLogProvider.getLog( getClass() );
-        this.userLog = userLogProvider.getLog( getClass() );
+        this.debugLog = serverLogService.getInternalLogProvider().getLog( getClass() );
+        this.userLog = serverLogService.getUserLogProvider().getLog( getClass() );
         this.serverName = serverName;
         this.executor = executor;
         this.portRegister = portRegister;
@@ -83,12 +83,12 @@ public class Server extends LifecycleAdapter
             channel = bootstrap.bind().syncUninterruptibly().channel();
             listenAddress = actualListenAddress( channel );
             registerListenAddress();
-            debugLog.info( "%s: bound to '%s' with transport '%s'", serverName, listenAddress, bootstrapConfiguration.channelClass().getSimpleName() );
+            debugLog.info( "bound to '%s' with transport '%s'", listenAddress, bootstrapConfiguration.channelClass().getSimpleName() );
         }
         catch ( Exception e )
         {
             String message =
-                    format( "%s: cannot bind to '%s' with transport '%s'.", serverName, listenAddress, bootstrapConfiguration.channelClass().getSimpleName() );
+                    format( "cannot bind to '%s' with transport '%s'.", listenAddress, bootstrapConfiguration.channelClass().getSimpleName() );
             userLog.error( message + " Message: " + e.getMessage() );
             debugLog.error( message, e );
             workerGroup.shutdownGracefully();
@@ -104,7 +104,7 @@ public class Server extends LifecycleAdapter
             return;
         }
 
-        debugLog.info( serverName + ": stopping and unbinding from: " + listenAddress );
+        debugLog.info( "stopping and unbinding from: " + listenAddress );
         try
         {
             deregisterListenAddress();

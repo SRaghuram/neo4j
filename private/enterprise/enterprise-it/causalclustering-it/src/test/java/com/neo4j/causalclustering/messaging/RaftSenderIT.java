@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.messaging;
 
+import com.neo4j.causalclustering.core.ServerLogService;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.membership.MemberIdSet;
 import com.neo4j.causalclustering.core.consensus.protocol.RaftProtocolClientInstaller;
@@ -321,7 +322,8 @@ class RaftSenderIT
 
         SocketAddress listenAddress = new SocketAddress( "localhost", 0 );
 
-        return new Server( channelInitializer, null, logProvider, logProvider, listenAddress, "raft-server", serverExecutor,
+        return new Server( channelInitializer, null, new ServerLogService( logProvider, logProvider, "raft-server" ), listenAddress, "raft-server",
+                serverExecutor,
                 new ConnectorPortRegister(), BootstrapConfiguration.serverConfig( Config.defaults() ) );
     }
 

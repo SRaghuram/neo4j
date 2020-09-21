@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.cluster;
 
+import com.neo4j.causalclustering.core.ServerLogService;
 import com.neo4j.causalclustering.helper.ErrorHandler;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.Server;
@@ -42,26 +43,28 @@ public class LocalNetworkPlatform
     public void start( ProtocolInstallers serverClientContext, LogProvider logProvider ) throws Throwable
     {
         executor = Executors.newCachedThreadPool();
-        log = logProvider.getLog( getClass() );
+        var benchmarkServer = "BenchmarkServer";
+        var serverLogService = new ServerLogService( logProvider, logProvider, benchmarkServer );
+        this.log = serverLogService.getInternalLog( getClass() );
         try
         {
-            log.info( "BEGIN start" );
+            this.log.info( "BEGIN start" );
             ProtocolInstaller<ProtocolInstaller.Orientation.Server> serverProtocolInstaller = serverClientContext.serverInstaller();
             SocketAddress listenSocketAddress = new SocketAddress( "localhost", SOME_BULLSHIT_PORT );
-            log.info( "Starting server. Binding to: %s", listenSocketAddress );
-            server = new Server( serverProtocolInstaller::install, null, logProvider, logProvider, listenSocketAddress, "BenchmarkServer", executor,
-                                 new ConnectorPortRegister(), BootstrapConfiguration.serverConfig( Config.defaults() ) );
+            this.log.info( "Starting server. Binding to: %s", listenSocketAddress );
+            server = new Server( serverProtocolInstaller::install, null, serverLogService, listenSocketAddress, benchmarkServer, executor,
+                    new ConnectorPortRegister(), BootstrapConfiguration.serverConfig( Config.defaults() ) );
             server.init();
             server.start();
 
             client = new Client( serverClientContext.clientInstaller() );
-            log.info( "Client channel connecting to: %s", listenSocketAddress );
+            this.log.info( "Client channel connecting to: %s", listenSocketAddress );
             // connect
             client.getOrConnect();
         }
         catch ( Throwable t )
         {
-            log.error( "Exception when starting", t );
+            this.log.error( "Exception when starting", t );
             // best effort stop
             try
             {
@@ -74,7 +77,7 @@ public class LocalNetworkPlatform
         }
         finally
         {
-            log.info( "END start" );
+            this.log.info( "END start" );
         }
     }
 

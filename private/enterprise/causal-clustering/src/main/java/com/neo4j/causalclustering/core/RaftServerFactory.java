@@ -65,10 +65,11 @@ public class RaftServerFactory
     private final ClusteringIdentityModule clusteringIdentityModule;
     private final ApplicationSupportedProtocols supportedApplicationProtocol;
     private final RaftMessageLogger<RaftMemberId> raftMessageLogger;
-    private final LogProvider logProvider;
     private final NettyPipelineBuilderFactory pipelineBuilderFactory;
     private final Collection<ModifierSupportedProtocols> supportedModifierProtocols;
     private final DatabaseIdRepository databaseIdRepository;
+    private final ServerLogService serverLogService;
+    private final LogProvider internalLogProvider;
 
     RaftServerFactory( GlobalModule globalModule, ClusteringIdentityModule clusteringIdentityModule, NettyPipelineBuilderFactory pipelineBuilderFactory,
             RaftMessageLogger<RaftMemberId> raftMessageLogger, ApplicationSupportedProtocols supportedApplicationProtocol,
@@ -78,10 +79,11 @@ public class RaftServerFactory
         this.clusteringIdentityModule = clusteringIdentityModule;
         this.supportedApplicationProtocol = supportedApplicationProtocol;
         this.raftMessageLogger = raftMessageLogger;
-        this.logProvider = globalModule.getLogService().getInternalLogProvider();
         this.pipelineBuilderFactory = pipelineBuilderFactory;
         this.supportedModifierProtocols = supportedModifierProtocols;
         this.databaseIdRepository = databaseIdRepository;
+        this.serverLogService = new ServerLogService( globalModule.getLogService(), RAFT_SERVER_NAME );
+        this.internalLogProvider = serverLogService.getInternalLogProvider();
     }
 
     Server createRaftServer( RaftMessageDispatcher raftMessageDispatcher, ChannelInboundHandler installedProtocolsHandler )
@@ -93,7 +95,7 @@ public class RaftServerFactory
         var modifierProtocolRepository =
                 new ModifierProtocolRepository( ModifierProtocols.values(), supportedModifierProtocols );
 
-        var nettyHandler = new RaftMessageNettyHandler( logProvider );
+        var nettyHandler = new RaftMessageNettyHandler( internalLogProvider );
 
         var maximumRaftVersion = globalModule.getGlobalConfig().get( experimental_raft_protocol ) ? ApplicationProtocols.RAFT_4_0
                                                                                                   : ApplicationProtocols.RAFT_3_0;
@@ -102,18 +104,17 @@ public class RaftServerFactory
                 ModifierProtocolInstaller.allServerInstallers );
 
         var handshakeInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
-                                                                   protocolInstallerRepository, pipelineBuilderFactory, logProvider, config );
+                protocolInstallerRepository, pipelineBuilderFactory, internalLogProvider, config );
 
         var handshakeTimeout = config.get( CausalClusteringSettings.handshake_timeout );
         var channelInitializer = new ServerChannelInitializer( handshakeInitializer, pipelineBuilderFactory,
-                                                               handshakeTimeout, logProvider, config );
+                handshakeTimeout, internalLogProvider, config );
 
         var raftListenAddress = config.get( CausalClusteringSettings.raft_listen_address );
 
         var raftServerExecutor = globalModule.getJobScheduler().executor( Group.RAFT_SERVER );
-        var raftServer = new Server( channelInitializer, installedProtocolsHandler, logProvider,
-                                     globalModule.getLogService().getUserLogProvider(), raftListenAddress, RAFT_SERVER_NAME, raftServerExecutor,
-                                     globalModule.getConnectorPortRegister(), BootstrapConfiguration.serverConfig( config ) );
+        var raftServer = new Server( channelInitializer, installedProtocolsHandler, serverLogService, raftListenAddress, RAFT_SERVER_NAME, raftServerExecutor,
+                globalModule.getConnectorPortRegister(), BootstrapConfiguration.serverConfig( config ) );
 
         var myself = /*RaftMessageLogger*/ RaftMemberId.from( clusteringIdentityModule.memberId() );
         var loggingRaftInbound = new LoggingInbound( nettyHandler, raftMessageLogger, myself, databaseIdRepository );
@@ -136,23 +137,23 @@ public class RaftServerFactory
     {
         final var clock = globalModule.getGlobalClock();
         final var factoryV2 = new RaftProtocolServerInstaller.Factory( nettyHandler,
-                                                                       pipelineBuilderFactory,
-                                                                       logProvider,
-                                                                       c -> new DecodingDispatcher( c, logProvider, RaftMessageDecoder::new ),
-                                                                       () -> new RaftMessageComposer( clock ),
-                                                                       RAFT_2_0 );
+                pipelineBuilderFactory,
+                internalLogProvider,
+                c -> new DecodingDispatcher( c, internalLogProvider, RaftMessageDecoder::new ),
+                () -> new RaftMessageComposer( clock ),
+                RAFT_2_0 );
         final var factoryV3 = new RaftProtocolServerInstaller.Factory( nettyHandler,
-                                                                       pipelineBuilderFactory,
-                                                                       logProvider,
-                                                                       c -> new DecodingDispatcher( c, logProvider, RaftMessageDecoderV3::new ),
-                                                                       () -> new RaftMessageComposer( clock ),
-                                                                       RAFT_3_0 );
+                pipelineBuilderFactory,
+                internalLogProvider,
+                c -> new DecodingDispatcher( c, internalLogProvider, RaftMessageDecoderV3::new ),
+                () -> new RaftMessageComposer( clock ),
+                RAFT_3_0 );
         final var factoryV4 = new RaftProtocolServerInstaller.Factory( nettyHandler,
-                                                                       pipelineBuilderFactory,
-                                                                       logProvider,
-                                                                       c -> new DecodingDispatcher( c, logProvider, RaftMessageDecoderV4::new ),
-                                                                       () -> new RaftMessageComposer( clock ),
-                                                                       RAFT_4_0 );
+                pipelineBuilderFactory,
+                internalLogProvider,
+                c -> new DecodingDispatcher( c, internalLogProvider, RaftMessageDecoderV4::new ),
+                () -> new RaftMessageComposer( clock ),
+                RAFT_4_0 );
 
         return List.of( factoryV2, factoryV3, factoryV4 )
                    .stream()
