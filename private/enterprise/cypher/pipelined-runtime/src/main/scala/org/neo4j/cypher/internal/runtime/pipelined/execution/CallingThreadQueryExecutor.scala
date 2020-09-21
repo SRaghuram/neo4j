@@ -94,7 +94,7 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
 
     val (workersProfiler, queryProfile) =
       if (doProfile) {
-        val profiler = new FixedWorkersQueryProfiler(1, executionGraphDefinition.applyRhsPlans, stateFactory.memoryTracker)
+        val profiler = new FixedWorkersQueryProfiler(1, executionGraphDefinition.applyRhsPlans, stateFactory.memoryTracker, queryContext.transactionalContext.kernelStatisticProvider)
         (profiler, profiler.Profile)
       } else {
         (WorkersQueryProfiler.NONE, QueryProfile.NONE)

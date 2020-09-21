@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.execution
 
 import java.util
 
+import org.neo4j.cypher.internal.profiling.KernelStatisticProvider
 import org.neo4j.cypher.internal.profiling.NoKernelStatisticProvider
 import org.neo4j.cypher.internal.profiling.ProfilingTracer
 import org.neo4j.cypher.internal.profiling.ProfilingTracerData
@@ -36,10 +37,10 @@ object WorkersQueryProfiler {
  *                      for counting apply rows. Instead we return the rhs operator rows, as these are guaranteed to
  *                      be identical.
  */
-class FixedWorkersQueryProfiler(numberOfWorkers: Int, applyRhsPlans: Map[Int, Int], memoryTracker: QueryMemoryTracker) extends WorkersQueryProfiler {
+class FixedWorkersQueryProfiler(numberOfWorkers: Int, applyRhsPlans: Map[Int, Int], memoryTracker: QueryMemoryTracker, statisticProvider: KernelStatisticProvider) extends WorkersQueryProfiler {
 
   private val profilers: Array[ProfilingTracer] =
-    (0 until numberOfWorkers).map(_ => new ProfilingTracer(NoKernelStatisticProvider)).toArray
+    (0 until numberOfWorkers).map(_ => new ProfilingTracer(statisticProvider)).toArray
 
   override def queryProfiler(workerId: Int): QueryProfiler = {
     profilers(workerId)
@@ -67,13 +68,13 @@ class FixedWorkersQueryProfiler(numberOfWorkers: Int, applyRhsPlans: Map[Int, In
           workerData.time(),
           workerData.dbHits(),
           workerData.rows(),
-          0,
-          0,
+          workerData.pageCacheHits(),
+          workerData.pageCacheMisses(),
           0)
 
         i += 1
       }
-      data.update(0, 0, 0, OperatorProfile.NO_DATA, OperatorProfile.NO_DATA, QueryMemoryTracker.memoryAsProfileData(memoryTracker.maxMemoryOfOperator(operatorId)))
+      data.update(0, 0, 0, 0, 0, QueryMemoryTracker.memoryAsProfileData(memoryTracker.maxMemoryOfOperator(operatorId)))
       data.sanitize()
       data
     }
@@ -87,7 +88,7 @@ class FixedWorkersQueryProfiler(numberOfWorkers: Int, applyRhsPlans: Map[Int, In
         data.update(timeData.time(), 0, rowData.rows(), 0, 0, 0)
         i += 1
       }
-      data.update(0, 0, 0, OperatorProfile.NO_DATA, OperatorProfile.NO_DATA, QueryMemoryTracker.memoryAsProfileData(memoryTracker.maxMemoryOfOperator(applyPlanId)))
+      data.update(0, 0, 0, 0, 0, QueryMemoryTracker.memoryAsProfileData(memoryTracker.maxMemoryOfOperator(applyPlanId)))
       data.sanitize()
       data
     }

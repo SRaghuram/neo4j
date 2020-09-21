@@ -87,6 +87,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ProcedureCallDbHitsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProcedureCallTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileMemoryTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileMemoryTrackingDisabledTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ProfilePageCacheStatsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileRowsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileTimeTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProjectEndpointsTestBase
@@ -495,6 +496,8 @@ class PipelinedProfileMemoryTest extends ProfileMemoryTestBase(FUSING, PIPELINED
                                  with ProfilePipelinedMemoryTestBase
 class PipelinedProfileMemoryTrackingDisabledNoFusingTest extends ProfileMemoryTrackingDisabledTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
 class PipelinedProfileMemoryTrackingDisabledTest extends ProfileMemoryTrackingDisabledTestBase(FUSING, PIPELINED, SIZE_HINT)
+
+class PipelinedProfilePageCacheStatsNoFusingTest extends ProfilePageCacheStatsTestBase(NO_FUSING, PIPELINED)
 
 class PipelinedNestedPlanExpressionTest extends NestedPlanExpressionTestBase(FUSING, PIPELINED, SIZE_HINT)
 class PipelinedNestedPlanExpressionNoFusingTest extends NestedPlanExpressionTestBase(NO_FUSING, PIPELINED, SIZE_HINT)

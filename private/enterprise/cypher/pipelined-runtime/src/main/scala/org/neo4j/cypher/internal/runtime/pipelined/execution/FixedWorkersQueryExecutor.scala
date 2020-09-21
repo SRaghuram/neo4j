@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.execution
 import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
+import org.neo4j.cypher.internal.profiling.NoKernelStatisticProvider
 import org.neo4j.cypher.internal.runtime.InputDataStream
 import org.neo4j.cypher.internal.runtime.MemoryTracking
 import org.neo4j.cypher.internal.runtime.QueryContext
@@ -95,7 +96,7 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
 
     val (workersProfiler, queryProfile) =
       if (doProfile) {
-        val profiler = new FixedWorkersQueryProfiler(workerManager.numberOfWorkers, executionGraphDefinition.applyRhsPlans, stateFactory.memoryTracker)
+        val profiler = new FixedWorkersQueryProfiler(workerManager.numberOfWorkers, executionGraphDefinition.applyRhsPlans, stateFactory.memoryTracker, NoKernelStatisticProvider)
         (profiler, profiler.Profile)
       } else {
         (WorkersQueryProfiler.NONE, QueryProfile.NONE)
