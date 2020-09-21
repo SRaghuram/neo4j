@@ -73,4 +73,20 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     r3.executionPlanDescription() should
       includeSomewhere.aPlan("Limit").withEstimatedRows(PlannerDefaults.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
   }
+
+  test("should estimate rows after DISTINCT") {
+    (0 until 100).map(_ => createLabeledNode("Person"))
+    val result = executeSingle("EXPLAIN MATCH (p:Person) RETURN DISTINCT p LIMIT 17")
+    result.executionPlanDescription() should
+      includeSomewhere.aPlan("Limit")
+        .withEstimatedRows(17)
+  }
+
+  test("should estimate rows after aggregation") {
+    (0 until 25*25).map(_ => createLabeledNode("Person"))
+    val result = executeSingle("EXPLAIN MATCH (p:Person) RETURN p, count(*) LIMIT 17")
+    result.executionPlanDescription() should
+      includeSomewhere.aPlan("Limit")
+        .withEstimatedRows(17)
+  }
 }
