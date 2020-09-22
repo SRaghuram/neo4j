@@ -13,7 +13,8 @@ import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.database.NamedDatabaseId;
-import org.neo4j.logging.Log;
+import org.neo4j.logging.log4j.LogExtended;
+import org.neo4j.logging.log4j.StructureAwareMessage;
 import org.neo4j.values.AnyValueWriter;
 import org.neo4j.values.virtual.MapValue;
 
@@ -23,7 +24,14 @@ import static org.neo4j.values.AnyValueWriter.EntityMode.REFERENCE;
 
 class ConfiguredQueryLogger implements QueryLogger
 {
-    private final Log log;
+    private enum QueryEvent
+    {
+        START,
+        ROLLBACK,
+        COMMIT
+    }
+
+    private final LogExtended log;
     private final long thresholdMillis;
     private final boolean logQueryParameters;
     private final AnyValueWriter.EntityMode parameterEntityMode;
@@ -34,7 +42,7 @@ class ConfiguredQueryLogger implements QueryLogger
     private final boolean verboseLogging;
     private final boolean rawLogging;
 
-    ConfiguredQueryLogger( Log log, Config config )
+    ConfiguredQueryLogger( LogExtended log, Config config )
     {
         this.log = log;
         this.thresholdMillis = config.get( GraphDatabaseSettings.log_queries_threshold ).toMillis();
@@ -55,25 +63,30 @@ class ConfiguredQueryLogger implements QueryLogger
         {
             QuerySnapshot snapshot = query.snapshot();
             boolean alreadyLoggedStart = this.rawLogging && snapshot.obfuscatedQueryText().isPresent();
-            boolean canLogStart = canCreateLogEntry( snapshot, false );
+            boolean canLogStart = canCreateLogEntry( snapshot );
 
             if ( !alreadyLoggedStart && canLogStart )
             {
-                log.info( "Query started: " + logEntry( snapshot, false ) );
+                log.info( new QueryLogLine( snapshot, false, QueryEvent.START ) );
             }
         }
+    }
+
+    private boolean canCreateLogEntry( QuerySnapshot query )
+    {
+        return query.obfuscatedQueryText().isPresent() || rawLogging;
     }
 
     @Override
     public void failure( ExecutingQuery query, Throwable failure )
     {
-        log.error( logEntry( query.snapshot(), true ), failure );
+        log.error( new QueryLogLine( query.snapshot(), true, QueryEvent.ROLLBACK ), failure );
     }
 
     @Override
     public void failure( ExecutingQuery query, String reason )
     {
-        log.error( logEntry( query.snapshot(), true, reason ) );
+        log.error( new QueryLogLine( query.snapshot(), true, QueryEvent.ROLLBACK, reason ) );
     }
 
     @Override
@@ -81,61 +94,135 @@ class ConfiguredQueryLogger implements QueryLogger
     {
         if ( NANOSECONDS.toMillis( query.elapsedNanos() ) >= thresholdMillis || verboseLogging )
         {
-            log.info( logEntry( query.snapshot(), false ) );
+            log.info( new QueryLogLine( query.snapshot(), false, QueryEvent.COMMIT ) );
         }
     }
 
-    private String logEntry( QuerySnapshot query, Boolean fallbackToRaw, String reason )
+    private class QueryLogLine extends StructureAwareMessage
     {
-        return logEntry( query, fallbackToRaw ) + " - " + reason.split( System.getProperty( "line.separator" ) )[0];
+        private final QuerySnapshot snapshot;
+        private final QueryEvent event;
+        private final String sourceString;
+        private final String username;
+        private final String databaseName;
+        private final String reason;
+        private final String queryText;
+        private final boolean shouldUseRawText;
+
+        private QueryLogLine( QuerySnapshot snapshot, boolean fallbackToRaw, QueryEvent event )
+        {
+            this( snapshot, fallbackToRaw, event, null );
+        }
+
+        private QueryLogLine( QuerySnapshot snapshot, boolean fallbackToRaw, QueryEvent event, String reason )
+        {
+            this.snapshot = snapshot;
+            this.event = event;
+            this.reason = reason;
+
+            sourceString = snapshot.clientConnection().asConnectionDetails();
+            username = snapshot.username();
+            databaseName = snapshot.databaseId().map( NamedDatabaseId::name ).orElse( "<none>" );
+
+            shouldUseRawText = rawLogging || (snapshot.obfuscatedQueryText().isEmpty() && fallbackToRaw);
+
+            queryText = shouldUseRawText ? snapshot.rawQueryText()
+                                         : snapshot.obfuscatedQueryText().get();
+        }
+
+        @Override
+        public void asString( StringBuilder sb )
+        {
+            if ( event == QueryEvent.START )
+            {
+                sb.append( "Query started: " );
+            }
+            if ( verboseLogging )
+            {
+                sb.append( "id:" ).append( snapshot.id() ).append( " - " );
+            }
+            sb.append( TimeUnit.MICROSECONDS.toMillis( snapshot.elapsedTimeMicros() ) ).append( " ms: " );
+            if ( logDetailedTime )
+            {
+                QueryLogFormatter.formatDetailedTime( sb, snapshot );
+            }
+            if ( logAllocatedBytes )
+            {
+                QueryLogFormatter.formatAllocatedBytes( sb, snapshot );
+            }
+            if ( logPageDetails )
+            {
+                QueryLogFormatter.formatPageDetails( sb, snapshot );
+            }
+
+            sb.append( sourceString ).append( "\t" ).append( databaseName ).append( " - " ).append( username ).append( " - " ).append( queryText );
+
+            if ( logQueryParameters )
+            {
+                MapValue params = shouldUseRawText ? snapshot.rawQueryParameters()
+                        : snapshot.obfuscatedQueryParameters().get();
+                QueryLogFormatter.formatMapValue( sb.append(" - "), params, parameterEntityMode );
+            }
+            if ( logRuntime )
+            {
+                sb.append( " - runtime=" ).append( snapshot.runtime() );
+            }
+            QueryLogFormatter.formatMap( sb.append(" - "), snapshot.transactionAnnotationData() );
+            if ( reason != null )
+            {
+                sb.append( " - " ).append( reason.split( System.lineSeparator() )[0] );
+            }
+        }
+
+        @Override
+        public void asStructure( FieldConsumer consumer )
+        {
+            StringBuilder buffer = new StringBuilder();
+            consumer.add( "event", event.toString().toLowerCase() );
+            if ( verboseLogging )
+            {
+                consumer.add( "id", snapshot.id() );
+            }
+            consumer.add( "elapsedTimeMs", TimeUnit.MICROSECONDS.toMillis( snapshot.elapsedTimeMicros() ) );
+            if ( logDetailedTime )
+            {
+                consumer.add( "planning", TimeUnit.MICROSECONDS.toMillis( snapshot.compilationTimeMicros() ) );
+                consumer.add( "cpu", TimeUnit.MICROSECONDS.toMillis( snapshot.cpuTimeMicros() ) );
+                consumer.add( "waiting", TimeUnit.MICROSECONDS.toMillis( snapshot.waitTimeMicros() ) );
+            }
+            if ( logAllocatedBytes )
+            {
+                consumer.add( "allocatedBytes", snapshot.allocatedBytes() );
+            }
+            if ( logPageDetails )
+            {
+                consumer.add( "pageHits", snapshot.pageHits() );
+                consumer.add( "pageFaults", snapshot.pageFaults() );
+            }
+            consumer.add( "source", sourceString );
+            consumer.add( "database", databaseName );
+            consumer.add( "username", username );
+            consumer.add( "query", queryText );
+
+            if ( logQueryParameters )
+            {
+                MapValue params = shouldUseRawText ? snapshot.rawQueryParameters()
+                        : snapshot.obfuscatedQueryParameters().get();
+                QueryLogFormatter.formatMapValue( buffer, params, parameterEntityMode );
+                consumer.add( "queryParameters", buffer.toString() );
+            }
+            if ( logRuntime )
+            {
+                consumer.add( "runtime", snapshot.runtime() );
+            }
+            buffer.setLength( 0 );
+            QueryLogFormatter.formatMap( buffer, snapshot.transactionAnnotationData() );
+            consumer.add( "annotationData", buffer.toString() );
+            if ( reason != null )
+            {
+                consumer.add( "failureReason", reason );
+            }
+        }
     }
 
-    private boolean canCreateLogEntry( QuerySnapshot query, Boolean fallbackToRaw )
-    {
-        return query.obfuscatedQueryText().isPresent() || rawLogging || fallbackToRaw;
-    }
-
-    private String logEntry( QuerySnapshot query, Boolean fallbackToRaw )
-    {
-        String sourceString = query.clientConnection().asConnectionDetails();
-        String username = query.username();
-        String databaseName = query.databaseId().map( NamedDatabaseId::name ).orElse( "<none>" );
-
-        boolean shouldUseRawText = rawLogging || (query.obfuscatedQueryText().isEmpty() && fallbackToRaw);
-
-        String queryText = shouldUseRawText ? query.rawQueryText()
-                                            : query.obfuscatedQueryText().get();
-
-        StringBuilder result = new StringBuilder( 80 );
-        if ( verboseLogging )
-        {
-            result.append( "id:" ).append( query.id() ).append( " - " );
-        }
-        result.append( TimeUnit.MICROSECONDS.toMillis( query.elapsedTimeMicros() ) ).append( " ms: " );
-        if ( logDetailedTime )
-        {
-            QueryLogFormatter.formatDetailedTime( result, query );
-        }
-        if ( logAllocatedBytes )
-        {
-            QueryLogFormatter.formatAllocatedBytes( result, query );
-        }
-        if ( logPageDetails )
-        {
-            QueryLogFormatter.formatPageDetails( result, query );
-        }
-        result.append( sourceString ).append( "\t" ).append( databaseName ).append( " - " ).append( username ).append( " - " ).append( queryText );
-        if ( logQueryParameters )
-        {
-            MapValue params = shouldUseRawText ? query.rawQueryParameters()
-                                               : query.obfuscatedQueryParameters().get();
-            QueryLogFormatter.formatMapValue( result.append(" - "), params, parameterEntityMode );
-        }
-        if ( logRuntime )
-        {
-            result.append( " - runtime=" ).append( query.runtime() );
-        }
-        QueryLogFormatter.formatMap( result.append(" - "), query.transactionAnnotationData() );
-        return result.toString();
-    }
 }

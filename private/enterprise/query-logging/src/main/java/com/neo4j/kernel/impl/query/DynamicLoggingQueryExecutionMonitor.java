@@ -21,6 +21,7 @@ import org.neo4j.logging.Level;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.logging.log4j.LogConfig;
+import org.neo4j.logging.log4j.LogExtended;
 import org.neo4j.logging.log4j.Neo4jLoggerContext;
 import org.neo4j.memory.HeapDumper;
 
@@ -100,7 +101,7 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
             {
                 heapDumper = null;
             }
-            currentLog = new ConfiguredQueryLogger( log, config );
+            currentLog = new ConfiguredQueryLogger( (LogExtended) log, config );
         }
         else
         {
