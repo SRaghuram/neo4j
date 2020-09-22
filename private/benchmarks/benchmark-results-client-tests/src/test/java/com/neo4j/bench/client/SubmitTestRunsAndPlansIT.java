@@ -311,7 +311,7 @@ public class SubmitTestRunsAndPlansIT
             BenchmarkGroup group = new BenchmarkGroup( "group1" );
             Benchmark benchmark1 = Benchmark.benchmarkFor( "desc1", "bench1", Benchmark.Mode.LATENCY, emptyMap() );
             Benchmark benchmark2 = Benchmark.benchmarkFor( "desc2", "bench2", Benchmark.Mode.LATENCY, emptyMap() );
-            Benchmark benchmark3 = Benchmark.benchmarkFor( "desc3", "bench3", Benchmark.Mode.LATENCY, emptyMap(), "RETURN 1" );
+            Benchmark benchmark3 = Benchmark.benchmarkFor( "desc3", "bench3", Benchmark.Mode.LATENCY, emptyMap() );
 
             ArrayList<BenchmarkPlan> benchmarkPlans1 = newArrayList(
                     new BenchmarkPlan( group, benchmark1, plan( "a" ) ),
@@ -753,6 +753,7 @@ public class SubmitTestRunsAndPlansIT
                 "slotted",
                 "slotted",
                 "3.2",
+                description,
                 new PlanTree( description, root )
         );
     }

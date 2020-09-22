@@ -5,6 +5,11 @@
  */
 package com.neo4j.bench.model.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -18,6 +23,7 @@ public class Plan
     private static final String USED_RUNTIME = "used_runtime";
     private static final String DEFAULT_RUNTIME = "default_runtime";
     private static final String CYPHER_VERSION = "cypher_version";
+    private static final String QUERY = "cypher_query";
 
     private final String requestedPlanner; // e.g. 'idp'
     private final String usedPlanner;
@@ -27,25 +33,19 @@ public class Plan
     private final String defaultRuntime;
     private final String cypherVersion; // e.g. 'CYPHER 3.1'
     private final PlanTree planTree;
+    private final String queryString;
 
-    /**
-     * WARNING: Never call this explicitly.
-     * No-params constructor is only used for JSON (de)serialization.
-     */
-    public Plan()
-    {
-        this( "-1", "-1", "-1", "-1", "-1", "-1", "-1", new PlanTree() );
-    }
-
+    @JsonCreator
     public Plan(
-            String requestedPlanner,
-            String usedPlanner,
-            String defaultPlanner,
-            String requestedRuntime,
-            String usedRuntime,
-            String defaultRuntime,
-            String cypherVersion,
-            PlanTree planTree )
+            @JsonProperty( "requestedPlanner" ) String requestedPlanner,
+            @JsonProperty( "usedPlanner" ) String usedPlanner,
+            @JsonProperty( "defaultPlanner" ) String defaultPlanner,
+            @JsonProperty( "requestedRuntime" ) String requestedRuntime,
+            @JsonProperty( "usedRuntime" ) String usedRuntime,
+            @JsonProperty( "defaultRuntime" ) String defaultRuntime,
+            @JsonProperty( "cypherVersion" ) String cypherVersion,
+            @JsonProperty( "queryString" ) String queryString,
+            @JsonProperty( "planTree" ) PlanTree planTree )
     {
         this.requestedPlanner = requestedPlanner;
         this.usedPlanner = usedPlanner;
@@ -54,6 +54,7 @@ public class Plan
         this.usedRuntime = usedRuntime;
         this.defaultRuntime = defaultRuntime;
         this.cypherVersion = cypherVersion;
+        this.queryString = queryString;
         this.planTree = planTree;
     }
 
@@ -72,37 +73,20 @@ public class Plan
         map.put( USED_RUNTIME, usedRuntime );
         map.put( DEFAULT_RUNTIME, defaultRuntime );
         map.put( CYPHER_VERSION, cypherVersion );
+        map.put( QUERY, queryString );
         return map;
     }
 
     @Override
-    public boolean equals( Object o )
+    public boolean equals( Object that )
     {
-        if ( this == o )
-        {
-            return true;
-        }
-        if ( o == null || getClass() != o.getClass() )
-        {
-            return false;
-        }
-        Plan plan = (Plan) o;
-        return Objects.equals( requestedPlanner, plan.requestedPlanner ) &&
-               Objects.equals( usedPlanner, plan.usedPlanner ) &&
-               Objects.equals( defaultPlanner, plan.defaultPlanner ) &&
-               Objects.equals( requestedRuntime, plan.requestedRuntime ) &&
-               Objects.equals( usedRuntime, plan.usedRuntime ) &&
-               Objects.equals( defaultRuntime, plan.defaultRuntime ) &&
-               Objects.equals( cypherVersion, plan.cypherVersion ) &&
-               Objects.equals( planTree, plan.planTree );
+        return EqualsBuilder.reflectionEquals( this, that );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects
-                .hash( requestedPlanner, usedPlanner, defaultPlanner, requestedRuntime, usedRuntime, defaultRuntime,
-                       cypherVersion, planTree );
+        return HashCodeBuilder.reflectionHashCode( this );
     }
 
     @Override

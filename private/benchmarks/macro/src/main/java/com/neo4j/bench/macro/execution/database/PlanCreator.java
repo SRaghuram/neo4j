@@ -91,7 +91,8 @@ public class PlanCreator
         PlannerDescription plannerDescription = PlannerDescription.fromResults( profilePlanDescription,
                                                                                 explainPlanDescription,
                                                                                 queryString.planner().name(),
-                                                                                queryString.runtime().name() );
+                                                                                queryString.runtime().name(),
+                                                                                queryString.value() );
 
         return plannerDescription.toPlan();
     }

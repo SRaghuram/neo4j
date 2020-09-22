@@ -167,7 +167,7 @@ public class Query
         params.put( "runtime", queryString.runtime().name() );
         params.put( "execution_mode", queryString.executionMode().name() );
         params.put( "deployment", deployment.name() );
-        return Benchmark.benchmarkFor( description, simpleName, mode(), params, queryString.stableValue() );
+        return Benchmark.benchmarkFor( description, simpleName, mode(), params );
     }
 
     private Benchmark.Mode mode()

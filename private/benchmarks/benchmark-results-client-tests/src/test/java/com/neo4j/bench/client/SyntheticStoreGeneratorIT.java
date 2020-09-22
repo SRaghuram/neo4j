@@ -12,7 +12,6 @@ import com.neo4j.bench.client.queries.schema.VerifyStoreSchema;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.Repository;
 import com.neo4j.harness.junit.extension.EnterpriseNeo4jExtension;
-import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matchers;
 import org.hamcrest.core.AnyOf;
 import org.junit.jupiter.api.AfterEach;
@@ -47,6 +46,7 @@ import static com.neo4j.bench.model.options.Edition.COMMUNITY;
 import static com.neo4j.bench.model.options.Edition.ENTERPRISE;
 import static java.util.Collections.singletonMap;
 import static java.util.stream.Collectors.toList;
+import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -143,7 +143,7 @@ public class SyntheticStoreGeneratorIT
         verifySchema( generationResult );
     }
 
-    private SyntheticStoreGenerator.GenerationResult generateStoreUsing( SyntheticStoreGenerator generator ) throws Exception
+    private SyntheticStoreGenerator.GenerationResult generateStoreUsing( SyntheticStoreGenerator generator )
     {
         Main.main( ReIndexStoreCommand.argsFor( USERNAME, PASSWORD, boltUri ) );
 
@@ -257,6 +257,11 @@ public class SyntheticStoreGeneratorIT
                             generationResult.testRunErrors(),
                             equalTo( testRunErrors ) );
 
+                int planCount = session.run( "MATCH (:Plan) RETURN count(*) AS c" ).next().get( "c" ).asInt();
+                assertThat( "has correct number of Plan nodes",
+                            planCount,
+                            equalTo( generationResult.plan() ) );
+
                 // -------------------------------------------------------------
                 // -------------------- Relationship Checks --------------------
                 // -------------------------------------------------------------
@@ -269,7 +274,7 @@ public class SyntheticStoreGeneratorIT
                                .next().get( "c" ).asInt();
                 assertThat( "has correct number of IN_ENVIRONMENT relationships",
                             totalInEnvironmentCount,
-                            CoreMatchers.allOf( equalTo( testRunCount ), equalTo( constrainedInEnvironmentCount ) ) );
+                            allOf( equalTo( testRunCount ), equalTo( constrainedInEnvironmentCount ) ) );
 
                 int totalWithJavaCount =
                         session.run( "RETURN size(()<-[:WITH_JAVA]-()) AS c" )
@@ -279,28 +284,28 @@ public class SyntheticStoreGeneratorIT
                                .next().get( "c" ).asInt();
                 assertThat( "has correct number of WITH_JAVA relationships",
                             totalWithJavaCount,
-                            CoreMatchers.allOf( equalTo( testRunCount ), equalTo( constrainedWithJavaCount ) ) );
+                            allOf( equalTo( testRunCount ), equalTo( constrainedWithJavaCount ) ) );
 
                 int totalWithProjectCount =
                         session.run( "RETURN size(()<-[:WITH_PROJECT]-()) AS c" )
                                .next().get( "c" ).asInt();
                 assertThat( "has correct number of Project",
                             totalWithProjectCount,
-                            CoreMatchers.allOf( equalTo( totalWithProjectCount ), equalTo( testRunCount ) ) );
+                            allOf( equalTo( totalWithProjectCount ), equalTo( testRunCount ) ) );
 
                 int projectCount =
                         session.run( "MATCH (:Project) RETURN COUNT(*) AS c" )
                                .next().get( "c" ).asInt();
                 assertThat( "has correct number of Project",
                             totalWithProjectCount,
-                            CoreMatchers.allOf( equalTo( testRunCount ), equalTo( projectCount ) ) );
+                            allOf( equalTo( testRunCount ), equalTo( projectCount ) ) );
 
                 int constrainedWithNeo4jCount =
                         session.run( "RETURN size((:Project)<-[:WITH_PROJECT]-(:TestRun)) AS c" )
                                .next().get( "c" ).asInt();
                 assertThat( "has correct number of WITH_PROJECT relationships",
                             totalWithProjectCount,
-                            CoreMatchers.allOf( equalTo( testRunCount ), equalTo( constrainedWithNeo4jCount ) ) );
+                            allOf( equalTo( testRunCount ), equalTo( constrainedWithNeo4jCount ) ) );
 
                 int totalHasConfigCount =
                         session.run( "RETURN size(()<-[:HAS_CONFIG]-()) AS c" )
@@ -331,7 +336,7 @@ public class SyntheticStoreGeneratorIT
                                .next().get( "c" ).asInt();
                 assertThat( "has correct number of WITH_TOOL relationships",
                             totalWithToolCount,
-                            CoreMatchers.allOf( equalTo( toolVersionCount ), equalTo( constrainedWithToolCount ) ) );
+                            allOf( equalTo( toolVersionCount ), equalTo( constrainedWithToolCount ) ) );
 
                 int totalHasMetricsCount =
                         session.run( "RETURN size(()<-[:HAS_METRICS]-()) AS c" )
@@ -341,7 +346,7 @@ public class SyntheticStoreGeneratorIT
                                .next().get( "c" ).asInt();
                 assertThat( "has correct number of HAS_METRICS relationships",
                             totalHasMetricsCount,
-                            CoreMatchers.allOf( equalTo( metricsCount ), equalTo( constrainedHasMetricsCount ) ) );
+                            allOf( equalTo( metricsCount ), equalTo( constrainedHasMetricsCount ) ) );
 
                 int totalMetricsForCount =
                         session.run( "RETURN size(()<-[:METRICS_FOR]-()) AS c" )
@@ -351,7 +356,7 @@ public class SyntheticStoreGeneratorIT
                                .next().get( "c" ).asInt();
                 assertThat( "has correct number of METRICS_FOR relationships",
                             totalMetricsForCount,
-                            CoreMatchers.allOf( equalTo( metricsCount ), equalTo( constrainedMetricsForCount ) ) );
+                            allOf( equalTo( metricsCount ), equalTo( constrainedMetricsForCount ) ) );
 
                 int totalHasBenchmarkCount =
                         session.run( "RETURN size(()<-[:HAS_BENCHMARK]-()) AS c" )
@@ -361,7 +366,28 @@ public class SyntheticStoreGeneratorIT
                                .next().get( "c" ).asInt();
                 assertThat( "has correct number of HAS_BENCHMARK relationships",
                             totalHasBenchmarkCount,
-                            CoreMatchers.allOf( equalTo( benchmarkCount ), equalTo( constrainedHasBenchmarkCount ) ) );
+                            allOf( equalTo( benchmarkCount ), equalTo( constrainedHasBenchmarkCount ) ) );
+
+                int totalHasPlanCount =
+                        session.run( "RETURN size(()<-[:HAS_PLAN]-()) AS c" )
+                               .next().get( "c" ).asInt();
+                int constrainedHasPlanCount =
+                        session.run( "RETURN size((:Plan)<-[:HAS_PLAN]-(:Metrics)) AS c" )
+                               .next().get( "c" ).asInt();
+                assertThat( "has correct number of HAS_PLAN relationships",
+                            planCount,
+                            allOf( equalTo( totalHasPlanCount ), equalTo( constrainedHasPlanCount ) ) );
+
+                int totalHasPlanTreeCount =
+                        session.run( "RETURN size(()<-[:HAS_PLAN_TREE]-()) AS c" )
+                               .next().get( "c" ).asInt();
+                int constrainedHasPlanTreeCount =
+                        session.run( "RETURN size((:PlanTree)<-[:HAS_PLAN_TREE]-(:Plan)) AS c" )
+                               .next().get( "c" ).asInt();
+                assertThat( "has correct number of HAS_PLAN_TREE relationships",
+                            planCount,
+                            allOf( equalTo( totalHasPlanTreeCount ),
+                                   equalTo( constrainedHasPlanTreeCount ) ) );
             }
         }
     }

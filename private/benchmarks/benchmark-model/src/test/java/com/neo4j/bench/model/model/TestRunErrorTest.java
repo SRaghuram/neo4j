@@ -24,8 +24,7 @@ public class TestRunErrorTest
                 Benchmark.benchmarkFor( "description",
                                         "simpleName",
                                         Benchmark.Mode.LATENCY,
-                                        ImmutableMap.of( "param1", "value1" ),
-                                        "Q1" );
+                                        ImmutableMap.of( "param1", "value1" ) );
 
         TestRunError error = new TestRunError( benchmarkGroup, benchmark, "error" );
         // when

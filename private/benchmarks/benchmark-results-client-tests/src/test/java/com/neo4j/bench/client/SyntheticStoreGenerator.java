@@ -360,6 +360,7 @@ public class SyntheticStoreGenerator
                     BenchmarkTool tool = generateBenchmarkTool( toolBenchGroup.tool );
                     BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics = new BenchmarkGroupBenchmarkMetrics();
                     BenchmarkGroup benchmarkGroup = toolBenchGroup.group();
+                    List<BenchmarkPlan> plans = new ArrayList<>();
                     for ( Benchmark benchmark : toolBenchGroup.benchmarks() )
                     {
                         generationResult.addBenchmark( tool, benchmarkGroup, benchmark );
@@ -390,6 +391,10 @@ public class SyntheticStoreGenerator
                                 generationResult.incAuxiliaryMetrics();
                             }
                         }
+                        plans.add( new BenchmarkPlan( benchmarkGroup,
+                                                      benchmark,
+                                                      SubmitTestRunsAndPlansIT.plan( "a" ) ) );
+                        generationResult.incPlan();
                     }
 
                     calendar.add( Calendar.MINUTE, minutesBetweenRuns );
@@ -417,7 +422,6 @@ public class SyntheticStoreGenerator
                             randomFrom( jvmVersions ),
                             randomFrom( jvmArgs ) );
                     generationResult.addJavas( java );
-                    List<BenchmarkPlan> plans = new ArrayList<>();
 
                     TestRunReport testRunReport = new TestRunReport(
                             testRun,
@@ -652,6 +656,7 @@ public class SyntheticStoreGenerator
         private int auxiliaryMetrics;
         private int testRunAnnotations;
         private int metricsAnnotations;
+        private int plan;
         private int testRunErrors;
 
         private GenerationResult( int expectedTotalTestRuns )
@@ -707,6 +712,11 @@ public class SyntheticStoreGenerator
         private void incMetricsAnnotations()
         {
             metricsAnnotations++;
+        }
+
+        private void incPlan()
+        {
+            plan++;
         }
 
         int benchmarkGroups()
@@ -801,6 +811,11 @@ public class SyntheticStoreGenerator
         List<Long> packagingBuildIds()
         {
             return packagingBuildIds;
+        }
+
+        int plan()
+        {
+            return plan;
         }
 
         public void incTestRunErrors()

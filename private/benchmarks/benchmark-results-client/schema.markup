@@ -11,7 +11,7 @@
   <li class="node" data-node-id="4" data-x="1423.7081929470728" data-y="1116.7651443100137">
     <span class="caption">:BenchmarkGroup (UNIQUE-name)</span><dl class="properties"><dt>name</dt><dd>.</dd></dl></li>
   <li class="node" data-node-id="5" data-x="-1291.6634578436206" data-y="1116.7651443100137">
-    <span class="caption">:Benchmark</span><dl class="properties"><dt>name</dt><dd>.</dd><dt>simple_name</dt><dd>.</dd><dt>mode</dt><dd>.</dd><dt>description</dt><dd>.</dd><dt>active</dt><dd>.</dd><dt>cypher_query</dt><dd>(optional)</dd></dl></li>
+    <span class="caption">:Benchmark</span><dl class="properties"><dt>name</dt><dd>.</dd><dt>simple_name</dt><dd>.</dd><dt>mode</dt><dd>.</dd><dt>description</dt><dd>.</dd><dt>active</dt><dd>.</dd></dl></li>
   <li class="node" data-node-id="6" data-x="-1291.6634578436206" data-y="46.48105235167004">
     <span class="caption">:Metrics</span><dl class="properties"><dt>unit</dt><dd>.</dd><dt>min</dt><dd>.</dd><dt>max</dt><dd>.</dd><dt>mean</dt><dd>.</dd><dt>sample_size</dt><dd>.</dd><dt>perc_25</dt><dd>.</dd><dt>perc_50</dt><dd>.</dd><dt>perc_75</dt><dd>.</dd><dt>perc_90</dt><dd>.</dd><dt>perc_95</dt><dd>.</dd><dt>perc_99</dt><dd>.</dd><dt>perc_99_9</dt><dd>.</dd></dl></li>
   <li class="node" data-node-id="7" data-x="1423.7081929470728" data-y="312.46486523756965">
@@ -19,7 +19,7 @@
   <li class="node" data-node-id="8" data-x="-2413.891475193943" data-y="-965.1552468958035">
     <span class="caption">:Java (UNIQUE)</span><dl class="properties"><dt>jvm</dt><dd>.</dd><dt>version</dt><dd>.</dd><dt>args</dt><dd>.</dd></dl></li>
   <li class="node" data-node-id="9" data-x="-2119.4779473408385" data-y="46.48105235167004">
-    <span class="caption">:Plan</span><dl class="properties"><dt>requested_planner</dt><dd>.</dd><dt>used_planner</dt><dd>.</dd><dt>default_planner</dt><dd>.</dd><dt>requested_runtime</dt><dd>.</dd><dt>used_runtime</dt><dd>.</dd><dt>default_runtime</dt><dd>.</dd><dt>cypher_version</dt><dd>.</dd></dl></li>
+    <span class="caption">:Plan</span><dl class="properties"><dt>requested_planner</dt><dd>.</dd><dt>used_planner</dt><dd>.</dd><dt>default_planner</dt><dd>.</dd><dt>requested_runtime</dt><dd>.</dd><dt>used_runtime</dt><dd>.</dd><dt>default_runtime</dt><dd>.</dd><dt>cypher_version</dt><dd>.</dd><dt>cypher_query</dt><dd>(optional)</dd></dl></li>
   <li class="node" data-node-id="10" data-x="-564.0960311889648" data-y="46.48105235167004">
     <span class="caption">:AuxiliaryMetrics</span><dl class="properties"><dt>unit</dt><dd>.</dd><dt>min</dt><dd>.</dd><dt>max</dt><dd>.</dd><dt>mean</dt><dd>.</dd><dt>sample_size</dt><dd>.</dd><dt>perc_25</dt><dd>.</dd><dt>perc_50</dt><dd>.</dd><dt>perc_75</dt><dd>.</dd><dt>perc_90</dt><dd>.</dd><dt>perc_95</dt><dd>.</dd><dt>perc_99</dt><dd>.</dd><dt>perc_99_9</dt><dd>.</dd></dl></li>
   <li class="node" data-node-id="11" data-x="-2261.53928592931" data-y="1116.7651443100137">

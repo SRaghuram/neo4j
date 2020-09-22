@@ -107,7 +107,8 @@ public class PlannerDescription
     public static PlannerDescription fromResults( ExecutionPlanDescription profileWithPlannerAndRuntime,
                                                   ExecutionPlanDescription explainWithoutPlannerOrRuntime,
                                                   String requestedPlanner,
-                                                  String requestedRuntime )
+                                                  String requestedRuntime,
+                                                  String queryString )
     {
         Map<String,Object> usedArguments = profileWithPlannerAndRuntime.getArguments();
         String usedPlanner = (String) usedArguments.getOrDefault( PLANNER_IMPL, UNKNOWN );
@@ -124,6 +125,7 @@ public class PlannerDescription
                                        requestedRuntime,
                                        usedRuntime.toLowerCase(),
                                        defaultRuntime.toLowerCase(),
+                                       queryString,
                                        profileWithPlannerAndRuntime,
                                        dbHits );
     }
@@ -134,6 +136,7 @@ public class PlannerDescription
     private final String requestedRuntime;
     private final String usedRuntime;
     private final String defaultRuntime;
+    private final String queryString;
     private final ExecutionPlanDescription planDescription;
     private final Long dbHits;
 
@@ -143,6 +146,7 @@ public class PlannerDescription
                                 String requestedRuntime,
                                 String usedRuntime,
                                 String defaultRuntime,
+                                String queryString,
                                 ExecutionPlanDescription planDescription,
                                 Long dbHits )
     {
@@ -152,6 +156,7 @@ public class PlannerDescription
         this.requestedRuntime = requestedRuntime;
         this.usedRuntime = usedRuntime;
         this.defaultRuntime = defaultRuntime;
+        this.queryString = queryString;
         this.planDescription = planDescription;
         this.dbHits = dbHits;
     }
@@ -212,6 +217,7 @@ public class PlannerDescription
                 usedRuntime,
                 defaultRuntime,
                 version,
+                queryString,
                 new PlanTree(
                         asciiPlanDescription(),
                         toPlanOperator( planDescription ) )

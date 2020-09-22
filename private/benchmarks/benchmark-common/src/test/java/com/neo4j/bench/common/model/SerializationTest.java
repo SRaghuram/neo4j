@@ -224,7 +224,7 @@ public class SerializationTest
         // given
         Map<String,String> params = new HashMap<>();
         params.put( "key", "value" );
-        Benchmark before = benchmarkFor( "desc", "name", LATENCY, params, "RETURN 1" );
+        Benchmark before = benchmarkFor( "desc", "name", LATENCY, params );
         // then
         shouldSerializeAndDeserialize( before );
     }
@@ -509,6 +509,7 @@ public class SerializationTest
                 "slotted",
                 "slotted",
                 "3.2",
+                "RETURN 1",
                 new PlanTree( "plan description", root )
         );
     }

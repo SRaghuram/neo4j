@@ -38,7 +38,6 @@ WITH test_run,
      metrics_tuple[0] AS benchmarkGroupName,
      metrics_tuple[1].name AS benchmarkName,
      metrics_tuple[1].description AS benchmarkDescription,
-     metrics_tuple[1].cypher_query AS cypherQuery,
      metrics_tuple[1] AS benchmarkProperties,
      metrics_tuple[2] AS benchmarkParams,
      metrics_tuple[3] AS metricsValues,
@@ -53,8 +52,7 @@ ON CREATE SET
     params=benchmarkParams
 // Description & Query overwritten on purpose. It may get updated/corrected over time, database should reflect these changes
 ON MATCH SET
-   benchmark.description=benchmarkDescription,
-   benchmark.cypher_query=cypherQuery
+   benchmark.description=benchmarkDescription
 CREATE (test_run)-[:HAS_METRICS]->(metrics:Metrics)-[:METRICS_FOR]->(benchmark)
 SET
     metrics = metricsValues

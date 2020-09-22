@@ -13,6 +13,8 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.KeyDeserializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.neo4j.bench.model.util.JsonUtil;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -54,7 +56,6 @@ public class Benchmark
     public static final String SIMPLE_NAME = "simple_name";
     public static final String ACTIVE = "active";
     public static final String DESCRIPTION = "description";
-    public static final String QUERY = "cypher_query";
     public static final String MODE = "mode";
 
     public static Benchmark benchmarkFor( String description, String simpleName, Mode mode, Map<String,String> parametersMap )
@@ -62,13 +63,6 @@ public class Benchmark
         Parameters parameters = Parameters.fromMap( parametersMap );
         String name = constructName( simpleName, parameters, mode );
         return new Benchmark( name, simpleName, description, mode, parameters );
-    }
-
-    public static Benchmark benchmarkFor( String description, String simpleName, Mode mode, Map<String,String> parametersMap, String queryString )
-    {
-        Parameters parameters = Parameters.fromMap( parametersMap );
-        String name = constructName( simpleName, parameters, mode );
-        return new Benchmark( name, simpleName, description, mode, parameters, queryString );
     }
 
     // TODO rather than saving the 'name' this method could split the name into params, and not take params as input at all
@@ -92,7 +86,6 @@ public class Benchmark
 
     // TODO is it even necessary to store the 'name', given that it can be recomputed from the other fields?
     private final String name;
-    private final String queryString;
     private final String simpleName;
     private final String description;
     private final Mode mode;
@@ -105,17 +98,11 @@ public class Benchmark
                        @JsonProperty( "mode" ) Mode mode,
                        @JsonProperty( "parameters" ) Parameters parameters )
     {
-        this( name, simpleName, description, mode, parameters, null );
-    }
-
-    private Benchmark( String name, String simpleName, String description, Mode mode, Parameters parameters, String queryString )
-    {
         this.name = requireNonNull( name );
         this.simpleName = requireNonNull( simpleName );
         this.description = requireNonNull( description );
         this.mode = requireNonNull( mode );
         this.parameters = requireNonNull( parameters );
-        this.queryString = queryString;
         assertSimpleNameIsPrefixOfName( name, simpleName );
         assertNotEmptyString( name, simpleName );
     }
@@ -167,33 +154,21 @@ public class Benchmark
         benchmarkNodeMap.put( NAME, name() );
         benchmarkNodeMap.put( SIMPLE_NAME, simpleName() );
         benchmarkNodeMap.put( MODE, mode().name() );
-        benchmarkNodeMap.put( QUERY, queryString );
         benchmarkNodeMap.put( DESCRIPTION, description );
         benchmarkNodeMap.put( ACTIVE, true );
         return benchmarkNodeMap;
     }
 
     @Override
-    public boolean equals( Object o )
+    public boolean equals( Object that )
     {
-        if ( this == o )
-        {
-            return true;
-        }
-        if ( o == null || getClass() != o.getClass() )
-        {
-            return false;
-        }
-        Benchmark benchmark = (Benchmark) o;
-        return Objects.equals( name, benchmark.name ) && Objects.equals( simpleName, benchmark.simpleName ) &&
-               Objects.equals( description, benchmark.description ) && mode == benchmark.mode &&
-               Objects.equals( parameters, benchmark.parameters ) && Objects.equals( queryString, benchmark.queryString );
+        return EqualsBuilder.reflectionEquals( this, that );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( name, simpleName, description, mode, parameters, queryString );
+        return HashCodeBuilder.reflectionHashCode( this );
     }
 
     @Override
