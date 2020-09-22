@@ -15,7 +15,6 @@ import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.hamcrest.core.AnyOf;
-import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,6 +50,7 @@ import static com.neo4j.bench.model.options.Edition.COMMUNITY;
 import static com.neo4j.bench.model.options.Edition.ENTERPRISE;
 import static java.util.Collections.singletonMap;
 import static java.util.stream.Collectors.toList;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SyntheticStoreGeneratorIT
 {
@@ -379,11 +379,11 @@ public class SyntheticStoreGeneratorIT
                                                               .collect( toList() );
         if ( nonDefaultBranchOwners.isEmpty() )
         {
-            Assert.assertEquals( 0, personalNeo4jCount );
+            assertEquals( 0, personalNeo4jCount );
         }
         else
         {
-            Assert.assertEquals( generationResult.testRuns(), personalNeo4jCount );
+            assertEquals( generationResult.testRuns(), personalNeo4jCount );
 
             for ( String owner : generationResult.projectBranchOwners() )
             {

@@ -24,7 +24,6 @@ import com.neo4j.bench.model.model.TestRun;
 import com.neo4j.bench.model.model.TestRunReport;
 import com.neo4j.bench.model.options.Edition;
 import com.neo4j.harness.junit.extension.EnterpriseNeo4jExtension;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -72,70 +71,72 @@ public class CreateJobTest
     public void createBatchJob()
     {
         // given
-        StoreClient storeClient = StoreClient.connect( boltUri, "neo4j", "neo4j" );
-        storeClient.execute( new CreateSchema() );
+        try ( StoreClient storeClient = StoreClient.connect( boltUri, "neo4j", "neo4j" ) )
+        {
+            storeClient.execute( new CreateSchema() );
 
-        TestRun testRun = new TestRun( UUID.randomUUID().toString(), 0, 0, 0, 0, "triggeredBy" );
+            TestRun testRun = new TestRun( UUID.randomUUID().toString(), 0, 0, 0, 0, "triggeredBy" );
 
-        BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics = new BenchmarkGroupBenchmarkMetrics();
-        benchmarkGroupBenchmarkMetrics.add(
-                new BenchmarkGroup( "group" ),
-                Benchmark.benchmarkFor( "description", "simpleName", Benchmark.Mode.LATENCY, emptyMap() ),
-                new Metrics( TimeUnit.MILLISECONDS, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ),
-                null,
-                Neo4jConfig.empty() );
+            BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics = new BenchmarkGroupBenchmarkMetrics();
+            benchmarkGroupBenchmarkMetrics.add(
+                    new BenchmarkGroup( "group" ),
+                    Benchmark.benchmarkFor( "description", "simpleName", Benchmark.Mode.LATENCY, emptyMap() ),
+                    new Metrics( TimeUnit.MILLISECONDS, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ),
+                    null,
+                    Neo4jConfig.empty() );
 
-        TestRunReport testRunReport = new TestRunReport(
-                testRun,
-                new BenchmarkConfig( emptyMap() ),
-                ImmutableSet.of( new Project(
-                        Repository.NEO4J,
-                        "commit",
-                        "3.5.16",
-                        Edition.ENTERPRISE,
-                        "branch",
-                        "owner" )
-                ),
-                Neo4jConfig.empty(),
-                Environment.current(),
-                benchmarkGroupBenchmarkMetrics,
-                new BenchmarkTool( Repository.NEO4J, "commit", "owner", "branch" ),
-                Java.current( "" ),
-                Collections.emptyList()
-        );
+            TestRunReport testRunReport = new TestRunReport(
+                    testRun,
+                    new BenchmarkConfig( emptyMap() ),
+                    ImmutableSet.of( new Project(
+                            Repository.NEO4J,
+                            "commit",
+                            "3.5.16",
+                            Edition.ENTERPRISE,
+                            "branch",
+                            "owner" )
+                    ),
+                    Neo4jConfig.empty(),
+                    Environment.current(),
+                    benchmarkGroupBenchmarkMetrics,
+                    new BenchmarkTool( Repository.NEO4J, "commit", "owner", "branch" ),
+                    Java.current( "" ),
+                    Collections.emptyList()
+            );
 
-        SubmitTestRun submitTestRun = new SubmitTestRun( testRunReport );
+            SubmitTestRun submitTestRun = new SubmitTestRun( testRunReport );
 
-        storeClient.execute( submitTestRun );
+            storeClient.execute( submitTestRun );
 
-        String awsBatchJobId = UUID.randomUUID().toString();
+            String awsBatchJobId = UUID.randomUUID().toString();
 
-        Job job = new Job( awsBatchJobId,
-                           ZonedDateTime.now().toEpochSecond(),
-                           ZonedDateTime.now().toEpochSecond(),
-                           ZonedDateTime.now().toEpochSecond(),
-                           "",
-                           ""
-        );
-        CreateJob createJob = new CreateJob( job, testRun.id() );
+            Job job = new Job( awsBatchJobId,
+                               ZonedDateTime.now().toEpochSecond(),
+                               ZonedDateTime.now().toEpochSecond(),
+                               ZonedDateTime.now().toEpochSecond(),
+                               "",
+                               ""
+            );
+            CreateJob createJob = new CreateJob( job, testRun.id() );
 
-        // when
-        boolean created = storeClient.execute( createJob );
+            // when
+            boolean created = storeClient.execute( createJob );
 
-        // then
-        assertTrue( created );
+            // then
+            assertTrue( created );
 
-        // when
-        Job actual = storeClient.session().readTransaction( tx ->
-                                                            {
-                                                                Result result = tx.run( "MATCH (bj:Job) WHERE bj.id = $id RETURN bj",
-                                                                                        Values.parameters( "id", awsBatchJobId ) );
-                                                                if ( result.hasNext() )
+            // when
+            Job actual = storeClient.session().readTransaction( tx ->
                                                                 {
-                                                                    return Job.fromMap( result.next().get( "bj" ).asMap() );
-                                                                }
-                                                                return null;
-                                                            } );
-        assertEquals( job, actual );
+                                                                    Result result = tx.run( "MATCH (bj:Job) WHERE bj.id = $id RETURN bj",
+                                                                                            Values.parameters( "id", awsBatchJobId ) );
+                                                                    if ( result.hasNext() )
+                                                                    {
+                                                                        return Job.fromMap( result.next().get( "bj" ).asMap() );
+                                                                    }
+                                                                    return null;
+                                                                } );
+            assertEquals( job, actual );
+        }
     }
 }
