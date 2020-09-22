@@ -5,8 +5,8 @@
  */
 package com.neo4j.metrics.source.causalclustering;
 
-import com.codahale.metrics.MetricRegistry;
 import com.neo4j.metrics.metric.MetricsCounter;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import org.neo4j.annotations.documented.Documented;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -23,10 +23,10 @@ public class CatchUpMetrics extends LifecycleAdapter
     private final String txPullRequestsReceived;
 
     private final Monitors monitors;
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
     private final TxPullRequestsMetric txPullRequestsMetric = new TxPullRequestsMetric();
 
-    public CatchUpMetrics( String metricsPrefix, Monitors monitors, MetricRegistry registry )
+    public CatchUpMetrics( String metricsPrefix, Monitors monitors, MetricsRegister registry )
     {
         this.txPullRequestsReceived = name( metricsPrefix, TX_PULL_REQUESTS_RECEIVED_TEMPLATE );
         this.monitors = monitors;
@@ -37,7 +37,7 @@ public class CatchUpMetrics extends LifecycleAdapter
     public void start()
     {
         monitors.addMonitorListener( txPullRequestsMetric );
-        registry.register( txPullRequestsReceived, new MetricsCounter( txPullRequestsMetric::txPullRequestsReceived ) );
+        registry.register( txPullRequestsReceived, () -> new MetricsCounter( txPullRequestsMetric::txPullRequestsReceived ) );
     }
 
     @Override

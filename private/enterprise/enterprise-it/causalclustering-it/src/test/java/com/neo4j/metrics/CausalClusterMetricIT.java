@@ -65,6 +65,8 @@ class CausalClusterMetricIT
                 .withSharedReadReplicaParam( MetricsSettings.metrics_enabled, TRUE )
                 .withSharedCoreParam( MetricsSettings.csv_enabled, TRUE )
                 .withSharedReadReplicaParam( MetricsSettings.csv_enabled, TRUE )
+                .withSharedCoreParam( MetricsSettings.metrics_filter, "*" )
+                .withSharedReadReplicaParam( MetricsSettings.metrics_filter, "*" )
                 .withSharedCoreParam( MetricsSettings.csv_interval, "100ms" )
                 .withSharedReadReplicaParam( MetricsSettings.csv_interval, "100ms" );
 

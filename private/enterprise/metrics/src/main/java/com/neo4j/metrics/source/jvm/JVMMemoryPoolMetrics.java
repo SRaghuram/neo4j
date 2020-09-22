@@ -6,7 +6,7 @@
 package com.neo4j.metrics.source.jvm;
 
 import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricRegistry;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryPoolMXBean;
@@ -21,13 +21,13 @@ public class JVMMemoryPoolMetrics extends JvmMetrics
 {
     private final String memoryPoolPrefix;
     private final String memoryPool;
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
 
     private static final String MEMORY_POOL_PREFIX = name( VM_NAME_PREFIX, "memory.pool" );
     @Documented( "Estimated number of buffers in the pool. (gauge)" )
     private static final String MEMORY_POOL_USAGE_TEMPLATE = name( MEMORY_POOL_PREFIX, "%s" );
 
-    public JVMMemoryPoolMetrics( String metricsPrefix, MetricRegistry registry )
+    public JVMMemoryPoolMetrics( String metricsPrefix, MetricsRegister registry )
     {
         this.registry = registry;
         this.memoryPoolPrefix = name( metricsPrefix, MEMORY_POOL_PREFIX );
@@ -40,7 +40,7 @@ public class JVMMemoryPoolMetrics extends JvmMetrics
         for ( final MemoryPoolMXBean memPool : ManagementFactory.getMemoryPoolMXBeans() )
         {
             registry.register( format( memoryPool, prettifyName( memPool.getName() ) ),
-                    (Gauge<Long>) () -> memPool.getUsage().getUsed() );
+                    () -> (Gauge<Long>) () -> memPool.getUsage().getUsed() );
         }
     }
 

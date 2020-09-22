@@ -6,7 +6,7 @@
 package com.neo4j.metrics.source.db;
 
 import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricRegistry;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -39,7 +39,7 @@ public class StoreSizeMetrics extends LifecycleAdapter
     @Documented( "The size of the database, in bytes. (gauge)" )
     private static final String DATABASE_SIZE = name( PREFIX, "database" );
 
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
     private final String totalStoreSize;
     private final String databaseSize;
     private final JobScheduler scheduler;
@@ -50,7 +50,7 @@ public class StoreSizeMetrics extends LifecycleAdapter
     private volatile long cachedStoreTotalSize = -1L;
     private volatile long cachedDatabaseSize = -1L;
 
-    public StoreSizeMetrics( String metricsPrefix, MetricRegistry registry, JobScheduler scheduler, FileSystemAbstraction fileSystemAbstraction,
+    public StoreSizeMetrics( String metricsPrefix, MetricsRegister registry, JobScheduler scheduler, FileSystemAbstraction fileSystemAbstraction,
             DatabaseLayout databaseLayout )
     {
         this.registry = registry;
@@ -70,8 +70,8 @@ public class StoreSizeMetrics extends LifecycleAdapter
             updateValuesHandle =
                     scheduler.scheduleRecurring( FILE_IO_HELPER, monitoringParams, this::updateCachedValues, UPDATE_INTERVAL.toMillis(), MILLISECONDS );
         }
-        registry.register( totalStoreSize, (Gauge<Long>) () -> cachedStoreTotalSize );
-        registry.register( databaseSize, (Gauge<Long>) () -> cachedDatabaseSize );
+        registry.register( totalStoreSize, () -> (Gauge<Long>) () -> cachedStoreTotalSize );
+        registry.register( databaseSize, () -> (Gauge<Long>) () -> cachedDatabaseSize );
     }
 
     @Override

@@ -7,11 +7,13 @@ package com.neo4j.configuration;
 
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 
 import org.neo4j.annotations.api.PublicApi;
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Description;
 import org.neo4j.configuration.SettingsDeclaration;
+import org.neo4j.configuration.helpers.GlobbingPattern;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.ByteUnit;
@@ -24,10 +26,12 @@ import static org.neo4j.configuration.SettingImpl.newBuilder;
 import static org.neo4j.configuration.SettingValueParsers.BOOL;
 import static org.neo4j.configuration.SettingValueParsers.BYTES;
 import static org.neo4j.configuration.SettingValueParsers.DURATION;
+import static org.neo4j.configuration.SettingValueParsers.GLOBBING_PATTERN;
 import static org.neo4j.configuration.SettingValueParsers.INT;
 import static org.neo4j.configuration.SettingValueParsers.PATH;
 import static org.neo4j.configuration.SettingValueParsers.SOCKET_ADDRESS;
 import static org.neo4j.configuration.SettingValueParsers.STRING;
+import static org.neo4j.configuration.SettingValueParsers.listOf;
 
 @ServiceProvider
 @PublicApi
@@ -44,77 +48,127 @@ public class MetricsSettings implements SettingsDeclaration
                   "neo4j.system.log.rotation_events will become neo4j.database.system.log.rotation_events." )
     public static final Setting<Boolean> metrics_namespaces_enabled = newBuilder( "metrics.namespaces.enabled", BOOL, false ).build();
 
-    // The below settings define what metrics to gather
-    // By default everything is on
     @Description( "Enable metrics. Setting this to `false` will to turn off all metrics." )
     public static final Setting<Boolean> metrics_enabled = newBuilder( "metrics.enabled", BOOL, true ).build();
 
-    @Description( "Enable reporting metrics about transactions; number of transactions started, committed, etc." )
-    public static final Setting<Boolean> neo_tx_enabled = newBuilder( "metrics.neo4j.tx.enabled", BOOL, true ).build();
+    // The below settings define what metrics to gather
+    @Description( "Specifies which metrics should be enabled by using a comma separated list of globbing patterns. " +
+                  "Only the metrics matching the filter will be enabled. " +
+                  "For example '*check_point*,neo4j.page_cache.evictions' will enable any checkpoint metrics and the pagecache eviction metric." )
+    public static final Setting<List<GlobbingPattern>> metrics_filter = newBuilder( "metrics.filter", listOf( GLOBBING_PATTERN ),
+            GlobbingPattern.create( "*bolt.connections*", "*bolt.messages_received*", "*bolt.messages_started*", "*dbms.pool.bolt.free",
+                    "*dbms.pool.bolt.total_size", "*dbms.pool.bolt.total_used", "*dbms.pool.bolt.used_heap", "*causal_clustering.core.is_leader",
+                    "*causal_clustering.core.last_leader_message", "*causal_clustering.core.replication_attempt", "*causal_clustering.core.replication_fail",
+                    "*check_point.duration", "*check_point.total_time", "*cypher.replan_events", "*ids_in_use.node", "*ids_in_use.property",
+                    "*ids_in_use.relationship", "*pool.transaction.*.total_used", "*pool.transaction.*.used_heap", "*pool.transaction.*.used_native",
+                    "*store.size*", "*transaction.active_read", "*transaction.active_write", "*transaction.committed*", "*transaction.last_committed_tx_id",
+                    "*transaction.peak_concurrent", "*transaction.rollbacks*", "*page_cache.hit*", "*page_cache.page_faults", "*page_cache.usage_ratio",
+                    "*vm.file.descriptors.count", "*vm.gc.time.*", "*vm.heap.used", "*vm.memory.buffer.direct.used", "*vm.memory.pool.g1_eden_space",
+                    "*vm.memory.pool.g1_old_gen", "*vm.pause_time", "*vm.thread*" ) ).build();
 
-    @Description( "Enable reporting metrics about the Neo4j page cache; page faults, evictions, flushes, exceptions, etc." )
-    public static final Setting<Boolean> neo_page_cache_enabled = newBuilder( "metrics.neo4j.pagecache.enabled", BOOL, true ).build();
+    @Deprecated( since = "4.2.0", forRemoval = true )
+    @Description( "Enable reporting metrics about transactions; number of transactions started, committed, etc. " +
+                  "Deprecated - use metrics.filter instead." )
+    public static final Setting<Boolean> neo_tx_enabled = newBuilder( "metrics.neo4j.tx.enabled", BOOL, false ).build();
 
+    @Deprecated( since = "4.2.0", forRemoval = true )
+    @Description( "Enable reporting metrics about the Neo4j page cache; page faults, evictions, flushes, exceptions, etc. " +
+                  "Deprecated - use metrics.filter instead." )
+    public static final Setting<Boolean> neo_page_cache_enabled = newBuilder( "metrics.neo4j.pagecache.enabled", BOOL, false ).build();
+
+    @Deprecated( since = "4.2.0", forRemoval = true )
     @Description( "Enable reporting metrics about approximately how many entities are in the database; nodes, " +
-            "relationships, properties, etc." )
-    public static final Setting<Boolean> neo_counts_enabled = newBuilder( "metrics.neo4j.counts.enabled", BOOL, true ).build();
+                  "relationships, properties, etc. Deprecated - use metrics.filter instead." )
+    public static final Setting<Boolean> neo_counts_enabled = newBuilder( "metrics.neo4j.counts.enabled", BOOL, false ).build();
 
-    @Description( "Enable reporting metrics about the store size of each database" )
-    public static final Setting<Boolean> neo_store_size_enabled = newBuilder( "metrics.neo4j.size.enabled", BOOL, true ).build();
+    @Deprecated( since = "4.2.0", forRemoval = true )
+    @Description( "Enable reporting metrics about the store size of each database. " +
+                  "Deprecated - use metrics.filter instead." )
+    public static final Setting<Boolean> neo_store_size_enabled = newBuilder( "metrics.neo4j.size.enabled", BOOL, false ).build();
 
-    @Description( "Enable reporting metrics about number of entities in the database." )
-    public static final Setting<Boolean> database_counts_enabled = newBuilder( "metrics.neo4j.data.counts.enabled", BOOL, true ).build();
+    @Deprecated( since = "4.2.0", forRemoval = true )
+    @Description( "Enable reporting metrics about number of entities in the database. " +
+                  "Deprecated - use metrics.filter instead." )
+    public static final Setting<Boolean> database_counts_enabled = newBuilder( "metrics.neo4j.data.counts.enabled", BOOL, false ).build();
 
-    @Description( "Enable reporting metrics about Causal Clustering mode." )
+    @Deprecated( since = "4.2.0", forRemoval = true )
+    @Description( "Enable reporting metrics about Causal Clustering mode. " +
+                  "Deprecated - use metrics.filter instead." )
     public static final Setting<Boolean> causal_clustering_enabled =
-            newBuilder( "metrics.neo4j.causal_clustering.enabled", BOOL, true ).build();
+            newBuilder( "metrics.neo4j.causal_clustering.enabled", BOOL, false ).build();
 
-    @Description( "Enable reporting metrics for Neo4j dbms operations; " +
-            "how many times databases have been created, started, stopped or dropped, and how many attempted operations have failed and recovered later." )
+    @Deprecated( since = "4.2.0", forRemoval = true )
+    @Description( "Enable reporting metrics for Neo4j dbms operations; how many times databases have been created, started, stopped or dropped, " +
+                  "and how many attempted operations have failed and recovered later. Deprecated - use metrics.filter instead." )
     public static final Setting<Boolean> database_operation_count_enabled =
-            newBuilder( "metrics.neo4j.database_operation_count.enabled", BOOL, true ).build();
+            newBuilder( "metrics.neo4j.database_operation_count.enabled", BOOL, false ).build();
 
+    @Deprecated( since = "4.2.0", forRemoval = true )
     @Description( "Enable reporting metrics about Neo4j check pointing; when it occurs and how much time it takes to " +
-            "complete." )
+                  "complete. Deprecated - use metrics.filter instead." )
     public static final Setting<Boolean> neo_check_pointing_enabled =
-            newBuilder( "metrics.neo4j.checkpointing.enabled", BOOL, true ).build();
+            newBuilder( "metrics.neo4j.checkpointing.enabled", BOOL, false ).build();
 
-    @Description( "Enable reporting metrics about the Neo4j transaction logs" )
-    public static final Setting<Boolean> neo_transaction_logs_enabled = newBuilder( "metrics.neo4j.logs.enabled", BOOL, true ).build();
+    @Deprecated( since = "4.2.0", forRemoval = true )
+    @Description( "Enable reporting metrics about the Neo4j transaction logs. " +
+                  "Deprecated - use metrics.filter instead." )
+    public static final Setting<Boolean> neo_transaction_logs_enabled = newBuilder( "metrics.neo4j.logs.enabled", BOOL, false ).build();
 
-    @Description( "Enable reporting metrics about Server threading info." )
-    public static final Setting<Boolean> neo_server_enabled = newBuilder( "metrics.neo4j.server.enabled", BOOL, true ).build();
+    @Deprecated( since = "4.2.0", forRemoval = true )
+    @Description( "Enable reporting metrics about Server threading info. " +
+                  "Deprecated - use metrics.filter instead." )
+    public static final Setting<Boolean> neo_server_enabled = newBuilder( "metrics.neo4j.server.enabled", BOOL, false ).build();
 
-    @Description( "Enable reporting metrics about the duration of garbage collections" )
-    public static final Setting<Boolean> jvm_gc_enabled = newBuilder( "metrics.jvm.gc.enabled", BOOL, true ).build();
+    @Deprecated( since = "4.2.0", forRemoval = true )
+    @Description( "Enable reporting metrics about the duration of garbage collections. " +
+                  "Deprecated - use metrics.filter instead." )
+    public static final Setting<Boolean> jvm_gc_enabled = newBuilder( "metrics.jvm.gc.enabled", BOOL, false ).build();
 
-    @Description( "Enable reporting metrics about the heap memory usage." )
-    public static final Setting<Boolean> jvm_heap_enabled = newBuilder( "metrics.jvm.heap.enabled", BOOL, true ).build();
+    @Deprecated( since = "4.2.0", forRemoval = true )
+    @Description( "Enable reporting metrics about the heap memory usage. " +
+                  "Deprecated - use metrics.filter instead." )
+    public static final Setting<Boolean> jvm_heap_enabled = newBuilder( "metrics.jvm.heap.enabled", BOOL, false ).build();
 
-    @Description( "Enable reporting metrics about the memory usage." )
-    public static final Setting<Boolean> jvm_memory_enabled = newBuilder( "metrics.jvm.memory.enabled", BOOL, true ).build();
+    @Deprecated( since = "4.2.0", forRemoval = true )
+    @Description( "Enable reporting metrics about the memory usage. " +
+                  "Deprecated - use metrics.filter instead." )
+    public static final Setting<Boolean> jvm_memory_enabled = newBuilder( "metrics.jvm.memory.enabled", BOOL, false ).build();
 
-    @Description( "Enable reporting metrics about the buffer pools." )
-    public static final Setting<Boolean> jvm_buffers_enabled = newBuilder( "metrics.jvm.buffers.enabled", BOOL, true ).build();
+    @Deprecated( since = "4.2.0", forRemoval = true )
+    @Description( "Enable reporting metrics about the buffer pools. " +
+                  "Deprecated - use metrics.filter instead." )
+    public static final Setting<Boolean> jvm_buffers_enabled = newBuilder( "metrics.jvm.buffers.enabled", BOOL, false ).build();
 
-    @Description( "Enable reporting metrics about the current number of threads running." )
-    public static final Setting<Boolean> jvm_threads_enabled = newBuilder( "metrics.jvm.threads.enabled", BOOL, true ).build();
+    @Deprecated( since = "4.2.0", forRemoval = true )
+    @Description( "Enable reporting metrics about the current number of threads running. " +
+                  "Deprecated - use metrics.filter instead." )
+    public static final Setting<Boolean> jvm_threads_enabled = newBuilder( "metrics.jvm.threads.enabled", BOOL, false ).build();
 
-    @Description( "Enable reporting metrics about the number of open file descriptors." )
+    @Deprecated( since = "4.2.0", forRemoval = true )
+    @Description( "Enable reporting metrics about the number of open file descriptors. " +
+                  "Deprecated - use metrics.filter instead." )
     public static final Setting<Boolean> jvm_file_descriptors_enabled =
-            newBuilder( "metrics.jvm.file.descriptors.enabled", BOOL, true ).build();
+            newBuilder( "metrics.jvm.file.descriptors.enabled", BOOL, false ).build();
 
-    @Description( "Enable reporting metrics about the VM pause time." )
-    public static final Setting<Boolean> jvm_pause_time_enabled = newBuilder( "metrics.jvm.pause_time.enabled", BOOL, true ).build();
+    @Deprecated( since = "4.2.0", forRemoval = true )
+    @Description( "Enable reporting metrics about the VM pause time. " +
+                  "Deprecated - use metrics.filter instead." )
+    public static final Setting<Boolean> jvm_pause_time_enabled = newBuilder( "metrics.jvm.pause_time.enabled", BOOL, false ).build();
 
-    @Description( "Enable reporting metrics about number of occurred replanning events." )
-    public static final Setting<Boolean> cypher_planning_enabled = newBuilder( "metrics.cypher.replanning.enabled", BOOL, true ).build();
+    @Deprecated( since = "4.2.0", forRemoval = true )
+    @Description( "Enable reporting metrics about number of occurred replanning events. " +
+                  "Deprecated - use metrics.filter instead." )
+    public static final Setting<Boolean> cypher_planning_enabled = newBuilder( "metrics.cypher.replanning.enabled", BOOL, false ).build();
 
-    @Description( "Enable reporting metrics about Bolt Protocol message processing." )
-    public static final Setting<Boolean> bolt_messages_enabled = newBuilder( "metrics.bolt.messages.enabled", BOOL, true ).build();
+    @Deprecated( since = "4.2.0", forRemoval = true )
+    @Description( "Enable reporting metrics about Bolt Protocol message processing. " +
+                  "Deprecated - use metrics.filter instead." )
+    public static final Setting<Boolean> bolt_messages_enabled = newBuilder( "metrics.bolt.messages.enabled", BOOL, false ).build();
 
-    @Description( "Enable reporting metrics about Neo4j memory pools." )
-    public static final Setting<Boolean> neo_memory_pools_enabled = newBuilder( "metrics.neo4j.pools.enabled", BOOL, true ).build();
+    @Deprecated( since = "4.2.0", forRemoval = true )
+    @Description( "Enable reporting metrics about Neo4j memory pools. " +
+                  "Deprecated - use metrics.filter instead." )
+    public static final Setting<Boolean> neo_memory_pools_enabled = newBuilder( "metrics.neo4j.pools.enabled", BOOL, false ).build();
 
     // CSV settings
     @Description( "Set to `true` to enable exporting metrics to CSV files" )
@@ -129,7 +183,7 @@ public class MetricsSettings implements SettingsDeclaration
 
     @Description( "The reporting interval for the CSV files. That is, how often new rows with numbers are appended to " +
             "the CSV files." )
-    public static final Setting<Duration> csv_interval = newBuilder( "metrics.csv.interval", DURATION, Duration.ofSeconds( 3 ) ).build();
+    public static final Setting<Duration> csv_interval = newBuilder( "metrics.csv.interval", DURATION, Duration.ofSeconds( 30 ) ).build();
 
     @Description( "The file size in bytes at which the csv files will auto-rotate. If set to zero then no " +
             "rotation will occur. Accepts a binary suffix `k`, `m` or `g`." )
@@ -151,7 +205,7 @@ public class MetricsSettings implements SettingsDeclaration
             .build();
 
     @Description( "The reporting interval for Graphite. That is, how often to send updated metrics to Graphite." )
-    public static final Setting<Duration> graphite_interval = newBuilder( "metrics.graphite.interval", DURATION, Duration.ofSeconds( 3 ) ).build();
+    public static final Setting<Duration> graphite_interval = newBuilder( "metrics.graphite.interval", DURATION, Duration.ofSeconds( 30 ) ).build();
 
     // Prometheus settings
     @Description( "Set to `true` to enable the Prometheus endpoint" )
@@ -163,5 +217,5 @@ public class MetricsSettings implements SettingsDeclaration
                     .setDependency( default_listen_address ).build();
 
     @Description( "Set to `true` to enable the JMX metrics endpoint" )
-    public static final Setting<Boolean> jmx_enabled = newBuilder( "metrics.jmx.enabled", BOOL, true ).build();
+    public static final Setting<Boolean> jmx_enabled = newBuilder( "metrics.jmx.enabled", BOOL, false ).build();
 }

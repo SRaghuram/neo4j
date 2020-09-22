@@ -5,12 +5,15 @@
  */
 package com.neo4j.metrics;
 
+import com.neo4j.configuration.MetricsSettings;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.stream.Collectors;
 
+import org.neo4j.configuration.helpers.GlobbingPattern;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.memory.MemoryPools;
@@ -23,6 +26,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static com.neo4j.configuration.MetricsSettings.csv_enabled;
 import static com.neo4j.configuration.MetricsSettings.csv_path;
 import static com.neo4j.configuration.MetricsSettings.metrics_enabled;
+import static com.neo4j.configuration.MetricsSettings.metrics_filter;
 import static com.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static com.neo4j.metrics.MetricsTestHelper.readLongGaugeValue;
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -51,6 +55,8 @@ public class MemoryPoolsMetricsIT
         builder.setConfig( metrics_enabled, true );
         builder.setConfig( csv_enabled, true );
         builder.setConfig( csv_path, outputPath.toAbsolutePath() );
+        builder.setConfig( metrics_filter, GlobbingPattern.create( "*" ) );
+        builder.setConfig( MetricsSettings.csv_interval, Duration.ofMillis( 10 ) );
     }
 
     @Test

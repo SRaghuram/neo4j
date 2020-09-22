@@ -19,6 +19,7 @@ import org.neo4j.bolt.testing.client.SocketConnection;
 import org.neo4j.bolt.testing.client.TransportConnection;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.helpers.GlobbingPattern;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -59,7 +60,7 @@ class BoltMetricsIT
             .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
             .setConfig( GraphDatabaseSettings.auth_enabled, false )
             .setConfig( MetricsSettings.metrics_enabled, true )
-            .setConfig( MetricsSettings.bolt_messages_enabled, true )
+            .setConfig( MetricsSettings.metrics_filter, GlobbingPattern.create( "*bolt*" ) )
             .setConfig( MetricsSettings.csv_enabled, true )
             .setConfig( MetricsSettings.csv_interval, Duration.ofMillis( 100 ) )
             .setConfig( MetricsSettings.csv_path, metricsFolder.toAbsolutePath() )

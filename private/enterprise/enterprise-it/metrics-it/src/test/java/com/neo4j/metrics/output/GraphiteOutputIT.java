@@ -26,6 +26,7 @@ import java.nio.file.Path;
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.neo4j.configuration.helpers.GlobbingPattern;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -34,6 +35,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static com.neo4j.configuration.MetricsSettings.graphite_enabled;
 import static com.neo4j.configuration.MetricsSettings.graphite_server;
 import static com.neo4j.configuration.MetricsSettings.metrics_enabled;
+import static com.neo4j.configuration.MetricsSettings.metrics_filter;
 import static com.neo4j.configuration.MetricsSettings.metrics_prefix;
 import static io.netty.handler.codec.Delimiters.lineDelimiter;
 import static java.lang.Math.toIntExact;
@@ -94,6 +96,7 @@ class GraphiteOutputIT
 
         return new TestEnterpriseDatabaseManagementServiceBuilder( homeDir )
                 .setConfig( metrics_enabled, true )
+                .setConfig( metrics_filter, GlobbingPattern.create( "*" ) )
                 .setConfig( metrics_prefix, CUSTOM_METRICS_PREFIX )
                 .setConfig( graphite_enabled, true )
                 .setConfig( graphite_server, new org.neo4j.configuration.helpers.SocketAddress( address.getHostString(), address.getPort() ) )

@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Path;
 import java.time.Duration;
 
+import org.neo4j.configuration.helpers.GlobbingPattern;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
@@ -50,6 +51,7 @@ public class TransactionMetricsIT
     {
         metricsDirectory = directory.homePath( "metrics" );
         builder.setConfig( MetricsSettings.metrics_enabled, true )
+                .setConfig( MetricsSettings.metrics_filter, GlobbingPattern.create( "*" ) )
                 .setConfig( MetricsSettings.csv_enabled, true )
                 .setConfig( MetricsSettings.csv_interval, Duration.ofMillis( 10 ) )
                 .setConfig( preallocate_logical_logs, false )

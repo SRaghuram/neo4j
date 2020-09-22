@@ -6,7 +6,7 @@
 package com.neo4j.metrics.source.jvm;
 
 import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricRegistry;
+import com.neo4j.metrics.metric.MetricsRegister;
 import org.apache.commons.lang3.SystemUtils;
 
 import org.neo4j.annotations.documented.Documented;
@@ -25,9 +25,9 @@ public class FileDescriptorMetrics extends JvmMetrics
     private final String fileCount;
     private final String fileMaximum;
 
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
 
-    public FileDescriptorMetrics( String metricsPrefix, MetricRegistry registry )
+    public FileDescriptorMetrics( String metricsPrefix, MetricsRegister registry )
     {
         this.registry = registry;
         this.fileCount = name( metricsPrefix, FILE_COUNT_TEMPLATE );
@@ -39,13 +39,13 @@ public class FileDescriptorMetrics extends JvmMetrics
     {
         if ( SystemUtils.IS_OS_UNIX )
         {
-            registry.register( fileCount, (Gauge<Long>) OsBeanUtil::getOpenFileDescriptors );
-            registry.register( fileMaximum, (Gauge<Long>) OsBeanUtil::getMaxFileDescriptors );
+            registry.register( fileCount, () -> (Gauge<Long>) OsBeanUtil::getOpenFileDescriptors );
+            registry.register( fileMaximum, () -> (Gauge<Long>) OsBeanUtil::getMaxFileDescriptors );
         }
         else
         {
-            registry.register( fileCount, (Gauge<Long>) () -> -1L );
-            registry.register( fileMaximum, (Gauge<Long>) () -> -1L );
+            registry.register( fileCount, () -> (Gauge<Long>) () -> -1L );
+            registry.register( fileMaximum, () -> (Gauge<Long>) () -> -1L );
         }
     }
 

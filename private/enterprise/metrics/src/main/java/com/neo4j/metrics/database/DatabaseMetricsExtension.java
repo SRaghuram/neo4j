@@ -5,8 +5,8 @@
  */
 package com.neo4j.metrics.database;
 
-import com.codahale.metrics.MetricRegistry;
 import com.neo4j.metrics.global.MetricsManager;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import java.util.Optional;
 
@@ -35,7 +35,7 @@ public class DatabaseMetricsExtension implements Lifecycle
         {
             if ( metricsManager.isConfigured() )
             {
-                MetricRegistry metricRegistry = metricsManager.getRegistry();
+                MetricsRegister metricRegistry = metricsManager.getRegistry();
                 new DatabaseMetricsExporter( metricRegistry, dependencies.configuration(), context, dependencies, life ).export();
             }
         } );

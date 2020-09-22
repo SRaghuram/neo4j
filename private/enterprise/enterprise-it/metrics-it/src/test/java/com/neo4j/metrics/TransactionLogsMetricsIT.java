@@ -14,8 +14,10 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.configuration.helpers.GlobbingPattern;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -67,6 +69,8 @@ class TransactionLogsMetricsIT
         builder.setConfig( preallocate_logical_logs, false );
         builder.setConfig( MetricsSettings.csv_path, outputPath.toAbsolutePath() );
         builder.setConfig( OnlineBackupSettings.online_backup_enabled, false );
+        builder.setConfig( MetricsSettings.csv_interval, Duration.ofMillis( 10 ) );
+        builder.setConfig( MetricsSettings.metrics_filter, GlobbingPattern.create( "*" ) );
     }
 
     @Test

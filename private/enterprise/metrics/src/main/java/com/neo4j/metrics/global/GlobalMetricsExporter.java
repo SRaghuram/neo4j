@@ -5,9 +5,9 @@
  */
 package com.neo4j.metrics.global;
 
-import com.codahale.metrics.MetricRegistry;
 import com.neo4j.configuration.MetricsSettings;
 import com.neo4j.metrics.global.GlobalMetricsExtensionFactory.Dependencies;
+import com.neo4j.metrics.metric.MetricsRegister;
 import com.neo4j.metrics.source.causalclustering.DiscoveryCoreMetrics;
 import com.neo4j.metrics.source.db.BoltMetrics;
 import com.neo4j.metrics.source.db.DatabaseOperationCountMetrics;
@@ -31,13 +31,13 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 
 public class GlobalMetricsExporter
 {
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
     private final LifeSupport life;
     private final Config config;
     private final ExtensionContext context;
     private final Dependencies dependencies;
 
-    GlobalMetricsExporter( MetricRegistry registry, Config config,
+    GlobalMetricsExporter( MetricsRegister registry, Config config,
             ExtensionContext context, Dependencies dependencies, LifeSupport life )
     {
         this.registry = registry;
@@ -51,69 +51,37 @@ public class GlobalMetricsExporter
     {
         String globalMetricsPrefix = config.get( MetricsSettings.metrics_namespaces_enabled ) ?
                                      config.get( MetricsSettings.metrics_prefix ) + ".dbms" : config.get( MetricsSettings.metrics_prefix );
-        if ( config.get( MetricsSettings.neo_page_cache_enabled ) )
-        {
-            life.add( new PageCacheMetrics( globalMetricsPrefix, registry, dependencies.pageCacheCounters() ) );
-        }
 
-        if ( config.get( MetricsSettings.jvm_gc_enabled ) )
-        {
-            life.add( new GCMetrics( globalMetricsPrefix, registry ) );
-        }
+        life.add( new PageCacheMetrics( globalMetricsPrefix, registry, dependencies.pageCacheCounters() ) );
 
-        if ( config.get( MetricsSettings.jvm_heap_enabled ) )
-        {
-            life.add( new HeapMetrics( globalMetricsPrefix, registry ) );
-        }
+        life.add( new GCMetrics( globalMetricsPrefix, registry ) );
 
-        if ( config.get( MetricsSettings.jvm_threads_enabled ) )
-        {
-            life.add( new ThreadMetrics( globalMetricsPrefix, registry ) );
-        }
+        life.add( new HeapMetrics( globalMetricsPrefix, registry ) );
 
-        if ( config.get( MetricsSettings.jvm_memory_enabled ) )
-        {
-            life.add( new JVMMemoryPoolMetrics( globalMetricsPrefix, registry ) );
-        }
+        life.add( new ThreadMetrics( globalMetricsPrefix, registry ) );
 
-        if ( config.get( MetricsSettings.jvm_buffers_enabled ) )
-        {
-            life.add( new JVMMemoryBuffersMetrics( globalMetricsPrefix, registry ) );
-        }
+        life.add( new JVMMemoryPoolMetrics( globalMetricsPrefix, registry ) );
 
-        if ( config.get( MetricsSettings.jvm_file_descriptors_enabled ) )
-        {
-            life.add( new FileDescriptorMetrics( globalMetricsPrefix, registry ) );
-        }
+        life.add( new JVMMemoryBuffersMetrics( globalMetricsPrefix, registry ) );
 
-        if ( config.get( MetricsSettings.jvm_pause_time_enabled ) )
-        {
-            life.add( new PauseMetrics( globalMetricsPrefix, registry, dependencies.monitors() ) );
-        }
+        life.add( new FileDescriptorMetrics( globalMetricsPrefix, registry ) );
 
-        if ( config.get( MetricsSettings.causal_clustering_enabled ) && config.get( GraphDatabaseSettings.mode ) == GraphDatabaseSettings.Mode.CORE )
+        life.add( new PauseMetrics( globalMetricsPrefix, registry, dependencies.monitors() ) );
+
+        if ( config.get( GraphDatabaseSettings.mode ) == GraphDatabaseSettings.Mode.CORE )
         {
             life.add( new DiscoveryCoreMetrics( globalMetricsPrefix, dependencies.monitors(), registry ) );
         }
 
-        if ( config.get( MetricsSettings.bolt_messages_enabled ) )
-        {
-            life.add( new BoltMetrics( globalMetricsPrefix, registry, dependencies.monitors() ) );
-        }
+        life.add( new BoltMetrics( globalMetricsPrefix, registry, dependencies.monitors() ) );
 
-        if ( config.get( MetricsSettings.database_operation_count_enabled ) )
-        {
-            life.add( new DatabaseOperationCountMetrics( globalMetricsPrefix, registry, dependencies.databaseOperationCounts() ) );
-        }
+        life.add( new DatabaseOperationCountMetrics( globalMetricsPrefix, registry, dependencies.databaseOperationCounts() ) );
 
-        if ( config.get( MetricsSettings.neo_memory_pools_enabled ) )
-        {
-            // GlobalMemoryPoolMetrics already contains dbms in its name, therefore its prefix doesn't depend on metrics_namespaces_enabled.
-            life.add( new GlobalMemoryPoolMetrics( config.get( MetricsSettings.metrics_prefix ), registry, dependencies.memoryPools() ) );
-        }
+        // GlobalMemoryPoolMetrics already contains dbms in its name, therefore its prefix doesn't depend on metrics_namespaces_enabled.
+        life.add( new GlobalMemoryPoolMetrics( config.get( MetricsSettings.metrics_prefix ), registry, dependencies.memoryPools() ) );
 
         boolean httpOrHttpsEnabled = config.get( HttpConnector.enabled ) || config.get( HttpsConnector.enabled );
-        if ( httpOrHttpsEnabled && config.get( MetricsSettings.neo_server_enabled ) )
+        if ( httpOrHttpsEnabled )
         {
             life.add( new ServerMetrics( globalMetricsPrefix, registry, dependencies.webContainerThreadInfo() ) );
         }

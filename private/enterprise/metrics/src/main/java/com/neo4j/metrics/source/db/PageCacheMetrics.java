@@ -6,8 +6,8 @@
 package com.neo4j.metrics.source.db;
 
 import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricRegistry;
 import com.neo4j.metrics.metric.MetricsCounter;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import org.neo4j.annotations.documented.Documented;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
@@ -58,10 +58,10 @@ public class PageCacheMetrics extends LifecycleAdapter
     private final String pcBytesRead;
     private final String pcBytesWritten;
 
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
     private final PageCacheCounters pageCacheCounters;
 
-    public PageCacheMetrics( String metricsPrefix, MetricRegistry registry, PageCacheCounters pageCacheCounters )
+    public PageCacheMetrics( String metricsPrefix, MetricsRegister registry, PageCacheCounters pageCacheCounters )
     {
         this.registry = registry;
         this.pageCacheCounters = pageCacheCounters;
@@ -82,18 +82,18 @@ public class PageCacheMetrics extends LifecycleAdapter
     @Override
     public void start()
     {
-        registry.register( pcPageFaults, new MetricsCounter( pageCacheCounters::faults ) );
-        registry.register( pcEvictions, new MetricsCounter( pageCacheCounters::evictions ) );
-        registry.register( pcPins, new MetricsCounter( pageCacheCounters::pins ) );
-        registry.register( pcUnpins, new MetricsCounter( pageCacheCounters::unpins ) );
-        registry.register( pcHits, new MetricsCounter( pageCacheCounters::hits ) );
-        registry.register( pcFlushes, new MetricsCounter( pageCacheCounters::flushes ) );
-        registry.register( pcMerges, new MetricsCounter( pageCacheCounters::merges ) );
-        registry.register( pcEvictionExceptions, new MetricsCounter( pageCacheCounters::evictionExceptions ) );
-        registry.register( pcHitRatio, new PageCacheHitRatioGauge( pageCacheCounters ) );
-        registry.register( pcUsageRatio, (Gauge<Double>) pageCacheCounters::usageRatio );
-        registry.register( pcBytesRead, new MetricsCounter( pageCacheCounters::bytesRead ) );
-        registry.register( pcBytesWritten, new MetricsCounter( pageCacheCounters::bytesWritten ) );
+        registry.register( pcPageFaults, () -> new MetricsCounter( pageCacheCounters::faults ) );
+        registry.register( pcEvictions, () -> new MetricsCounter( pageCacheCounters::evictions ) );
+        registry.register( pcPins, () -> new MetricsCounter( pageCacheCounters::pins ) );
+        registry.register( pcUnpins, () -> new MetricsCounter( pageCacheCounters::unpins ) );
+        registry.register( pcHits, () -> new MetricsCounter( pageCacheCounters::hits ) );
+        registry.register( pcFlushes, () -> new MetricsCounter( pageCacheCounters::flushes ) );
+        registry.register( pcMerges, () -> new MetricsCounter( pageCacheCounters::merges ) );
+        registry.register( pcEvictionExceptions, () -> new MetricsCounter( pageCacheCounters::evictionExceptions ) );
+        registry.register( pcHitRatio, () -> new PageCacheHitRatioGauge( pageCacheCounters ) );
+        registry.register( pcUsageRatio, () -> (Gauge<Double>) pageCacheCounters::usageRatio );
+        registry.register( pcBytesRead, () -> new MetricsCounter( pageCacheCounters::bytesRead ) );
+        registry.register( pcBytesWritten, () -> new MetricsCounter( pageCacheCounters::bytesWritten ) );
     }
 
     @Override

@@ -13,10 +13,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
+import org.neo4j.configuration.helpers.GlobbingPattern;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
@@ -46,7 +48,8 @@ class FileDescriptorMetricsTestIT
 
         managementService = new TestDatabaseManagementServiceBuilder( testDirectory.homePath() )
                 .setConfig( MetricsSettings.metrics_enabled, true )
-                .setConfig( MetricsSettings.jvm_file_descriptors_enabled, true )
+                .setConfig( MetricsSettings.metrics_filter, GlobbingPattern.create( "*vm.file.descriptors*" ) )
+                .setConfig( MetricsSettings.csv_interval, Duration.ofMillis( 10 ) )
                 .build();
     }
 

@@ -6,7 +6,7 @@
 package com.neo4j.metrics.source.jvm;
 
 import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricRegistry;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
@@ -29,12 +29,12 @@ public class HeapMetrics extends JvmMetrics
     public static final String HEAP_USED_TEMPLATE = name( VM_NAME_PREFIX, "heap.used" );
     public static final String HEAP_MAX_TEMPLATE = name( VM_NAME_PREFIX, "heap.max" );
 
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
     private final String heapCommitted;
     private final String heapUsed;
     private final String heapMax;
 
-    public HeapMetrics( String metricsPrefix, MetricRegistry registry )
+    public HeapMetrics( String metricsPrefix, MetricsRegister registry )
     {
         this.registry = registry;
         this.heapCommitted = name( metricsPrefix, HEAP_COMMITTED_TEMPLATE );
@@ -46,9 +46,9 @@ public class HeapMetrics extends JvmMetrics
     public void start()
     {
         MemoryUsageSupplier memoryUsageSupplier = new MemoryUsageSupplier();
-        registry.register( heapCommitted, (Gauge<Long>) memoryUsageSupplier::getCommitted );
-        registry.register( heapUsed, (Gauge<Long>) memoryUsageSupplier::getUsed );
-        registry.register( heapMax, (Gauge<Long>) memoryUsageSupplier::getMax );
+        registry.register( heapCommitted, () -> (Gauge<Long>) memoryUsageSupplier::getCommitted );
+        registry.register( heapUsed, () -> (Gauge<Long>) memoryUsageSupplier::getUsed );
+        registry.register( heapMax, () -> (Gauge<Long>) memoryUsageSupplier::getMax );
     }
 
     @Override

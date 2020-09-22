@@ -5,8 +5,8 @@
  */
 package com.neo4j.metrics.source.causalclustering;
 
-import com.codahale.metrics.MetricRegistry;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import org.neo4j.annotations.documented.Documented;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -30,14 +30,14 @@ public class DiscoveryCoreMetrics extends LifecycleAdapter
     private final ClusterSizeMetric discoveryClusterSizeMetric = new ClusterSizeMetric();
     private final ReplicatedDataMetric discoveryReplicatedDataMetric = new ReplicatedDataMetric();
     private final Monitors monitors;
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
 
     private final String clusterConverged;
     private final String clusterMembers;
     private final String clusterUnreachable;
     private final String replicatedData;
 
-    public DiscoveryCoreMetrics( String globalMetricsPrefix, Monitors globalMonitors, MetricRegistry metricRegistry )
+    public DiscoveryCoreMetrics( String globalMetricsPrefix, Monitors globalMonitors, MetricsRegister metricRegistry )
     {
         this.monitors = globalMonitors;
         this.registry = metricRegistry;
@@ -53,14 +53,14 @@ public class DiscoveryCoreMetrics extends LifecycleAdapter
         monitors.addMonitorListener( discoveryReplicatedDataMetric );
         monitors.addMonitorListener( discoveryClusterSizeMetric );
 
-        registry.register( clusterConverged, discoveryClusterSizeMetric.converged() );
-        registry.register( clusterMembers, discoveryClusterSizeMetric.members() );
-        registry.register( clusterUnreachable, discoveryClusterSizeMetric.unreachable() );
+        registry.register( clusterConverged, () -> discoveryClusterSizeMetric.converged() );
+        registry.register( clusterMembers, () -> discoveryClusterSizeMetric.members() );
+        registry.register( clusterUnreachable, () -> discoveryClusterSizeMetric.unreachable() );
 
         for ( ReplicatedDataIdentifier identifier : ReplicatedDataIdentifier.values() )
         {
-            registry.register( discoveryReplicatedDataName( identifier, "visible" ), discoveryReplicatedDataMetric.getVisibleDataSize( identifier ) );
-            registry.register( discoveryReplicatedDataName( identifier, "invisible" ), discoveryReplicatedDataMetric.getInvisibleDataSize( identifier ) );
+            registry.register( discoveryReplicatedDataName( identifier, "visible" ), () -> discoveryReplicatedDataMetric.getVisibleDataSize( identifier ) );
+            registry.register( discoveryReplicatedDataName( identifier, "invisible" ), () -> discoveryReplicatedDataMetric.getInvisibleDataSize( identifier ) );
         }
     }
 

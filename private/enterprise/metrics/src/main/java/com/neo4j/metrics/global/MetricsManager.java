@@ -5,11 +5,11 @@
  */
 package com.neo4j.metrics.global;
 
-import com.codahale.metrics.MetricRegistry;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 public interface MetricsManager
 {
-    MetricRegistry getRegistry();
+    MetricsRegister getRegistry();
 
     boolean isConfigured();
 }

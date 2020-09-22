@@ -5,8 +5,8 @@
  */
 package com.neo4j.metrics.database;
 
-import com.codahale.metrics.MetricRegistry;
 import com.neo4j.configuration.MetricsSettings;
+import com.neo4j.metrics.metric.MetricsRegister;
 import com.neo4j.metrics.source.causalclustering.CatchUpMetrics;
 import com.neo4j.metrics.source.causalclustering.RaftCoreMetrics;
 import com.neo4j.metrics.source.causalclustering.ReadReplicaMetrics;
@@ -27,13 +27,13 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 
 public class DatabaseMetricsExporter
 {
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
     private final LifeSupport life;
     private final Config config;
     private final ExtensionContext context;
     private final DatabaseMetricsExtensionFactory.Dependencies dependencies;
 
-    DatabaseMetricsExporter( MetricRegistry registry, Config config, ExtensionContext context,
+    DatabaseMetricsExporter( MetricsRegister registry, Config config, ExtensionContext context,
             DatabaseMetricsExtensionFactory.Dependencies dependencies, LifeSupport life )
     {
         this.registry = registry;
@@ -47,68 +47,38 @@ public class DatabaseMetricsExporter
     {
         String metricsPrefix = databaseMetricsPrefix();
 
-        if ( config.get( MetricsSettings.neo_tx_enabled ) )
+        life.add( new TransactionMetrics( metricsPrefix, registry, dependencies.transactionIdStoreSupplier(), dependencies.transactionCounters() ) );
+
+        life.add( new CheckPointingMetrics( metricsPrefix, registry, dependencies.checkpointCounters() ) );
+
+        life.add( new TransactionLogsMetrics( metricsPrefix, registry, dependencies.transactionLogCounters() ) );
+
+        if ( context.dbmsInfo().edition != Edition.COMMUNITY && context.dbmsInfo().edition != Edition.UNKNOWN )
         {
-            life.add( new TransactionMetrics( metricsPrefix, registry, dependencies.transactionIdStoreSupplier(), dependencies.transactionCounters() ) );
+            life.add( new EntityCountMetrics( metricsPrefix, registry, dependencies.storeEntityCounters() ) );
+
+            var pageCacheTracer = dependencies.tracers().getPageCacheTracer();
+            life.add( new DatabaseCountMetrics( metricsPrefix, registry, dependencies.storeEntityCounters(), pageCacheTracer ) );
         }
 
-        if ( config.get( MetricsSettings.neo_check_pointing_enabled ) )
-        {
-            life.add( new CheckPointingMetrics( metricsPrefix, registry, dependencies.checkpointCounters() ) );
-        }
+        life.add( new StoreSizeMetrics( metricsPrefix, registry, dependencies.scheduler(), dependencies.fileSystem(),
+                dependencies.database().getDatabaseLayout() ) );
 
-        if ( config.get( MetricsSettings.neo_transaction_logs_enabled ) )
-        {
-            life.add( new TransactionLogsMetrics( metricsPrefix, registry, dependencies.transactionLogCounters() ) );
-        }
+        life.add( new CypherMetrics( metricsPrefix, registry, dependencies.monitors() ) );
 
-        if ( config.get( MetricsSettings.neo_counts_enabled ) )
-        {
-            if ( context.dbmsInfo().edition != Edition.COMMUNITY && context.dbmsInfo().edition != Edition.UNKNOWN )
-            {
-                life.add( new EntityCountMetrics( metricsPrefix, registry, dependencies.storeEntityCounters() ) );
-            }
-        }
+        life.add( new DatabaseMemoryPoolMetrics( metricsPrefix, registry, dependencies.memoryPools(),
+                dependencies.database().getNamedDatabaseId().name() ) );
 
-        if ( config.get( MetricsSettings.database_counts_enabled ) )
+        OperationalMode mode = context.dbmsInfo().operationalMode;
+        if ( mode == OperationalMode.CORE )
         {
-            if ( context.dbmsInfo().edition != Edition.COMMUNITY && context.dbmsInfo().edition != Edition.UNKNOWN )
-            {
-                var pageCacheTracer = dependencies.tracers().getPageCacheTracer();
-                life.add( new DatabaseCountMetrics( metricsPrefix, registry, dependencies.storeEntityCounters(), pageCacheTracer ) );
-            }
+            life.add( new RaftCoreMetrics( metricsPrefix, dependencies.raftMonitors(), registry, dependencies.coreMetadataSupplier() ) );
+            life.add( new CatchUpMetrics( metricsPrefix, dependencies.monitors(), registry ) );
         }
-
-        if ( config.get( MetricsSettings.neo_store_size_enabled ) )
+        else if ( mode == OperationalMode.READ_REPLICA )
         {
-            life.add( new StoreSizeMetrics( metricsPrefix, registry, dependencies.scheduler(), dependencies.fileSystem(),
-                    dependencies.database().getDatabaseLayout() ) );
-        }
-
-        if ( config.get( MetricsSettings.cypher_planning_enabled ) )
-        {
-            life.add( new CypherMetrics( metricsPrefix, registry, dependencies.monitors() ) );
-        }
-
-        if ( config.get( MetricsSettings.neo_memory_pools_enabled ) )
-        {
-            life.add( new DatabaseMemoryPoolMetrics( metricsPrefix, registry, dependencies.memoryPools(),
-                            dependencies.database().getNamedDatabaseId().name() ) );
-        }
-
-        if ( config.get( MetricsSettings.causal_clustering_enabled ) )
-        {
-            OperationalMode mode = context.dbmsInfo().operationalMode;
-            if ( mode == OperationalMode.CORE )
-            {
-                life.add( new RaftCoreMetrics( metricsPrefix, dependencies.raftMonitors(), registry, dependencies.coreMetadataSupplier() ) );
-                life.add( new CatchUpMetrics( metricsPrefix, dependencies.monitors(), registry ) );
-            }
-            else if ( mode == OperationalMode.READ_REPLICA )
-            {
-                life.add( new ReadReplicaMetrics( metricsPrefix, dependencies.raftMonitors(), registry ) );
-                life.add( new CatchUpMetrics( metricsPrefix, dependencies.monitors(), registry ) );
-            }
+            life.add( new ReadReplicaMetrics( metricsPrefix, dependencies.raftMonitors(), registry ) );
+            life.add( new CatchUpMetrics( metricsPrefix, dependencies.monitors(), registry ) );
         }
     }
 

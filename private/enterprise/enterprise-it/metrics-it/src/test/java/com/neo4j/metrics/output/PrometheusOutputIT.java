@@ -16,6 +16,7 @@ import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
+import org.neo4j.configuration.helpers.GlobbingPattern;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -24,6 +25,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.configuration.MetricsSettings.metrics_filter;
 import static com.neo4j.configuration.MetricsSettings.prometheus_enabled;
 import static com.neo4j.configuration.MetricsSettings.prometheus_endpoint;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,7 +46,8 @@ class PrometheusOutputIT
     void setUp()
     {
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() ).setConfig( prometheus_enabled, true )
-                .setConfig( prometheus_endpoint, new SocketAddress( "localhost", 0 ) ).build();
+                .setConfig( prometheus_endpoint, new SocketAddress( "localhost", 0 ) )
+                .setConfig( metrics_filter, GlobbingPattern.create( "*" ) ).build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 

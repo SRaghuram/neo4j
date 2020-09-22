@@ -6,11 +6,11 @@
 package com.neo4j.metrics.source.causalclustering;
 
 import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricRegistry;
 import com.neo4j.causalclustering.common.RaftMonitors;
 import com.neo4j.causalclustering.core.consensus.CoreMetaData;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.metrics.metric.MetricsCounter;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import java.util.function.Supplier;
 
@@ -87,7 +87,7 @@ public class RaftCoreMetrics extends LifecycleAdapter
     private final String lastLeaderMessage;
 
     private final RaftMonitors monitors;
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
     private final Supplier<CoreMetaData> coreMetaData;
 
     private final RaftLogCommitIndexMetric raftLogCommitIndexMetric = new RaftLogCommitIndexMetric();
@@ -101,7 +101,7 @@ public class RaftCoreMetrics extends LifecycleAdapter
     private final ReplicationMetric replicationMetric = new ReplicationMetric();
     private final LastLeaderMessageMetric lastLeaderMessageMetric;
 
-    public RaftCoreMetrics( String metricsPrefix, RaftMonitors monitors, MetricRegistry registry, Supplier<CoreMetaData> coreMetaData )
+    public RaftCoreMetrics( String metricsPrefix, RaftMonitors monitors, MetricsRegister registry, Supplier<CoreMetaData> coreMetaData )
     {
         this.appendIndex = name( metricsPrefix, APPEND_INDEX_TEMPLATE );
         this.commitIndex = name( metricsPrefix, COMMIT_INDEX_TEMPLATE );
@@ -144,30 +144,30 @@ public class RaftCoreMetrics extends LifecycleAdapter
         monitors.addMonitorListener( replicationMetric );
         monitors.addMonitorListener( lastLeaderMessageMetric );
 
-        registry.register( commitIndex, (Gauge<Long>) raftLogCommitIndexMetric::commitIndex );
-        registry.register( appendIndex, (Gauge<Long>) raftLogAppendIndexMetric::appendIndex );
-        registry.register( appliedIndex, (Gauge<Long>) raftLogAppliedIndexMetric::appliedIndex );
-        registry.register( term, (Gauge<Long>) raftTermMetric::term );
-        registry.register( txRetries, new MetricsCounter( txRetryMetric::transactionsRetries ) );
-        registry.register( isLeader, new LeaderGauge() );
-        registry.register( totalBytes, (Gauge<Long>) inFlightCacheMetric::getTotalBytes );
-        registry.register( hits, new MetricsCounter( inFlightCacheMetric::getHits ) );
-        registry.register( misses, new MetricsCounter( inFlightCacheMetric::getMisses ) );
-        registry.register( maxBytes, (Gauge<Long>) inFlightCacheMetric::getMaxBytes );
-        registry.register( maxElements, (Gauge<Long>) inFlightCacheMetric::getMaxElements );
-        registry.register( elementCount, (Gauge<Long>) inFlightCacheMetric::getElementCount );
-        registry.register( delay, (Gauge<Long>) raftMessageProcessingMetric::delay );
-        registry.register( timer, raftMessageProcessingMetric.timer() );
-        registry.register( replicationNew, new MetricsCounter( replicationMetric::newReplicationCount ) );
-        registry.register( replicationAttempt, new MetricsCounter( replicationMetric::attemptCount ) );
-        registry.register( replicationFail, new MetricsCounter( replicationMetric::failCount ) );
-        registry.register( replicationMaybe, new MetricsCounter( replicationMetric::maybeCount ) );
-        registry.register( replicationSuccess, new MetricsCounter( replicationMetric::successCount ) );
-        registry.register( lastLeaderMessage, lastLeaderMessageMetric );
+        registry.register( commitIndex, () -> (Gauge<Long>) raftLogCommitIndexMetric::commitIndex );
+        registry.register( appendIndex, () -> (Gauge<Long>) raftLogAppendIndexMetric::appendIndex );
+        registry.register( appliedIndex, () -> (Gauge<Long>) raftLogAppliedIndexMetric::appliedIndex );
+        registry.register( term, () -> (Gauge<Long>) raftTermMetric::term );
+        registry.register( txRetries, () -> new MetricsCounter( txRetryMetric::transactionsRetries ) );
+        registry.register( isLeader, () -> new LeaderGauge() );
+        registry.register( totalBytes, () -> (Gauge<Long>) inFlightCacheMetric::getTotalBytes );
+        registry.register( hits, () -> new MetricsCounter( inFlightCacheMetric::getHits ) );
+        registry.register( misses, () -> new MetricsCounter( inFlightCacheMetric::getMisses ) );
+        registry.register( maxBytes, () -> (Gauge<Long>) inFlightCacheMetric::getMaxBytes );
+        registry.register( maxElements, () -> (Gauge<Long>) inFlightCacheMetric::getMaxElements );
+        registry.register( elementCount, () -> (Gauge<Long>) inFlightCacheMetric::getElementCount );
+        registry.register( delay, () -> (Gauge<Long>) raftMessageProcessingMetric::delay );
+        registry.register( timer, () -> raftMessageProcessingMetric.timer() );
+        registry.register( replicationNew, () -> new MetricsCounter( replicationMetric::newReplicationCount ) );
+        registry.register( replicationAttempt, () -> new MetricsCounter( replicationMetric::attemptCount ) );
+        registry.register( replicationFail, () -> new MetricsCounter( replicationMetric::failCount ) );
+        registry.register( replicationMaybe, () -> new MetricsCounter( replicationMetric::maybeCount ) );
+        registry.register( replicationSuccess, () -> new MetricsCounter( replicationMetric::successCount ) );
+        registry.register( lastLeaderMessage, () -> lastLeaderMessageMetric );
 
         for ( RaftMessages.Type type : RaftMessages.Type.values() )
         {
-            registry.register( messageTimerName( type ), raftMessageProcessingMetric.timer( type ) );
+            registry.register( messageTimerName( type ), () -> raftMessageProcessingMetric.timer( type ) );
         }
     }
 

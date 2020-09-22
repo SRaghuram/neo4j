@@ -5,8 +5,8 @@
  */
 package com.neo4j.metrics.source.jvm;
 
-import com.codahale.metrics.MetricRegistry;
 import com.neo4j.metrics.metric.MetricsCounter;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
@@ -30,9 +30,9 @@ public class GCMetrics extends JvmMetrics
     private final String gcTime;
     private final String gcCount;
 
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
 
-    public GCMetrics( String metricsPrefix, MetricRegistry registry )
+    public GCMetrics( String metricsPrefix, MetricsRegister registry )
     {
         this.registry = registry;
         this.gcPrefix = name( metricsPrefix, GC_PREFIX );
@@ -45,8 +45,8 @@ public class GCMetrics extends JvmMetrics
     {
         for ( final GarbageCollectorMXBean gcBean : ManagementFactory.getGarbageCollectorMXBeans() )
         {
-            registry.register( format( gcTime, prettifyName( gcBean.getName() ) ), new MetricsCounter( gcBean::getCollectionTime ) );
-            registry.register( format( gcCount, prettifyName( gcBean.getName() ) ), new MetricsCounter( gcBean::getCollectionCount ) );
+            registry.register( format( gcTime, prettifyName( gcBean.getName() ) ), () -> new MetricsCounter( gcBean::getCollectionTime ) );
+            registry.register( format( gcCount, prettifyName( gcBean.getName() ) ), () -> new MetricsCounter( gcBean::getCollectionCount ) );
         }
     }
 

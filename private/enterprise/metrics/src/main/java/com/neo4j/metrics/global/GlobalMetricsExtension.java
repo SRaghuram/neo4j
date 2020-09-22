@@ -7,6 +7,7 @@ package com.neo4j.metrics.global;
 
 import com.codahale.metrics.MetricRegistry;
 import com.neo4j.metrics.global.GlobalMetricsExtensionFactory.Dependencies;
+import com.neo4j.metrics.metric.MetricsRegister;
 import com.neo4j.metrics.output.EventReporterBuilder;
 
 import org.neo4j.configuration.Config;
@@ -17,12 +18,13 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
 
 import static com.neo4j.configuration.MetricsSettings.metrics_enabled;
+import static com.neo4j.configuration.MetricsSettings.metrics_filter;
 
 public class GlobalMetricsExtension implements Lifecycle, MetricsManager
 {
     private final LifeSupport life = new LifeSupport();
     private final Log logger;
-    private final MetricRegistry registry;
+    private final MetricsRegister metricsRegister;
     private final ExtensionContext context;
     private final GlobalMetricsExtensionFactory.Dependencies dependencies;
     private final boolean configured;
@@ -33,7 +35,8 @@ public class GlobalMetricsExtension implements Lifecycle, MetricsManager
         this.context = context;
         this.dependencies = dependencies;
         this.logger = logService.getUserLog( getClass() );
-        this.registry = new MetricRegistry();
+        MetricRegistry registry = new MetricRegistry();
+        this.metricsRegister = new MetricsRegister( registry, dependencies.configuration().get( metrics_filter ) );
         this.configured = new EventReporterBuilder( dependencies.configuration(), registry, logger, context, life, dependencies.fileSystemAbstraction(),
                 dependencies.scheduler(), dependencies.portRegister() ).configure();
     }
@@ -54,7 +57,7 @@ public class GlobalMetricsExtension implements Lifecycle, MetricsManager
                     "Metrics extension is disabled." );
             return;
         }
-        new GlobalMetricsExporter( registry, config, context, dependencies, life ).export();
+        new GlobalMetricsExporter( metricsRegister, config, context, dependencies, life ).export();
         life.init();
     }
 
@@ -78,9 +81,9 @@ public class GlobalMetricsExtension implements Lifecycle, MetricsManager
     }
 
     @Override
-    public MetricRegistry getRegistry()
+    public MetricsRegister getRegistry()
     {
-        return registry;
+        return metricsRegister;
     }
 
     @Override

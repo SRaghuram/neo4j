@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Path;
 import java.time.Duration;
 
+import org.neo4j.configuration.helpers.GlobbingPattern;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -48,7 +49,7 @@ class PageCacheMetricsIT
     {
         metricsDirectory = testDirectory.directoryPath( "metrics" );
         builder.setConfig( MetricsSettings.metrics_enabled, true  )
-                .setConfig( MetricsSettings.neo_page_cache_enabled, true  )
+                .setConfig( MetricsSettings.metrics_filter, GlobbingPattern.create( "*page_cache*" ) )
                 .setConfig( MetricsSettings.csv_enabled, true )
                 .setConfig( MetricsSettings.csv_interval, Duration.ofMillis( 10 ) )
                 .setConfig( MetricsSettings.csv_path, metricsDirectory.toAbsolutePath() )

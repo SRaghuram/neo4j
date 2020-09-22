@@ -19,6 +19,7 @@ import java.util.function.Supplier;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.configuration.helpers.GlobbingPattern;
 import org.neo4j.dbms.database.DatabaseOperationCounts;
 import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -111,6 +112,7 @@ class DatabaseMetricsExtensionTest
     void registerDatabaseMetricsInGlobalMetricsRegistry()
     {
         Config config = Config.defaults();
+        config.set( MetricsSettings.metrics_filter, GlobbingPattern.create( "*" ) );
         GlobalMetricsExtension globalMetricsExtension = new GlobalMetricsExtension( context, new GlobalMetricsDependencies( config ) );
         DatabaseMetricsDependencies metricsDependencies = new DatabaseMetricsDependencies( config, globalMetricsExtension );
         DatabaseMetricsExtension databaseMetricsExtension = new DatabaseMetricsExtension( context, metricsDependencies );
@@ -119,7 +121,8 @@ class DatabaseMetricsExtensionTest
         {
             try ( Lifespan ignored = new Lifespan( globalMetricsExtension, databaseMetricsExtension ) )
             {
-                assertThat( globalMetricsExtension.getRegistry().getNames() ).contains( format( "neo4j.%s.check_point.events", DATABASE_ID.name() ) );
+                assertThat( globalMetricsExtension.getRegistry().getNames() )
+                        .contains( format( "neo4j.%s.check_point.events", DATABASE_ID.name() ) );
             }
         } );
     }

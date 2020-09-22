@@ -5,8 +5,8 @@
  */
 package com.neo4j.metrics.source.db;
 
-import com.codahale.metrics.MetricRegistry;
 import com.neo4j.metrics.metric.MetricsCounter;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import org.neo4j.annotations.documented.Documented;
 import org.neo4j.cypher.PlanCacheMetricsMonitor;
@@ -28,11 +28,11 @@ public class CypherMetrics extends LifecycleAdapter
     private final String replanEvents;
     private final String replanWaitTime;
 
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
     private final Monitors monitors;
     private final PlanCacheMetricsMonitor cacheMonitor = new PlanCacheMetricsMonitor();
 
-    public CypherMetrics( String metricsPrefix, MetricRegistry registry, Monitors monitors )
+    public CypherMetrics( String metricsPrefix, MetricsRegister registry, Monitors monitors )
     {
         this.replanEvents = name( metricsPrefix, REPLAN_EVENTS_TEMPLATE );
         this.replanWaitTime = name( metricsPrefix, REPLAN_WAIT_TIME_TEMPLATE );
@@ -44,8 +44,8 @@ public class CypherMetrics extends LifecycleAdapter
     public void start()
     {
         monitors.addMonitorListener( cacheMonitor );
-        registry.register( replanEvents, new MetricsCounter( cacheMonitor::numberOfReplans ) );
-        registry.register( replanWaitTime, new MetricsCounter( cacheMonitor::replanWaitTime ) );
+        registry.register( replanEvents, () -> new MetricsCounter( cacheMonitor::numberOfReplans ) );
+        registry.register( replanWaitTime, () -> new MetricsCounter( cacheMonitor::replanWaitTime ) );
     }
 
     @Override

@@ -18,6 +18,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.BiPredicate;
 
+import org.neo4j.configuration.helpers.GlobbingPattern;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
@@ -29,6 +30,7 @@ import static com.neo4j.configuration.MetricsSettings.csv_interval;
 import static com.neo4j.configuration.MetricsSettings.csv_max_archives;
 import static com.neo4j.configuration.MetricsSettings.csv_path;
 import static com.neo4j.configuration.MetricsSettings.csv_rotation_threshold;
+import static com.neo4j.configuration.MetricsSettings.metrics_filter;
 import static com.neo4j.metrics.MetricsTestHelper.readLongCounterAndAssert;
 import static java.time.Duration.ofMinutes;
 import static java.util.Objects.requireNonNull;
@@ -60,7 +62,8 @@ class RotatableCsvOutputIT
                 .setConfig( csv_rotation_threshold, "t,count,mean_rate,m1_rate,m5_rate,m15_rate,rate_unit".length() + 1L )
                 .setConfig( csv_interval, Duration.ofMillis( 100 ) )
                 .setConfig( csv_max_archives, MAX_ARCHIVES )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, false ).build();
+                .setConfig( OnlineBackupSettings.online_backup_enabled, false )
+                .setConfig( metrics_filter, GlobbingPattern.create( "*" ) ).build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 

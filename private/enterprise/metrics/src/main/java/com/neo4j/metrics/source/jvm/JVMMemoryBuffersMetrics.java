@@ -6,7 +6,7 @@
 package com.neo4j.metrics.source.jvm;
 
 import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricRegistry;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import java.lang.management.BufferPoolMXBean;
 import java.lang.management.ManagementFactory;
@@ -28,13 +28,13 @@ public class JVMMemoryBuffersMetrics extends JvmMetrics
     @Documented( "Estimated total capacity of buffers in the pool. (gauge)" )
     private static final String MEMORY_BUFFER_CAPACITY_TEMPLATE = name( MEMORY_BUFFER_PREFIX, "%s", "capacity" );
 
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
     private final String memoryBufferPrefix;
     private final String memoryBufferCount;
     private final String memoryBufferUsed;
     private final String memoryBufferCapacity;
 
-    public JVMMemoryBuffersMetrics( String metricsPrefix, MetricRegistry registry )
+    public JVMMemoryBuffersMetrics( String metricsPrefix, MetricsRegister registry )
     {
         this.registry = registry;
         this.memoryBufferPrefix = name( metricsPrefix, MEMORY_BUFFER_PREFIX );
@@ -49,9 +49,9 @@ public class JVMMemoryBuffersMetrics extends JvmMetrics
         for ( final BufferPoolMXBean pool : ManagementFactory.getPlatformMXBeans( BufferPoolMXBean.class ) )
         {
             String poolPrettyName = prettifyName( pool.getName() );
-            registry.register( format( memoryBufferCount, poolPrettyName ), (Gauge<Long>) pool::getCount );
-            registry.register( format( memoryBufferUsed, poolPrettyName ), (Gauge<Long>) pool::getMemoryUsed );
-            registry.register( format( memoryBufferCapacity, poolPrettyName ), (Gauge<Long>) pool::getTotalCapacity );
+            registry.register( format( memoryBufferCount, poolPrettyName ), () -> (Gauge<Long>) pool::getCount );
+            registry.register( format( memoryBufferUsed, poolPrettyName ), () -> (Gauge<Long>) pool::getMemoryUsed );
+            registry.register( format( memoryBufferCapacity, poolPrettyName ), () -> (Gauge<Long>) pool::getTotalCapacity );
         }
     }
 

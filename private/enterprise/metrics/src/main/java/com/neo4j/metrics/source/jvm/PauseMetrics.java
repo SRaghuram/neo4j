@@ -6,7 +6,7 @@
 package com.neo4j.metrics.source.jvm;
 
 import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricRegistry;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -25,10 +25,10 @@ public class PauseMetrics extends JvmMetrics
 
     private final String pauseTime;
     private final Monitors monitors;
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
     private final MetricPauseMonitor metricPauseMonitor;
 
-    public PauseMetrics( String metricsPrefix, MetricRegistry registry, Monitors monitors )
+    public PauseMetrics( String metricsPrefix, MetricsRegister registry, Monitors monitors )
     {
         this.registry = registry;
         this.pauseTime = name( metricsPrefix, PAUSE_TIME );
@@ -40,7 +40,7 @@ public class PauseMetrics extends JvmMetrics
     public void start()
     {
         monitors.addMonitorListener( metricPauseMonitor );
-        registry.register( pauseTime, (Gauge<Long>) metricPauseMonitor::getPauseTime );
+        registry.register( pauseTime, () -> (Gauge<Long>) metricPauseMonitor::getPauseTime );
     }
 
     @Override

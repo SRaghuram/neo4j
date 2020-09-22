@@ -6,7 +6,7 @@
 package com.neo4j.metrics.source.server;
 
 import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricRegistry;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import java.util.function.Supplier;
 
@@ -29,10 +29,10 @@ public class ServerMetrics extends LifecycleAdapter
     private final String threadJettyIdle;
     private final String threadJettyAll;
 
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
     private final Supplier<WebContainerThreadInfo> webContainerThreadInfo;
 
-    public ServerMetrics( String metricsPrefix, MetricRegistry registry, Supplier<WebContainerThreadInfo> webThreadInfo )
+    public ServerMetrics( String metricsPrefix, MetricsRegister registry, Supplier<WebContainerThreadInfo> webThreadInfo )
     {
         this.registry = registry;
         this.threadJettyIdle = name( metricsPrefix, THREAD_JETTY_IDLE_TEMPLATE );
@@ -43,8 +43,8 @@ public class ServerMetrics extends LifecycleAdapter
     @Override
     public void start()
     {
-        registry.register( threadJettyIdle, (Gauge<Integer>) () -> webContainerThreadInfo.get().idleThreads() );
-        registry.register( threadJettyAll, (Gauge<Integer>) () -> webContainerThreadInfo.get().allThreads() );
+        registry.register( threadJettyIdle, () -> (Gauge<Integer>) () -> webContainerThreadInfo.get().idleThreads() );
+        registry.register( threadJettyAll, () -> (Gauge<Integer>) () -> webContainerThreadInfo.get().allThreads() );
     }
 
     @Override

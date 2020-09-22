@@ -25,6 +25,7 @@ import org.neo4j.collection.RawIterator;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.helpers.GlobbingPattern;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -79,6 +80,7 @@ class GlobalMetricsExtensionFactoryIT
         builder.setConfig( GraphDatabaseSettings.check_point_interval_time, Duration.ofMillis( 100 ) );
         builder.setConfig( MetricsSettings.graphite_interval, Duration.ofSeconds( 1 ) );
         builder.setConfig( OnlineBackupSettings.online_backup_enabled, false );
+        builder.setConfig( MetricsSettings.metrics_filter, GlobbingPattern.create( "*" ) );
     }
 
     @BeforeEach

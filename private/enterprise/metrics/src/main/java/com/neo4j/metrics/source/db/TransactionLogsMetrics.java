@@ -6,8 +6,8 @@
 package com.neo4j.metrics.source.db;
 
 import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricRegistry;
 import com.neo4j.metrics.metric.MetricsCounter;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import org.neo4j.annotations.documented.Documented;
 import org.neo4j.kernel.impl.transaction.stats.TransactionLogCounters;
@@ -34,10 +34,10 @@ public class TransactionLogsMetrics extends LifecycleAdapter
     private final String logRotationDuration;
     private final String logAppendedBytes;
 
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
     private final TransactionLogCounters logCounters;
 
-    public TransactionLogsMetrics( String metricsPrefix, MetricRegistry registry, TransactionLogCounters logCounters )
+    public TransactionLogsMetrics( String metricsPrefix, MetricsRegister registry, TransactionLogCounters logCounters )
     {
         this.logRotationEvents = name( metricsPrefix, LOG_ROTATION_EVENTS_TEMPLATE );
         this.logRotationTotalTime = name( metricsPrefix, LOG_ROTATION_TOTAL_TIME_TEMPLATE );
@@ -50,10 +50,10 @@ public class TransactionLogsMetrics extends LifecycleAdapter
     @Override
     public void start()
     {
-        registry.register( logRotationEvents, new MetricsCounter( logCounters::numberOfLogRotations ) );
-        registry.register( logRotationTotalTime, new MetricsCounter( logCounters::logRotationAccumulatedTotalTimeMillis ) );
-        registry.register( logAppendedBytes, new MetricsCounter( logCounters::appendedBytes ) );
-        registry.register( logRotationDuration, (Gauge<Long>) logCounters::lastLogRotationTimeMillis  );
+        registry.register( logRotationEvents, () -> new MetricsCounter( logCounters::numberOfLogRotations ) );
+        registry.register( logRotationTotalTime, () -> new MetricsCounter( logCounters::logRotationAccumulatedTotalTimeMillis ) );
+        registry.register( logAppendedBytes, () -> new MetricsCounter( logCounters::appendedBytes ) );
+        registry.register( logRotationDuration, () -> (Gauge<Long>) logCounters::lastLogRotationTimeMillis  );
     }
 
     @Override

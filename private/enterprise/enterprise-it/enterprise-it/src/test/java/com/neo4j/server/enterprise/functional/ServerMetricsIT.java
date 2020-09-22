@@ -54,6 +54,7 @@ class ServerMetricsIT
         var webServerContainer = serverOnRandomPorts()
                                                   .usingDataDir( directory.homeDir().getAbsolutePath() )
                                                   .withProperty( MetricsSettings.metrics_enabled.name(), TRUE )
+                                                  .withProperty( MetricsSettings.metrics_filter.name(), "*" )
                                                   .withProperty( MetricsSettings.csv_enabled.name(), TRUE )
                                                   .withProperty( MetricsSettings.csv_path.name(), metrics.toAbsolutePath().toString() )
                                                   .withProperty( MetricsSettings.csv_interval.name(), "100ms" )

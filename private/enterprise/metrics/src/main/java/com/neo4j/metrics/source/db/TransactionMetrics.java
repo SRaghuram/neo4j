@@ -6,8 +6,8 @@
 package com.neo4j.metrics.source.db;
 
 import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricRegistry;
 import com.neo4j.metrics.metric.MetricsCounter;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import java.util.function.Supplier;
 
@@ -92,11 +92,11 @@ public class TransactionMetrics extends LifecycleAdapter
     private final String txSizeNative;
     private final TransactionSizeMetrics transactionSizeMetrics = new TransactionSizeMetrics();
 
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
     private final TransactionCounters transactionCounters;
     private final Supplier<TransactionIdStore> transactionIdStoreSupplier;
 
-    public TransactionMetrics( String metricsPrefix, MetricRegistry registry,
+    public TransactionMetrics( String metricsPrefix, MetricsRegister registry,
             Supplier<TransactionIdStore> transactionIdStoreSupplier, TransactionCounters transactionCounters )
     {
         this.txStarted = name( metricsPrefix, TX_STARTED_TEMPLATE );
@@ -127,30 +127,30 @@ public class TransactionMetrics extends LifecycleAdapter
     {
         transactionCounters.setTransactionSizeCallback( transactionSizeMetrics );
 
-        registry.register( txStarted, new MetricsCounter( transactionCounters::getNumberOfStartedTransactions ) );
-        registry.register( txPeakConcurrent, new MetricsCounter( transactionCounters::getPeakConcurrentNumberOfTransactions ) );
+        registry.register( txStarted, () -> new MetricsCounter( transactionCounters::getNumberOfStartedTransactions ) );
+        registry.register( txPeakConcurrent, () -> new MetricsCounter( transactionCounters::getPeakConcurrentNumberOfTransactions ) );
 
-        registry.register( txActive, (Gauge<Long>) transactionCounters::getNumberOfActiveTransactions );
-        registry.register( readTxActive, (Gauge<Long>) transactionCounters::getNumberOfActiveReadTransactions );
-        registry.register( writeTxActive, (Gauge<Long>) transactionCounters::getNumberOfActiveWriteTransactions );
+        registry.register( txActive, () -> (Gauge<Long>) transactionCounters::getNumberOfActiveTransactions );
+        registry.register( readTxActive, () -> (Gauge<Long>) transactionCounters::getNumberOfActiveReadTransactions );
+        registry.register( writeTxActive, () -> (Gauge<Long>) transactionCounters::getNumberOfActiveWriteTransactions );
 
-        registry.register( txCommitted, new MetricsCounter( transactionCounters::getNumberOfCommittedTransactions ) );
-        registry.register( readTxCommitted, new MetricsCounter( transactionCounters::getNumberOfCommittedReadTransactions ) );
-        registry.register( writeTxCommitted, new MetricsCounter( transactionCounters::getNumberOfCommittedWriteTransactions ) );
+        registry.register( txCommitted, () -> new MetricsCounter( transactionCounters::getNumberOfCommittedTransactions ) );
+        registry.register( readTxCommitted, () -> new MetricsCounter( transactionCounters::getNumberOfCommittedReadTransactions ) );
+        registry.register( writeTxCommitted, () -> new MetricsCounter( transactionCounters::getNumberOfCommittedWriteTransactions ) );
 
-        registry.register( txRollbacks, new MetricsCounter(  transactionCounters::getNumberOfRolledBackTransactions ) );
-        registry.register( readTxRollbacks, new MetricsCounter( transactionCounters::getNumberOfRolledBackReadTransactions ) );
-        registry.register( writeTxRollbacks, new MetricsCounter( transactionCounters::getNumberOfRolledBackWriteTransactions ) );
+        registry.register( txRollbacks, () -> new MetricsCounter(  transactionCounters::getNumberOfRolledBackTransactions ) );
+        registry.register( readTxRollbacks, () -> new MetricsCounter( transactionCounters::getNumberOfRolledBackReadTransactions ) );
+        registry.register( writeTxRollbacks, () -> new MetricsCounter( transactionCounters::getNumberOfRolledBackWriteTransactions ) );
 
-        registry.register( txTerminated, new MetricsCounter( transactionCounters::getNumberOfTerminatedTransactions ) );
-        registry.register( readTxTerminated, new MetricsCounter( transactionCounters::getNumberOfTerminatedReadTransactions ) );
-        registry.register( writeTxTerminated, new MetricsCounter( transactionCounters::getNumberOfTerminatedWriteTransactions ) );
+        registry.register( txTerminated, () -> new MetricsCounter( transactionCounters::getNumberOfTerminatedTransactions ) );
+        registry.register( readTxTerminated, () -> new MetricsCounter( transactionCounters::getNumberOfTerminatedReadTransactions ) );
+        registry.register( writeTxTerminated, () -> new MetricsCounter( transactionCounters::getNumberOfTerminatedWriteTransactions ) );
 
-        registry.register( lastCommittedTxId, new MetricsCounter( () -> transactionIdStoreSupplier.get().getLastCommittedTransactionId() ) );
-        registry.register( lastClosedTxId, new MetricsCounter( () -> transactionIdStoreSupplier.get().getLastClosedTransactionId() ) );
+        registry.register( lastCommittedTxId, () -> new MetricsCounter( () -> transactionIdStoreSupplier.get().getLastCommittedTransactionId() ) );
+        registry.register( lastClosedTxId, () -> new MetricsCounter( () -> transactionIdStoreSupplier.get().getLastClosedTransactionId() ) );
 
-        registry.register( txSizeHeap, transactionSizeMetrics.heapTxSizeHistogram() );
-        registry.register( txSizeNative, transactionSizeMetrics.nativeTxSizeHistogram() );
+        registry.register( txSizeHeap, () -> transactionSizeMetrics.heapTxSizeHistogram() );
+        registry.register( txSizeNative, () -> transactionSizeMetrics.nativeTxSizeHistogram() );
     }
 
     @Override

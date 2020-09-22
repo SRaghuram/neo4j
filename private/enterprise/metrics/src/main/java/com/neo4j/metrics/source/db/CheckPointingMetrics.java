@@ -6,8 +6,8 @@
 package com.neo4j.metrics.source.db;
 
 import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricRegistry;
 import com.neo4j.metrics.metric.MetricsCounter;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import org.neo4j.annotations.documented.Documented;
 import org.neo4j.kernel.impl.transaction.stats.CheckpointCounters;
@@ -31,10 +31,10 @@ public class CheckPointingMetrics extends LifecycleAdapter
     private final String checkPointTotalTime;
     private final String checkPointDuration;
 
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
     private final CheckpointCounters checkpointCounters;
 
-    public CheckPointingMetrics( String metricsPrefix, MetricRegistry registry, CheckpointCounters checkpointCounters )
+    public CheckPointingMetrics( String metricsPrefix, MetricsRegister registry, CheckpointCounters checkpointCounters )
     {
         this.checkPointEvents = name( metricsPrefix, CHECK_POINT_EVENTS_TEMPLATE );
         this.checkPointTotalTime = name( metricsPrefix, CHECK_POINT_TOTAL_TIME_TEMPLATE );
@@ -46,9 +46,9 @@ public class CheckPointingMetrics extends LifecycleAdapter
     @Override
     public void start()
     {
-        registry.register( checkPointEvents, new MetricsCounter( checkpointCounters::numberOfCheckPoints ) );
-        registry.register( checkPointTotalTime, new MetricsCounter( checkpointCounters::checkPointAccumulatedTotalTimeMillis ) );
-        registry.register( checkPointDuration, (Gauge<Long>) checkpointCounters::lastCheckpointTimeMillis );
+        registry.register( checkPointEvents, () -> new MetricsCounter( checkpointCounters::numberOfCheckPoints ) );
+        registry.register( checkPointTotalTime, () -> new MetricsCounter( checkpointCounters::checkPointAccumulatedTotalTimeMillis ) );
+        registry.register( checkPointDuration, () -> (Gauge<Long>) checkpointCounters::lastCheckpointTimeMillis );
     }
 
     @Override

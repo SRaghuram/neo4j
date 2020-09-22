@@ -14,6 +14,7 @@ import com.neo4j.metrics.database.DatabaseMetricsExtensionFactory;
 import com.neo4j.metrics.global.GlobalMetricsExtension;
 import com.neo4j.metrics.global.GlobalMetricsExtensionFactory;
 import com.neo4j.metrics.global.MetricsManager;
+import com.neo4j.metrics.metric.MetricsRegister;
 import com.neo4j.metrics.source.db.DatabaseCountMetrics;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
@@ -29,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.neo4j.configuration.helpers.GlobbingPattern;
 import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
@@ -97,6 +99,7 @@ class DatabaseMetricsExtensionIT
         builder.setConfig( check_point_interval_time, Duration.ofMillis( 100 ) );
         builder.setConfig( MetricsSettings.graphite_interval, Duration.ofSeconds( 1 ) );
         builder.setConfig( OnlineBackupSettings.online_backup_enabled, false );
+        builder.setConfig( MetricsSettings.metrics_filter, GlobbingPattern.create( "*" ) );
     }
 
     @BeforeEach
@@ -118,14 +121,14 @@ class DatabaseMetricsExtensionIT
     @Test
     void tracePageCacheAccessOnCountMetricsEvaluation()
     {
-        var registry = new MetricRegistry();
+        MetricRegistry registry = new MetricRegistry();
         var tempDatabaseName = "foo";
         managementService.createDatabase( tempDatabaseName );
         GraphDatabaseAPI fooDb = (GraphDatabaseAPI) managementService.database( tempDatabaseName );
         var suppliers = fooDb.getDependencyResolver().provideDependency( StoreEntityCounters.class );
         var pageCacheTracer = new DefaultPageCacheTracer();
 
-        var countMetrics = new DatabaseCountMetrics( "prefix", registry, suppliers, pageCacheTracer );
+        var countMetrics = new DatabaseCountMetrics( "prefix", new MetricsRegister( registry, GlobbingPattern.create( "*" ) ), suppliers, pageCacheTracer );
         countMetrics.start();
 
         var gauges = registry.getGauges().values();

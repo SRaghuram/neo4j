@@ -16,6 +16,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.time.Duration;
 
+import org.neo4j.configuration.helpers.GlobbingPattern;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
@@ -47,6 +48,7 @@ class DatabaseOperationCountMetricsIT
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
         builder.setConfig( MetricsSettings.metrics_enabled, true )
+                .setConfig( MetricsSettings.metrics_filter, GlobbingPattern.create( "*" ) )
                 .setConfig( MetricsSettings.csv_enabled, true )
                 .setConfig( MetricsSettings.csv_interval, Duration.ofSeconds( 1 ) );
     }

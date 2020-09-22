@@ -5,7 +5,7 @@
  */
 package com.neo4j.metrics.source.db;
 
-import com.codahale.metrics.MetricRegistry;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -27,7 +27,7 @@ public class DatabaseMemoryPoolMetrics extends AbstractMemoryPoolMetrics
     private final String poolTemplate;
     private final String databaseName;
 
-    public DatabaseMemoryPoolMetrics( String metricsPrefix, MetricRegistry registry, MemoryPools memoryPools, String databaseName )
+    public DatabaseMemoryPoolMetrics( String metricsPrefix, MetricsRegister registry, MemoryPools memoryPools, String databaseName )
     {
         super( name( metricsPrefix, NEO_DATABASE_POOL_PREFIX ), registry, memoryPools );
         this.poolTemplate = name( metricsPrefix, NEO_DATABASE_POOL_USAGE_TEMPLATE );

@@ -6,8 +6,8 @@
 package com.neo4j.metrics.source.db;
 
 import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricRegistry;
 import com.neo4j.metrics.metric.MetricsCounter;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -74,11 +74,11 @@ public class BoltMetrics extends LifecycleAdapter
     private final String totalQueueTime;
     private final String totalProcessingTime;
 
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
     private final Monitors monitors;
     private final BoltMetricsMonitor boltMonitor = new BoltMetricsMonitor();
 
-    public BoltMetrics( String metricsPrefix, MetricRegistry registry, Monitors monitors )
+    public BoltMetrics( String metricsPrefix, MetricsRegister registry, Monitors monitors )
     {
         this.sessionsStarted = name( metricsPrefix, SESSIONS_STARTED_TEMPLATE );
         this.connectionsOpened = name( metricsPrefix, CONNECTIONS_OPENED_TEMPLATE );
@@ -99,17 +99,17 @@ public class BoltMetrics extends LifecycleAdapter
     public void start()
     {
         monitors.addMonitorListener( boltMonitor );
-        registry.register( sessionsStarted, new MetricsCounter( boltMonitor.connectionsOpened::get ) );
-        registry.register( connectionsOpened, new MetricsCounter( boltMonitor.connectionsOpened::get ) );
-        registry.register( connectionsClosed, new MetricsCounter( boltMonitor.connectionsClosed::get ) );
-        registry.register( connectionsRunning, (Gauge<Long>) boltMonitor.connectionsActive::get );
-        registry.register( connectionsIdle, (Gauge<Long>) boltMonitor.connectionsIdle::get );
-        registry.register( messagesReceived, new MetricsCounter( boltMonitor.messagesReceived::get ) );
-        registry.register( messagesStarted, new MetricsCounter( boltMonitor.messagesStarted::get ) );
-        registry.register( messagesDone, new MetricsCounter( boltMonitor.messagesDone::get ) );
-        registry.register( messagesFailed, new MetricsCounter( boltMonitor.messagesFailed::get ) );
-        registry.register( totalQueueTime, new MetricsCounter( boltMonitor.queueTime::get ) );
-        registry.register( totalProcessingTime, new MetricsCounter( boltMonitor.processingTime::get ) );
+        registry.register( sessionsStarted, () -> new MetricsCounter( boltMonitor.connectionsOpened::get ) );
+        registry.register( connectionsOpened, () -> new MetricsCounter( boltMonitor.connectionsOpened::get ) );
+        registry.register( connectionsClosed, () -> new MetricsCounter( boltMonitor.connectionsClosed::get ) );
+        registry.register( connectionsRunning, () -> (Gauge<Long>) boltMonitor.connectionsActive::get );
+        registry.register( connectionsIdle, () -> (Gauge<Long>) boltMonitor.connectionsIdle::get );
+        registry.register( messagesReceived, () -> new MetricsCounter( boltMonitor.messagesReceived::get ) );
+        registry.register( messagesStarted, () -> new MetricsCounter( boltMonitor.messagesStarted::get ) );
+        registry.register( messagesDone, () -> new MetricsCounter( boltMonitor.messagesDone::get ) );
+        registry.register( messagesFailed, () -> new MetricsCounter( boltMonitor.messagesFailed::get ) );
+        registry.register( totalQueueTime, () -> new MetricsCounter( boltMonitor.queueTime::get ) );
+        registry.register( totalProcessingTime, () -> new MetricsCounter( boltMonitor.processingTime::get ) );
     }
 
     @Override

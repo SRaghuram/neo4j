@@ -5,8 +5,8 @@
  */
 package com.neo4j.metrics.source.causalclustering;
 
-import com.codahale.metrics.MetricRegistry;
 import com.neo4j.metrics.metric.MetricsCounter;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import org.neo4j.annotations.documented.Documented;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -33,11 +33,11 @@ public class ReadReplicaMetrics extends LifecycleAdapter
     private final String pullUpdateHighestTxIdReceived;
 
     private final Monitors monitors;
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
 
     private final PullRequestMetric pullRequestMetric = new PullRequestMetric();
 
-    public ReadReplicaMetrics( String metricsPrefix, Monitors monitors, MetricRegistry registry )
+    public ReadReplicaMetrics( String metricsPrefix, Monitors monitors, MetricsRegister registry )
     {
         this.pullUpdates = name( metricsPrefix, PULL_UPDATES_TEMPLATE );
         this.pullUpdateHighestTxIdRequested = name( metricsPrefix, PULL_UPDATE_HIGHEST_TX_ID_REQUESTED_TEMPLATE );
@@ -51,9 +51,9 @@ public class ReadReplicaMetrics extends LifecycleAdapter
     {
         monitors.addMonitorListener( pullRequestMetric );
 
-        registry.register( pullUpdates, new MetricsCounter( pullRequestMetric::numberOfRequests ) );
-        registry.register( pullUpdateHighestTxIdRequested, new MetricsCounter(  pullRequestMetric::lastRequestedTxId ) );
-        registry.register( pullUpdateHighestTxIdReceived, new MetricsCounter(  pullRequestMetric::lastReceivedTxId ) );
+        registry.register( pullUpdates, () -> new MetricsCounter( pullRequestMetric::numberOfRequests ) );
+        registry.register( pullUpdateHighestTxIdRequested, () -> new MetricsCounter(  pullRequestMetric::lastRequestedTxId ) );
+        registry.register( pullUpdateHighestTxIdReceived, () -> new MetricsCounter(  pullRequestMetric::lastReceivedTxId ) );
     }
 
     @Override

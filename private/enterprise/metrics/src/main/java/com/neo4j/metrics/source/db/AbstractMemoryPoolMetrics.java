@@ -6,7 +6,7 @@
 package com.neo4j.metrics.source.db;
 
 import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricRegistry;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import java.util.List;
 
@@ -27,11 +27,11 @@ public abstract class AbstractMemoryPoolMetrics extends LifecycleAdapter
     private static final String TOTAL_SIZE = "total_size";
     @Documented( "Available unused memory in the pool, in bytes. (gauge)" )
     private static final String FREE = "free";
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
     private final String metricsPoolPrefix;
     protected final MemoryPools memoryPools;
 
-    public AbstractMemoryPoolMetrics( String metricsPoolPrefix, MetricRegistry registry, MemoryPools memoryPools )
+    public AbstractMemoryPoolMetrics( String metricsPoolPrefix, MetricsRegister registry, MemoryPools memoryPools )
     {
         this.registry = registry;
         this.memoryPools = memoryPools;
@@ -47,11 +47,11 @@ public abstract class AbstractMemoryPoolMetrics extends LifecycleAdapter
     {
         pools().forEach( pool ->
         {
-            registry.register( prettifyName( namePoolMetric( pool, USED_HEAP ) ), (Gauge<Long>) pool::usedHeap );
-            registry.register( prettifyName( namePoolMetric( pool, USED_NATIVE ) ), (Gauge<Long>) pool::usedNative );
-            registry.register( prettifyName( namePoolMetric( pool, TOTAL_USED ) ), (Gauge<Long>) pool::totalUsed );
-            registry.register( prettifyName( namePoolMetric( pool, TOTAL_SIZE ) ), (Gauge<Long>) pool::totalSize );
-            registry.register( prettifyName( namePoolMetric( pool, FREE ) ), (Gauge<Long>) pool::free );
+            registry.register( prettifyName( namePoolMetric( pool, USED_HEAP ) ), () -> (Gauge<Long>) pool::usedHeap );
+            registry.register( prettifyName( namePoolMetric( pool, USED_NATIVE ) ), () -> (Gauge<Long>) pool::usedNative );
+            registry.register( prettifyName( namePoolMetric( pool, TOTAL_USED ) ), () -> (Gauge<Long>) pool::totalUsed );
+            registry.register( prettifyName( namePoolMetric( pool, TOTAL_SIZE ) ), () -> (Gauge<Long>) pool::totalSize );
+            registry.register( prettifyName( namePoolMetric( pool, FREE ) ), () -> (Gauge<Long>) pool::free );
         } );
     }
 

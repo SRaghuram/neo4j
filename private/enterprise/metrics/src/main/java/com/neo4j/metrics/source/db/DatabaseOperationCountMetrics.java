@@ -5,8 +5,8 @@
  */
 package com.neo4j.metrics.source.db;
 
-import com.codahale.metrics.MetricRegistry;
 import com.neo4j.metrics.metric.MetricsCounter;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import org.neo4j.annotations.documented.Documented;
 import org.neo4j.dbms.database.DatabaseOperationCounts;
@@ -39,10 +39,10 @@ public class DatabaseOperationCountMetrics extends LifecycleAdapter
     private final String countFailed;
     private final String countRecovered;
 
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
     private final DatabaseOperationCounts counter;
 
-    public DatabaseOperationCountMetrics( String metricsPrefix, MetricRegistry registry, DatabaseOperationCounts counter )
+    public DatabaseOperationCountMetrics( String metricsPrefix, MetricsRegister registry, DatabaseOperationCounts counter )
     {
         this.registry = registry;
         this.counter = counter;
@@ -58,12 +58,12 @@ public class DatabaseOperationCountMetrics extends LifecycleAdapter
     @Override
     public void start()
     {
-        registry.register( countCreate, new MetricsCounter( counter::createCount ) );
-        registry.register( countStart, new MetricsCounter( counter::startCount ) );
-        registry.register( countStop, new MetricsCounter( counter::stopCount ) );
-        registry.register( countDrop, new MetricsCounter( counter::dropCount ) );
-        registry.register( countFailed, new MetricsCounter( counter::failedCount ) );
-        registry.register( countRecovered, new MetricsCounter( counter::recoveredCount ) );
+        registry.register( countCreate, () -> new MetricsCounter( counter::createCount ) );
+        registry.register( countStart, () -> new MetricsCounter( counter::startCount ) );
+        registry.register( countStop, () -> new MetricsCounter( counter::stopCount ) );
+        registry.register( countDrop, () -> new MetricsCounter( counter::dropCount ) );
+        registry.register( countFailed, () -> new MetricsCounter( counter::failedCount ) );
+        registry.register( countRecovered, () -> new MetricsCounter( counter::recoveredCount ) );
     }
 
     @Override

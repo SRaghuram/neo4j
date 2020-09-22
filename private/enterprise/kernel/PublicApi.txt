@@ -27,6 +27,7 @@ com.neo4j.configuration.MetricsSettings::jvm_memory_enabled org.neo4j.graphdb.co
 com.neo4j.configuration.MetricsSettings::jvm_pause_time_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
 com.neo4j.configuration.MetricsSettings::jvm_threads_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
 com.neo4j.configuration.MetricsSettings::metrics_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+com.neo4j.configuration.MetricsSettings::metrics_filter org.neo4j.graphdb.config.Setting<java.util.List<org.neo4j.configuration.helpers.GlobbingPattern>> public static final
 com.neo4j.configuration.MetricsSettings::metrics_namespaces_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
 com.neo4j.configuration.MetricsSettings::metrics_prefix org.neo4j.graphdb.config.Setting<java.lang.String> public static final
 com.neo4j.configuration.MetricsSettings::neo_check_pointing_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final

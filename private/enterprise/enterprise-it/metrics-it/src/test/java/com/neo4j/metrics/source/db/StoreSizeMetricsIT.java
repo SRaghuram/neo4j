@@ -13,7 +13,9 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
 
+import org.neo4j.configuration.helpers.GlobbingPattern;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -55,7 +57,8 @@ class StoreSizeMetricsIT
     {
         clock = new FakeClock();
         builder.setConfig( MetricsSettings.metrics_enabled, true );
-        builder.setConfig( MetricsSettings.neo_store_size_enabled, true );
+        builder.setConfig( MetricsSettings.metrics_filter, GlobbingPattern.create( "*store.size*" ) );
+        builder.setConfig( MetricsSettings.csv_interval, Duration.ofMillis( 10 ) );
         builder.setClock( clock );
     }
 

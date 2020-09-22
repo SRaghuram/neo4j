@@ -6,7 +6,7 @@
 package com.neo4j.metrics.source.jvm;
 
 import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricRegistry;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
@@ -26,10 +26,10 @@ public class ThreadMetrics extends JvmMetrics
     private final String threadCount;
     private final String threadTotal;
 
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
     private final ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
 
-    public ThreadMetrics( String metricsPrefix, MetricRegistry registry )
+    public ThreadMetrics( String metricsPrefix, MetricsRegister registry )
     {
         this.registry = registry;
         this.threadCount = name( metricsPrefix, THREAD_COUNT_TEMPLATE );
@@ -39,8 +39,8 @@ public class ThreadMetrics extends JvmMetrics
     @Override
     public void start()
     {
-        registry.register( threadCount, (Gauge<Integer>) Thread::activeCount );
-        registry.register( threadTotal, (Gauge<Integer>) threadMXBean::getThreadCount );
+        registry.register( threadCount, () -> (Gauge<Integer>) Thread::activeCount );
+        registry.register( threadTotal, () -> (Gauge<Integer>) threadMXBean::getThreadCount );
     }
 
     @Override

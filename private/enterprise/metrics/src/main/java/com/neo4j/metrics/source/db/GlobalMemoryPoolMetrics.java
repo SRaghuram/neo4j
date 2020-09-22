@@ -5,7 +5,7 @@
  */
 package com.neo4j.metrics.source.db;
 
-import com.codahale.metrics.MetricRegistry;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import java.util.List;
 
@@ -25,7 +25,7 @@ public class GlobalMemoryPoolMetrics extends AbstractMemoryPoolMetrics
 
     private final String poolTemplate;
 
-    public GlobalMemoryPoolMetrics( String metricsPrefix, MetricRegistry registry, MemoryPools memoryPools )
+    public GlobalMemoryPoolMetrics( String metricsPrefix, MetricsRegister registry, MemoryPools memoryPools )
     {
         super( name( metricsPrefix, NEO_GLOBAL_POOL_PREFIX ), registry, memoryPools );
         this.poolTemplate = name( metricsPrefix, NEO_POOL_USAGE_TEMPLATE );

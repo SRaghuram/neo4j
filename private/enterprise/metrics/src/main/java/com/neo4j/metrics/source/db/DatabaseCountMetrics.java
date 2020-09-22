@@ -6,7 +6,7 @@
 package com.neo4j.metrics.source.db;
 
 import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricRegistry;
+import com.neo4j.metrics.metric.MetricsRegister;
 
 import java.util.function.Supplier;
 
@@ -29,13 +29,13 @@ public class DatabaseCountMetrics extends LifecycleAdapter
     @Documented( "The total number of nodes in the database. (gauge)" )
     public static final String COUNTS_NODE_TEMPLATE = name( COUNTS_PREFIX, "node" );
 
-    private final MetricRegistry registry;
+    private final MetricsRegister registry;
     private final Supplier<StoreEntityCounters> countsSource;
     private final PageCacheTracer pageCacheTracer;
     private final String relationshipCounts;
     private final String nodeCounts;
 
-    public DatabaseCountMetrics( String metricsPrefix, MetricRegistry registry, Supplier<StoreEntityCounters> countsSource, PageCacheTracer pageCacheTracer )
+    public DatabaseCountMetrics( String metricsPrefix, MetricsRegister registry, Supplier<StoreEntityCounters> countsSource, PageCacheTracer pageCacheTracer )
     {
         this.nodeCounts = name( metricsPrefix, COUNTS_NODE_TEMPLATE );
         this.relationshipCounts = name( metricsPrefix, COUNTS_RELATIONSHIP_TEMPLATE );
@@ -47,14 +47,14 @@ public class DatabaseCountMetrics extends LifecycleAdapter
     @Override
     public void start()
     {
-        registry.register( nodeCounts, (Gauge<Long>) () ->
+        registry.register( nodeCounts, () -> (Gauge<Long>) () ->
         {
             try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( COUNT_ALL_NODES_TAG ) )
             {
                 return countsSource.get().allNodesCountStore( cursorTracer );
             }
         } );
-        registry.register( relationshipCounts, (Gauge<Long>) () ->
+        registry.register( relationshipCounts, () -> (Gauge<Long>) () ->
         {
             try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( COUNT_ALL_RELATIONSHIP_TAG ) )
             {

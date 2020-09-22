@@ -17,6 +17,7 @@ import java.util.List;
 import javax.management.MBeanServer;
 
 import org.neo4j.collection.RawIterator;
+import org.neo4j.configuration.helpers.GlobbingPattern;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
@@ -55,6 +56,7 @@ class JMXMetricsIT
         builder.setConfig( MetricsSettings.csv_enabled, false );
         builder.setConfig( preallocate_logical_logs, false );
         builder.setConfig( OnlineBackupSettings.online_backup_enabled, false );
+        builder.setConfig( MetricsSettings.metrics_filter, GlobbingPattern.create( "*" ) );
     }
 
     @Test

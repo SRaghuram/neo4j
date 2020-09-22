@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Path;
 import java.time.Duration;
 
+import org.neo4j.configuration.helpers.GlobbingPattern;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.monitoring.VmPauseMonitor;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
@@ -40,7 +41,7 @@ class PauseMetricsIT
     {
         metricsDirectory = testDirectory.directoryPath( "metrics" );
         builder.setConfig( MetricsSettings.metrics_enabled, true )
-               .setConfig( MetricsSettings.jvm_pause_time_enabled, true )
+               .setConfig( MetricsSettings.metrics_filter, GlobbingPattern.create( "*pause_time*" ) )
                .setConfig( MetricsSettings.csv_enabled, true )
                .setConfig( MetricsSettings.csv_interval, Duration.ofMillis( 10 ) )
                .setConfig( MetricsSettings.csv_path, metricsDirectory.toAbsolutePath() )
