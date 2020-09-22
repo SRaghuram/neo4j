@@ -9,6 +9,7 @@ import com.neo4j.configuration.CausalClusteringSettings;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,10 +18,12 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.server.configuration.ConfigurableServerModules;
 import org.neo4j.server.configuration.ServerSettings;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.neo4j.configuration.GraphDatabaseSettings.Mode.CORE;
 import static org.neo4j.configuration.GraphDatabaseSettings.Mode.READ_REPLICA;
@@ -60,6 +63,25 @@ class EnterpriseDiscoverableURIsTest
     }
 
     @Test
+    void shouldNotExposeCausalClusteringManagementApiOnCoreWhenDisabled()
+    {
+        // Given
+        var config = Config.newBuilder()
+                           .set( ServerSettings.http_enabled_modules,
+                                 EnumSet.complementOf( EnumSet.of( ConfigurableServerModules.ENTERPRISE_MANAGEMENT_ENDPOINTS ) ) )
+                           .set( GraphDatabaseSettings.mode, CORE )
+                           .set( CausalClusteringSettings.initial_discovery_members, List.of( new SocketAddress( "localhost" ) ) )
+                           .build();
+
+        // When
+        var discoverableURIs = findEnterpriseDiscoverableURIs( config );
+
+        // Then
+        assertThat( discoverableURIs.get( "db/cluster" ), nullValue() );
+        assertThat( discoverableURIs.get( "dbms/cluster" ), nullValue() );
+    }
+
+    @Test
     void shouldExposeCausalClusteringManagementApiOnReadReplica()
     {
         // Given
@@ -74,6 +96,25 @@ class EnterpriseDiscoverableURIsTest
         // Then
         assertThat( discoverableURIs.get( "db/cluster" ), equalTo( "/db/{databaseName}/cluster" ) );
         assertThat( discoverableURIs.get( "dbms/cluster" ), equalTo( "/dbms/cluster" ) );
+    }
+
+    @Test
+    void shouldNotExposeCausalClusteringManagementApiOnReadReplicaWhenDisabled()
+    {
+        // Given
+        var config = Config.newBuilder()
+                           .set( ServerSettings.http_enabled_modules,
+                                 EnumSet.complementOf( EnumSet.of( ConfigurableServerModules.ENTERPRISE_MANAGEMENT_ENDPOINTS ) ) )
+                           .set( GraphDatabaseSettings.mode, READ_REPLICA )
+                           .set( CausalClusteringSettings.initial_discovery_members, List.of( new SocketAddress( "localhost" ) ) )
+                           .build();
+
+        // When
+        var discoverableURIs = findEnterpriseDiscoverableURIs( config );
+
+        // Then
+        assertThat( discoverableURIs.get( "db/cluster" ), nullValue() );
+        assertThat( discoverableURIs.get( "dbms/cluster" ), nullValue() );
     }
 
     @Test

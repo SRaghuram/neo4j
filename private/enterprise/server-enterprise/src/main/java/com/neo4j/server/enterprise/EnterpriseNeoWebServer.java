@@ -24,6 +24,8 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.CommunityNeoWebServer;
+import org.neo4j.server.configuration.ConfigurableServerModules;
+import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.server.modules.AuthorizationModule;
 import org.neo4j.server.modules.DBMSModule;
 import org.neo4j.server.modules.ServerModule;
@@ -58,11 +60,18 @@ public class EnterpriseNeoWebServer extends CommunityNeoWebServer
     @Override
     protected Iterable<ServerModule> createServerModules()
     {
-        List<ServerModule> modules = new ArrayList<>();
-        modules.add( new ClusterModule( webServer, getConfig() ) );
-        modules.add( new LegacyManagementModule( webServer, getConfig() ) );
-        super.createServerModules().forEach( modules::add );
-        return modules;
+        var config = getConfig();
+        var enabledModules = config.get( ServerSettings.http_enabled_modules );
+        var serverModules = new ArrayList<ServerModule>();
+
+        if ( enabledModules.contains( ConfigurableServerModules.ENTERPRISE_MANAGEMENT_ENDPOINTS ) )
+        {
+            serverModules.add( new ClusterModule( webServer, getConfig() ) );
+            serverModules.add( new LegacyManagementModule( webServer, getConfig() ) );
+        }
+
+        super.createServerModules().forEach( serverModules::add );
+        return serverModules;
     }
 
     @Override

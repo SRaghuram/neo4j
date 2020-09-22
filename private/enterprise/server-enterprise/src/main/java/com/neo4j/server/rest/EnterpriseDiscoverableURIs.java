@@ -11,6 +11,8 @@ import com.neo4j.server.rest.causalclustering.ClusteringDbmsService;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.server.configuration.ConfigurableServerModules;
+import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.server.rest.discovery.DiscoverableURIs;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.Mode.CORE;
@@ -24,7 +26,8 @@ public class EnterpriseDiscoverableURIs
         var discoverableURIsBuilder = communityDiscoverableURIsBuilder( config, portRegister );
 
         var mode = config.get( GraphDatabaseSettings.mode );
-        if ( mode == CORE || mode == READ_REPLICA )
+        var enabledModules = config.get( ServerSettings.http_enabled_modules );
+        if ( enabledModules.contains( ConfigurableServerModules.ENTERPRISE_MANAGEMENT_ENDPOINTS ) && (mode == CORE || mode == READ_REPLICA) )
         {
             discoverableURIsBuilder.addEndpoint( ClusteringDatabaseService.KEY, ClusteringDatabaseService.absoluteDatabaseClusterPath( config ) );
             discoverableURIsBuilder.addEndpoint( ClusteringDbmsService.KEY, ClusteringDbmsService.absoluteDbmsClusterPath( config ) );
