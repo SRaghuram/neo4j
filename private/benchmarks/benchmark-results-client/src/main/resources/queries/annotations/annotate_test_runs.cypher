@@ -5,7 +5,7 @@ MATCH (tr:TestRun)-[:WITH_PROJECT]->(p:Project),
       (b)<-[:HAS_BENCHMARK]-(bg:BenchmarkGroup)
 WHERE tr.parent_build >= $packaging_build_id AND
       p.name='neo4j' AND
-      p.owner='neo4j' AND
+      p.owner='neo-technology' AND
       p.branch=$neo4j_branch AND
       bt.name IN $benchmark_tools
 

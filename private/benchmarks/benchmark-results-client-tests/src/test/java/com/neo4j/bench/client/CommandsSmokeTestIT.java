@@ -272,7 +272,7 @@ public class CommandsSmokeTestIT
                 .withNeo4jVersions( "4.0.1", "3.0.1", "3.0.0" )
                 .withNeo4jEditions( ENTERPRISE )
                 .withSettingsInConfig( 1 )
-                .withNeo4jBranchOwners( "neo4j" )
+                .withNeo4jBranchOwners( "neo-technology" )
                 .withToolBranchOwners( "neo-technology" )
                 .withProjects( NEO4J )
                 .withPrintout( false )

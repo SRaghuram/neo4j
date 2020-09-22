@@ -2,7 +2,7 @@
 MATCH (tr:TestRun)-[:WITH_TOOL]->(:BenchmarkToolVersion)-[:VERSION_OF]->(:BenchmarkTool {name:'ldbc'}),
       (tr)-[:WITH_PROJECT]->(p:Project)
 WHERE p.name='neo4j' AND
-      p.owner='neo4j' AND
+      p.owner='neo-technology' AND
       p.version=$old_version
 
 MATCH (tr)-[:HAS_METRICS]->(m:Metrics),
@@ -18,7 +18,7 @@ WITH bg, b, bp, head(collect(m)) AS m_old
 MATCH (p:Project)<-[:WITH_PROJECT]-(tr:TestRun),
       (tr)-[:HAS_METRICS]->(m_new:Metrics)-[:METRICS_FOR]->(b)
 WHERE p.name='neo4j' AND
-      p.owner='neo4j' AND
+      p.owner='neo-technology' AND
       p.version=$new_version
 WITH bg, b, bp, m_new, m_old
 ORDER BY tr.date DESC
