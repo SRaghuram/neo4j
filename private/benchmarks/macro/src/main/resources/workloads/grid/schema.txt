@@ -1,1 +1,3 @@
 INDEX ON :Person(name)
+INDEX ON :Person(row)
+INDEX ON :Person(col)
