@@ -28,3 +28,4 @@ packaging/standalone/src/main/distribution/cypher-shell
 dependency-reduced-pom.xml
 .attach_pid*
 /private/stresstests/logs/
+/benchmark_stores/
