@@ -69,9 +69,8 @@ base_artifacts_uri="s3://benchmarking.neo4j.com/artifacts/upgrader/$id"
 aws s3 cp upgrade-all-stores.sh "$base_artifacts_uri/upgrade-all-stores.sh"
 aws s3 cp target/macro.jar "$base_artifacts_uri/target/macro.jar"
 
+# schellcheck disable=SC2089
 json_parameters='{ "--base-artifact-uri" : "'$base_artifacts_uri'","--new-neo4j-version" : "'$new_neo4j_version'","--old-neo4j-version" : "'$old_neo4j_version'","--s3-dest-datasets-url" : "'$s3_dest_datasets_url'"}'
-
-echo $json_parameters
 
 job_name=$(echo "macro_workload_store_upgrade_${new_neo4j_version}_${old_neo4j_version}" | sed 's/\./_/g')
 

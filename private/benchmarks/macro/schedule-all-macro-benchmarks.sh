@@ -78,11 +78,13 @@ workloads=("accesscontrol M5DLargeJobQueue accesscontrol"
   "osmnodes M5D2XLargeJobQueue osmnodes"
   "offshore_leaks M5D2XLargeJobQueue offshore_leaks"
   "alacrity M5D2XLargeJobQueue alacrity"
+  "offshore_leaks M5D2XLargeJobQueue offshore_leaks"
   "fraud-poc-credit M5D2XLargeJobQueue fraud-poc"
   "fraud-poc-aml M5D2XLargeJobQueue fraud-poc-aml"
   "ciena M5D2XLargeJobQueue ciena")
 
 for i in "${workloads[@]}"; do
+  # shellcheck disable=SC2207,SC2116,SC2086
   workload=($(echo ${i}))
   workload_name=${workload[0]}
   instance_type=${workload[1]}
@@ -98,6 +100,7 @@ for i in "${workloads[@]}"; do
   fi
 
   (
+    # shellcheck disable=SC1091
     . schedule-run-macro-benchmark.sh \
       --job-queue "$instance_type" \
       --batch-stack "benchmarking-production" \

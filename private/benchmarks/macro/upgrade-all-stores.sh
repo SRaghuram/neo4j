@@ -44,6 +44,12 @@ db_and_workloads=(
  "ciena;ciena"
  "zero;zero")
 
+compress_with=$(command pigz)
+
+if [[ ! -f "$compress_with" ]]; then
+  compress_with=$(command gzip)
+fi
+
 for i in "${db_and_workloads[@]}"; do
 
     # shellcheck disable=SC2206
