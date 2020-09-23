@@ -18,7 +18,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collector;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.neo4j.cypher.internal.security.SystemGraphCredential;
@@ -44,7 +44,8 @@ import static org.neo4j.internal.helpers.collection.Iterables.single;
 
 public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownEnterpriseSecurityComponentVersion
 {
-    static Label SEGMENT_LABEL = Label.label( "Segment" );
+    static final Label SEGMENT_LABEL = Label.label( "Segment" );
+    static final String DB_PARAM = "database";
 
     private Node matchNodePriv;
     private Node matchRelPriv;
@@ -327,51 +328,56 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
 
     public BackupCommands getBackupCommands( Transaction tx, String databaseName, boolean saveUsers, boolean saveRoles )
     {
-        final String PARAM = "database";
         ArrayList<String> roleSetup = new ArrayList<>();
         ArrayList<String> userSetup = new ArrayList<>();
 
         String defaultDatabaseName = getDefaultDatabaseName( tx );
 
-        if ( !databaseName.equals( defaultDatabaseName ) )
+        roleSetup.add( String.format( "CREATE DATABASE $%s IF NOT EXISTS", DB_PARAM ) );
+        Node databaseNode = tx.findNode( Label.label("Database"), "name", databaseName.toLowerCase() );
+        if ( databaseNode != null && databaseNode.getProperty( "status" ).equals( "offline" ) )
         {
-            roleSetup.add( String.format( "CREATE DATABASE $%s IF NOT EXISTS", PARAM ) );
+            roleSetup.add( String.format( "STOP DATABASE $%s", DB_PARAM ) );
+        }
 
-            Node databaseNode = tx.findNode( Label.label("Database"), "name", databaseName.toLowerCase() );
-            if ( databaseNode != null && databaseNode.getProperty( "status" ).equals( "offline" ) )
-            {
-                roleSetup.add( String.format( "STOP DATABASE $%s", PARAM ) );
-            }
+        List<String> roles;
+        try ( ResourceIterator<Node> roleNodes = tx.findNodes( ROLE_LABEL ) )
+        {
+            roles = roleNodes.stream()
+                             .map( r -> r.getProperty( "name" ).toString() )
+                             .filter( r -> !r.equals( PUBLIC ) )
+                             .collect( Collectors.toList() );
         }
 
         List<String> relevantRoles = new ArrayList<>();
-        try ( ResourceIterator<Node> roleNodes = tx.findNodes( ROLE_LABEL ) )
+        for ( String role : roles )
         {
-            List<String> roles = roleNodes.stream()
-                                          .map( r -> r.getProperty( "name" ).toString() )
-                                          .filter( r -> !r.equals( PUBLIC ) )
-                                          .collect( Collectors.toList() );
-
-            for ( String role : roles )
+            Set<ResourcePrivilege> privileges = currentGetPrivilegeForRole( tx, role );
+            Predicate<ResourcePrivilege> isRelevantPrivilege = p -> p.appliesToAll() ||
+                                                                    p.getDbName().equals( databaseName.toLowerCase() ) ||
+                                                                    databaseName.toLowerCase().equals( defaultDatabaseName ) &&
+                                                                    p.appliesToDefault();
+            Set<ResourcePrivilege> relevantPrivileges = privileges.stream()
+                                                                  .filter( isRelevantPrivilege )
+                                                                  .filter( p -> !p.isDbmsPrivilege() )
+                                                                  .collect( Collectors.toSet() );
+            if ( !relevantPrivileges.isEmpty() )
             {
-                Set<ResourcePrivilege> privileges = currentGetPrivilegeForRole( tx, role );
-                Set<ResourcePrivilege> relevantPrivileges = privileges.stream()
-                                                                      .filter( p ->
-                                                                              p.appliesToAll() ||
-                                                                              p.getDbName().equals( databaseName ) ||
-                                                                              databaseName.equals( defaultDatabaseName ) && p.appliesToDefault() )
-                                                                      .filter( p -> !p.isDbmsPrivilege() )
-                                                                      .collect( Collectors.toSet() );
-                if ( !relevantPrivileges.isEmpty() )
-                {
-                    relevantRoles.add( role );
+                relevantRoles.add( role );
+            }
 
-                    if (saveRoles) {
-                        roleSetup.add( String.format( "CREATE ROLE `%s` IF NOT EXISTS", role ) );
-                        for ( ResourcePrivilege privilege : relevantPrivileges )
-                        {
-                            roleSetup.addAll( privilege.asGrantFor( role, PARAM ) );
-                        }
+            if ( !relevantPrivileges.isEmpty() && saveRoles )
+            {
+                roleSetup.add( String.format( "CREATE ROLE `%s` IF NOT EXISTS", role ) );
+                for ( ResourcePrivilege privilege : relevantPrivileges )
+                {
+                    try
+                    {
+                        roleSetup.addAll( privilege.asGrantFor( role, DB_PARAM ) );
+                    }
+                    catch ( RuntimeException e )
+                    {
+                        log.warn( "Failed to write restore command for privilege '%s': %s", privilege.toString(), e.getMessage() );
                     }
                 }
             }
@@ -390,7 +396,8 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
         Map<String, String> users = new HashMap<>();
         Map<String, List<String>> userToRoles = new HashMap<>();
 
-        for ( String role : relevantRoles ) {
+        for ( String role : relevantRoles )
+        {
             Node roleNode = tx.findNode( Label.label( "Role" ), "name", role );
             roleNode.getRelationships(Direction.INCOMING, RelationshipType.withName( "HAS_ROLE" ) ).forEach( rel ->
             {
@@ -403,11 +410,11 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
                 {
                     String maskedCredentials = SystemGraphCredential.maskSerialized( (String) properties.get( "credentials" ) );
                     users.put( username, String.format( "CREATE USER `%s` IF NOT EXISTS SET ENCRYPTED PASSWORD '%s' %s %s",
-                                                        username, maskedCredentials, changeRequired, setStatus )
-                    );
+                                                        username, maskedCredentials, changeRequired, setStatus ) );
 
                     userToRoles.computeIfAbsent( username, u -> new ArrayList<>() );
-                    if (withRoleGrants) {
+                    if ( withRoleGrants )
+                    {
                         userToRoles.get( username ).add( String.format( "GRANT ROLE `%s` TO `%s`", role, username ) );
                     }
                 }
@@ -419,9 +426,9 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
         }
 
         List<String> commands = new ArrayList<>();
-        users.forEach( (user, command) -> {
-            commands.add(command);
-            commands.addAll(userToRoles.get(user));
+        users.forEach( ( user, command ) -> {
+            commands.add( command );
+            commands.addAll( userToRoles.get( user ) );
         });
 
         return commands;

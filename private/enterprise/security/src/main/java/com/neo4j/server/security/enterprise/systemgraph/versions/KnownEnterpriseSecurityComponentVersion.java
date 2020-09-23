@@ -83,7 +83,7 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
     }
 
     public abstract BackupCommands getBackupCommands( Transaction tx, String databaseName, boolean saveUsers, boolean saveRoles );
-    
+
     public boolean isEmpty()
     {
         return roleNodes.isEmpty();

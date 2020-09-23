@@ -16,6 +16,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DBMS_ACTIONS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE_BOOSTED;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRANSACTION_MANAGEMENT;
 
 public class ResourcePrivilege
@@ -108,23 +109,23 @@ public class ResourcePrivilege
         return allDatabases;
     }
 
-    public List<String> asGrantFor( String role )
+    public List<String> asGrantFor( String role ) throws RuntimeException
     {
-        return asGrantFor( role, "", false, true );
+        return asGrantFor( role, "", false );
     }
 
-    public List<String> asGrantFor( String role, String param )
+    public List<String> asGrantFor( String role, String databaseParameter ) throws RuntimeException
     {
-        return asGrantFor( role, param, true, false );
+        return asGrantFor( role, databaseParameter, true );
     }
 
-    private List<String> asGrantFor( String role, String param, boolean replaceDbName, boolean keepDbmsActions )
+    private List<String> asGrantFor( String role, String parameter, boolean withDatabaseParameter ) throws RuntimeException
     {
         String database;
 
-        if ( replaceDbName )
+        if ( withDatabaseParameter )
         {
-            database = "$" + param;
+            database = "$" + parameter;
         }
         else
         {
@@ -200,18 +201,19 @@ public class ResourcePrivilege
             return List.of( String.format( "%s TERMINATE TRANSACTION (%s) ON DATABASE %s TO `%s`", privilegeType.prefix, segment.toString(), database, role ) );
         case SHOW_CONNECTION:
             // NOT USED
-            break;
+            return List.of();
         case TERMINATE_CONNECTION:
             // NOT USED
-            break;
+            return List.of();
         case TRANSACTION_MANAGEMENT:
-            return List.of( String.format( "%s TRANSACTION MANAGEMENT (%s) ON DATABASE %s TO `%s`", privilegeType.prefix, segment.toString(), database, role ) );
+            return List
+                    .of( String.format( "%s TRANSACTION MANAGEMENT (%s) ON DATABASE %s TO `%s`", privilegeType.prefix, segment.toString(), database, role ) );
 
         case DATABASE_ACTIONS:
-            return List.of( String.format( "%s ALL DATABASE PRIVILEGES ON %s TO `%s`", privilegeType.prefix, database, role ) );
+            return List.of( String.format( "%s ALL DATABASE PRIVILEGES ON DATABASE %s TO `%s`", privilegeType.prefix, database, role ) );
 
         case CREATE_DATABASE:
-            return keepDbmsActions ? List.of( String.format( "%s CREATE DATABASE ON DBMS TO `%s`", privilegeType.prefix, role ) ) : Collections.emptyList();
+            return List.of( String.format( "%s CREATE DATABASE ON DBMS TO `%s`", privilegeType.prefix, role ) );
         case DROP_DATABASE:
             return List.of( String.format( "%s DROP DATABASE ON DBMS TO `%s`", privilegeType.prefix, role ) );
         case DATABASE_MANAGEMENT:
@@ -267,12 +269,15 @@ public class ResourcePrivilege
 
         case EXECUTE:
             return List.of( String.format( "%s EXECUTE PROCEDURE %s ON DBMS TO `%s`", privilegeType.prefix, segment.toString(), role ) );
-        //case EXECUTE_BOOSTED:
-        //return List.of(String.format( "%s EXECUTE BOOSTED PROCEDURE %s ON DBMS TO `%s`", privilegeType.prefix, segment.toString(), role ));
-        case ADMIN_PROCEDURE:
+        case EXECUTE_BOOSTED:
+            return List.of(String.format( "%s EXECUTE BOOSTED PROCEDURE %s ON DBMS TO `%s`", privilegeType.prefix, segment.toString(), role ));
+        case EXECUTE_ADMIN:
             return List.of( String.format( "%s EXECUTE ADMIN PROCEDURES ON DBMS TO `%s`", privilegeType.prefix, role ) );
+        default:
+            // throw error
         }
-        return Collections.emptyList();
+        throw new RuntimeException(
+                String.format( "Failed to convert ResourcePrivilege to grant: conversion for action '%s' is missing", action.toString() ) );
     }
 
     @Override
@@ -305,7 +310,10 @@ public class ResourcePrivilege
 
     public boolean isDbmsPrivilege()
     {
-        return DBMS_ACTIONS.satisfies( action ) || EXECUTE.satisfies( action );
+        return DBMS_ACTIONS.satisfies( action ) ||
+               EXECUTE.satisfies( action ) ||
+               EXECUTE_BOOSTED.satisfies( action ) ||
+               ADMIN == action;
     }
 
     public enum GrantOrDeny

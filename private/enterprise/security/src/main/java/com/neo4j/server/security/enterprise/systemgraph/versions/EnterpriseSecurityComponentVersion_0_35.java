@@ -17,7 +17,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.prefs.BackingStoreException;
 import java.util.stream.Collectors;
 
 import org.neo4j.graphdb.Node;

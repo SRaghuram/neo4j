@@ -8,8 +8,6 @@ package com.neo4j.server.security.enterprise.systemgraph.versions;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 import com.neo4j.server.security.enterprise.systemgraph.BackupCommands;
 
-import java.util.List;
-
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
