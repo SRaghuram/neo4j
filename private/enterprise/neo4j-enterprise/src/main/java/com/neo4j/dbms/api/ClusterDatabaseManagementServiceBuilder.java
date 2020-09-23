@@ -148,10 +148,21 @@ public class ClusterDatabaseManagementServiceBuilder extends EnterpriseDatabaseM
         return this;
     }
 
+    /**
+     * @deprecated Use {@link #loadPropertiesFromFile(Path)} instead.
+     */
     @Override
+    @Deprecated( forRemoval = true )
     public ClusterDatabaseManagementServiceBuilder loadPropertiesFromFile( String fileName )
     {
-        super.loadPropertiesFromFile( fileName );
+        loadPropertiesFromFile( Path.of( fileName ) );
+        return this;
+    }
+
+    @Override
+    public ClusterDatabaseManagementServiceBuilder loadPropertiesFromFile( Path path )
+    {
+        super.loadPropertiesFromFile( path );
         return this;
     }
 }

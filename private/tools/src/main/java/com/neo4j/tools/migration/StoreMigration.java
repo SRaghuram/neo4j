@@ -5,8 +5,9 @@
  */
 package com.neo4j.tools.migration;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 
 import org.neo4j.collection.Dependencies;
@@ -75,7 +76,7 @@ public final class StoreMigration
         {
             printUsageAndExit();
         }
-        File storeDir = parseDir( arguments );
+        Path storeDir = parseDir( arguments );
 
         LogProvider userLogProvider = new Log4jLogProvider( System.out );
         try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
@@ -84,15 +85,15 @@ public final class StoreMigration
         }
     }
 
-    private static Config getMigrationConfig( File workingDirectory )
+    private static Config getMigrationConfig( Path workingDirectory )
     {
         return Config.newBuilder()
                 .set( GraphDatabaseSettings.allow_upgrade, true )
-                .set( logs_directory, workingDirectory.toPath().toAbsolutePath() )
+                .set( logs_directory, workingDirectory.toAbsolutePath() )
                 .build();
     }
 
-    public static void run( final FileSystemAbstraction fs, final File storeDirectory, Config config, LogProvider userLogProvider ) throws Exception
+    public static void run( final FileSystemAbstraction fs, final Path storeDirectory, Config config, LogProvider userLogProvider ) throws Exception
     {
         Neo4jLoggerContext ctx = LogConfig.createBuilder( fs, config.get( store_internal_log_path ), Level.INFO ).build();
 
@@ -114,7 +115,7 @@ public final class StoreMigration
             deps.satisfyDependencies( fs, config, pageCache, logService, monitors,
                     RecoveryCleanupWorkCollector.immediate() );
 
-            DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( storeDirectory.toPath() );
+            DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( storeDirectory );
             DatabaseExtensionContext extensionContext = new DatabaseExtensionContext( databaseLayout, DbmsInfo.UNKNOWN, deps );
             Iterable<ExtensionFactory<?>> extensionFactories = GraphDatabaseDependencies.newDependencies().extensions();
             DatabaseExtensions databaseExtensions = life.add( new DatabaseExtensions( extensionContext, extensionFactories, deps, ignore() ) );
@@ -163,15 +164,15 @@ public final class StoreMigration
         }
     }
 
-    private static File parseDir( Args args )
+    private static Path parseDir( Args args )
     {
         if ( args.orphans().size() != 1 )
         {
             System.out.println( "Error: too much arguments provided." );
             printUsageAndExit();
         }
-        File dir = new File( args.orphans().get( 0 ) );
-        if ( !dir.isDirectory() )
+        Path dir = Path.of( args.orphans().get( 0 ) );
+        if ( !Files.isDirectory( dir ) )
         {
             System.out.println( "Invalid directory: '" + dir + "'" );
             printUsageAndExit();

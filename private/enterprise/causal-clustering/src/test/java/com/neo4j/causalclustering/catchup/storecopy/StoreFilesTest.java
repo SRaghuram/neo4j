@@ -9,11 +9,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.Predicate;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseFile;
@@ -59,9 +59,9 @@ class StoreFilesTest
     @BeforeEach
     void beforeEach() throws Exception
     {
-        databaseDir = testDirectory.directoryPath( "databasedir" );
+        databaseDir = testDirectory.directory( "databasedir" );
         databaseLayout = DatabaseLayout.ofFlat( databaseDir );
-        otherDatabaseDir = testDirectory.directoryPath( "otherdatabasedir" );
+        otherDatabaseDir = testDirectory.directory( "otherdatabasedir" );
         otherDatabaseLayout = DatabaseLayout.ofFlat( otherDatabaseDir );
         logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseDir, fs ).build();
         otherLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( otherDatabaseDir, fs ).build();
@@ -70,7 +70,7 @@ class StoreFilesTest
     @Test
     void shouldDeleteFilesThatMatchTheFilter() throws Exception
     {
-        StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "KnownFile" ) );
+        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "KnownFile" ) );
 
         List<Path> files = Arrays.asList(
                 createFile( databaseDir, "KnownFile1" ),
@@ -88,7 +88,7 @@ class StoreFilesTest
     @Test
     void shouldDeleteDirectoriesThatMatchTheFilter() throws Exception
     {
-        StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "knownDirectory" ) );
+        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "knownDirectory" ) );
 
         List<Path> directories = Arrays.asList(
                 createDirectory( databaseDir, "knownDirectory1" ),
@@ -130,7 +130,7 @@ class StoreFilesTest
     @Test
     void shouldNotDeleteFilesThatDoNotMatchTheFilter() throws Exception
     {
-        StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "KnownFile" ) );
+        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "KnownFile" ) );
 
         Path file1 = createFile( databaseDir, "UnknownFile1" );
         Path file2 = createFile( databaseDir, "KnownFile2" );
@@ -146,7 +146,7 @@ class StoreFilesTest
     @Test
     void shouldNotDeleteDirectoriesThatDoNotMatchTheFilter() throws Exception
     {
-        StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "KnownDirectory" ) );
+        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "KnownDirectory" ) );
 
         Path dir1 = createDirectory( databaseDir, "UnknownDirectory1" );
         Path dir2 = createDirectory( databaseDir, "KnownDirectory2" );
@@ -163,13 +163,13 @@ class StoreFilesTest
     @Test
     void shouldMoveFilesThatMatchTheFilter() throws Exception
     {
-        StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "KnownFile" ) );
+        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "KnownFile" ) );
 
         Path file1 = createFile( databaseDir, "KnownFile1" );
         Path file2 = createFile( databaseDir, "KnownFile2" );
         Path file3 = createFile( databaseDir, "KnownFile3" );
 
-        storeFiles.moveTo( databaseDir.toFile(), otherDatabaseLayout, otherLogFiles );
+        storeFiles.moveTo( databaseDir, otherDatabaseLayout, otherLogFiles );
 
         assertFalse( fs.fileExists( file1 ) );
         assertFalse( fs.fileExists( file2 ) );
@@ -183,7 +183,7 @@ class StoreFilesTest
     @Test
     void shouldMoveDirectoriesThatMatchTheFilter() throws Exception
     {
-        StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "KnownDirectory" ) );
+        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "KnownDirectory" ) );
 
         Path dir1 = createDirectory( databaseDir, "KnownDirectory1" );
         Path dir2 = createDirectory( databaseDir, "KnownDirectory2" );
@@ -193,7 +193,7 @@ class StoreFilesTest
         createFile( dir2, "dummy-file-2" );
         createFile( dir3, "dummy-file-3" );
 
-        storeFiles.moveTo( databaseDir.toFile(), otherDatabaseLayout, otherLogFiles );
+        storeFiles.moveTo( databaseDir, otherDatabaseLayout, otherLogFiles );
 
         assertFalse( fs.fileExists( dir1 ) );
         assertFalse( fs.fileExists( dir2 ) );
@@ -220,7 +220,7 @@ class StoreFilesTest
             createFile( txLogFile );
         }
 
-        storeFiles.moveTo( databaseDir.toFile(), otherDatabaseLayout, otherLogFiles );
+        storeFiles.moveTo( databaseDir, otherDatabaseLayout, otherLogFiles );
 
         for ( Path txLogFile : txLogFiles )
         {
@@ -233,13 +233,13 @@ class StoreFilesTest
     @Test
     void shouldNotMoveFilesThatDoNotMatchTheFilter() throws Exception
     {
-        StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "KnownFile" ) );
+        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "KnownFile" ) );
 
         Path file1 = createFile( databaseDir, "UnknownFile1" );
         Path file2 = createFile( databaseDir, "KnownFile2" );
         Path file3 = createFile( databaseDir, "UnknownFile3" );
 
-        storeFiles.moveTo( databaseDir.toFile(), otherDatabaseLayout, otherLogFiles );
+        storeFiles.moveTo( databaseDir, otherDatabaseLayout, otherLogFiles );
 
         assertTrue( fs.fileExists( file1 ) );
         assertFalse( fs.fileExists( file2 ) );
@@ -253,7 +253,7 @@ class StoreFilesTest
     @Test
     void shouldNotMoveDirectoriesThatDoNotMatchTheFilter() throws Exception
     {
-        StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "KnownDirectory" ) );
+        StoreFiles storeFiles = newStoreFiles( path -> path.getFileName().toString().startsWith( "KnownDirectory" ) );
 
         Path dir1 = createDirectory( databaseDir, "UnknownDirectory1" );
         Path dir2 = createDirectory( databaseDir, "KnownDirectory2" );
@@ -263,7 +263,7 @@ class StoreFilesTest
         Path file2 = createFile( dir2, "dummy-file-2" );
         Path file3 = createFile( dir3, "dummy-file-3" );
 
-        storeFiles.moveTo( databaseDir.toFile(), otherDatabaseLayout, otherLogFiles );
+        storeFiles.moveTo( databaseDir, otherDatabaseLayout, otherLogFiles );
 
         assertTrue( fs.isDirectory( dir1 ) );
         assertTrue( fs.fileExists( file1 ) );
@@ -296,7 +296,7 @@ class StoreFilesTest
     {
         StoreFiles storeFiles = newStoreFiles();
 
-        Path emptyDirectory = testDirectory.directoryPath( "EmptyDirectory" );
+        Path emptyDirectory = testDirectory.directory( "EmptyDirectory" );
         DatabaseLayout layout = DatabaseLayout.ofFlat( emptyDirectory );
 
         assertTrue( storeFiles.isEmpty( layout ) );
@@ -379,7 +379,7 @@ class StoreFilesTest
         assertTrue( fs.isDirectory( tempCopyDir ) );
         assertTrue( fs.isDirectory( notTempCopyDir ) );
 
-        storeFiles.moveTo( databaseDir.toFile(), otherDatabaseLayout, otherLogFiles );
+        storeFiles.moveTo( databaseDir, otherDatabaseLayout, otherLogFiles );
 
         assertTrue( fs.isDirectory( tempCopyDir ) );
         assertFalse( fs.isDirectory( otherDatabaseDir.resolve( "temp-copy" ) ) );
@@ -408,9 +408,9 @@ class StoreFilesTest
         return dir;
     }
 
-    private StoreFiles newStoreFiles( Predicate<String> nameFilter )
+    private StoreFiles newStoreFiles( DirectoryStream.Filter<Path> nameFilter )
     {
-        return new StoreFiles( fs, pageCache, ( dir, name ) -> nameFilter.test( name ) );
+        return new StoreFiles( fs, pageCache, nameFilter );
     }
 
     private StoreFiles newStoreFiles()

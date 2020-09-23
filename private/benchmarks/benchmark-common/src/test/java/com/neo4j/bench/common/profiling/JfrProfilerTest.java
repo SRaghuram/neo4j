@@ -43,7 +43,7 @@ class JfrProfilerTest
     @BeforeEach
     void setUp() throws Exception
     {
-        Path parentDir = tempFolder.absolutePath().toPath();
+        Path parentDir = tempFolder.absolutePath();
 
         benchmarkGroup = new BenchmarkGroup( "group" );
         benchmark = benchmarkFor( "description", "simpleName", LATENCY, Collections.emptyMap() );

@@ -227,7 +227,7 @@ class FulltextIndexBackupIT
         ConnectorPortRegister portRegister = resolver.resolveDependency( ConnectorPortRegister.class );
         HostnamePort backupAddress = portRegister.getLocalAddress( BACKUP_SERVER_NAME );
 
-        Path backupDir = dir.directoryPath( BACKUP_DIR_NAME );
+        Path backupDir = dir.directory( BACKUP_DIR_NAME );
 
         var contextBuilder = OnlineBackupContext.builder()
                 .withAddress( backupAddress.getHost(), backupAddress.getPort() )

@@ -257,7 +257,7 @@ class MultiDatabaseManagerIT
         GraphDatabaseFacade database = (GraphDatabaseFacade) managementService.database( databaseToDrop );
 
         DatabaseLayout databaseLayout = database.databaseLayout();
-        assertNotEquals( databaseLayout.databaseDirectory().toFile(), databaseLayout.getTransactionLogsDirectory().toFile() );
+        assertNotEquals( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory() );
         assertTrue( Files.exists( databaseLayout.databaseDirectory() ) );
         assertTrue( Files.exists( databaseLayout.getTransactionLogsDirectory() ) );
 

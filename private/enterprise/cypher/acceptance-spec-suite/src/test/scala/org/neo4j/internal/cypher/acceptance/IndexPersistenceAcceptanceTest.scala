@@ -34,7 +34,7 @@ class IndexPersistenceAcceptanceTest extends IndexingTestSupport {
   override val cypherComparisonSupport = false
 
   override protected def initTest() {
-    dbDir = testDir.prepareDirectoryForTest(System.currentTimeMillis().toString).toPath
+    dbDir = testDir.prepareDirectoryForTest(System.currentTimeMillis().toString)
     startGraphDatabase(dbDir)
   }
 

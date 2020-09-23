@@ -86,7 +86,7 @@ public class PathModelTest
         BenchmarkGroup benchmarkGroup = new BenchmarkGroup( "group1" );
         Benchmark benchmark = Benchmark.benchmarkFor( "test benchmark", "benchmark1", Benchmark.Mode.LATENCY, Collections.emptyMap() );
 
-        Path workDir = testDirectory.absolutePath().toPath();
+        Path workDir = testDirectory.absolutePath();
         BenchmarkGroupDirectory benchmarkGroupDirectory = BenchmarkGroupDirectory.createAt( workDir, benchmarkGroup );
         BenchmarkDirectory benchmarkDirectory = benchmarkGroupDirectory.findOrCreate( benchmark );
         ForkDirectory forkDirectory = benchmarkDirectory.create( "fork", Collections.emptyList() );

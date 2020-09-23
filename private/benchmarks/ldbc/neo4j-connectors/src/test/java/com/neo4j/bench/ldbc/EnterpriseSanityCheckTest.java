@@ -57,7 +57,7 @@ public class EnterpriseSanityCheckTest
 
     private void shouldUseRuntime( Optional<String> maybeRequestedRuntime, String expectedRuntime ) throws Exception
     {
-        File dbDir = testFolder.directory( "db" );
+        File dbDir = testFolder.directory( "db" ).toFile();
         DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, configFile() );
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         String requestedRuntime = maybeRequestedRuntime.isPresent() ? "runtime=" + maybeRequestedRuntime.get() : "";
@@ -77,7 +77,7 @@ public class EnterpriseSanityCheckTest
 
     private File configFile() throws IOException
     {
-        File neo4jConfigFile = testFolder.file( "neo4j.conf" );
+        File neo4jConfigFile = testFolder.file( "neo4j.conf" ).toFile();
         Neo4jConfigBuilder.withDefaults()
                           .withSetting( record_format, "high_limit" )
                           .writeToFile( neo4jConfigFile.toPath() );

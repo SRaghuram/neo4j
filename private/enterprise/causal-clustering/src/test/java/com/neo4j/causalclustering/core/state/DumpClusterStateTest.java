@@ -54,7 +54,7 @@ class DumpClusterStateTest
     @BeforeEach
     void setup()
     {
-        dataDir = testDirectory.directoryPath( DEFAULT_DATA_DIR_NAME );
+        dataDir = testDirectory.directory( DEFAULT_DATA_DIR_NAME );
         var clusterStateLayout = ClusterStateLayout.of( dataDir.resolve( DEFAULT_CLUSTER_STATE_DIRECTORY_NAME ) );
         storageFactory = new ClusterStateStorageFactory( testDirectory.getFileSystem(), clusterStateLayout,
                 NullLogProvider.getInstance(), Config.defaults(), INSTANCE );

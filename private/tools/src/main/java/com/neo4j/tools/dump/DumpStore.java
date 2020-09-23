@@ -5,9 +5,10 @@
  */
 package com.neo4j.tools.dump;
 
-import java.io.File;
 import java.io.PrintStream;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -92,7 +93,7 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
               PageCache pageCache = createPageCache( fs, scheduler, cacheTracer ) )
         {
             final DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fs, immediate() );
-            Function<File,StoreFactory> createStoreFactory = file -> new StoreFactory( DatabaseLayout.ofFlat( file.getParentFile().toPath() ),
+            Function<Path,StoreFactory> createStoreFactory = file -> new StoreFactory( DatabaseLayout.ofFlat( file.getParent() ),
                     Config.defaults(), idGeneratorFactory, pageCache, fs, logProvider(), cacheTracer );
 
             for ( String arg : args )
@@ -102,16 +103,16 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
         }
     }
 
-    private static void dumpFile( Function<File, StoreFactory> createStoreFactory, String fileName ) throws Exception
+    private static void dumpFile( Function<Path, StoreFactory> createStoreFactory, String fileName ) throws Exception
     {
-        File file = new File( fileName );
+        Path file = Path.of( fileName );
         IdRange[] ids = null; // null means all possible ids
 
-        if ( file.isFile() )
+        if ( Files.isRegularFile( file ) )
         {
                 /* If file exists, even with : in its path, then accept it straight off. */
         }
-        else if ( !file.isDirectory() && file.getName().indexOf( ':' ) != -1 )
+        else if ( !Files.isDirectory( file ) && file.getFileName().toString().indexOf( ':' ) != -1 )
         {
                 /* Now we know that it is not a directory either, and that the last component
                    of the path contains a colon, thus it is very likely an attempt to use the
@@ -125,14 +126,14 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
             {
                 ids[i] = IdRange.parse( idStrings[i] );
             }
-            file = new File( fileName.substring( 0, idStart ) );
+            file = Path.of( fileName.substring( 0, idStart ) );
 
-            if ( !file.isFile() )
+            if ( !Files.isRegularFile( file ) )
             {
                 throw new IllegalArgumentException( "No such file: " + fileName );
             }
         }
-        DatabaseFile databaseFile = DatabaseFile.fileOf( file.getName() ).orElseThrow( illegalArgumentExceptionSupplier( fileName ) );
+        DatabaseFile databaseFile = DatabaseFile.fileOf( file.getFileName().toString() ).orElseThrow( illegalArgumentExceptionSupplier( fileName ) );
         StoreType storeType = StoreType.typeOf( databaseFile ).orElseThrow( illegalArgumentExceptionSupplier( fileName ) );
         try ( NeoStores neoStores = createStoreFactory.apply( file ).openNeoStores( storeType ) )
         {
@@ -211,9 +212,9 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
     private static <R extends TokenRecord> void dumpTokens(
             final TokenStore<R> store, IdRange[] ids ) throws Exception
     {
-        try
+        try ( store )
         {
-            new DumpStore<R, TokenStore<R>>( System.out )
+            new DumpStore<R,TokenStore<R>>( System.out )
             {
                 @Override
                 protected Object transform( R record )
@@ -226,10 +227,6 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
                     return null;
                 }
             }.dump( store, ids );
-        }
-        finally
-        {
-            store.close();
         }
     }
 

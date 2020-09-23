@@ -43,16 +43,16 @@ class InteractiveExecutionIT
 
     private void executeWorkloadInteractively( String workloadName, Neo4jDeployment neo4jDeployment ) throws Exception
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Workload workload = Workload.fromName( workloadName, resources, neo4jDeployment.deployment() );
 
-            Path neo4jConfigFile = createTempFile( temporaryFolder.absolutePath().toPath(), "neo4j", ".conf" );
+            Path neo4jConfigFile = createTempFile( temporaryFolder.absolutePath(), "neo4j", ".conf" );
             Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfigFile );
 
             Store store = StoreTestUtil.createEmptyStoreFor( workload,
-                                                             createTempDirectory( temporaryFolder.absolutePath().toPath(), "store" ), // store
-                                                             createTempFile( temporaryFolder.absolutePath().toPath(), "neo4j", ".conf" ) ); // neo4j config
+                                                             createTempDirectory( temporaryFolder.absolutePath(), "store" ), // store
+                                                             createTempFile( temporaryFolder.absolutePath(), "neo4j", ".conf" ) ); // neo4j config
             OptionsBuilder optionsBuilder = new OptionsBuilder()
                     .withNeo4jConfig( neo4jConfigFile )
                     .withForks( 0 )
@@ -64,7 +64,7 @@ class InteractiveExecutionIT
 
             for ( Query query : workload.queries() )
             {
-                Path outputDir = createTempDirectory( temporaryFolder.absolutePath().toPath(), "output" );
+                Path outputDir = createTempDirectory( temporaryFolder.absolutePath(), "output" );
                 Options options = optionsBuilder
                         .withOutputDir( outputDir )
                         .withStoreDir( store.topLevelDirectory() )

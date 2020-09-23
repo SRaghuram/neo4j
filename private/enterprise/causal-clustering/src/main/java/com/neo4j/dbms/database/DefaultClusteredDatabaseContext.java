@@ -11,8 +11,8 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.common.ClusteredDatabase;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Optional;
 
 import org.neo4j.collection.Dependencies;
@@ -181,7 +181,7 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
      * @param sourceDir the store files to replace this databases's current files with
      */
     @Override
-    public void replaceWith( File sourceDir ) throws IOException
+    public void replaceWith( Path sourceDir ) throws IOException
     {
         storeFiles.delete( databaseLayout, txLogs );
         storeFiles.moveTo( sourceDir, databaseLayout, txLogs );

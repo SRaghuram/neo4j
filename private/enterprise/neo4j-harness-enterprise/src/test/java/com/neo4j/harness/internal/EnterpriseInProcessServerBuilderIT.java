@@ -12,11 +12,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Arrays;
 
 import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilder;
+import org.neo4j.io.fs.FileUtils;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -37,21 +38,21 @@ class EnterpriseInProcessServerBuilderIT
     void shouldLaunchAServerInSpecifiedDirectory()
     {
         // Given
-        File workDir = testDir.directory("specific" );
+        Path workDir = testDir.directory( "specific" );
 
         // When
         try ( Neo4j server = getTestServerBuilder( workDir ).build() )
         {
             // Then
             assertThat( HTTP.GET( server.httpURI().toString() ).status() ).isEqualTo( 200 );
-            assertThat( workDir.list().length ).isEqualTo( 1 );
+            assertThat( FileUtils.listPaths( workDir ).length ).isEqualTo( 1 );
         }
 
         // And after it's been closed, it should've cleaned up after itself.
-        assertThat( workDir.list().length ).as( Arrays.toString( workDir.list() ) ).isEqualTo( 0 );
+        assertThat( FileUtils.listPaths( workDir ).length ).as( Arrays.toString( FileUtils.listPaths( workDir ) ) ).isEqualTo( 0 );
     }
 
-    private Neo4jBuilder getTestServerBuilder( File workDir )
+    private Neo4jBuilder getTestServerBuilder( Path workDir )
     {
         return EnterpriseNeo4jBuilders.newInProcessBuilder( workDir )
                                           .withConfig( OnlineBackupSettings.online_backup_enabled, false );

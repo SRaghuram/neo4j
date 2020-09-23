@@ -21,9 +21,9 @@ import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.OnlineBackupSettings;
 import org.apache.lucene.util.NamedThreadFactory;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.rmi.RemoteException;
 import java.time.Duration;
@@ -78,8 +78,8 @@ import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 
 public class Orchestrator
 {
-    public static final File DEFAULT_PATH = new File( "data" );
-    public static final File CONFIG_FILE = new File( "neo4j.properties" );
+    public static final Path DEFAULT_PATH = Path.of( "data" );
+    public static final Path CONFIG_FILE = Path.of( "neo4j.properties" );
     private static final int LOW_BACKUP_SERVER_PORT = 4000;
     private static final int LOW_DISCOVERY_SERVER_PORT = 5000;
     private static final int LOW_TX_SERVER_PORT = 6000;
@@ -90,7 +90,7 @@ public class Orchestrator
     private final JvmMode jvmMode;
     private final int numberOfCcInstances;
     private final Random random = new Random();
-    private final File path;
+    private final Path path;
     private final ReferenceNodeStrategy referenceNodeStrategy;
     private final boolean indexing;
     private final LogProvider logProvider;
@@ -105,7 +105,7 @@ public class Orchestrator
     private WorkLoad currentLoad;
     private boolean workLoadIsCompleted;
 
-    public Orchestrator( LogProvider logProvider, int numberOfCcInstances, JvmMode jvmMode, File pathOrNullForDefault, boolean keepDbHistory,
+    public Orchestrator( LogProvider logProvider, int numberOfCcInstances, JvmMode jvmMode, Path pathOrNullForDefault, boolean keepDbHistory,
             ReferenceNodeStrategy referenceNodeStrategy, boolean indexing, Map<String,String> additionalDbConfig, boolean acquireReadLocks ) throws Exception
     {
         this.logProvider = logProvider;
@@ -126,7 +126,7 @@ public class Orchestrator
         instanceFiles.init();
 
         log.info( "Starting CC cluster..." );
-        if ( !CONFIG_FILE.exists() )
+        if ( Files.notExists( CONFIG_FILE ) )
         {
             log.debug( "(You can specify custom configuration for instances in neo4j.properties file here in the root directory)" );
         }
@@ -140,7 +140,7 @@ public class Orchestrator
     private static Map<String,String> loadUserConfig() throws IOException
     {
         Map<String,String> config = stringMap();
-        if ( CONFIG_FILE.exists() )
+        if ( Files.exists( CONFIG_FILE ) )
         {
             config.putAll( loadConfig() );
         }
@@ -149,7 +149,7 @@ public class Orchestrator
 
     private static Map<String,String> loadConfig() throws IOException
     {
-        try ( FileInputStream stream = new FileInputStream( CONFIG_FILE ) )
+        try ( InputStream stream = Files.newInputStream( CONFIG_FILE ) )
         {
             return load( stream );
         }
@@ -641,10 +641,10 @@ public class Orchestrator
     {
         for ( int i = 0; i < getNumberOfCcInstances(); i++ )
         {
-            File homeDir = instanceFiles.directoryFor( i );
+            Path homeDir = instanceFiles.directoryFor( i );
             try
             {
-                consistencyVerifier.verifyConsistencyOffline( homeDir.toPath() );
+                consistencyVerifier.verifyConsistencyOffline( homeDir );
                 log.info( "VERIFIED " + homeDir );
             }
             catch ( Exception e )
@@ -715,12 +715,12 @@ public class Orchestrator
         int count = 0;
         for ( int i = 0; i < numberOfCcInstances; i++ )
         {
-            count += EmbeddedCcInstance.getNumberOfBranches( instanceFiles.directoryFor( i ).getAbsoluteFile() );
+            count += EmbeddedCcInstance.getNumberOfBranches( instanceFiles.directoryFor( i ) );
         }
         return count;
     }
 
-    void cleanArtifacts()
+    void cleanArtifacts() throws IOException
     {
         instanceFiles.clean();
     }
@@ -780,8 +780,8 @@ public class Orchestrator
                             boolean grabReadLocks ) throws Exception
                     {
                         Map<String,String> parameters = stringMap( CcProcess.SERVER_ID_KEY, "" + serverId, "dbdir",
-                                files.directoryFor( serverId ).getAbsolutePath(), GraphDatabaseSettings.logs_directory.name(),
-                                files.directoryFor( serverId ).getAbsolutePath(), CcRobustness.REFERENCENODE, referenceNodeStrategy.name(),
+                                files.directoryFor( serverId ).toAbsolutePath().toString(), GraphDatabaseSettings.logs_directory.name(),
+                                files.directoryFor( serverId ).toAbsolutePath().toString(), CcRobustness.REFERENCENODE, referenceNodeStrategy.name(),
                                 CcRobustness.INDEXING, "" + indexing, CcRobustness.ACQUIRE_READ_LOCKS, "" + grabReadLocks );
                         parameters.putAll( additionalDbConfig );
                         CcInstance instance = new CcProcess().start( parameters );

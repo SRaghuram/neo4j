@@ -169,7 +169,7 @@ public class EagerProcedureIT
     {
         new JarBuilder().createJarFor( testDirectory.createFile( "myProcedures.jar" ), ClassWithProcedures.class );
         managementService = new TestDatabaseManagementServiceBuilder().impermanent()
-                .setConfig( GraphDatabaseSettings.plugin_dir, testDirectory.homePath().toAbsolutePath() ).build();
+                .setConfig( GraphDatabaseSettings.plugin_dir, testDirectory.absolutePath() ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
     }
 

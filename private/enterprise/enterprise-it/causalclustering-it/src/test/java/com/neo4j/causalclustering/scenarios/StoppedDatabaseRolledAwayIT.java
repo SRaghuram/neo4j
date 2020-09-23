@@ -315,7 +315,7 @@ class StoppedDatabaseRolledAwayIT
         var dataDir = member.neo4jLayout().databasesDirectory();
         var trxDir = member.neo4jLayout().transactionLogsRootDirectory();
         var neo4jHome = member.homePath();
-        var configDir = testDirectory.directoryPath( "configDir" );
+        var configDir = testDirectory.directory( "configDir" );
         appendConfigSetting( configDir, databases_root_path, dataDir );
         appendConfigSetting( configDir, transaction_logs_root_path, trxDir );
 

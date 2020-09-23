@@ -46,9 +46,9 @@ public class GcLogTest
         assertThat( gcLogEvent.value(), equalTo( value ) );
         assertThat( gcLogEvent.cumulativeValue(), equalTo( cumulativeValue ) );
 
-        File gcLogEventJson = temporaryFolder.file( "gc-log.json" );
-        JsonUtil.serializeJson( gcLogEventJson.toPath(), gcLogEvent );
-        GcLog.GcLogEvent deserializeGcLogEvent = JsonUtil.deserializeJson( gcLogEventJson.toPath(), GcLog.GcLogEvent.class );
+        Path gcLogEventJson = temporaryFolder.file( "gc-log.json" );
+        JsonUtil.serializeJson( gcLogEventJson, gcLogEvent );
+        GcLog.GcLogEvent deserializeGcLogEvent = JsonUtil.deserializeJson( gcLogEventJson, GcLog.GcLogEvent.class );
         assertThat( deserializeGcLogEvent, equalTo( gcLogEvent ) );
     }
 
@@ -58,7 +58,7 @@ public class GcLogTest
         File gcLogFile = FileUtils.toFile( GcLogTest.class.getResource( "/gc-jdk8.log" ) );
         GcLog gcLog = GcLog.parse( gcLogFile.toPath() );
 
-        Path csv = temporaryFolder.file( "gc-log.csv" ).toPath();
+        Path csv = temporaryFolder.file( "gc-log.csv" );
         gcLog.toCSV( csv );
         long actualCsvRowCount = Files.lines( csv ).count();
         long expectCsvRowCount = gcLog.events().size() + 1;
@@ -74,7 +74,7 @@ public class GcLogTest
         File gcLogFile = FileUtils.toFile( GcLogTest.class.getResource( "/gc-jdk8.log" ) );
         GcLog gcLog = GcLog.parse( gcLogFile.toPath() );
 
-        File gcLogJson = temporaryFolder.file( "gc-log.json" );
+        File gcLogJson = temporaryFolder.file( "gc-log.json" ).toFile();
         JsonUtil.serializeJson( gcLogJson.toPath(), gcLog );
 
         GcLog deserializeGcLog = JsonUtil.deserializeJson( gcLogJson.toPath(), GcLog.class );

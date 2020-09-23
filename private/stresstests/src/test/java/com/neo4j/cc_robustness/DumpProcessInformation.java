@@ -8,9 +8,10 @@ package com.neo4j.cc_robustness;
 import org.hamcrest.Matcher;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -29,8 +30,8 @@ public class DumpProcessInformation
     private static final String HEAP = "heap";
     private static final String DIR = "dir";
     private final Log log;
-    private final File outputDirectory;
-    public DumpProcessInformation( LogProvider logProvider, File outputDirectory )
+    private final Path outputDirectory;
+    public DumpProcessInformation( LogProvider logProvider, Path outputDirectory )
     {
         this.log = logProvider.getLog( getClass() );
         this.outputDirectory = outputDirectory;
@@ -42,7 +43,7 @@ public class DumpProcessInformation
         boolean doHeapDump = arg.getBoolean( HEAP, false, true );
         String[] containing = arg.orphans().toArray( new String[0] );
         String dumpDir = arg.get( DIR, "data" );
-        new DumpProcessInformation( new Log4jLogProvider( System.out ), new File( dumpDir ) )
+        new DumpProcessInformation( new Log4jLogProvider( System.out ), Path.of( dumpDir ) )
                 .dumpRunningProcesses( doHeapDump, containing );
     }
 
@@ -53,7 +54,7 @@ public class DumpProcessInformation
 
     public void dumpRunningProcesses( boolean includeHeapDump, String... javaPidsContainingClassNames ) throws Exception
     {
-        outputDirectory.mkdirs();
+        Files.createDirectories( outputDirectory );
         for ( Pair<Long,String> pid : getJPids( is( in( javaPidsContainingClassNames ) ) ) )
         {
             doThreadDump( pid );
@@ -64,10 +65,10 @@ public class DumpProcessInformation
         }
     }
 
-    public File doThreadDump( Pair<Long,String> pid ) throws Exception
+    public Path doThreadDump( Pair<Long,String> pid ) throws Exception
     {
-        File outputFile = new File( outputDirectory, fileName( "threaddump", pid ) );
-        log.info( "Creating thread dump of " + pid + " to " + outputFile.getAbsolutePath() );
+        Path outputFile = outputDirectory.resolve( fileName( "threaddump", pid ) );
+        log.info( "Creating thread dump of " + pid + " to " + outputFile.toAbsolutePath() );
         String[] cmdarray = new String[]{"jstack", "" + pid.first()};
         Process process = Runtime.getRuntime().exec( cmdarray );
         writeProcessOutputToFile( process, outputFile );
@@ -76,9 +77,9 @@ public class DumpProcessInformation
 
     public void doHeapDump( Pair<Long,String> pid ) throws Exception
     {
-        File outputFile = new File( outputDirectory, fileName( "heapdump", pid ) );
-        log.info( "Creating heap dump of " + pid + " to " + outputFile.getAbsolutePath() );
-        String[] cmdarray = new String[]{"jmap", "-dump:file=" + outputFile.getAbsolutePath(), "" + pid.first()};
+        Path outputFile = outputDirectory.resolve( fileName( "heapdump", pid ) );
+        log.info( "Creating heap dump of " + pid + " to " + outputFile.toAbsolutePath() );
+        String[] cmdarray = new String[]{"jmap", "-dump:file=" + outputFile.toAbsolutePath(), "" + pid.first()};
         Runtime.getRuntime().exec( cmdarray ).waitFor();
     }
 
@@ -126,11 +127,11 @@ public class DumpProcessInformation
         return jPids;
     }
 
-    private void writeProcessOutputToFile( Process process, File outputFile ) throws Exception
+    private void writeProcessOutputToFile( Process process, Path outputFile ) throws Exception
     {
         BufferedReader reader = new BufferedReader( new InputStreamReader( process.getInputStream() ) );
         String line;
-        try ( PrintStream out = new PrintStream( outputFile ) )
+        try ( PrintStream out = new PrintStream( Files.newOutputStream( outputFile ) ) )
         {
             while ( (line = reader.readLine()) != null )
             {

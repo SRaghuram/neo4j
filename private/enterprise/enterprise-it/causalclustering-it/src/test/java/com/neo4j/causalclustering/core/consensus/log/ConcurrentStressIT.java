@@ -63,7 +63,7 @@ public abstract class ConcurrentStressIT
 
     private void readAndWrite( int nReaders, int time, TimeUnit unit ) throws Throwable
     {
-        var raftLog = createRaftLog( testDir.getFileSystem(), testDir.directoryPath( "raft-logs" ) );
+        var raftLog = createRaftLog( testDir.getFileSystem(), testDir.directory( "raft-logs" ) );
         if ( raftLog instanceof Lifecycle )
         {
             life.add( (Lifecycle) raftLog );

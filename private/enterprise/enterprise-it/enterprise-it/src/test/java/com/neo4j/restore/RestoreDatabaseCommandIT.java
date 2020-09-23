@@ -6,7 +6,6 @@
 package com.neo4j.restore;
 
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
-import com.neo4j.configuration.CausalClusteringSettings;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -296,7 +295,7 @@ class RestoreDatabaseCommandIT
     {
         String databaseName = "target-database";
         FileSystemAbstraction fs = Mockito.spy( fileSystem );
-        Path fromPath = directory.directoryPath( "database-to-restore" );
+        Path fromPath = directory.directory( "database-to-restore" );
 
         Config config = configWith( neo4jLayout );
 
@@ -315,7 +314,7 @@ class RestoreDatabaseCommandIT
     {
         String databaseName = "target-database";
         FileSystemAbstraction fs = Mockito.spy( fileSystem );
-        Path fromPath = directory.directoryPath( "database-to-restore" );
+        Path fromPath = directory.directory( "database-to-restore" );
 
         Config config = configWith( neo4jLayout );
 
@@ -336,7 +335,7 @@ class RestoreDatabaseCommandIT
         var databaseName =  "new" ;
         Neo4jLayout testStore = neo4jLayout;
         Config config = useDefaultClusterStateDirectory ? configWith( testStore ) : Config.defaults(
-                Map.of( neo4j_home, testStore.homeDirectory(), cluster_state_directory, directory.directoryPath( "extra_cluster_state" ) ) );
+                Map.of( neo4j_home, testStore.homeDirectory(), cluster_state_directory, directory.directory( "extra_cluster_state" ) ) );
 
         Path fromPath = directory.homePath().resolve( "old" );
 

@@ -5,8 +5,9 @@
  */
 package com.neo4j.tools.dump;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -64,32 +65,32 @@ public abstract class DumpStoreChain<RECORD extends AbstractBaseRecord>
         {
             throw invalidUsage( "no store file given" );
         }
-        File storeFile = new File( orphans.get( 0 ) );
+        Path storeFile = Path.of( orphans.get( 0 ) );
         DumpStoreChain tool;
-        if ( storeFile.isDirectory() )
+        if ( Files.isDirectory( storeFile ) )
         {
-            verifyFilesExists( new File( storeFile, NODESTORE ),
-                    new File( storeFile, RELSTORE ),
-                    new File( storeFile, PROPSTORE ) );
+            verifyFilesExists( storeFile.resolve( NODESTORE ),
+                    storeFile.resolve( RELSTORE ),
+                    storeFile.resolve( PROPSTORE ) );
             tool = chainForNode( arguments );
         }
         else
         {
             verifyFilesExists( storeFile );
-            if ( RELSTORE.equals( storeFile.getName() ) )
+            if ( RELSTORE.equals( storeFile.getFileName().toString() ) )
             {
                 tool = relationshipChain( arguments );
             }
-            else if ( PROPSTORE.equals( storeFile.getName() ) )
+            else if ( PROPSTORE.equals( storeFile.getFileName().toString() ) )
             {
                 tool = propertyChain( arguments );
             }
             else
             {
-                throw invalidUsage( "not a chain store: " + storeFile.getName() );
+                throw invalidUsage( "not a chain store: " + storeFile.getFileName() );
             }
         }
-        tool.dump( DatabaseLayout.ofFlat( storeFile.toPath() ) );
+        tool.dump( DatabaseLayout.ofFlat( storeFile ) );
     }
 
     long firstRecord;
@@ -193,11 +194,11 @@ public abstract class DumpStoreChain<RECORD extends AbstractBaseRecord>
         return nodeStore.getRecord( id, nodeStore.newRecord(), FORCE, NULL );
     }
 
-    private static void verifyFilesExists( File... files )
+    private static void verifyFilesExists( Path... files )
     {
-        for ( File file : files )
+        for ( Path file : files )
         {
-            if ( !file.isFile() )
+            if ( !Files.isRegularFile( file ) )
             {
                 throw invalidUsage( file + " does not exist" );
             }

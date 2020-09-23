@@ -8,9 +8,12 @@ package com.neo4j.cc_robustness;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.SystemUtils;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.neo4j.logging.Log;
 
@@ -20,11 +23,11 @@ class CcInstanceFiles
 {
     private static final AtomicInteger zippedDbCounter = new AtomicInteger();
     private static final String INTERNAL_LOG_NAME = "debug.log";
-    private final File path;
+    private final Path path;
     private final boolean keepHistory;
     private final Log log;
 
-    CcInstanceFiles( File path, Log log, boolean keepHistory )
+    CcInstanceFiles( Path path, Log log, boolean keepHistory )
     {
         this.path = path;
         this.log = log;
@@ -41,75 +44,78 @@ class CcInstanceFiles
         return builder.toString();
     }
 
-    void init()
+    void init() throws IOException
     {
-        System.out.println( "Running tests in: " + this.path.getAbsolutePath() );
+        System.out.println( "Running tests in: " + this.path.toAbsolutePath() );
         cleanDataDirectory( path );
-        defaultDiscoveryFile().delete();
-        path.mkdirs();
+        Files.delete( defaultDiscoveryFile() );
+        Files.createDirectories( path );
     }
 
-    private File dbsPath()
+    private Path dbsPath()
     {
-        return new File( path, "db" );
+        return path.resolve( "db" );
     }
 
-    private File packedDbFile( int serverId, int id )
+    private Path packedDbFile( int serverId, int id )
     {
-        return new File( path, zeroPad( id, 3 ) + "_db" + serverId + ".tgz" );
+        return path.resolve( zeroPad( id, 3 ) + "_db" + serverId + ".tgz" );
     }
 
-    synchronized void packDb( int serverId, boolean intermediary )
+    synchronized void packDb( int serverId, boolean intermediary ) throws IOException
     {
         if ( SystemUtils.IS_OS_WINDOWS || intermediary && !keepHistory )
         {
             return;
         }
 
-        File dbPath = directoryFor( serverId );
-        File targetName = packedDbFile( serverId, zippedDbCounter.incrementAndGet() );
+        Path dbPath = directoryFor( serverId );
+        Path targetName = packedDbFile( serverId, zippedDbCounter.incrementAndGet() );
 
         targz( dbPath, targetName, log );
 
         removeOldPackedDbs( 10 );
     }
 
-    File directoryFor( int serverId )
+    Path directoryFor( int serverId )
     {
-        return new File( dbsPath(), "" + serverId ).getAbsoluteFile();
+        return dbsPath().resolve( "" + serverId ).toAbsolutePath();
     }
 
-    private void cleanDataDirectory( File dir )
+    private void cleanDataDirectory( Path dir ) throws IOException
     {
-        if ( !dir.exists() )
+        if ( Files.notExists( dir ) )
         {
             return;
         }
-        for ( File child : dir.listFiles() )
+        try ( DirectoryStream<Path> paths = Files.newDirectoryStream( dir ) )
         {
-            // "output.txt" is the name of the file that the run bash-script uses to
-            // redirect all outputs to.
-            if ( child.isFile() )
+            for ( Path child : paths )
             {
-                if ( !child.getName().equals( "output.txt" ) )
+                // "output.txt" is the name of the file that the run bash-script uses to
+                // redirect all outputs to.
+                if ( Files.isRegularFile( child ) )
                 {
-                    child.delete();
+                    if ( !child.getFileName().toString().equals( "output.txt" ) )
+                    {
+                        FileUtils.deleteQuietly( child.toFile() );
+                    }
                 }
-            }
-            else
-            {
-                FileUtils.deleteQuietly( child );
+                else
+                {
+                    FileUtils.deleteQuietly( child.toFile() );
+                }
             }
         }
     }
 
-    private File defaultDiscoveryFile()
+    private Path defaultDiscoveryFile()
     {
         try
         {
-            File file = File.createTempFile( "cronie", "test" );
-            file.delete();
-            return new File( file.getParentFile(), "cronie-discovery" );
+            Path file = Files.createTempFile( "cronie", "test" );
+            Files.delete( file );
+            return file.getParent().resolve( "cronie-discovery" );
         }
         catch ( IOException e )
         {
@@ -117,53 +123,56 @@ class CcInstanceFiles
         }
     }
 
-    private void removeOldPackedDbs( int legRoom )
+    private void removeOldPackedDbs( int legRoom ) throws IOException
     {
         int tooOld = Math.max( 0, zippedDbCounter.get() - legRoom );
-        for ( File file : path.listFiles() )
+        try ( DirectoryStream<Path> paths = Files.newDirectoryStream( path ) )
         {
-            if ( file.getName().contains( "_db" ) && idOfPackedFile( file ) <= tooOld )
+            for ( Path file : paths )
             {
-                file.delete();
+                if ( file.getFileName().toString().contains( "_db" ) && idOfPackedFile( file ) <= tooOld )
+                {
+                    Files.delete( file );
+                }
             }
         }
     }
 
-    private int idOfPackedFile( File file )
+    private int idOfPackedFile( Path file )
     {
-        return Integer.parseInt( file.getName().substring( 0, 3 ) );
+        return Integer.parseInt( file.getFileName().toString().substring( 0, 3 ) );
     }
 
-    void clean()
+    void clean() throws IOException
     {
         // Removed packed dbs (every time they're shut down)
         removeOldPackedDbs( 0 );
 
         // Clean the database directories so that there are only messages.log left
-        for ( File dbPath : dbsPath().listFiles() )
+        try ( Stream<Path> list = Files.list( dbsPath() ) )
         {
-            if ( dbPath.isDirectory() )
-            {
-                cleanDbDirectory( dbPath );
-            }
+            list.filter( Files::isDirectory ).forEach( this::cleanDbDirectory );
         }
     }
 
-    private void cleanDbDirectory( File dbPath )
+    private void cleanDbDirectory( Path dbPath )
     {
-        for ( File file : dbPath.listFiles() )
+        try ( Stream<Path> list = Files.list( dbPath ) )
         {
-            if ( !file.getName().equals( INTERNAL_LOG_NAME ) )
-            {
+            list.filter( path -> !path.getFileName().toString().equals( INTERNAL_LOG_NAME ) ).forEach( path -> {
                 try
                 {
-                    org.neo4j.io.fs.FileUtils.deleteDirectory( file.toPath() );
+                    org.neo4j.io.fs.FileUtils.deleteDirectory( path );
                 }
                 catch ( IOException e )
                 {
-                    System.err.println( "Couldn't delete " + file + " while cleaning up after successful run, due to " + e );
+                    System.err.println( "Couldn't delete " + path + " while cleaning up after successful run, due to " + e );
                 }
-            }
+            } );
+        }
+        catch ( IOException e )
+        {
+            System.err.println( "Couldn't clean up after successful run, due to " + e );
         }
     }
 }

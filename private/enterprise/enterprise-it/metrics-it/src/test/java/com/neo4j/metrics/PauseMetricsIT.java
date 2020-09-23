@@ -39,7 +39,7 @@ class PauseMetricsIT
     @ExtensionCallback
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
-        metricsDirectory = testDirectory.directoryPath( "metrics" );
+        metricsDirectory = testDirectory.directory( "metrics" );
         builder.setConfig( MetricsSettings.metrics_enabled, true )
                .setConfig( MetricsSettings.metrics_filter, GlobbingPattern.create( "*pause_time*" ) )
                .setConfig( MetricsSettings.csv_enabled, true )

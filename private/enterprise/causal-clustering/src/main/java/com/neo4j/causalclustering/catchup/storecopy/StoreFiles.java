@@ -5,9 +5,8 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
-import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Path;
 import java.util.Set;
 
@@ -25,20 +24,21 @@ import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngi
 
 public class StoreFiles
 {
-    public static final FilenameFilter EXCLUDE_TEMPORARY_DIRS = ( dir, name ) -> !name.equals( TEMP_STORE_COPY_DIRECTORY_NAME ) &&
-                                                                                 !name.equals( TEMP_BOOTSTRAP_DIRECTORY_NAME ) &&
-                                                                                 !name.equals( TEMP_SAVE_DIRECTORY_NAME );
+    public static final DirectoryStream.Filter<Path> EXCLUDE_TEMPORARY_DIRS =
+            path -> !path.getFileName().toString().equals( TEMP_STORE_COPY_DIRECTORY_NAME ) &&
+                    !path.getFileName().toString().equals( TEMP_BOOTSTRAP_DIRECTORY_NAME ) &&
+                    !path.getFileName().toString().equals( TEMP_SAVE_DIRECTORY_NAME );
 
     private final FileSystemAbstraction fs;
     private final PageCache pageCache;
-    private final FilenameFilter filenameFilter;
+    private final DirectoryStream.Filter<Path> filenameFilter;
 
     public StoreFiles( FileSystemAbstraction fs, PageCache pageCache )
     {
         this( fs, pageCache, EXCLUDE_TEMPORARY_DIRS );
     }
 
-    public StoreFiles( FileSystemAbstraction fs, PageCache pageCache, FilenameFilter filenameFilter )
+    public StoreFiles( FileSystemAbstraction fs, PageCache pageCache, DirectoryStream.Filter<Path> filenameFilter )
     {
         this.fs = fs;
         this.pageCache = pageCache;
@@ -69,11 +69,11 @@ public class StoreFiles
         }
     }
 
-    public void moveTo( File source, DatabaseLayout target, LogFiles logFiles ) throws IOException
+    public void moveTo( Path source, DatabaseLayout target, LogFiles logFiles ) throws IOException
     {
         fs.mkdirs( logFiles.logFilesDirectory() );
 
-        Path[] files = fs.listFiles( source.toPath(), filenameFilter );
+        Path[] files = fs.listFiles( source, filenameFilter );
         if ( files.length != 0 )
         {
             for ( Path file : files )

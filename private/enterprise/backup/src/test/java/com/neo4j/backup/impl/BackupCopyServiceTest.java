@@ -72,7 +72,7 @@ class BackupCopyServiceTest
     void logicForMovingBackupsIsDelegatedToFileMoveProvider() throws IOException
     {
         // given
-        Path parentDirectory = testDirectory.directory( "parent" ).toPath();
+        Path parentDirectory = testDirectory.directory( "parent" );
         Path oldLocation = parentDirectory.resolve( "oldLocation" );
         Files.createDirectories( oldLocation );
         Path newLocation = parentDirectory.resolve( "newLocation" );
@@ -119,8 +119,8 @@ class BackupCopyServiceTest
     @Test
     void shouldNotDeletePreExistingBrokenBackupWhenItHasDifferentStoreIdFromNewSuccessfulBackup() throws Exception
     {
-        Path oldDir = testDirectory.directoryPath( "old" );
-        Path newDir = testDirectory.directoryPath( "new" );
+        Path oldDir = testDirectory.directory( "old" );
+        Path newDir = testDirectory.directory( "new" );
 
         startAndStopDb( oldDir );
         startAndStopDb( newDir );

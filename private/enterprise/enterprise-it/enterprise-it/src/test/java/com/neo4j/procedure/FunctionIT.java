@@ -352,7 +352,7 @@ class FunctionIT
 
         managementService.shutdown();
         managementService = new TestDatabaseManagementServiceBuilder().setInternalLogProvider( logProvider ).setUserLogProvider( logProvider ).impermanent()
-                .setConfig( GraphDatabaseSettings.plugin_dir, plugins.homePath().toAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.plugin_dir, plugins.absolutePath() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
 
@@ -650,7 +650,7 @@ class FunctionIT
 
     private String createCsvFile( String... lines ) throws IOException
     {
-        java.nio.file.Path file = plugins.createFilePath( "test" );
+        java.nio.file.Path file = plugins.createFile( "test" );
 
         try ( PrintWriter writer = FileUtils.newFilePrintWriter( file, UTF_8 ) )
         {
@@ -916,7 +916,7 @@ class FunctionIT
         exceptionsInFunction.clear();
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder().impermanent()
-                .setConfig( GraphDatabaseSettings.plugin_dir, plugins.homePath().toAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.plugin_dir, plugins.absolutePath() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
     }

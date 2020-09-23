@@ -76,7 +76,7 @@ public class NativeMemoryTrackingSummaryReportTest
                 report.getCommittedKBInCategory( "Code" ) );
 
         // when
-        File tmpfile = temporaryFolder.createFile( "nmt_summary.csv" );
+        File tmpfile = temporaryFolder.createFile( "nmt_summary.csv" ).toFile();
         report.toCSV( tmpfile.toPath() );
 
         // then

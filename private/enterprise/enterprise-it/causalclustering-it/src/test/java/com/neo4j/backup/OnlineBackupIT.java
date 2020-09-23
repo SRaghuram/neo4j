@@ -76,7 +76,7 @@ class OnlineBackupIT
     @BeforeEach
     void setUp()
     {
-        backupsDir = testDirectory.directory( "backups" ).toPath();
+        backupsDir = testDirectory.directory( "backups" );
         defaultDbBackupDir = backupsDir.resolve( DB_NAME );
 
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )

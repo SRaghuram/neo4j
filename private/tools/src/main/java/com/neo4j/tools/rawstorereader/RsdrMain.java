@@ -8,7 +8,6 @@ package com.neo4j.tools.rawstorereader;
 import com.neo4j.tools.util.TransactionLogUtils;
 
 import java.io.Console;
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -72,20 +71,20 @@ public class RsdrMain
         {
             console.printf( "Neo4j Raw Store Diagnostics Reader%n" );
 
-            if ( args.length != 1 || !fileSystem.isDirectory( new File( args[0] ).toPath() ) )
+            if ( args.length != 1 || !fileSystem.isDirectory( Path.of( args[0] ) ) )
             {
                 console.printf( "Usage: rsdr <store directory>%n" );
                 return;
             }
 
-            File databaseDirectory = new File( args[0] );
-            DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( databaseDirectory.toPath() );
+            Path databaseDirectory = Path.of( args[0] );
+            DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( databaseDirectory );
 
             Config config = buildConfig();
             JobScheduler jobScheduler = createInitialisedScheduler();
             try ( PageCache pageCache = createPageCache( fileSystem, config, jobScheduler, PageCacheTracer.NULL ) )
             {
-                File neoStore = databaseLayout.metadataStore().toFile();
+                Path neoStore = databaseLayout.metadataStore();
                 StoreFactory factory = openStore( fileSystem, neoStore, config, pageCache );
                 NeoStores neoStores = factory.openAllNeoStores();
                 interact( fileSystem, neoStores, databaseLayout );
@@ -100,12 +99,12 @@ public class RsdrMain
                 .set( GraphDatabaseSettings.pagecache_memory, "64M" ).build();
     }
 
-    private static StoreFactory openStore( FileSystemAbstraction fileSystem, File storeDir, Config config,
+    private static StoreFactory openStore( FileSystemAbstraction fileSystem, Path storeDir, Config config,
             PageCache pageCache )
     {
         IdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fileSystem, immediate() );
         NullLogProvider logProvider = NullLogProvider.getInstance();
-        return new StoreFactory( DatabaseLayout.ofFlat( storeDir.toPath() ), config, idGeneratorFactory, pageCache, fileSystem, logProvider,
+        return new StoreFactory( DatabaseLayout.ofFlat( storeDir ), config, idGeneratorFactory, pageCache, fileSystem, logProvider,
                 PageCacheTracer.NULL );
     }
 

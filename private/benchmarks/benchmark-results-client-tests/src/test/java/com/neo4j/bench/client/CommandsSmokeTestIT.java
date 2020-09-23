@@ -199,7 +199,7 @@ public class CommandsSmokeTestIT
     {
         SyntheticStoreGenerator.GenerationResult generationResult = createSyntheticResultsStore();
 
-        Path outputDir = temporaryFolder.absolutePath().toPath();
+        Path outputDir = temporaryFolder.absolutePath();
 
         List<String> versionComparisonArgs = CompareVersionsCommand.argsFor( USERNAME,
                                                                              PASSWORD,

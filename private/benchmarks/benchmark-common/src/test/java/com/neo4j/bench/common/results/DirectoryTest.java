@@ -49,7 +49,7 @@ public class DirectoryTest
     @Test
     void shouldBeAbleToCreateGroupDirs()
     {
-        Path parentDir = temporaryFolder.absolutePath().toPath();
+        Path parentDir = temporaryFolder.absolutePath();
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( parentDir, GROUP_1 );
 
         Path groupDirPath = Paths.get( groupDir.toAbsolutePath() );
@@ -62,7 +62,7 @@ public class DirectoryTest
     @Test
     void groupDirShouldCreateBenchDirs()
     {
-        Path parentDir = temporaryFolder.absolutePath().toPath();
+        Path parentDir = temporaryFolder.absolutePath();
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( parentDir, GROUP_1 );
 
         BenchmarkDirectory benchDir1 = groupDir.findOrCreate( BENCH_1 );
@@ -94,7 +94,7 @@ public class DirectoryTest
     @Test
     void groupDirShouldBeAbleToOverwriteItself()
     {
-        Path parentDir = temporaryFolder.absolutePath().toPath();
+        Path parentDir = temporaryFolder.absolutePath();
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( parentDir, GROUP_1 );
         assertThat( "Should contain no benchmarks", groupDir.benchmarks(), equalTo( Collections.emptyList() ) );
 
@@ -108,7 +108,7 @@ public class DirectoryTest
     @Test
     void benchDirShouldCreateForkDirs()
     {
-        Path parentDir = temporaryFolder.absolutePath().toPath();
+        Path parentDir = temporaryFolder.absolutePath();
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( parentDir, GROUP_1 );
 
         List<ProfilerType> expectedProfilers1 = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
@@ -143,7 +143,7 @@ public class DirectoryTest
     @Test
     void benchDirShouldOpenExistingForkDirs()
     {
-        Path parentDir = temporaryFolder.absolutePath().toPath();
+        Path parentDir = temporaryFolder.absolutePath();
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( parentDir, GROUP_1 );
         BenchmarkDirectory benchDir = groupDir.findOrCreate( BENCH_1 );
         List<ProfilerType> expectedProfilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
@@ -158,7 +158,7 @@ public class DirectoryTest
     @Test
     void benchDirShouldCreateFilesInForkDir() throws Exception
     {
-        Path parentDir = temporaryFolder.absolutePath().toPath();
+        Path parentDir = temporaryFolder.absolutePath();
 
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( parentDir, GROUP_1 );
         BenchmarkDirectory benchDir = groupDir.findOrCreate( BENCH_1 );

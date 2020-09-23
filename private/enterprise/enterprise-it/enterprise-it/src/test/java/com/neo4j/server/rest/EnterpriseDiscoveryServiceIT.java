@@ -17,7 +17,6 @@ import org.neo4j.test.server.HTTP;
 import static com.neo4j.server.enterprise.helpers.EnterpriseWebContainerBuilder.serverOnRandomPorts;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 
 /*
 Note that when running this test from within an IDE, the version field will be an empty string. This is because the
@@ -39,7 +38,7 @@ public class EnterpriseDiscoveryServiceIT extends ExclusiveWebContainerTestBase
     {
         // Given
         testWebContainer = serverOnRandomPorts()
-                .usingDataDir( folder.directory( name.getMethodName() ).getAbsolutePath() )
+                .usingDataDir( folder.directory( name.getMethodName() ).toAbsolutePath().toString() )
                 .persistent()
                 .build();
         String releaseVersion = Version.getKernel().getReleaseVersion();

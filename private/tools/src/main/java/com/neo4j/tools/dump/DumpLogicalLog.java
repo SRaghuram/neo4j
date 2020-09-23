@@ -7,7 +7,6 @@ package com.neo4j.tools.dump;
 
 import com.neo4j.tools.dump.TransactionLogAnalyzer.Monitor;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
@@ -147,7 +146,7 @@ public class DumpLogicalLog
         {
             this.timeZone = timeZone;
             inconsistencies = new InconsistentRecords();
-            new InconsistencyReportReader( inconsistencies ).read( new File( ccFile ) );
+            new InconsistencyReportReader( inconsistencies ).read( Path.of( ccFile ) );
         }
 
         @Override

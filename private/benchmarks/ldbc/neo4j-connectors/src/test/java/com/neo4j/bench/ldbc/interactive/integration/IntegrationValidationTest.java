@@ -153,9 +153,9 @@ class IntegrationValidationTest
                 MapUtils.loadPropertiesToMap( new File( scenario.updatesDir(), "updateStream.properties" ) );
         configuration = (ConsoleAndFileDriverConfiguration) configuration.applyArgs( updateStreamConfiguration );
 
-        File storeDir = temporaryFolder.directory( "store" );
+        File storeDir = temporaryFolder.directory( "store" ).toFile();
 
-        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ).toFile() );
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema()
@@ -286,7 +286,7 @@ class IntegrationValidationTest
         int threadCount = 4;
         int statusDisplayIntervalAsSeconds = 1;
         TimeUnit timeUnit = TimeUnit.MILLISECONDS;
-        String resultDirPath = temporaryFolder.directory( "results" ).toString();
+        String resultDirPath = temporaryFolder.directory( "results" ).toFile().toString();
         Double timeCompressionRatio = 1.0;
         ConsoleAndFileDriverConfiguration.ConsoleAndFileValidationParamOptions validationCreationParams = null;
         String databaseValidationFilePath = scenario.validationParamsFile().getAbsolutePath();
@@ -331,8 +331,8 @@ class IntegrationValidationTest
         VALIDATE
          */
 
-        File storeDir = temporaryFolder.directory( "store" );
-        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
+        File storeDir = temporaryFolder.directory( "store" ).toFile();
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ).toFile() );
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema()

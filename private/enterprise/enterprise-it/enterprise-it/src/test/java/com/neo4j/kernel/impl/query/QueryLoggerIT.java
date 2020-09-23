@@ -550,7 +550,7 @@ class QueryLoggerIT
 
             databaseManagementService.shutdown();
 
-        Path[] queryLogs = fileSystem.listFiles( logsDirectory, ( dir1, name1 ) -> name1.startsWith( "query.log" ) );
+        Path[] queryLogs = fileSystem.listFiles( logsDirectory, path -> path.getFileName().toString().startsWith( "query.log" ) );
         assertThat( "Expect to have more then one query log file.", queryLogs.length, greaterThanOrEqualTo( 2 ) );
 
             List<String> loggedQueries = Arrays.stream( queryLogs )
@@ -574,7 +574,7 @@ class QueryLoggerIT
 
             databaseManagementService.shutdown();
 
-        queryLogs = fileSystem.listFiles( logsDirectory, ( dir, name ) -> name.startsWith( "query.log" ) );
+        queryLogs = fileSystem.listFiles( logsDirectory, path -> path.getFileName().toString().startsWith( "query.log" ) );
         assertThat( "Expect to have more then one query log file.", queryLogs.length, lessThan( 100 ) );
 
             loggedQueries = Arrays.stream( queryLogs )

@@ -7,8 +7,8 @@ package com.neo4j.server.rest.security;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.function.Consumer;
 import javax.ws.rs.core.HttpHeaders;
@@ -23,7 +23,7 @@ import static org.neo4j.test.server.HTTP.RawPayload.quotedJson;
 class RESTInteraction extends AbstractRESTInteraction
 {
 
-    RESTInteraction( Map<Setting<?>,String> config, File dataDir ) throws IOException
+    RESTInteraction( Map<Setting<?>,String> config, Path dataDir ) throws IOException
     {
         super( config, dataDir );
     }

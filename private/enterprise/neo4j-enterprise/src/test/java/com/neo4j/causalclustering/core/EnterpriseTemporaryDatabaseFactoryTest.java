@@ -56,7 +56,7 @@ public class EnterpriseTemporaryDatabaseFactoryTest
     {
         // given
         var config = Config.defaults();
-        var tempRoot = testDirectory.directoryPath( "tempRoot" );
+        var tempRoot = testDirectory.directory( "tempRoot" );
 
         // when
         temporaryDatabase = temporaryDatabaseFactory.startTemporaryDatabase( tempRoot, config, true );
@@ -71,7 +71,7 @@ public class EnterpriseTemporaryDatabaseFactoryTest
     {
         // given
         var config = Config.defaults();
-        var tempRoot = testDirectory.directoryPath( "tempRoot" );
+        var tempRoot = testDirectory.directory( "tempRoot" );
 
         var customDefaultDatabase = "boat";
         config.set( GraphDatabaseSettings.default_database, customDefaultDatabase );
@@ -89,7 +89,7 @@ public class EnterpriseTemporaryDatabaseFactoryTest
     {
         // given
         var config = Config.defaults();
-        var tempRoot = testDirectory.directoryPath( "tempRoot" );
+        var tempRoot = testDirectory.directory( "tempRoot" );
 
         var customDefaultDatabase = "boat";
         config.set( GraphDatabaseSettings.default_database, customDefaultDatabase );

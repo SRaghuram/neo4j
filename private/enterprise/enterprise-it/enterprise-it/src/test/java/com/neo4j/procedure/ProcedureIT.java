@@ -111,7 +111,7 @@ public class ProcedureIT
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder()
                 .impermanent()
-                .setConfig( plugin_dir, plugins.homePath().toAbsolutePath() )
+                .setConfig( plugin_dir, plugins.absolutePath() )
                 .setConfig( procedure_unrestricted, List.of("com.neo4j.procedure.startTimeOfKernelTransaction") )
                 .build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
@@ -721,7 +721,7 @@ public class ProcedureIT
         managementService.shutdown();
         managementService = new TestDatabaseManagementServiceBuilder().setInternalLogProvider( logProvider ).setUserLogProvider(
                 logProvider ).impermanent()
-                .setConfig( plugin_dir, plugins.homePath().toAbsolutePath() )
+                .setConfig( plugin_dir, plugins.absolutePath() )
                 .setConfig( procedure_unrestricted, List.of( "com.neo4j.procedure.*" ) ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
 
@@ -1267,7 +1267,7 @@ public class ProcedureIT
 
     private String createCsvFile( String... lines ) throws IOException
     {
-        java.nio.file.Path file = plugins.createFilePath( "file" );
+        java.nio.file.Path file = plugins.createFile( "file" );
 
         try ( PrintWriter writer = FileUtils.newFilePrintWriter( file, StandardCharsets.UTF_8 ) )
         {

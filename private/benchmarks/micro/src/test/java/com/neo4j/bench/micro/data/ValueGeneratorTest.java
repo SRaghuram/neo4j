@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.micro.data;
 
-import com.neo4j.bench.model.util.JsonUtil;
 import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket;
 import com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition;
+import com.neo4j.bench.model.util.JsonUtil;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -470,7 +470,7 @@ public class ValueGeneratorTest
             values.add( fun.next( rng ) );
         }
 
-        File jsonFile = temporaryFolder.file( "file.json" );
+        File jsonFile = temporaryFolder.file( "file.json" ).toFile();
         JsonUtil.serializeJson( jsonFile.toPath(), factory );
         ValueGeneratorFactory factoryAfter = JsonUtil.deserializeJson( jsonFile.toPath(), factory.getClass() );
 

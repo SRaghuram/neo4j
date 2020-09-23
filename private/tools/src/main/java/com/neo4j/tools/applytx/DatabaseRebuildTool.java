@@ -9,7 +9,6 @@ import com.neo4j.tools.input.ArgsCommand;
 import com.neo4j.tools.input.ConsoleInput;
 import com.neo4j.tools.input.ConsoleUtil;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
@@ -140,16 +139,16 @@ public class DatabaseRebuildTool
         {
             throw new IllegalArgumentException( "Missing --from i.e. from where to read transaction logs" );
         }
-        File sourceDirectory = new File( from );
+        Path sourceDirectory = Path.of( from );
         // try to get custom tx log root directory if specified
         String txRootDirectoryPath = args.get( "fromTx" );
-        File txRootDirectory = txRootDirectoryPath != null ? new File( txRootDirectoryPath ).getParentFile() : sourceDirectory.getParentFile();
+        Path txRootDirectory = txRootDirectoryPath != null ? Path.of( txRootDirectoryPath ).getParent() : sourceDirectory.getParent();
 
         Config config = Config.newBuilder()
-                .set( GraphDatabaseInternalSettings.databases_root_path, sourceDirectory.getParentFile().toPath().toAbsolutePath() )
-                .set( GraphDatabaseSettings.transaction_logs_root_path, txRootDirectory.toPath().toAbsolutePath() )
+                .set( GraphDatabaseInternalSettings.databases_root_path, sourceDirectory.getParent().toAbsolutePath() )
+                .set( GraphDatabaseSettings.transaction_logs_root_path, txRootDirectory.toAbsolutePath() )
                 .build();
-        return Neo4jLayout.of( config ).databaseLayout( sourceDirectory.getName() );
+        return Neo4jLayout.of( config ).databaseLayout( sourceDirectory.getFileName().toString() );
     }
 
     private static DatabaseManagementServiceBuilder newDbBuilder( Path storeDir, String databaseName, Args args )

@@ -6,10 +6,10 @@
 package com.neo4j.cc_robustness.util;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -68,7 +68,7 @@ public class CommandReactor
 
     private class Reactor extends Thread
     {
-        private final File commandFile = new File( "command" );
+        private final Path commandFile = Path.of( "command" );
         private volatile boolean halted;
 
         Reactor( String name )
@@ -134,12 +134,14 @@ public class CommandReactor
                     return line;
                 }
             }
-            if ( commandFile.exists() )
+            if ( Files.exists( commandFile ) )
             {
-                BufferedReader reader = new BufferedReader( new FileReader( commandFile ) );
-                String line = reader.readLine();
-                reader.close();
-                commandFile.delete();
+                String line;
+                try ( BufferedReader reader = Files.newBufferedReader( commandFile ) )
+                {
+                    line = reader.readLine();
+                }
+                Files.delete( commandFile );
                 return line;
             }
             return null;

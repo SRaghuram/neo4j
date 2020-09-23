@@ -59,7 +59,7 @@ public class StoreCopyProcess
                 tempStore.keepStore();
                 throw e;
             }
-            clusteredDatabaseContext.replaceWith( tempStore.databaseLayout().databaseDirectory().toFile() );
+            clusteredDatabaseContext.replaceWith( tempStore.databaseLayout().databaseDirectory() );
         }
         log.info( "Replaced store successfully" );
     }

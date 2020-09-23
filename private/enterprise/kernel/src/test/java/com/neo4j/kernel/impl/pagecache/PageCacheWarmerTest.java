@@ -419,7 +419,7 @@ class PageCacheWarmerTest
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg ) )
         {
             int pageSize = pageCache.pageSize();
-            Path testFile = testDirectory.createFilePath( "testfile" );
+            Path testFile = testDirectory.createFile( "testfile" );
             fs.write( testFile ).writeAll( ByteBuffer.wrap( new byte[ numPages * pageSize] ) );
 
             try ( PagedFile ignore = pageCache.map( testFile, pageCache.pageSize(), immutable.of( CREATE ) ) )
@@ -448,8 +448,8 @@ class PageCacheWarmerTest
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg ) )
         {
             int pageSize = pageCache.pageSize();
-            Path testFile1 = testDirectory.createFilePath( "testfile1" );
-            Path testFile2 = testDirectory.createFilePath( "testfile2" );
+            Path testFile1 = testDirectory.createFile( "testfile1" );
+            Path testFile2 = testDirectory.createFile( "testfile2" );
             fs.write( testFile1 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile1 * pageSize] ) );
             fs.write( testFile2 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile2 * pageSize] ) );
 
@@ -478,9 +478,9 @@ class PageCacheWarmerTest
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg ) )
         {
             int pageSize = pageCache.pageSize();
-            Path testFile1 = testDirectory.createFilePath( "testfile1.taken" );
-            Path testFile2 = testDirectory.createFilePath( "testfile.ignored" );
-            Path testFile3 = testDirectory.createFilePath( "testfile2.taken" );
+            Path testFile1 = testDirectory.createFile( "testfile1.taken" );
+            Path testFile2 = testDirectory.createFile( "testfile.ignored" );
+            Path testFile3 = testDirectory.createFile( "testfile2.taken" );
             fs.write( testFile1 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile1 * pageSize] ) );
             fs.write( testFile2 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile2 * pageSize] ) );
             fs.write( testFile3 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile3 * pageSize] ) );
@@ -514,7 +514,7 @@ class PageCacheWarmerTest
             var logProvider = new AssertableLogProvider();
             var log = logProvider.getLog( PageCacheWarmer.class );
 
-            Path testfile = testDirectory.createFilePath( "testfile" );
+            Path testfile = testDirectory.createFile( "testfile" );
             try ( PagedFile ignore = pageCache.map( testfile, pageCache.pageSize(), immutable.of( CREATE ) ) )
             {
 

@@ -96,7 +96,7 @@ class CatchupServerIT
     @BeforeEach
     void startDb()
     {
-        temporaryDirectory = testDirectory.directoryPath( "temp" );
+        temporaryDirectory = testDirectory.directory( "temp" );
         TestEnterpriseDatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() );
         configure( builder );
         managementService = builder.build();

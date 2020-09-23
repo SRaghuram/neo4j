@@ -9,7 +9,6 @@ import com.neo4j.configuration.EnterpriseEditionSettings;
 import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -30,7 +29,7 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 
 class MultiDatabaseCreationStressTesting
 {
-    private static final String DEFAULT_WORKING_DIR = new File( getProperty( "java.io.tmpdir" ) ).getPath();
+    private static final String DEFAULT_WORKING_DIR = Path.of( getProperty( "java.io.tmpdir" ) ).toString();
     private static final String DEFAULT_DURATION_IN_MINUTES = "5";
     private static final String DEFAULT_NUM_THREADS = "10";
 

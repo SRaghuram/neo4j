@@ -59,7 +59,7 @@ public class ManagedStore
         DatabaseManagementServiceBuilder builder = new EnterpriseDatabaseManagementServiceBuilder( store.topLevelDirectory() );
         if ( null != config )
         {
-            builder = builder.loadPropertiesFromFile( config.toFile().getAbsolutePath() );
+            builder = builder.loadPropertiesFromFile( config );
         }
         managementService = builder.build();
 

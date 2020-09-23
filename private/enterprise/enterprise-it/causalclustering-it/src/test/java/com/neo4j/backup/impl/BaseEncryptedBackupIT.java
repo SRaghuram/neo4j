@@ -22,9 +22,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
@@ -90,7 +89,7 @@ abstract class BaseEncryptedBackupIT
     @BeforeEach
     void beforeEach()
     {
-        backupHome = testDir.directoryPath( "backupNeo4jHome-" + randomUUID().toString() );
+        backupHome = testDir.directory( "backupNeo4jHome-" + randomUUID().toString() );
     }
 
     @Test
@@ -296,16 +295,16 @@ abstract class BaseEncryptedBackupIT
 
     private void createConfigFile( Path neo4jHome ) throws IOException
     {
-        var config = neo4jHome.resolve( "conf" + File.separator + Config.DEFAULT_CONFIG_FILE_NAME ).toFile();
-        var backupPolicyLocation = neo4jHome.resolve( "certificates" ).resolve( "backup" ).toFile();
-        fs.mkdirs( backupPolicyLocation.toPath() );
+        var config = neo4jHome.resolve( "conf" ).resolve( Config.DEFAULT_CONFIG_FILE_NAME );
+        var backupPolicyLocation = neo4jHome.resolve( "certificates" ).resolve( "backup" );
+        fs.mkdirs( backupPolicyLocation );
         var properties = new Properties();
         var backupSslConfigGroup = SslPolicyConfig.forScope( BACKUP );
         properties.setProperty( backupSslConfigGroup.enabled.name(), TRUE );
-        properties.setProperty( backupSslConfigGroup.base_directory.name(), backupPolicyLocation.getAbsolutePath() );
-        fs.mkdirs( config.getParentFile().toPath() );
+        properties.setProperty( backupSslConfigGroup.base_directory.name(), backupPolicyLocation.toAbsolutePath().toString() );
+        fs.mkdirs( config.getParent() );
 
-        try ( var fileWriter = new FileWriter( config ) )
+        try ( var fileWriter = Files.newBufferedWriter( config ) )
         {
             properties.store( fileWriter, StringUtils.EMPTY );
         }

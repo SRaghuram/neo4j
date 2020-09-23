@@ -31,7 +31,7 @@ class OnlineBackupSettingsMigratorTest
     @Test
     void testMigration() throws IOException
     {
-        Path confFile = testDirectory.createFilePath( "test.conf" );
+        Path confFile = testDirectory.createFile( "test.conf" );
         Files.write( confFile, Collections.singletonList( "dbms.backup.address=foo:123" ) );
 
         Config config = Config.newBuilder().fromFile( confFile ).build();
@@ -42,7 +42,7 @@ class OnlineBackupSettingsMigratorTest
     @Test
     void testMigrationOverriddenMigration() throws IOException
     {
-        Path confFile = testDirectory.createFilePath( "test.conf" );
+        Path confFile = testDirectory.createFile( "test.conf" );
         Files.write( confFile, Arrays.asList( "dbms.backup.address=foo:123", online_backup_listen_address.name() + "=bar:567" ) );
 
         Config config = Config.newBuilder().fromFile( confFile ).build();

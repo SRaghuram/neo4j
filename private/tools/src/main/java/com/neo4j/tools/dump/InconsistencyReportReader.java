@@ -6,9 +6,9 @@
 package com.neo4j.tools.dump;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 /**
  * Reads CC inconsistency reports. Example of entry:
@@ -37,9 +37,9 @@ public class InconsistencyReportReader
         this.inconsistencies = inconsistencies;
     }
 
-    public void read( File file ) throws IOException
+    public void read( Path file ) throws IOException
     {
-        try ( BufferedReader reader = new BufferedReader( new FileReader( file ) ) )
+        try ( BufferedReader reader = Files.newBufferedReader( file ) )
         {
             read( reader );
         }

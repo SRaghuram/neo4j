@@ -56,7 +56,7 @@ class RotatableCsvOutputIT
     @BeforeEach
     void setup()
     {
-        outputPath = testDirectory.directoryPath( "metrics" );
+        outputPath = testDirectory.directory( "metrics" );
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
                 .setConfig( csv_path, outputPath.toAbsolutePath() )
                 .setConfig( csv_rotation_threshold, "t,count,mean_rate,m1_rate,m5_rate,m15_rate,rate_unit".length() + 1L )

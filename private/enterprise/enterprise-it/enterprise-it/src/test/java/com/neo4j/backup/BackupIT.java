@@ -22,7 +22,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.ServerSocket;
@@ -39,6 +38,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.common.DependencyResolver;
@@ -465,7 +465,7 @@ class BackupIT
     @TestWithRecordFormats
     void backupDatabaseWithCustomTransactionLogsLocation( String recordFormatName ) throws Exception
     {
-        Path customTxLogsLocation = testDirectory.directory( "customLogLocation" ).toPath().toAbsolutePath();
+        Path customTxLogsLocation = testDirectory.directory( "customLogLocation" ).toAbsolutePath();
         Map<Setting<?>,Object> settings = Maps.mutable.of( record_format, recordFormatName, transaction_logs_root_path, customTxLogsLocation );
         GraphDatabaseService db = startDb( serverHomeDir, settings );
         createInitialDataSet( db );
@@ -520,19 +520,23 @@ class BackupIT
         GraphDatabaseService db = startDb( serverHomeDir );
         createInitialDataSet( db );
 
-        assertTrue( backupDatabaseLayout.databaseDirectory().toFile().mkdirs() );
-        File incorrectFile = backupDatabaseLayout.file( ".jibberishfile" ).toFile();
-        fs.write( incorrectFile.toPath() ).close();
+        Files.createDirectories( backupDatabaseLayout.databaseDirectory() );
+        Path incorrectFile = backupDatabaseLayout.file( ".jibberishfile" );
+        fs.write( incorrectFile ).close();
 
         executeBackup( db );
 
         // unexpected file was moved to an error directory
         Path incorrectExistingBackupDir = backupsDir.resolve( "neo4j.err.0" );
         assertTrue( fs.isDirectory( incorrectExistingBackupDir ) );
-        assertTrue( fs.fileExists( incorrectExistingBackupDir.resolve( incorrectFile.getName() ) ) );
+        assertTrue( fs.fileExists( incorrectExistingBackupDir.resolve( incorrectFile.getFileName() ) ) );
 
         // no temporary directories are present, i.e. 'neo4j.temp.0'
-        assertThat( backupsDir.toFile().list() ).contains( DEFAULT_DATABASE_NAME, "neo4j.err.0" );
+        try ( Stream<Path> list = Files.list( backupsDir ) )
+        {
+            assertThat( list.map( Path::getFileName ).map( Path::toString ).collect( Collectors.toList() ) )
+                    .contains( DEFAULT_DATABASE_NAME, "neo4j.err.0" );
+        }
 
         // backup produced a correct database
         assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
@@ -544,22 +548,26 @@ class BackupIT
         GraphDatabaseService db = startDb( serverHomeDir );
         createInitialDataSet( db );
 
-        File incorrectDir = backupDatabaseLayout.file( "jibberishfolder" ).toFile();
-        File incorrectFile = new File( incorrectDir, "jibberishfile" );
-        fs.mkdirs( incorrectDir.toPath() );
-        fs.write( incorrectFile.toPath() ).close();
+        Path incorrectDir = backupDatabaseLayout.file( "jibberishfolder" );
+        Path incorrectFile = incorrectDir.resolve( "jibberishfile" );
+        fs.mkdirs( incorrectDir );
+        fs.write( incorrectFile ).close();
 
         executeBackup( db );
 
         // unexpected directory was moved to an error directory
-        File incorrectExistingBackupDir = new File( backupsDir.toFile(), "neo4j.err.0" );
-        assertTrue( fs.isDirectory( incorrectExistingBackupDir.toPath() ) );
-        File movedIncorrectDir = new File( incorrectExistingBackupDir, incorrectDir.getName() );
-        assertTrue( fs.isDirectory( movedIncorrectDir.toPath() ) );
-        assertTrue( fs.fileExists( new File( movedIncorrectDir, incorrectFile.getName() ).toPath() ) );
+        Path incorrectExistingBackupDir = backupsDir.resolve( "neo4j.err.0" );
+        assertTrue( fs.isDirectory( incorrectExistingBackupDir ) );
+        Path movedIncorrectDir = incorrectExistingBackupDir.resolve( incorrectDir.getFileName() );
+        assertTrue( fs.isDirectory( movedIncorrectDir ) );
+        assertTrue( fs.fileExists( movedIncorrectDir.resolve( incorrectFile.getFileName() ) ) );
 
         // no temporary directories are present, i.e. 'neo4j.temp.0'
-        assertThat( backupsDir.toFile().list() ).contains( DEFAULT_DATABASE_NAME, "neo4j.err.0" );
+        try ( Stream<Path> list = Files.list( backupsDir ) )
+        {
+            assertThat( list.map( Path::getFileName ).map( Path::toString ).collect( Collectors.toList() ) )
+                    .contains( DEFAULT_DATABASE_NAME, "neo4j.err.0" );
+        }
 
         // backup produced a correct database
         assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
@@ -575,7 +583,7 @@ class BackupIT
 
         executeBackup( db );
 
-        File[] backupStoreFiles = backupDatabaseLayout.databaseDirectory().toFile().listFiles();
+        Path[] backupStoreFiles = fs.listFiles( backupDatabaseLayout.databaseDirectory() );
         assertNotNull( backupStoreFiles );
         assertThat( backupStoreFiles ).hasSizeGreaterThan( 0 );
 
@@ -583,7 +591,7 @@ class BackupIT
         {
             if ( backupDatabaseLayout.countStore().equals( storeFile ) )
             {
-                assertThat( backupStoreFiles ).contains( backupDatabaseLayout.countStore().toFile() );
+                assertThat( backupStoreFiles ).contains( backupDatabaseLayout.countStore() );
             }
             else
             {
@@ -593,7 +601,7 @@ class BackupIT
                     // Skip relationship type scan store file if feature is not enabled
                     continue;
                 }
-                assertThat( backupStoreFiles ).contains( storeFile.toFile() );
+                assertThat( backupStoreFiles ).contains( storeFile );
             }
         }
 
@@ -998,7 +1006,7 @@ class BackupIT
         assertEquals( defaultDBRepresentation, getBackupDbRepresentation() );
 
         //then nature db doesn't exist on file system
-        assertFalse( backupsDir.resolve( natureDB ).toFile().exists() );
+        assertFalse( Files.exists( backupsDir.resolve( natureDB ) ) );
 
         //then verify user and error logs
         LogAssertions.assertThat( userLogProvider ).forClass( OnlineBackupExecutor.class )

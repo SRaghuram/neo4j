@@ -62,7 +62,7 @@ class CsvOutputTest
     void shouldHaveRelativeMetricsCsvPathBeRelativeToNeo4jHome() throws Exception
     {
         // GIVEN
-        Path home = directory.homePath().toAbsolutePath();
+        Path home = directory.absolutePath();
         Config config = Config.newBuilder()
                 .set( MetricsSettings.csv_enabled, true )
                 .set( MetricsSettings.csv_interval, Duration.ofMillis( 10 ) )

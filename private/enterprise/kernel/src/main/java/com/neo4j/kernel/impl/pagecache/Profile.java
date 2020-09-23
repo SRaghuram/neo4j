@@ -94,7 +94,7 @@ final class Profile implements Comparable<Profile>
     OutputStream write( FileSystemAbstraction fs ) throws IOException
     {
         // Create PROFILE_FOLDER if it does not exist.
-        fs.mkdirs( profileFile.toFile().getParentFile().toPath() );
+        fs.mkdirs( profileFile.getParent() );
         try
         {
             return CompressionFormat.compress( () -> fs.openAsOutputStream( profileFile, true ), CompressionFormat.GZIP );

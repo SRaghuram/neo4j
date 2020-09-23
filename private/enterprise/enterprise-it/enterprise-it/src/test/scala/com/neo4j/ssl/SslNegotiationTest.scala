@@ -90,8 +90,8 @@ class SslNegotiationTest extends WordSpecLike with GeneratorDrivenPropertyChecks
   }
 
   def withClient(testDir: TestDirectory, clientSetup: Setup, serverSetup: Setup)(test: SecureClient => Unit): Unit = {
-    val sslServerResource = selfSignedKeyId(0).trustKeyId(1).install(testDir.directoryPath("server"))
-    val sslClientResource = selfSignedKeyId(1).trustKeyId(0).install(testDir.directoryPath("client"))
+    val sslServerResource = selfSignedKeyId(0).trustKeyId(1).install(testDir.directory("server"))
+    val sslClientResource = selfSignedKeyId(1).trustKeyId(0).install(testDir.directory("client"))
 
     var server: SecureServer = null
     var client: SecureClient = null

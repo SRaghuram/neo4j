@@ -22,8 +22,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
@@ -477,16 +475,15 @@ class CustomSecurityInitializationIT
 
     private void writeTestInitializationFile( Path initFile, String... lines ) throws IOException
     {
-        //noinspection ResultOfMethodCallIgnored
-        initFile.getParent().toFile().mkdirs();
-        File file = initFile.toFile();
-        BufferedWriter writer = new BufferedWriter( new FileWriter( file ) );
-        for ( String line : lines )
+        Files.createDirectories( initFile.getParent() );
+        try ( BufferedWriter writer = Files.newBufferedWriter( initFile ) )
         {
-            writer.write( line + ";" );
-            writer.newLine();
+            for ( String line : lines )
+            {
+                writer.write( line + ";" );
+                writer.newLine();
+            }
         }
-        writer.close();
     }
 
     @SuppressWarnings( "SameParameterValue" )

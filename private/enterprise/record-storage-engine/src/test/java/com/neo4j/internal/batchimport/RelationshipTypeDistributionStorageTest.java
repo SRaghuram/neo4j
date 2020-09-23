@@ -41,7 +41,7 @@ class RelationshipTypeDistributionStorageTest
     void shouldStoreAndLoadStringTypes() throws Exception
     {
         // given
-        Path file = directory.filePath( "store" );
+        Path file = directory.file( "store" );
         RelationshipTypeDistributionStorage storage = new RelationshipTypeDistributionStorage( fs, file, INSTANCE );
         List<RelationshipTypeCount> types = new ArrayList<>();
         for ( int i = 0; i < 10; i++ )

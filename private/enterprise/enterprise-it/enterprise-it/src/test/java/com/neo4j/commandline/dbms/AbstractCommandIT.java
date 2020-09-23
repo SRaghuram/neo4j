@@ -60,7 +60,7 @@ abstract class AbstractCommandIT
     {
         Path dataDir = neo4jLayout.databasesDirectory();
         neo4jHome = config.get( GraphDatabaseSettings.neo4j_home );
-        configDir = testDirectory.directoryPath( "configDir" );
+        configDir = testDirectory.directory( "configDir" );
         appendConfigSetting( databases_root_path, dataDir );
         out = new Output();
         err = new Output();

@@ -767,10 +767,10 @@ public class DataGeneratorConfigTest
         assertThat( format( "%s\n%s", config1, config2 ),
                     config1.equals( config2 ), equalTo( value ) );
 
-        File config1File = temporaryFolder.file( "config1.file" );
+        File config1File = temporaryFolder.file( "config1.file" ).toFile();
         config1.serialize( config1File.toPath() );
 
-        File config2File =  temporaryFolder.file( "config2.file" );
+        File config2File = temporaryFolder.file( "config2.file" ).toFile();
         config2.serialize( config2File.toPath() );
 
         DataGeneratorConfig config1After = DataGeneratorConfig.from( config1File.toPath() );

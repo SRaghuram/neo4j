@@ -50,9 +50,9 @@ class ServerMetricsIT
     void shouldShowServerMetrics() throws Throwable
     {
         // Given
-        Path metrics = directory.filePath( "metrics" );
+        Path metrics = directory.file( "metrics" );
         var webServerContainer = serverOnRandomPorts()
-                                                  .usingDataDir( directory.homeDir().getAbsolutePath() )
+                                                  .usingDataDir( directory.absolutePath().toString() )
                                                   .withProperty( MetricsSettings.metrics_enabled.name(), TRUE )
                                                   .withProperty( MetricsSettings.metrics_filter.name(), "*" )
                                                   .withProperty( MetricsSettings.csv_enabled.name(), TRUE )

@@ -40,7 +40,7 @@ class StoreMigrationTest
     @BeforeEach
     void setUp() throws IOException
     {
-        migrationDir = directory.directoryPath( "migration" );
+        migrationDir = directory.directory( "migration" );
         Unzip.unzip( getClass(), "3.4-store.zip", migrationDir );
     }
 
@@ -50,8 +50,8 @@ class StoreMigrationTest
         StoreMigration.main( new String[]{migrationDir.toAbsolutePath().toString()} );
 
         // after migration we can open store and do something
-        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( directory.directoryPath( "testdb" ) )
-                .setConfig( GraphDatabaseSettings.logs_directory, directory.directoryPath( "logs" ).toAbsolutePath() )
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( directory.directory( "testdb" ) )
+                .setConfig( GraphDatabaseSettings.logs_directory, directory.directory( "logs" ).toAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.transaction_logs_root_path, migrationDir.toAbsolutePath() )
                 .build();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );

@@ -80,8 +80,8 @@ class AkkaDiscoverySSLEngineProviderIT
     @EnumSource( SslEngineProviderFactory.class )
     void shouldConnectWithMutualTrust( SslEngineProviderFactory sslEngineProviderFactory ) throws Throwable
     {
-        SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directoryPath( "server" ) );
-        SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directoryPath( "client" ) );
+        SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "server" ) );
+        SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
 
         testConnection( sslEngineProviderFactory, sslClientResource, sslServerResource, this::accept );
     }
@@ -90,8 +90,8 @@ class AkkaDiscoverySSLEngineProviderIT
     @EnumSource( SslEngineProviderFactory.class )
     void shouldConnectWithMutualTrustViaCA( SslEngineProviderFactory sslEngineProviderFactory ) throws Throwable
     {
-        SslResource sslServerResource = caSignedKeyId( 0 ).trustSignedByCA().install( testDir.directoryPath( "server" ) );
-        SslResource sslClientResource = caSignedKeyId( 1 ).trustSignedByCA().install( testDir.directoryPath( "client" ) );
+        SslResource sslServerResource = caSignedKeyId( 0 ).trustSignedByCA().install( testDir.directory( "server" ) );
+        SslResource sslClientResource = caSignedKeyId( 1 ).trustSignedByCA().install( testDir.directory( "client" ) );
 
         testConnection( sslEngineProviderFactory, sslClientResource, sslServerResource, this::accept );
     }
@@ -100,8 +100,8 @@ class AkkaDiscoverySSLEngineProviderIT
     @EnumSource( SslEngineProviderFactory.class )
     void shouldNotConnectWithUntrustedClient( SslEngineProviderFactory sslEngineProviderFactory ) throws Throwable
     {
-        SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directoryPath( "client" ) );
-        SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( UNRELATED_ID ).install( testDir.directoryPath( "server" ) );
+        SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
+        SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( UNRELATED_ID ).install( testDir.directory( "server" ) );
 
         testConnection( sslEngineProviderFactory, sslClientResource, sslServerResource, this::decline );
     }
@@ -110,8 +110,8 @@ class AkkaDiscoverySSLEngineProviderIT
     @EnumSource( SslEngineProviderFactory.class )
     void shouldNotConnectWithUntrustedServer( SslEngineProviderFactory sslEngineProviderFactory ) throws Throwable
     {
-        SslResource sslClientResource = selfSignedKeyId( 0 ).trustKeyId( UNRELATED_ID ).install( testDir.directoryPath( "client" ) );
-        SslResource sslServerResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directoryPath( "server" ) );
+        SslResource sslClientResource = selfSignedKeyId( 0 ).trustKeyId( UNRELATED_ID ).install( testDir.directory( "client" ) );
+        SslResource sslServerResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "server" ) );
 
         testConnection( sslEngineProviderFactory, sslClientResource, sslServerResource, this::decline );
     }
@@ -120,8 +120,8 @@ class AkkaDiscoverySSLEngineProviderIT
     @EnumSource( SslEngineProviderFactory.class )
     void shouldNotConnectWhenTrustedByCAAndServerRevoked( SslEngineProviderFactory sslEngineProviderFactory ) throws Throwable
     {
-        SslResource sslServerResource = caSignedKeyId( 0 ).trustSignedByCA().install( testDir.directoryPath( "server" ) );
-        SslResource sslClientResource = caSignedKeyId( 1 ).trustSignedByCA().revoke( 0 ).install( testDir.directoryPath( "client" ) );
+        SslResource sslServerResource = caSignedKeyId( 0 ).trustSignedByCA().install( testDir.directory( "server" ) );
+        SslResource sslClientResource = caSignedKeyId( 1 ).trustSignedByCA().revoke( 0 ).install( testDir.directory( "client" ) );
 
         testConnection( sslEngineProviderFactory, sslClientResource, sslServerResource, this::decline );
     }
@@ -130,8 +130,8 @@ class AkkaDiscoverySSLEngineProviderIT
     @EnumSource( SslEngineProviderFactory.class )
     void shouldNotConnectWhenTrustedByCAAndClientRevoked( SslEngineProviderFactory sslEngineProviderFactory ) throws Throwable
     {
-        SslResource sslServerResource = caSignedKeyId( 0 ).trustSignedByCA().revoke( 1 ).install( testDir.directoryPath( "server" ) );
-        SslResource sslClientResource = caSignedKeyId( 1 ).trustSignedByCA().install( testDir.directoryPath( "client" ) );
+        SslResource sslServerResource = caSignedKeyId( 0 ).trustSignedByCA().revoke( 1 ).install( testDir.directory( "server" ) );
+        SslResource sslClientResource = caSignedKeyId( 1 ).trustSignedByCA().install( testDir.directory( "client" ) );
 
         testConnection( sslEngineProviderFactory, sslClientResource, sslServerResource, this::decline );
     }
@@ -140,8 +140,8 @@ class AkkaDiscoverySSLEngineProviderIT
     @EnumSource( SslEngineProviderFactory.class )
     void shouldConnectIfProtocolsInCommon( SslEngineProviderFactory sslEngineProviderFactory ) throws Throwable
     {
-        SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directoryPath( "server" ) );
-        SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directoryPath( "client" ) );
+        SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "server" ) );
+        SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
         SslPolicy serverSslPolicy = makeSslPolicy( sslServerResource, protocols( TLSv12 ).ciphers(), CLUSTER );
         SslPolicy clientSslPolicy = makeSslPolicy( sslClientResource, protocols( TLSv12 ).ciphers(), CLUSTER );
 
@@ -152,8 +152,8 @@ class AkkaDiscoverySSLEngineProviderIT
     @EnumSource( SslEngineProviderFactory.class )
     void shouldNotConnectIfNoProtocolsInCommon( SslEngineProviderFactory sslEngineProviderFactory ) throws Throwable
     {
-        SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directoryPath( "server" ) );
-        SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directoryPath( "client" ) );
+        SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "server" ) );
+        SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
         SslPolicy serverSslPolicy = makeSslPolicy( sslServerResource, protocols( TLSv12 ).ciphers(), CLUSTER );
         SslPolicy clientSslPolicy = makeSslPolicy( sslClientResource, protocols( TLSv11 ).ciphers(), CLUSTER );
 
@@ -164,8 +164,8 @@ class AkkaDiscoverySSLEngineProviderIT
     @EnumSource( SslEngineProviderFactory.class )
     void shouldConnectIfCiphersInCommon( SslEngineProviderFactory sslEngineProviderFactory ) throws Throwable
     {
-        SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directoryPath( "server" ) );
-        SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directoryPath( "client" ) );
+        SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "server" ) );
+        SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
         SslPolicy serverSslPolicy = makeSslPolicy( sslServerResource, protocols().ciphers( NEW_CIPHER_A ), CLUSTER );
         SslPolicy clientSslPolicy = makeSslPolicy( sslClientResource, protocols().ciphers( NEW_CIPHER_A ), CLUSTER );
 
@@ -176,8 +176,8 @@ class AkkaDiscoverySSLEngineProviderIT
     @EnumSource( SslEngineProviderFactory.class )
     void shouldNotConnectIfNoCiphersInCommon( SslEngineProviderFactory sslEngineProviderFactory ) throws Throwable
     {
-        SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directoryPath( "server" ) );
-        SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directoryPath( "client" ) );
+        SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "server" ) );
+        SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
         SslPolicy serverSslPolicy = makeSslPolicy( sslServerResource, protocols().ciphers( NEW_CIPHER_A ), CLUSTER );
         SslPolicy clientSslPolicy = makeSslPolicy( sslClientResource, protocols().ciphers( NEW_CIPHER_B ), CLUSTER );
 

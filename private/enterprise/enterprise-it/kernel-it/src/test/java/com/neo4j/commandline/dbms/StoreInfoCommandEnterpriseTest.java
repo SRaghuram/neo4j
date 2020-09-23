@@ -48,7 +48,7 @@ class StoreInfoCommandEnterpriseTest
     @BeforeEach
     void setUp() throws Exception
     {
-        Path homeDir = testDirectory.directoryPath( "home-dir" );
+        Path homeDir = testDirectory.directory( "home-dir" );
         databaseDirectory = homeDir.resolve( "data/databases/foo" );
         Files.createDirectories( databaseDirectory );
         out = mock( PrintStream.class );
@@ -60,7 +60,7 @@ class StoreInfoCommandEnterpriseTest
     void readsEnterpriseStoreVersionCorrectly() throws Exception
     {
         prepareNeoStoreFile( HighLimitV3_4_0.RECORD_FORMATS.storeVersion() );
-        CommandLine.populateCommand( command, databaseDirectory.toFile().getAbsolutePath() );
+        CommandLine.populateCommand( command, databaseDirectory.toAbsolutePath().toString() );
 
         command.execute();
 

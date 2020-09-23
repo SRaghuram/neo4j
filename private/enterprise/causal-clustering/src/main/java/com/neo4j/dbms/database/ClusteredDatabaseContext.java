@@ -10,8 +10,8 @@ import com.neo4j.causalclustering.common.ClusteredDatabase;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Optional;
 
 import org.neo4j.dbms.database.DatabaseContext;
@@ -64,7 +64,7 @@ public interface ClusteredDatabaseContext extends DatabaseContext
      * Replace the store files for this database
      * @param sourceDir the store files to replace this databases's current files with
      */
-    void replaceWith( File sourceDir ) throws IOException;
+    void replaceWith( Path sourceDir ) throws IOException;
 
     /**
      * @return the identifier for this database

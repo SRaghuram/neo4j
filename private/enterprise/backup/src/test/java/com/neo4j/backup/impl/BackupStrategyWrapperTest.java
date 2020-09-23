@@ -76,9 +76,9 @@ class BackupStrategyWrapperTest
     void setup() throws Exception
     {
         desiredBackupLayout = neo4jLayout.databaseLayout( DEFAULT_DATABASE_NAME );
-        reportDir = testDirectory.directoryPath( "reportDir" );
-        availableFreshBackupLocation = testDirectory.directoryPath( "availableFreshBackupLocation" );
-        availableOldBackupLocation = testDirectory.directoryPath( "availableOldBackupLocation" );
+        reportDir = testDirectory.directory( "reportDir" );
+        availableFreshBackupLocation = testDirectory.directory( "availableFreshBackupLocation" );
+        availableOldBackupLocation = testDirectory.directory( "availableOldBackupLocation" );
 
         when( pageCache.map( any(), anyInt(), any() ) ).thenReturn( mock( PagedFile.class, RETURNS_MOCKS ) );
         when( backupCopyService.findAnAvailableLocationForNewFullBackup( any() ) ).thenReturn( availableFreshBackupLocation );
@@ -239,7 +239,7 @@ class BackupStrategyWrapperTest
     void successfulFullBackupsMoveExistingBackup() throws Exception
     {
         // given backup exists
-        Path backupsDir = testDirectory.directoryPath( "backups" );
+        Path backupsDir = testDirectory.directory( "backups" );
         Path databaseBackupDir = backupsDir.resolve( DEFAULT_DATABASE_NAME );
 
         desiredBackupLayout = DatabaseLayout.ofFlat( backupsDir );
@@ -249,12 +249,12 @@ class BackupStrategyWrapperTest
         onlineBackupContext = newBackupContext( true );
 
         // and a new location for the existing backup is found
-        Path newLocationForExistingBackup = testDirectory.directoryPath( "new-backup-location" );
+        Path newLocationForExistingBackup = testDirectory.directory( "new-backup-location" );
         when( backupCopyService.findNewBackupLocationForBrokenExisting( databaseBackupDir ) )
                 .thenReturn( newLocationForExistingBackup );
 
         // and there is a generated location for where to store a new full backup so the original is not destroyed
-        Path temporaryFullBackupLocation = testDirectory.directory( "temporary-full-backup" ).toPath();
+        Path temporaryFullBackupLocation = testDirectory.directory( "temporary-full-backup" );
         when( backupCopyService.findAnAvailableLocationForNewFullBackup( databaseBackupDir ) )
                 .thenReturn( temporaryFullBackupLocation );
 

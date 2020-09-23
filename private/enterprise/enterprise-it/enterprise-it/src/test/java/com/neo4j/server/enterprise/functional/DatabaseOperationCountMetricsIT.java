@@ -10,9 +10,9 @@ import com.neo4j.dbms.LocalDbmsOperator;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 
@@ -27,7 +27,6 @@ import org.neo4j.test.rule.TestDirectory;
 import static com.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static com.neo4j.metrics.MetricsTestHelper.readLongCounterAndAssert;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @EnterpriseDbmsExtension( configurationCallback = "configure" )
@@ -54,17 +53,17 @@ class DatabaseOperationCountMetricsIT
     }
 
     @Test
-    void shouldDatabaseOperationCountsMatch()
+    void shouldDatabaseOperationCountsMatch() throws IOException
     {
         // although EnterpriseDbmsExtension gives you a database in each test method, this test does not use that
         // but this created database must be considered in the counts so beside the two built in databases there is a third, that is the reason why
         // create and start count start with 3
 
         // given
-        Path metrics = directory.filePath( "metrics" );
+        Path metrics = directory.file( "metrics" );
 
-        var fooTrxLog = new File( directory.homeDir(), "data/transactions/foo/neostore.transaction.db.0" );
-        var fooTrxLogRenamed = new File( directory.homeDir(), "data/transactions/temp" );
+        var fooTrxLog = directory.homePath().resolve( "data/transactions/foo/neostore.transaction.db.0" );
+        var fooTrxLogRenamed = directory.homePath().resolve( "data/transactions/temp" );
 
         // when start
         var systemDatabase = managementService.database( "system" );
@@ -88,13 +87,13 @@ class DatabaseOperationCountMetricsIT
         assertDatabaseCount( metrics, 5, 5, 2, 1, 0, 0 );
 
         // when damage and start
-        assertTrue( fooTrxLog.renameTo( fooTrxLogRenamed ) );
+        Files.move( fooTrxLog, fooTrxLogRenamed );
         systemDatabase.executeTransactionally( "START DATABASE foo" );
         // then
         assertDatabaseCount( metrics, 5, 5, 2, 1, 1, 0 );
 
         // when heal and start
-        assertTrue( fooTrxLogRenamed.renameTo( fooTrxLog ) );
+        Files.move( fooTrxLogRenamed, fooTrxLog );
         graphDatabaseAPI.getDependencyResolver().resolveDependency( LocalDbmsOperator.class ).startDatabase( "foo" );
         // then
         assertDatabaseCount( metrics, 5, 6, 2, 1, 1, 1 );

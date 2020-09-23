@@ -51,7 +51,7 @@ class SegmentedRaftLogRotationTest
         log.append( new RaftLogEntry( 0, replicatedStringOfBytes( ROTATE_AT_SIZE_IN_BYTES ) ) );
 
         // Then
-        Path[] files = fileSystem.listFiles( testDirectory.homePath(), ( dir, name ) -> name.startsWith( "raft" ) );
+        Path[] files = fileSystem.listFiles( testDirectory.homePath(), file -> file.getFileName().toString().startsWith( "raft" ) );
         assertEquals( 2, files.length );
     }
 

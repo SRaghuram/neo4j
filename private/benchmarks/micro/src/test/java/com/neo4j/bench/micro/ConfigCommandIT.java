@@ -48,7 +48,7 @@ public class ConfigCommandIT extends AnnotationsFixture
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" ).toFile();
         Main.main( new String[]{
                 "config", "default",
                 "--path", benchmarkConfig.getAbsolutePath()
@@ -73,7 +73,7 @@ public class ConfigCommandIT extends AnnotationsFixture
     public void shouldFailToWriteNonExistentGroupConfig()
     {
         // when
-        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" ).toFile();
         try
         {
             Main.main( new String[]{
@@ -93,7 +93,7 @@ public class ConfigCommandIT extends AnnotationsFixture
     public void shouldFailToWriteGroupConfigWhenNoGroupSpecified()
     {
         // when
-        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" ).toFile();
         try
         {
             Main.main( new String[]{
@@ -113,7 +113,7 @@ public class ConfigCommandIT extends AnnotationsFixture
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" ).toFile();
         Main.main( new String[]{
                 "config", "groups",
                 "--path", benchmarkConfig.getAbsolutePath(),
@@ -140,7 +140,7 @@ public class ConfigCommandIT extends AnnotationsFixture
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" ).toFile();
         Main.main( new String[]{
                 "config", "groups",
                 "--path", benchmarkConfig.getAbsolutePath(),
@@ -166,7 +166,7 @@ public class ConfigCommandIT extends AnnotationsFixture
     public void shouldFailToWriteNonExistentBenchmarkConfig()
     {
         // when
-        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" ).toFile();
         try
         {
             Main.main( new String[]{
@@ -186,7 +186,7 @@ public class ConfigCommandIT extends AnnotationsFixture
     public void shouldFailToWriteBenchmarkConfigWhenNoBenchmarkSpecified()
     {
         // when
-        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" ).toFile();
         try
         {
             Main.main( new String[]{
@@ -206,7 +206,7 @@ public class ConfigCommandIT extends AnnotationsFixture
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" ).toFile();
         String benchmarkName = NoOpBenchmark.class.getName();
         Main.main( new String[]{
                 "config", "benchmarks",
@@ -243,7 +243,7 @@ public class ConfigCommandIT extends AnnotationsFixture
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" ).toFile();
         String benchmarkName = DefaultDisabled.class.getName();
         Main.main( new String[]{
                 "config", "benchmarks",
@@ -281,7 +281,7 @@ public class ConfigCommandIT extends AnnotationsFixture
         Validation validation = new Validation();
         String benchmarkName1 = ConstantDataConstantAugment.class.getName();
         String benchmarkName2 = NoOpBenchmark.class.getName();
-        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" ).toFile();
         Main.main( new String[]{
                 "config", "benchmarks",
                 "--verbose",
@@ -333,7 +333,7 @@ public class ConfigCommandIT extends AnnotationsFixture
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" ).toFile();
         String benchmarkName = NoOpBenchmark.class.getName();
         Main.main( new String[]{
                 "config", "benchmarks",
@@ -378,7 +378,7 @@ public class ConfigCommandIT extends AnnotationsFixture
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" ).toFile();
         String benchmarkName = DefaultDisabled.class.getName();
         Main.main( new String[]{
                 "config", "benchmarks",

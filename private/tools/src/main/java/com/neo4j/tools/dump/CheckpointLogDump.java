@@ -5,9 +5,10 @@
  */
 package com.neo4j.tools.dump;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -50,14 +51,14 @@ public class CheckpointLogDump
         dumpCheckpoints( checkpointLogs, System.out );
     }
 
-    static void dumpCheckpoints( File checkpointLogs, PrintStream printStream ) throws IOException
+    static void dumpCheckpoints( Path checkpointLogs, PrintStream printStream ) throws IOException
     {
-        var logFolder = checkpointLogs.isFile() ? checkpointLogs.getParentFile() : checkpointLogs;
+        var logFolder = Files.isRegularFile( checkpointLogs ) ? checkpointLogs.getParent() : checkpointLogs;
 
         printStream.println( "Dump all checkpoint log files in " + checkpointLogs + "." );
         var fileSystem = new DefaultFileSystemAbstraction();
         var context = createLogFileContext( fileSystem );
-        var fileHelper = new TransactionLogFilesHelper( fileSystem, logFolder.toPath(), CHECKPOINT_FILE_PREFIX );
+        var fileHelper = new TransactionLogFilesHelper( fileSystem, logFolder, CHECKPOINT_FILE_PREFIX );
         var channelAllocator = new CheckpointLogChannelAllocator( context, fileHelper );
         var versionVisitor = new RangeLogVersionVisitor();
         fileHelper.accept( versionVisitor );
@@ -74,7 +75,7 @@ public class CheckpointLogDump
         var checkpointReader = new VersionAwareLogEntryReader( NO_COMMANDS, INSTANCE, true );
         while ( currentVersion >= lowestVersion )
         {
-            if ( checkpointLogs.isFile() && !getExtension( checkpointLogs.getName() ).equals( "" + currentVersion ) )
+            if ( Files.isRegularFile( checkpointLogs ) && !getExtension( checkpointLogs.getFileName().toString() ).equals( "" + currentVersion ) )
             {
                 currentVersion--;
                 continue;
@@ -109,9 +110,9 @@ public class CheckpointLogDump
                 Clock.systemUTC(), Config.defaults() );
     }
 
-    private static File getCheckpointLogsFile( Args args )
+    private static Path getCheckpointLogsFile( Args args )
     {
-        return new File( args.orphans().get( 0 ) );
+        return Path.of( args.orphans().get( 0 ) );
     }
 
     private static void validateArguments( Args parsedArgs )

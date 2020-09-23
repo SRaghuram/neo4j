@@ -13,7 +13,6 @@ import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.io.Writer;
@@ -221,7 +220,7 @@ public class StoreUpgradeIT
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
             builder.setConfig( allow_upgrade, true );
             builder.setConfig( fail_on_missing_files, false );
-            builder.setConfig( logs_directory, testDir.directoryPath( "logs" ).toAbsolutePath());
+            builder.setConfig( logs_directory, testDir.directory( "logs" ).toAbsolutePath());
             DatabaseManagementService managementService = builder.build();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             DatabaseLayout databaseLayout = ((GraphDatabaseAPI) db).databaseLayout();
@@ -235,8 +234,9 @@ public class StoreUpgradeIT
             }
 
             assertConsistentStore( databaseLayout );
-            assertFalse( new File( layout.countStore().toFile().getAbsolutePath() + ".a" ).exists() );
-            assertFalse( new File( layout.countStore().toFile().getAbsolutePath() + ".b" ).exists() );
+
+            assertFalse( Files.exists( layout.countStore().resolveSibling( layout.countStore().getFileName() + ".a" ) ) );
+            assertFalse( Files.exists( layout.countStore().resolveSibling( layout.countStore().getFileName() + ".b" ) ) );
         }
 
         @Test
@@ -247,7 +247,7 @@ public class StoreUpgradeIT
 
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
             builder.setConfig( fail_on_missing_files, false );
-            builder.setConfig( logs_directory, testDir.directoryPath( "logs" ).toAbsolutePath());
+            builder.setConfig( logs_directory, testDir.directory( "logs" ).toAbsolutePath());
 
             DatabaseManagementService managementService = builder.build();
             GraphDatabaseAPI database = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
@@ -267,8 +267,8 @@ public class StoreUpgradeIT
             }
 
             assertConsistentStore( databaseLayout );
-            assertFalse( new File( layout.countStore() + ".a" ).exists() );
-            assertFalse( new File( layout.countStore() + ".b" ).exists() );
+            assertFalse( Files.exists( layout.countStore().resolveSibling( layout.countStore().getFileName() + ".a" ) ) );
+            assertFalse( Files.exists( layout.countStore().resolveSibling( layout.countStore().getFileName() + ".b" ) ) );
         }
 
         @Test
@@ -281,7 +281,7 @@ public class StoreUpgradeIT
             DatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( layout );
             builder.setConfig( allow_upgrade, false );
             builder.setConfig( fail_on_missing_files, false );
-            builder.setConfig( logs_directory, testDir.directoryPath( "logs" ).toAbsolutePath());
+            builder.setConfig( logs_directory, testDir.directory( "logs" ).toAbsolutePath());
             DatabaseManagementService managementService = builder.build();
             var defaultDatabase = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
             var db = defaultDatabase.getDependencyResolver().resolveDependency( Database.class );
@@ -319,8 +319,8 @@ public class StoreUpgradeIT
             }
 
             assertConsistentStore( databaseLayout );
-            assertFalse( new File( layout.countStore().toFile().getAbsolutePath() + ".a" ).exists() );
-            assertFalse( new File( layout.countStore().toFile().getAbsolutePath() + ".b" ).exists() );
+            assertFalse( Files.exists( layout.countStore().resolveSibling( layout.countStore().getFileName() + ".a" ) ) );
+            assertFalse( Files.exists( layout.countStore().resolveSibling( layout.countStore().getFileName() + ".b" ) ) );
         }
 
         @Test
@@ -332,7 +332,7 @@ public class StoreUpgradeIT
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
             builder.setConfig( allow_upgrade, true );
             builder.setConfig( fail_on_missing_files, false );
-            builder.setConfig( logs_directory, testDir.directoryPath( "logs" ).toAbsolutePath());
+            builder.setConfig( logs_directory, testDir.directory( "logs" ).toAbsolutePath());
             DatabaseManagementService managementService = builder.build();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             try
@@ -380,7 +380,7 @@ public class StoreUpgradeIT
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
             builder.setConfig( allow_upgrade, true );
             builder.setConfig( fail_on_missing_files, false );
-            builder.setConfig( logs_directory, testDir.directoryPath( "logs" ).toAbsolutePath());
+            builder.setConfig( logs_directory, testDir.directory( "logs" ).toAbsolutePath());
             DatabaseManagementService managementService = builder.build();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             try
@@ -419,7 +419,7 @@ public class StoreUpgradeIT
         public void serverDatabaseShouldStartOnOlderStoreWhenUpgradeIsEnabled() throws Throwable
         {
             Path rootDir = testDir.homePath();
-            DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( testDir.directoryPath( DEFAULT_DATABASE_NAME ) );
+            DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( testDir.directory( DEFAULT_DATABASE_NAME ) );
 
             store.prepareDirectory( databaseLayout.databaseDirectory() );
 
@@ -465,7 +465,7 @@ public class StoreUpgradeIT
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
             DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
             Path databaseDir = databaseLayout.databaseDirectory();
-            Path transactionLogsRoot = testDir.directoryPath( "transactionLogsRoot" );
+            Path transactionLogsRoot = testDir.directory( "transactionLogsRoot" );
             Path databaseDirectory = store.prepareDirectory( databaseDir );
 
             // migrated databases have their transaction logs located in
@@ -496,8 +496,8 @@ public class StoreUpgradeIT
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
             DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
             Path databaseDir = databaseLayout.databaseDirectory();
-            Path transactionLogsRoot = testDir.directoryPath( "transactionLogsRoot" );
-            Path customTransactionLogsLocation = testDir.directoryPath( "transactionLogsCustom" );
+            Path transactionLogsRoot = testDir.directory( "transactionLogsRoot" );
+            Path customTransactionLogsLocation = testDir.directory( "transactionLogsCustom" );
             Path databaseDirectory = store.prepareDirectory( databaseDir );
             moveAvailableLogsToCustomLocation( fileSystem, customTransactionLogsLocation, databaseDirectory );
 
@@ -525,7 +525,7 @@ public class StoreUpgradeIT
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
             DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
             Path databaseDir = databaseLayout.databaseDirectory();
-            Path transactionLogsRoot = testDir.directoryPath( "transactionLogsRoot" );
+            Path transactionLogsRoot = testDir.directory( "transactionLogsRoot" );
             store.prepareDirectory( databaseDir );
 
             // Remove everything from the log file, except the header and last check point.
@@ -617,7 +617,7 @@ public class StoreUpgradeIT
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
             DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
             Path databaseDir = databaseLayout.databaseDirectory();
-            Path transactionLogsRoot = testDir.directoryPath( "transactionLogsRoot" );
+            Path transactionLogsRoot = testDir.directory( "transactionLogsRoot" );
             store.prepareDirectory( databaseDir );
 
             // Remove all log files.
@@ -683,7 +683,7 @@ public class StoreUpgradeIT
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
             DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
             Path databaseDir = databaseLayout.databaseDirectory();
-            Path transactionLogsRoot = testDir.directoryPath( "transactionLogsRoot" );
+            Path transactionLogsRoot = testDir.directory( "transactionLogsRoot" );
             store.prepareDirectory( databaseDir );
 
             // Remove all log files.
@@ -790,7 +790,7 @@ public class StoreUpgradeIT
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
             builder.setConfig( allow_upgrade, false );
             builder.setConfig( fail_on_missing_files, false );
-            builder.setConfig( logs_directory, testDir.directoryPath( "logs" ).toAbsolutePath());
+            builder.setConfig( logs_directory, testDir.directory( "logs" ).toAbsolutePath());
             DatabaseManagementService managementService = builder.build();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             DatabaseLayout databaseLayout = ((GraphDatabaseAPI) db).databaseLayout();
@@ -804,8 +804,8 @@ public class StoreUpgradeIT
             }
 
             assertConsistentStore( databaseLayout );
-            assertFalse( new File( layout.countStore().toFile().getAbsolutePath() + ".a" ).exists() );
-            assertFalse( new File( layout.countStore().toFile().getAbsolutePath() + ".b" ).exists() );
+            assertFalse( Files.exists( layout.countStore().resolveSibling( layout.countStore().getFileName() + ".a" ) ) );
+            assertFalse( Files.exists( layout.countStore().resolveSibling( layout.countStore().getFileName() + ".b" ) ) );
         }
     }
 

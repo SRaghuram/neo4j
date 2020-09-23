@@ -29,10 +29,10 @@ public class TarGzArchiveTest
     @Test
     public void createEmptyArchive() throws Exception
     {
-        File archiveDir = temporaryFolder.directory( "archive" );
-        File extractDir = temporaryFolder.directory( "extract" );
+        File archiveDir = temporaryFolder.directory( "archive" ).toFile();
+        File extractDir = temporaryFolder.directory( "extract" ).toFile();
 
-        File archiveFile = temporaryFolder.file( "archive.tar.gz" );
+        File archiveFile = temporaryFolder.file( "archive.tar.gz" ).toFile();
         // when
         TarGzArchive.compress( archiveFile.toPath(), archiveDir.toPath() );
         // then
@@ -44,11 +44,11 @@ public class TarGzArchiveTest
     public void createArchiveWithOneFile() throws Exception
     {
         // given
-        File archiveDir = temporaryFolder.directory( "archive" );
-        File extractDir = temporaryFolder.directory( "extract" );
+        File archiveDir = temporaryFolder.directory( "archive" ).toFile();
+        File extractDir = temporaryFolder.directory( "extract" ).toFile();
 
         Files.write( archiveDir.toPath().resolve( "file" ), Arrays.asList( "file" ) );
-        File archiveFile = temporaryFolder.file( "archive.tar.gz" );
+        File archiveFile = temporaryFolder.file( "archive.tar.gz" ).toFile();
         // when
         TarGzArchive.compress( archiveFile.toPath(), archiveDir.toPath() );
         // then
@@ -63,11 +63,11 @@ public class TarGzArchiveTest
     public void createArchiveWithOneEmptyDirectory() throws Exception
     {
         // given
-        File archiveDir = temporaryFolder.directory( "archive" );
-        File extractDir = temporaryFolder.directory( "extract" );
+        File archiveDir = temporaryFolder.directory( "archive" ).toFile();
+        File extractDir = temporaryFolder.directory( "extract" ).toFile();
 
         Files.createDirectories( archiveDir.toPath().resolve( "folder" ) );
-        File archiveFile = temporaryFolder.file( "archive.tar.gz" );
+        File archiveFile = temporaryFolder.file( "archive.tar.gz" ).toFile();
         // when
         TarGzArchive.compress( archiveFile.toPath(), archiveDir.toPath() );
         // then

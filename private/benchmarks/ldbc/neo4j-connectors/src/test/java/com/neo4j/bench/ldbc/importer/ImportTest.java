@@ -80,8 +80,8 @@ class ImportTest
     {
         boolean withUnique = withUnique();
         Scenario scenario = Scenario.randomInteractive();
-        File storeDir = temporaryFolder.directory( "store" );
-        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
+        File storeDir = temporaryFolder.directory( "store" ).toFile();
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ).toFile() );
         String[] args = new String[]{
                 "import",
                 ImportCommand.CMD_CSV_SCHEMA, scenario.csvSchema().name(),
@@ -132,7 +132,7 @@ class ImportTest
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
         Scenario scenario = Scenario.randomInteractive();
-        File config = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
+        File config = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ).toFile() );
 
         assertThrows( RuntimeException.class, () ->
         {
@@ -161,10 +161,10 @@ class ImportTest
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
         Scenario scenario = Scenario.randomInteractive();
-        File storeDir = temporaryFolder.directory( "store" );
+        File storeDir = temporaryFolder.directory( "store" ).toFile();
         assertThrows( RuntimeException.class, () ->
         {
-            File config = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
+            File config = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ).toFile() );
             String[] args = new String[]{
                     "import",
                     ImportCommand.CMD_DB, storeDir.getAbsolutePath(),
@@ -190,10 +190,10 @@ class ImportTest
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
         Scenario scenario = Scenario.randomInteractive();
-        File storeDir = temporaryFolder.directory( "store" );
+        File storeDir = temporaryFolder.directory( "store" ).toFile();
         assertThrows( RuntimeException.class, () ->
         {
-            File config = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
+            File config = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ).toFile() );
             String[] args = new String[]{
                     "import",
                     ImportCommand.CMD_DB, storeDir.getAbsolutePath(),
@@ -224,10 +224,10 @@ class ImportTest
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
-        File storeDir = temporaryFolder.directory( "store" );
+        File storeDir = temporaryFolder.directory( "store" ).toFile();
         File csvFilesDir = DriverConfigUtils.getResource(
                 "/validation_sets/data/social_network/string_date/" );
-        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ).toFile() );
         LdbcCli.importParallelRegular(
                 storeDir,
                 csvFilesDir,
@@ -265,10 +265,10 @@ class ImportTest
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
-        File storeDir = temporaryFolder.directory( "store" );
+        File storeDir = temporaryFolder.directory( "store" ).toFile();
         File csvFilesDir = DriverConfigUtils.getResource(
                 "/validation_sets/data/social_network/string_date/" );
-        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ).toFile() );
         LdbcCli.importParallelRegular(
                 storeDir,
                 csvFilesDir,
@@ -306,10 +306,10 @@ class ImportTest
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
-        File storeDir = temporaryFolder.directory( "store" );
+        File storeDir = temporaryFolder.directory( "store" ).toFile();
         File csvFilesDir = DriverConfigUtils.getResource(
                 "/validation_sets/data/social_network/num_date/" );
-        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ).toFile() );
         LdbcCli.importParallelRegular(
                 storeDir,
                 csvFilesDir,
@@ -347,10 +347,10 @@ class ImportTest
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
-        File storeDir = temporaryFolder.directory( "store" );
+        File storeDir = temporaryFolder.directory( "store" ).toFile();
         File csvFilesDir = DriverConfigUtils.getResource(
                 "/validation_sets/data/social_network/num_date/" );
-        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ).toFile() );
         LdbcCli.importParallelRegular(
                 storeDir,
                 csvFilesDir,
@@ -388,11 +388,11 @@ class ImportTest
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
-        File storeDir = temporaryFolder.directory( "store" );
+        File storeDir = temporaryFolder.directory( "store" ).toFile();
         File csvFilesDir = DriverConfigUtils.getResource(
                 "/validation_sets/data/merge/social_network/string_date/" );
         LdbcDateCodec.Resolution timestampResolution = Scenario.timestampResolution( Neo4jSchema.NEO4J_DENSE_1 );
-        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ).toFile() );
         LdbcCli.importParallelImportDense1(
                 storeDir,
                 csvFilesDir,
@@ -431,11 +431,11 @@ class ImportTest
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
-        File storeDir = temporaryFolder.directory( "store" );
+        File storeDir = temporaryFolder.directory( "store" ).toFile();
         File csvFilesDir = DriverConfigUtils.getResource(
                 "/validation_sets/data/merge/social_network/string_date/" );
         LdbcDateCodec.Resolution timestampResolution = Scenario.timestampResolution( Neo4jSchema.NEO4J_DENSE_1 );
-        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ).toFile() );
         LdbcCli.importParallelImportDense1(
                 storeDir,
                 csvFilesDir,
@@ -474,11 +474,11 @@ class ImportTest
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
-        File storeDir = temporaryFolder.directory( "store" );
+        File storeDir = temporaryFolder.directory( "store" ).toFile();
         File csvFilesDir = DriverConfigUtils.getResource(
                 "/validation_sets/data/merge/social_network/num_date/" );
         LdbcDateCodec.Resolution timestampResolution = Scenario.timestampResolution( Neo4jSchema.NEO4J_DENSE_1 );
-        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ).toFile() );
         LdbcCli.importParallelImportDense1(
                 storeDir,
                 csvFilesDir,
@@ -517,11 +517,11 @@ class ImportTest
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
-        File storeDir = temporaryFolder.directory( "store" );
+        File storeDir = temporaryFolder.directory( "store" ).toFile();
         File csvFilesDir = DriverConfigUtils.getResource(
                 "/validation_sets/data/merge/social_network/num_date/" );
         LdbcDateCodec.Resolution timestampResolution = Scenario.timestampResolution( Neo4jSchema.NEO4J_DENSE_1 );
-        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ).toFile() );
         LdbcCli.importParallelImportDense1(
                 storeDir,
                 csvFilesDir,

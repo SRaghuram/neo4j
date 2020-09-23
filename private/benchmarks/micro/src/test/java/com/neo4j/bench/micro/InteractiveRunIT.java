@@ -7,7 +7,6 @@ package com.neo4j.bench.micro;
 
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
-import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.common.util.Jvm;
@@ -21,6 +20,7 @@ import com.neo4j.bench.micro.benchmarks.test.ConstantDataConstantAugment;
 import com.neo4j.bench.micro.benchmarks.test.ConstantDataVariableAugment;
 import com.neo4j.bench.micro.benchmarks.test.DefaultDisabled;
 import com.neo4j.bench.micro.data.Stores;
+import com.neo4j.bench.model.profiling.RecordingType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
@@ -191,8 +191,8 @@ class InteractiveRunIT extends AnnotationsFixture
             int measurementForks,
             String... methods ) throws Exception
     {
-        File storesDir = temporaryFolder.directory( UUID.randomUUID().toString() );
-        Path profilerRecordingDirectory = temporaryFolder.directory( UUID.randomUUID().toString() ).toPath();
+        File storesDir = temporaryFolder.directory( UUID.randomUUID().toString() ).toFile();
+        Path profilerRecordingDirectory = temporaryFolder.directory( UUID.randomUUID().toString() );
         int iterationCount = 1;
         TimeValue iterationDuration = TimeValue.seconds( 1 );
         Main.run(

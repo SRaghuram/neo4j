@@ -55,17 +55,17 @@ public class MemberIdMigrator
 
     private void convertOldServerIdFilename()
     {
-        var oldFile = neo4jLayout.dataDirectory().resolve( "server-id" ).toFile();
-        if ( fs.fileExists( oldFile.toPath() ) )
+        var oldFile = neo4jLayout.dataDirectory().resolve( "server-id" );
+        if ( fs.fileExists( oldFile ) )
         {
-            var newFile = neo4jLayout.serverIdFile().toFile();
-            if ( fs.fileExists( newFile.toPath() ) )
+            var newFile = neo4jLayout.serverIdFile();
+            if ( fs.fileExists( newFile ) )
             {
                 throw new IllegalStateException( "Two ServerIds present, migration to ServerId not possible" );
             }
             try
             {
-                fs.renameFile( oldFile.toPath(), newFile.toPath() );
+                fs.renameFile( oldFile, newFile );
             }
             catch ( IOException ioe )
             {

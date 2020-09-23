@@ -7,9 +7,9 @@ package com.neo4j.kernel.impl.enterprise.configuration;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import org.neo4j.configuration.Config;
@@ -33,8 +33,8 @@ class EnterpriseEditionSettingsMigratorTest
     @Test
     void migrateWhitelistSetting() throws IOException
     {
-        File confFile = testDirectory.createFile( "neo4j.conf" );
-        Files.write( confFile.toPath(), singletonList( "dbms.dynamic.setting.whitelist=a,b" ) );
+        Path confFile = testDirectory.createFile( "neo4j.conf" );
+        Files.write( confFile, singletonList( "dbms.dynamic.setting.whitelist=a,b" ) );
 
         Config config = Config.newBuilder().fromFile( confFile ).build();
 

@@ -20,7 +20,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -93,7 +92,7 @@ class OnlineBackupCommandCcIT
     @BeforeEach
     void setUp()
     {
-        backupsDir = testDirectory.directoryPath( "backups" );
+        backupsDir = testDirectory.directory( "backups" );
     }
 
     @TestWithRecordFormats
@@ -264,11 +263,11 @@ class OnlineBackupCommandCcIT
         createSomeData( cluster );
 
         // and backup client is told to rotate conveniently
-        File configOverrideFile = testDirectory.file( "neo4j-backup.conf" );
+        Path configOverrideFile = testDirectory.file( "neo4j-backup.conf" );
         writeConfigWithLogRotationThreshold( configOverrideFile, "1m" );
 
         // and we have a full backup
-        Path backupDir = testDirectory.directoryPath( "backups", "backupName-" + recordFormat );
+        Path backupDir = testDirectory.directory( "backups", "backupName-" + recordFormat );
         String address = CausalClusteringTestHelpers.backupAddress( cluster.awaitLeader().defaultDatabase() );
         assertEquals( 0, runBackupToolAndGetExitCode(
                 "--from", address,
@@ -494,9 +493,9 @@ class OnlineBackupCommandCcIT
         return address.toString();
     }
 
-    private static void writeConfigWithLogRotationThreshold( File conf, String value ) throws IOException
+    private static void writeConfigWithLogRotationThreshold( Path conf, String value ) throws IOException
     {
-        Files.writeString( conf.toPath(), logical_log_rotation_threshold.name() + "=" + value );
+        Files.writeString( conf, logical_log_rotation_threshold.name() + "=" + value );
     }
 
     private static void createIndexes( Cluster cluster ) throws Exception

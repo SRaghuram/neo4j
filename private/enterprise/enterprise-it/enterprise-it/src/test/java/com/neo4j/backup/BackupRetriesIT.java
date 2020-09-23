@@ -24,7 +24,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -107,7 +106,7 @@ class BackupRetriesIT
     void setUp()
     {
         logProvider = new Log4jLogProvider( System.out );
-        backupsDir = testDirectory.directory( "backups" ).toPath();
+        backupsDir = testDirectory.directory( "backups" );
     }
 
     @AfterEach
@@ -265,7 +264,7 @@ class BackupRetriesIT
                                   .withAddress( backupAddress( db ) )
                                   .withDatabaseNamePattern( DB_NAME )
                                   .withBackupDirectory( backupsDir )
-                                  .withReportsDirectory( testDirectory.directory( "reports" ).toPath() )
+                                  .withReportsDirectory( testDirectory.directory( "reports" ) )
                                   .withConfig( config );
 
     }
@@ -400,7 +399,7 @@ class BackupRetriesIT
         @Override
         public void startReceivingStoreFile( String file )
         {
-            String storeFileName = new File( file ).getName();
+            String storeFileName = Path.of( file ).getFileName().toString();
             DatabaseFile databaseFile = DatabaseFile.fileOf( storeFileName ).orElseThrow( AssertionError::new );
             ChannelBreaker breaker = storeFileBreakers.remove( databaseFile );
             if ( breaker != null )

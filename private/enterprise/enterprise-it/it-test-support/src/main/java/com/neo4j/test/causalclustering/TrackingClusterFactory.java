@@ -40,7 +40,7 @@ public class TrackingClusterFactory implements ClusterFactory
     @Override
     public Cluster createCluster( ClusterConfig clusterConfig )
     {
-        Path directory = testDirectory.directoryPath( generateId() );
+        Path directory = testDirectory.directory( generateId() );
         Cluster cluster = ClusterConfig.createCluster( directory, clusterConfig );
         clusters.add( cluster );
         return cluster;

@@ -7,8 +7,8 @@ package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -39,7 +39,7 @@ public class BootstrapContext
         return databaseLayout;
     }
 
-    void replaceWith( File sourceDir ) throws IOException
+    void replaceWith( Path sourceDir ) throws IOException
     {
         storeFiles.delete( databaseLayout, transactionLogs );
         storeFiles.moveTo( sourceDir, databaseLayout, transactionLogs );

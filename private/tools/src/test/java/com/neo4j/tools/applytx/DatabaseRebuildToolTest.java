@@ -82,9 +82,9 @@ class DatabaseRebuildToolTest
 
         var toNeoLayout = toLayout.getNeo4jLayout();
         // WHEN
-        tool.run( "--from", fromLayout.databaseDirectory().toFile().getAbsolutePath(),
-                "--fromTx", fromLayout.getTransactionLogsDirectory().toFile().getAbsolutePath(),
-                "--to", toLayout.databaseDirectory().toFile().getAbsolutePath(),
+        tool.run( "--from", fromLayout.databaseDirectory().toAbsolutePath().toString(),
+                "--fromTx", fromLayout.getTransactionLogsDirectory().toAbsolutePath().toString(),
+                "--to", toLayout.databaseDirectory().toAbsolutePath().toString(),
                 "-D" + GraphDatabaseSettings.transaction_logs_root_path.name(), toNeoLayout.transactionLogsRootDirectory().toAbsolutePath().toString(),
                 "-D" + GraphDatabaseInternalSettings.databases_root_path.name(), toNeoLayout.databasesDirectory().toAbsolutePath().toString(),
                 "apply last" );
@@ -105,9 +105,9 @@ class DatabaseRebuildToolTest
                 NULL_PRINT_STREAM, NULL_PRINT_STREAM );
 
         // WHEN
-        tool.run( "--from", fromLayout.databaseDirectory().toFile().getAbsolutePath(),
-                "--fromTx", fromLayout.getTransactionLogsDirectory().toFile().getAbsolutePath(),
-                "--to", toLayout.databaseDirectory().toFile().getPath(), "-i" );
+        tool.run( "--from", fromLayout.databaseDirectory().toAbsolutePath().toString(),
+                "--fromTx", fromLayout.getTransactionLogsDirectory().toAbsolutePath().toString(),
+                "--to", toLayout.databaseDirectory().toString(), "-i" );
 
         // THEN
         assertEquals( TransactionIdStore.BASE_TX_ID + 2, lastAppliedTx( toLayout ) );
@@ -170,7 +170,8 @@ class DatabaseRebuildToolTest
                 out, NULL_PRINT_STREAM );
 
         // WHEN
-        tool.run( "--from", fromLayout.databaseDirectory().toFile().getAbsolutePath(), "--to", toLayout.databaseDirectory().toFile().getAbsolutePath(), "-i" );
+        tool.run( "--from", fromLayout.databaseDirectory().toAbsolutePath().toString(),
+                "--to", toLayout.databaseDirectory().toAbsolutePath().toString(), "-i" );
 
         // THEN
         out.flush();

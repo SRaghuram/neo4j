@@ -37,7 +37,7 @@ class MetricsSettingsMigratorTest
     @Test
     void oldLogMetricsSettingShouldBeMigratedToMetricsFilter() throws IOException
     {
-        Path confFile = testDirectory.createFilePath( "neo4j.conf" );
+        Path confFile = testDirectory.createFile( "neo4j.conf" );
         // Migration from metrics.neo4j.logrotation.enabled to metrics.neo4j.logs.enabled should
         // still work with migration to metrics filter
         Files.write( confFile, asList( metrics_filter.name() + "=",
@@ -51,7 +51,7 @@ class MetricsSettingsMigratorTest
     @Test
     void useOfDeprecatedMetricsSettingShouldPrintWarning() throws IOException
     {
-        Path confFile = testDirectory.createFilePath( "neo4j.conf" );
+        Path confFile = testDirectory.createFile( "neo4j.conf" );
         Files.write( confFile, asList( metrics_filter.name() + "=my.filter.string",
                 "metrics.neo4j.logs.enabled=true" ) );
 
@@ -67,7 +67,7 @@ class MetricsSettingsMigratorTest
     @Test
     void suppliedMetricsFilterShouldNotBeOverwrittenJustAppended() throws IOException
     {
-        Path confFile = testDirectory.createFilePath( "neo4j.conf" );
+        Path confFile = testDirectory.createFile( "neo4j.conf" );
         Files.write( confFile, asList( metrics_filter.name() + "=my.filter.string",
                 "metrics.neo4j.logs.enabled=true" ) );
 
@@ -79,7 +79,7 @@ class MetricsSettingsMigratorTest
     @Test
     void defaultMetricsFilterShouldNotBeOverwrittenIfNoFilterSuppliedJustAppended() throws IOException
     {
-        Path confFile = testDirectory.createFilePath( "neo4j.conf" );
+        Path confFile = testDirectory.createFile( "neo4j.conf" );
         Files.write( confFile, singletonList( "metrics.neo4j.pagecache.enabled=true" ) );
 
         Config config = Config.newBuilder().fromFile( confFile ).build();
@@ -92,7 +92,7 @@ class MetricsSettingsMigratorTest
     @Test
     void metricsFilterWithNamespacesEnabled() throws IOException
     {
-        Path confFile = testDirectory.createFilePath( "neo4j.conf" );
+        Path confFile = testDirectory.createFile( "neo4j.conf" );
         Files.write( confFile, asList( metrics_prefix.name() + "=prefix",
                 metrics_namespaces_enabled.name() + "=true",
                 metrics_filter.name() + "=",
@@ -108,7 +108,7 @@ class MetricsSettingsMigratorTest
     @Test
     void metricsFilterWithNamespacesDisabled() throws IOException
     {
-        Path confFile = testDirectory.createFilePath( "neo4j.conf" );
+        Path confFile = testDirectory.createFile( "neo4j.conf" );
         Files.write( confFile, asList( metrics_prefix.name() + "=prefix",
                 metrics_namespaces_enabled.name() + "=false",
                 metrics_filter.name() + "=",

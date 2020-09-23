@@ -79,7 +79,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
     @BeforeEach
     void setup() throws InterruptedException, ExecutionException
     {
-        backupLocation = testDirectory.directoryPath( "backupLocation" + UUID.randomUUID().toString() );
+        backupLocation = testDirectory.directory( "backupLocation" + UUID.randomUUID().toString() );
         cluster = createCluster( getConfigMap() );
         cluster.start();
     }

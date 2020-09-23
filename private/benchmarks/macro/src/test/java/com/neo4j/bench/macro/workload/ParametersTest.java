@@ -32,7 +32,7 @@ class ParametersTest
     @Test
     void shouldParseParameters()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Path parametersFile = resources.getResourceFile( "/test_workloads/test/parameters/valid_param_types.txt" );
             try ( FileParametersReader reader = new FileParametersReader( parametersFile ) )
@@ -111,7 +111,7 @@ class ParametersTest
     @Test
     void shouldFailToParseParameterFilesWithInvalidParameterTypes()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Path parametersFile = resources.getResourceFile( "/test_workloads/test/parameters/invalid_param_types.txt" );
             BenchmarkUtil.assertException( RuntimeException.class,
@@ -122,7 +122,7 @@ class ParametersTest
     @Test
     void shouldFailToParseParameterFilesWithInvalidColumnCounts()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Path parametersFile = resources.getResourceFile( "/test_workloads/test/parameters/invalid_param_column_numbers.txt" );
             try ( FileParametersReader reader = new FileParametersReader( parametersFile ) )

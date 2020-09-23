@@ -63,10 +63,10 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
     {
         // When
         int resultCode = NeoBootstrapper.start( bootstrapper, withConnectorsOnRandomPortsConfig(
-                "--home-dir", testDirectory.directory( "home-dir" ).getAbsolutePath(),
+                "--home-dir", testDirectory.directory( "home-dir" ).toAbsolutePath().toString(),
                 "-c", configOption( GraphDatabaseSettings.mode, "SINGLE" ),
                 "-c", configOption( data_directory, getRelativePath( folder.homePath(), data_directory ).toString() ),
-                "-c", configOption( logs_directory, testDirectory.homeDir().getAbsolutePath() ),
+                "-c", configOption( logs_directory, testDirectory.absolutePath().toString() ),
                 "-c", "dbms.connector.bolt.listen_address=:0" ) );
 
         // Then
@@ -78,7 +78,7 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
     public void debugLoggingDisabledByDefault() throws Exception
     {
         // When
-        Path configFile = testDirectory.filePath( Config.DEFAULT_CONFIG_FILE_NAME );
+        Path configFile = testDirectory.file( Config.DEFAULT_CONFIG_FILE_NAME );
 
         Map<String, String> properties = stringMap();
         properties.putAll( getDefaultRelativeProperties( testDirectory.homePath() ) );
@@ -88,7 +88,7 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
         // When
         try ( var bootstrapper = new UncoveredEnterpriseBootstrapper() )
         {
-            NeoBootstrapper.start( bootstrapper, "--home-dir", testDirectory.directory( "home-dir" ).getAbsolutePath(), "--config-dir",
+            NeoBootstrapper.start( bootstrapper, "--home-dir", testDirectory.directory( "home-dir" ).toAbsolutePath().toString(), "--config-dir",
                     configFile.getParent().toAbsolutePath().toString() );
 
             // Then
@@ -102,7 +102,7 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
     public void debugLoggingEnabledBySetting() throws Exception
     {
         // When
-        Path configFile = testDirectory.filePath( Config.DEFAULT_CONFIG_FILE_NAME );
+        Path configFile = testDirectory.file( Config.DEFAULT_CONFIG_FILE_NAME );
 
         Map<String, String> properties = stringMap( store_internal_log_level.name(), "DEBUG");
         properties.putAll( getDefaultRelativeProperties( testDirectory.homePath() ) );
@@ -112,7 +112,7 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
         // When
         try ( var bootstrapper = new UncoveredEnterpriseBootstrapper() )
         {
-            NeoBootstrapper.start( bootstrapper, "--home-dir", testDirectory.directory( "home-dir" ).getAbsolutePath(), "--config-dir",
+            NeoBootstrapper.start( bootstrapper, "--home-dir", testDirectory.directory( "home-dir" ).toAbsolutePath().toString(), "--config-dir",
                     configFile.getParent().toAbsolutePath().toString() );
 
             // Then

@@ -11,8 +11,8 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -59,7 +59,7 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
     }
 
     @Override
-    public void replaceWith( File sourceDir ) throws IOException
+    public void replaceWith( Path sourceDir ) throws IOException
     {
         storeFiles.delete( database.getDatabaseLayout(), logFiles );
         storeFiles.moveTo( sourceDir, database.getDatabaseLayout(), logFiles );

@@ -101,7 +101,7 @@ class EnterpriseGraphDatabaseBackupIT
     private Path performBackup() throws Exception
     {
         var storeDir = neo4jLayout.databasesDirectory();
-        var backupsDir = testDirectory.directoryPath( "backups" );
+        var backupsDir = testDirectory.directory( "backups" );
 
         var exitCode = runBackupToolFromOtherJvmToGetExitCode( storeDir,
                 "--from=" + backupAddress( db ),

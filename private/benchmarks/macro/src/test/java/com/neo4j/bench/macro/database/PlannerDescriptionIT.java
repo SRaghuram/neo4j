@@ -61,15 +61,15 @@ class PlannerDescriptionIT
     @Test
     void shouldExtractPlans() throws IOException
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             for ( Workload workload : Workload.all( resources, Deployment.embedded() ) )
             {
                 LOG.debug( "Verifying plan extraction on workload: " + workload.name() );
-                Path neo4jConfigFile = Files.createTempFile( temporaryFolder.absolutePath().toPath(), "neo4j", ".conf" );
+                Path neo4jConfigFile = Files.createTempFile( temporaryFolder.absolutePath(), "neo4j", ".conf" );
                 Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfigFile );
                 try ( Store store = StoreTestUtil.createTemporaryEmptyStoreFor( workload,
-                                                                                Files.createTempDirectory( temporaryFolder.absolutePath().toPath(),
+                                                                                Files.createTempDirectory( temporaryFolder.absolutePath(),
                                                                                                      "store" ), /* store */
                                                                                 neo4jConfigFile ) )
                 {

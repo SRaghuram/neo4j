@@ -44,7 +44,7 @@ class FileDescriptorMetricsTestIT
     @BeforeEach
     void setUp()
     {
-        metricsFolder = testDirectory.directoryPath( "metrics" );
+        metricsFolder = testDirectory.directory( "metrics" );
 
         managementService = new TestDatabaseManagementServiceBuilder( testDirectory.homePath() )
                 .setConfig( MetricsSettings.metrics_enabled, true )

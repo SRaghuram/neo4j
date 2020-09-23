@@ -99,8 +99,8 @@ abstract class AbstractDriverSslTest
     @Test
     void testServerCertificateTrustedDirectly() throws Exception
     {
-        SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDirectory.directoryPath( "server" ) );
-        SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDirectory.directoryPath( "client" ) );
+        SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDirectory.directory( "server" ) );
+        SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDirectory.directory( "client" ) );
 
         server = startServer( sslServerResource, ClientAuth.REQUIRE );
 
@@ -111,8 +111,8 @@ abstract class AbstractDriverSslTest
     @Test
     void testServerCertificateTrustedThroughCA() throws Exception
     {
-        SslResource sslServerResource = caSignedKeyId( 0 ).trustSignedByCA().install( testDirectory.directoryPath( "server" ) );
-        SslResource sslClientResource = caSignedKeyId( 1 ).trustSignedByCA().install( testDirectory.directoryPath( "client" ) );
+        SslResource sslServerResource = caSignedKeyId( 0 ).trustSignedByCA().install( testDirectory.directory( "server" ) );
+        SslResource sslClientResource = caSignedKeyId( 1 ).trustSignedByCA().install( testDirectory.directory( "client" ) );
 
         server = startServer( sslServerResource, ClientAuth.REQUIRE  );
 
@@ -123,8 +123,8 @@ abstract class AbstractDriverSslTest
     @Test
     void testServerCertificateNotTrusted() throws Exception
     {
-        SslResource sslClientResource = selfSignedKeyId( 0 ).trustKeyId( 5 ).install( testDirectory.directoryPath( "client" ) );
-        SslResource sslServerResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDirectory.directoryPath( "server" ) );
+        SslResource sslClientResource = selfSignedKeyId( 0 ).trustKeyId( 5 ).install( testDirectory.directory( "client" ) );
+        SslResource sslServerResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDirectory.directory( "server" ) );
 
         server = startServer( sslServerResource, ClientAuth.REQUIRE );
 
@@ -135,8 +135,8 @@ abstract class AbstractDriverSslTest
     @Test
     void testServerCertificateRevoked() throws Exception
     {
-        SslResource sslServerResource = caSignedKeyId( 0 ).trustSignedByCA().install( testDirectory.directoryPath( "server" ) );
-        SslResource sslClientResource = caSignedKeyId( 1 ).trustSignedByCA().revoke( 0 ).install( testDirectory.directoryPath( "client" ) );
+        SslResource sslServerResource = caSignedKeyId( 0 ).trustSignedByCA().install( testDirectory.directory( "server" ) );
+        SslResource sslClientResource = caSignedKeyId( 1 ).trustSignedByCA().revoke( 0 ).install( testDirectory.directory( "client" ) );
 
         server = startServer( sslServerResource, ClientAuth.REQUIRE );
 
@@ -147,8 +147,8 @@ abstract class AbstractDriverSslTest
     @Test
     void testHostnameVerificationSuccess() throws IOException, GeneralSecurityException, OperatorCreationException
     {
-        SslDir sslServerResource = selfSignedCertificate( testDirectory.homePath().toAbsolutePath().resolve( "server" ) );
-        SslDir sslClientResource = trust( sslServerResource, testDirectory.homePath().toAbsolutePath().resolve( "client" ) );
+        SslDir sslServerResource = selfSignedCertificate( testDirectory.absolutePath().resolve( "server" ) );
+        SslDir sslClientResource = trust( sslServerResource, testDirectory.absolutePath().resolve( "client" ) );
 
         server = startServer( sslServerResource, ClientAuth.NONE );
 
@@ -159,8 +159,8 @@ abstract class AbstractDriverSslTest
     @Test
     void testHostnameVerificationFailure() throws IOException, GeneralSecurityException, OperatorCreationException
     {
-        SslDir sslServerResource = selfSignedCertificate( testDirectory.homePath().toAbsolutePath().resolve( "server" ) );
-        SslDir sslClientResource = trust( sslServerResource, testDirectory.homePath().toAbsolutePath().resolve( "client" ) );
+        SslDir sslServerResource = selfSignedCertificate( testDirectory.absolutePath().resolve( "server" ) );
+        SslDir sslClientResource = trust( sslServerResource, testDirectory.absolutePath().resolve( "client" ) );
 
         server = startServer( sslServerResource, ClientAuth.NONE );
 
@@ -192,7 +192,7 @@ abstract class AbstractDriverSslTest
 
     private <T extends Exception> void testConnection( SslDir sslResource, String host, Class<T> errorCause, String errorMessage, boolean verifyHostname )
     {
-        var policyBaseDir = testDirectory.directory( "client" ).getAbsolutePath();
+        var policyBaseDir = testDirectory.directory( "client" ).toAbsolutePath().toString();
         var uri = "bolt://" + host + ":" + server.port();
         var properties = getSettingValues( uri, sslResource, policyBaseDir, verifyHostname );
         var config = Config.newBuilder()

@@ -31,7 +31,7 @@ public class RESTUserManagementProceduresInteractionIT extends AuthProceduresInt
     @Override
     public NeoInteractionLevel<RESTSubject> setUpNeoServer( Map<Setting<?>,String> config, TestInfo testInfo ) throws Throwable
     {
-        return new RESTInteraction( config, testDirectory.homeDir() );
+        return new RESTInteraction( config, testDirectory.homePath() );
     }
 
     @Override

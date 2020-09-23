@@ -77,7 +77,7 @@ class BackupCoreIT
             // Run backup
             updateStore( clusteredDriver, dbDriver );
             DbRepresentation beforeChange = DbRepresentation.of( db.defaultDatabase() );
-            Path coreBackupDir = testDirectory.directory( "backups", "core-" + db.index() + "-backup" ).toPath();
+            Path coreBackupDir = testDirectory.directory( "backups", "core-" + db.index() + "-backup" );
             String databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
             Path coreDefaultDbBackupDir = coreBackupDir.resolve( databaseName );
             String[] args = backupArguments( backupAddress( db.defaultDatabase() ), coreBackupDir, databaseName );

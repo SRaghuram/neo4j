@@ -33,7 +33,7 @@ public class TemporaryStoreDirectory implements AutoCloseable
         this.tempHomeDir = databaseLayout.file( TEMP_STORE_COPY_DIRECTORY_NAME );
         this.tempDatabaseLayout = Neo4jLayout.ofFlat( tempHomeDir ).databaseLayout( databaseLayout.getDatabaseName() );
         this.fs = fs;
-        storeFiles = new StoreFiles( fs, pageCache, ( directory, name ) -> true );
+        storeFiles = new StoreFiles( fs, pageCache, path -> true );
         tempLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( tempDatabaseLayout.getTransactionLogsDirectory(), fs )
                 .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
                 .build();

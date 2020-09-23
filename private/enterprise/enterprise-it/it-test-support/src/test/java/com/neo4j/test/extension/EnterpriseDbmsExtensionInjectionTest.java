@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -66,7 +66,7 @@ class EnterpriseDbmsExtensionInjectionTest
     void shouldRestart()
     {
         // given
-        File preHomeDir = testDirectory.homeDir();
+        Path preHomeDir = testDirectory.homePath();
 
         // when
         var databaseName = dbApi.databaseName();
@@ -76,7 +76,7 @@ class EnterpriseDbmsExtensionInjectionTest
         assertTrue( dbApi.isAvailable( 0 ) );
 
         // then
-        File postHomeDir = testDirectory.homeDir();
+        Path postHomeDir = testDirectory.homePath();
         assertEquals( preHomeDir, postHomeDir );
         assertAllIsInjected();
     }

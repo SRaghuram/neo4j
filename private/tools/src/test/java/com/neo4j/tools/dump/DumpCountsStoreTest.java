@@ -49,7 +49,7 @@ class DumpCountsStoreTest
     void shouldDumpCountsStore() throws Exception
     {
         // given
-        Path file = directory.filePath( "file" );
+        Path file = directory.file( "file" );
         try ( GBPTreeCountsStore store = new GBPTreeCountsStore( pageCache, file, directory.getFileSystem(), immediate(), EMPTY, false, PageCacheTracer.NULL,
                 NO_MONITOR ) )
         {

@@ -22,6 +22,7 @@ com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::build() com.neo4j.db
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::getDbmsInfo(org.neo4j.configuration.Config) org.neo4j.kernel.impl.factory.DbmsInfo protected
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::getEditionFactory(org.neo4j.configuration.Config) java.util.function.Function<org.neo4j.graphdb.factory.module.GlobalModule,org.neo4j.graphdb.factory.module.edition.AbstractEditionModule> protected
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::loadPropertiesFromFile(java.lang.String) com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder public
+com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::loadPropertiesFromFile(java.nio.file.Path) com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder public
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::newDatabaseManagementService(org.neo4j.configuration.Config, org.neo4j.graphdb.facade.ExternalDependencies) com.neo4j.dbms.api.ClusterDatabaseManagementService protected
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::setConfig(java.util.Map<org.neo4j.graphdb.config.Setting<?>,java.lang.Object>) com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder public
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::setConfigRaw(java.util.Map<java.lang.String,java.lang.String>) com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder public

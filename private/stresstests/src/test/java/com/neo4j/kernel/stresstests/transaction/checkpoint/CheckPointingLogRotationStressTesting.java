@@ -9,7 +9,6 @@ import com.neo4j.kernel.stresstests.transaction.checkpoint.tracers.TimerTransact
 import com.neo4j.kernel.stresstests.transaction.checkpoint.workload.Workload;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
@@ -55,7 +54,7 @@ import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 class CheckPointingLogRotationStressTesting
 {
     private static final String DEFAULT_DURATION_IN_MINUTES = "5";
-    private static final String DEFAULT_STORE_DIR = new File( getProperty( "java.io.tmpdir" ), "store" ).getPath();
+    private static final String DEFAULT_STORE_DIR = Path.of( getProperty( "java.io.tmpdir" ), "store" ).toString();
     private static final String DEFAULT_NODE_COUNT = "100000";
     private static final String DEFAULT_WORKER_THREADS = "16";
     private static final String DEFAULT_PAGE_CACHE_MEMORY = "4g";

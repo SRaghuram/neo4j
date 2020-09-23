@@ -10,8 +10,8 @@ import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Spec;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
@@ -40,7 +40,7 @@ public class ConsistencyCheckTool implements Callable<Object>
     protected CommandSpec spec;
 
     @CommandLine.Parameters( index = "0", description = "Home directory." )
-    private File homeDirectory;
+    private Path homeDirectory;
 
     @CommandLine.Option( names = "--database", description = "Database name." )
     private String databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -49,7 +49,7 @@ public class ConsistencyCheckTool implements Callable<Object>
     private int sampleSize = 50;
 
     @CommandLine.Option( names = "--config", description = "Config file to use, trying `home/" + DEFAULT_CONFIG_FILE_NAME + "` if unspecified" )
-    private File configFile;
+    private Path configFile;
 
     @CommandLine.Option( names = {"--verbose", "-v"}, description = "Flag to enable a bit more debug outputs along the way" )
     private boolean verbose;
@@ -112,10 +112,10 @@ public class ConsistencyCheckTool implements Callable<Object>
     private Config config()
     {
         Config.Builder configBuilder = Config.newBuilder()
-                .set( neo4j_home, homeDirectory.toPath().toAbsolutePath() )
+                .set( neo4j_home, homeDirectory.toAbsolutePath() )
                 .setDefault( experimental_consistency_checker, true ) // default to using new checker
                 .set( experimental_consistency_checker_stop_threshold, 80 )
-                .fromFileNoThrow( configFile != null ? configFile : new File( homeDirectory, DEFAULT_CONFIG_FILE_NAME ) );
+                .fromFileNoThrow( configFile != null ? configFile : homeDirectory.resolve( DEFAULT_CONFIG_FILE_NAME ) );
         if ( databaseName != null )
         {
             configBuilder.set( default_database, databaseName );

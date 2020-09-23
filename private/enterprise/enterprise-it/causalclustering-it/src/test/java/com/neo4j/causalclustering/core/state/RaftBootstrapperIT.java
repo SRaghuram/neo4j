@@ -20,7 +20,6 @@ import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Map;
@@ -198,7 +197,7 @@ class RaftBootstrapperIT
 
         // then
         verifySnapshot( snapshot, raftMembers, defaultConfig );
-        assertFalse( fileSystem.fileExists( new File( databaseLayout.databaseDirectory().toFile(), TEMP_BOOTSTRAP_DIRECTORY_NAME ).toPath() ) );
+        assertFalse( fileSystem.fileExists( databaseLayout.databaseDirectory().resolve( TEMP_BOOTSTRAP_DIRECTORY_NAME ) ) );
     }
 
     @Test
@@ -225,7 +224,7 @@ class RaftBootstrapperIT
 
         // then
         verifySnapshot( snapshot, raftMembers, defaultConfig );
-        assertFalse( fileSystem.fileExists( new File( databaseLayout.databaseDirectory().toFile(), TEMP_BOOTSTRAP_DIRECTORY_NAME ).toPath() ) );
+        assertFalse( fileSystem.fileExists( databaseLayout.databaseDirectory().resolve( TEMP_BOOTSTRAP_DIRECTORY_NAME ) ) );
     }
 
     @Test
@@ -233,7 +232,7 @@ class RaftBootstrapperIT
     {
         // given
         int nodeCount = 100;
-        Path customTransactionLogsRootDirectory = testDirectory.directoryPath( "custom-tx-logs-location" );
+        Path customTransactionLogsRootDirectory = testDirectory.directory( "custom-tx-logs-location" );
         ClassicNeo4jDatabase database = ClassicNeo4jDatabase
                 .builder( dataDirectory, fileSystem )
                 .databaseId( DATABASE_ID )
@@ -324,7 +323,7 @@ class RaftBootstrapperIT
     {
         // given
         int nodeCount = 100;
-        Path customTransactionLogsRootDirectory = testDirectory.directoryPath( "custom-tx-logs-location" );
+        Path customTransactionLogsRootDirectory = testDirectory.directory( "custom-tx-logs-location" );
         ClassicNeo4jDatabase database = ClassicNeo4jDatabase
                 .builder( dataDirectory, fileSystem )
                 .databaseId( DATABASE_ID )

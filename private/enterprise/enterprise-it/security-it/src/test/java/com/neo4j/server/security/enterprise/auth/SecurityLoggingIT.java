@@ -50,7 +50,7 @@ class SecurityLoggingIT
     @BeforeEach
     void setup()
     {
-        Path homeDir = testDirectory.directoryPath( "logs" );
+        Path homeDir = testDirectory.directory( "logs" );
         securityLog = homeDir.resolve( "security.log" );
 
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )

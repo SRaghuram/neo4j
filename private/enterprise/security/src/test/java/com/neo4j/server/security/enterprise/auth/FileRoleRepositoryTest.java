@@ -60,7 +60,7 @@ class FileRoleRepositoryTest
     @BeforeEach
     void setup()
     {
-        roleFile = testDirectory.directoryPath( "dbms" ).resolve( "roles" );
+        roleFile = testDirectory.directory( "dbms" ).resolve( "roles" );
         roleRepository = new FileRoleRepository( fileSystem, roleFile, logProvider );
     }
 

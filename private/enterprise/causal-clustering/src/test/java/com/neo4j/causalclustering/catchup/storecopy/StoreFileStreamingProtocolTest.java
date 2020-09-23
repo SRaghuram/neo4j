@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -42,8 +41,8 @@ class StoreFileStreamingProtocolTest
         var protocol = new StoreFileStreamingProtocol( maxChunkSize );
         var ctx = mock( ChannelHandlerContext.class );
 
-        fs.mkdir( new File( "dirA" ).toPath() );
-        fs.mkdir( new File( "dirB" ).toPath() );
+        fs.mkdir( Path.of( "dirA" ) );
+        fs.mkdir( Path.of( "dirB" ) );
 
         String[] files = new String[]{"dirA/one", "dirA/two", "dirB/one", "dirB/two", "one", "two", "three"};
 

@@ -137,7 +137,7 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         }
         assert raftIdStateDir.getParent().equals( raftGroupDir );
 
-        Path[] files = fs.listFiles( raftGroupDir, ( ignored, name ) -> !raftIdStateDir.getFileName().toString().equals( name ) );
+        Path[] files = fs.listFiles( raftGroupDir, path -> !raftIdStateDir.getFileName().equals( path.getFileName() ) );
 
         for ( Path file : files )
         {

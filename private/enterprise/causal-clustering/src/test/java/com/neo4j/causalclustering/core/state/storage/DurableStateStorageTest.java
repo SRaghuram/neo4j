@@ -9,10 +9,10 @@ import com.neo4j.causalclustering.core.state.CoreStateFiles;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -54,7 +54,7 @@ class DurableStateStorageTest
         storage.writeState( new AtomicInteger( 99 ) );
 
         // then
-        assertEquals( 4, fileSystem.getFileSize( stateFileA().toPath() ) );
+        assertEquals( 4, fileSystem.getFileSize( stateFileA() ) );
     }
 
     @Test
@@ -75,8 +75,8 @@ class DurableStateStorageTest
         storage.writeState( new AtomicInteger( 9999 ) );
 
         // then
-        assertEquals( 4, fileSystem.getFileSize( stateFileB().toPath() ) );
-        assertEquals( numberOfEntriesBeforeRotation * 4, fileSystem.getFileSize( stateFileA().toPath() ) );
+        assertEquals( 4, fileSystem.getFileSize( stateFileB() ) );
+        assertEquals( numberOfEntriesBeforeRotation * 4, fileSystem.getFileSize( stateFileA() ) );
     }
 
     @Test
@@ -97,8 +97,8 @@ class DurableStateStorageTest
         storage.writeState( new AtomicInteger( 9999 ) );
 
         // then
-        assertEquals( 4, fileSystem.getFileSize( stateFileA().toPath() ) );
-        assertEquals( numberOfEntriesBeforeRotation * 4, fileSystem.getFileSize( stateFileB().toPath() ) );
+        assertEquals( 4, fileSystem.getFileSize( stateFileA() ) );
+        assertEquals( numberOfEntriesBeforeRotation * 4, fileSystem.getFileSize( stateFileB() ) );
     }
 
     @Test
@@ -131,7 +131,7 @@ class DurableStateStorageTest
          * should nevertheless be correct
          */
         ByteBuffer forReadingBackIn = ByteBuffers.allocate( 10_000, INSTANCE );
-        StoreChannel lastWrittenTo = fileSystem.read( stateFileA().toPath() );
+        StoreChannel lastWrittenTo = fileSystem.read( stateFileA() );
         lastWrittenTo.read( forReadingBackIn );
         forReadingBackIn.flip();
 
@@ -180,13 +180,13 @@ class DurableStateStorageTest
         }
     }
 
-    private File stateFileA()
+    private Path stateFileA()
     {
-        return new File( testDirectory.homeDir(), CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ).name() + ".a" );
+        return testDirectory.homePath().resolve( CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ).name() + ".a" );
     }
 
-    private File stateFileB()
+    private Path stateFileB()
     {
-        return new File( testDirectory.homeDir(), CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ).name() + ".b" );
+        return testDirectory.homePath().resolve( CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ).name() + ".b" );
     }
 }

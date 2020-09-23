@@ -47,8 +47,8 @@ class SetOperatorPasswordCommandTest
     @BeforeEach
     void setup()
     {
-        command = new SetOperatorPasswordCommand( new ExecutionContext( testDir.directoryPath( "home" ),
-                testDir.directoryPath( "conf" ), mock( PrintStream.class ), mock( PrintStream.class ), fileSystem ) );
+        command = new SetOperatorPasswordCommand( new ExecutionContext( testDir.directory( "home" ),
+                testDir.directory( "conf" ), mock( PrintStream.class ), mock( PrintStream.class ), fileSystem ) );
 
         authOperatorFile = EnterpriseSecurityModule.getOperatorUserRepositoryFile( command.loadNeo4jConfig() );
         CommunitySecurityModule.getUserRepositoryFile( command.loadNeo4jConfig() );

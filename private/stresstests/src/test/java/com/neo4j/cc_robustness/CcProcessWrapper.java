@@ -14,7 +14,6 @@ import com.neo4j.cc_robustness.workload.Work;
 import org.apache.commons.io.FileUtils;
 import org.apache.lucene.util.NamedThreadFactory;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.rmi.RemoteException;
 import java.util.Map;
@@ -159,8 +158,8 @@ public class CcProcessWrapper implements CcInstance
 
         if ( type == ShutdownType.wipe )
         {
-            File dbPath = instanceFiles.directoryFor( serverId );
-            FileUtils.deleteQuietly( dbPath );
+            Path dbPath = instanceFiles.directoryFor( serverId );
+            FileUtils.deleteQuietly( dbPath.toFile() );
         }
 
         executor.shutdownNow();

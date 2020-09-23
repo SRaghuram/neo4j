@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -64,23 +63,23 @@ public class ProcessTest
     @Test
     void shouldLaunchSimpleProcessAndWriteItsOutputToFile() throws Exception
     {
-        Path folder = temporaryFolder.directory( "folder" ).toPath();
+        Path folder = temporaryFolder.directory( "folder" );
         Files.createFile( folder.resolve( "file1.txt" ) );
         Files.createFile( folder.resolve( "file2.txt" ) );
 
-        File processOutput = temporaryFolder.file( "processOutput" );
-        Files.createFile( processOutput.toPath() );
+        Path processOutput = temporaryFolder.file( "processOutput" );
+        Files.createFile( processOutput );
 
-        assertThat( "Expected process output to be empty", Files.lines( processOutput.toPath() ).count(), equalTo( 0L ) );
+        assertThat( "Expected process output to be empty", Files.lines( processOutput ).count(), equalTo( 0L ) );
 
         ProcessWrapper process = ProcessWrapper.start( new ProcessBuilder()
                                                                .command( "ls", folder.toAbsolutePath().toString() )
-                                                               .redirectOutput( processOutput ) );
+                                                               .redirectOutput( processOutput.toFile() ) );
         process.waitFor();
 
         String expectedFileLines = "file1.txt\n" +
                                    "file2.txt";
-        String actualFileLines = Files.lines( processOutput.toPath() ).collect( Collectors.joining( "\n" ) );
+        String actualFileLines = Files.lines( processOutput ).collect( Collectors.joining( "\n" ) );
         assertThat( expectedFileLines, equalTo( actualFileLines ) );
     }
 }

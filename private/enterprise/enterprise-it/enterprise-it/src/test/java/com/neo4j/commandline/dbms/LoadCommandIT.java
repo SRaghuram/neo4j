@@ -78,7 +78,7 @@ class LoadCommandIT extends AbstractCommandIT
         }
         managementService.shutdownDatabase( databaseName );
 
-        var dump = testDirectory.filePath( "dump1" );
+        var dump = testDirectory.file( "dump1" );
         new Dumper( System.out ).dump( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory(), dump, ZSTD,
                                        alwaysFalse() );
 
@@ -107,7 +107,7 @@ class LoadCommandIT extends AbstractCommandIT
         }
         managementService.shutdownDatabase( databaseName );
 
-        var dump = testDirectory.filePath( "dump2" );
+        var dump = testDirectory.file( "dump2" );
         new Dumper( System.out ).dump( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory(), dump, ZSTD,
                                        alwaysFalse() );
 
@@ -138,7 +138,7 @@ class LoadCommandIT extends AbstractCommandIT
         }
         managementService.shutdownDatabase( databaseName );
 
-        var dump = testDirectory.filePath( "dump3" );
+        var dump = testDirectory.file( "dump3" );
         new Dumper( System.out ).dump( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory(), dump, ZSTD,
                                        alwaysFalse() );
 
@@ -161,7 +161,7 @@ class LoadCommandIT extends AbstractCommandIT
         }
         managementService.shutdownDatabase( databaseName );
 
-        var dump = testDirectory.filePath( "dump4" );
+        var dump = testDirectory.file( "dump4" );
         new Dumper( System.out ).dump( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory(), dump, ZSTD,
                                        alwaysFalse() );
 
@@ -177,7 +177,7 @@ class LoadCommandIT extends AbstractCommandIT
         var databaseLayout = databaseAPI.databaseLayout();
         managementService.shutdownDatabase( databaseName );
 
-        var dump = testDirectory.filePath( "dump5" );
+        var dump = testDirectory.file( "dump5" );
         new Dumper( System.out ).dump( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory(), dump, ZSTD,
                                        alwaysFalse() );
 

@@ -395,7 +395,7 @@ class TransactionGuardIT
     {
         if ( databaseWithTimeout == null )
         {
-            databaseWithTimeout = startCustomDatabase( testDirectory.directoryPath( "dbWithTimeout" ), getSettingsWithTimeoutAndBolt() );
+            databaseWithTimeout = startCustomDatabase( testDirectory.directory( "dbWithTimeout" ), getSettingsWithTimeoutAndBolt() );
             boltPortDatabaseWithTimeout = getBoltConnectorPort( databaseWithTimeout );
         }
         return databaseWithTimeout;
@@ -412,7 +412,7 @@ class TransactionGuardIT
     {
         if ( databaseWithoutTimeout == null )
         {
-            databaseWithoutTimeout = startCustomDatabase( testDirectory.directoryPath( "dbWithoutTimeout" ), getSettingsWithoutTransactionTimeout() );
+            databaseWithoutTimeout = startCustomDatabase( testDirectory.directory( "dbWithoutTimeout" ), getSettingsWithoutTransactionTimeout() );
         }
         return databaseWithoutTimeout;
     }

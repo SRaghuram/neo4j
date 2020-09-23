@@ -121,7 +121,7 @@ class TransactionLogAnalyzerTest
     @Test
     void throwExceptionWithErrorMessageIfLogFilesNotFound()
     {
-        Path emptyDirectory = testDirectory.directoryPath( "empty" );
+        Path emptyDirectory = testDirectory.directory( "empty" );
         assertThrows( IllegalStateException.class, () -> TransactionLogAnalyzer.analyze( fs, emptyDirectory, monitor ) );
     }
 

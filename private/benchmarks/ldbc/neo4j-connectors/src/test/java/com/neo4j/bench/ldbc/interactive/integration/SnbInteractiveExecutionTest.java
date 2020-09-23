@@ -114,8 +114,8 @@ abstract class SnbInteractiveExecutionTest
             long operationCount,
             Scenario scenario ) throws Exception
     {
-        File storeDir = temporaryFolder.directory( "store" );
-        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
+        File storeDir = temporaryFolder.directory( "store" ).toFile();
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ).toFile() );
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema()
@@ -130,7 +130,7 @@ abstract class SnbInteractiveExecutionTest
                 false
         );
         Store store = Neo4jStore.createFrom( storeDir.toPath() );
-        File resultDir = temporaryFolder.directory( "results" );
+        File resultDir = temporaryFolder.directory( "results" ).toFile();
         assertThat( resultDir.listFiles().length, is( 0 ) );
 
         try ( DatabaseAndUrl databaseAndUrl = createRemoteConnector( store.topLevelDirectory().toFile() ) )
@@ -186,7 +186,7 @@ abstract class SnbInteractiveExecutionTest
 
             configuration = (ConsoleAndFileDriverConfiguration) modifyConfiguration( configuration );
 
-            File ldbcConfigFile = temporaryFolder.file( "ldbc.config" );
+            File ldbcConfigFile = temporaryFolder.file( "ldbc.config" ).toFile();
             BenchmarkUtil.stringToFile( configuration.toPropertiesString(), ldbcConfigFile.toPath() );
             LdbcCli.benchmark(
                     store,
@@ -248,8 +248,8 @@ abstract class SnbInteractiveExecutionTest
             long operationCount,
             Scenario scenario ) throws Exception
     {
-        File storeDir = temporaryFolder.directory( "store" );
-        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
+        File storeDir = temporaryFolder.directory( "store" ).toFile();
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ).toFile() );
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema()
@@ -263,7 +263,7 @@ abstract class SnbInteractiveExecutionTest
                 true,
                 false
         );
-        File resultDir = temporaryFolder.directory( "results" );
+        File resultDir = temporaryFolder.directory( "results" ).toFile();
         Store store = Neo4jStore.createFrom( storeDir.toPath() );
         assertThat( resultDir.listFiles().length, is( 0 ) );
 
@@ -333,7 +333,7 @@ abstract class SnbInteractiveExecutionTest
 
             configuration = (ConsoleAndFileDriverConfiguration) modifyConfiguration( configuration );
 
-            File ldbcConfigFile = temporaryFolder.file( "ldbc.config" );
+            File ldbcConfigFile = temporaryFolder.file( "ldbc.config" ).toFile();
             BenchmarkUtil.stringToFile( configuration.toPropertiesString(), ldbcConfigFile.toPath() );
             LdbcCli.benchmark(
                     store,
@@ -396,8 +396,8 @@ abstract class SnbInteractiveExecutionTest
             long operationCount,
             Scenario scenario ) throws Exception
     {
-        File storeDir = temporaryFolder.directory( "store" );
-        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
+        File storeDir = temporaryFolder.directory( "store" ).toFile();
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ).toFile() );
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema()
@@ -411,7 +411,7 @@ abstract class SnbInteractiveExecutionTest
                 true,
                 false
         );
-        File resultDir = temporaryFolder.directory( "results" );
+        File resultDir = temporaryFolder.directory( "results" ).toFile();
         Store store = Neo4jStore.createFrom( storeDir.toPath() );
         assertThat( resultDir.listFiles().length, is( 0 ) );
 
@@ -480,7 +480,7 @@ abstract class SnbInteractiveExecutionTest
 
             configuration = (ConsoleAndFileDriverConfiguration) modifyConfiguration( configuration );
 
-            File ldbcConfigFile = temporaryFolder.file( "ldbc.config" );
+            File ldbcConfigFile = temporaryFolder.file( "ldbc.config" ).toFile();
             BenchmarkUtil.stringToFile( configuration.toPropertiesString(), ldbcConfigFile.toPath() );
             LdbcCli.benchmark(
                     store,

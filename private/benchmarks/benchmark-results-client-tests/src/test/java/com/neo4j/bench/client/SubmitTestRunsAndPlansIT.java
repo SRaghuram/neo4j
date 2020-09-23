@@ -45,13 +45,12 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -147,7 +146,7 @@ public class SubmitTestRunsAndPlansIT
             BenchmarkGroup group = new BenchmarkGroup( "group1" );
             Benchmark benchmark1 = Benchmark.benchmarkFor( "desc1", "bench1", Benchmark.Mode.LATENCY, emptyMap() );
             Benchmark benchmark2 = Benchmark.benchmarkFor( "desc2", "bench2", Benchmark.Mode.LATENCY, emptyMap() );
-            File testRunResultsJson1 = temporaryFolder.file( "results1.json" );
+            File testRunResultsJson1 = temporaryFolder.file( "results1.json" ).toFile();
             TestRunReport testRunReport = createTestRunReportTwoProjects(
                     testRun1,
                     newArrayList(), // no plans
@@ -189,7 +188,7 @@ public class SubmitTestRunsAndPlansIT
              */
 
             TestRun testRun2 = new TestRun( "id2", 1, 1, 1, 1, "user" );
-            final File testRunResultsJson2 = temporaryFolder.file( "results2.json" );
+            final File testRunResultsJson2 = temporaryFolder.file( "results2.json" ).toFile();
             testRunReport = createTestRunReportTwoProjects(
                     testRun2,
                     newArrayList(), // no plans
@@ -267,7 +266,7 @@ public class SubmitTestRunsAndPlansIT
              */
 
             TestRun testRun3 = new TestRun( "id3", 1, 1, 1, 1, "user" );
-            File testRunResultsJson3 = temporaryFolder.file( "results3.json" );
+            File testRunResultsJson3 = temporaryFolder.file( "results3.json" ).toFile();
             testRunReport = createTestRunReportTwoProjects(
                     testRun3,
                     newArrayList(), // no plans
@@ -326,7 +325,7 @@ public class SubmitTestRunsAndPlansIT
                     new BenchmarkPlan( group, benchmark1, plan( "a" ) ),
                     new BenchmarkPlan( group, benchmark2, plan( "a" ) ) );
 
-            File testRunResultsJson1 = temporaryFolder.file( "results1.json" );
+            File testRunResultsJson1 = temporaryFolder.file( "results1.json" ).toFile();
             ArrayList<TestRunError> errors = newArrayList();
             TestRunReport testRunReport1 = createTestRunReportTwoProjects(
                     testRun1,
@@ -382,7 +381,7 @@ public class SubmitTestRunsAndPlansIT
                     new BenchmarkPlan( group, benchmark1, plan( "a" ) ),
                     new BenchmarkPlan( group, benchmark2, plan( "b" ) ),
                     new BenchmarkPlan( group, benchmark4, plan( "c" ) ) );
-            File testRunResultsJson2 = temporaryFolder.file( "results2.json" );
+            File testRunResultsJson2 = temporaryFolder.file( "results2.json" ).toFile();
             TestRunReport testRunReport2 = createTestRunReport(
                     testRun2,
                     benchmarkPlans2,
@@ -495,7 +494,7 @@ public class SubmitTestRunsAndPlansIT
             List<BenchmarkPlan> benchmarkPlans = newArrayList(
                     new BenchmarkPlan( group, benchmark1, plan( "a" ) ),
                     new BenchmarkPlan( group, benchmark2, plan( "b" ) ) );
-            File testRunResultsJson = temporaryFolder.file( "results.json" );
+            File testRunResultsJson = temporaryFolder.file( "results.json" ).toFile();
             ArrayList<TestRunError> errors = newArrayList( new TestRunError( "group1", "benchmark1", "description 1" ),
                                                            new TestRunError( "group2", "benchmark2", "description 2" ) );
             TestRunReport testRunReport1 =
@@ -594,7 +593,7 @@ public class SubmitTestRunsAndPlansIT
             List<BenchmarkPlan> benchmarkPlans = newArrayList(
                     new BenchmarkPlan( group, benchmark1, plan( "a" ) ),
                     new BenchmarkPlan( group, benchmark2, plan( "a" ) ) );
-            File testRunResultsJson = temporaryFolder.file( "results.json" );
+            File testRunResultsJson = temporaryFolder.file( "results.json" ).toFile();
             ArrayList<TestRunError> errors = newArrayList( new TestRunError( "group1", "benchmark1", "description 1" ),
                                                            new TestRunError( "group2", "benchmark2", "description 2" ) );
             TestRunReport testRunReport1 =
@@ -704,7 +703,7 @@ public class SubmitTestRunsAndPlansIT
             Benchmark benchmark1,
             Benchmark benchmark2 ) throws IOException
     {
-        Path absolutePath = temporaryFolder.absolutePath().toPath();
+        Path absolutePath = temporaryFolder.absolutePath();
         Path topFolder = absolutePath.resolve( "profiles" );
         Files.createDirectories( topFolder );
         Files.createFile( absolutePath.resolve( "archive.tar.gz" ) );

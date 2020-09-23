@@ -7,9 +7,9 @@ package com.neo4j.tools.dbstructure;
 
 import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -61,12 +61,12 @@ public class DbStructureTool
         {
             if ( writeToFile )
             {
-                File sourceRoot = new File( args[1] );
-                String outputPackageDir = generatedClassPackage.replace( '.', File.separatorChar );
+                Path sourceRoot = Path.of( args[1] );
+                String outputPackageDir = generatedClassPackage.replace( '.', sourceRoot.getFileSystem().getSeparator().charAt( 0 ) );
                 String outputFileName = generatedClassName + ".java";
-                File outputDir = new File( sourceRoot, outputPackageDir );
-                File outputFile = new File( outputDir, outputFileName );
-                try ( PrintWriter writer = new PrintWriter( outputFile ) )
+                Path outputDir = sourceRoot.resolve( outputPackageDir );
+                Path outputFile = outputDir.resolve( outputFileName );
+                try ( PrintWriter writer = new PrintWriter( Files.newOutputStream( outputFile ) ) )
                 {
                     traceDb( generator, generatedClassPackage, generatedClassName, graph, writer );
                 }

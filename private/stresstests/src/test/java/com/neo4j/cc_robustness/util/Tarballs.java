@@ -6,26 +6,26 @@
 package com.neo4j.cc_robustness.util;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.Path;
 
 import org.neo4j.logging.Log;
 
 public class Tarballs
 {
-    public static void targz( File input, File output, Log log )
+    public static void targz( Path input, Path output, Log log )
     {
         try
         {
-            String targetFileName = output.getPath();
-            Process process = Runtime.getRuntime().exec( new String[]{"tar", "zcf", targetFileName, input.getPath()} );
+            String targetFileName = output.toString();
+            Process process = Runtime.getRuntime().exec( new String[]{"tar", "zcf", targetFileName, input.toString()} );
             readAndPrintOutputFrom( process, log );
             int result = process.waitFor();
             if ( result != 0 )
             {
-                throw new RuntimeException( "Couldn't pack db '" + input.getPath() + "' to '" + targetFileName + "'" );
+                throw new RuntimeException( "Couldn't pack db '" + input + "' to '" + targetFileName + "'" );
             }
             log.info( "Packed it --> " + output );
         }

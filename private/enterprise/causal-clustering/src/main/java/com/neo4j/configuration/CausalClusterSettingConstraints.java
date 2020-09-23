@@ -8,7 +8,7 @@ package com.neo4j.configuration;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
 
-import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.stream.Collectors;
@@ -33,23 +33,21 @@ final class CausalClusterSettingConstraints
         return SettingConstraints.ifCluster( new SettingConstraint<>()
         {
             @Override
-            public void validate( Path value, Configuration config )
+            public void validate( Path akkaConfigFile, Configuration config )
             {
-                if ( value != null )
+                if ( akkaConfigFile != null )
                 {
-                    File akkaConfigFile = value.toFile();
-
-                    if ( !akkaConfigFile.exists() || !akkaConfigFile.isFile() )
+                    if ( Files.notExists( akkaConfigFile ) || !Files.isRegularFile( akkaConfigFile ) )
                     {
                         throw new IllegalArgumentException( format( "'%s' must be a file or empty", middleware_akka_external_config.name() ) );
                     }
                     try
                     {
-                        ConfigFactory.parseFileAnySyntax( akkaConfigFile );
+                        ConfigFactory.parseFileAnySyntax( akkaConfigFile.toFile() );
                     }
                     catch ( ConfigException e )
                     {
-                        throw new IllegalArgumentException( format( "'%s' could not be parsed", value ), e );
+                        throw new IllegalArgumentException( format( "'%s' could not be parsed", akkaConfigFile ), e );
                     }
                 }
             }

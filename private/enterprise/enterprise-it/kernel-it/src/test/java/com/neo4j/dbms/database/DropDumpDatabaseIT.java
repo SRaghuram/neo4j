@@ -70,11 +70,11 @@ public class DropDumpDatabaseIT
         dropDump( systemDb, fooDb.databaseName() );
 
         // then
-        var dumpsArr = fsa.listFiles( dumpRoots, ( dir, name ) -> name.startsWith( dbName ) );
+        var dumpsArr = fsa.listFiles( dumpRoots, path -> path.getFileName().toString().startsWith( dbName ) );
         var fooDump = Arrays.stream( dumpsArr ).findFirst().orElseThrow( AssertionError::new );
 
         // given
-        var configDir = testDirectory.directory( "configDir" ).toPath();
+        var configDir = testDirectory.directory( "configDir" );
         var homeDir = config.get( neo4j_home );
         setupConfFile( configDir );
 

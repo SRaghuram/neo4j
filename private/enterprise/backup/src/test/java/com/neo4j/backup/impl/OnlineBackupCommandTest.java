@@ -11,7 +11,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import picocli.CommandLine;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
@@ -140,8 +139,8 @@ class OnlineBackupCommandTest
 
     private String executeBackup( String databaseName ) throws IOException
     {
-        File cfg = dir.file( "neo4j.conf" );
-        try ( PrintStream ps = new PrintStream( fs.openAsOutputStream( cfg.toPath(), false ) ) )
+        Path cfg = dir.file( "neo4j.conf" );
+        try ( PrintStream ps = new PrintStream( fs.openAsOutputStream( cfg, false ) ) )
         {
             ps.printf( "%s=%s%n", db_timezone.name(), LogTimeZone.SYSTEM.name() );
         }
@@ -151,7 +150,7 @@ class OnlineBackupCommandTest
                 PrintStream ps = new PrintStream( os );
                 PrintWriter writer = new PrintWriter( ps ) )
         {
-            ExecutionContext ctx = new ExecutionContext( dir.homePath(), cfg.getParentFile().toPath(), ps, ps, fs );
+            ExecutionContext ctx = new ExecutionContext( dir.homePath(), cfg.getParent(), ps, ps, fs );
 
             String[] args = { "--verbose",
                               "--database", databaseName,

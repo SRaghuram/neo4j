@@ -15,14 +15,16 @@ import com.neo4j.cc_robustness.workload.ShutdownType;
 import com.neo4j.cc_robustness.workload.Work;
 import org.apache.commons.io.FileUtils;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.rmi.RemoteException;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.internal.helpers.Numbers;
 import org.neo4j.kernel.impl.transaction.log.rotation.LogRotation;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
@@ -52,7 +54,7 @@ public class EmbeddedCcInstance implements CcInstance
     {
         this.instanceFiles = instanceFiles;
         this.serverId = serverId;
-        this.homeDir = instanceFiles.directoryFor( serverId ).toPath();
+        this.homeDir = instanceFiles.directoryFor( serverId );
         this.consistencyCheck = consistencyCheck;
         this.slowLogging = new SlowLogging( additionalDbConfig );
         this.log = logProvider.getLog( getClass() );
@@ -96,26 +98,25 @@ public class EmbeddedCcInstance implements CcInstance
 
     static int getNumberOfBranches( GraphDatabaseAPI db )
     {
-        return getNumberOfBranches( db.databaseLayout().databaseDirectory().toFile() );
+        return getNumberOfBranches( db.databaseLayout().databaseDirectory() );
     }
 
-    static int getNumberOfBranches( File storeDir )
+    static int getNumberOfBranches( Path storeDir )
     {
-        File branchDir = new File( storeDir, "branched" );
-        if ( !branchDir.exists() )
+        Path branchDir = storeDir.resolve( "branched" );
+        if ( Files.notExists( branchDir ) )
         {
             return 0;
         }
 
-        int count = 0;
-        for ( File child : branchDir.listFiles() )
+        try ( Stream<Path> list = Files.list( branchDir ) )
         {
-            if ( child.isDirectory() )
-            {
-                count++;
-            }
+            return Numbers.safeCastLongToInt( list.filter( Files::isDirectory ).count() );
         }
-        return count;
+        catch ( IOException e )
+        {
+            return 0;
+        }
     }
 
     @Override
@@ -137,10 +138,17 @@ public class EmbeddedCcInstance implements CcInstance
     }
 
     @Override
-    public void shutdown( ShutdownType type )
+    public void shutdown( ShutdownType type ) throws RemoteException
     {
         managementService.shutdown();
-        instanceFiles.packDb( serverId, true );
+        try
+        {
+            instanceFiles.packDb( serverId, true );
+        }
+        catch ( IOException e )
+        {
+            throw new RemoteException( "Failed to shutdown", e );
+        }
         if ( type == ShutdownType.wipe )
         {
             FileUtils.deleteQuietly( homeDir.toFile() );
@@ -174,7 +182,7 @@ public class EmbeddedCcInstance implements CcInstance
     @Override
     public void dumpLocks()
     {
-        Orchestrator.dumpAllLocks( db, instanceFiles.directoryFor( serverId ).toPath(), log );
+        Orchestrator.dumpAllLocks( db, instanceFiles.directoryFor( serverId ), log );
     }
 
     @Override

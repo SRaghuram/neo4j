@@ -61,7 +61,7 @@ public class RestoreDatabaseCommand
         if ( fs.fileExists( targetDatabaseLayout.databaseDirectory() ) && !forceOverwrite )
         {
             throw new IllegalArgumentException( format( "Database with name [%s] already exists at %s", targetDatabaseLayout.getDatabaseName(),
-                    targetDatabaseLayout.databaseDirectory().toFile() ) );
+                    targetDatabaseLayout.databaseDirectory() ) );
         }
 
         if ( fs.fileExists( raftGroupDirectory ) )
@@ -97,7 +97,7 @@ public class RestoreDatabaseCommand
         var transactionLogsDirectory = targetDatabaseLayout.getTransactionLogsDirectory();
         var databaseLockFile = targetDatabaseLayout.databaseLockFile();
 
-        var filesToRemove = fs.listFiles( databaseDirectory, ( dir, name ) -> !name.equals( databaseLockFile.getFileName().toString() ) );
+        var filesToRemove = fs.listFiles( databaseDirectory, path -> !path.getFileName().equals( databaseLockFile.getFileName() ) );
         if ( filesToRemove != null )
         {
             for ( var file : filesToRemove )

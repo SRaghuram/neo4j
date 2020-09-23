@@ -100,7 +100,7 @@ class RestartableImportIT
                     assertEquals( 0, exitCode );
                 }
 
-                zip( fs, dbDirectory, testDirectory.directoryPath( "snapshots" ).resolve( format( "killed-%02d.zip", restartCount ) ) );
+                zip( fs, dbDirectory, testDirectory.directory( "snapshots" ).resolve( format( "killed-%02d.zip", restartCount ) ) );
 
                 if ( !completedOnItsOwn && !fs.fileExists( dbDirectory.resolve( FILE_NAME_STATE ) ) &&
                         !fs.fileExists( dbDirectory.resolve( COMPLETED ) ) )
@@ -150,7 +150,7 @@ class RestartableImportIT
                 getClass().getCanonicalName(), databaseDirectory.toAbsolutePath().toString(), Long.toString( seed ) );
         Path wd = Path.of( "target/test-classes" ).toAbsolutePath();
         Files.createDirectories( wd );
-        File reportFile = testDirectory.createFile( "testReport" + seed );
+        File reportFile = testDirectory.createFile( "testReport" + seed ).toFile();
         return pb.directory( wd.toFile() )
                  .redirectOutput( appendTo( reportFile ) )
                  .redirectError( appendTo( reportFile ) )

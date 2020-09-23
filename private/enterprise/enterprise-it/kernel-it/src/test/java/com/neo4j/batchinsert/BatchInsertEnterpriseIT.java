@@ -71,9 +71,9 @@ class BatchInsertEnterpriseIT
         DatabaseLayout layout = Neo4jLayout.of( directory.homePath() ).databaseLayout( DEFAULT_DATABASE_NAME );
         // GIVEN
         Config config = Config.newBuilder()
-                .set( GraphDatabaseSettings.log_queries, LogQueryLevel.INFO )
-                .set( GraphDatabaseSettings.record_format, recordFormat )
-                .set( GraphDatabaseSettings.log_queries_filename, directory.file( "query.log" ).toPath().toAbsolutePath() ).build();
+                              .set( GraphDatabaseSettings.log_queries, LogQueryLevel.INFO )
+                              .set( GraphDatabaseSettings.record_format, recordFormat )
+                              .set( GraphDatabaseSettings.log_queries_filename, directory.file( "query.log" ).toAbsolutePath() ).build();
         BatchInserter inserter = BatchInserters.inserter( layout, fs, config );
         long node1Id;
         long node2Id;

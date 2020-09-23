@@ -31,7 +31,7 @@ public class HostnameVerificationHelper
     {
         SslPolicyConfig policy = SslPolicyConfig.forScope( scope );
         String random = UUID.randomUUID().toString();
-        Path baseDirectory = testDirectory.directoryPath( "base_directory_" + random );
+        Path baseDirectory = testDirectory.directory( "base_directory_" + random );
         Path validCertificatePath = baseDirectory.resolve( "certificate.crt" );
         Path validPrivateKeyPath = baseDirectory.resolve( "private.pem" );
         Path revoked = baseDirectory.resolve( "revoked" );

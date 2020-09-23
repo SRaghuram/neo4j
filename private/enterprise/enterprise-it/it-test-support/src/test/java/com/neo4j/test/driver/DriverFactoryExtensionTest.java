@@ -8,7 +8,6 @@ package com.neo4j.test.driver;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
@@ -56,9 +55,9 @@ class DriverFactoryExtensionTest
                 driver.session().run( "RETURN 1" ).consume();
             }
 
-            var driverLogsDir = new File( testDirectory.homeDir(), DriverFactory.LOGS_DIR );
-            assertTrue( fsa.isDirectory( driverLogsDir.toPath() ) );
-            assertTrue( fsa.fileExists( new File( driverLogsDir, "driver-1.log" ).toPath() ) );
+            var driverLogsDir = testDirectory.homePath().resolve( DriverFactory.LOGS_DIR );
+            assertTrue( fsa.isDirectory( driverLogsDir ) );
+            assertTrue( fsa.fileExists( driverLogsDir.resolve( "driver-1.log" ) ) );
         }
         finally
         {

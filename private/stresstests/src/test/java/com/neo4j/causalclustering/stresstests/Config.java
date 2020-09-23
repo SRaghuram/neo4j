@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.stresstests;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
@@ -56,7 +56,7 @@ public class Config
     public Config()
     {
         logProvider = new Log4jLogProvider( System.out );
-        workingDir = envOrDefault( "WORKING_DIR", new File( getProperty( "java.io.tmpdir" ) ).getPath() );
+        workingDir = envOrDefault( "WORKING_DIR", Path.of( getProperty( "java.io.tmpdir" ) ).toString() );
 
         numberOfCores = envOrDefault( "NUMBER_OF_CORES", 3 );
         numberOfEdges = envOrDefault( "NUMBER_OF_EDGES", 1 );

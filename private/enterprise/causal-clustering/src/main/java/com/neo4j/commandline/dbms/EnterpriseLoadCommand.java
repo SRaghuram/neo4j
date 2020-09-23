@@ -8,6 +8,7 @@ package com.neo4j.commandline.dbms;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.configuration.CausalClusteringSettings;
 
+import java.io.IOException;
 import java.nio.file.Path;
 
 import org.neo4j.cli.ExecutionContext;
@@ -29,7 +30,7 @@ public class EnterpriseLoadCommand extends LoadCommand
     }
 
     @Override
-    protected void loadDump()
+    protected void loadDump() throws IOException
     {
         Config config = buildConfig();
         Path raftGroupDirectory = getRaftGroupDirectory( database.name(), config );

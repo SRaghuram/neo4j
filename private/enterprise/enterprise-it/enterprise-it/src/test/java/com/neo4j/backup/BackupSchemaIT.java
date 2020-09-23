@@ -150,12 +150,12 @@ class BackupSchemaIT
 
     private Path executeBackup() throws Exception
     {
-        Path backupsDir = testDirectory.directory( "backups" ).toPath();
+        Path backupsDir = testDirectory.directory( "backups" );
 
         var context = OnlineBackupContext.builder()
                 .withAddress( "localhost", getConnectorAddress( db, BACKUP_SERVER_NAME ).getPort() )
                 .withBackupDirectory( backupsDir )
-                .withReportsDirectory( testDirectory.directory( "reports" ).toPath() );
+                .withReportsDirectory( testDirectory.directory( "reports" ) );
 
         LogProvider logProvider = new Log4jLogProvider( System.out );
         OnlineBackupExecutor executor = OnlineBackupExecutor.builder()

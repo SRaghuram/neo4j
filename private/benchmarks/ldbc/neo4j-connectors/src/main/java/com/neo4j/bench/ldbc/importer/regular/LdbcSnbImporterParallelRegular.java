@@ -730,7 +730,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
         LifeSupport lifeSupport = new LifeSupport();
         lifeSupport.add( jobScheduler );
         lifeSupport.start();
-        Config dbConfig = null == importerProperties ? Config.defaults() : Config.newBuilder().fromFile( importerProperties ).build();
+        Config dbConfig = null == importerProperties ? Config.defaults() : Config.newBuilder().fromFile( importerProperties.toPath() ).build();
         dbConfig.set( GraphDatabaseSettings.dense_node_threshold, 1 );
         Collector badCollector = Collector.EMPTY;
         BatchImporter batchImporter = new ParallelBatchImporter(

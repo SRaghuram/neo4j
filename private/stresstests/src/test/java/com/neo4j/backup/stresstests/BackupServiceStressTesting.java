@@ -11,7 +11,6 @@ import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 import com.neo4j.helper.Workload;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -66,7 +65,7 @@ class BackupServiceStressTesting
         String databaseName = "testDatabase";
 
         Path storeDir = testDirectory.homePath( databaseName );
-        File backupsDir = testDirectory.directory( "backups" );
+        Path backupsDir = testDirectory.directory( "backups" );
 
         DatabaseManagementServiceBuilder databaseManagementServiceBuilder =
                 new EnterpriseDatabaseManagementServiceBuilder( storeDir )
@@ -88,7 +87,7 @@ class BackupServiceStressTesting
             dbRef.set( managementService.database( databaseName ) );
 
             TransactionalWorkload transactionalWorkload = new TransactionalWorkload( control, dbRef::get );
-            BackupLoad backupWorkload = new BackupLoad( control, backupHostname, backupPort, backupsDir.toPath() );
+            BackupLoad backupWorkload = new BackupLoad( control, backupHostname, backupPort, backupsDir );
             StartStop startStopWorkload = new StartStop( control, dbRef, managementService, databaseName );
 
             executeWorkloads( control, executor, asList( transactionalWorkload, backupWorkload, startStopWorkload ) );

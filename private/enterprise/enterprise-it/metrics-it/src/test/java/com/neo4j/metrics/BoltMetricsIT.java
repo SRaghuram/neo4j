@@ -55,7 +55,7 @@ class BoltMetricsIT
     @ExtensionCallback
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
-        metricsFolder = testDirectory.directoryPath( "metrics" );
+        metricsFolder = testDirectory.directory( "metrics" );
         builder.setConfig( BoltConnector.enabled, true )
             .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
             .setConfig( GraphDatabaseSettings.auth_enabled, false )

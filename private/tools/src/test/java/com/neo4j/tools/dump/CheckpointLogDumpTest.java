@@ -10,9 +10,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Path;
 
 import static com.neo4j.tools.dump.CheckpointLogDump.dumpCheckpoints;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,7 +29,7 @@ class CheckpointLogDumpTest
     }
 
     @Test
-    void dumpSingleFileContent() throws IOException
+    void dumpSingleFileContent() throws Exception
     {
         var resourceFile = getResourceFile();
         dumpCheckpoints( resourceFile, printStream );
@@ -39,17 +38,17 @@ class CheckpointLogDumpTest
     }
 
     @Test
-    void dumpDirectoryContent() throws IOException
+    void dumpDirectoryContent() throws Exception
     {
-        var resourceFile = getResourceFile().getParentFile();
+        var resourceFile = getResourceFile().getParent();
         dumpCheckpoints( resourceFile, printStream );
         assertThat( outputStream.toString() ).satisfies( s -> assertThat( StringUtils.countMatches( s, "LogEntryDetachedCheckpoint" ) ).isEqualTo( 2 ) )
                                              .containsOnlyOnce( "reason='Checkpoint triggered by \"Database shutdown\" @ txId: 1'" )
                                             .containsOnlyOnce( "reason='test'" );
     }
 
-    private File getResourceFile()
+    private Path getResourceFile() throws Exception
     {
-        return new File( getClass().getResource( "/checkpoint.0" ).getFile() );
+        return Path.of( getClass().getResource( "/checkpoint.0" ).toURI() );
     }
 }

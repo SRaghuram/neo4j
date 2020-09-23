@@ -71,7 +71,7 @@ class AdminToolCausalClusterBackupIT
     {
         CoreClusterMember leader = cluster.awaitLeader();
 
-        Path backupDir = testDirectory.directoryPath( "backups", newBackupDirName() );
+        Path backupDir = testDirectory.directory( "backups", newBackupDirName() );
         String backupAddress = leader.config().get( OnlineBackupSettings.online_backup_listen_address ).toString();
 
         cluster.coreTx( AdminToolCausalClusterBackupIT::createSomeData );

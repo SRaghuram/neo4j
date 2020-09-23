@@ -59,7 +59,7 @@ class DataGeneratorDataCharacteristicsIT
     {
         builder = new DataGeneratorConfigBuilder()
                 .withRngSeed( RNG_SEED );
-        Path absoluteTempPath = temporaryFolder.absolutePath().toPath();
+        Path absoluteTempPath = temporaryFolder.absolutePath();
         neo4jConfigPath = absoluteTempPath.resolve( "neo4j.config" );
         Neo4jConfigBuilder.writeToFile( NEO4J_CONFIG, neo4jConfigPath );
     }

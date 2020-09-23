@@ -35,7 +35,7 @@ class ClusterStateLayoutTest
     @BeforeEach
     void setUp()
     {
-        clusterStateDir = testDirectory.directoryPath( DEFAULT_DATA_DIR_NAME ).resolve( DEFAULT_CLUSTER_STATE_DIRECTORY_NAME );
+        clusterStateDir = testDirectory.directory( DEFAULT_DATA_DIR_NAME ).resolve( DEFAULT_CLUSTER_STATE_DIRECTORY_NAME );
         layout = ClusterStateLayout.of( clusterStateDir );
     }
 
@@ -143,7 +143,7 @@ class ClusterStateLayoutTest
     @Test
     void shouldWorkNonDefaultDirectory()
     {
-        var clusterStateDir = testDirectory.directoryPath( "different" );
+        var clusterStateDir = testDirectory.directory( "different" );
         var layout = ClusterStateLayout.of( clusterStateDir );
 
         assertEquals( clusterStateDir.resolve( "version-state" ).resolve( "version" ), layout.clusterStateVersionFile() );

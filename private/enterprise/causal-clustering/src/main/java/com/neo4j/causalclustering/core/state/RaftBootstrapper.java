@@ -173,7 +173,7 @@ public class RaftBootstrapper
 
             DatabaseLayout tempDatabaseLayout = initializeStoreUsingTempDatabase( bootstrapRootDir.get(), true );
 
-            bootstrapContext.replaceWith( tempDatabaseLayout.databaseDirectory().toFile() );
+            bootstrapContext.replaceWith( tempDatabaseLayout.databaseDirectory() );
         }
     }
 
@@ -195,7 +195,7 @@ public class RaftBootstrapper
                         cursorTracer );
             }
             log.info( "Moving created store files from " + bootstrapDatabaseLayout + " to " + bootstrapContext.databaseLayout() );
-            bootstrapContext.replaceWith( bootstrapDatabaseLayout.databaseDirectory().toFile() );
+            bootstrapContext.replaceWith( bootstrapDatabaseLayout.databaseDirectory() );
 
             // delete transaction logs so they will be recreated with the new store id, they should be empty so it's fine
             bootstrapContext.removeTransactionLogs();

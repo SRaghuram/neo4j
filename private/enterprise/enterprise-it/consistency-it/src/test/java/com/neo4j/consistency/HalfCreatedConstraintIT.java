@@ -72,7 +72,7 @@ class HalfCreatedConstraintIT
         }
 
         ConsistencyCheckService service = new ConsistencyCheckService();
-        Path logs = testDirectory.cleanDirectoryPath( "logs" );
+        Path logs = testDirectory.cleanDirectory( "logs" );
         Config config = Config.defaults( logs_directory, logs );
         ConsistencyCheckService.Result checkResult =
                 service.runFullConsistencyCheck( databaseLayout, config, NONE, NullLogProvider.getInstance(), false );

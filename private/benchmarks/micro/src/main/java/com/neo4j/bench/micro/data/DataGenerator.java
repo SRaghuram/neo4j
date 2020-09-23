@@ -723,7 +723,7 @@ public class DataGenerator
         Path relationshipIdsFile = tempOutputDir.resolve( RELATIONSHIP_ID_FILENAME );
         if ( !relationshipIdsFile.toFile().createNewFile() )
         {
-            throw new RuntimeException( "Unable to create file: " + relationshipIdsFile.toFile().getAbsolutePath() );
+            throw new RuntimeException( "Unable to create file: " + relationshipIdsFile.toAbsolutePath() );
         }
         return relationshipIdsFile;
     }

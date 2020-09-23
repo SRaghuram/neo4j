@@ -26,7 +26,6 @@ import java.io.PrintWriter;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.KeyStore;
 import java.util.Collection;
 import java.util.stream.Collectors;
@@ -180,7 +179,7 @@ public class KubernetesResolverIT
 
     private String readJsonFile( final String fileName ) throws IOException, URISyntaxException
     {
-        Path path = Paths.get( getClass().getResource( "/com.neo4j.causalclustering.discovery/" + fileName ).toURI() );
+        Path path = Path.of( getClass().getResource( "/com.neo4j.causalclustering.discovery/" + fileName ).toURI() );
         String fullFile = Files.lines( path ).collect( Collectors.joining( "\n" ) );
         return String.format( fullFile, testServiceName, testPortName, testPortNumber );
     }
@@ -195,7 +194,7 @@ public class KubernetesResolverIT
 
         String keyStorePass = "key store pass";
         String privateKeyPass = "private key pass";
-        SslResource server1 = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directoryPath( "k8s" ) );
+        SslResource server1 = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "k8s" ) );
         SslPolicy sslPolicy = com.neo4j.ssl.SslContextFactory.makeSslPolicy( server1, CLUSTER );
         KeyStore keyStore = sslPolicy.getKeyStore( keyStorePass.toCharArray(), privateKeyPass.toCharArray() );
 

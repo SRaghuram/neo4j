@@ -181,14 +181,14 @@ public class Stores
         {
             try
             {
-                LOG.debug( "Deleting failed store: " + topLevelStoreDir.toFile().getAbsolutePath() );
+                LOG.debug( "Deleting failed store: " + topLevelStoreDir.toAbsolutePath() );
                 FileUtils.deleteDirectory( topLevelStoreDir );
             }
             catch ( IOException ioe )
             {
-                throw new UncheckedIOException( "Error deleting failed store: " + topLevelStoreDir.toFile().getAbsolutePath(), ioe );
+                throw new UncheckedIOException( "Error deleting failed store: " + topLevelStoreDir.toAbsolutePath(), ioe );
             }
-            throw new Kaboom( "Error creating store at: " + topLevelStoreDir.toFile().getAbsolutePath(), e );
+            throw new Kaboom( "Error creating store at: " + topLevelStoreDir.toAbsolutePath(), e );
         }
         StoreAndConfig storeAndConfig = new StoreAndConfig( topLevelStoreDir, neo4jConfigFile );
 

@@ -88,8 +88,8 @@ class StoreCopyClientIT
 
     private final AssertableLogProvider assertableLogProvider = new AssertableLogProvider( true );
     private final Supplier<TerminationCondition> defaultTerminationCondition = () -> TerminationCondition.CONTINUE_INDEFINITELY;
-    private final FakeFile fileA = new FakeFile( "fileA", "This is file a content" );
-    private final FakeFile fileB = new FakeFile( "another-file-b", "Totally different content 123" );
+    private final FakePath fileA = new FakePath( "fileA", "This is file a content" );
+    private final FakePath fileB = new FakePath( "another-file-b", "Totally different content 123" );
     private final Path targetLocation = Path.of( "copyTargetLocation" );
     private JobScheduler scheduler;
     private LogProvider logProvider;
@@ -359,7 +359,7 @@ class StoreCopyClientIT
 
     private Path relative( String filename )
     {
-        return testDirectory.filePath( filename );
+        return testDirectory.file( filename );
     }
 
     private String fileContent( Path file ) throws IOException

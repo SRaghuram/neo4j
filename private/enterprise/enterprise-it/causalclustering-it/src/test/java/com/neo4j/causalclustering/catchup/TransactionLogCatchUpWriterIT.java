@@ -15,6 +15,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.LongStream;
 
@@ -57,7 +58,6 @@ import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.apache.commons.io.FileUtils.sizeOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
@@ -130,7 +130,7 @@ class TransactionLogCatchUpWriterIT
     @ParameterizedTest( name = "fullStoreCopy: {0}" )
     void createTransactionLogWithCheckpointInCustomLocation( boolean fullStoreCopy ) throws IOException
     {
-        createTransactionLogWithCheckpoint( defaults( transaction_logs_root_path, dir.directoryPath( "custom-tx-logs" ).toAbsolutePath() ), false,
+        createTransactionLogWithCheckpoint( defaults( transaction_logs_root_path, dir.directory( "custom-tx-logs" ).toAbsolutePath() ), false,
                 fullStoreCopy );
     }
 
@@ -185,11 +185,11 @@ class TransactionLogCatchUpWriterIT
         writer.close();
         if ( fullStoreCopy )
         {
-            assertThat( sizeOf( databaseLayout.getTransactionLogsDirectory().toFile() ), lessThanOrEqualTo( 400L ) );
+            assertThat( getSizeOfDirectory( databaseLayout.getTransactionLogsDirectory() ), lessThanOrEqualTo( 400L ) );
         }
         else
         {
-            assertThat( sizeOf( databaseLayout.getTransactionLogsDirectory().toFile() ),
+            assertThat( getSizeOfDirectory( databaseLayout.getTransactionLogsDirectory() ),
                     greaterThanOrEqualTo( logical_log_rotation_threshold.defaultValue() ) );
         }
     }
@@ -204,7 +204,7 @@ class TransactionLogCatchUpWriterIT
                 storageEngineFactory, LongRange.range( BASE_TX_ID, BASE_TX_ID ), fullStoreCopy, true, NULL, INSTANCE,
                 new DatabaseHealth( NO_OP, NullLog.getInstance() ) );
         writer.close();
-        assertThat( sizeOf( databaseLayout.getTransactionLogsDirectory().toFile() ), lessThanOrEqualTo( 400L ) );
+        assertThat( getSizeOfDirectory( databaseLayout.getTransactionLogsDirectory() ), lessThanOrEqualTo( 400L ) );
     }
 
     @ValueSource( booleans = {false, true} )
@@ -240,6 +240,19 @@ class TransactionLogCatchUpWriterIT
             assertEquals( 7L, pageCacheTracer.hits() );
             assertEquals( 5L, pageCacheTracer.faults() );
         }
+    }
+
+    private long getSizeOfDirectory( Path directory )
+    {
+        long ret = 0;
+        for ( Path path : fs.listFiles( directory ) )
+        {
+            if ( !fs.isDirectory( path ) )
+            {
+                ret += fs.getFileSize( path );
+            }
+        }
+        return ret;
     }
 
     private void createTransactionLogWithCheckpoint( Config config, boolean logsInStoreDir, boolean fullStoreCopy ) throws IOException

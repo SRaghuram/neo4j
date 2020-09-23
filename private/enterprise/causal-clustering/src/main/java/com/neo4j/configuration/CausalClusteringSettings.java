@@ -7,9 +7,8 @@ package com.neo4j.configuration;
 
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 
-import java.io.File;
+import java.nio.file.FileSystems;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.List;
 
@@ -229,12 +228,12 @@ public class CausalClusteringSettings implements SettingsDeclaration
             pathUnixAbsolute( "causal_clustering.kubernetes.ca_crt", "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt" );
 
     @Description( "Limits amount of global threads shared by raft groups for handling bathing of messages and timeout events." )
-    public static Setting<Integer> raft_handler_parallelism =
+    public static final Setting<Integer> raft_handler_parallelism =
             newBuilder( "causal_clustering.raft_handler_parallelism", INT, min( getRuntime().availableProcessors() * 2, 8 ) )
                     .addConstraint( min( 1 ) ).build();
 
     @Description( "Limits amount of global threads for applying commands." )
-    public static Setting<Integer> command_applier_parallelism =
+    public static final Setting<Integer> command_applier_parallelism =
             newBuilder( "causal_clustering.command_applier_parallelism", INT, min( getRuntime().availableProcessors() * 2, 8 ) )
                     .addConstraint( min( 1 ) ).build();
 
@@ -245,9 +244,11 @@ public class CausalClusteringSettings implements SettingsDeclaration
      */
     private static Setting<Path> pathUnixAbsolute( String name, String path )
     {
-        File[] roots = File.listRoots();
-        Path root = roots.length > 0 ? roots[0].toPath() : Paths.get( "//" );
-        return newBuilder( name, PATH, root.resolve( path ) ).build();
+        for ( Path root : FileSystems.getDefault().getRootDirectories() )
+        {
+            return newBuilder( name, PATH, root.resolve( path ) ).build();
+        }
+        return newBuilder( name, PATH, Path.of( "//" ).resolve( path ) ).build();
     }
 
     @Description( "LabelSelector for Kubernetes API" )

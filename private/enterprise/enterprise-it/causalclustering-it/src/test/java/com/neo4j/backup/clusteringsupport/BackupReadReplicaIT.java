@@ -67,7 +67,7 @@ class BackupReadReplicaIT
         cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
 
-        backupsDir = testDirectory.cleanDirectory( "backups" ).toPath();
+        backupsDir = testDirectory.cleanDirectory( "backups" );
     }
 
     @Test

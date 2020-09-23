@@ -58,7 +58,7 @@ class ConvertNonCausalClusteringStoreIT
     void shouldReplicateTransactionToCoreMembers( String recordFormat ) throws Throwable
     {
         // given
-        Path dbDir = testDirectory.cleanDirectoryPath( "classic-db-" + recordFormat );
+        Path dbDir = testDirectory.cleanDirectory( "classic-db-" + recordFormat );
         int classicNodeCount = 1024;
         Path classicNeo4jDatabase = createNeoDatabase( dbDir, recordFormat, classicNodeCount ).layout().databaseDirectory();
 

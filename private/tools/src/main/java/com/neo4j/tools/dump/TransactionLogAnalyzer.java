@@ -8,7 +8,6 @@ package com.neo4j.tools.dump;
 import com.neo4j.tools.dump.log.TransactionLogEntryCursor;
 import com.neo4j.tools.util.TransactionLogUtils;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -92,7 +91,7 @@ public class TransactionLogAnalyzer
      * {@link Monitor} for each encountered data item.
      *
      * @param fileSystem {@link FileSystemAbstraction} to find the files on.
-     * @param storeDirOrLogFile {@link File} pointing either to a directory containing transaction log files, or directly
+     * @param storeDirOrLogFile {@link Path} pointing either to a directory containing transaction log files, or directly
      * pointing to a single transaction log file to analyze.
      * @param monitor {@link Monitor} receiving call-backs for all {@link Monitor#transaction(LogEntry[]) transactions},
      * {@link Monitor#checkpoint(LogEntryInlinedCheckPoint, LogPosition) checkpoints} and {@link Monitor#logFile(Path, long) log file transitions}

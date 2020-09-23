@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.configuration.CausalClusteringSettings;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -93,7 +92,7 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
      */
     private void addDirectory( String path, Path dir, List<DiagnosticsReportSource> sources )
     {
-        String currentLevel = path + File.separator + dir.getFileName();
+        String currentLevel = path + dir.getFileSystem().getSeparator() + dir.getFileName();
         if ( fs.isDirectory( dir ) )
         {
             Path[] files = fs.listFiles( dir );

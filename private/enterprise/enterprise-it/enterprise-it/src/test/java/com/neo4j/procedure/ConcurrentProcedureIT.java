@@ -64,7 +64,7 @@ public class ConcurrentProcedureIT
                 ClassWithProceduresUsingKernelTransaction.class );
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder()
                 .impermanent()
-                .setConfig( plugin_dir, plugins.homePath().toAbsolutePath() )
+                .setConfig( plugin_dir, plugins.absolutePath() )
                 .setConfig( procedure_unrestricted,
                         List.of( "com.neo4j.procedure.metaDataIdProcedure",
                                 "com.neo4j.procedure.metaDataIdFunction",

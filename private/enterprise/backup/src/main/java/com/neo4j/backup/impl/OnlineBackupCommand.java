@@ -159,7 +159,7 @@ public class OnlineBackupCommand extends AbstractCommand
     private Config buildConfig( Path configFile, Path additionalConfigFile, Path backupDirectory )
     {
         Config cfg = Config.newBuilder()
-                .fromFileNoThrow( configFile.toFile() )
+                .fromFileNoThrow( configFile )
                 .fromFileNoThrow( additionalConfigFile )
                 .set( GraphDatabaseSettings.neo4j_home, backupDirectory )
                 .set( pagecache_memory, pagecacheMemory )

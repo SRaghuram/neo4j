@@ -84,7 +84,7 @@ class SecurityPlanConstructionTest
                 "fabric.graph.1.driver.ssl_enabled", "false",
                 "dbms.ssl.policy.fabric.enabled", "true",
                 "dbms.ssl.policy.fabric.verify_hostname", "true",
-                "dbms.ssl.policy.fabric.base_directory", testDirectory.directory( "fabric-cert" ).getAbsolutePath()
+                "dbms.ssl.policy.fabric.base_directory", testDirectory.directory( "fabric-cert" ).toAbsolutePath().toString()
         );
         var config = Config.newBuilder()
                 .setRaw( properties )

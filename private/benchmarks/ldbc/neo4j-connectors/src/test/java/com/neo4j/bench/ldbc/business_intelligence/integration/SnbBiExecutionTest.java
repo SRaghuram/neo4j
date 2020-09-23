@@ -78,8 +78,8 @@ public abstract class SnbBiExecutionTest
             long operationCount,
             Scenario scenario ) throws Exception
     {
-        File storeDir = temporaryFolder.directory( "store" );
-        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
+        File storeDir = temporaryFolder.directory( "store" ).toFile();
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ).toFile() );
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema()
@@ -93,7 +93,7 @@ public abstract class SnbBiExecutionTest
                 true,
                 false
         );
-        File resultDir = temporaryFolder.directory( "results" );
+        File resultDir = temporaryFolder.directory( "results" ).toFile();
         Store store = Neo4jStore.createFrom( storeDir.toPath() );
         assertThat( resultDir.listFiles().length, is( 0 ) );
 
@@ -224,7 +224,7 @@ public abstract class SnbBiExecutionTest
                         "false"
                 );
 
-        File ldbcConfigFile = temporaryFolder.file( "ldbc.conf" );
+        File ldbcConfigFile = temporaryFolder.file( "ldbc.conf" ).toFile();
         BenchmarkUtil.stringToFile( configuration.toPropertiesString(), ldbcConfigFile.toPath() );
         LdbcCli.benchmark(
                 store,

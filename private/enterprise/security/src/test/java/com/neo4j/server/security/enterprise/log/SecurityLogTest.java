@@ -9,8 +9,8 @@ import com.neo4j.configuration.SecuritySettings;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Scanner;
@@ -57,10 +57,10 @@ class SecurityLogTest
         securityLog.info( "line 2" );
         securityLog.shutdown();
 
-        File activeLogFile = config.get( SecuritySettings.security_log_filename ).toFile();
-        assertThat( fs.fileExists( activeLogFile.toPath() ) ).isEqualTo( true );
-        assertThat( fs.fileExists( archive( 1 ).toPath() ) ).isEqualTo( true );
-        assertThat( fs.fileExists( archive( 2 ).toPath() ) ).isEqualTo( false );
+        Path activeLogFile = config.get( SecuritySettings.security_log_filename );
+        assertThat( fs.fileExists( activeLogFile ) ).isEqualTo( true );
+        assertThat( fs.fileExists( archive( 1 ) ) ).isEqualTo( true );
+        assertThat( fs.fileExists( archive( 2 ) ) ).isEqualTo( false );
 
         String[] activeLines = readLogFile( fs, activeLogFile );
         assertThat( activeLines ).allMatch( item -> item.contains( "line 2" ) );
@@ -95,7 +95,7 @@ class SecurityLogTest
         securityLog.info( "line 1" );
         securityLog.shutdown();
 
-        File activeLogFile = timeZoneConfig.get( SecuritySettings.security_log_filename ).toFile();
+        Path activeLogFile = timeZoneConfig.get( SecuritySettings.security_log_filename );
         String[] activeLines = readLogFile( fs, activeLogFile );
         assertThat( activeLines ).allMatch( item -> item.contains( timeZoneSuffix ) );
         dir.cleanup();
@@ -109,7 +109,7 @@ class SecurityLogTest
         writeAllLevelsAndShutdown( withLogLevel( Level.WARN ), "warn" );
         writeAllLevelsAndShutdown( withLogLevel( Level.ERROR ), "error" );
 
-        File activeLogFile = config.get( SecuritySettings.security_log_filename ).toFile();
+        Path activeLogFile = config.get( SecuritySettings.security_log_filename );
         String[] activeLines = readLogFile( fs, activeLogFile );
         var stringValues = List.of( "debug: debug line", "debug: info line", "debug: warn line", "debug: error line", "info: info line", "info: warn line",
                 "info: error line", "warn: warn line", "warn: error line", "error: error line" );
@@ -137,9 +137,9 @@ class SecurityLogTest
                 fs );
     }
 
-    private String[] readLogFile( FileSystemAbstraction fs, File activeLogFile ) throws IOException
+    private String[] readLogFile( FileSystemAbstraction fs, Path activeLogFile ) throws IOException
     {
-        try ( Scanner scan = new Scanner( fs.openAsInputStream( activeLogFile.toPath() ) ) )
+        try ( Scanner scan = new Scanner( fs.openAsInputStream( activeLogFile ) ) )
         {
             scan.useDelimiter( "\\Z" );
             String allLines = scan.next();
@@ -147,8 +147,8 @@ class SecurityLogTest
         }
     }
 
-    private File archive( int archiveNumber )
+    private Path archive( int archiveNumber )
     {
-        return new File( format( "%s.%d", config.get( SecuritySettings.security_log_filename ), archiveNumber ) );
+        return Path.of( format( "%s.%d", config.get( SecuritySettings.security_log_filename ), archiveNumber ) );
     }
 }

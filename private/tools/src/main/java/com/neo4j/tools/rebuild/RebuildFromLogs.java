@@ -8,7 +8,6 @@ package com.neo4j.tools.rebuild;
 import com.neo4j.configuration.OnlineBackupSettings;
 import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 
-import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -112,19 +111,19 @@ class RebuildFromLogs
             System.exit( -1 );
             return;
         }
-        File source = new File( args[0] );
-        File target = new File( args[1] );
-        if ( !source.isDirectory() )
+        Path source = Path.of( args[0] );
+        Path target = Path.of( args[1] );
+        if ( !Files.isDirectory( source ) )
         {
             printUsage( source + " is not a directory" );
             System.exit( -1 );
             return;
         }
-        if ( target.exists() )
+        if ( Files.exists( target ) )
         {
-            if ( target.isDirectory() )
+            if ( Files.isDirectory( target ) )
             {
-                if ( directoryContainsDb( target.toPath() ) )
+                if ( directoryContainsDb( target ) )
                 {
                     printUsage( "target graph database already exists" );
                     System.exit( -1 );
@@ -142,7 +141,7 @@ class RebuildFromLogs
 
         try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {
-            new RebuildFromLogs( fileSystem ).rebuild( DatabaseLayout.ofFlat( source.toPath() ), DatabaseLayout.ofFlat( target.toPath() ), txId );
+            new RebuildFromLogs( fileSystem ).rebuild( DatabaseLayout.ofFlat( source ), DatabaseLayout.ofFlat( target ), txId );
         }
     }
 

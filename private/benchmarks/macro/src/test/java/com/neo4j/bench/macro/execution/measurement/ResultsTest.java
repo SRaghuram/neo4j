@@ -5,13 +5,13 @@
  */
 package com.neo4j.bench.macro.execution.measurement;
 
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.macro.execution.measurement.Results.Phase;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkGroup;
 import org.junit.jupiter.api.Test;
 
 import java.io.BufferedWriter;
@@ -68,7 +68,7 @@ public class ResultsTest
     @Test
     public void shouldFailToLoadWhenTooFewColumns() throws Exception
     {
-        File validResultFile = temporaryFolder.file( "valid-result" );
+        File validResultFile = temporaryFolder.file( "valid-result" ).toFile();
         try ( BufferedWriter bufferedWriter = Files.newBufferedWriter( validResultFile.toPath() ) )
         {
             bufferedWriter.write( "scheduled_start,start,duration_ms,rows" );
@@ -77,7 +77,7 @@ public class ResultsTest
         }
         Results.loadFromFile( validResultFile.toPath() );
 
-        File invalidResultFile = temporaryFolder.file("invalid-results" );
+        File invalidResultFile = temporaryFolder.file( "invalid-results" ).toFile();
         try ( BufferedWriter bufferedWriter = Files.newBufferedWriter( invalidResultFile.toPath() ) )
         {
             bufferedWriter.write( "scheduled_start,start,duration_invalid,rows" );
@@ -91,7 +91,7 @@ public class ResultsTest
     @Test
     public void shouldFailToLoadWhenTooManyColumns() throws Exception
     {
-        File validResultFile = Files.createTempFile( temporaryFolder.absolutePath().toPath(), "valid-results", ".file" ).toFile();
+        File validResultFile = Files.createTempFile( temporaryFolder.absolutePath(), "valid-results", ".file" ).toFile();
         try ( BufferedWriter bufferedWriter = Files.newBufferedWriter( validResultFile.toPath() ) )
         {
             bufferedWriter.write( "scheduled_start,start,duration_ms,rows" );
@@ -100,7 +100,7 @@ public class ResultsTest
         }
         Results.loadFromFile( validResultFile.toPath() );
 
-        File invalidResultFile = temporaryFolder.file( "invalid-results" );
+        File invalidResultFile = temporaryFolder.file( "invalid-results" ).toFile();
         try ( BufferedWriter bufferedWriter = Files.newBufferedWriter( invalidResultFile.toPath() ) )
         {
             bufferedWriter.write( "scheduled_start,start,duration_invalid,rows" );
@@ -182,7 +182,7 @@ public class ResultsTest
 
     private Path createForkDirPath() throws IOException
     {
-        BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( temporaryFolder.directory( "fork" ).toPath() , GROUP );
+        BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( temporaryFolder.directory( "fork" ) , GROUP );
         BenchmarkDirectory benchDir = groupDir.findOrCreate( BENCH );
         ForkDirectory forkDir = benchDir.create( FORK, new ArrayList<>() );
         return Paths.get( forkDir.toAbsolutePath() );

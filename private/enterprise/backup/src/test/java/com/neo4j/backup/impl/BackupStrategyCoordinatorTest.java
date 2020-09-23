@@ -54,8 +54,8 @@ class BackupStrategyCoordinatorTest
     @BeforeEach
     void setup()
     {
-        Path reportsDir = testDirectory.directoryPath( "reports" );
-        Path backupsDir = testDirectory.directoryPath( "backups" );
+        Path reportsDir = testDirectory.directory( "reports" );
+        Path backupsDir = testDirectory.directory( "backups" );
 
         when( fileSystem.isDirectory( any( Path.class ) ) ).thenReturn( true );
         when( onlineBackupContext.getReportDir() ).thenReturn( reportsDir );

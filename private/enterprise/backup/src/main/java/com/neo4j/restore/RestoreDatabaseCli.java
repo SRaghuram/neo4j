@@ -81,7 +81,7 @@ public class RestoreDatabaseCli extends AbstractCommand
     private Config loadNeo4jConfig( Path homeDir, Path configDir )
     {
         final var builder = Config.newBuilder()
-                                  .fromFile( configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME ).toFile() )
+                                  .fromFile( configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME ) )
                                   .set( GraphDatabaseSettings.neo4j_home, homeDir );
         Optional.ofNullable( databaseRootDirectory ).ifPresent( v -> builder.set( GraphDatabaseInternalSettings.databases_root_path, v ) );
         Optional.ofNullable( txRootDirectory ).ifPresent( v -> builder.set( GraphDatabaseSettings.transaction_logs_root_path, v ) );

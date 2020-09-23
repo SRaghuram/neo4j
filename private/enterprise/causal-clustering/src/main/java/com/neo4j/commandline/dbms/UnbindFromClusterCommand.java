@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -58,7 +57,7 @@ public class UnbindFromClusterCommand extends AbstractCommand
 
                 if ( ctx.fs().fileExists( clusterStateDirectory ) )
                 {
-                    deleteClusterStateIn( clusterStateDirectory.toFile() );
+                    deleteClusterStateIn( clusterStateDirectory );
                 }
                 else
                 {
@@ -78,11 +77,11 @@ public class UnbindFromClusterCommand extends AbstractCommand
         }
     }
 
-    private void deleteClusterStateIn( File target ) throws UnbindFailureException
+    private void deleteClusterStateIn( Path target ) throws UnbindFailureException
     {
         try
         {
-            ctx.fs().deleteRecursively( target.toPath() );
+            ctx.fs().deleteRecursively( target );
         }
         catch ( IOException e )
         {

@@ -140,7 +140,7 @@ class ConvenientLocalExecutionIT
     @Test
     void executeQuery() throws Exception
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Workload workload = Workload.fromName( WORKLOAD_NAME, resources, DEPLOYMENT );
             Query query = workload.queries()
@@ -176,7 +176,7 @@ class ConvenientLocalExecutionIT
 
     private Path neo4jConfigFile()
     {
-        Path neo4jConfigFile = temporaryFolder.file( "neo4j.conf" ).toPath();
+        Path neo4jConfigFile = temporaryFolder.file( "neo4j.conf" );
         Neo4jConfig neo4jConfig = neo4jConfig();
         Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
         return neo4jConfigFile;

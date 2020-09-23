@@ -47,7 +47,7 @@ class EnterpriseDatabaseManagementServiceBuilderIT
     void configuredDatabasesRootPath()
     {
         Path homeDir = testDirectory.homePath();
-        Path databasesDir = testDirectory.directoryPath( "my_databases" );
+        Path databasesDir = testDirectory.directory( "my_databases" );
 
         DatabaseManagementService managementService = createDbmsBuilder( homeDir )
                 .setConfig( databases_root_path, databasesDir )

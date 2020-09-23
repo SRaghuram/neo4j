@@ -46,7 +46,7 @@ class RunReportCommandIT
         var exception = assertThrows( BenchmarkConfigurationException.class, () ->
         {
             // Create empty Neo4j configuration file
-            File neo4jConfigFile = temporaryFolder.file( "neo4j.conf" );
+            File neo4jConfigFile = temporaryFolder.file( "neo4j.conf" ).toFile();
             try ( InputStream inputStream = getClass().getResource( "/neo4j.conf" )
                                                       .openStream();
                   OutputStream outputStream = Files.newOutputStream( neo4jConfigFile.toPath() ) )
@@ -55,12 +55,12 @@ class RunReportCommandIT
             }
 
             // Create empty benchmark configuration file
-            File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
+            File benchmarkConfig = temporaryFolder.file( "benchmark.config" ).toFile();
             Files.write( benchmarkConfig.toPath(), List.of( "# empty config file" ) );
 
-            Path jsonFile = temporaryFolder.file( "file.json" ).toPath();
-            Path profileOutputDirectory = temporaryFolder.directory( "output" ).toPath();
-            Path storesDir = temporaryFolder.directory( "benchmark_stores" ).toPath();
+            Path jsonFile = temporaryFolder.file( "file.json" );
+            Path profileOutputDirectory = temporaryFolder.directory( "output" );
+            Path storesDir = temporaryFolder.directory( "benchmark_stores" );
 
             List<String> commandArgs = RunReportCommand.argsFor(
                     "abc123",

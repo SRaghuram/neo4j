@@ -12,7 +12,6 @@ import org.junit.After;
 import org.junit.Rule;
 import org.junit.rules.RuleChain;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -191,8 +190,8 @@ public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
         EmbeddedTestCertificates()
         {
             URL url = getClass().getResource( "/neo4j_ldap_test_keystore.jks" );
-            File keyStoreFile = new File( url.getFile() );
-            String keyStorePath = keyStoreFile.getAbsolutePath();
+            Path keyStoreFile = Path.of( url.getFile() );
+            String keyStorePath = keyStoreFile.toAbsolutePath().toString();
 
             System.setProperty( KEY_STORE, keyStorePath );
             System.setProperty( KEY_STORE_PASSWORD, "secret" );

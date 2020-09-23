@@ -45,7 +45,7 @@ class WorkloadTest
     @Test
     void onlyPeriodicCommitQueriesShouldHaveWarmupQueries()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             for ( Workload workload : Workload.all( resources, Deployment.embedded() ) )
             {
@@ -68,7 +68,7 @@ class WorkloadTest
     //       that is not the case for any query existing at this time, however, and having this sanity may protect us from quietly doing dumb things in future.
     void shouldAlwaysMarkMutatingQueriesAsMutating()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             for ( Workload workload : Workload.all( resources, Deployment.embedded() ) )
             {
@@ -95,7 +95,7 @@ class WorkloadTest
     //       that is not the case for any query existing at this time, however, and having this sanity may protect us from quietly doing dumb things in future.
     void shouldNeverHaveMutatingWarmupQueries()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             for ( Workload workload : Workload.all( resources, Deployment.embedded() ) )
             {
@@ -141,7 +141,7 @@ class WorkloadTest
     @Test
     void allWorkloadsShouldHaveUniqueName()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Map<String,List<Workload>> workloadsByName = Workload.allWorkloads( resources, Deployment.embedded() ).stream()
                                                                  .collect( Collectors.groupingBy( Workload::name ) );
@@ -157,7 +157,7 @@ class WorkloadTest
     @Test
     void allWorkloadsShouldHaveExactlyOneConfigurationFile() throws Exception
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Path workloadsDir = resources.getResourceFile( "/workloads" );
             try ( Stream<Path> workloadDirs = Files.list( workloadsDir )
@@ -179,7 +179,7 @@ class WorkloadTest
     @Test
     void workloadsShouldHaveCorrectName()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Workload.allWorkloads( resources, Deployment.embedded() )
                     .forEach( workload ->
@@ -202,7 +202,7 @@ class WorkloadTest
     @Test
     void workloadsShouldHaveAtLeastOneQuery()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Workload.allWorkloads( resources, Deployment.embedded() ).forEach( workload -> assertFalse( workload.queries().isEmpty() ) );
         }
@@ -211,7 +211,7 @@ class WorkloadTest
     @Test
     public void workloadsShouldHaveUniquelyNamedQueries() throws IOException
     {
-        try ( Resources resources = new Resources( temporaryFolder.directory( "resources" ).toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.directory( "resources" ) ) )
         {
             for ( Workload workload : Workload.allWorkloads( resources, Deployment.embedded() ) )
             {
@@ -233,7 +233,7 @@ class WorkloadTest
     @Test
     void workloadQueriesShouldHaveAllFieldsPopulated()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Workload.allWorkloads( resources, Deployment.embedded() ).stream()
                     .flatMap( workload -> workload.queries().stream() )
@@ -254,7 +254,7 @@ class WorkloadTest
     @Test
     void shouldParseAllParameterFiles()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Workload.allWorkloads( resources, Deployment.embedded() )
                     .forEach( workload ->
@@ -286,7 +286,7 @@ class WorkloadTest
     @Test
     void shouldParseValidWorkload() throws Exception
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Path workloadDir = resources.getResourceFile( "/test_workloads/test" );
             Path validWorkloadConfig = workloadDir.resolve( "valid.json" );
@@ -376,7 +376,7 @@ class WorkloadTest
     @Test
     void shouldFailToParseWhenEmptyQueries()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_empty_queries.json" );
 
@@ -389,7 +389,7 @@ class WorkloadTest
     @Test
     void shouldFailToParseWhenMissingParamFile()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_missing_parameters_file.json" );
 
@@ -405,7 +405,7 @@ class WorkloadTest
     @Test
     void shouldFailToParseWhenMissingQueryFile()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_missing_query_file.json" );
 
@@ -418,7 +418,7 @@ class WorkloadTest
     @Test
     void shouldFailToParseWhenMissingSchemaFile()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_missing_schema_file.json" );
 
@@ -431,7 +431,7 @@ class WorkloadTest
     @Test
     void shouldFailToParseWhenSchemaFileContainsDuplicates()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_schema_with_duplicates.json" );
 
@@ -444,7 +444,7 @@ class WorkloadTest
     @Test
     void shouldFailToParseWhenNoParamFile()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_no_parameters_file.json" );
 
@@ -457,7 +457,7 @@ class WorkloadTest
     @Test
     void shouldFailToParseWhenNoQueries()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_no_queries.json" );
 
@@ -470,7 +470,7 @@ class WorkloadTest
     @Test
     void shouldFailToParseWhenNoQueryFile()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_no_query_file.json" );
 
@@ -483,7 +483,7 @@ class WorkloadTest
     @Test
     void shouldFailToParseWhenNoQueryName()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_no_query_name.json" );
 
@@ -496,7 +496,7 @@ class WorkloadTest
     @Test
     void shouldFailToParseWhenNoSchema()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_no_schema.json" );
 
@@ -509,7 +509,7 @@ class WorkloadTest
     @Test
     void shouldFailToParseWhenNoWorkloadName()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_no_workload_name.json" );
 
@@ -522,7 +522,7 @@ class WorkloadTest
     @Test
     void shouldFailToParseWhenInvalidQueryKey()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_query_key.json" );
 
@@ -535,7 +535,7 @@ class WorkloadTest
     @Test
     void shouldFailToParseWhenInvalidWorkloadKey()
     {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Path workloadConfigurationFile = resources.getResourceFile( "/test_workloads/test/invalid_workload_key.json" );
 

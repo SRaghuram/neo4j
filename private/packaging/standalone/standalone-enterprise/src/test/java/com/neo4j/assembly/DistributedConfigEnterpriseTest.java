@@ -7,7 +7,6 @@ package com.neo4j.assembly;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
@@ -41,9 +40,9 @@ class DistributedConfigEnterpriseTest
         List<String> mentionedSettings = new ArrayList<>();
         Path of = Path.of( "src", "main", "distribution", "text", "enterprise", "conf", "neo4j.conf" );
         List<String> lines = Files.readAllLines( of );
-        File newConfig = testDirectory.file( "tmp.conf" );
+        Path newConfig = testDirectory.file( "tmp.conf" );
         boolean multiLine = false;
-        try ( PrintWriter writer = new PrintWriter( Files.newBufferedWriter( newConfig.toPath() ) ) )
+        try ( PrintWriter writer = new PrintWriter( Files.newBufferedWriter( newConfig ) ) )
         {
             for ( String line : lines )
             {

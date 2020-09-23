@@ -10,10 +10,12 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-import java.util.StringJoiner;
 import java.util.stream.Collectors;
 
 import org.neo4j.cli.CommandFailedException;
@@ -34,7 +36,7 @@ class RestoreCommandIT extends AbstractCommandIT
     void failToRestoreRunningDatabase() throws IOException
     {
         String databaseName = databaseAPI.databaseName();
-        Path testBackup = testDirectory.directoryPath( "testbackup" );
+        Path testBackup = testDirectory.directory( "testbackup" );
         FileUtils.copyDirectory( databaseAPI.databaseLayout().databaseDirectory(), testBackup );
         CommandFailedException exception = assertThrows( CommandFailedException.class,
                                                          () ->
@@ -51,7 +53,7 @@ class RestoreCommandIT extends AbstractCommandIT
     {
         String databaseName = databaseAPI.databaseName();
         managementService.shutdownDatabase( databaseName );
-        Path testBackup = testDirectory.directoryPath( "testbackup2" );
+        Path testBackup = testDirectory.directory( "testbackup2" );
         FileUtils.copyDirectory( databaseAPI.databaseLayout().databaseDirectory(), testBackup );
 
         assertDoesNotThrow( () ->
@@ -66,7 +68,7 @@ class RestoreCommandIT extends AbstractCommandIT
     void shouldUseLastNameOfFromPathIfDatabaseNameParameterIsNotPassed() throws IOException
     {
         managementService.shutdownDatabase( databaseAPI.databaseName() );
-        Path testBackup = testDirectory.directoryPath( "testbackup2" );
+        Path testBackup = testDirectory.directory( "testbackup2" );
         FileUtils.copyDirectory( databaseAPI.databaseLayout().databaseDirectory(), testBackup );
 
         assertDoesNotThrow( () ->
@@ -78,17 +80,19 @@ class RestoreCommandIT extends AbstractCommandIT
         final String databaseName = testBackup.getName( testBackup.getNameCount() - 1 ).toString();
         final Path restoredDatabaseFolder = Neo4jLayout.of( config ).databaseLayout( databaseName ).databaseDirectory();
 
-        assertThat( restoredDatabaseFolder.toFile() ).isDirectory();
-        assertThat( restoredDatabaseFolder.toFile().listFiles() ).isNotEmpty();
+        assertThat( restoredDatabaseFolder ).isNotEmptyDirectory();
     }
 
     @Test
     void shouldRestoreTwoDatabaseDefinedAsAList() throws IOException
     {
         managementService.shutdownDatabase( databaseAPI.databaseName() );
-        final List<Path> databaseDirs = List.of( testDirectory.directoryPath( "db1", "testDir" ),
-                                                 testDirectory.directoryPath( "db2", "testDir" ) );
-        databaseDirs.forEach( dir -> copy( databaseAPI.databaseLayout().databaseDirectory(), dir ) );
+        final List<Path> databaseDirs = List.of( testDirectory.directory( "db1", "testDir" ),
+                                                 testDirectory.directory( "db2", "testDir" ) );
+        for ( Path databaseDir : databaseDirs )
+        {
+            FileUtils.copyDirectory( databaseAPI.databaseLayout().databaseDirectory(), databaseDir );
+        }
 
         //when
         assertDoesNotThrow( () ->
@@ -103,21 +107,20 @@ class RestoreCommandIT extends AbstractCommandIT
         databaseDirs.stream()
                     .map( db -> db.getName( db.getNameCount() - 1 ).toString() )
                     .map( path -> Neo4jLayout.of( config ).databaseLayout( path ).databaseDirectory() )
-                    .forEach( restoredDatabaseFolder ->
-                              {
-                                  assertThat( restoredDatabaseFolder.toFile() ).isDirectory();
-                                  assertThat( restoredDatabaseFolder.toFile().listFiles() ).isNotEmpty();
-                              } );
+                    .forEach( restoredDatabaseFolder -> assertThat( restoredDatabaseFolder ).isNotEmptyDirectory() );
     }
 
     @Test
-    void shouldRestoreAllDatabasesThatMatchTheFilter()
+    void shouldRestoreAllDatabasesThatMatchTheFilter() throws IOException
     {
         managementService.shutdownDatabase( databaseAPI.databaseName() );
-        final List<Path> databaseDirs = List.of( testDirectory.directoryPath( "db1", "testDir" ),
-                                                 testDirectory.directoryPath( "db2", "testDir" ),
-                                                 testDirectory.directoryPath( "mongo", "testDir" ) );
-        databaseDirs.forEach( dir -> copy( databaseAPI.databaseLayout().databaseDirectory(), dir ) );
+        final List<Path> databaseDirs = List.of( testDirectory.directory( "db1", "testDir" ),
+                                                 testDirectory.directory( "db2", "testDir" ),
+                                                 testDirectory.directory( "mongo", "testDir" ) );
+        for ( Path databaseDir : databaseDirs )
+        {
+            FileUtils.copyDirectory( databaseAPI.databaseLayout().databaseDirectory(), databaseDir );
+        }
 
         var fromPath = databaseDirs.get( 0 ).getParent().toAbsolutePath().toString(); // point to testDir folder
 
@@ -129,28 +132,27 @@ class RestoreCommandIT extends AbstractCommandIT
         databaseDirs.subList( 0, 2 ).stream()
                     .map( db -> db.getName( db.getNameCount() - 1 ).toString() )
                     .map( path -> Neo4jLayout.of( config ).databaseLayout( path ).databaseDirectory() )
-                    .forEach( restoredDatabaseFolder ->
-                              {
-                                  assertThat( restoredDatabaseFolder.toFile() ).isDirectory();
-                                  assertThat( restoredDatabaseFolder.toFile().listFiles() ).isNotEmpty();
-                              } );
+                    .forEach( restoredDatabaseFolder -> assertThat( restoredDatabaseFolder ).isNotEmptyDirectory() );
 
         //then mongo is not created because doesn't match the pattern
         List.of( databaseDirs.get( 2 ) ).stream()
             .map( db -> db.getName( db.getNameCount() - 1 ).toString() )
             .map( path -> Neo4jLayout.of( config ).databaseLayout( path ).databaseDirectory() )
-            .forEach( notRestoredDB -> assertThat( notRestoredDB.toFile() ).doesNotExist() );
+            .forEach( notRestoredDB -> assertThat( notRestoredDB ).doesNotExist() );
     }
 
     @Test
-    void shouldRestoreDatabaseInCustomDatabaseDirectory()
+    void shouldRestoreDatabaseInCustomDatabaseDirectory() throws IOException
     {
         managementService.shutdownDatabase( databaseAPI.databaseName() );
 
-        final List<Path> databaseDirs = List.of( testDirectory.directoryPath( "db1", "testDir" ) );
-        databaseDirs.forEach( dir -> copy( databaseAPI.databaseLayout().databaseDirectory(), dir ) );
+        final List<Path> databaseDirs = List.of( testDirectory.directory( "db1", "testDir" ) );
+        for ( Path databaseDir : databaseDirs )
+        {
+            FileUtils.copyDirectory( databaseAPI.databaseLayout().databaseDirectory(), databaseDir );
+        }
 
-        final var databaseRootFolder = testDirectory.directoryPath( "databases", "restoreResult" );
+        final var databaseRootFolder = testDirectory.directory( "databases", "restoreResult" );
 
         //when
         assertDoesNotThrow( () ->
@@ -170,11 +172,7 @@ class RestoreCommandIT extends AbstractCommandIT
                               newConfig.set( GraphDatabaseInternalSettings.databases_root_path, databaseRootFolder );
                               return Neo4jLayout.of( newConfig.build() ).databaseLayout( path ).databaseDirectory();
                           } )
-                    .forEach( restoredDatabaseFolder ->
-                              {
-                                  assertThat( restoredDatabaseFolder.toFile() ).isDirectory();
-                                  assertThat( restoredDatabaseFolder.toFile().listFiles() ).isNotEmpty();
-                              } );
+                    .forEach( restoredDatabaseFolder -> assertThat( restoredDatabaseFolder ).isNotEmptyDirectory() );
     }
 
     @Test
@@ -196,8 +194,8 @@ class RestoreCommandIT extends AbstractCommandIT
     @Test
     void throwExceptionWhenFromPathPointToTheRootOfTheFileSystem()
     {
-        final var roots = File.listRoots();
-        if ( roots.length == 0 )
+        Iterator<Path> rootDirectories = FileSystems.getDefault().getRootDirectories().iterator();
+        if ( !rootDirectories.hasNext() )
         {
             return;
         }
@@ -205,7 +203,7 @@ class RestoreCommandIT extends AbstractCommandIT
                                                      () ->
                                                      {
 
-                                                         final String fromPath = roots[0].toString();
+                                                         final String fromPath = rootDirectories.next().toString();
                                                          restoreDatabase( Optional.empty(), fromPath,
                                                                           Optional.empty(), Optional.empty(), Optional.empty() );
                                                      } );
@@ -246,7 +244,6 @@ class RestoreCommandIT extends AbstractCommandIT
 
     private void restoreDatabase( Optional<String> database, String fromPath, Optional<Boolean> move,
                                   Optional<Path> databaseRootFolder, Optional<Path> transactionRootFolder )
-            throws IOException
     {
         var command = new RestoreDatabaseCli( getExtensionContext() );
 
@@ -262,7 +259,7 @@ class RestoreCommandIT extends AbstractCommandIT
                                 Optional<Path> databaseRootFolder,
                                 Optional<Path> transactionsRootFolder )
     {
-        StringJoiner args = new StringJoiner( "!!!" );
+        List<String> args = new ArrayList<>();
         database.ifPresent( v -> args.add( "--database=" + v ) );
         args.add( "--from=" + fromPath );
         databaseRootFolder.ifPresent( v -> args.add( "--to-data-directory=" + v ) );
@@ -271,28 +268,11 @@ class RestoreCommandIT extends AbstractCommandIT
 
         args.add( "--force" );
 
-        return args.toString().split( "!!!" );
-    }
-
-    private void copy( Path from, Path to )
-    {
-        try
-        {
-            FileUtils.copyDirectory( from, to );
-        }
-        catch ( Exception ex )
-        {
-            throw new RuntimeException( ex );
-        }
+        return args.toArray( String[]::new );
     }
 
     private String concatenateSubPath( String... paths )
     {
-        StringJoiner result = new StringJoiner( File.separator );
-        for ( String path : paths )
-        {
-            result.add( path );
-        }
-        return result.toString();
+        return String.join( File.separator, paths );
     }
 }

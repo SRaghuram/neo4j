@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.helpers.BuffersExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -41,7 +41,7 @@ class StreamToDiskTest
     @Test
     public void shouldLetPageCacheHandleRecordStoresAndNativeLabelScanStoreFiles() throws Exception
     {
-        var layout = DatabaseLayout.ofFlat( directory.filePath( DEFAULT_DATABASE_NAME ) );
+        var layout = DatabaseLayout.ofFlat( directory.file( DEFAULT_DATABASE_NAME ) );
         // GIVEN
         var monitors = new Monitors();
         var writerProvider = new StreamToDiskProvider( layout.databaseDirectory(), fs, monitors );
@@ -49,21 +49,21 @@ class StreamToDiskTest
         // WHEN
         for ( var type : StoreType.values() )
         {
-            var file = layout.file( type.getDatabaseFile() ).toFile();
+            var file = layout.file( type.getDatabaseFile() );
             writeAndVerify( writerProvider, file );
         }
-        writeAndVerify( writerProvider, layout.labelScanStore().toFile() );
+        writeAndVerify( writerProvider, layout.labelScanStore() );
     }
 
-    private void writeAndVerify( StreamToDiskProvider writerProvider, File file ) throws Exception
+    private void writeAndVerify( StreamToDiskProvider writerProvider, Path file ) throws Exception
     {
-        try ( var acquire = writerProvider.acquire( file.getName(), 16 ) )
+        try ( var acquire = writerProvider.acquire( file.getFileName().toString(), 16 ) )
         {
             var buffer = buffers.buffer();
             buffer.writeBytes( DATA );
             acquire.write( buffer );
         }
-        assertTrue( fs.fileExists( file.toPath() ), "Streamed file created." );
-        assertEquals( DATA.length, fs.getFileSize( file.toPath() ) );
+        assertTrue( fs.fileExists( file ), "Streamed file created." );
+        assertEquals( DATA.length, fs.getFileSize( file ) );
     }
 }

@@ -102,7 +102,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         @Test
         void warmupMustReloadHotPagesAfterRestartAndFaultsMustBeVisibleViaMetrics()
         {
-            Path metricsDirectory = testDirectory.directoryPath( "metrics" );
+            Path metricsDirectory = testDirectory.directory( "metrics" );
 
             createData( db );
             long pagesInMemory = waitForCacheProfile( monitors );
@@ -149,7 +149,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
 
             for ( int i = 0; i < 5; i++ )
             {
-                Path backupDir = testDirectory.cleanDirectoryPath( "backup" );
+                Path backupDir = testDirectory.cleanDirectory( "backup" );
                 executeBackup( db, backupDir );
             }
         }
@@ -190,8 +190,8 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
 
             BinaryLatch latch = pauseProfile( monitors ); // We don't want torn profile files in this test.
 
-            Path metricsDirectory = testDirectory.cleanDirectoryPath( "metrics" );
-            Path backupDir = testDirectory.cleanDirectoryPath( "backup" );
+            Path metricsDirectory = testDirectory.cleanDirectory( "metrics" );
+            Path backupDir = testDirectory.cleanDirectory( "backup" );
             executeBackup( db, backupDir );
             latch.release();
             controller.restartDbms( db.databaseName(), builder ->
@@ -242,14 +242,14 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         {
             builder.setConfig( metrics_enabled, false )
                     .setConfig( online_backup_enabled, false )
-                    .setConfig( databases_root_path, testDirectory.homePath().toAbsolutePath() )
+                    .setConfig( databases_root_path, testDirectory.absolutePath() )
                     .setConfig( pagecache_warmup_profiling_interval, Duration.ofMillis( 100 )  );
         }
 
         @Test
         void cacheProfilesMustBeIncludedInOfflineBackups() throws Exception
         {
-            Path data = testDirectory.directoryPath( "data" );
+            Path data = testDirectory.directory( "data" );
             Path logs = data.resolve( DEFAULT_TX_LOGS_ROOT_DIR_NAME );
             createData( db );
             long pagesInMemory = waitForCacheProfile( monitors );
@@ -262,7 +262,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
             FileUtils.copyDirectory( databaseDir, graphdb );
             FileUtils.deleteDirectory( databaseDir );
             Path homePath = data.getParent();
-            Path dumpDir = testDirectory.cleanDirectoryPath( "dump-dir" );
+            Path dumpDir = testDirectory.cleanDirectory( "dump-dir" );
 
             ExecutionContext ctx = new ExecutionContext( homePath, homePath, System.out, System.err, testDirectory.getFileSystem() );
             AdminTool.execute( ctx, "dump", "--database=" + DEFAULT_DATABASE_NAME, "--to=" + dumpDir );
@@ -273,7 +273,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
             FileUtils.copyDirectory( graphdb, databaseDir );
             FileUtils.deleteDirectory( graphdb );
 
-            Path metricsDirectory = testDirectory.cleanDirectoryPath( "metrics" );
+            Path metricsDirectory = testDirectory.cleanDirectory( "metrics" );
             controller.restartDbms( db.databaseName(), builder ->
                     builder.setConfig( metrics_enabled, true )
                            .setConfig( csv_enabled, true )
@@ -311,7 +311,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         @Test
         void logPageCacheWarmupStartCompletionMessages()
         {
-            Path metricsDirectory = testDirectory.directoryPath( "metrics" );
+            Path metricsDirectory = testDirectory.directory( "metrics" );
 
             createData( db );
             long pagesInMemory = waitForCacheProfile( monitors );
@@ -352,7 +352,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         @Test
         void willPrefetchEverything() throws Exception
         {
-            Path metricsDirectory = testDirectory.directoryPath( "metrics" );
+            Path metricsDirectory = testDirectory.directory( "metrics" );
 
             createData( db );
 

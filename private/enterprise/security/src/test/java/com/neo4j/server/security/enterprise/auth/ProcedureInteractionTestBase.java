@@ -134,7 +134,7 @@ public abstract class ProcedureInteractionTestBase<S>
 
     Map<Setting<?>,String> defaultConfiguration()
     {
-        Path homeDir = testDirectory.directoryPath( "logs" );
+        Path homeDir = testDirectory.directory( "logs" );
         securityLog = homeDir.resolve( "security.log" );
         return Map.of(
                 GraphDatabaseSettings.logs_directory, homeDir.toAbsolutePath().toString(),

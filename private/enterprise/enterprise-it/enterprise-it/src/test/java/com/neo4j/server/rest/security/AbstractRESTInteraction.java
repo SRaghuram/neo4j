@@ -16,8 +16,8 @@ import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.server.enterprise.helpers.EnterpriseWebContainerBuilder;
 import com.neo4j.server.security.enterprise.auth.NeoInteractionLevel;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -69,14 +69,14 @@ abstract class AbstractRESTInteraction extends CommunityWebContainerTestBase imp
 
     protected abstract Response authenticate( String principalCredentials );
 
-    AbstractRESTInteraction( Map<Setting<?>,String> config, File dataDir ) throws IOException
+    AbstractRESTInteraction( Map<Setting<?>,String> config, Path dataDir ) throws IOException
     {
         Map<String,String> stringMap = new HashMap<>( config.size() );
         config.forEach( ( setting, s ) -> stringMap.put( setting.name(), s ) );
 
         CommunityWebContainerBuilder builder = EnterpriseWebContainerBuilder.serverOnRandomPorts();
         builder = builder
-                .usingDataDir( dataDir.getAbsolutePath() )
+                .usingDataDir( dataDir.toAbsolutePath().toString() )
                 .withProperty( BoltConnector.enabled.name(), TRUE )
                 .withProperty( BoltConnector.encryption_level.name(), DISABLED.name() )
                 .withProperty( GraphDatabaseSettings.auth_enabled.name(), Boolean.toString( true ) );

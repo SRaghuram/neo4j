@@ -140,7 +140,7 @@ class ClusterStateMigratorTest
 
     private void setup( String clusterStateDirectory ) throws IOException
     {
-        clusterStateLayout = ClusterStateLayout.of( testDirectory.directoryPath( clusterStateDirectory ) );
+        clusterStateLayout = ClusterStateLayout.of( testDirectory.directory( clusterStateDirectory ) );
         writeRandomClusterId( clusterStateLayout.raftIdStateFile( DEFAULT_DATABASE_NAME ) );
 
         clusterStateVersionStorage = new SimpleFileStorage<>( fs, clusterStateLayout.clusterStateVersionFile(), VERSION.marshal(), INSTANCE );

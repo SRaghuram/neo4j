@@ -95,7 +95,7 @@ public class AddProfilesIT
 
     private File createJfrAndAsyncAndGcProfilesForBenchmark1a( Parameters parameters ) throws IOException
     {
-        Path absolutePath = temporaryFolder.absolutePath().toPath();
+        Path absolutePath = temporaryFolder.absolutePath();
         Path topLevelDir = absolutePath.resolve( "benchmark1a" );
         Files.createDirectory( topLevelDir );
 
@@ -117,7 +117,7 @@ public class AddProfilesIT
 
     private File createAsyncProfilesForBenchmark1b( Parameters parameters ) throws IOException
     {
-        Path absolutePath = temporaryFolder.absolutePath().toPath();
+        Path absolutePath = temporaryFolder.absolutePath();
         Path topLevelDir = absolutePath.resolve( "benchmark1b" );
         Files.createDirectories( topLevelDir );
         Files.createFile( absolutePath.resolve( "benchmark1b/" + filename( GROUP_1, BENCHMARK_1_B, parameters, ASYNC ) ) );
@@ -134,7 +134,7 @@ public class AddProfilesIT
 
     private File createJfrProfilesBenchmark2a( Parameters parameters ) throws IOException
     {
-        Path absolutePath = temporaryFolder.absolutePath().toPath();
+        Path absolutePath = temporaryFolder.absolutePath();
         Path topLevelDir = absolutePath.resolve( "benchmark2a" );
         Files.createDirectories( topLevelDir );
         Files.createFile( absolutePath.resolve( "benchmark2a/" + filename( GROUP_2, BENCHMARK_2_A, parameters, JFR ) ) );
@@ -326,7 +326,7 @@ public class AddProfilesIT
                 Lists.newArrayList( benchmarkPlan1a, benchmarkPlan1b ),
                 Lists.newArrayList( new TestRunError( "group", "name", "an error message\n\n" ) ) );
 
-        File testRunReportJson = temporaryFolder.file( "test-run-report.json" );
+        File testRunReportJson = temporaryFolder.file( "test-run-report.json" ).toFile();
         JsonUtil.serializeJson( testRunReportJson.toPath(), testRunReportBefore );
 
         // no profiles should exist yet

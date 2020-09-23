@@ -7,7 +7,6 @@ package com.neo4j.kernel.stresstests.transaction.log;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
 
@@ -30,7 +29,7 @@ import static org.neo4j.function.Suppliers.untilTimeExpired;
 class TransactionAppenderStressTesting
 {
     private static final String DEFAULT_DURATION_IN_MINUTES = "5";
-    private static final String DEFAULT_WORKING_DIR = new File( getProperty( "java.io.tmpdir" ), "working" ).getPath();
+    private static final String DEFAULT_WORKING_DIR = Path.of( getProperty( "java.io.tmpdir" ), "working" ).toString();
     private static final String DEFAULT_NUM_THREADS = "10";
 
     @Test

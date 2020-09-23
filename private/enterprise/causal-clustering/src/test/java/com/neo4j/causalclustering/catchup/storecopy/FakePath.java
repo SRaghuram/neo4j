@@ -5,23 +5,22 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.util.Optional;
 
 /**
  * A fake file tracks a file, but also several counters and helpers that can be used in tests to invoke desired behaviour
  */
-class FakeFile
+class FakePath
 {
-    private File file;
+    private Path path;
     private String filename;
     private String content;
     private int remainingNoResponse;
     private int remainingFailed;
     private Path relativePath;
 
-    FakeFile( String name, String content )
+    FakePath( String name, String content )
     {
         setFilename( name );
         this.content = content;
@@ -30,13 +29,13 @@ class FakeFile
     public void setFilename( String filename )
     {
         this.filename = filename;
-        this.file = getRelativePath().resolve( filename ).toFile();
+        this.path = getRelativePath().resolve( filename );
     }
 
-    public void setFile( File file )
+    public void setPath( Path path )
     {
-        this.filename = file.getName();
-        this.file = file;
+        this.filename = path.getFileName().toString();
+        this.path = path;
     }
 
     private Path getRelativePath()
@@ -44,9 +43,9 @@ class FakeFile
         return Optional.ofNullable( relativePath ).orElse( Path.of( "." ) );
     }
 
-    public File getFile()
+    public Path getPath()
     {
-        return file;
+        return path;
     }
 
     public String getFilename()

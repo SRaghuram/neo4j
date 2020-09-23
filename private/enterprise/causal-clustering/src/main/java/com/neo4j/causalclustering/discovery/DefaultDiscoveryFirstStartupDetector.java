@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 
+import static java.nio.file.Files.notExists;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 public class DefaultDiscoveryFirstStartupDetector implements DiscoveryFirstStartupDetector
@@ -22,6 +23,6 @@ public class DefaultDiscoveryFirstStartupDetector implements DiscoveryFirstStart
     public Boolean isFirstStartup()
     {
         // this how we figure out if core has ever formed a cluster before
-        return !clusterStateLayout.raftIdStateFile( SYSTEM_DATABASE_NAME ).toFile().exists();
+        return notExists( clusterStateLayout.raftIdStateFile( SYSTEM_DATABASE_NAME ) );
     }
 }

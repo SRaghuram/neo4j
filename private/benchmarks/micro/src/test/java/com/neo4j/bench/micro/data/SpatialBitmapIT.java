@@ -101,8 +101,8 @@ public class SpatialBitmapIT
             spatialBitmap.addPointToBitmap( pointX, pointY );
         }
         while ( !fun.wrapped() );
-        Path path = temporaryFolder.absolutePath().toPath().resolve( filename );
-        LOG.debug( "Writing image to: " + path.toFile().getAbsolutePath() );
+        Path path = temporaryFolder.absolutePath().resolve( filename );
+        LOG.debug( "Writing image to: " + path.toAbsolutePath() );
         spatialBitmap.writeTo( path );
     }
 }

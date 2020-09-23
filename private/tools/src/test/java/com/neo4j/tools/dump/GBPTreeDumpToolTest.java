@@ -36,7 +36,7 @@ class GBPTreeDumpToolTest
     void shouldPrintSomething() throws Exception
     {
         // Given a tree
-        Path file = dir.filePath( "index" );
+        Path file = dir.file( "index" );
         try ( GBPTree<?,?> tree = new GBPTreeBuilder<>( pageCache, file, new TokenScanLayout() ).build() )
         {
             tree.checkpoint( IOLimiter.UNLIMITED, NULL );

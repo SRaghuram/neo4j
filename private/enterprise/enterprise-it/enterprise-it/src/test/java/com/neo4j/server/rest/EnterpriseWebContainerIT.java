@@ -28,7 +28,7 @@ public abstract class EnterpriseWebContainerIT extends ExclusiveWebContainerTest
     {
         testWebContainer = serverOnRandomPorts()
                                         .persistent()
-                                        .usingDataDir( staticFolder.homeDir().getAbsolutePath() )
+                                        .usingDataDir( staticFolder.absolutePath().toString() )
                                         .build();
 
         functionalTestHelper = new FunctionalTestHelper( testWebContainer );

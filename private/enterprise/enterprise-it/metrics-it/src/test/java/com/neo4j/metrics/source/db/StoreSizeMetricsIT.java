@@ -65,7 +65,7 @@ class StoreSizeMetricsIT
     @BeforeEach
     void setUp()
     {
-        metricsFolder = testDirectory.directoryPath( "metrics" );
+        metricsFolder = testDirectory.directory( "metrics" );
     }
 
     @AfterEach

@@ -8,7 +8,6 @@ package com.neo4j.cc_robustness.consistency;
 import org.apache.commons.lang3.SystemUtils;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -82,16 +81,16 @@ public class RobustnessConsistencyCheck
             if ( storeIsLocked( e ) && !SystemUtils.IS_OS_WINDOWS )
             {
                 log.error( "FATAL: Unable to open database for verification, dumping lsof for debugging. " );
-                lsof( databaseLayout.databaseDirectory().toFile() );
-                lsof( databaseLayout.getTransactionLogsDirectory().toFile() );
+                lsof( databaseLayout.databaseDirectory() );
+                lsof( databaseLayout.getTransactionLogsDirectory() );
             }
             throw new IllegalStateException( "Unable to start database for verification!", e );
         }
     }
 
-    private void lsof( File dir )
+    private void lsof( Path dir )
     {
-        try ( InputStream in = new ProcessBuilder( "lsof", dir.getAbsolutePath() ).start().getInputStream() )
+        try ( InputStream in = new ProcessBuilder( "lsof", dir.toAbsolutePath().toString() ).start().getInputStream() )
         {
             BufferedReader br = new BufferedReader( new InputStreamReader( in ) );
             String line;
