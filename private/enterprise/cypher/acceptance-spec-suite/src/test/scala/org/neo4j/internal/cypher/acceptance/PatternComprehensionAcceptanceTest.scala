@@ -577,4 +577,64 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
       Map("n" -> Map("Thing_Has_Thing2" -> List("item2"), "name" -> "b"))))
 
   }
+
+  test("Nested pattern comprehensions should see the outer outer scope.") {
+    executeSingle(
+      """CREATE (a:A)-[:R]->(b:B), (a)-[:R]->(c:C)-[:R]->(d:D {foo: 1})<-[:R]-(b), (c)-[:R]->(d2:D {foo: 2})<-[:R]-(b2:B)
+        |""".stripMargin)
+
+    val result = executeWith(Configs.All,
+      """|MATCH (a:A)-->(b:B)
+         |RETURN [(a)-->(c:C) |
+         |  [(c)-->(d:D)<--(b) | d.foo] // if b is incorrectly seen as a new variable here, we will get also find `(d2)<--(b2)` and get wrong results.
+         |] AS dfoos
+         |""".stripMargin)
+
+    result.toList should equal(List(Map("dfoos" -> List(List(1)))))
+  }
+
+  test("Nested pattern expressions should see the outer outer scope.") {
+    executeSingle(
+      """CREATE (a:A)-[:R]->(b:B), (a)-[:R]->(c:C)-[:R]->(d:D {foo: 1})<-[:R]-(b), (c)-[:R]->(d2:D {foo: 2})<-[:R]-(b2:B)
+        |""".stripMargin)
+
+    val result = executeWith(Configs.All,
+      """|MATCH (a:A)-->(b:B)
+         |RETURN [(a)-->(c:C) |
+         |  [(c)-->(d:D) WHERE (d)<--(b) | d.foo] // if b is incorrectly seen as a new variable here, we will get also find `(d2)<--(b2)` and get wrong results.
+         |] AS dfoos
+         |""".stripMargin)
+
+    result.toList should equal(List(Map("dfoos" -> List(List(1)))))
+  }
+
+  test("Nested pattern comprehensions inside loop expression should see the outer outer scope.") {
+    executeSingle(
+      """CREATE (a:A)-[:R]->(b:B), (a)-[:R]->(c:C)-[:R]->(d:D {foo: 1})<-[:R]-(b), (c)-[:R]->(d2:D {foo: 2})<-[:R]-(b2:B)
+        |""".stripMargin)
+
+    val result = executeWith(Configs.All,
+      """|MATCH (a:A)-->(b:B)
+         |RETURN reduce(acc=[], s IN [1] | acc + [(a)-->(c:C) |
+         |  [(c)-->(d:D)<--(b) | d.foo] // if b is incorrectly seen as a new variable here, we will get also find `(d2)<--(b2)` and get wrong results.
+         |]) AS dfoos
+         |""".stripMargin)
+
+    result.toList should equal(List(Map("dfoos" -> List(List(1)))))
+  }
+
+  test("Nested pattern expressions inside loop expression should see the outer outer scope.") {
+    executeSingle(
+      """CREATE (a:A)-[:R]->(b:B), (a)-[:R]->(c:C)-[:R]->(d:D {foo: 1})<-[:R]-(b), (c)-[:R]->(d2:D {foo: 2})<-[:R]-(b2:B)
+        |""".stripMargin)
+
+    val result = executeWith(Configs.All,
+      """|MATCH (a:A)-->(b:B)
+         |RETURN reduce(acc=[], s IN [1] | acc + [(a)-->(c:C) |
+         |  [(c)-->(d:D) WHERE (d)<--(b) | d.foo] // if b is incorrectly seen as a new variable here, we will get also find `(d2)<--(b2)` and get wrong results.
+         |]) AS dfoos
+         |""".stripMargin)
+
+    result.toList should equal(List(Map("dfoos" -> List(List(1)))))
+  }
 }
