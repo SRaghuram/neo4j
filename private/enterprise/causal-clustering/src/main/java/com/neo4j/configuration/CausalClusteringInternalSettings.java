@@ -108,27 +108,27 @@ public class CausalClusteringInternalSettings implements SettingsDeclaration
     @Internal
     @Description( "Parallelism level of default dispatcher used by Akka based cluster topology discovery, including cluster, replicator, and discovery actors" )
     public static final Setting<Integer> middleware_akka_default_parallelism_level =
-            newBuilder( "causal_clustering.middleware.akka.default-parallelism", INT, 4 ).build();
+            newBuilder( "causal_clustering.middleware.akka.default_parallelism", INT, 4 ).build();
 
     @Internal
     @Description( "Parallelism level of dispatcher used for communication from Akka based cluster topology discovery " )
     public static final Setting<Integer> middleware_akka_sink_parallelism_level =
-            newBuilder( "causal_clustering.middleware.akka.sink-parallelism", INT, 2 ).build();
+            newBuilder( "causal_clustering.middleware.akka.sink_parallelism", INT, 2 ).build();
 
     @Internal
     @Description( "Timeout for Akka socket binding" )
     public static final Setting<Duration> akka_bind_timeout =
-            newBuilder( "causal_clustering.middleware.akka.bind-timeout", DURATION,  ofSeconds( 10 ) ).build();
+            newBuilder( "causal_clustering.middleware.akka.bind_timeout", DURATION,  ofSeconds( 10 ) ).build();
 
     @Internal
     @Description( "Timeout for Akka connection" )
     public static final Setting<Duration> akka_connection_timeout =
-            newBuilder( "causal_clustering.middleware.akka.connection-timeout", DURATION,  ofSeconds( 10 ) ).build();
+            newBuilder( "causal_clustering.middleware.akka.connection_timeout", DURATION,  ofSeconds( 10 ) ).build();
 
     @Internal
     @Description( "Timeout for Akka handshake" )
     public static final Setting<Duration> akka_handshake_timeout =
-            newBuilder( "causal_clustering.middleware.akka.handshake-timeout", DURATION,  ofSeconds( 30 ) ).build();
+            newBuilder( "causal_clustering.middleware.akka.handshake_timeout", DURATION,  ofSeconds( 30 ) ).build();
 
     @Internal
     @Description( "Time that seed nodes will spend trying to find an existing cluster before forming a new cluster" )

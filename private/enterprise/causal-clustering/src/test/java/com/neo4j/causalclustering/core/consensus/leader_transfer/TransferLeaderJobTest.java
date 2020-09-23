@@ -54,7 +54,8 @@ class TransferLeaderJobTest
     void shouldChooseToTransferIfIAmNotInPriority()
     {
         // Priority group exist and I am not in it
-        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).setting().name(), "prio" ) ).build();
+        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).leadership_priority_group.name(), "prio" ) )
+                           .build();
         var serverGroupsSupplier = listen( config );
         var myLeaderships = new ArrayList<NamedDatabaseId>();
         var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, new RandomStrategy(), () -> myLeaderships );
@@ -76,7 +77,8 @@ class TransferLeaderJobTest
     void shouldChooseToNotTransferLeaderIfIamNotLeader()
     {
         // Priority group exist and I am not in it
-        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).setting().name(), "prio" ) ).build();
+        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).leadership_priority_group.name(), "prio" ) )
+                           .build();
         var serverGroupsSupplier = listen( config );
 
         // I am not leader for any database
@@ -94,8 +96,8 @@ class TransferLeaderJobTest
     void shouldChooseToNotTransferLeaderIfIamLeaderAndInPrioritisedGroup()
     {
         // Priority group exist and I am in it
-        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).setting().name(), "prio" ) )
-                .set( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "prio" ) ).build();
+        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).leadership_priority_group.name(), "prio" ) )
+                           .set( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "prio" ) ).build();
         var serverGroupsSupplier = listen( config );
 
         var myLeaderships = new ArrayList<NamedDatabaseId>();
@@ -114,7 +116,8 @@ class TransferLeaderJobTest
     void shouldNotTransferIfPriorityGroupsIsEmptyAndStrategyIsNoOp()
     {
         // Priority group does not exist
-        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).setting().name(), "" ) ).build();
+        var config =
+                Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).leadership_priority_group.name(), "" ) ).build();
         var serverGroupsSupplier = listen( config );
 
         var myLeaderships = new ArrayList<NamedDatabaseId>();
@@ -133,7 +136,7 @@ class TransferLeaderJobTest
     void shouldFallBackToNormalLoadBalancingWithNoGroupsIfNoTarget()
     {
         // Priority group exist for one db and I am in it
-        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).setting().name(), "prio" ) )
+        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).leadership_priority_group.name(), "prio" ) )
                 .set( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "prio" ) ).build();
         var serverGroupsSupplier = listen( config );
 
@@ -199,7 +202,8 @@ class TransferLeaderJobTest
         var databaseIds = Set.of( databaseOne, DatabaseIdFactory.from( "two", randomUUID() ) );
         // Priority groups exist ...
         var builder = Config.newBuilder();
-        databaseIds.forEach( dbid -> builder.setRaw( Map.of( new LeadershipPriorityGroupSetting( dbid.name() ).setting().name(), dbid.name() ) ).build() );
+        databaseIds.forEach(
+                dbid -> builder.setRaw( Map.of( new LeadershipPriorityGroupSetting( dbid.name() ).leadership_priority_group.name(), dbid.name() ) ).build() );
         // ...and I am in one of them
         builder.set( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "two" ) );
         var config = builder.build();
@@ -222,7 +226,7 @@ class TransferLeaderJobTest
     @Test
     void shouldAdaptToDynamicChangesInMyServerGroups()
     {
-        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).setting().name(), "prio" ) )
+        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).leadership_priority_group.name(), "prio" ) )
                 .set( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "prio" ) )
                 .build();
         var serverGroupsSupplier = listen( config );

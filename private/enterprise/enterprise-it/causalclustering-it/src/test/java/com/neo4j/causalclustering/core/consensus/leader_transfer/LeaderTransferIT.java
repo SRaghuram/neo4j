@@ -24,13 +24,13 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStarted;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.createDatabase;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -52,10 +52,10 @@ class LeaderTransferIT
     {
         var cluster = clusterFactory.createCluster(
                 clusterConfig()
-                        .withSharedCoreParam( new LeadershipPriorityGroupSetting( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ).setting(), "prio" )
-                        .withSharedCoreParam( new LeadershipPriorityGroupSetting( SYSTEM_DATABASE_NAME ).setting(), "prio" )
-                        .withSharedCoreParam( new LeadershipPriorityGroupSetting( databaseFoo ).setting(), priFoo )
-                        .withSharedCoreParam( new LeadershipPriorityGroupSetting( databaseBar ).setting(), prioBar )
+                        .withSharedCoreParam( new LeadershipPriorityGroupSetting( DEFAULT_DATABASE_NAME ).leadership_priority_group, "prio" )
+                        .withSharedCoreParam( new LeadershipPriorityGroupSetting( SYSTEM_DATABASE_NAME ).leadership_priority_group, "prio" )
+                        .withSharedCoreParam( new LeadershipPriorityGroupSetting( databaseFoo ).leadership_priority_group, priFoo )
+                        .withSharedCoreParam( new LeadershipPriorityGroupSetting( databaseBar ).leadership_priority_group, prioBar )
                         .withNumberOfCoreMembers( 3 )
                         .withInstanceCoreParam( CausalClusteringSettings.server_groups, value ->
                         {
@@ -87,7 +87,7 @@ class LeaderTransferIT
 
         additionalCore.start();
 
-        assertLeaderIsOnCorrectMember( cluster, GraphDatabaseSettings.DEFAULT_DATABASE_NAME, additionalCore );
+        assertLeaderIsOnCorrectMember( cluster, DEFAULT_DATABASE_NAME, additionalCore );
         assertLeaderIsOnCorrectMember( cluster, SYSTEM_DATABASE_NAME, additionalCore );
     }
 
@@ -142,7 +142,7 @@ class LeaderTransferIT
         var config = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 )
-                .withSharedCoreParam( new LeadershipPriorityGroupSetting( SYSTEM_DATABASE_NAME ).setting(), "prio" )
+                .withSharedCoreParam( new LeadershipPriorityGroupSetting( SYSTEM_DATABASE_NAME ).leadership_priority_group, "prio" )
                 .withSharedCoreParam( CausalClusteringInternalSettings.leader_transfer_interval, "5s" )
                 .withSharedCoreParam( CausalClusteringSettings.leader_balancing, "equal_balancing" );
         var cluster = clusterFactory.createCluster( config );

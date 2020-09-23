@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core;
 
+import com.neo4j.configuration.ServerGroupName;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
@@ -25,10 +26,16 @@ import org.neo4j.internal.helpers.collection.MapUtil;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Level;
 
+import static com.neo4j.configuration.CausalClusteringInternalSettings.akka_bind_timeout;
+import static com.neo4j.configuration.CausalClusteringInternalSettings.akka_connection_timeout;
+import static com.neo4j.configuration.CausalClusteringInternalSettings.akka_handshake_timeout;
+import static com.neo4j.configuration.CausalClusteringInternalSettings.middleware_akka_default_parallelism_level;
+import static com.neo4j.configuration.CausalClusteringInternalSettings.middleware_akka_sink_parallelism_level;
+import static com.neo4j.configuration.CausalClusteringSettings.connect_randomly_to_server_group_strategy;
 import static com.neo4j.configuration.CausalClusteringSettings.discovery_advertised_address;
 import static com.neo4j.configuration.CausalClusteringSettings.discovery_listen_address;
-import static com.neo4j.configuration.CausalClusteringSettings.leader_failure_detection_window;
 import static com.neo4j.configuration.CausalClusteringSettings.election_failure_detection_window;
+import static com.neo4j.configuration.CausalClusteringSettings.leader_failure_detection_window;
 import static com.neo4j.configuration.CausalClusteringSettings.middleware_logging_level;
 import static com.neo4j.configuration.CausalClusteringSettings.raft_advertised_address;
 import static com.neo4j.configuration.CausalClusteringSettings.raft_listen_address;
@@ -150,9 +157,29 @@ class CausalClusteringSettingsMigratorTest
 
         assertEquals( value, config.get( leader_failure_detection_window ) );
 
-        assertThat(logProvider).forClass( Config.class ).forLevel( WARN )
+        assertThat( logProvider ).forClass( Config.class ).forLevel( WARN )
                                .containsMessageWithArguments( "Deprecated setting '%s' is ignored because replacement '%s' and '%s' is set",
                                                               setting, leader_failure_detection_window.name(), election_failure_detection_window.name() );
+    }
+
+    @Test
+    void renameSettingsWithHyphens()
+    {
+        Config config = Config.newBuilder().setRaw( Map.of(
+                "causal_clustering.connect-randomly-to-server-group", "a",
+                "causal_clustering.middleware.akka.default-parallelism", "5",
+                "causal_clustering.middleware.akka.sink-parallelism", "5",
+                "causal_clustering.middleware.akka.bind-timeout", "1s",
+                "causal_clustering.middleware.akka.connection-timeout", "1s",
+                "causal_clustering.middleware.akka.handshake-timeout", "1s"
+                ) ).build();
+
+        assertThat( config.get( connect_randomly_to_server_group_strategy ) ).containsExactly( new ServerGroupName( "a" ) );
+        assertThat( config.get( middleware_akka_default_parallelism_level ) ).isEqualTo( 5 );
+        assertThat( config.get( middleware_akka_sink_parallelism_level ) ).isEqualTo( 5 );
+        assertThat( config.get( akka_bind_timeout ) ).isEqualTo( Duration.ofSeconds( 1 ) );
+        assertThat( config.get( akka_connection_timeout ) ).isEqualTo( Duration.ofSeconds( 1 ) );
+        assertThat( config.get( akka_handshake_timeout ) ).isEqualTo( Duration.ofSeconds( 1 ) );
     }
 
     private static void testAddrMigration( Setting<SocketAddress> listenAddr, Setting<SocketAddress> advertisedAddr )

@@ -12,15 +12,20 @@ import java.util.Objects;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.SettingMigrator;
-import org.neo4j.configuration.SettingMigrators;
 import org.neo4j.configuration.helpers.DurationRange;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.Log;
 
+import static com.neo4j.configuration.CausalClusteringInternalSettings.akka_bind_timeout;
+import static com.neo4j.configuration.CausalClusteringInternalSettings.akka_connection_timeout;
+import static com.neo4j.configuration.CausalClusteringInternalSettings.akka_handshake_timeout;
+import static com.neo4j.configuration.CausalClusteringInternalSettings.middleware_akka_default_parallelism_level;
+import static com.neo4j.configuration.CausalClusteringInternalSettings.middleware_akka_sink_parallelism_level;
+import static com.neo4j.configuration.CausalClusteringSettings.connect_randomly_to_server_group_strategy;
 import static com.neo4j.configuration.CausalClusteringSettings.discovery_advertised_address;
 import static com.neo4j.configuration.CausalClusteringSettings.discovery_listen_address;
-import static com.neo4j.configuration.CausalClusteringSettings.leader_failure_detection_window;
 import static com.neo4j.configuration.CausalClusteringSettings.election_failure_detection_window;
+import static com.neo4j.configuration.CausalClusteringSettings.leader_failure_detection_window;
 import static com.neo4j.configuration.CausalClusteringSettings.middleware_logging_level;
 import static com.neo4j.configuration.CausalClusteringSettings.raft_advertised_address;
 import static com.neo4j.configuration.CausalClusteringSettings.raft_listen_address;
@@ -30,6 +35,7 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.neo4j.configuration.GraphDatabaseSettings.routing_ttl;
 import static org.neo4j.configuration.SettingMigrators.migrateAdvertisedAddressInheritanceChange;
+import static org.neo4j.configuration.SettingMigrators.migrateSettingNameChange;
 import static org.neo4j.configuration.SettingValueParsers.DURATION;
 import static org.neo4j.configuration.SettingValueParsers.DURATION_RANGE;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
@@ -52,11 +58,13 @@ public class CausalClusteringSettingsMigrator implements SettingMigrator
         migrateMiddlewareLoggingLevelValue( values, log );
         migrateAdvertisedAddresses( values, defaultValues, log );
         migrateElectionTimeout( values, defaultValues, log );
+        migrateConnectRandomly( values, log );
+        migrateMiddlewareAkka( values, log );
     }
 
     private void migrateRoutingTtl( Map<String,String> values, Log log )
     {
-        SettingMigrators.migrateSettingNameChange( values, log, "causal_clustering.cluster_routing_ttl", routing_ttl );
+        migrateSettingNameChange( values, log, "causal_clustering.cluster_routing_ttl", routing_ttl );
     }
 
     private void migrateDisableMiddlewareLogging( Map<String,String> values, Log log )
@@ -179,5 +187,19 @@ public class CausalClusteringSettingsMigrator implements SettingMigrator
                 values.put( failureResolutionWindowSetting,failureDetectionWindowValue );
             }
         }
+    }
+
+    private void migrateConnectRandomly( Map<String,String> values, Log log )
+    {
+        migrateSettingNameChange( values, log, "causal_clustering.connect-randomly-to-server-group", connect_randomly_to_server_group_strategy );
+    }
+
+    private void migrateMiddlewareAkka( Map<String,String> values, Log log )
+    {
+        migrateSettingNameChange( values, log, "causal_clustering.middleware.akka.default-parallelism", middleware_akka_default_parallelism_level );
+        migrateSettingNameChange( values, log, "causal_clustering.middleware.akka.sink-parallelism", middleware_akka_sink_parallelism_level );
+        migrateSettingNameChange( values, log, "causal_clustering.middleware.akka.bind-timeout", akka_bind_timeout );
+        migrateSettingNameChange( values, log, "causal_clustering.middleware.akka.connection-timeout", akka_connection_timeout );
+        migrateSettingNameChange( values, log, "causal_clustering.middleware.akka.handshake-timeout", akka_handshake_timeout );
     }
 }

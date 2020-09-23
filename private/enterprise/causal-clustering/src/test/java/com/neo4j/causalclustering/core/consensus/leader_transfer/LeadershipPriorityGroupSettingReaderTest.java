@@ -16,7 +16,6 @@ import static com.neo4j.causalclustering.core.consensus.leader_transfer.Leadersh
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.fail;
 
 class LeadershipPriorityGroupSettingReaderTest
 {
@@ -29,10 +28,10 @@ class LeadershipPriorityGroupSettingReaderTest
         var invalid = new LeadershipPriorityGroupSetting( "" );
 
         var setting = Map.of(
-                one.setting().name(), "1",
-                two.setting().name(), "2",
-                three.setting().name(), ServerGroupName.EMPTY.getRaw(),
-                invalid.setting().name(), "4" );
+                one.leadership_priority_group.name(), "1",
+                two.leadership_priority_group.name(), "2",
+                three.leadership_priority_group.name(), ServerGroupName.EMPTY.getRaw(),
+                invalid.leadership_priority_group.name(), "4" );
         var config = Config.newBuilder()
                 .setRaw( setting ).build();
 
@@ -55,9 +54,9 @@ class LeadershipPriorityGroupSettingReaderTest
         var groupB = "B";
 
         var setting = Map.of(
-                fooDbSetting.setting().name(), groupA,
-                barDbSetting.setting().name(), "," + groupB,
-                bazDbSetting.setting().name(), groupA + "," + groupB );
+                fooDbSetting.leadership_priority_group.name(), groupA,
+                barDbSetting.leadership_priority_group.name(), "," + groupB,
+                bazDbSetting.leadership_priority_group.name(), groupA + "," + groupB );
         // when/then
         assertThrows( IllegalArgumentException.class, () -> Config.newBuilder().setRaw( setting ).build() );
     }

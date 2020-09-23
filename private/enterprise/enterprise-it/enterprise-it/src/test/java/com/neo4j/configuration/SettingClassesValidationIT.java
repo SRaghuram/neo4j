@@ -28,10 +28,16 @@ class SettingClassesValidationIT
     private static final Pattern VALID_SETTINGS_NAME = Pattern.compile( "^[a-z0-9_]+$" );
 
     @Test
-    void validateInternalSettingsAndNaming()
+    void validateInternalSettingsAndNaming() throws IllegalAccessException
     {
-        Services.loadAll( SettingsDeclaration.class ).stream().map( Object::getClass ).forEach( SettingClassesValidationIT::validateField );
-        Services.loadAll( GroupSetting.class ).stream().map( Object::getClass ).forEach( SettingClassesValidationIT::validateField );
+        for ( SettingsDeclaration settingsDeclaration : Services.loadAll( SettingsDeclaration.class ) )
+        {
+            validateField( settingsDeclaration );
+        }
+        for ( GroupSetting groupSetting : Services.loadAll( GroupSetting.class ) )
+        {
+            validateField( groupSetting );
+        }
     }
 
     @Test
@@ -40,18 +46,27 @@ class SettingClassesValidationIT
         Services.loadAll( SettingsDeclaration.class ).stream().map( Object::getClass ).forEach( SettingClassesValidationIT::validateParsingOfField );
     }
 
-    private static void validateField( Class<?> settingsDeclarationClass )
+    private static void validateField( Object settingsDeclaration ) throws IllegalAccessException
     {
+        Class<?> settingsDeclarationClass = settingsDeclaration.getClass();
         boolean publicApi = isPublicApi( settingsDeclarationClass );
 
         for ( Field declaredField : settingsDeclarationClass.getDeclaredFields() )
         {
             if ( declaredField.getType().isAssignableFrom( Setting.class ) )
             {
-                // Name should not have camel case
+                Setting<?> setting = (Setting<?>) declaredField.get( settingsDeclaration );
+
+                // Java API name should not be camel case
                 String settingName = settingsDeclarationClass.getName() + "." + declaredField.getName();
                 assertTrue( VALID_SETTINGS_NAME.matcher( declaredField.getName() ).matches(),
                         "Setting name " + settingName + " does not follow naming convention" );
+
+                // Config parameter should not contain hyphen
+                if ( setting != null )
+                {
+                    assertFalse( setting.name().contains( "-" ), "The config parameter " + setting.name() + " contains a '-' which is not allowed" );
+                }
 
                 if ( publicApi )
                 {

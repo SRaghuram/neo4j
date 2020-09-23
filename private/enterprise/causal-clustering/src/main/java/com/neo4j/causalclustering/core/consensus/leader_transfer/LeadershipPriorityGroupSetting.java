@@ -28,7 +28,7 @@ public class LeadershipPriorityGroupSetting extends GroupSetting
 
     @Description( "The name of a server_group whose members should be prioritized as leaders for the given database. This does not guarantee that members " +
                   "of this group will be leader at all times, but the cluster will attempt to transfer leadership to such a member when possible." )
-    private final Setting<ServerGroupName> leadership_priority_group = getBuilder( SERVER_GROUP_NAME, ServerGroupName.EMPTY ).build();
+    public final Setting<ServerGroupName> leadership_priority_group = getBuilder( SERVER_GROUP_NAME, ServerGroupName.EMPTY ).build();
 
     public LeadershipPriorityGroupSetting( String databaseName )
     {
@@ -47,11 +47,6 @@ public class LeadershipPriorityGroupSetting extends GroupSetting
         return PREFIX;
     }
 
-    Setting<ServerGroupName> setting()
-    {
-        return leadership_priority_group;
-    }
-
     public static class LeadershipPriorityGroupSettingReader
     {
         private LeadershipPriorityGroupSettingReader()
@@ -68,7 +63,7 @@ public class LeadershipPriorityGroupSetting extends GroupSetting
             return config.getGroups( LeadershipPriorityGroupSetting.class )
                     .entrySet()
                     .stream()
-                    .map( entry -> Pair.of( entry.getKey(), config.get( entry.getValue().setting() ) ) )
+                    .map( entry -> Pair.of( entry.getKey(), config.get( entry.getValue().leadership_priority_group ) ) )
                     .collect( toMap( Pair::first, Pair::other ) );
         }
     }
