@@ -637,4 +637,31 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
     result.toList should equal(List(Map("dfoos" -> List(List(1)))))
   }
-}
+
+  test("should handle pattern comprehension within ALL list expression referencing outer scope") {
+
+    // GIVEN
+    // Make AllNodesScan expensive
+    (0 to 1000).foreach(_ => createLabeledNode("Dummy"))
+    execute("CREATE (a:P {name: 'badger'})-[:A]->(:F), (a)-[:B]->(:D {name: 'foo'})")
+    execute("CREATE (a:P {name: 'snake'})-[:A]->(:F), (a)-[:B]->(:D {name: 'bar'})")
+
+    // WHEN
+    val query =
+      """
+        |MATCH (f:F)<-[:A]-(p)
+        |WHERE
+        |  ALL(condition IN [
+        |    (p)-[:B]->(d:D)
+        |    | d.name CONTAINS 'foo'
+        |  ] WHERE condition)
+        |RETURN p { .name }
+        |""".stripMargin
+    val r = executeWith(Configs.All, query)
+
+    // THEN
+    withClue(r.executionPlanString()) {
+      r.toList shouldBe List(Map("p" -> Map("name" -> "badger")))
+    }
+  }
+ }
