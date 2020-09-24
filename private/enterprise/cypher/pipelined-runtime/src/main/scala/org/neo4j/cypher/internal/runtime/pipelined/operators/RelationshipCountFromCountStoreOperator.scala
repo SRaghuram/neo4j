@@ -262,7 +262,7 @@ class RelationshipCountFromCountStoreOperatorTemplate(override val inner: Operat
       codeGen.setRefAt(offset, invokeStatic(method[Values, LongValue, Long]("longValue"), condition(countOps))),
       dbHitsRepresentation,
       inner.genOperateWithExpressions,
-      conditionallyProfileRow(innerCantContinue, id),
+      conditionallyProfileRow(innerCannotContinue, id),
       setField(canContinue, constant(false))
     )
   }

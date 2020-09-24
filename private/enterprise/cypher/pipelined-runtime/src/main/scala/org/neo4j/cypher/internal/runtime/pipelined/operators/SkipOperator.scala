@@ -96,7 +96,7 @@ class SerialTopLevelSkipOperatorTaskTemplate(inner: OperatorTaskTemplate,
     block(
       ifElse(equal(load(countLeftVar), constant(0)))(block(
         inner.genOperateWithExpressions,
-        conditionallyProfileRow(innerCantContinue, id)
+        conditionallyProfileRow(innerCannotContinue, id)
       ))(
         doIfInnerCantContinue(assign(countLeftVar, subtract(load(countLeftVar), constant(1))))
       )

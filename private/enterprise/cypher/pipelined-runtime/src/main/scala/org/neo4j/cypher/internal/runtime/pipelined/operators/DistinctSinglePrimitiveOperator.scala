@@ -240,7 +240,7 @@ abstract class BaseDistinctSinglePrimitiveOperatorTaskTemplate(val inner: Operat
         block(
           computeProjection,
           inner.genOperateWithExpressions,
-          conditionallyProfileRow(innerCantContinue, id)
+          conditionallyProfileRow(innerCannotContinue, id)
         )
       })
   }

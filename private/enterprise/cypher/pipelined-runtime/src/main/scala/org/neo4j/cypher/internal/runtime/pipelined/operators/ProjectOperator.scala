@@ -53,7 +53,7 @@ class ProjectOperatorTemplate(override val inner: OperatorTaskTemplate,
     block(
       projections.ir,
       inner.genOperateWithExpressions,
-      conditionallyProfileRow(innerCantContinue, id),
+      conditionallyProfileRow(innerCannotContinue, id),
     )
   }
 

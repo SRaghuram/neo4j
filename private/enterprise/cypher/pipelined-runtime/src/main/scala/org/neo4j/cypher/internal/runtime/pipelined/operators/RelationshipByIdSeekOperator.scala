@@ -390,7 +390,7 @@ class SingleDirectedRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTemplate
         codeGen.setLongAt(fromOffset, invoke(loadField(cursor), method[RelationshipScanCursor, Long]("sourceNodeReference"))),
         codeGen.setLongAt(toOffset, invoke(loadField(cursor), method[RelationshipScanCursor, Long]("targetNodeReference"))),
         inner.genOperateWithExpressions,
-        conditionallyProfileRow(innerCantContinue, id),
+        conditionallyProfileRow(innerCannotContinue, id),
         innermost.setUnlessPastLimit(canContinue, constant(false)))
     )
   }
@@ -564,7 +564,7 @@ class ManyDirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
             codeGen.setLongAt(fromOffset, invoke(loadField(cursor), method[RelationshipScanCursor, Long]("sourceNodeReference"))),
             codeGen.setLongAt(toOffset, invoke(loadField(cursor), method[RelationshipScanCursor, Long]("targetNodeReference"))),
             inner.genOperateWithExpressions,
-            conditionallyProfileRow(innerCantContinue, id)
+            conditionallyProfileRow(innerCannotContinue, id)
           )),
         doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, cursorNext[IteratorCursor](loadField(idCursor)))))
     )

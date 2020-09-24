@@ -158,7 +158,7 @@ abstract class BaseDistinctPrimitiveOperatorTaskTemplate(val inner: OperatorTask
           declareAndAssign(typeRefOf[AnyValue], keyVar, nullCheckIfRequired(groupingExpression.computeKey)),
           nullCheckIfRequired(groupingExpression.projectKey),
           inner.genOperateWithExpressions,
-          conditionallyProfileRow(innerCantContinue, id)
+          conditionallyProfileRow(innerCannotContinue, id)
         )
       })
   }

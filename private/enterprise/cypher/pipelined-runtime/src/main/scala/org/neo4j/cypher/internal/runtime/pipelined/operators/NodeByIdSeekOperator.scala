@@ -188,7 +188,7 @@ class SingleNodeByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, load(idVariable)),
         inner.genOperateWithExpressions,
-        conditionallyProfileRow(innerCantContinue, id),
+        conditionallyProfileRow(innerCannotContinue, id),
         innermost.setUnlessPastLimit(canContinue, constant(false)),
         endInnerLoop),
     )
@@ -266,7 +266,7 @@ class ManyNodeByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
             codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
             codeGen.setLongAt(offset, load(idVariable)),
             inner.genOperateWithExpressions,
-            conditionallyProfileRow(innerCantContinue, id)
+            conditionallyProfileRow(innerCannotContinue, id)
           )),
         doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, cursorNext[IteratorCursor](loadField(idCursor)))),
         endInnerLoop)

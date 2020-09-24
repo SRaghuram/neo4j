@@ -73,7 +73,7 @@ class FilterOperatorTemplate(val inner: OperatorTaskTemplate,
     condition(equal(nullCheckIfRequired(predicate), trueValue)) (
       block(
         inner.genOperateWithExpressions,
-        conditionallyProfileRow(innerCantContinue, id),
+        conditionallyProfileRow(innerCannotContinue, id),
       )
     )
   }

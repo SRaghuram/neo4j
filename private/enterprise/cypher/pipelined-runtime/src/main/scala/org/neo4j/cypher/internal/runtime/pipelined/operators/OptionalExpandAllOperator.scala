@@ -276,7 +276,7 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     def innerBlock: IntermediateRepresentation = block(
       setField(hasWritten, constant(true)),
       inner.genOperateWithExpressions,
-      conditionallyProfileRow(innerCantContinue, id)
+      conditionallyProfileRow(innerCannotContinue, id)
     )
 
     val shouldWriteRow = codeGen.namer.nextVariableName()

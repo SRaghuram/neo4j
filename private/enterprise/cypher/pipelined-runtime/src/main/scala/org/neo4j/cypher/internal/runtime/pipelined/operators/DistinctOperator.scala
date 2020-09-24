@@ -244,7 +244,7 @@ abstract class BaseDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate,
         block(
           nullCheckIfRequired(groupingExpression.projectKey),
           inner.genOperateWithExpressions,
-          conditionallyProfileRow(innerCantContinue, id)
+          conditionallyProfileRow(innerCannotContinue, id)
         )
       })
   }

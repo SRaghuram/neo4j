@@ -237,7 +237,7 @@ class NodeCountFromCountStoreOperatorTemplate(override val inner: OperatorTaskTe
       codeGen.setRefAt(offset, invokeStatic(method[Values, LongValue, Long]("longValue"), load(countVar))),
       inner.genOperateWithExpressions,
       setField(canContinue, constant(false)),
-      conditionallyProfileRow(innerCantContinue, id)
+      conditionallyProfileRow(innerCannotContinue, id)
     )
   }
 
