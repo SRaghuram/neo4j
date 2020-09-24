@@ -11,8 +11,8 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
-import javax.inject.Inject;
 
+import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -24,7 +24,7 @@ public class TarGzArchiveTest
 {
 
     @Inject
-    public TestDirectory temporaryFolder;
+    private TestDirectory temporaryFolder;
 
     @Test
     public void createEmptyArchive() throws Exception
