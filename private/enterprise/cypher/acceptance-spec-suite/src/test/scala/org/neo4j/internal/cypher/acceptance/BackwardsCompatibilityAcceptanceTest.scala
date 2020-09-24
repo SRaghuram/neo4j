@@ -432,4 +432,28 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     }
     exception.getMessage should include("EXECUTE ADMIN PROCEDURES is not supported in this Cypher version.")
   }
+
+  test("EXECUTE FUNCTION should not work with CYPHER 4.1") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.1 GRANT EXECUTE FUNCTION * ON DBMS TO custom")
+    }
+    exception.getMessage should include("EXECUTE FUNCTION is not supported in this Cypher version.")
+  }
+
+  test("EXECUTE BOOSTED FUNCTION should not work with CYPHER 4.1") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.1 DENY EXECUTE BOOSTED FUNCTION * ON DBMS TO custom")
+    }
+    exception.getMessage should include("EXECUTE BOOSTED FUNCTION is not supported in this Cypher version.")
+  }
 }

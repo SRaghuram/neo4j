@@ -48,6 +48,8 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val DEFAULT: String = "DEFAULT"
   val FAIL_EXECUTE_ADMIN_PROC: String = "Executing admin procedure is not allowed"
   val FAIL_EXECUTE_PROC: String = "Executing procedure is not allowed"
+  val FAIL_EXECUTE_FUNC: String = "Executing user defined function is not allowed"
+  val FAIL_EXECUTE_AGG_FUNC: String = "Executing aggregating user defined function is not allowed"
 
   private val helpfulCheckUserPrivilegeErrorText: String = " Try executing SHOW USER PRIVILEGES to determine the missing or denied privileges. " +
     "In case of missing privileges, they need to be granted (See GRANT). In case of denied privileges, they need to be revoked (See REVOKE) and granted."
@@ -256,6 +258,8 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
 
     def procedure(procedure: String): PrivilegeMapBuilder = PrivilegeMapBuilder(map + ("segment" -> s"PROCEDURE($procedure)"))
 
+    def function(function: String): PrivilegeMapBuilder = PrivilegeMapBuilder(map + ("segment" -> s"FUNCTION($function)"))
+
     /**
      * Currently database() and graph() are equivalent.
      * But when/if we implement multiple graphs per database, the distinction will become important.
@@ -288,6 +292,9 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val executeProcedure: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "execute", "segment" -> "PROCEDURE(*)")
   val executeBoosted: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "execute_boosted", "segment" -> "PROCEDURE(*)")
   val executeBoostedFromConfig: Map[String, String] = adminAction(PrivilegeResolver.EXECUTE_BOOSTED_FROM_CONFIG)
+
+  val executeFunction: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "execute", "segment" -> "FUNCTION(*)")
+  val executeBoostedFunction: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "execute_boosted", "segment" -> "FUNCTION(*)")
 
   val startDatabase: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "start_database")
   val stopDatabase: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "stop_database")
@@ -356,10 +363,17 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   )
   val dbmsCommands: Iterable[String] = dbmsPrivileges.keys
 
-  val executePrivileges: Map[String, Map[String, String]] = Map(
+  val executeProcedurePrivileges: Map[String, Map[String, String]] = Map(
     "EXECUTE PROCEDURE" -> executeProcedure,
     "EXECUTE BOOSTED PROCEDURE" -> executeBoosted
   )
+
+  val executeFunctionPrivileges: Map[String, Map[String, String]] = Map(
+    "EXECUTE FUNCTION" -> executeFunction,
+    "EXECUTE BOOSTED FUNCTION" -> executeBoostedFunction
+  )
+
+  val executePrivileges: Map[String, Map[String, String]] = executeProcedurePrivileges ++ executeFunctionPrivileges
 
   // Collection of all database privileges
 

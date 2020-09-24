@@ -83,7 +83,7 @@ public abstract class ProcedureCallWithSecurityTestBase<G extends KernelAPIWrite
             tx.execute( "CREATE ROLE custom" );
             tx.execute( "GRANT ROLE custom TO testUser" );
             tx.execute( "GRANT EXECUTE PROCEDURE test.proc1 ON DBMS TO custom" );
-            tx.execute( "GRANT EXECUTE PROCEDURE example.* ON DBMS TO custom" );
+            tx.execute( "GRANT EXECUTE BOOSTED PROCEDURE example.* ON DBMS TO custom" );
             tx.execute( "DENY EXECUTE PROCEDURE example.proc1 ON DBMS TO custom" );
             tx.commit();
         }

@@ -79,9 +79,10 @@ class StandardAccessMode implements AccessMode
     private final PropertyPrivileges writeAllow;
     private final PropertyPrivileges writeDisallow;
 
-    private ProcedurePrivileges procedurePrivileges;
-    private AdminAccessMode adminAccessMode;
-    private AdminActionOnResource.DatabaseScope database;
+    private final ProcedurePrivileges procedurePrivileges;
+    private final FunctionPrivileges functionPrivileges;
+    private final AdminAccessMode adminAccessMode;
+    private final AdminActionOnResource.DatabaseScope database;
 
     StandardAccessMode(
             boolean allowsAccess,
@@ -136,6 +137,7 @@ class StandardAccessMode implements AccessMode
             PropertyPrivileges writeDisallow,
 
             ProcedurePrivileges procedurePrivileges,
+            FunctionPrivileges functionPrivileges,
 
             AdminAccessMode adminAccessMode,
             String database
@@ -192,6 +194,7 @@ class StandardAccessMode implements AccessMode
         this.writeDisallow = writeDisallow;
 
         this.procedurePrivileges = procedurePrivileges;
+        this.functionPrivileges = functionPrivileges;
 
         this.adminAccessMode = adminAccessMode;
         this.database = new AdminActionOnResource.DatabaseScope( database );
@@ -522,6 +525,30 @@ class StandardAccessMode implements AccessMode
     public boolean shouldBoostProcedure( int procedureId )
     {
         return procedurePrivileges.shouldBoostProcedure( procedureId ) ;
+    }
+
+    @Override
+    public boolean allowsExecuteFunction( int id )
+    {
+        return functionPrivileges.allowExecuteFunction( id );
+    }
+
+    @Override
+    public boolean shouldBoostFunction( int id )
+    {
+        return functionPrivileges.shouldBoostFunction( id );
+    }
+
+    @Override
+    public boolean allowsExecuteAggregatingFunction( int id )
+    {
+        return functionPrivileges.allowExecuteAggregatingFunction( id );
+    }
+
+    @Override
+    public boolean shouldBoostAggregatingFunction( int id )
+    {
+        return functionPrivileges.shouldBoostAggregatingFunction( id );
     }
 
     @Override

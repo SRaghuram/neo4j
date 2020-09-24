@@ -95,7 +95,7 @@ public abstract class EnterpriseFabricServicesBootstrap extends FabricServicesBo
         var fabricConfig = resolve( FabricEnterpriseConfig.class );
         if ( fabricConfig.getDatabase() != null )
         {
-            globalProcedures.register( new GraphIdsFunction( fabricConfig ) );
+            globalProcedures.registerBuiltInFunctions( new GraphIdsFunction( fabricConfig ) );
         }
     }
 

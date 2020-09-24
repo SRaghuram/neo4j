@@ -19,6 +19,7 @@ import java.util.function.Function;
 
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
+import org.neo4j.internal.kernel.api.security.FunctionSegment;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.ProcedureSegment;
 import org.neo4j.internal.kernel.api.security.Segment;
@@ -109,6 +110,13 @@ public class PrivilegeBuilder
             break;
         case "ProcedureQualifierAll":
             this.segment = ProcedureSegment.ALL;
+            break;
+        case "FunctionQualifier":
+            String functionQualifier = qualifierNode.getProperty( "label" ).toString();
+            this.segment = new FunctionSegment( functionQualifier );
+            break;
+        case "FunctionQualifierAll":
+            this.segment = FunctionSegment.ALL;
             break;
         default:
             throw new IllegalArgumentException( "Unknown privilege qualifier type: " + qualifierType.name() );

@@ -25,6 +25,7 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CONSTRAINT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DATABASE_ACTIONS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE_ADMIN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE_BOOSTED;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.GRAPH_ACTIONS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.INDEX;
@@ -38,6 +39,7 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRAVERSE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.WRITE;
 
+@SuppressWarnings( "StatementWithEmptyBody" )
 class ResourcePrivilegeTest
 {
     @Test
@@ -107,7 +109,7 @@ class ResourcePrivilegeTest
                 {
                     assertOk( privilegeType, action, new DatabaseResource() );
                 }
-                else if ( EXECUTE.satisfies( action ) || EXECUTE_BOOSTED.satisfies( action ) )
+                else if ( EXECUTE.satisfies( action ) || EXECUTE_BOOSTED.satisfies( action ) || EXECUTE_ADMIN.satisfies( action ) )
                 {
                     assertOk( privilegeType, action, new DatabaseResource() );
                 }
@@ -221,7 +223,7 @@ class ResourcePrivilegeTest
                     assertFail( privilegeType, action, new LabelResource( "foo" ) );
                     assertFail( privilegeType, action, new AllLabelsResource() );
                 }
-                else if ( EXECUTE.satisfies( action ) || EXECUTE_BOOSTED.satisfies( action ) )
+                else if ( EXECUTE.satisfies( action ) || EXECUTE_BOOSTED.satisfies( action ) || EXECUTE_ADMIN.satisfies( action ) )
                 {
                     assertFail( privilegeType, action, new AllPropertiesResource() );
                     assertFail( privilegeType, action, new GraphResource() );
@@ -259,5 +261,5 @@ class ResourcePrivilegeTest
         new ResourcePrivilege( privilegeType, action, resource, TEST_SEGMENT, SpecialDatabase.ALL );
     }
 
-    private static Segment TEST_SEGMENT = segment -> false;
+    private static final Segment TEST_SEGMENT = segment -> false;
 }

@@ -39,7 +39,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     // GIVEN
     execute("CREATE ROLE custom")
 
-    executePrivileges.foreach {
+    executeProcedurePrivileges.foreach {
       case (command, action) =>
         withClue(s"$command: \n") {
           // WHEN
@@ -84,7 +84,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     // GIVEN
     execute("CREATE ROLE custom")
 
-    executePrivileges.foreach {
+    executeProcedurePrivileges.foreach {
       case (command, action) =>
         withClue(s"$command: \n") {
           // WHEN

@@ -39,6 +39,8 @@ import org.neo4j.cypher.internal.ast.DefaultDatabaseScope
 import org.neo4j.cypher.internal.ast.DefaultGraphScope
 import org.neo4j.cypher.internal.ast.DropDatabaseAction
 import org.neo4j.cypher.internal.ast.DumpData
+import org.neo4j.cypher.internal.ast.FunctionAllQualifier
+import org.neo4j.cypher.internal.ast.FunctionQualifier
 import org.neo4j.cypher.internal.ast.GraphOrDatabaseScope
 import org.neo4j.cypher.internal.ast.LabelAllQualifier
 import org.neo4j.cypher.internal.ast.LabelQualifier
@@ -465,6 +467,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |  WHEN 'database' THEN 'database'
           |  WHEN 'user' THEN 'USER('+q.label+')'
           |  WHEN 'procedure' THEN 'PROCEDURE('+q.label+')'
+          |  WHEN 'function' THEN 'FUNCTION('+q.label+')'
           |  ELSE 'ELEMENT('+q.label+')'
           |END
         """.stripMargin
@@ -930,18 +933,26 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
   private def getQualifierPart(qualifier: PrivilegeQualifier, matchOrMerge: String): (String, Value, (Transaction, MapValue) =>  MapValue, String) = qualifier match {
     case AllQualifier() => ("", Values.NO_VALUE, IdentityConverter, matchOrMerge + " (q:DatabaseQualifier {type: 'database', label: ''})") // The label is just for later printout of results
     case AllDatabasesQualifier() => ("", Values.NO_VALUE, IdentityConverter, matchOrMerge + " (q:DatabaseQualifier {type: 'database', label: ''})") // The label is just for later printout of results
+
     case LabelQualifier(name) => (privilegeKeys("label"), Values.utf8Value(name), IdentityConverter, matchOrMerge + s" (q:LabelQualifier {type: 'node', label: $$`${privilegeKeys("label")}`})")
     case LabelAllQualifier() => ("", Values.NO_VALUE, IdentityConverter, matchOrMerge + " (q:LabelQualifierAll {type: 'node', label: '*'})") // The label is just for later printout of results
     case RelationshipQualifier(name) => (privilegeKeys("label"), Values.utf8Value(name), IdentityConverter, matchOrMerge + s" (q:RelationshipQualifier {type: 'relationship', label: $$`${privilegeKeys("label")}`})")
     case RelationshipAllQualifier() => ("", Values.NO_VALUE, IdentityConverter, matchOrMerge + " (q:RelationshipQualifierAll {type: 'relationship', label: '*'})") // The label is just for later printout of results
+
     case UserAllQualifier() => ("", Values.NO_VALUE, IdentityConverter, matchOrMerge + " (q:UserQualifierAll {type: 'user', label: '*'})") // The label is just for later printout of results
     case UserQualifier(name) =>
       val nameFields = getNameFields("userQualifier", name)
       (nameFields.nameKey, nameFields.nameValue, nameFields.nameConverter, matchOrMerge + s" (q:UserQualifier {type: 'user', label: $$`${nameFields.nameKey}`})")
+
     case ProcedureQualifier(nameSpace, procedureName) =>
       val qualifiedProcedureName = (nameSpace.parts :+ procedureName.name).mkString(".")
       (privilegeKeys("label"), Values.utf8Value(qualifiedProcedureName), IdentityConverter, matchOrMerge + s" (q:ProcedureQualifier {type: 'procedure', label: $$`${privilegeKeys("label")}`})")
     case ProcedureAllQualifier() => ("", Values.NO_VALUE, IdentityConverter, matchOrMerge + " (q:ProcedureQualifierAll {type: 'procedure', label: '*'})")
+
+    case FunctionQualifier(nameSpace, functionName) =>
+      val qualifiedFunctionName = (nameSpace.parts :+ functionName.name).mkString(".")
+      (privilegeKeys("label"), Values.utf8Value(qualifiedFunctionName), IdentityConverter, matchOrMerge + s" (q:FunctionQualifier {type: 'function', label: $$`${privilegeKeys("label")}`})")
+    case FunctionAllQualifier() => ("", Values.NO_VALUE, IdentityConverter, matchOrMerge + " (q:FunctionQualifierAll {type: 'function', label: '*'})")
   }
 
   private def escapeName(name: Either[String, AnyRef]): String = name match {

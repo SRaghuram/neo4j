@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.internal.kernel.api.security.AdminActionOnResource;
+import org.neo4j.internal.kernel.api.security.FunctionSegment;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.ProcedureSegment;
@@ -95,6 +96,13 @@ class StandardAccessModeBuilder
     private final Map<ResourcePrivilege.GrantOrDeny,Boolean> executeBoostedAllProcedures = new HashMap<>();
     private final Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> executeBoostedProcedures = new HashMap<>();
 
+    private final Map<ResourcePrivilege.GrantOrDeny,Boolean> executeAllFunctions = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,Boolean> executeBoostedAllFunctions = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> executeFunctions = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> executeAggregatingFunctions = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> executeBoostedFunctions = new HashMap<>();
+    private final Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> executeBoostedAggregatingFunctions = new HashMap<>();
+
     private final StandardAdminAccessMode.Builder adminModeBuilder = new StandardAdminAccessMode.Builder();
 
     StandardAccessModeBuilder( boolean isAuthenticated, boolean passwordChangeRequired, Set<String> roles, LoginContext.IdLookup resolver, String database,
@@ -130,6 +138,10 @@ class StandardAccessModeBuilder
             this.writeRelationshipSegmentForProperty.put( privilegeType, IntObjectMaps.mutable.empty() );
             this.executeProcedures.put( privilegeType, IntSets.mutable.empty() );
             this.executeBoostedProcedures.put( privilegeType, IntSets.mutable.empty() );
+            this.executeFunctions.put( privilegeType, IntSets.mutable.empty() );
+            this.executeBoostedFunctions.put( privilegeType, IntSets.mutable.empty() );
+            this.executeAggregatingFunctions.put( privilegeType, IntSets.mutable.empty() );
+            this.executeBoostedAggregatingFunctions.put( privilegeType, IntSets.mutable.empty() );
         }
     }
 
@@ -226,6 +238,19 @@ class StandardAccessModeBuilder
                                          executeBoostedProcedures.get( GRANT ),
                                          executeBoostedProcedures.get( DENY ) ),
 
+                new FunctionPrivileges( executeAllFunctions.getOrDefault( GRANT, false ),
+                                        executeAllFunctions.getOrDefault( DENY, false ),
+                                        executeFunctions.get( GRANT ),
+                                        executeAggregatingFunctions.get( GRANT ),
+                                        executeFunctions.get( DENY ),
+                                        executeAggregatingFunctions.get( DENY ),
+                                        executeBoostedAllFunctions.getOrDefault( GRANT, false ),
+                                        executeBoostedAllFunctions.getOrDefault( DENY, false ),
+                                        executeBoostedFunctions.get( GRANT ),
+                                        executeBoostedAggregatingFunctions.get( GRANT ),
+                                        executeBoostedFunctions.get( DENY ),
+                                        executeBoostedAggregatingFunctions.get( DENY ) ),
+
                 adminModeBuilder.build(),
                 database );
     }
@@ -300,11 +325,11 @@ class StandardAccessModeBuilder
             break;
 
         case EXECUTE:
-            handleExecute( segment, privilegeType, executeAllProcedures, executeProcedures );
+            handleExecute( segment, privilegeType );
             break;
 
         case EXECUTE_BOOSTED:
-            handleExecute( segment, privilegeType, executeBoostedAllProcedures, executeBoostedProcedures );
+            handleExecuteBoosted( segment, privilegeType );
             break;
 
         default:
@@ -334,6 +359,8 @@ class StandardAccessModeBuilder
             {
                 executeAllProcedures.put( privilegeType, true );
                 executeBoostedAllProcedures.put( privilegeType, true );
+                executeAllFunctions.put( privilegeType, true );
+                executeBoostedAllFunctions.put( privilegeType, true );
             }
             else if ( action.satisfies( EXECUTE_ADMIN ) )
             {
@@ -554,29 +581,89 @@ class StandardAccessModeBuilder
         }
     }
 
-    private void handleExecute( Segment qualifier, ResourcePrivilege.GrantOrDeny privilegeType,
-                                Map<ResourcePrivilege.GrantOrDeny, Boolean> allProcedures,
-                                Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> procedures )
+    private void handleExecute( Segment qualifier, ResourcePrivilege.GrantOrDeny privilegeType )
     {
         if ( qualifier instanceof ProcedureSegment )
         {
             if ( qualifier.equals( ProcedureSegment.ALL ) )
             {
-                allProcedures.put( privilegeType, true );
+                executeAllProcedures.put( privilegeType, true );
             }
             else
             {
                 var procQualifier = (ProcedureSegment) qualifier;
                 for ( int procId : resolver.getProcedureIds( procQualifier.getProcedure() ) )
                 {
-                    procedures.get( privilegeType ).add( procId );
+                    executeProcedures.get( privilegeType ).add( procId );
+                }
+            }
+        }
+        else if ( qualifier instanceof FunctionSegment )
+        {
+            if ( qualifier.equals( FunctionSegment.ALL ) )
+            {
+                executeAllFunctions.put( privilegeType, true );
+            }
+            else
+            {
+                var funcQualifier = (FunctionSegment) qualifier;
+                for ( int funcId : resolver.getFunctionIds( funcQualifier.getFunction() ) )
+                {
+                    executeFunctions.get( privilegeType ).add( funcId );
+                }
+
+                for ( int funcId : resolver.getAggregatingFunctionIds( funcQualifier.getFunction() ) )
+                {
+                    executeAggregatingFunctions.get( privilegeType ).add( funcId );
                 }
             }
         }
         else
         {
-            throw new IllegalStateException(
-                    "Unsupported segment qualifier for execute privilege: " + qualifier.getClass().getSimpleName() );
+            throw new IllegalStateException( "Unsupported segment qualifier for execute boosted privilege: " + qualifier.getClass().getSimpleName() );
+        }
+    }
+
+    private void handleExecuteBoosted( Segment qualifier, ResourcePrivilege.GrantOrDeny privilegeType )
+    {
+        if ( qualifier instanceof ProcedureSegment )
+        {
+            if ( qualifier.equals( ProcedureSegment.ALL ) )
+            {
+                executeBoostedAllProcedures.put( privilegeType, true );
+            }
+            else
+            {
+                var procQualifier = (ProcedureSegment) qualifier;
+                for ( int procId : resolver.getProcedureIds( procQualifier.getProcedure() ) )
+                {
+                    executeBoostedProcedures.get( privilegeType ).add( procId );
+                }
+            }
+        }
+        else if ( qualifier instanceof FunctionSegment )
+        {
+            if ( qualifier.equals( FunctionSegment.ALL ) )
+            {
+                executeBoostedAllFunctions.put( privilegeType, true );
+            }
+            else
+            {
+                var funcQualifier = (FunctionSegment) qualifier;
+                for ( int funcId : resolver.getFunctionIds( funcQualifier.getFunction() ) )
+                {
+                    executeBoostedFunctions.get( privilegeType ).add( funcId );
+                }
+
+                for ( int funcId : resolver.getAggregatingFunctionIds( funcQualifier.getFunction() ) )
+                {
+                    executeBoostedAggregatingFunctions.get( privilegeType ).add( funcId );
+                }
+            }
+        }
+        else
+        {
+            throw new IllegalStateException( "Unsupported segment qualifier for execute privilege: " + qualifier.getClass().getSimpleName() );
         }
     }
 
