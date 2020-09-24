@@ -50,6 +50,11 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils
 import org.neo4j.cypher.internal.physicalplanning.ast
 import org.neo4j.cypher.internal.physicalplanning.ast.GetDegreePrimitive
+import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreeGreaterThanOrEqualPrimitive
+import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreeGreaterThanPrimitive
+import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreeLessThanOrEqualPrimitive
+import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreeLessThanPrimitive
+import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreePrimitive
 import org.neo4j.cypher.internal.physicalplanning.ast.HasLabelsFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.IdFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.IsPrimitiveNull
@@ -4280,6 +4285,120 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compile(GetDegreePrimitive(0, Some(relType), OUTGOING), slots), context) should equal(Values.longValue(2))
     evaluate(compile(GetDegreePrimitive(0, Some(relType), INCOMING), slots), context) should equal(Values.longValue(1))
     evaluate(compile(GetDegreePrimitive(0, Some(relType), BOTH), slots), context) should equal(Values.longValue(3))
+  }
+
+  test("check Degree without type") {
+    //given node with three outgoing and two incoming relationships
+    val n = createNode("prop" -> "hello")
+    relate(createNode(), n)
+    relate(createNode(), n)
+    relate(n, createNode())
+    relate(n, createNode())
+    relate(n, createNode())
+
+    val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
+    val context = SlottedRow(slots)
+    context.setLongAt(0, n.getId)
+
+    //null
+    evaluate(compile(HasDegreeGreaterThanPrimitive(0, None, OUTGOING, parameter(0)), slots), 0, Array(NO_VALUE), context) should equal(NO_VALUE)
+
+    //greater than
+    evaluate(compile(HasDegreeGreaterThanPrimitive(0, None, OUTGOING, literalInt(4)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreeGreaterThanPrimitive(0, None, OUTGOING, literalInt(3)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreeGreaterThanPrimitive(0, None, OUTGOING, literalInt(2)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreeGreaterThanPrimitive(0, None, INCOMING, literalInt(3)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreeGreaterThanPrimitive(0, None, INCOMING, literalInt(2)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreeGreaterThanPrimitive(0, None, INCOMING, literalInt(1)), slots), context) should equal(Values.TRUE)
+
+    //greater than or equal
+    evaluate(compile(HasDegreeGreaterThanOrEqualPrimitive(0, None, OUTGOING, literalInt(4)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreeGreaterThanOrEqualPrimitive(0, None, OUTGOING, literalInt(3)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreeGreaterThanOrEqualPrimitive(0, None, OUTGOING, literalInt(2)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreeGreaterThanOrEqualPrimitive(0, None, INCOMING, literalInt(3)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreeGreaterThanOrEqualPrimitive(0, None, INCOMING, literalInt(2)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreeGreaterThanOrEqualPrimitive(0, None, INCOMING, literalInt(1)), slots), context) should equal(Values.TRUE)
+
+    // equal
+    evaluate(compile(HasDegreePrimitive(0, None, OUTGOING, literalInt(4)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreePrimitive(0, None, OUTGOING, literalInt(3)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreePrimitive(0, None, OUTGOING, literalInt(2)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreePrimitive(0, None, INCOMING, literalInt(3)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreePrimitive(0, None, INCOMING, literalInt(2)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreePrimitive(0, None, INCOMING, literalInt(1)), slots), context) should equal(Values.FALSE)
+
+    // less than
+    evaluate(compile(HasDegreeLessThanPrimitive(0, None, OUTGOING, literalInt(4)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreeLessThanPrimitive(0, None, OUTGOING, literalInt(3)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreeLessThanPrimitive(0, None, OUTGOING, literalInt(2)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreeLessThanPrimitive(0, None, INCOMING, literalInt(3)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreeLessThanPrimitive(0, None, INCOMING, literalInt(2)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreeLessThanPrimitive(0, None, INCOMING, literalInt(1)), slots), context) should equal(Values.FALSE)
+
+    // less than or equal
+    evaluate(compile(HasDegreeLessThanOrEqualPrimitive(0, None, OUTGOING, literalInt(4)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreeLessThanOrEqualPrimitive(0, None, OUTGOING, literalInt(3)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreeLessThanOrEqualPrimitive(0, None, OUTGOING, literalInt(2)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreeLessThanOrEqualPrimitive(0, None, INCOMING, literalInt(3)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreeLessThanOrEqualPrimitive(0, None, INCOMING, literalInt(2)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreeLessThanOrEqualPrimitive(0, None, INCOMING, literalInt(1)), slots), context) should equal(Values.FALSE)
+  }
+
+  test("check Degree with type") {
+    //given node with three outgoing and two incoming relationships
+    val n = createNode("prop" -> "hello")
+    val relType = "R"
+    relate(createNode(), n, relType)
+    relate(createNode(), n, "OTHER")
+    relate(n, createNode(), relType)
+    relate(n, createNode(), relType)
+    relate(n, createNode(), "OTHER")
+    val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
+    val context = SlottedRow(slots)
+    context.setLongAt(0, n.getId)
+
+    //null
+    evaluate(compile(HasDegreeGreaterThanPrimitive(0, Some("R"), OUTGOING, parameter(0)), slots), 0, Array(NO_VALUE), context) should equal(NO_VALUE)
+
+    //greater than
+    evaluate(compile(HasDegreeGreaterThanPrimitive(0, Some("R"), OUTGOING, literalInt(3)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreeGreaterThanPrimitive(0, Some("R"), OUTGOING, literalInt(2)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreeGreaterThanPrimitive(0, Some("R"), OUTGOING, literalInt(1)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreeGreaterThanPrimitive(0, Some("R"), INCOMING, literalInt(2)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreeGreaterThanPrimitive(0, Some("R"), INCOMING, literalInt(1)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreeGreaterThanPrimitive(0, Some("R"), INCOMING, literalInt(0)), slots), context) should equal(Values.TRUE)
+
+    //greater than or equal
+    evaluate(compile(HasDegreeGreaterThanOrEqualPrimitive(0, Some("R"), OUTGOING, literalInt(3)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreeGreaterThanOrEqualPrimitive(0, Some("R"), OUTGOING, literalInt(2)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreeGreaterThanOrEqualPrimitive(0, Some("R"), OUTGOING, literalInt(1)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreeGreaterThanOrEqualPrimitive(0, Some("R"), INCOMING, literalInt(2)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreeGreaterThanOrEqualPrimitive(0, Some("R"), INCOMING, literalInt(1)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreeGreaterThanOrEqualPrimitive(0, Some("R"), INCOMING, literalInt(0)), slots), context) should equal(Values.TRUE)
+
+    // equal
+    evaluate(compile(HasDegreePrimitive(0, Some("R"), OUTGOING, literalInt(3)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreePrimitive(0, Some("R"), OUTGOING, literalInt(2)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreePrimitive(0, Some("R"), OUTGOING, literalInt(1)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreePrimitive(0, Some("R"), INCOMING, literalInt(2)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreePrimitive(0, Some("R"), INCOMING, literalInt(1)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreePrimitive(0, Some("R"), INCOMING, literalInt(0)), slots), context) should equal(Values.FALSE)
+
+    // less than
+    evaluate(compile(HasDegreeLessThanPrimitive(0, Some("R"), OUTGOING, literalInt(3)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreeLessThanPrimitive(0, Some("R"), OUTGOING, literalInt(2)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreeLessThanPrimitive(0, Some("R"), OUTGOING, literalInt(1)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreeLessThanPrimitive(0, Some("R"), INCOMING, literalInt(2)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreeLessThanPrimitive(0, Some("R"), INCOMING, literalInt(1)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreeLessThanPrimitive(0, Some("R"), INCOMING, literalInt(0)), slots), context) should equal(Values.FALSE)
+
+    // less than or equal
+    evaluate(compile(HasDegreeLessThanOrEqualPrimitive(0, Some("R"), OUTGOING, literalInt(3)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreeLessThanOrEqualPrimitive(0, Some("R"), OUTGOING, literalInt(2)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreeLessThanOrEqualPrimitive(0, Some("R"), OUTGOING, literalInt(1)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreeLessThanOrEqualPrimitive(0, Some("R"), INCOMING, literalInt(2)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreeLessThanOrEqualPrimitive(0, Some("R"), INCOMING, literalInt(1)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreeLessThanOrEqualPrimitive(0, Some("R"), INCOMING, literalInt(0)), slots), context) should equal(Values.FALSE)
   }
 
   test("NodePropertyExists") {
