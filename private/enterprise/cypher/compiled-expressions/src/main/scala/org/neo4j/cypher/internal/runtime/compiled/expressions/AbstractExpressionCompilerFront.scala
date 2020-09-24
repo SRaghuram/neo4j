@@ -29,6 +29,8 @@ import org.neo4j.codegen.api.IntermediateRepresentation.fail
 import org.neo4j.codegen.api.IntermediateRepresentation.falseValue
 import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.getStatic
+import org.neo4j.codegen.api.IntermediateRepresentation.greaterThan
+import org.neo4j.codegen.api.IntermediateRepresentation.greaterThanOrEqual
 import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
 import org.neo4j.codegen.api.IntermediateRepresentation.instanceOf
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
@@ -36,6 +38,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.isNull
 import org.neo4j.codegen.api.IntermediateRepresentation.lessThan
+import org.neo4j.codegen.api.IntermediateRepresentation.lessThanOrEqual
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.loop
@@ -131,6 +134,11 @@ import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter.DEFAULT_NULLAB
 import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter.DEFAULT_OFFSET_IS_FOR_LONG_SLOT
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.physicalplanning.ast.GetDegreePrimitive
+import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreeGreaterThanOrEqualPrimitive
+import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreeGreaterThanPrimitive
+import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreeLessThanOrEqualPrimitive
+import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreeLessThanPrimitive
+import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreePrimitive
 import org.neo4j.cypher.internal.physicalplanning.ast.HasLabelsFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.IdFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.IsPrimitiveNull
@@ -1575,6 +1583,21 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
               ), Seq(f), Seq(vNODE_CURSOR), Set.empty))
       }
 
+    case HasDegreeGreaterThanPrimitive(offset, typ, dir, maxDegreeExpression) =>
+     checkDegree(offset, typ, dir, maxDegreeExpression, greaterThan, d => add(d, constant(1)))
+
+    case HasDegreeGreaterThanOrEqualPrimitive(offset, typ, dir, maxDegreeExpression) =>
+      checkDegree(offset, typ, dir, maxDegreeExpression, greaterThanOrEqual, identity)
+
+    case HasDegreePrimitive(offset, typ, dir, maxDegreeExpression) =>
+      checkDegree(offset, typ, dir, maxDegreeExpression, equal, d => add(d, constant(1)))
+
+    case HasDegreeLessThanPrimitive(offset, typ, dir, maxDegreeExpression) =>
+      checkDegree(offset, typ, dir, maxDegreeExpression, lessThan, identity)
+
+    case HasDegreeLessThanOrEqualPrimitive(offset, typ, dir, maxDegreeExpression) =>
+      checkDegree(offset, typ, dir, maxDegreeExpression, lessThanOrEqual, d => add(d, constant(1)))
+
     case f@ResolvedFunctionInvocation(name, Some(signature), args) if !f.isAggregate =>
       val inputArgs = args.map(Some(_))
         .zipAll(signature.inputSignature.map(_.default), None, None).flatMap {
@@ -1695,6 +1718,63 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     tokensAndInits.unzip
   }
 
+  private def degreeMethod(direction: SemanticDirection) = direction match {
+    case SemanticDirection.OUTGOING => "nodeGetOutgoingDegree"
+    case SemanticDirection.INCOMING => "nodeGetIncomingDegree"
+    case SemanticDirection.BOTH => "nodeGetTotalDegree"
+  }
+
+  private def checkDegree(offset: Int,
+                          typ: Option[String],
+                          dir: SemanticDirection,
+                          maxDegreeExpression: Expression,
+                          comparison: (IntermediateRepresentation, IntermediateRepresentation) => IntermediateRepresentation,
+                          computeMax: IntermediateRepresentation => IntermediateRepresentation): Option[IntermediateExpression] = {
+    val methodName = degreeMethod(dir)
+    val localDegree = namer.nextVariableName("degree")
+    val localDegreeInt = namer.nextVariableName("degreeInt")
+
+    typ match {
+      case None =>
+        for (maxDegree <- compileExpression(maxDegreeExpression)) yield {
+          val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], localDegree, nullCheckIfRequired(maxDegree)))
+          val nullCheck = Set(block(lazySet, equal(load(localDegree), noValue)))
+          IntermediateExpression(
+            block(
+              lazySet,
+              declareAndAssign(typeRefOf[Int], localDegreeInt,
+                ternary(equal(load(localDegree), noValue),
+                  constant(-1),
+                  invokeStatic(method[CypherFunctions, Int, AnyValue]("asInt"), load(localDegree)))),
+              ternary(
+                comparison(
+                  invoke(DB_ACCESS, method[DbAccess, Int, Int, Long, NodeCursor](methodName), computeMax(load(localDegreeInt)), getLongAt(offset), NODE_CURSOR), load(localDegreeInt)
+                ), trueValue, falseValue)
+            ), maxDegree.fields, maxDegree.variables :+ vNODE_CURSOR, nullCheck)
+        }
+
+      case Some(t) =>
+        val f = field[Int](namer.nextVariableName(), constant(-1))
+        for (maxDegree <- compileExpression(maxDegreeExpression)) yield {
+          val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], localDegree, nullCheckIfRequired(maxDegree)))
+          val nullCheck = Set(block(lazySet, equal(load(localDegree), noValue)))
+          IntermediateExpression(
+            block(
+              lazySet,
+              declareAndAssign(typeRefOf[Int], localDegreeInt,
+                ternary(equal(load(localDegree), noValue),
+                  constant(-1),
+                  invokeStatic(method[CypherFunctions, Int, AnyValue]("asInt"), load(localDegree)))),
+              condition(equal(loadField(f), constant(-1)))(
+                setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("relationshipType"), constant(t)))),
+              ternary(
+                comparison(
+                  invoke(DB_ACCESS, method[DbAccess, Int, Int, Long, Int, NodeCursor](methodName), computeMax(load(localDegreeInt)), getLongAt(offset), loadField(f), NODE_CURSOR), load(localDegreeInt)
+                ), trueValue, falseValue)
+            ), maxDegree.fields :+ f, maxDegree.variables :+ vNODE_CURSOR, nullCheck)
+        }
+    }
+  }
   def compileFunction(c: FunctionInvocation): Option[IntermediateExpression] = c.function match {
     case functions.Acos =>
       compileExpression(c.args.head).map(in => IntermediateExpression(
