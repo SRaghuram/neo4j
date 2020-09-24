@@ -34,6 +34,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
@@ -62,6 +63,25 @@ public class GenerateLdbcParametersIT
         getParameters( workloadName, storeDir );
     }
 
+    private static class RowConsumer implements Consumer<Map<String,Object>>
+    {
+        private final String property;
+        private final Set<String> ids;
+
+        private RowConsumer( String property, Set<String> ids )
+        {
+            this.property = property;
+            this.ids = ids;
+        }
+
+        @Override
+        public void accept( Map<String,Object> row )
+        {
+            assert row.get( property ) != null;
+            ids.add( String.valueOf( row.get( property ) ) );
+        }
+    }
+
     private void getParameters( String workloadName, Path storeDir ) throws Exception
     {
         try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
@@ -69,76 +89,57 @@ public class GenerateLdbcParametersIT
             Workload workload = Workload.fromName( workloadName, resources, Deployment.embedded() );
             try ( Store store = Store.createFrom( storeDir ) )
             {
-                EmbeddedDatabase database = EmbeddedDatabase.startWith( store, Edition.ENTERPRISE, neo4jConfigFile() );
-                GraphDatabaseService db = database.db();
-
-                Map<Query,List<String>> queries = new HashMap<>();
-
-                queries.put( workload.queryForName( "Read 1" ),
-                             Arrays.asList( "id" ) );
-                queries.put( workload.queryForName( "Read 2" ),
-                             Arrays.asList( "personId", "messageId" ) );
-                queries.put( workload.queryForName( "Read 3" ),
-                             Arrays.asList( "friendId" ) );
-                queries.put( workload.queryForName( "Read 7" ),
-                             Arrays.asList( "personId", "messageId" ) );
-                queries.put( workload.queryForName( "Read 8" ),
-                             Arrays.asList( "personId", "commentId" ) );
-                queries.put( workload.queryForName( "Read 9" ),
-                             Arrays.asList( "personId", "messageId" ) );
-                queries.put( workload.queryForName( "Read 10" ),
-                             Arrays.asList( "friendId" ) );
-                queries.put( workload.queryForName( "Read 11" ),
-                             Arrays.asList( "personId" ) );
-                queries.put( workload.queryForName( "Read 12" ),
-                             Arrays.asList( "friendId" ) );
-                queries.put( workload.queryForName( "Read 14" ),
-                             Arrays.asList( "personId" ) );
-                Set<String> messageIds = new HashSet();
-                Set<String> personIds = new HashSet();
-
-                for ( Query query : queries.keySet() )
+                try ( EmbeddedDatabase database = EmbeddedDatabase.startWith( store, Edition.ENTERPRISE, neo4jConfigFile() ) )
                 {
-                    List<String> queryKeys = queries.get( query );
-                    Parameters parameters = query.parameters();
-                    ParametersReader parametersReader = parameters.create();
+                    GraphDatabaseService db = database.db();
 
-                    //all of these parameters are loop able, so we need to cancel after a while.
-                    //and 1000 iterations should be more then enough
-                    int count = 0;
-                    while ( parametersReader.hasNext() && count < 1000 )
+                    Set<String> messageIds = new HashSet<>();
+                    Set<String> personIds = new HashSet<>();
+                    Map<String,List<Consumer<Map<String,Object>>>> queryConsumers = new HashMap<>();
+
+                    queryConsumers.put( "Read 1", Arrays.asList( new RowConsumer( "id", personIds ) ) );
+                    queryConsumers.put( "Read 2", Arrays.asList( new RowConsumer( "personId", personIds ),
+                                                                 new RowConsumer( "messageId", messageIds ) ) );
+                    queryConsumers.put( "Read 3", Arrays.asList( new RowConsumer( "friendId", personIds ) ) );
+                    queryConsumers.put( "Read 7", Arrays.asList( new RowConsumer( "personId", personIds ),
+                                                                 new RowConsumer( "messageId", messageIds ) ) );
+                    queryConsumers.put( "Read 8", Arrays.asList( new RowConsumer( "personId", personIds ),
+                                                                 new RowConsumer( "commentId", messageIds ) ) );
+                    queryConsumers.put( "Read 9", Arrays.asList( new RowConsumer( "personId", personIds ),
+                                                                 new RowConsumer( "messageId", messageIds ) ) );
+                    queryConsumers.put( "Read 10", Arrays.asList( new RowConsumer( "personId", personIds ) ) );
+                    queryConsumers.put( "Read 11", Arrays.asList( new RowConsumer( "friendId", personIds ) ) );
+                    queryConsumers.put( "Read 12", Arrays.asList( new RowConsumer( "friendId", personIds ) ) );
+
+                    for ( Query query : workload.queries() )
                     {
-                        count++;
-                        Map<String,Object> queryParameters = parametersReader.next();
-                        try ( Transaction tx = db.beginTx() )
+                        List<Consumer<Map<String,Object>>> consumers = queryConsumers.getOrDefault( query.name(), null );
+                        if ( consumers != null )
                         {
-                            try ( Result result = db.execute( query.queryString().value(), queryParameters ) )
+                            Parameters parameters = query.parameters();
+                            ParametersReader parametersReader = parameters.create();
+
+                            int count = 0;
+                            while ( parametersReader.hasNext() && count < 1000 )
                             {
-                                result.stream().forEach( row ->
-                                                                 queryKeys.forEach( key ->
-                                                                                    {
-                                                                                        if ( key.equals( "id" ) || key.equals( "personId" ) ||
-                                                                                             key.equals( "friendId" ) )
-                                                                                        {
-                                                                                            personIds.add( String.valueOf( row.get( key ) ) );
-                                                                                        }
-                                                                                        else
-                                                                                        {
-                                                                                            messageIds.add( String.valueOf( row.get( key ) ) );
-                                                                                        }
-                                                                                    } )
-                                );
-                                tx.success();
+                                count++;
+                                Map<String,Object> queryParameters = parametersReader.next();
+                                try ( Transaction tx = db.beginTx() )
+                                {
+                                    try ( Result result = db.execute( query.queryString().value(), queryParameters ) )
+                                    {
+                                        result.forEachRemaining( row -> consumers.forEach( consumer -> consumer.accept( row ) ) );
+                                    }
+                                }
                             }
                         }
                     }
+                    writeToFile( "Message:Long", messageIds, workloadName );
+                    writeToFile( "Person:Long", personIds, workloadName );
                 }
-                writeToFile( "Message:Long", messageIds, workloadName );
-                writeToFile( "Person:Long", personIds,workloadName );
             }
         }
     }
-
     private void writeToFile( String name, Set<String> ids, String workloadName ) throws IOException
     {
         FileWriter fileWriter = new FileWriter( workloadName + name + ".txt" );
