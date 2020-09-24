@@ -6,10 +6,12 @@
 package com.neo4j.bench.model.model;
 
 import com.neo4j.bench.model.options.Edition;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
@@ -111,7 +113,7 @@ public class Project
     public Map<String,String> toMap()
     {
         HashMap<String,String> map = new HashMap<>();
-        map.put( NAME, repository.projectName().toLowerCase() );
+        map.put( NAME, repository.repositoryName().toLowerCase() );
         map.put( COMMIT, commit.toLowerCase() );
         map.put( EDITION, edition.name().toLowerCase() );
         map.put( VERSION, version );
@@ -123,39 +125,18 @@ public class Project
     @Override
     public boolean equals( Object o )
     {
-        if ( this == o )
-        {
-            return true;
-        }
-        if ( o == null || getClass() != o.getClass() )
-        {
-            return false;
-        }
-        Project project = (Project) o;
-        return repository == project.repository &&
-               Objects.equals( commit, project.commit ) &&
-               Objects.equals( version, project.version ) &&
-               Objects.equals( edition, project.edition ) &&
-               Objects.equals( branch, project.branch ) &&
-               Objects.equals( owner, project.owner );
+        return EqualsBuilder.reflectionEquals( this, o );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( repository, commit, version, edition, branch, owner );
+        return HashCodeBuilder.reflectionHashCode( this );
     }
 
     @Override
     public String toString()
     {
-        return "Project{" +
-               "name=" + name() +
-               ", commit='" + commit + '\'' +
-               ", version='" + version + '\'' +
-               ", edition='" + edition + '\'' +
-               ", branch='" + branch + '\'' +
-               ", owner='" + owner + '\'' +
-               '}';
+        return ToStringBuilder.reflectionToString( this );
     }
 }

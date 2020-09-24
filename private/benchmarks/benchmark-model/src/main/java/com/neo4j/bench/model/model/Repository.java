@@ -90,6 +90,15 @@ public enum Repository
     private final Pattern standardBranch;
     private final Pattern validVersion;
 
+    /**
+     * See also {@link Project} for an explanation of how these fields are used to construct Github URLs.
+     *
+     * @param projectName         convenient, descriptive name for the repository, e.g., "Internal Benchmarking Harness"
+     * @param repositoryName      name of the repository in Github
+     * @param defaultOwner        owner of the Github repository
+     * @param standardBranchRegex valid main-branch names
+     * @param validVersionRegex   valid version strings
+     */
     Repository( String projectName, String repositoryName, String defaultOwner, String standardBranchRegex, String validVersionRegex )
     {
         this.projectName = projectName;
