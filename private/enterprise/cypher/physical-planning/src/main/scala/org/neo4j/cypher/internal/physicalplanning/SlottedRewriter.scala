@@ -12,6 +12,11 @@ import org.neo4j.cypher.internal.expressions.Equals
 import org.neo4j.cypher.internal.expressions.False
 import org.neo4j.cypher.internal.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.expressions.GetDegree
+import org.neo4j.cypher.internal.expressions.HasDegree
+import org.neo4j.cypher.internal.expressions.HasDegreeGreaterThan
+import org.neo4j.cypher.internal.expressions.HasDegreeGreaterThanOrEqual
+import org.neo4j.cypher.internal.expressions.HasDegreeLessThan
+import org.neo4j.cypher.internal.expressions.HasDegreeLessThanOrEqual
 import org.neo4j.cypher.internal.expressions.HasLabels
 import org.neo4j.cypher.internal.expressions.IsNotNull
 import org.neo4j.cypher.internal.expressions.IsNull
@@ -37,6 +42,11 @@ import org.neo4j.cypher.internal.logical.plans.VariablePredicate
 import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
 import org.neo4j.cypher.internal.physicalplanning.ast.GetDegreePrimitive
+import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreeGreaterThanOrEqualPrimitive
+import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreeGreaterThanPrimitive
+import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreeLessThanOrEqualPrimitive
+import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreeLessThanPrimitive
+import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreePrimitive
 import org.neo4j.cypher.internal.physicalplanning.ast.HasLabelsFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.IdFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.IsPrimitiveNull
@@ -274,6 +284,51 @@ class SlottedRewriter(tokenContext: TokenContext) {
           case LongSlot(offset, false, CTNode) => GetDegreePrimitive(offset, maybeToken, direction)
           case LongSlot(offset, true, CTNode) => NullCheck(offset, GetDegreePrimitive(offset, maybeToken, direction))
           // For ref-slots, we just use the non-specialized GetDegree
+          case _ => original
+        }
+
+      case original@HasDegreeGreaterThan(Variable(n), typ, direction, degree) =>
+        val maybeToken: Option[String] = typ.map(r => r.name)
+        slotConfiguration(n) match {
+          case LongSlot(offset, false, CTNode) => HasDegreeGreaterThanPrimitive(offset, maybeToken, direction, degree)
+          case LongSlot(offset, true, CTNode) => NullCheck(offset, HasDegreeGreaterThanPrimitive(offset, maybeToken, direction, degree))
+          // For ref-slots, we just use the non-specialized HasDegreeGreaterThan
+          case _ => original
+        }
+
+      case original@HasDegreeGreaterThanOrEqual(Variable(n), typ, direction, degree) =>
+        val maybeToken: Option[String] = typ.map(r => r.name)
+        slotConfiguration(n) match {
+          case LongSlot(offset, false, CTNode) => HasDegreeGreaterThanOrEqualPrimitive(offset, maybeToken, direction, degree)
+          case LongSlot(offset, true, CTNode) => NullCheck(offset, HasDegreeGreaterThanOrEqualPrimitive(offset, maybeToken, direction, degree))
+          // For ref-slots, we just use the non-specialized HasDegreeGreaterThanOrEqual
+          case _ => original
+        }
+
+      case original@HasDegree(Variable(n), typ, direction, degree) =>
+        val maybeToken: Option[String] = typ.map(r => r.name)
+        slotConfiguration(n) match {
+          case LongSlot(offset, false, CTNode) => HasDegreePrimitive(offset, maybeToken, direction, degree)
+          case LongSlot(offset, true, CTNode) => NullCheck(offset, HasDegreePrimitive(offset, maybeToken, direction, degree))
+          // For ref-slots, we just use the non-specialized HasDegree
+          case _ => original
+        }
+
+      case original@HasDegreeLessThan(Variable(n), typ, direction, degree) =>
+        val maybeToken: Option[String] = typ.map(r => r.name)
+        slotConfiguration(n) match {
+          case LongSlot(offset, false, CTNode) => HasDegreeLessThanPrimitive(offset, maybeToken, direction, degree)
+          case LongSlot(offset, true, CTNode) => NullCheck(offset, HasDegreeLessThanPrimitive(offset, maybeToken, direction, degree))
+          // For ref-slots, we just use the non-specialized HasDegreeGreaterThanOrEqual
+          case _ => original
+        }
+
+      case original@HasDegreeLessThanOrEqual(Variable(n), typ, direction, degree) =>
+        val maybeToken: Option[String] = typ.map(r => r.name)
+        slotConfiguration(n) match {
+          case LongSlot(offset, false, CTNode) => HasDegreeLessThanOrEqualPrimitive(offset, maybeToken, direction, degree)
+          case LongSlot(offset, true, CTNode) => NullCheck(offset, HasDegreeLessThanOrEqualPrimitive(offset, maybeToken, direction, degree))
+          // For ref-slots, we just use the non-specialized HasDegreeGreaterThanOrEqual
           case _ => original
         }
 

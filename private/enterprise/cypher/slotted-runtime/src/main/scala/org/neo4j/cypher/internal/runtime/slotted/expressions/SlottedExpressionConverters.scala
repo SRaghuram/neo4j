@@ -127,6 +127,16 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan, maybeOwningPi
         Some(slotted.expressions.PrimitiveEquals(lhs, rhs))
       case physicalplanning.ast.GetDegreePrimitive(offset, typ, direction) =>
         Some(slotted.expressions.GetDegreePrimitive(offset, typ, direction))
+      case physicalplanning.ast.HasDegreeGreaterThanPrimitive(offset, typ, direction, degree) =>
+        Some(slotted.expressions.HasDegreeGreaterThanPrimitive(offset, typ, direction, self.toCommandExpression(id, degree)))
+      case physicalplanning.ast.HasDegreeGreaterThanOrEqualPrimitive(offset, typ, direction, degree) =>
+        Some(slotted.expressions.HasDegreeGreaterThanOrEqualPrimitive(offset, typ, direction, self.toCommandExpression(id, degree)))
+      case physicalplanning.ast.HasDegreePrimitive(offset, typ, direction, degree) =>
+        Some(slotted.expressions.HasDegreePrimitive(offset, typ, direction, self.toCommandExpression(id, degree)))
+      case physicalplanning.ast.HasDegreeLessThanPrimitive(offset, typ, direction, degree) =>
+        Some(slotted.expressions.HasDegreeLessThanPrimitive(offset, typ, direction, self.toCommandExpression(id, degree)))
+      case physicalplanning.ast.HasDegreeLessThanOrEqualPrimitive(offset, typ, direction, degree) =>
+        Some(slotted.expressions.HasDegreeLessThanOrEqualPrimitive(offset, typ, direction, self.toCommandExpression(id, degree)))
       case physicalplanning.ast.NodePropertyExists(offset, token, _) =>
         Some(slotted.expressions.NodePropertyExists(offset, token))
       case physicalplanning.ast.NodePropertyExistsLate(offset, token, _) =>
