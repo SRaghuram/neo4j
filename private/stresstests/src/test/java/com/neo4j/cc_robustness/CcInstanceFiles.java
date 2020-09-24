@@ -48,7 +48,6 @@ class CcInstanceFiles
     {
         System.out.println( "Running tests in: " + this.path.toAbsolutePath() );
         cleanDataDirectory( path );
-        Files.delete( defaultDiscoveryFile() );
         Files.createDirectories( path );
     }
 
@@ -106,20 +105,6 @@ class CcInstanceFiles
                     FileUtils.deleteQuietly( child.toFile() );
                 }
             }
-        }
-    }
-
-    private Path defaultDiscoveryFile()
-    {
-        try
-        {
-            Path file = Files.createTempFile( "cronie", "test" );
-            Files.delete( file );
-            return file.getParent().resolve( "cronie-discovery" );
-        }
-        catch ( IOException e )
-        {
-            throw new RuntimeException( e );
         }
     }
 
