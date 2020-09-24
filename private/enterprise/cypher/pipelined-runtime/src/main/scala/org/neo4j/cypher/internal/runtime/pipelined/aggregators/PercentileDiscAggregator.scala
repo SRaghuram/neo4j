@@ -84,13 +84,17 @@ abstract class PercentileStandardReducer(memoryTracker: MemoryTracker) extends D
       }
     }
     tmp.add(number)
+    if(estimatedNumberSize == -1L) {
+      estimatedNumberSize = number.estimatedHeapUsage()
+    }
+    memoryTracker.allocateHeap(estimatedNumberSize)
   }
 }
 class PercentileContStandardReducer(memoryTracker: MemoryTracker) extends PercentileStandardReducer(memoryTracker) {
   override def result: AnyValue = {
     tmp.sort((o1: NumberValue, o2: NumberValue) => java.lang.Double.compare(o1.doubleValue(), o2.doubleValue()))
     val count = tmp.size
-    if (percent == 1.0 || count == 1) {
+    val r = if (percent == 1.0 || count == 1) {
       tmp.get(count - 1)
     } else if (count > 1) {
       val floatIdx = percent * (count - 1)
@@ -101,6 +105,10 @@ class PercentileContStandardReducer(memoryTracker: MemoryTracker) extends Percen
     } else {
       Values.NO_VALUE
     }
+
+    memoryTracker.releaseHeap(count*estimatedNumberSize)
+    tmp.close()
+    r
   }
 }
 
@@ -108,7 +116,7 @@ class PercentileDiscStandardReducer(memoryTracker: MemoryTracker) extends Percen
   override def result: AnyValue = {
     tmp.sort((o1: NumberValue, o2: NumberValue) => java.lang.Double.compare(o1.doubleValue(), o2.doubleValue()))
     val count = tmp.size
-    if (percent == 1.0 || count == 1) {
+    val r = if (percent == 1.0 || count == 1) {
       tmp.get(count - 1)
     } else if (count > 1) {
       val floatIdx = percent * count
@@ -118,6 +126,10 @@ class PercentileDiscStandardReducer(memoryTracker: MemoryTracker) extends Percen
     } else {
       Values.NO_VALUE
     }
+
+    memoryTracker.releaseHeap(count*estimatedNumberSize)
+    tmp.close()
+    r
   }
 }
 

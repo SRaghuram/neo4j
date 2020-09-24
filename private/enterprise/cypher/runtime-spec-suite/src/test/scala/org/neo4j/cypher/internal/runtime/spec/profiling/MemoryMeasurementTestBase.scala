@@ -164,6 +164,22 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
       tolerance = tolerance,
     )
 
+  ignore("measure grouping aggregation: percentileCont(...)") {
+    measureAggregation(grouped = true, "percentileCont(x, 0.20)", tolerance = ErrorFractionTolerance(0.3))
+  }
+
+  ignore("measure aggregation: percentileCont(...)") {
+    measureAggregation(grouped = false, "percentileCont(x, 0.20)", tolerance = ErrorFractionTolerance(0.5))
+  }
+
+  ignore("measure grouping aggregation: percentileDisc(...)") {
+    measureAggregation(grouped = true, "percentileDisc(x, 0.20)", tolerance = ErrorFractionTolerance(0.3))
+  }
+
+  ignore("measure aggregation: percentileDisc(...)") {
+    measureAggregation(grouped = false, "percentileDisc(x, 0.20)", tolerance = ErrorFractionTolerance(0.5))
+  }
+
   ignore("measure aggregation: count(...)") {
     measureAggregation(grouped = false, "count(x)", tolerance = AbsoluteErrorTolerance(100, ByteUnit.KibiByte))
   }
@@ -815,66 +831,6 @@ trait FullSupportMemoryMeasurementTestBase [CONTEXT <: RuntimeContext] {
       measuringStrategy = HeapDumpAtEstimateHighWaterMarkInputOffset,
       baselineStrategy = Some(HeapDumpAtInputOffset(DEFAULT_INPUT_SIZE / 2)),
       tolerance = ErrorFractionTolerance(5.0),
-    )
-  }
-
-  ignore("measure aggregation percentileCont without grouping") {
-    validateMaxAllocatedMemoryEstimate(
-      baselineQuery = passThoughQuery(variables = Seq("x")),
-      measuredQuery = new LogicalQueryBuilder(this)
-        .produceResults("y")
-        .aggregation(Seq.empty, Seq("percentileCont(x,0.50) AS y"))
-        .input(variables = Seq("x"))
-        .build(),
-      input = withRandom(random => finiteGeneratedInput(DEFAULT_INPUT_SIZE.toInt)(_ => Array[Any](random.nextInt(10000)))),
-      measuringStrategy = HeapDumpAtEstimateHighWaterMarkInputOffset,
-      baselineStrategy = Some(HeapDumpAtInputOffset(DEFAULT_INPUT_SIZE / 2)),
-      tolerance = DEFAULT_TOLERANCE,
-    )
-  }
-
-  ignore("measure aggregation percentileCont with grouping") {
-    validateMaxAllocatedMemoryEstimate(
-      baselineQuery = passThoughQuery(variables = Seq("x", "y")),
-      measuredQuery = new LogicalQueryBuilder(this)
-        .produceResults("y", "z")
-        .aggregation(Seq("y AS y"), Seq("percentileCont(x,0.20) AS z"))
-        .input(variables = Seq("x", "y"))
-        .build(),
-      input = withRandom(random => finiteGeneratedInput(DEFAULT_INPUT_SIZE.toInt)(i => Array[Any](random.nextInt(10000), Math.round(i /30)))),
-      measuringStrategy = HeapDumpAtEstimateHighWaterMarkInputOffset,
-      baselineStrategy = Some(HeapDumpAtInputOffset(DEFAULT_INPUT_SIZE / 2)),
-      tolerance = ErrorFractionTolerance(0.3),
-    )
-  }
-
-  ignore("measure aggregation percentileDisc without grouping") {
-    validateMaxAllocatedMemoryEstimate(
-      baselineQuery = passThoughQuery(variables = Seq("x")),
-      measuredQuery = new LogicalQueryBuilder(this)
-        .produceResults("y")
-        .aggregation(Seq.empty, Seq("percentileDisc(x,0.20) AS y"))
-        .input(variables = Seq("x"))
-        .build(),
-      input = withRandom(random => finiteGeneratedInput(DEFAULT_INPUT_SIZE.toInt)(_ => Array[Any](random.nextInt(10000)))),
-      measuringStrategy = HeapDumpAtEstimateHighWaterMarkInputOffset,
-      baselineStrategy = Some(HeapDumpAtInputOffset(DEFAULT_INPUT_SIZE / 2)),
-      tolerance = DEFAULT_TOLERANCE,
-    )
-  }
-
-  ignore("measure aggregation percentileDisc with grouping") {
-    validateMaxAllocatedMemoryEstimate(
-      baselineQuery = passThoughQuery(variables = Seq("x", "y")),
-      measuredQuery = new LogicalQueryBuilder(this)
-        .produceResults("y", "z")
-        .aggregation(Seq("y AS y"), Seq("percentileDisc(x,0.20) AS z"))
-        .input(variables = Seq("x", "y"))
-        .build(),
-      input = withRandom(random => finiteGeneratedInput(DEFAULT_INPUT_SIZE.toInt)(i => Array[Any](random.nextInt(10000), Math.round(i / 30)))),
-      measuringStrategy = HeapDumpAtEstimateHighWaterMarkInputOffset,
-      baselineStrategy = Some(HeapDumpAtInputOffset(DEFAULT_INPUT_SIZE / 2)),
-      tolerance = ErrorFractionTolerance(0.3),
     )
   }
 
