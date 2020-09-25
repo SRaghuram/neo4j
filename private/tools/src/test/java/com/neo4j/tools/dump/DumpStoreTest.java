@@ -12,6 +12,7 @@ import org.junit.jupiter.api.parallel.Resources;
 import org.mockito.Mockito;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.PrintStream;
 import java.net.URL;
 import java.nio.ByteBuffer;
@@ -74,7 +75,7 @@ class DumpStoreTest
     void canDumpNeoStoreFileContent() throws Exception
     {
         URL neostore = getClass().getClassLoader().getResource( "neostore" );
-        String neostoreFile = neostore.getFile();
+        String neostoreFile = new File( neostore.toURI() ).getAbsolutePath();
         DumpStore.main( neostoreFile );
     }
 }
