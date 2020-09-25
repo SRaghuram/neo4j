@@ -290,7 +290,7 @@ class RebuildFromLogs
                     NodeBasedMemoryLimiter.DEFAULT );
 
             ConsistencySummaryStatistics summaryStatistics = fullCheck.execute( pageCache, stores, () -> (CountsStore) storageEngine.countsAccessor(),
-                    pageCacheTracer, EmptyMemoryTracker.INSTANCE,
+                    null, pageCacheTracer, EmptyMemoryTracker.INSTANCE,
                     new Log4jLogProvider( System.err ).getLog( getClass() ) );
             if ( !summaryStatistics.isConsistent() )
             {
