@@ -5,13 +5,12 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.rewriters
 
+import org.neo4j.cypher.internal.expressions.CollectAll
 import org.neo4j.cypher.internal.expressions.Variable
 import org.neo4j.cypher.internal.logical.plans.Aggregation
 import org.neo4j.cypher.internal.logical.plans.Apply
-import org.neo4j.cypher.internal.logical.plans.ConditionalApply
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.RollUpApply
-import org.neo4j.cypher.internal.physicalplanning.ast.CollectAll
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
 import org.neo4j.cypher.internal.util.InputPosition.NONE

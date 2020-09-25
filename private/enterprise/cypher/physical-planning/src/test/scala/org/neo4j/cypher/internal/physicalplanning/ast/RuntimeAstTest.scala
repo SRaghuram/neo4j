@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.physicalplanning.ast
 
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.ast.prettifier.ExpressionStringifier
+import org.neo4j.cypher.internal.expressions.CollectAll
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
 class RuntimeAstTest extends CypherFunSuite with AstConstructionTestSupport {

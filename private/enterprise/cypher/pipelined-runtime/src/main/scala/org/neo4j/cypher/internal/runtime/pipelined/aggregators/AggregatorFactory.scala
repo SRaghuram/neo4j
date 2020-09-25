@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
 import org.neo4j.cypher.internal.expressions
+import org.neo4j.cypher.internal.expressions.CollectAll
 import org.neo4j.cypher.internal.expressions.CountStar
 import org.neo4j.cypher.internal.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.expressions.Null
@@ -13,7 +14,6 @@ import org.neo4j.cypher.internal.expressions.functions
 import org.neo4j.cypher.internal.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.logical.plans.ResolvedFunctionInvocation
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
-import org.neo4j.cypher.internal.physicalplanning.ast.CollectAll
 import org.neo4j.cypher.internal.physicalplanning.ast.IsEmpty
 import org.neo4j.cypher.internal.physicalplanning.ast.NonEmpty
 import org.neo4j.exceptions.CantCompileQueryException
