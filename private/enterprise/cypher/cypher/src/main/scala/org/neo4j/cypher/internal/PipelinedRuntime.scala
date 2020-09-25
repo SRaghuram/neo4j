@@ -38,6 +38,7 @@ import org.neo4j.cypher.internal.runtime.QueryStatistics
 import org.neo4j.cypher.internal.runtime.ThreadSafeResourceManager
 import org.neo4j.cypher.internal.runtime.createParameterArray
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverter
@@ -289,6 +290,10 @@ class PipelinedRuntime private(parallelExecution: Boolean,
           else
           // Try again with fusion disabled
             TemplateOperatorPolicy(fusionEnabled = false, fusionOverPipelinesEnabled = false, query.readOnly, parallelExecution)
+
+        if (DebugSupport.PHYSICAL_PLANNING.enabled) {
+          DebugSupport.PHYSICAL_PLANNING.log("Could not compile pipeline because of %s. Retrying with %s", e, nextOperatorFusionPolicy)
+        }
 
         compilePlan(nextOperatorFusionPolicy, query, context, queryIndexRegistrator, warnings + warning)
     }

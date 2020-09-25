@@ -40,6 +40,11 @@ trait OperatorFusionPolicy {
    */
   def canFuseOverPipeline(lp: LogicalPlan, outerApplyPlanId: Id): Boolean
 
+  /**
+   * @return The maximum number of fusions over pipelines we can consider before forcing a pipeline break
+   */
+  def fusionOverPipelineLimit: Int
+
   def operatorFuserFactory(physicalPlan: PhysicalPlan,
                            tokenContext: TokenContext,
                            readOnly: Boolean,
@@ -61,6 +66,7 @@ object OperatorFusionPolicy {
                                       indexRegistrator: QueryIndexRegistrator,
                                       parallelExecution: Boolean,
                                       codeGenerationMode: CodeGeneration.CodeGenerationMode): OperatorFuserFactory = OperatorFuserFactory.NO_FUSION
+    override def fusionOverPipelineLimit: Int = 0
   }
 }
 

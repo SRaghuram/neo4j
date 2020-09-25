@@ -27,7 +27,8 @@ object TemplateOperatorPolicy {
 
 class TemplateOperatorPolicy(override val fusionOverPipelineEnabled: Boolean,
                              readOnly: Boolean,
-                             parallelExecution: Boolean)
+                             parallelExecution: Boolean,
+                             override val fusionOverPipelineLimit: Int = 8)
   extends TemplateOperators(readOnly, parallelExecution, fusionOverPipelineEnabled) with OperatorFusionPolicy {
 
   override def fusionEnabled: Boolean = true
@@ -46,4 +47,8 @@ class TemplateOperatorPolicy(override val fusionOverPipelineEnabled: Boolean,
                                     parallelExecution: Boolean,
                                     codeGenerationMode: CodeGeneration.CodeGenerationMode): OperatorFuserFactory =
     new TemplateOperatorFuserFactory(physicalPlan, tokenContext, readOnly, indexRegistrator, parallelExecution, fusionOverPipelineEnabled, codeGenerationMode)
+
+  override def toString: String = {
+    s"${this.getClass.getSimpleName}(fusionOverPipelineEnabled=$fusionOverPipelineEnabled,readOnly=$readOnly,parallelExecution=$parallelExecution,fusionOverPipelineLimit=$fusionOverPipelineLimit)"
+  }
 }

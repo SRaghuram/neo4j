@@ -20,7 +20,6 @@ import org.neo4j.cypher.internal.logical.plans.Distinct
 import org.neo4j.cypher.internal.logical.plans.EagerLogicalPlan
 import org.neo4j.cypher.internal.logical.plans.ErrorPlan
 import org.neo4j.cypher.internal.logical.plans.Expand
-import org.neo4j.cypher.internal.logical.plans.ExpandAll
 import org.neo4j.cypher.internal.logical.plans.FindShortestPaths
 import org.neo4j.cypher.internal.logical.plans.Input
 import org.neo4j.cypher.internal.logical.plans.LeftOuterHashJoin
@@ -68,6 +67,7 @@ import org.neo4j.cypher.internal.logical.plans.ValueHashJoin
 import org.neo4j.cypher.internal.logical.plans.VarExpand
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
 import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.util.attribution.Attribute
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
@@ -76,18 +76,61 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
                                            interpretedPipesPolicy: InterpretedPipesFallbackPolicy,
                                            parallelExecution: Boolean) extends PipelineBreakingPolicy {
 
-  private class BreakOn extends Attribute[LogicalPlan, Boolean]
+  private class BreakOn extends Attribute[LogicalPlan, (Boolean, Int)]
 
-  private val cache: BreakOn = new BreakOn
-
-  override def breakOn(lp: LogicalPlan, outerApplyPlanId: Id): Boolean = {
-    if (!cache.isDefinedAt(lp.id)) {
-      cache.set(lp.id, computeBreakOn(lp, outerApplyPlanId))
+  private val cache: BreakOn = {
+    if (DebugSupport.PHYSICAL_PLANNING.enabled) {
+      DebugSupport.PHYSICAL_PLANNING.log("New breaking policy cache for %s", this)
     }
-    cache.get(lp.id)
+    new BreakOn
   }
 
-  private def computeBreakOn(lp: LogicalPlan, outerApplyPlanId: Id): Boolean = {
+  override def breakOn(lp: LogicalPlan, outerApplyPlanId: Id): Boolean = {
+    val (break, _) = breakOnInternal(lp, outerApplyPlanId)
+    break
+  }
+
+  private def breakOnInternal(lp: LogicalPlan, outerApplyPlanId: Id): (Boolean, Int) = {
+    if (!cache.isDefinedAt(lp.id)) {
+      // Build upon an already cached source plan
+      // NOTE: This assumes that the first use of this policy, which will build up the cache,
+      //       is traversing the plan tree in a producer-to-consumer order (i.e. starting from the leftmost leaf).
+      //       This should hold true for SlotAllocation, which is the first currently known usage of this policy
+      val sourceFuseOverPipelineCount = findSourcePlanFuseOverPipelineCount(lp)
+      val break = computeBreakOn(lp, outerApplyPlanId, sourceFuseOverPipelineCount)
+      if (DebugSupport.PHYSICAL_PLANNING.enabled) {
+        DebugSupport.PHYSICAL_PLANNING.log(f" + Breaking policy for ${s"${lp.getClass.getSimpleName}(${lp.id.x})"}%-32s break=${break._1}%-8s fuseOverPipelineCount=${break._2}%3d")
+      }
+      cache.set(lp.id, break)
+      break
+    } else {
+      cache.get(lp.id)
+    }
+  }
+
+  private def findSourcePlanFuseOverPipelineCount(lp: LogicalPlan) = {
+    (lp.lhs, lp.rhs) match {
+      // For Apply we follow the right-hand side
+      case (Some(_), Some(rhs)) if lp.isInstanceOf[Apply] && cache.isDefinedAt(rhs.id) =>
+        val (_, sourceFuseOverPipelineCount) = cache.get(rhs.id)
+        sourceFuseOverPipelineCount
+      case (Some(Apply(_, rhs)), None) if cache.isDefinedAt(rhs.id) =>
+        // Special case for Apply. When source of a one-child plan is an Apply, it may not yet be cached, but its rhs may be.
+        val (_, sourceFuseOverPipelineCount) = cache.get(rhs.id)
+        sourceFuseOverPipelineCount
+      case (Some(source), None) if cache.isDefinedAt(source.id) =>
+        val (_, sourceFuseOverPipelineCount) = cache.get(source.id)
+        sourceFuseOverPipelineCount
+      case (None, None) =>
+        0
+      case _ =>
+        // We did not find a fusable source in the cache, assume that we the first plan following a pipeline break
+        DebugSupport.PHYSICAL_PLANNING.log(s"  no cached source found for $lp")
+        0
+    }
+  }
+
+  private def computeBreakOn(lp: LogicalPlan, outerApplyPlanId: Id, fuseIndex: Int): (Boolean, Int) = {
     lp match {
       // leaf operators
       case _: AllNodesScan |
@@ -105,12 +148,9 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
            _: RelationshipCountFromCountStore |
            _: Input |
            _: Argument // TODO: breaking on argument is often silly. Let's not do that when avoidable.
-      => true
+      => (true, fuseIndex)
 
       // 1 child operators
-      case e: OptionalExpand if e.mode == ExpandAll
-      => !canFuseOneChildOperator(e, outerApplyPlanId)
-
       case _: Expand |
            _: OptionalExpand |
            _: UnwindCollection |
@@ -125,16 +165,20 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
            _: VarExpand |
            _: TriadicBuild |
            _: TriadicFilter
-      => !canFuseOneChildOperator(lp, outerApplyPlanId)
+      => breakOnFuseableOperator(lp, outerApplyPlanId, fuseIndex)
 
-      case ProcedureCall(_, call) if !parallelExecution && call.containsNoUpdates
-      =>
-        // Void procedures preserve cardinality and are always non-breaking
-        !call.signature.isVoid && !canFuseOneChildOperator(lp, outerApplyPlanId)
+      // Void procedures preserve cardinality and are always non-breaking
+      case ProcedureCall(_, call) if !parallelExecution && call.containsNoUpdates && call.signature.isVoid =>
+        (false, fuseIndex)
 
-      case p: ProjectEndpoints =>
-        // Undirected is cardinality increasing if nothing is in scope, otherwise not
-        !p.directed && !p.startInScope && !p.endInScope && !canFuseOneChildOperator(lp, outerApplyPlanId)
+      case ProcedureCall(_, call) if !parallelExecution && call.containsNoUpdates => // TODO: Why do updates matter for breaking-policy?
+        breakOnFuseableOperator(lp, outerApplyPlanId, fuseIndex)
+
+      // Undirected is cardinality increasing if nothing is in scope, otherwise not
+      case p: ProjectEndpoints if !p.directed && !p.startInScope && !p.endInScope =>
+        breakOnFuseableOperator(lp, outerApplyPlanId, fuseIndex)
+      case _: ProjectEndpoints =>
+        (false, fuseIndex)
 
       case _: ProduceResult |
            _: Limit |
@@ -145,11 +189,11 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
            _: CacheProperties |
            _: Selection |
            _: NonFuseable
-      => false
+      => (false, fuseIndex)
 
       // 2 child operators
       case _: Apply
-      => false
+      => (false, fuseIndex)
 
       case _: NodeHashJoin |
            _: RightOuterHashJoin |
@@ -161,10 +205,13 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
            _: AntiConditionalApply |
            _: SelectOrSemiApply |
            _: SelectOrAntiSemiApply
-      => true
+      => (true, fuseIndex)
 
       case plan =>
-        interpretedPipesPolicy.breakOn(plan) && !canFuseOneChildOperator(plan, outerApplyPlanId)
+        if (interpretedPipesPolicy.breakOn(plan))
+          breakOnFuseableOperator(plan, outerApplyPlanId, fuseIndex)
+        else
+          (false, fuseIndex)
     }
   }
 
@@ -178,7 +225,7 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
    * `Expand` can't be fused and instead insert a pipeline break, whereas for `AllNodesScan -> Expand` we might be
    * able to fuse them together and don't have to insert a pipeline break.
    */
-  private def canFuseOneChildOperator(lp: LogicalPlan, outerApplyPlanId: Id): Boolean = {
+  private def breakOnFuseableOperator(lp: LogicalPlan, outerApplyPlanId: Id, fuseOverPipelineCount: Int): (Boolean, Int) = {
     require(lp.rhs.isEmpty)
 
     def previous(p: LogicalPlan): LogicalPlan = p match {
@@ -187,21 +234,27 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
     }
 
     if (!fusionPolicy.canFuseOverPipeline(lp, outerApplyPlanId)) {
-      return false
+      return (true, 0)
+    }
+
+    val newFuseOverPipelineCount = fuseOverPipelineCount + 1 // We increase this count every time we decide we can fuse over pipelines (by a recursive call)
+    if (newFuseOverPipelineCount >= fusionPolicy.fusionOverPipelineLimit) {
+      return (true, 0)
     }
 
     var current = previous(lp)
     while (current != null) {
       if (!fusionPolicy.canFuse(current, outerApplyPlanId)) {
-        return false
+        return (true, 0)
       }
       //we made it all the way down to a pipeline break
-      if (breakOn(current, outerApplyPlanId)) {
-        return true
+      val (break, _) = breakOnInternal(current, outerApplyPlanId)
+      if (break) {
+        return (false, newFuseOverPipelineCount)
       }
       current = previous(current)
     }
-    true
+    (false, newFuseOverPipelineCount)
   }
 }
 
