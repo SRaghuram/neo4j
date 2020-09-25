@@ -2480,7 +2480,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
                 statuses.put( resultAsString( row, "component" ), resultAsString( row, "status" ) );
             }
             r.close();
-            assertThat( "Expected all test components to be found", statuses.size(), equalTo( 8 ) );
+            assertThat( "Expected all test components to be found", statuses.size(), equalTo( 9 ) );
             assertThat(statuses.get("system-graph"), containsString( SystemGraphComponent.Status.REQUIRES_UPGRADE.name()));
             assertThat(statuses.get("component_A"), containsString( SystemGraphComponent.Status.CURRENT.name()));
             assertThat(statuses.get("component_B"), containsString( SystemGraphComponent.Status.CURRENT.name()));
@@ -2505,7 +2505,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
                 results.put( resultAsString( row, "component" ), resultAsString( row, "upgradeResult" ) );
             }
             r.close();
-            assertThat( "Expected all test components to be found", statuses.size(), equalTo( 8 ) );
+            assertThat( "Expected all test components to be found", statuses.size(), equalTo( 9 ) );
             assertThat( statuses.get( "system-graph" ), containsString( SystemGraphComponent.Status.REQUIRES_UPGRADE.name() ) );
             assertThat( statuses.get( "component_A" ), containsString( SystemGraphComponent.Status.CURRENT.name() ) );
             assertThat( statuses.get( "component_B" ), containsString( SystemGraphComponent.Status.CURRENT.name() ) );

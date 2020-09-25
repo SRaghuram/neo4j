@@ -64,7 +64,6 @@ class TransactionLogUpgradeIT
         cluster.shutdown();
     }
 
-    @Disabled( "Temporarily disabling until DBMS runtime system component is registered again" )
     @Test
     void testBasicVersionLifecycle()
     {

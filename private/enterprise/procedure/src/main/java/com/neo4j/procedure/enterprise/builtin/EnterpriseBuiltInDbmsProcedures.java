@@ -73,6 +73,7 @@ import static java.lang.String.valueOf;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.REQUIRES_UPGRADE;
+import static org.neo4j.dbms.database.SystemGraphComponent.Status.UNINITIALIZED;
 import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 import static org.neo4j.io.ByteUnit.bytesToString;
 import static org.neo4j.kernel.api.exceptions.Status.Procedure.ProcedureCallFailed;
@@ -478,13 +479,19 @@ public class EnterpriseBuiltInDbmsProcedures
         SystemGraphComponents versions = systemGraphComponents;
         SystemGraphComponent.Status status = versions.detect( transaction );
         ArrayList<SystemGraphComponentUpgradeResultDetails> results = new ArrayList<>();
-        if ( status == REQUIRES_UPGRADE )
+
+        // New components are not currently initialised in cluster deployment when new binaries are booted on top of an existing database.
+        // This is a known shortcoming of the lifecycle and a state transfer from UNINITIALIZED to CURRENT must be supported
+        // as a workaround until it is fixed.
+        var upgradableStatuses = List.of( REQUIRES_UPGRADE, UNINITIALIZED );
+
+        if ( upgradableStatuses.contains( status ) )
         {
             ArrayList<SystemGraphComponent> failed = new ArrayList<>();
             versions.forEach( component ->
             {
                 SystemGraphComponent.Status initialStatus = component.detect( transaction );
-                if ( initialStatus == REQUIRES_UPGRADE )
+                if ( upgradableStatuses.contains( initialStatus ) )
                 {
                     try
                     {
