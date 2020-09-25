@@ -73,7 +73,7 @@ public class AddProfilesIT
     @Inject
     public TestDirectory temporaryFolder;
 
-    private static final Map<String,String> PARAMS = new HashMap<>( Map.of("key", "value" ) );
+    private static final Map<String,String> PARAMS = new HashMap<>( Map.of( "key", "value" ) );
     private static final BenchmarkGroup GROUP_1 = new BenchmarkGroup( "name1" );
     private static final BenchmarkGroup GROUP_2 = new BenchmarkGroup( "name2" );
     private static final Benchmark BENCHMARK_1_A = Benchmark.benchmarkFor( "desc1a", "name1a", LATENCY, PARAMS );
