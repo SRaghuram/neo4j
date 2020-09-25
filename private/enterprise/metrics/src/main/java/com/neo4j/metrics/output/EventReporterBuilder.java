@@ -20,7 +20,6 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.Log;
-import org.neo4j.scheduler.JobScheduler;
 
 import static com.neo4j.configuration.MetricsSettings.csv_enabled;
 import static com.neo4j.configuration.MetricsSettings.graphite_enabled;
@@ -43,10 +42,9 @@ public class EventReporterBuilder
     private final LifeSupport life;
     private final ConnectorPortRegister portRegister;
     private final FileSystemAbstraction fileSystem;
-    private final JobScheduler scheduler;
 
     public EventReporterBuilder( Config config, MetricRegistry registry, Log logger, ExtensionContext extensionContext,
-            LifeSupport life, FileSystemAbstraction fileSystem, JobScheduler scheduler, ConnectorPortRegister portRegister )
+            LifeSupport life, FileSystemAbstraction fileSystem, ConnectorPortRegister portRegister )
     {
         this.config = config;
         this.registry = registry;
@@ -54,7 +52,6 @@ public class EventReporterBuilder
         this.extensionContext = extensionContext;
         this.life = life;
         this.fileSystem = fileSystem;
-        this.scheduler = scheduler;
         this.portRegister = portRegister;
     }
 
@@ -68,7 +65,7 @@ public class EventReporterBuilder
 
         if ( config.get( csv_enabled ) )
         {
-            CsvOutput csvOutput = new CsvOutput( config, registry, logger, extensionContext, fileSystem, scheduler );
+            CsvOutput csvOutput = new CsvOutput( config, registry, logger, extensionContext, fileSystem );
             life.add( csvOutput );
             consumersConfigured = true;
         }

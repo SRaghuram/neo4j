@@ -25,8 +25,6 @@ import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLog;
-import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.test.OnDemandJobScheduler;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
@@ -48,7 +46,6 @@ class CsvOutputTest
     private FileSystemAbstraction fileSystem;
     @Inject
     private DatabaseLayout databaseLayout;
-    private final JobScheduler jobScheduler = new OnDemandJobScheduler();
 
     private ExtensionContext extensionContext;
 
@@ -97,7 +94,7 @@ class CsvOutputTest
 
     private CsvOutput createCsvOutput( Config config )
     {
-        return new CsvOutput( config, new MetricRegistry(), NullLog.getInstance(), extensionContext, fileSystem, jobScheduler );
+        return new CsvOutput( config, new MetricRegistry(), NullLog.getInstance(), extensionContext, fileSystem );
     }
 
     private void waitForFileToAppear( Path file ) throws InterruptedException

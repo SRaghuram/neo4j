@@ -16,46 +16,38 @@ import com.codahale.metrics.ScheduledReporter;
 import com.codahale.metrics.Snapshot;
 import com.codahale.metrics.Timer;
 
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import org.neo4j.io.IOUtils;
+import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.logging.log4j.RotatingLogFileWriter;
 
 public class RotatableCsvReporter extends ScheduledReporter
 {
-    private final Locale locale;
-    private final Clock clock;
     private final Path directory;
-    private final Map<Path,CsvRotatableWriter> writers;
-    private final BiFunction<Path,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> fileSupplierStreamCreator;
+    private final Map<Path,RotatingLogFileWriter> writers;
+    private final FileSystemAbstraction fileSystemAbstraction;
+    private final long rotationThreshold;
+    private final int maxArchives;
+    private final RotatingLogFileFactory logFileFactory;
 
     private boolean stopped;
 
-    RotatableCsvReporter( MetricRegistry registry, Locale locale, TimeUnit rateUnit, TimeUnit durationUnit, Clock clock,
-            Path directory,
-            BiFunction<Path,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> fileSupplierStreamCreator )
+    RotatableCsvReporter( MetricRegistry registry, FileSystemAbstraction fileSystemAbstraction, Path directory, long rotationThreshold, int maxArchives,
+            RotatingLogFileFactory logFileFactory )
     {
-        super( registry, "csv-reporter", MetricFilter.ALL, rateUnit, durationUnit );
-        this.locale = locale;
-        this.clock = clock;
+        super( registry, "csv-reporter", MetricFilter.ALL, TimeUnit.SECONDS, TimeUnit.MILLISECONDS );
         this.directory = directory;
-        this.fileSupplierStreamCreator = fileSupplierStreamCreator;
+        this.fileSystemAbstraction = fileSystemAbstraction;
+        this.rotationThreshold = rotationThreshold;
+        this.maxArchives = maxArchives;
+        this.logFileFactory = logFileFactory;
         this.writers = new HashMap<>();
-    }
-
-    static Builder forRegistry( MetricRegistry registry )
-    {
-        return new Builder( registry );
     }
 
     @Override
@@ -63,7 +55,7 @@ public class RotatableCsvReporter extends ScheduledReporter
     {
         super.stop();
         stopped = true;
-        writers.values().forEach( CsvRotatableWriter::close );
+        IOUtils.closeAllSilently( writers.values() );
     }
 
     @Override
@@ -74,7 +66,7 @@ public class RotatableCsvReporter extends ScheduledReporter
         {
             return;
         }
-        final long timestamp = TimeUnit.MILLISECONDS.toSeconds( clock.getTime() );
+        final long timestamp = TimeUnit.MILLISECONDS.toSeconds( Clock.defaultClock().getTime() );
 
         for ( Map.Entry<String,Gauge> entry : gauges.entrySet() )
         {
@@ -150,138 +142,9 @@ public class RotatableCsvReporter extends ScheduledReporter
     private void report( long timestamp, String name, String header, String line, Object... values )
     {
         Path file = directory.resolve( name + ".csv" );
-        CsvRotatableWriter csvRotatableWriter = writers.computeIfAbsent( file,
-                new RotatingCsvWriterSupplier( header, fileSupplierStreamCreator ) );
-        csvRotatableWriter.writeValues( locale, timestamp, line, values );
-    }
 
-    public static class Builder
-    {
-        private final MetricRegistry registry;
-        private Locale locale;
-        private TimeUnit rateUnit;
-        private TimeUnit durationUnit;
-        private Clock clock;
-        private BiFunction<Path,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier>
-                outputStreamSupplierFactory;
-
-        private Builder( MetricRegistry registry )
-        {
-            this.registry = registry;
-            this.locale = Locale.getDefault();
-            this.rateUnit = TimeUnit.SECONDS;
-            this.durationUnit = TimeUnit.MILLISECONDS;
-            this.clock = Clock.defaultClock();
-        }
-
-        Builder formatFor( Locale locale )
-        {
-            this.locale = locale;
-            return this;
-        }
-
-        Builder convertRatesTo( TimeUnit rateUnit )
-        {
-            this.rateUnit = rateUnit;
-            return this;
-        }
-
-        Builder convertDurationsTo( TimeUnit durationUnit )
-        {
-            this.durationUnit = durationUnit;
-            return this;
-        }
-
-        Builder outputStreamSupplierFactory(
-                BiFunction<Path,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> outputStreamSupplierFactory )
-        {
-            this.outputStreamSupplierFactory = outputStreamSupplierFactory;
-            return this;
-        }
-
-        /**
-         * Builds a {@link RotatableCsvReporter} with the given properties, writing {@code .csv} files to the
-         * given directory.
-         *
-         * @param directory the directory in which the {@code .csv} files will be created
-         * @return a {@link RotatableCsvReporter}
-         */
-        public RotatableCsvReporter build( Path directory )
-        {
-            return new RotatableCsvReporter( registry, locale, rateUnit, durationUnit, clock, directory,
-                    outputStreamSupplierFactory );
-        }
-    }
-
-    private static class RotatingCsvWriterSupplier implements Function<Path,CsvRotatableWriter>
-    {
-        private final String header;
-        private final BiFunction<Path,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> fileSupplierStreamCreator;
-
-        RotatingCsvWriterSupplier( String header,
-                BiFunction<Path,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> fileSupplierStreamCreator )
-        {
-            this.header = header;
-            this.fileSupplierStreamCreator = fileSupplierStreamCreator;
-        }
-
-        @Override
-        public CsvRotatableWriter apply( Path file )
-        {
-            RotatingFileOutputStreamSupplier outputStreamSupplier =
-                    fileSupplierStreamCreator.apply( file, new HeaderWriterRotationListener() );
-            PrintWriter printWriter = createWriter( outputStreamSupplier.get() );
-            CsvRotatableWriter writer = new CsvRotatableWriter( printWriter, outputStreamSupplier );
-            writeHeader( printWriter, header );
-            return writer;
-        }
-
-        private class HeaderWriterRotationListener extends RotatingFileOutputStreamSupplier.RotationListener
-        {
-
-            @Override
-            public void rotationCompleted( OutputStream out )
-            {
-                super.rotationCompleted( out );
-                try ( PrintWriter writer = createWriter( out ) )
-                {
-                    writeHeader( writer, header );
-                }
-            }
-        }
-        private static PrintWriter createWriter( OutputStream outputStream )
-        {
-            return new PrintWriter( new OutputStreamWriter( outputStream, StandardCharsets.UTF_8 ) );
-        }
-
-        private static void writeHeader( PrintWriter printWriter, String header )
-        {
-            printWriter.println( "t," + header );
-            printWriter.flush();
-        }
-    }
-
-    private static class CsvRotatableWriter
-    {
-        private final PrintWriter printWriter;
-        private final RotatingFileOutputStreamSupplier streamSupplier;
-
-        CsvRotatableWriter( PrintWriter printWriter, RotatingFileOutputStreamSupplier streamSupplier )
-        {
-            this.printWriter = printWriter;
-            this.streamSupplier = streamSupplier;
-        }
-
-        void close()
-        {
-            IOUtils.closeAllSilently( printWriter, streamSupplier );
-        }
-
-        void writeValues( Locale locale, long timestamp, String line, Object[] values )
-        {
-            streamSupplier.get();
-            printWriter.printf( locale, String.format( locale, "%d,%s%n", timestamp, line ), values );
-            printWriter.flush();
-        }
+        RotatingLogFileWriter csvWriter = writers.computeIfAbsent( file,
+                fileName -> logFileFactory.createWriter( fileSystemAbstraction, fileName, rotationThreshold, maxArchives, "t," + header + "%n" ) );
+        csvWriter.printf( String.format( Locale.US, "%d,%s", timestamp, line ), values );
     }
 }

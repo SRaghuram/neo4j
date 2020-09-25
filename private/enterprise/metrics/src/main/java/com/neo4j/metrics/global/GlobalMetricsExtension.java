@@ -38,7 +38,7 @@ public class GlobalMetricsExtension implements Lifecycle, MetricsManager
         MetricRegistry registry = new MetricRegistry();
         this.metricsRegister = new MetricsRegister( registry, dependencies.configuration().get( metrics_filter ) );
         this.configured = new EventReporterBuilder( dependencies.configuration(), registry, logger, context, life, dependencies.fileSystemAbstraction(),
-                dependencies.scheduler(), dependencies.portRegister() ).configure();
+                dependencies.portRegister() ).configure();
     }
 
     @Override
