@@ -151,6 +151,7 @@ public class StoreCopyCommand extends AbstractCommand
     @Option(
             names = "--keep-only-node-properties",
             description = "A comma separated list of property keys to keep for nodes with the specified label. " +
+                          "Any labels not explicitly mentioned will keep their properties. " +
                           "Can not be combined with --skip-properties or --skip-node-properties.",
             paramLabel = "<label.property>[,<label.property>...]",
             showDefaultValue = NEVER,
@@ -171,6 +172,7 @@ public class StoreCopyCommand extends AbstractCommand
     @Option(
             names = "--keep-only-relationship-properties",
             description = "A comma separated list of property keys to keep for relationships with the specified type. " +
+                          "Any relationship types not explicitly mentioned will keep their properties. " +
                           "Can not be combined with --skip-properties or --skip-relationship-properties.",
             paramLabel = "<relationship.property>[,<relationship.property>...]",
             showDefaultValue = NEVER,

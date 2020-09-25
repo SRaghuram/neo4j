@@ -523,12 +523,12 @@ public class StoreCopy
         int[] keepOnlyNodesWithLabelsIds = getTokenIds( keepOnlyNodesWithLabels, tokenHolders.labelTokens() );
         int[] skipLabelsIds = getTokenIds( skipLabels, tokenHolders.labelTokens() );
         int[] skipPropertyIds = getTokenIds( skipProperties, tokenHolders.propertyKeyTokens() );
-        var skipNodePropertyIds = getPropertyComboTokenIds( skipNodeProperties, tokenHolders.propertyKeyTokens(), tokenHolders.labelTokens() );
-        var keepOnlyNodePropertyIds = getPropertyComboTokenIds( keepOnlyNodeProperties, tokenHolders.propertyKeyTokens(), tokenHolders.labelTokens() );
+        var skipNodePropertyIds = getPropertyComboTokenIds( skipNodeProperties, tokenHolders.propertyKeyTokens(), tokenHolders.labelTokens(), false );
+        var keepOnlyNodePropertyIds = getPropertyComboTokenIds( keepOnlyNodeProperties, tokenHolders.propertyKeyTokens(), tokenHolders.labelTokens(), true );
         var skipRelationshipPropertyIds =
-                getPropertyComboTokenIds( skipRelationshipProperties, tokenHolders.propertyKeyTokens(), tokenHolders.relationshipTypeTokens() );
+                getPropertyComboTokenIds( skipRelationshipProperties, tokenHolders.propertyKeyTokens(), tokenHolders.relationshipTypeTokens(), false );
         var keepOnlyRelationshipPropertyIds =
-                getPropertyComboTokenIds( keepOnlyRelationshipProperties, tokenHolders.propertyKeyTokens(), tokenHolders.relationshipTypeTokens() );
+                getPropertyComboTokenIds( keepOnlyRelationshipProperties, tokenHolders.propertyKeyTokens(), tokenHolders.relationshipTypeTokens(), true );
         int[] skipRelationshipIds = getTokenIds( skipRelationships, tokenHolders.relationshipTypeTokens() );
 
         return new StoreCopyFilter( stats, deleteNodesWithLabelsIds, keepOnlyNodesWithLabelsIds, skipLabelsIds, skipPropertyIds, skipNodePropertyIds,
@@ -552,7 +552,7 @@ public class StoreCopy
     }
 
     private static ImmutableIntObjectMap<ImmutableIntSet> getPropertyComboTokenIds( List<List<String>> propertiesWithOwningEntityTokens,
-                                                                                    TokenHolder propertyKeyTokens, TokenHolder owningEntityTokens )
+            TokenHolder propertyKeyTokens, TokenHolder owningEntityTokens, boolean groupByOwningEntity )
     {
         MutableIntObjectMap<MutableIntSet> propertyComboTokens = new IntObjectHashMap<>();
 
@@ -575,8 +575,16 @@ public class StoreCopy
                 throw new RuntimeException( "Unable to find token: for " + oneOwningEntityTokenAndProperty.get( 0 ) );
             }
 
-            MutableIntSet owningEntityTokenIds = propertyComboTokens.getIfAbsentPut( propId, IntHashSet::new );
-            owningEntityTokenIds.add( owningEntityTokenId );
+            if ( groupByOwningEntity )
+            {
+                MutableIntSet propertyTokenIds = propertyComboTokens.getIfAbsentPut( owningEntityTokenId, IntHashSet::new );
+                propertyTokenIds.add( propId );
+            }
+            else
+            {
+                MutableIntSet owningEntityTokenIds = propertyComboTokens.getIfAbsentPut( propId, IntHashSet::new );
+                owningEntityTokenIds.add( owningEntityTokenId );
+            }
         }
         MutableIntObjectMap<ImmutableIntSet> immutableSets = new IntObjectHashMap<>();
         propertyComboTokens.forEachKeyValue( ( i, integers ) -> immutableSets.put( i, integers.toImmutable() ) );

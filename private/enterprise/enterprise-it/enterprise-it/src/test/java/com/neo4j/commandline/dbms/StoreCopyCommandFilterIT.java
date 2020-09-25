@@ -242,7 +242,7 @@ public class StoreCopyCommandFilterIT extends AbstractCommandIT
                 "--to-database=" + copyName,
                 "--keep-only-nodes-with-labels=S3,SAll",
                 "--skip-labels=S1,S2,S3,SAll",
-                "--keep-only-node-properties=Person.id,Division.name,Team.name"
+                "--keep-only-node-properties=Person.id,Division.name"
         );
 
         managementService.createDatabase( copyName );

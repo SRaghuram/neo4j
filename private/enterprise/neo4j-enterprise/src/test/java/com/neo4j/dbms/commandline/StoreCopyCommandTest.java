@@ -101,9 +101,10 @@ class StoreCopyCommandTest
                 "                               --keep-only-node-properties.%n" +
                 "      --keep-only-node-properties=<label.property>[,<label.property>...]%n" +
                 "                             A comma separated list of property keys to keep%n" +
-                "                               for nodes with the specified label. Can not be%n" +
-                "                               combined with --skip-properties or%n" +
-                "                               --skip-node-properties.%n" +
+                "                               for nodes with the specified label. Any labels%n" +
+                "                               not explicitly mentioned will keep their%n" +
+                "                               properties. Can not be combined with%n" +
+                "                               --skip-properties or --skip-node-properties.%n" +
                 "      --skip-relationship-properties=<relationship.property>[,<relationship.%n" +
                 "        property>...]%n" +
                 "                             A comma separated list of property keys to ignore%n" +
@@ -113,8 +114,10 @@ class StoreCopyCommandTest
                 "      --keep-only-relationship-properties=<relationship.property>[,%n" +
                 "        <relationship.property>...]%n" +
                 "                             A comma separated list of property keys to keep%n" +
-                "                               for relationships with the specified type. Can%n" +
-                "                               not be combined with --skip-properties or%n" +
+                "                               for relationships with the specified type. Any%n" +
+                "                               relationship types not explicitly mentioned will%n" +
+                "                               keep their properties. Can not be combined with%n" +
+                "                               --skip-properties or%n" +
                 "                               --skip-relationship-properties.%n" +
                 "      --skip-relationships=<relationship>[,<relationship>...]%n" +
                 "                             A comma separated list of relationships to ignore.%n" +

@@ -144,20 +144,20 @@ class StoreCopyFilter
         }
         else if ( !keepOnlyNodePropertyIds.isEmpty() )
         {
-            ImmutableIntSet keepPropertiesForLabel = keepOnlyNodePropertyIds.get( keyIndexId );
-            if ( keepPropertiesForLabel == null )
-            {
-                return false;
-            }
+            boolean noMatchingLabel = true; // Nodes that don't match any label should keep all their properties.
             for ( long nodeLabelId : nodeLabelIds )
             {
-                if ( keepPropertiesForLabel.contains( toIntExact( nodeLabelId ) ) )
+                ImmutableIntSet keepPropertiesForLabel = keepOnlyNodePropertyIds.get( toIntExact( nodeLabelId ) );
+                if ( keepPropertiesForLabel != null )
                 {
-                    //the node has a label that we should keep this property for.
-                    return true;
+                    noMatchingLabel = false;
+                    if ( keepPropertiesForLabel.contains( keyIndexId ) )
+                    {
+                        return true;
+                    }
                 }
             }
-            return false;
+            return noMatchingLabel;
         }
         return true;
     }
@@ -179,12 +179,13 @@ class StoreCopyFilter
         }
         else if ( !keepOnlyRelationshipPropertyIds.isEmpty() )
         {
-            ImmutableIntSet keepPropForRelationships = keepOnlyRelationshipPropertyIds.get( keyIndexId );
+            ImmutableIntSet keepPropForRelationships = keepOnlyRelationshipPropertyIds.get( relationshipTypeId );
             if ( keepPropForRelationships == null )
             {
-                return false;
+                // All properties for the relationship should be kept if it wasn't specified to only keep specific properties.
+                return true;
             }
-            return keepPropForRelationships.contains( relationshipTypeId );
+            return keepPropForRelationships.contains( keyIndexId );
         }
         return true;
     }

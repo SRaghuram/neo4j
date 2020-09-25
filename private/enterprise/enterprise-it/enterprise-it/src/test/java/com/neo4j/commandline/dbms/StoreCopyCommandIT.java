@@ -77,6 +77,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
     private static final Label ERROR_LABEL = Label.label( "Error" );
     private static final RelationshipType KNOWS = RelationshipType.withName( "KNOWS" );
     private static final RelationshipType SECRET = RelationshipType.withName( "SECRET" );
+    private static final RelationshipType LIKES = RelationshipType.withName( "LIKES" );
 
     @Test
     void cantCopyFromRunningDatabase()
@@ -532,6 +533,8 @@ class StoreCopyCommandIT extends AbstractCommandIT
             b.setProperty( "secretProperty", "keep me" );
             Node c = tx.createNode( NUMBER_LABEL );
             c.setProperty( "name", "Trays" );
+            Node d = tx.createNode( ERROR_LABEL );
+            d.setProperty( "other", "OtherProp" );
 
             a.createRelationshipTo( b, KNOWS );
             Relationship rel = b.createRelationshipTo( c, KNOWS );
@@ -553,7 +556,8 @@ class StoreCopyCommandIT extends AbstractCommandIT
             Node a = tx.getNodeById( 0 );
             Node b = tx.getNodeById( 1 );
             Node c = tx.getNodeById( 2 );
-            assertThrows( NotFoundException.class, () -> tx.getNodeById( 3 ) );
+            Node d = tx.getNodeById( 3 );
+            assertThrows( NotFoundException.class, () -> tx.getNodeById( 4 ) );
 
             // Validate a
             assertEquals( "On",  a.getProperty( "name" ) );
@@ -576,6 +580,10 @@ class StoreCopyCommandIT extends AbstractCommandIT
 
             // Validate c
             assertEquals( "Trays",  c.getProperty( "name" ) );
+            assertFalse( c.getRelationships( Direction.OUTGOING ).iterator().hasNext() );
+
+            // Validate d - should still have its properties since no filter was added for the Error label
+            assertEquals( "OtherProp",  d.getProperty( "other" ) );
             assertFalse( c.getRelationships( Direction.OUTGOING ).iterator().hasNext() );
             tx.commit();
         }
@@ -680,7 +688,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
     }
 
     @Test
-    void cankeepOnlyRelationshipProperties() throws Exception
+    void canKeepOnlyRelationshipProperties() throws Exception
     {
         // Create some data
         try ( Transaction tx = databaseAPI.beginTx() )
@@ -699,6 +707,8 @@ class StoreCopyCommandIT extends AbstractCommandIT
             rel.setProperty( "secretProperty", "Please delete me!" );
             rel = c.createRelationshipTo( a, SECRET );
             rel.setProperty( "secretProperty", "keep me" );
+            rel = a.createRelationshipTo( c, LIKES );
+            rel.setProperty( "otherProperty", "keep me too" );
             tx.commit();
         }
         String databaseName = databaseAPI.databaseName();
@@ -721,6 +731,10 @@ class StoreCopyCommandIT extends AbstractCommandIT
             // Validate a
             assertEquals( "On",  a.getProperty( "name" ) );
             Iterator<Relationship> aRelationships = a.getRelationships( Direction.OUTGOING ).iterator();
+            Relationship aLikesC = aRelationships.next();
+            assertEquals( c.getId(), aLikesC.getEndNodeId() );
+            assertEquals( "LIKES", aLikesC.getType().name() );
+            assertEquals( aLikesC.getProperty( "otherProperty" ), "keep me too" );
             Relationship aKnowsB = aRelationships.next();
             assertEquals( b.getId(), aKnowsB.getEndNodeId() );
             assertEquals( "KNOWS", aKnowsB.getType().name() );
