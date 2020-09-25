@@ -639,6 +639,14 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
     result.toList should equal(List(Map("dfoos" -> List(List(1)))))
   }
 
+  test("should correctly identify pattern comprehension dependencies with ambiguous name due to isolateAggregation") {
+    relate(createLabeledNode(Map("p" -> "n"), "N"), createLabeledNode(Map("p" -> "nn"),"NN"))
+    relate(createLabeledNode(Map("p" -> "m"),"N"), createLabeledNode(Map("p" -> "mm"),"MM"))
+
+    val r = executeWith(Configs.All, "MATCH (n:N) WITH head(collect(n)) AS foo, n MATCH (n) RETURN [(n)--(:MM) | n.p] AS p")
+    r.toList should contain theSameElementsAs (List(Map("p" -> List("m")), Map("p" -> List())))
+  }
+
   test("should handle pattern comprehension within ALL list expression referencing outer scope") {
 
     // GIVEN

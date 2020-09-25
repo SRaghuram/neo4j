@@ -456,6 +456,14 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
       planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
   }
 
+  test("should correctly identify pattern expression dependencies with ambiguous name due to isolateAggregation") {
+    relate(createLabeledNode(Map("p" -> "n"), "N"), createLabeledNode(Map("p" -> "nn"),"NN"))
+    relate(createLabeledNode(Map("p" -> "m"),"N"), createLabeledNode(Map("p" -> "mm"),"MM"))
+
+    val r = executeWith(Configs.All, "MATCH (n:N) WITH head(collect(n)) AS foo, n MATCH (n) WHERE (n)--(:MM) RETURN n.p")
+    r.toList should equal(List(Map("n.p" -> "m")))
+  }
+
   private def setup(): (Node, Node) = {
     val n1 = createLabeledNode("X")
     val n2 = createLabeledNode("X")
