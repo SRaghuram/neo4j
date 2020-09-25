@@ -109,7 +109,7 @@ object PipelineTreeBuilder {
     }
 
     def fuseOrInterpret(plan: LogicalPlan, isBreaking: Boolean): Unit = {
-      if (!fuse(plan)) {
+      if (isBreaking || !fuse(plan)) {
         middlePlans += plan
       }
     }
@@ -724,18 +724,16 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
 
       case _ =>
         val isBreaking = breakingPolicy.breakOn(plan, applyPlans(plan.id))
-        if (source.fuse(plan)) {
+        if (isBreaking) {
+          val buffer = outputToBuffer(source, plan)
+          val pipeline = newPipeline(plan, buffer)
+          pipeline.lhs = source.id
+          pipeline
+        } else if (source.fuse(plan)) {
           source
         } else {
-          if (isBreaking) {
-            val buffer = outputToBuffer(source, plan)
-            val pipeline = newPipeline(plan, buffer)
-            pipeline.lhs = source.id
-            pipeline
-          } else {
-            source.middlePlans += plan
-            source
-          }
+          source.middlePlans += plan
+          source
         }
     }
   }
