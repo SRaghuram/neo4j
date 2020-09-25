@@ -21,7 +21,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
 import org.neo4j.codegen.api.IntermediateRepresentation.equal
 import org.neo4j.codegen.api.IntermediateRepresentation.field
-import org.neo4j.codegen.api.IntermediateRepresentation.getStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
@@ -72,6 +71,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTa
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_NODE_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_TRAVERSAL_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NO_TOKEN
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NodeCursorPool
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.TraversalCursorPool
@@ -91,9 +91,12 @@ import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.PropertyCursor
+import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.TokenRead
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections
+import org.neo4j.kernel.impl.newapi.Cursors
+import org.neo4j.kernel.impl.newapi.Cursors.emptyTraversalCursor
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
 
@@ -212,7 +215,7 @@ class ExpandAllTask(inputMorsel: Morsel,
 
     val read = context.transactionalContext.dataRead
     read.singleNode(node, nodeCursor)
-    if (!nodeCursor.next()) RelationshipTraversalCursor.EMPTY
+    if (!nodeCursor.next()) emptyTraversalCursor(read)
     else {
       traversalCursor = pools.relationshipTraversalCursorPool.allocateAndTrace()
       dir match {
@@ -479,7 +482,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
             loadField(typeField))))
       )( //else
         setField(relationshipsField,
-          getStatic[RelationshipTraversalCursor, RelationshipTraversalCursor]("EMPTY"))
+          invokeStatic(method[Cursors, RelationshipTraversalCursor, Read]("emptyTraversalCursor"), loadField(DATA_READ)))
       ))
   }
 

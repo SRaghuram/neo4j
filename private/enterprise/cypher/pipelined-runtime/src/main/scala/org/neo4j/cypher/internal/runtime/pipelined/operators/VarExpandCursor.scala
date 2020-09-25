@@ -19,6 +19,7 @@ import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.allCursor
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.incomingCursor
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.outgoingCursor
+import org.neo4j.kernel.impl.newapi.Cursors.emptyTraversalCursor
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.ListValue
 import org.neo4j.values.virtual.RelationshipValue
@@ -129,7 +130,7 @@ abstract class VarExpandCursor(val fromNode: Long,
     read.singleNode(node, nodeCursor)
     val cursor =
       if (!nodeCursor.next()) {
-        RelationshipTraversalCursor.EMPTY
+        emptyTraversalCursor(read)
       } else {
         val traversalCursor = relTraCursors.computeIfAbsent(pathLength, () => {
           val cursor = cursorPools.relationshipTraversalCursorPool.allocateAndTrace()

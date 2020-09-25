@@ -15,11 +15,12 @@ import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
 import org.neo4j.codegen.api.IntermediateRepresentation.equal
 import org.neo4j.codegen.api.IntermediateRepresentation.field
-import org.neo4j.codegen.api.IntermediateRepresentation.getStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.loop
+import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.not
 import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
@@ -43,6 +44,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.getNodeIdFromSlot
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.conditionallyProfileRow
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.cursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
@@ -52,8 +54,11 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.helpers.CachingExpandInto
+import org.neo4j.kernel.impl.newapi.Cursors
+import org.neo4j.kernel.impl.newapi.Cursors.emptyTraversalCursor
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.storable.Values
 
@@ -112,7 +117,7 @@ class OptionalExpandIntoOperator(val workIdentity: WorkIdentity,
       val toNode = getToNodeFunction.applyAsLong(inputCursor)
       hasWritten = false
       if (entityIsNull(fromNode) || entityIsNull(toNode)) {
-        relationships = RelationshipTraversalCursor.EMPTY
+        relationships = emptyTraversalCursor(state.query.transactionalContext.dataRead)
       } else {
         setUp(state, resources)
         setupCursors(state.queryContext, resources, fromNode, toNode)
@@ -217,7 +222,7 @@ class OptionalExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
    *    if (fromNode != -1L && toNode != -1L) ) {
    *      [setUpCursors]
    *    } else {
-   *       this.relationships = RelationshipSelectionCursor.EMPTY
+   *       this.relationships = Cursors.emptyTraversalCursor(read)
    *    }
    *    true
    * }}}
@@ -237,7 +242,7 @@ class OptionalExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
         )
       }{//else
         setField(relationshipsField,
-          getStatic[RelationshipTraversalCursor, RelationshipTraversalCursor]("EMPTY"))
+          invokeStatic(method[Cursors, RelationshipTraversalCursor, Read]("emptyTraversalCursor"), loadField(DATA_READ)))
       },
       constant(true))
   }
@@ -249,7 +254,7 @@ class OptionalExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
    *     if (!this.hasWritten && !this.canContinue) {
    *       rel = -1L
    *       node = -1L
-   *       relationship = RelationshipTraversalCursor.EMPTY
+   *       relationship = Cursors.emptyTraversalCursor()
    *       shouldWriteRow = true
    *     } else {
    *       [rel = getRel]
@@ -283,7 +288,7 @@ class OptionalExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
             block(
               writeRow(constant(-1L)),
               setField(relationshipsField,
-                getStatic[RelationshipTraversalCursor, RelationshipTraversalCursor]("EMPTY")),
+                invokeStatic(method[Cursors, RelationshipTraversalCursor, Read]("emptyTraversalCursor"), loadField(DATA_READ))),
               doIfPredicate(assign(shouldWriteRow, constant(true)))))
           (/*else*/
             block(
