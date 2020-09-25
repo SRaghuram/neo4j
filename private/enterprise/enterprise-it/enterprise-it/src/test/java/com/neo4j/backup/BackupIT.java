@@ -7,6 +7,7 @@ package com.neo4j.backup;
 
 import com.neo4j.backup.impl.BackupExecutionException;
 import com.neo4j.backup.impl.ConsistencyCheckExecutionException;
+import com.neo4j.backup.impl.DatabaseIdStore;
 import com.neo4j.backup.impl.OnlineBackupContext;
 import com.neo4j.backup.impl.OnlineBackupExecutor;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -33,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -67,6 +70,7 @@ import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory;
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.layout.DatabaseFile;
@@ -74,8 +78,10 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.MetaDataStore.Position;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
@@ -283,6 +289,7 @@ class BackupIT
 
         executeBackup( db );
 
+        checkDatabaseIdCorrectness( DEFAULT_DATABASE_NAME );
         assertEquals( initialDataSetRepresentation, getBackupDbRepresentation() );
         managementService.shutdown();
 
@@ -292,6 +299,7 @@ class BackupIT
         executeBackupWithoutFallbackToFull( db );
 
         assertEquals( furtherRepresentation, getBackupDbRepresentation() );
+        checkDatabaseIdCorrectness( DEFAULT_DATABASE_NAME );
     }
 
     @TestWithRecordFormats
@@ -1061,6 +1069,28 @@ class BackupIT
         assertThat( getRootCause( exception ).getMessage() ).contains( "Database '" + natureDB + "' is stopped" );
     }
 
+    @TestWithRecordFormats
+    void shouldThrowExceptionIfDataStoreIdIsDifferentFromServerOne( String recordFormatName ) throws Exception
+    {
+        createInitialDataSet( serverHomeDir, recordFormatName );
+        final var db = startDb( serverHomeDir );
+
+        //when execute full backup
+        executeBackup( db );
+        managementService.shutdown();
+
+        //than change the value in datastore file
+        new DatabaseIdStore( fs, new Log4jLogProvider( System.out ) )
+                .writeDatabaseId( DatabaseIdFactory.from( UUID.randomUUID() ), Path.of( backupsDir.toAbsolutePath().toString(), DEFAULT_DATABASE_NAME ) );
+
+        // then add more data and execute incremental backup
+        addMoreData( serverHomeDir, recordFormatName );
+
+        final var exception =
+                assertThrows( BackupExecutionException.class, () -> executeBackupWithoutFallbackToFull( startDb( serverHomeDir ) ) );
+        assertThat( exception.getCause() ).hasMessageContaining( "stored on the file system doesn't match with the server one" );
+    }
+
     private void createTransactionWithWeirdRelationshipGroupRecord( GraphDatabaseService db )
     {
         Node node;
@@ -1542,6 +1572,14 @@ class BackupIT
     private static ExecutorService newSingleThreadedExecutor()
     {
         return Executors.newSingleThreadExecutor( new DaemonThreadFactory() );
+    }
+
+    private void checkDatabaseIdCorrectness( String databaseName )
+    {
+        var databaseId = new DatabaseIdStore( new DefaultFileSystemAbstraction(), new Log4jLogProvider( System.out ) )
+                .readDatabaseId( backupsDir.resolve( databaseName ) ).orElseThrow( () -> new IllegalStateException( "database id file should be presented" ) );
+        var expectedDatabaseId = ((GraphDatabaseFacade) managementService.database( databaseName )).databaseId().databaseId();
+        assertEquals( expectedDatabaseId, databaseId );
     }
 
     private static class BackupClientPausingMonitor extends StoreCopyClientMonitor.Adapter

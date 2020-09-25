@@ -5,7 +5,9 @@
  */
 package com.neo4j.restore;
 
+import com.neo4j.backup.impl.DatabaseIdStore;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -14,7 +16,9 @@ import org.mockito.Mockito;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.UUID;
 
 import org.neo4j.cli.CommandFailedException;
 import org.neo4j.configuration.Config;
@@ -25,11 +29,13 @@ import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
+import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.impl.transaction.log.files.LogFile;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.internal.locker.DatabaseLocker;
 import org.neo4j.kernel.internal.locker.Locker;
+import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
@@ -40,6 +46,7 @@ import static com.neo4j.configuration.CausalClusteringSettings.cluster_state_dir
 import static com.neo4j.configuration.OnlineBackupSettings.online_backup_enabled;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.never;
@@ -62,10 +69,18 @@ class RestoreDatabaseCommandIT
     private Neo4jLayout neo4jLayout;
     private static DatabaseManagementService managementService;
 
+    private Path backupsDir1;
+
+    @BeforeEach
+    void beforeEach()
+    {
+        backupsDir1 = directory.homePath( "backups1" );
+    }
+
     @Test
     void forceShouldRespectDatabaseLock()
     {
-        var databaseName =  "new" ;
+        var databaseName = "new";
         Neo4jLayout testStore = neo4jLayout;
         Config config = configWith( testStore );
 
@@ -96,7 +111,7 @@ class RestoreDatabaseCommandIT
     void shouldNotCopyOverAnExistingDatabase()
     {
         // given
-        var databaseName =  "new" ;
+        var databaseName = "new";
         Neo4jLayout testStore = neo4jLayout;
         Config config = configWith( testStore );
 
@@ -119,7 +134,7 @@ class RestoreDatabaseCommandIT
     void shouldThrowExceptionIfBackupDirectoryDoesNotExist()
     {
         // given
-        var databaseName =  "new" ;
+        var databaseName = "new";
         Config config = configWith( neo4jLayout );
 
         Path fromPath = directory.homePath().resolve( "old" );
@@ -132,7 +147,7 @@ class RestoreDatabaseCommandIT
         final var databaseLayout = Neo4jLayout.of( config ).databaseLayout( databaseName );
         IllegalArgumentException illegalException =
                 assertThrows( IllegalArgumentException.class,
-                              () -> new RestoreDatabaseCommand( fileSystem, fromPath, databaseLayout, raftGroupDirectory,false, false ).execute() );
+                              () -> new RestoreDatabaseCommand( fileSystem, fromPath, databaseLayout, raftGroupDirectory, false, false ).execute() );
         assertTrue( illegalException.getMessage().contains( "Source directory does not exist" ), illegalException.getMessage() );
     }
 
@@ -140,7 +155,7 @@ class RestoreDatabaseCommandIT
     void shouldThrowExceptionIfBackupDirectoryDoesNotHaveStoreFiles() throws IOException
     {
         // given
-        var databaseName =  "new" ;
+        var databaseName = "new";
         Config config = configWith( neo4jLayout );
 
         Path fromPath = directory.homePath().resolve( "old" );
@@ -151,7 +166,7 @@ class RestoreDatabaseCommandIT
         final var databaseLayout = Neo4jLayout.of( config ).databaseLayout( databaseName );
         IllegalArgumentException illegalException =
                 assertThrows( IllegalArgumentException.class,
-                              () -> new RestoreDatabaseCommand( fileSystem, fromPath, databaseLayout, raftGroupDirectory,false, false ).execute() );
+                              () -> new RestoreDatabaseCommand( fileSystem, fromPath, databaseLayout, raftGroupDirectory, false, false ).execute() );
         assertTrue( illegalException.getMessage().contains( "Source directory is not a database backup" ), illegalException.getMessage() );
     }
 
@@ -167,7 +182,7 @@ class RestoreDatabaseCommandIT
         final var clusterStateLayout = ClusterStateLayout.of( config.get( cluster_state_directory ) );
         final var raftGroupDirectory = clusterStateLayout.raftGroupDir( databaseName );
         final var databaseLayout = Neo4jLayout.of( config ).databaseLayout( databaseName );
-        assertThrows( Exception.class, () -> new RestoreDatabaseCommand( fileSystem, fromPath, databaseLayout, raftGroupDirectory,false, false ).execute() );
+        assertThrows( Exception.class, () -> new RestoreDatabaseCommand( fileSystem, fromPath, databaseLayout, raftGroupDirectory, false, false ).execute() );
     }
 
     @Test
@@ -190,7 +205,7 @@ class RestoreDatabaseCommandIT
         final var clusterStateLayout = ClusterStateLayout.of( config.get( cluster_state_directory ) );
         final var raftGroupDirectory = clusterStateLayout.raftGroupDir( DEFAULT_DATABASE_NAME );
         final var databaseLayout = Neo4jLayout.of( config ).databaseLayout( DEFAULT_DATABASE_NAME );
-        new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), databaseLayout, raftGroupDirectory,true, false ).execute();
+        new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), databaseLayout, raftGroupDirectory, true, false ).execute();
 
         // then
         DatabaseManagementService managementService =
@@ -224,7 +239,7 @@ class RestoreDatabaseCommandIT
         final var clusterStateLayout = ClusterStateLayout.of( config.get( cluster_state_directory ) );
         final var raftGroupDirectory = clusterStateLayout.raftGroupDir( DEFAULT_DATABASE_NAME );
         final var databaseLayout = Neo4jLayout.of( config ).databaseLayout( DEFAULT_DATABASE_NAME );
-        new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), databaseLayout, raftGroupDirectory,false, true ).execute();
+        new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), databaseLayout, raftGroupDirectory, false, true ).execute();
 
         // then
         assertThat( fileSystem.fileExists( fromLayout.databaseDirectory() ) ).isFalse();
@@ -251,9 +266,9 @@ class RestoreDatabaseCommandIT
 
         Path newHome = directory.homePath( "new" );
         Config config = Config.newBuilder()
-                .set( neo4j_home, newHome )
-                .set( transaction_logs_root_path, newHome.resolve( "customLogicalLog" ) )
-                .build();
+                              .set( neo4j_home, newHome )
+                              .set( transaction_logs_root_path, newHome.resolve( "customLogicalLog" ) )
+                              .build();
 
         Neo4jLayout toStoreLayout = Neo4jLayout.of( config );
 
@@ -272,7 +287,7 @@ class RestoreDatabaseCommandIT
         final var clusterStateLayout = ClusterStateLayout.of( config.get( cluster_state_directory ) );
         final var raftGroupDirectory = clusterStateLayout.raftGroupDir( DEFAULT_DATABASE_NAME );
         final var databaseLayout = Neo4jLayout.of( config ).databaseLayout( DEFAULT_DATABASE_NAME );
-        new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), databaseLayout, raftGroupDirectory,true, false ).execute();
+        new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), databaseLayout, raftGroupDirectory, true, false ).execute();
 
         LogFiles fromStoreLogFiles = logFilesBasedOnlyBuilder( fromLayout.databaseDirectory(), fileSystem )
                 .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
@@ -304,7 +319,7 @@ class RestoreDatabaseCommandIT
         final var clusterStateLayout = ClusterStateLayout.of( config.get( cluster_state_directory ) );
         final var raftGroupDirectory = clusterStateLayout.raftGroupDir( databaseName );
         final var databaseLayout = Neo4jLayout.of( config ).databaseLayout( databaseName );
-        new RestoreDatabaseCommand( fs, fromPath, databaseLayout, raftGroupDirectory,true, false ).execute();
+        new RestoreDatabaseCommand( fs, fromPath, databaseLayout, raftGroupDirectory, true, false ).execute();
 
         verify( fs, never() ).deleteRecursively( neo4jLayout.transactionLogsRootDirectory() );
     }
@@ -323,7 +338,7 @@ class RestoreDatabaseCommandIT
         final var clusterStateLayout = ClusterStateLayout.of( config.get( cluster_state_directory ) );
         final var raftGroupDirectory = clusterStateLayout.raftGroupDir( databaseName );
         final var databaseLayout = Neo4jLayout.of( config ).databaseLayout( databaseName );
-        new RestoreDatabaseCommand( fs, fromPath, databaseLayout, raftGroupDirectory,true, false ).execute();
+        new RestoreDatabaseCommand( fs, fromPath, databaseLayout, raftGroupDirectory, true, false ).execute();
 
         verify( fs ).deleteRecursively( neo4jLayout.databaseLayout( databaseName ).getTransactionLogsDirectory() );
     }
@@ -332,7 +347,7 @@ class RestoreDatabaseCommandIT
     @ValueSource( booleans = {false, true} )
     void failIfHasClusterStateForDatabase( boolean useDefaultClusterStateDirectory ) throws IOException
     {
-        var databaseName =  "new" ;
+        var databaseName = "new";
         Neo4jLayout testStore = neo4jLayout;
         Config config = useDefaultClusterStateDirectory ? configWith( testStore ) : Config.defaults(
                 Map.of( neo4j_home, testStore.homeDirectory(), cluster_state_directory, directory.directory( "extra_cluster_state" ) ) );
@@ -346,7 +361,7 @@ class RestoreDatabaseCommandIT
         final var raftGroupDirectory = clusterStateLayout.raftGroupDir( databaseName );
         final var databaseLayout = Neo4jLayout.of( config ).databaseLayout( databaseName );
         IllegalArgumentException illegalArgumentException = assertThrows(
-                IllegalArgumentException.class, () -> new RestoreDatabaseCommand( fileSystem, fromPath, databaseLayout, raftGroupDirectory,true, false )
+                IllegalArgumentException.class, () -> new RestoreDatabaseCommand( fileSystem, fromPath, databaseLayout, raftGroupDirectory, true, false )
                         .execute() );
 
         assertThat( illegalArgumentException.getMessage() ).isEqualTo(
@@ -355,6 +370,30 @@ class RestoreDatabaseCommandIT
                 "If the database already is dropped, then you need to unbind the local instance using `neo4j-admin unbind`. " +
                 "Note that unbind requires stopping the instance, and affects all databases."
         );
+    }
+
+    @Test
+    void shouldNotCopyDatabaseStoreIdFile() throws IOException
+    {
+        createDbAt( backupsDir1, 10 );
+        new DatabaseIdStore( fileSystem, Mockito.mock( LogProvider.class ) )
+                .writeDatabaseId( DatabaseIdFactory.from( UUID.randomUUID() ), backupsDir1 );
+        DatabaseLayout toLayout = neo4jLayout.databaseLayout( "test" );
+        Config config = configWith( neo4jLayout );
+        String databaseName = "target-database";
+        final var clusterStateLayout = ClusterStateLayout.of( config.get( cluster_state_directory ) );
+        final var raftGroupDirectory = clusterStateLayout.raftGroupDir( databaseName );
+
+        //when
+        new RestoreDatabaseCommand( fileSystem, backupsDir1, toLayout, raftGroupDirectory, false, false ).execute();
+
+        //then
+        final var databaseStoreFileExistsInDatabaseDirectory = Arrays.stream( fileSystem.listFiles( toLayout.databaseDirectory() ) )
+                                                                     .anyMatch( path -> path.toFile().getName().equals( DatabaseIdStore.FILE_NAME ) );
+        final var databaseStoreFileExistsInTxDirectory = Arrays.stream( fileSystem.listFiles( toLayout.getTransactionLogsDirectory() ) )
+                                                               .anyMatch( path -> path.toFile().getName().equals( DatabaseIdStore.FILE_NAME ) );
+        assertFalse( databaseStoreFileExistsInDatabaseDirectory );
+        assertFalse( databaseStoreFileExistsInTxDirectory );
     }
 
     private static Config configWith( Neo4jLayout layout )

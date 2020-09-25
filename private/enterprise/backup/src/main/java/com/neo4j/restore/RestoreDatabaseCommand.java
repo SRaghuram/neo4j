@@ -5,9 +5,15 @@
  */
 package com.neo4j.restore;
 
+import com.neo4j.backup.impl.DatabaseIdStore;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.neo4j.cli.CommandFailedException;
 import org.neo4j.commandline.dbms.CannotWriteException;
@@ -113,18 +119,20 @@ public class RestoreDatabaseCommand
 
     private void restoreDatabaseFiles() throws IOException
     {
-        var databaseFiles = fs.listFiles( fromDatabasePath );
+        var databaseFiles = Optional.ofNullable( fs.listFiles( fromDatabasePath, path -> !path.getFileName().toString().equals( DatabaseIdStore.FILE_NAME ) ) )
+                                    .map( files -> Arrays.stream( files )
+                                                         .collect( Collectors.toSet() ) )
+                                    .orElse( Set.of() );
+
         var transactionLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( fromDatabasePath, fs ).build();
 
-        if ( databaseFiles != null )
+        var databaseDirectory = targetDatabaseLayout.databaseDirectory();
+        var transactionLogsDirectory = targetDatabaseLayout.getTransactionLogsDirectory();
+        var databaseLockFile = targetDatabaseLayout.databaseLockFile();
+        for ( var file : databaseFiles )
         {
-            var databaseDirectory = targetDatabaseLayout.databaseDirectory();
-            var transactionLogsDirectory = targetDatabaseLayout.getTransactionLogsDirectory();
-            var databaseLockFile = targetDatabaseLayout.databaseLockFile();
-            for ( var file : databaseFiles )
+            if ( Files.isDirectory( file ) )
             {
-                if ( Files.isDirectory( file ) )
-                {
                     if ( moveFiles )
                     {
                         fs.moveToDirectory( file, databaseDirectory );
@@ -157,6 +165,5 @@ public class RestoreDatabaseCommand
             {
                 fs.deleteRecursively( fromDatabasePath );
             }
-        }
     }
 }

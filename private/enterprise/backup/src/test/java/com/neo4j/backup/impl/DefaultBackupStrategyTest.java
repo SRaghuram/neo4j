@@ -43,7 +43,9 @@ class DefaultBackupStrategyTest
     private final StoreFiles storeFiles = mock( StoreFiles.class );
     private final StoreId expectedStoreId = new StoreId( 11, 22, 33, 44, 55 );
     private final NamedDatabaseId namedDatabaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
-    private final DefaultBackupStrategy strategy = new DefaultBackupStrategy( backupDelegator, NullLogProvider.getInstance(), storeFiles, NULL );
+    private final DatabaseIdStore databaseIdStore = mock( DatabaseIdStore.class );
+    private final DefaultBackupStrategy strategy =
+            new DefaultBackupStrategy( backupDelegator, NullLogProvider.getInstance(), storeFiles, NULL, databaseIdStore );
     private final String databaseName = "database name";
 
     @BeforeEach

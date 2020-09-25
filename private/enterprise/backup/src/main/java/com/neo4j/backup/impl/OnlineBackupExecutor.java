@@ -5,7 +5,6 @@
  */
 package com.neo4j.backup.impl;
 
-import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.com.storecopy.FileMoveProvider;
 
@@ -21,13 +20,11 @@ import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.time.Clocks;
@@ -120,20 +117,22 @@ public final class OnlineBackupExecutor
 
         try ( BackupSupportingClasses supportingClasses = backupSupportingClassesFactory.createSupportingClasses( context.getConfig() ) )
         {
-            StoreCopyClientMonitor backupStoreCopyMonitor = new BackupOutputMonitor( userLogProvider, clock );
+            final var backupStoreCopyMonitor = new BackupOutputMonitor( userLogProvider, clock );
             monitors.addMonitorListener( backupStoreCopyMonitor );
 
-            PageCache pageCache = supportingClasses.getPageCache();
+            final var pageCache = supportingClasses.getPageCache();
             var pageCacheTracer = supportingClasses.getPageCacheTracer();
 
-            StoreFiles storeFiles = new StoreFiles( fs, pageCache );
+            final var storeFiles = new StoreFiles( fs, pageCache );
             BackupCopyService copyService = new BackupCopyService( fs, new FileMoveProvider( fs ), storeFiles, internalLogProvider, pageCacheTracer );
 
-            BackupStrategy strategy = new DefaultBackupStrategy( supportingClasses.getBackupDelegator(), internalLogProvider, storeFiles, pageCacheTracer );
-            BackupStrategyWrapper wrapper = new BackupStrategyWrapper( strategy, copyService, fs, pageCache, userLogProvider, internalLogProvider );
+            final var databaseIdStore = new DatabaseIdStore( fs, internalLogProvider );
+            final var strategy = new DefaultBackupStrategy( supportingClasses.getBackupDelegator(), internalLogProvider, storeFiles, pageCacheTracer,
+                                                            databaseIdStore );
+            final var wrapper = new BackupStrategyWrapper( strategy, copyService, fs, pageCache, userLogProvider, internalLogProvider );
 
-            BackupStrategyCoordinator coordinator = new BackupStrategyCoordinator( fs, consistencyCheckService, internalLogProvider,
-                                                                                   progressMonitorFactory, wrapper );
+            final var coordinator = new BackupStrategyCoordinator( fs, consistencyCheckService, internalLogProvider,
+                                                                   progressMonitorFactory, wrapper );
             coordinator.performBackup( context );
         }
     }
