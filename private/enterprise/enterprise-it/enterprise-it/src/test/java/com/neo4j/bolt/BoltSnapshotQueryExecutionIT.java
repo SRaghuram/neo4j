@@ -27,7 +27,6 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.exceptions.TransientException;
-import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -35,6 +34,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.io.IOUtils;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.scheduler.Group;
 import org.neo4j.snapshot.TestTransactionVersionContextSupplier;
 import org.neo4j.snapshot.TestVersionContext;
 import org.neo4j.test.extension.Inject;
@@ -72,7 +72,7 @@ class BoltSnapshotQueryExecutionIT
                 .setConfig( BoltConnector.enabled, true )
                 .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0  ) )
                 .setConfig( GraphDatabaseInternalSettings.snapshot_query, true )
-                //  The global metrics extension and page cache warmer issue queries that can make our version contexts dirty.
+                // The global metrics extension and page cache warmer issue queries that can make our version contexts dirty.
                 // If we don't remove these extensions, we might get a count of 0 or more than 1 for `testCursorContext.getAdditionalAttempts()`,
                 // depending on when the extension marks it as dirty
                 .removeExtensions( extension -> extension instanceof GlobalMetricsExtensionFactory ||
@@ -149,6 +149,7 @@ class BoltSnapshotQueryExecutionIT
     private void prepareCursorContext()
     {
         testCursorContext = TestVersionContext.testCursorContext( managementService, DEFAULT_DATABASE_NAME );
+        testCursorContext.setThreadFilter( t -> t.getThreadGroup().getName().equals( Group.BOLT_WORKER.groupName() ) );
         testContextSupplier.setTestVersionContext( testCursorContext );
     }
 
