@@ -145,7 +145,7 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
     // then
     failWithErrorOnTx(Configs.All, tx1, "MATCH (b) WHERE b = $param RETURN labels(b)",
-      Seq(s"The transaction of entity ${node2.getId} has been closed."), params = Map("param" -> node2))
+      s"The transaction of entity ${node2.getId} has been closed.", params = Map("param" -> node2))
 
     tx1.close()
   }
@@ -162,8 +162,8 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
     // then
     failWithErrorOnTx(Configs.All, tx1, "MATCH (b) WHERE b = $param RETURN labels(b)",
-      Seq(s"Can not use an entity from another database. Entity id: ${node2.getId}, entity database: $dbOtherName, " +
-        s"expected database: ${tx1.asInstanceOf[InternalTransaction].getDatabaseName}."), params = Map("param" -> node2))
+      s"Can not use an entity from another database. Entity id: ${node2.getId}, entity database: $dbOtherName, " +
+        s"expected database: ${tx1.asInstanceOf[InternalTransaction].getDatabaseName}.", params = Map("param" -> node2))
 
     tx1.close()
     tx2.close()

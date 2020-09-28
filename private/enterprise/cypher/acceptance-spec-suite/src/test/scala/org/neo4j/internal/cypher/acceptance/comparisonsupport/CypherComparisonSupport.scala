@@ -150,10 +150,9 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
   protected def failWithErrorOnTx(expectedSpecificFailureFrom: TestConfiguration,
                               transaction: Transaction,
                               query: String,
-                              message: Seq[String] = Seq.empty,
-                              errorType: Seq[String] = Seq.empty,
+                              message: String,
                               params: Map[String, Any] = Map.empty): Unit =
-    validateError(expectedSpecificFailureFrom, transaction.execute(_, params.mapValues(_.asInstanceOf[Object]).asJava), query, message, errorType)
+    validateError(expectedSpecificFailureFrom, transaction.execute(_, params.mapValues(_.asInstanceOf[Object]).asJava), query, Seq(message), Seq.empty)
 
   private def validateError[R](expectedSpecificFailureFrom: TestConfiguration,
                                executeQuery: String => R,
