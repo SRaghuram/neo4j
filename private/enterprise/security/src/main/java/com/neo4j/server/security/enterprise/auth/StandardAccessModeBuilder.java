@@ -447,8 +447,8 @@ class StandardAccessModeBuilder
         switch ( resource.type() )
         {
         case PROPERTY:
-            handlePropertyResource( resource, segment, privilegeType, "set property", writeNodeProperties, writeNodeSegmentForProperty,
-                                    writeRelationshipProperties, writeRelationshipSegmentForProperty );
+            handlePropertyResource( (Resource.PropertyResource) resource, segment, privilegeType, "set property", writeNodeProperties,
+                                    writeNodeSegmentForProperty, writeRelationshipProperties, writeRelationshipSegmentForProperty );
             break;
         case ALL_PROPERTIES:
             handleAllResourceQualifier( segment, privilegeType, "set property", writeAllPropertiesAllLabels, writeNodeSegmentForAllProperties,
@@ -467,8 +467,8 @@ class StandardAccessModeBuilder
             readAllPropertiesAllRelTypes.put( privilegeType, true );
             break;
         case PROPERTY:
-            handlePropertyResource( resource, segment, privilegeType, privilegeName, nodeProperties, nodeSegmentForProperty, relationshipProperties,
-                                    relationshipSegmentForProperty );
+            handlePropertyResource( (Resource.PropertyResource) resource, segment, privilegeType, privilegeName, nodeProperties, nodeSegmentForProperty,
+                                    relationshipProperties, relationshipSegmentForProperty );
             break;
         case ALL_PROPERTIES:
             handleAllResourceQualifier( segment, privilegeType, privilegeName, readAllPropertiesAllLabels, nodeSegmentForAllProperties,
@@ -478,13 +478,13 @@ class StandardAccessModeBuilder
         }
     }
 
-    private void handlePropertyResource( Resource propertyResource, Segment segment, ResourcePrivilege.GrantOrDeny privilegeType, String privilegeName,
-                                         Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> nodeProperties,
+    private void handlePropertyResource( Resource.PropertyResource propertyResource, Segment segment, ResourcePrivilege.GrantOrDeny privilegeType,
+                                         String privilegeName, Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> nodeProperties,
                                          Map<ResourcePrivilege.GrantOrDeny,MutableIntObjectMap<IntSet>> nodeSegmentForProperty,
                                          Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> relationshipProperties,
                                          Map<ResourcePrivilege.GrantOrDeny,MutableIntObjectMap<IntSet>> relationshipSegmentForProperty )
     {
-        int propertyId = resolvePropertyId( propertyResource.getArg1() );
+        int propertyId = resolvePropertyId( propertyResource.getProperty() );
         if ( propertyId == ANY_PROPERTY_KEY )
         {
             return;
@@ -658,7 +658,7 @@ class StandardAccessModeBuilder
 
     private void addLabelResource( MutableIntSet whiteOrBlacklist, Resource.LabelResource resource )
     {
-        int labelId = resolveLabelId( resource.getArg1() );
+        int labelId = resolveLabelId( resource.getLabel() );
         if ( labelId != ANY_LABEL )
         {
             whiteOrBlacklist.add( labelId );

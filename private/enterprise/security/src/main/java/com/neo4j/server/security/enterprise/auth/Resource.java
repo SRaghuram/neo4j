@@ -20,11 +20,6 @@ public interface Resource
 {
     void assertValidCombination( PrivilegeAction action ) throws InvalidArgumentsException;
 
-    default String getArg1()
-    {
-        return "";
-    }
-
     Type type();
 
     class GraphResource implements Resource
@@ -160,12 +155,6 @@ public interface Resource
         }
 
         @Override
-        public String getArg1()
-        {
-            return property == null ? "" : property;
-        }
-
-        @Override
         public Type type()
         {
             return Type.PROPERTY;
@@ -197,6 +186,11 @@ public interface Resource
                 return this.property == null && other.property == null || this.property != null && this.property.equals( other.property );
             }
             return false;
+        }
+
+        public String getProperty()
+        {
+            return property == null ? "" : property;
         }
     }
 
@@ -259,12 +253,6 @@ public interface Resource
         }
 
         @Override
-        public String getArg1()
-        {
-            return label == null ? "" : label;
-        }
-
-        @Override
         public Type type()
         {
             return Type.LABEL;
@@ -296,6 +284,11 @@ public interface Resource
                 return this.label == null && other.label == null || this.label != null && this.label.equals( other.label );
             }
             return false;
+        }
+
+        public String getLabel()
+        {
+            return label == null ? "" : label;
         }
     }
 
