@@ -7,6 +7,7 @@ package com.neo4j.bench.micro.benchmarks.cypher
 
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
+import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.data.DataGeneratorConfig
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
@@ -15,6 +16,7 @@ import com.neo4j.bench.micro.data.Plans.astVariable
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.planner.spi.PlanContext
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
@@ -39,6 +41,12 @@ class CartesianProduct extends AbstractCypherBenchmark {
     base = Array("1", "1000"))
   @Param(Array[String]())
   var rows: Int = _
+
+  @ParamValues(
+    allowed = Array("false", "true"),
+    base = Array("false"))
+  @Param(Array[String]())
+  var leveragedOrder: Boolean = _
 
   override def description = "Cartesian Product"
 
@@ -65,7 +73,13 @@ class CartesianProduct extends AbstractCypherBenchmark {
 
     val table = SemanticTable().addNode(astVariable(a)).addNode(astVariable(b))
 
-    TestSetup(produceResults, table, resultColumns)
+    val leveragedOrders = new LeveragedOrders
+    if (leveragedOrder) {
+      leveragedOrders.set(cartesianProduct.id, true)
+      leveragedOrders.set(produceResults.id, true)
+    }
+
+    TestSetup(produceResults, table, resultColumns, leveragedOrders)
   }
 
   @Benchmark
