@@ -1100,14 +1100,16 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
   private def isTemporaryPrivilege(privilegeAction: PrivilegeAction, qualifier: PrivilegeQualifier, revokeType: String, roleName: String): Boolean = {
     if (privilegeAction == PrivilegeAction.EXECUTE_BOOSTED) {
       val qualifierString = qualifier match {
-        case ProcedureQualifier(nameSpace, procedureName) => (nameSpace.parts :+ procedureName.name).mkString(".")
-        case _ => "*"
+        case ProcedureQualifier(nameSpace, procedureName) => s"PROCEDURE(${(nameSpace.parts :+ procedureName.name).mkString(".")})"
+        case _: ProcedureAllQualifier => s"PROCEDURE(*)"
+        case FunctionQualifier(nameSpace, functionName) => s"FUNCTION(${(nameSpace.parts :+ functionName.name).mkString(".")})"
+        case _: FunctionAllQualifier => s"FUNCTION(*)"
       }
       // This has to be formatted in this way, since the result from getTemporaryPrivileges is formatted to be usable in a cypher unwind for showing privileges
       val notFoundPrivilege = java.util.Map.of(
         "role", roleName,
         "graph", "*",
-        "segment", s"PROCEDURE($qualifierString)",
+        "segment", qualifierString,
         "resource", "database",
         "action", PrivilegeResolver.EXECUTE_BOOSTED_FROM_CONFIG,
         "access", revokeType

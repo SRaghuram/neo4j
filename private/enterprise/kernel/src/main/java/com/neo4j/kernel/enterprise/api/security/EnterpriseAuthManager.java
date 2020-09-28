@@ -29,7 +29,7 @@ public abstract class EnterpriseAuthManager extends AuthManager
      * {
      *     "role": roleName,
      *     "graph": "*",
-     *     "segment": PROCEDURE(name),
+     *     "segment": PROCEDURE(name) or FUNCTION(name)
      *     "resource": "database",
      *     "action": "execute_boosted_from_config",
      *     "access": GRANTED|DENIED

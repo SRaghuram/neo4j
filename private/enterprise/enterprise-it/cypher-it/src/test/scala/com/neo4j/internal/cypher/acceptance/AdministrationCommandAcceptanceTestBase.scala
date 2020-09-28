@@ -110,6 +110,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   lazy val defaultRolePrivileges: Set[Map[String, AnyRef]] = Set(
     granted(access).database(DEFAULT).role(PredefinedRoles.PUBLIC).map,
     granted(executeProcedure).role(PredefinedRoles.PUBLIC).map,
+    granted(executeFunction).role(PredefinedRoles.PUBLIC).map,
 
     granted(access).role("reader").map,
     granted(matchPrivilege).role("reader").node("*").map,
@@ -159,7 +160,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     }
   }
 
-  lazy val defaultUserPrivileges: Set[Map[String, AnyRef]] = publicPrivileges("neo4j") ++ Set(
+  lazy val defaultUserPrivileges: Set[Map[String, String]] = publicPrivileges("neo4j") ++ Set(
     granted(access).role("admin").user("neo4j").map,
     granted(matchPrivilege).role("admin").user("neo4j").node("*").map,
     granted(matchPrivilege).role("admin").user("neo4j").relationship("*").map,
@@ -242,12 +243,12 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   def publicRole(users: String*): Set[Map[String, Any]] =
     users.map(u => role(PredefinedRoles.PUBLIC).member(u).map).toSet
 
-  def publicPrivileges(user: String): Set[Map[String, AnyRef]] = Set(
+  def publicPrivileges(user: String): Set[Map[String, String]] = Set(
     granted(executeProcedure).user(user).role(PUBLIC).map,
     granted(access).database(DEFAULT).user(user).role(PUBLIC).map
   )
 
-  case class PrivilegeMapBuilder(map: Map[String, AnyRef]) {
+  case class PrivilegeMapBuilder(map: Map[String, String]) {
     def action(action: String): PrivilegeMapBuilder = PrivilegeMapBuilder(map + ("action" -> action))
 
     def role(role: String): PrivilegeMapBuilder = PrivilegeMapBuilder(map + ("role" -> role))
@@ -281,6 +282,26 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   }
 
   private val baseMap: Map[String, String] = Map("graph" -> "*", "segment" -> "database")
+
+  def grantedFromConfig(name: String, role: String): Set[Map[String, String]] = Set(
+    granted(adminAction(PrivilegeResolver.EXECUTE_BOOSTED_FROM_CONFIG)).function(name).role(role).map,
+    granted(adminAction(PrivilegeResolver.EXECUTE_BOOSTED_FROM_CONFIG)).procedure(name).role(role).map
+  )
+
+  def grantedFromConfig(name: String, role: String, user: String): Set[Map[String, String]] = Set(
+    granted(adminAction(PrivilegeResolver.EXECUTE_BOOSTED_FROM_CONFIG)).function(name).role(role).user(user).map,
+    granted(adminAction(PrivilegeResolver.EXECUTE_BOOSTED_FROM_CONFIG)).procedure(name).role(role).user(user).map
+  )
+
+  def deniedFromConfig(name: String, role: String): Set[Map[String, String]] = Set(
+    denied(adminAction(PrivilegeResolver.EXECUTE_BOOSTED_FROM_CONFIG)).function(name).role(role).map,
+    denied(adminAction(PrivilegeResolver.EXECUTE_BOOSTED_FROM_CONFIG)).procedure(name).role(role).map
+  )
+
+  def deniedFromConfig(name: String, role: String, user: String): Set[Map[String, String]] = Set(
+    denied(adminAction(PrivilegeResolver.EXECUTE_BOOSTED_FROM_CONFIG)).function(name).role(role).user(user).map,
+    denied(adminAction(PrivilegeResolver.EXECUTE_BOOSTED_FROM_CONFIG)).procedure(name).role(role).user(user).map
+  )
 
   def granted(privilegeMap: Map[String,String]): PrivilegeMapBuilder = PrivilegeMapBuilder( privilegeMap + ("access" -> "GRANTED"))
   def denied(privilegeMap: Map[String,String]): PrivilegeMapBuilder = PrivilegeMapBuilder( privilegeMap + ("access" -> "DENIED"))

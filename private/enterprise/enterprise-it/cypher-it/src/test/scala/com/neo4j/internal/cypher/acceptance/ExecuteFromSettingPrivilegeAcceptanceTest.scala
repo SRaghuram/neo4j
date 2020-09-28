@@ -23,299 +23,306 @@ class ExecuteFromSettingPrivilegeAcceptanceTest extends AdministrationCommandAcc
     execute(s"REVOKE ACCESS ON DEFAULT DATABASE FROM ${PredefinedRoles.PUBLIC}")
     execute(s"REVOKE EXECUTE PROCEDURES * ON DBMS FROM ${PredefinedRoles.PUBLIC}")
     execute(s"REVOKE EXECUTE FUNCTIONS * ON DBMS FROM ${PredefinedRoles.PUBLIC}")
-    execute("SHOW ROLE PUBLIC PRIVILEGES").toList should be(List(
-      granted(executeBoostedFromConfig).function("dbms.security.listUsers").role("PUBLIC").map,
-      granted(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("PUBLIC").map
-    ))
+    execute("SHOW ROLE PUBLIC PRIVILEGES").toSet should be(grantedFromConfig("dbms.security.listUsers", PredefinedRoles.PUBLIC))
   }
 
   //noinspection ScalaDeprecation
   override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(
     GraphDatabaseSettings.auth_enabled -> TRUE,
-    GraphDatabaseSettings.procedure_roles -> "db.labels:procRole,default;db.property*:procRole;dbms.security.listUsers:PUBLIC",
+    GraphDatabaseSettings.procedure_roles -> "db.labels:configRole,default;db.property*:configRole;dbms.security.listUsers:PUBLIC",
     GraphDatabaseSettings.default_allowed -> "default"
   )
 
   test("should show execute boosted privileges for roles from config settings") {
     // GIVEN
-    execute("CREATE ROLE funcRole")
+    execute("CREATE ROLE configRole")
     execute("CREATE ROLE default")
 
     // THEN
-    execute("SHOW ROLE funcRole, default PRIVILEGES").toSet should be(Set(
-      granted(executeBoostedFromConfig).function("db.labels").role("funcRole").map,
-      granted(executeBoostedFromConfig).procedure("db.labels").role("funcRole").map,
-      granted(executeBoostedFromConfig).function("db.labels").role("default").map,
-      granted(executeBoostedFromConfig).procedure("db.labels").role("default").map,
-      granted(executeBoostedFromConfig).function("db.property*").role("funcRole").map,
-      granted(executeBoostedFromConfig).procedure("db.property*").role("funcRole").map,
-      granted(executeBoostedFromConfig).function("*").role("default").map,
-      granted(executeBoostedFromConfig).procedure("*").role("default").map,
-      denied(executeBoostedFromConfig).function("db.property*").role("default").map,
-      denied(executeBoostedFromConfig).procedure("db.property*").role("default").map,
-      denied(executeBoostedFromConfig).function("dbms.security.listUsers").role("default").map,
-      denied(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("default").map
-    ))
+    execute("SHOW ROLE configRole, default PRIVILEGES").toSet should be(
+      grantedFromConfig("db.labels", "configRole") ++
+      grantedFromConfig("db.property*", "configRole") ++
+      grantedFromConfig("db.labels", "default") ++
+      grantedFromConfig("*", "default") ++
+      deniedFromConfig("db.property*", "default") ++
+      deniedFromConfig("dbms.security.listUsers", "default")
+    )
   }
 
   test("should show execute boosted privileges for user from config settings") {
     // GIVEN
-    setupUserWithCustomRole(rolename = "funcRole")
+    setupUserWithCustomRole(rolename = "configRole")
 
     // THEN
-    execute("SHOW USER joe PRIVILEGES").toSet should be(Set(
-      granted(executeBoostedFromConfig).function("db.labels").role("funcRole").user("joe").map,
-      granted(executeBoostedFromConfig).procedure("db.labels").role("funcRole").user("joe").map,
-      granted(executeBoostedFromConfig).function("db.property*").role("funcRole").user("joe").map,
-      granted(executeBoostedFromConfig).procedure("db.property*").role("funcRole").user("joe").map,
-      granted(access).role("funcRole").user("joe").map,
-
-      granted(executeBoostedFromConfig).function("dbms.security.listUsers").role("PUBLIC").user("joe").map,
-      granted(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("PUBLIC").user("joe").map
-    ))
+    execute("SHOW USER joe PRIVILEGES").toSet should be(
+      grantedFromConfig("db.labels", "configRole", "joe") ++
+      grantedFromConfig("db.property*", "configRole", "joe") ++
+      grantedFromConfig("dbms.security.listUsers", "PUBLIC", "joe") ++
+      Set(granted(access).role("configRole").user("joe").map)
+    )
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT EXECUTE FUNCTION dbms.* ON DBMS TO funcRole")
-    execute("DENY EXECUTE BOOSTED FUNCTION apoc.* ON DBMS TO funcRole")
+    execute("GRANT EXECUTE FUNCTION dbms.a* ON DBMS TO configRole")
+    execute("GRANT EXECUTE PROCEDURE dbms.b* ON DBMS TO configRole")
+    execute("DENY EXECUTE BOOSTED FUNCTION apoc.a* ON DBMS TO configRole")
+    execute("DENY EXECUTE BOOSTED PROCEDURE apoc.b* ON DBMS TO configRole")
 
     // THEN
-    execute("SHOW USER joe PRIVILEGES").toSet should be(Set(
-      granted(executeBoostedFromConfig).function("db.labels").role("funcRole").user("joe").map,
-      granted(executeBoostedFromConfig).procedure("db.labels").role("funcRole").user("joe").map,
-      granted(executeBoostedFromConfig).function("db.property*").role("funcRole").user("joe").map,
-      granted(executeBoostedFromConfig).procedure("db.property*").role("funcRole").user("joe").map,
-      granted(access).role("funcRole").user("joe").map,
-      granted(executeFunction).function("dbms.*").role("funcRole").user("joe").map,
-      denied(executeBoostedFunction).function("apoc.*").role("funcRole").user("joe").map,
-      denied(executeBoostedFunction).procedure("apoc.*").role("funcRole").user("joe").map,
-
-      granted(executeBoostedFromConfig).function("dbms.security.listUsers").role("PUBLIC").user("joe").map,
-      granted(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("PUBLIC").user("joe").map
-    ))
+    execute("SHOW USER joe PRIVILEGES").toSet should be(
+      grantedFromConfig("db.labels", "configRole", "joe") ++
+      grantedFromConfig("db.property*", "configRole", "joe") ++
+      grantedFromConfig("dbms.security.listUsers", "PUBLIC", "joe") ++
+      Set(
+        granted(access).role("configRole").user("joe").map,
+        granted(executeFunction).function("dbms.a*").role("configRole").user("joe").map,
+        granted(executeProcedure).procedure("dbms.b*").role("configRole").user("joe").map,
+        denied(executeBoosted).function("apoc.a*").role("configRole").user("joe").map,
+        denied(executeBoosted).procedure("apoc.b*").role("configRole").user("joe").map
+      )
+    )
   }
 
   test("should show execute boosted privileges for multiple users from config settings") {
     // GIVEN
-    setupUserWithCustomRole(rolename = "funcRole")
+    setupUserWithCustomRole(rolename = "configRole")
     setupUserWithCustomRole("alice", rolename = "default", access = false)
     setupUserWithCustomRole("bob")
 
     execute("CREATE USER charlie SET PASSWORD 'abc123'")
-    execute("GRANT ROLE funcRole, default TO charlie")
+    execute("GRANT ROLE configRole, default TO charlie")
 
     // THEN
-    execute("SHOW USER joe, $user, bob, charlie PRIVILEGES", Map("user" -> "alice")).toSet should be(Set(
-      granted(executeBoostedFromConfig).function("db.labels").role("funcRole").user("joe").map,
-      granted(executeBoostedFromConfig).procedure("db.labels").role("funcRole").user("joe").map,
-      granted(executeBoostedFromConfig).function("db.property*").role("funcRole").user("joe").map,
-      granted(executeBoostedFromConfig).procedure("db.property*").role("funcRole").user("joe").map,
-      granted(access).role("funcRole").user("joe").map,
-      granted(executeBoostedFromConfig).function("dbms.security.listUsers").role("PUBLIC").user("joe").map,
-      granted(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("PUBLIC").user("joe").map,
+    execute("SHOW USER joe, $user, bob, charlie PRIVILEGES", Map("user" -> "alice")).toSet should be(
+      grantedFromConfig("db.labels", "configRole", "joe") ++
+      grantedFromConfig("db.property*", "configRole", "joe") ++
+      grantedFromConfig("dbms.security.listUsers", "PUBLIC", "joe") ++
 
-      granted(executeBoostedFromConfig).function("db.labels").role("default").user("alice").map,
-      granted(executeBoostedFromConfig).procedure("db.labels").role("default").user("alice").map,
-      granted(executeBoostedFromConfig).function("*").role("default").user("alice").map,
-      granted(executeBoostedFromConfig).procedure("*").role("default").user("alice").map,
-      denied(executeBoostedFromConfig).function("db.property*").role("default").user("alice").map,
-      denied(executeBoostedFromConfig).procedure("db.property*").role("default").user("alice").map,
-      denied(executeBoostedFromConfig).function("dbms.security.listUsers").role("default").user("alice").map,
-      denied(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("default").user("alice").map,
-      granted(executeBoostedFromConfig).function("dbms.security.listUsers").role("PUBLIC").user("alice").map,
-      granted(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("PUBLIC").user("alice").map,
+      grantedFromConfig("db.labels", "default", "alice") ++
+      grantedFromConfig("*", "default", "alice") ++
+      deniedFromConfig("db.property*", "default", "alice") ++
+      deniedFromConfig("dbms.security.listUsers", "default", "alice") ++
+      grantedFromConfig("dbms.security.listUsers", "PUBLIC", "alice") ++
 
-      granted(access).role("custom").user("bob").map,
-      granted(executeBoostedFromConfig).function("dbms.security.listUsers").role("PUBLIC").user("bob").map,
-      granted(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("PUBLIC").user("bob").map,
+      grantedFromConfig("dbms.security.listUsers", "PUBLIC", "bob") ++
 
-      granted(executeBoostedFromConfig).function("db.labels").role("funcRole").user("charlie").map,
-      granted(executeBoostedFromConfig).procedure("db.labels").role("funcRole").user("charlie").map,
-      granted(executeBoostedFromConfig).function("db.property*").role("funcRole").user("charlie").map,
-      granted(executeBoostedFromConfig).procedure("db.property*").role("funcRole").user("charlie").map,
-      granted(access).role("funcRole").user("charlie").map,
-      granted(executeBoostedFromConfig).function("db.labels").role("default").user("charlie").map,
-      granted(executeBoostedFromConfig).procedure("db.labels").role("default").user("charlie").map,
-      granted(executeBoostedFromConfig).function("*").role("default").user("charlie").map,
-      granted(executeBoostedFromConfig).procedure("*").role("default").user("charlie").map,
-      denied(executeBoostedFromConfig).function("db.property*").role("default").user("charlie").map,
-      denied(executeBoostedFromConfig).procedure("db.property*").role("default").user("charlie").map,
-      denied(executeBoostedFromConfig).function("dbms.security.listUsers").role("default").user("charlie").map,
-      denied(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("default").user("charlie").map,
-      granted(executeBoostedFromConfig).function("dbms.security.listUsers").role("PUBLIC").user("charlie").map,
-      granted(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("PUBLIC").user("charlie").map
-    ))
+      grantedFromConfig("db.labels", "configRole", "charlie") ++
+      grantedFromConfig("db.property*", "configRole", "charlie") ++
+      grantedFromConfig("db.labels", "default", "charlie") ++
+      grantedFromConfig("*", "default", "charlie") ++
+      deniedFromConfig("db.property*", "default", "charlie") ++
+      deniedFromConfig("dbms.security.listUsers", "default", "charlie") ++
+      grantedFromConfig("dbms.security.listUsers", "PUBLIC", "charlie") ++
+      Set(
+        granted(access).role("configRole").user("joe").map,
+        granted(access).role("configRole").user("charlie").map,
+        granted(access).role("custom").user("bob").map
+      )
+    )
   }
 
   test("should show execute boosted privileges for current user from config settings") {
     // GIVEN
-    setupUserWithCustomRole(rolename = "funcRole")
-
-    val expected = Set(
-      granted(executeBoostedFromConfig).function("db.labels").role("funcRole").user("joe").map,
-      granted(executeBoostedFromConfig).procedure("db.labels").role("funcRole").user("joe").map,
-      granted(executeBoostedFromConfig).function("db.property*").role("funcRole").user("joe").map,
-      granted(executeBoostedFromConfig).procedure("db.property*").role("funcRole").user("joe").map,
-      granted(access).role("funcRole").user("joe").map,
-      granted(executeBoostedFromConfig).function("dbms.security.listUsers").role("PUBLIC").user("joe").map,
-      granted(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("PUBLIC").user("joe").map
-    )
+    setupUserWithCustomRole(rolename = "configRole")
 
     val result = new mutable.HashSet[Map[String, AnyRef]]
     executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES", resultHandler = (row, _) => {
       result.add(asPrivilegesResult(row))
     })
-    result should be(expected)
+    result should be(
+      grantedFromConfig("db.labels", "configRole", "joe") ++
+      grantedFromConfig("db.property*", "configRole", "joe") ++
+      Set(granted(access).role("configRole").user("joe").map) ++
+      grantedFromConfig("dbms.security.listUsers", "PUBLIC", "joe")
+    )
   }
 
   test("should show all privileges including from config settings") {
     // GIVEN
-    setupUserWithCustomRole(rolename = "funcRole")
+    setupUserWithCustomRole(rolename = "configRole")
     setupUserWithCustomRole("alice", rolename = "default", access = false)
 
     // THEN
-    execute("SHOW ALL PRIVILEGES WHERE role IN ['funcRole', 'default', 'custom']").toSet should be(Set(
-      granted(executeBoostedFromConfig).function("db.labels").role("funcRole").map,
-      granted(executeBoostedFromConfig).function("db.property*").role("funcRole").map,
-      granted(access).role("funcRole").map,
+    execute("SHOW ALL PRIVILEGES WHERE role IN ['configRole', 'default', 'custom']").toSet should be(
+      grantedFromConfig("db.labels", "configRole") ++
+      grantedFromConfig("db.property*", "configRole") ++
 
-      granted(executeBoostedFromConfig).function("db.labels").role("default").map,
-      granted(executeBoostedFromConfig).function("*").role("default").map,
-      denied(executeBoostedFromConfig).function("db.property*").role("default").map,
-      denied(executeBoostedFromConfig).function("dbms.security.listUsers").role("default").map
-    ))
+      grantedFromConfig("db.labels", "default") ++
+      grantedFromConfig("*", "default") ++
+      deniedFromConfig("db.property*", "default") ++
+      deniedFromConfig("dbms.security.listUsers", "default") ++
+      Set(granted(access).role("configRole").map)
+    )
 
     // WHEN restore PUBLIC role
     execute("GRANT EXECUTE FUNCTION * ON DBMS TO PUBLIC")
+    execute("GRANT EXECUTE PROCEDURE * ON DBMS TO PUBLIC")
     execute("GRANT ACCESS ON DEFAULT DATABASE TO PUBLIC")
 
     // THEN
-    execute("SHOW ALL PRIVILEGES").toSet should be(defaultRolePrivileges ++ Set(
-      granted(executeBoostedFromConfig).function("db.labels").role("funcRole").map,
-      granted(executeBoostedFromConfig).function("db.property*").role("funcRole").map,
-      granted(access).role("funcRole").map,
+    execute("SHOW ALL PRIVILEGES").toSet should be(defaultRolePrivileges ++
+      grantedFromConfig("db.labels", "configRole") ++
+      grantedFromConfig("db.property*", "configRole") ++
 
-      granted(executeBoostedFromConfig).function("db.labels").role("default").map,
-      granted(executeBoostedFromConfig).function("*").role("default").map,
-      denied(executeBoostedFromConfig).function("db.property*").role("default").map,
-      denied(executeBoostedFromConfig).function("dbms.security.listUsers").role("default").map,
-
-      granted(executeBoostedFromConfig).function("dbms.security.listUsers").role("PUBLIC").map
-    ))
+      grantedFromConfig("db.labels", "default") ++
+      grantedFromConfig("*", "default") ++
+      deniedFromConfig("db.property*", "default") ++
+      deniedFromConfig("dbms.security.listUsers", "default") ++
+      grantedFromConfig("dbms.security.listUsers", PredefinedRoles.PUBLIC) ++
+      Set(granted(access).role("configRole").map)
+    )
   }
 
   test("should filter privileges from config settings") {
     // GIVEN
-    setupUserWithCustomRole(rolename = "funcRole")
+    setupUserWithCustomRole(rolename = "configRole")
     setupUserWithCustomRole("alice", rolename = "default", access = false)
     setupUserWithCustomRole("bob")
 
     // THEN
-    execute("SHOW ALL PRIVILEGES YIELD segment, action, role, access WHERE role IN ['funcRole', 'default', 'custom']").toSet should be(Set(
-      Map("segment" -> "FUNCTION(db.labels)", "action" -> EXECUTE_BOOSTED_FROM_CONFIG, "role" -> "funcRole", "access" -> "GRANTED"),
-      Map("segment" -> "FUNCTION(db.property*)", "action" -> EXECUTE_BOOSTED_FROM_CONFIG, "role" -> "funcRole", "access" -> "GRANTED"),
-      Map("segment" -> "database", "action" -> "access", "role" -> "funcRole", "access" -> "GRANTED"),
+    execute("SHOW ALL PRIVILEGES YIELD segment, action, role, access WHERE role IN ['configRole', 'default', 'custom']").toSet should be(Set(
+      Map("segment" -> "FUNCTION(db.labels)", "action" -> EXECUTE_BOOSTED_FROM_CONFIG, "role" -> "configRole", "access" -> "GRANTED"),
+      Map("segment" -> "PROCEDURE(db.labels)", "action" -> EXECUTE_BOOSTED_FROM_CONFIG, "role" -> "configRole", "access" -> "GRANTED"),
+      Map("segment" -> "FUNCTION(db.property*)", "action" -> EXECUTE_BOOSTED_FROM_CONFIG, "role" -> "configRole", "access" -> "GRANTED"),
+      Map("segment" -> "PROCEDURE(db.property*)", "action" -> EXECUTE_BOOSTED_FROM_CONFIG, "role" -> "configRole", "access" -> "GRANTED"),
+      Map("segment" -> "database", "action" -> "access", "role" -> "configRole", "access" -> "GRANTED"),
 
       Map("segment" -> "FUNCTION(db.labels)", "action" -> EXECUTE_BOOSTED_FROM_CONFIG, "role" -> "default", "access" -> "GRANTED"),
+      Map("segment" -> "PROCEDURE(db.labels)", "action" -> EXECUTE_BOOSTED_FROM_CONFIG, "role" -> "default", "access" -> "GRANTED"),
       Map("segment" -> "FUNCTION(*)", "action" -> EXECUTE_BOOSTED_FROM_CONFIG, "role" -> "default", "access" -> "GRANTED"),
+      Map("segment" -> "PROCEDURE(*)", "action" -> EXECUTE_BOOSTED_FROM_CONFIG, "role" -> "default", "access" -> "GRANTED"),
       Map("segment" -> "FUNCTION(db.property*)", "action" -> EXECUTE_BOOSTED_FROM_CONFIG, "role" -> "default", "access" -> "DENIED"),
+      Map("segment" -> "PROCEDURE(db.property*)", "action" -> EXECUTE_BOOSTED_FROM_CONFIG, "role" -> "default", "access" -> "DENIED"),
       Map("segment" -> "FUNCTION(dbms.security.listUsers)", "action" -> EXECUTE_BOOSTED_FROM_CONFIG, "role" -> "default", "access" -> "DENIED"),
+      Map("segment" -> "PROCEDURE(dbms.security.listUsers)", "action" -> EXECUTE_BOOSTED_FROM_CONFIG, "role" -> "default", "access" -> "DENIED"),
 
       Map("segment" -> "database", "action" -> "access", "role" -> "custom", "access" -> "GRANTED")
     ))
   }
 
-  test("should allow grant/revoke of function privileges to role in dbms.security.functions.roles/default_allowed") {
+  test("should allow grant/revoke of function/procedure privileges to role in dbms.security.functions.roles/default_allowed") {
     // GIVEN
-    execute("CREATE ROLE funcRole")
+    execute("CREATE ROLE configRole")
     execute("CREATE ROLE default")
 
     // WHEN
-    execute("GRANT EXECUTE BOOSTED FUNCTION dbms.showCurrentUser ON DBMS TO funcRole, default")
+    execute("GRANT EXECUTE BOOSTED PROCEDURE dbms.showCurrentUser ON DBMS TO configRole, default")
+    execute("GRANT EXECUTE BOOSTED FUNCTION dbms.* ON DBMS TO configRole, default")
 
     // THEN
-    execute("SHOW ROLE funcRole, default PRIVILEGES").toSet should be(Set(
-      granted(executeBoostedFromConfig).function("db.labels").role("funcRole").map,
-      granted(executeBoostedFromConfig).function("db.property*").role("funcRole").map,
-      granted(executeBoostedFunction).function("dbms.showCurrentUser").role("funcRole").map,
+    execute("SHOW ROLE configRole, default PRIVILEGES").toSet should be(
+      grantedFromConfig("db.labels", "configRole") ++
+      grantedFromConfig("db.property*", "configRole") ++
+      Set(
+        granted(executeBoosted).procedure("dbms.showCurrentUser").role("configRole").map,
+        granted(executeBoosted).function("dbms.*").role("configRole").map
+      ) ++
 
-      granted(executeBoostedFromConfig).function("*").role("default").map,
-      granted(executeBoostedFromConfig).function("db.labels").role("default").map,
-      denied(executeBoostedFromConfig).function("db.property*").role("default").map,
-      denied(executeBoostedFromConfig).function("dbms.security.listUsers").role("default").map,
-      granted(executeBoostedFunction).function("dbms.showCurrentUser").role("default").map
-    ))
+      grantedFromConfig("*", "default") ++
+      grantedFromConfig("db.labels", "default") ++
+      deniedFromConfig("db.property*", "default") ++
+      deniedFromConfig("dbms.security.listUsers", "default") ++
+      Set(
+        granted(executeBoosted).procedure("dbms.showCurrentUser").role("default").map,
+        granted(executeBoosted).function("dbms.*").role("default").map
+      )
+    )
 
     // WHEN
-    execute("REVOKE GRANT EXECUTE BOOSTED FUNCTION dbms.showCurrentUser ON DBMS FROM funcRole, default")
+    execute("REVOKE GRANT EXECUTE BOOSTED PROCEDURE dbms.showCurrentUser ON DBMS FROM configRole, default")
+    execute("REVOKE GRANT EXECUTE BOOSTED FUNCTION dbms.* ON DBMS FROM configRole, default")
 
     // THEN
-    execute("SHOW ROLE funcRole, default PRIVILEGES").toSet should be(Set(
-      granted(executeBoostedFromConfig).function("db.labels").role("funcRole").map,
-      granted(executeBoostedFromConfig).function("db.property*").role("funcRole").map,
+    execute("SHOW ROLE configRole, default PRIVILEGES").toSet should be(
+      grantedFromConfig("db.labels", "configRole") ++
+      grantedFromConfig("db.property*", "configRole") ++
 
-      granted(executeBoostedFromConfig).function("*").role("default").map,
-      granted(executeBoostedFromConfig).function("db.labels").role("default").map,
-      denied(executeBoostedFromConfig).function("db.property*").role("default").map,
-      denied(executeBoostedFromConfig).function("dbms.security.listUsers").role("default").map
-    ))
+      grantedFromConfig("*", "default") ++
+      grantedFromConfig("db.labels", "default") ++
+      deniedFromConfig("db.property*", "default") ++
+      deniedFromConfig("dbms.security.listUsers", "default")
+    )
   }
 
-  test("should allow grant/revoke of same function privileges to role in dbms.security.functions.roles/default_allowed") {
+  test("should allow grant/revoke of same function/procedure privileges to role in dbms.security.functions.roles/default_allowed") {
     // GIVEN
-    execute("CREATE ROLE funcRole")
+    execute("CREATE ROLE configRole")
     execute("CREATE ROLE default")
 
     // WHEN
-    execute("GRANT EXECUTE BOOSTED FUNCTION db.labels ON DBMS TO funcRole, default")
+    execute("GRANT EXECUTE BOOSTED FUNCTION db.labels ON DBMS TO configRole, default")
+    execute("GRANT EXECUTE BOOSTED PROCEDURE db.property* ON DBMS TO configRole, default")
 
     // THEN
-    execute("SHOW ROLE funcRole, default PRIVILEGES").toSet should be(Set(
-      granted(executeBoostedFromConfig).function("db.labels").role("funcRole").map,
-      granted(executeBoostedFromConfig).function("db.property*").role("funcRole").map,
-      granted(executeBoostedFunction).function("db.labels").role("funcRole").map,
+    execute("SHOW ROLE configRole, default PRIVILEGES").toSet should be(
+      grantedFromConfig("db.labels", "configRole") ++
+      grantedFromConfig("db.property*", "configRole") ++
 
-      granted(executeBoostedFromConfig).function("*").role("default").map,
-      granted(executeBoostedFromConfig).function("db.labels").role("default").map,
-      denied(executeBoostedFromConfig).function("db.property*").role("default").map,
-      denied(executeBoostedFromConfig).function("dbms.security.listUsers").role("default").map,
-      granted(executeBoostedFunction).function("db.labels").role("default").map
-    ))
+      grantedFromConfig("*", "default") ++
+      grantedFromConfig("db.labels", "default") ++
+      deniedFromConfig("db.property*", "default") ++
+      deniedFromConfig("dbms.security.listUsers", "default") ++
+      Set(
+        granted(executeBoosted).function("db.labels").role("configRole").map,
+        granted(executeBoosted).function("db.labels").role("default").map,
+        granted(executeBoosted).procedure("db.property*").role("configRole").map,
+        granted(executeBoosted).procedure("db.property*").role("default").map
+      )
+    )
 
     // WHEN
-    execute("REVOKE GRANT EXECUTE BOOSTED FUNCTION db.labels ON DBMS FROM funcRole, default")
+    execute("REVOKE GRANT EXECUTE BOOSTED FUNCTION db.labels ON DBMS FROM configRole, default")
+    execute("REVOKE GRANT EXECUTE BOOSTED PROCEDURE db.property* ON DBMS FROM configRole, default")
 
     // THEN
-    execute("SHOW ROLE funcRole, default PRIVILEGES").toSet should be(Set(
-      granted(executeBoostedFromConfig).function("db.labels").role("funcRole").map,
-      granted(executeBoostedFromConfig).function("db.property*").role("funcRole").map,
+    execute("SHOW ROLE configRole, default PRIVILEGES").toSet should be(
+      grantedFromConfig("db.labels", "configRole") ++
+      grantedFromConfig("db.property*", "configRole") ++
 
-      granted(executeBoostedFromConfig).function("*").role("default").map,
-      granted(executeBoostedFromConfig).function("db.labels").role("default").map,
-      denied(executeBoostedFromConfig).function("db.property*").role("default").map,
-      denied(executeBoostedFromConfig).function("dbms.security.listUsers").role("default").map
-    ))
+      grantedFromConfig("*", "default") ++
+      grantedFromConfig("db.labels", "default") ++
+      deniedFromConfig("db.property*", "default") ++
+      deniedFromConfig("dbms.security.listUsers", "default")
+    )
   }
 
-  test("should have nice error message when trying to revoke privilege from dbms.security.functions.roles") {
+  test("should have nice error message when trying to revoke function privilege from dbms.security.functions.roles") {
     // GIVEN
-    execute("CREATE ROLE funcRole")
+    execute("CREATE ROLE configRole")
 
     // WHEN .. THEN
     (the[InvalidArgumentsException] thrownBy {
-      execute("REVOKE EXECUTE BOOSTED FUNCTION db.property* ON DBMS FROM funcRole")
+      execute("REVOKE EXECUTE BOOSTED FUNCTION db.property* ON DBMS FROM configRole")
     }).getMessage should be
-    """Failed to revoke execute_boosted privilege from role 'funcRole': This privilege was granted through the config.
-      |Altering the settings 'dbms.security.functions.roles' and 'dbms.security.functions.default_allowed' will affect this privilege after restart.""".stripMargin
+    """Failed to revoke execute_boosted privilege from role 'configRole': This privilege was granted through the config.
+      |Altering the settings 'dbms.security.procedures.roles' and 'dbms.security.procedures.default_allowed' will affect this privilege after restart.""".stripMargin
 
     // THEN
-    execute("SHOW ROLE funcRole PRIVILEGES").toSet should be(Set(
-      granted(executeBoostedFromConfig).function("db.labels").role("funcRole").map,
-      granted(executeBoostedFromConfig).function("db.property*").role("funcRole").map,
-    ))
+    execute("SHOW ROLE configRole PRIVILEGES").toSet should be(
+      grantedFromConfig("db.labels", "configRole") ++
+      grantedFromConfig("db.property*", "configRole")
+    )
   }
 
-  test("should have nice error message when trying to revoke privilege from dbms.security.functions.default_allowed") {
+  test("should have nice error message when trying to revoke procedure privilege from dbms.security.functions.roles") {
+    // GIVEN
+    execute("CREATE ROLE configRole")
+
+    // WHEN .. THEN
+    (the[InvalidArgumentsException] thrownBy {
+      execute("REVOKE EXECUTE BOOSTED PROCEDURE db.property* ON DBMS FROM configRole")
+    }).getMessage should be
+    """Failed to revoke execute_boosted privilege from role 'configRole': This privilege was granted through the config.
+      |Altering the settings 'dbms.security.procedures.roles' and 'dbms.security.procedures.default_allowed' will affect this privilege after restart.""".stripMargin
+
+    // THEN
+    execute("SHOW ROLE configRole PRIVILEGES").toSet should be(
+      grantedFromConfig("db.labels", "configRole") ++
+        grantedFromConfig("db.property*", "configRole")
+    )
+  }
+
+  test("should have nice error message when trying to revoke function privilege from dbms.security.functions.default_allowed") {
     // GIVEN
     execute("CREATE ROLE default")
 
@@ -324,14 +331,34 @@ class ExecuteFromSettingPrivilegeAcceptanceTest extends AdministrationCommandAcc
       execute("REVOKE EXECUTE BOOSTED FUNCTION * ON DBMS FROM default")
     }).getMessage should be
     """Failed to revoke execute_boosted privilege from role 'default': This privilege was granted through the config.
-      |Altering the settings 'dbms.security.functions.roles' and 'dbms.security.functions.default_allowed' will affect this privilege after restart.""".stripMargin
+      |Altering the settings 'dbms.security.procedures.roles' and 'dbms.security.procedures.default_allowed' will affect this privilege after restart.""".stripMargin
 
     // THEN
-    execute("SHOW ROLE default PRIVILEGES").toSet should be(Set(
-      granted(executeBoostedFromConfig).function("*").role("default").map,
-      granted(executeBoostedFromConfig).function("db.labels").role("default").map,
-      denied(executeBoostedFromConfig).function("db.property*").role("default").map,
-      denied(executeBoostedFromConfig).function("dbms.security.listUsers").role("default").map
-    ))
+    execute("SHOW ROLE default PRIVILEGES").toSet should be(
+      grantedFromConfig("*", "default") ++
+        grantedFromConfig("db.labels", "default") ++
+        deniedFromConfig("db.property*", "default") ++
+        deniedFromConfig("dbms.security.listUsers", "default")
+    )
+  }
+
+  test("should have nice error message when trying to revoke procedure privilege from dbms.security.functions.default_allowed") {
+    // GIVEN
+    execute("CREATE ROLE default")
+
+    // WHEN .. THEN
+    (the[InvalidArgumentsException] thrownBy {
+      execute("REVOKE EXECUTE BOOSTED PROCEDURE * ON DBMS FROM default")
+    }).getMessage should be
+    """Failed to revoke execute_boosted privilege from role 'default': This privilege was granted through the config.
+      |Altering the settings 'dbms.security.procedures.roles' and 'dbms.security.procedures.default_allowed' will affect this privilege after restart.""".stripMargin
+
+    // THEN
+    execute("SHOW ROLE default PRIVILEGES").toSet should be(
+      grantedFromConfig("*", "default") ++
+      grantedFromConfig("db.labels", "default") ++
+      deniedFromConfig("db.property*", "default") ++
+      deniedFromConfig("dbms.security.listUsers", "default")
+    )
   }
 }

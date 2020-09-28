@@ -50,7 +50,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    void shouldAllowExecuteAllMatchingWildcardConfigs( TestInfo testInfo ) throws Throwable
+    void shouldBoostAllProceduresMatchingWildcardConfigs( TestInfo testInfo ) throws Throwable
     {
         configuredSetup( Map.of( GraphDatabaseSettings.procedure_roles, "test.*:tester;test.create*:other" ), testInfo );
 
@@ -64,7 +64,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    void shouldAllowExecuteAllMatchingWildcardRoleConfigsWithDefaultForUDFs( TestInfo testInfo ) throws Throwable
+    void shouldBoostAllFunctionsMatchingWildcardRoleConfigsWithDefaultForUDFs( TestInfo testInfo ) throws Throwable
     {
         configuredSetup( Map.of( GraphDatabaseSettings.procedure_roles, "test.*:tester;test.create*:other",
                 GraphDatabaseSettings.default_allowed, "default" ), testInfo );

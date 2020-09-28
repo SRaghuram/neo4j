@@ -21,6 +21,7 @@ import java.util.Set;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.internal.kernel.api.security.FunctionSegment;
 import org.neo4j.internal.kernel.api.security.ProcedureSegment;
 import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
@@ -70,7 +71,7 @@ public class PrivilegeResolver
 
             // ACCESS ON DATABASE system
             accessOnSystem = new ResourcePrivilege( GRANT, ACCESS, new DatabaseResource(), Segment.ALL, SYSTEM_DATABASE_NAME );
-            // EXECUTE BOOSTED dbms.upgrade* ON DBMS
+            // EXECUTE BOOSTED PROCEDURE dbms.upgrade* ON DBMS
             ProcedureSegment segment = new ProcedureSegment( "dbms.upgrade*" );
             executeBoostedUpgrade = new ResourcePrivilege( GRANT, EXECUTE_BOOSTED, new DatabaseResource(), segment, SYSTEM_DATABASE_NAME );
             // EXECUTE dbms.*.getRoutingTable ON DBMS
@@ -136,16 +137,21 @@ public class PrivilegeResolver
         {
             // All procedures in dbms.security.procedures.roles should result in a temporary privilege:
             // GRANT EXECUTE BOOSTED PROCEDURE procedure ON DBMS TO role1 [,role2 ...]
+            // GRANT EXECUTE BOOSTED FUNCTION function ON DBMS TO role1 [,role2 ...]
             String[] spec = procToRoleSpec.split( MAPPING_DELIMITER );
             if ( spec.length == 2 )
             {
                 ProcedureSegment procSegment = new ProcedureSegment( spec[0].trim() );
-                ResourcePrivilege privilege = new ResourcePrivilege( GRANT, EXECUTE_BOOSTED, new DatabaseResource(), procSegment, SpecialDatabase.ALL );
-                allMappedBoostPrivileges.add( privilege );
+                FunctionSegment funcSegment = new FunctionSegment( spec[0].trim() );
+                ResourcePrivilege procPrivilege = new ResourcePrivilege( GRANT, EXECUTE_BOOSTED, new DatabaseResource(), procSegment, SpecialDatabase.ALL );
+                ResourcePrivilege funcPrivilege = new ResourcePrivilege( GRANT, EXECUTE_BOOSTED, new DatabaseResource(), funcSegment, SpecialDatabase.ALL );
+                allMappedBoostPrivileges.add( procPrivilege );
+                allMappedBoostPrivileges.add( funcPrivilege );
                 for ( String role : spec[1].split( ROLES_DELIMITER ) )
                 {
                     Set<ResourcePrivilege> privileges = roleToPrivilege.computeIfAbsent( role.trim(), x -> new HashSet<>() );
-                    privileges.add( privilege );
+                    privileges.add( procPrivilege );
+                    privileges.add( funcPrivilege );
                 }
             }
         }
@@ -154,10 +160,13 @@ public class PrivilegeResolver
         {
             // The role specified with dbms.security.procedures.default_allowed, should have a temporary privilege:
             // GRANT EXECUTE BOOSTED PROCEDURE * ON DBMS TO roleToBoostAll
+            // GRANT EXECUTE BOOSTED FUNCTION * ON DBMS TO roleToBoostAll
             // All procedures in dbms.security.procedures.roles that aren't mapped to roleToBoostAll should have a temporary privilege:
             // DENY EXECUTE BOOSTED PROCEDURE procedure ON DBMS TO roleToBoostAll
+            // DENY EXECUTE BOOSTED FUNCTION procedure ON DBMS TO roleToBoostAll
             Set<ResourcePrivilege> privilegeSet = roleToPrivilege.computeIfAbsent( roleToBoostAll, x -> new HashSet<>() );
             privilegeSet.add( new ResourcePrivilege( GRANT, EXECUTE_BOOSTED, new DatabaseResource(), ProcedureSegment.ALL, SpecialDatabase.ALL ) );
+            privilegeSet.add( new ResourcePrivilege( GRANT, EXECUTE_BOOSTED, new DatabaseResource(), FunctionSegment.ALL, SpecialDatabase.ALL ) );
 
             allMappedBoostPrivileges.removeAll( privilegeSet );
             for ( ResourcePrivilege privilege : allMappedBoostPrivileges )
@@ -192,8 +201,17 @@ public class PrivilegeResolver
             String role = entry.getKey();
             for ( var privilege : entry.getValue() )
             {
-                ProcedureSegment segment = (ProcedureSegment) privilege.getSegment();
-                String segmentString = String.format( "PROCEDURE(%s)", segment.equals( ProcedureSegment.ALL ) ? "*" : segment.getProcedure() );
+                String segmentString;
+                if ( privilege.getSegment() instanceof ProcedureSegment )
+                {
+                    ProcedureSegment segment = (ProcedureSegment) privilege.getSegment();
+                    segmentString = String.format( "PROCEDURE(%s)", segment.equals( ProcedureSegment.ALL ) ? "*" : segment.getProcedure() );
+                }
+                else
+                {
+                    FunctionSegment segment = (FunctionSegment) privilege.getSegment();
+                    segmentString = String.format( "FUNCTION(%s)", segment.equals( FunctionSegment.ALL ) ? "*" : segment.getFunction() );
+                }
                 result.add( Map.of(
                         "role", role,
                         "graph", "*",
