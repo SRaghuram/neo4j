@@ -194,7 +194,8 @@ public class EnterpriseSecurityComponentVersion_2_40 extends SupportedEnterprise
         upgradeWriteFromAllPropertiesToGraphResource( tx );
         upgradeFromSchemaPrivilegeToIndexAndContraintPrivileges( tx );
         Node publicRole = createPublicRoleFromUpgrade( tx );
-        grantExecutePrivilegeTo( tx, publicRole );
+        grantExecuteProcedurePrivilegeTo( tx, publicRole );
+        grantExecuteFunctionPrivilegeTo( tx, publicRole );
     }
 
     private void upgradeWriteFromAllPropertiesToGraphResource( Transaction tx )

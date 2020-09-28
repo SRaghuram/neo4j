@@ -25,6 +25,7 @@ import org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERS
 import org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41
 import org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41D1
 import org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D4
+import org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D6
 import org.neo4j.server.security.systemgraph.UserSecurityGraphComponent
 import org.neo4j.test.TestDatabaseManagementServiceBuilder
 import org.scalactic.source
@@ -35,8 +36,8 @@ import org.scalatest.mockito.MockitoSugar
 trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLike {
   self: AdministrationCommandAcceptanceTestBase =>
 
-  val CURRENT_VERSION: String = VERSION_42D4
-  val allSystemGraphVersions: Array[String] = Array(VERSION_40, VERSION_41D1, VERSION_41, VERSION_42D4)
+  val CURRENT_VERSION: String = VERSION_42D6
+  val allSystemGraphVersions: Array[String] = Array(VERSION_40, VERSION_41D1, VERSION_41, VERSION_42D4, VERSION_42D6)
   var _configSupplier: () => Config = () => Config.defaults()
   var _version: Option[String] = None
   var _expectToFailWith: Option[Class[_]] = None
@@ -73,7 +74,8 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
     case VERSION_41D1 => translatePrivilegesTo41(privileges)
     case VERSION_41 => translatePrivilegesTo41(privileges)
     case VERSION_42D4 => translatePrivilegesTo41(privileges)
-    case _ => throw new IllegalArgumentException(s"Unsupported version: $version")
+    case VERSION_42D6 => translatePrivilegesTo41(privileges)
+    case _            => throw new IllegalArgumentException(s"Unsupported version: $version")
   }
 
   def makeCombinedFrom(acc: Set[Map[String, AnyRef]], m: Map[String, AnyRef], combined: String, other: String): Set[Map[String, AnyRef]] = {

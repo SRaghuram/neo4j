@@ -75,7 +75,8 @@ public class EnterpriseSecurityComponentVersion_3_41D1 extends SupportedEnterpri
         // Upgrade from 4.1.0-Drop01 to 4.1.x, which means add the Version node
         setVersionProperty( tx, latest.version );
         Node publicRole = tx.findNode( ROLE_LABEL, "name", PUBLIC );
-        grantExecutePrivilegeTo( tx, publicRole );
+        grantExecuteProcedurePrivilegeTo( tx, publicRole );
+        grantExecuteFunctionPrivilegeTo( tx, publicRole );
     }
 
     // RUNTIME

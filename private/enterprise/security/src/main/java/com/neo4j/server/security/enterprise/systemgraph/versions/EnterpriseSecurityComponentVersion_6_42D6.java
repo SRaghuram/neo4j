@@ -17,23 +17,21 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.systemgraph.ComponentVersion;
-import org.neo4j.util.Preconditions;
 
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
-import static java.lang.String.format;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION;
 
 /**
- * This is the EnterpriseSecurityComponent version for Neo4j 4.2-drop4.
+ * This is the EnterpriseSecurityComponent version for Neo4j 4.2-drop6.
  */
-public class EnterpriseSecurityComponentVersion_5_42D4 extends SupportedEnterpriseSecurityComponentVersion
+public class EnterpriseSecurityComponentVersion_6_42D6 extends SupportedEnterpriseSecurityComponentVersion
 {
     private final KnownEnterpriseSecurityComponentVersion previous;
+    private Node functionPriv;
     private Node procedurePriv;
 
-    public EnterpriseSecurityComponentVersion_5_42D4( Log log, KnownEnterpriseSecurityComponentVersion previous )
+    public EnterpriseSecurityComponentVersion_6_42D6( Log log, KnownEnterpriseSecurityComponentVersion previous )
     {
-        super( ComponentVersion.ENTERPRISE_SECURITY_42D4, log );
+        super( ComponentVersion.ENTERPRISE_SECURITY_42D6, log );
         this.previous = previous;
     }
 
@@ -54,6 +52,18 @@ public class EnterpriseSecurityComponentVersion_5_42D4 extends SupportedEnterpri
 
         procedurePriv = tx.createNode( PRIVILEGE_LABEL );
         setupPrivilegeNode( procedurePriv, PrivilegeAction.EXECUTE.toString(), procSegment, dbResource );
+
+        // Create new privilege for execute functions
+        Node funcQualifier = tx.createNode( Label.label( "FunctionQualifierAll" ) );
+        funcQualifier.setProperty( "type", "function" );
+        funcQualifier.setProperty( "label", "*" );
+
+        Node funcSegment = tx.createNode( SEGMENT_LABEL );
+        funcSegment.createRelationshipTo( funcQualifier, QUALIFIED );
+        funcSegment.createRelationshipTo( allDb, FOR );
+
+        functionPriv = tx.createNode( PRIVILEGE_LABEL );
+        setupPrivilegeNode( functionPriv, PrivilegeAction.EXECUTE.toString(), funcSegment, dbResource );
     }
 
     @Override
@@ -62,34 +72,15 @@ public class EnterpriseSecurityComponentVersion_5_42D4 extends SupportedEnterpri
         super.assignDefaultPrivileges( role, predefinedRole );
         if ( predefinedRole.equals( PUBLIC ) )
         {
+            role.createRelationshipTo( functionPriv, GRANTED );
             role.createRelationshipTo( procedurePriv, GRANTED );
         }
     }
 
     @Override
-    public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest )
-    {
-        Preconditions.checkState( latest.version == LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION,
-                format("Latest version should be %s but was %s", LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION, latest.version ));
-        setVersionProperty( tx, latest.version );
-        Node publicRole = tx.findNode( ROLE_LABEL, "name", PUBLIC );
-        grantExecuteFunctionPrivilegeTo( tx, publicRole );
-    }
-
-    @Override
     boolean supportsUpdateAction( PrivilegeAction action )
     {
-        switch ( action )
-        {
-        // Execute procedures
-        case EXECUTE:
-        case EXECUTE_BOOSTED:
-        case EXECUTE_ADMIN:
-            return true;
-
-        default:
-            return previous.supportsUpdateAction( action );
-        }
+        return previous.supportsUpdateAction( action );
     }
 
     @Override

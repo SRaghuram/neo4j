@@ -62,7 +62,6 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -81,6 +80,7 @@ import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersio
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41;
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41D1;
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D4;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D6;
 
 @TestDirectoryExtension
 @TestInstance( PER_CLASS )
@@ -178,7 +178,7 @@ class SystemGraphComponentsTest
 
     @ParameterizedTest
     @ValueSource( strings = {VERSION_36, VERSION_40, VERSION_41D1, VERSION_41} )
-    void shouldGrantExecutePrivilegeToPublicOnUpgrade( String version ) throws Exception
+    void shouldGrantExecuteProcedurePrivilegeToPublicOnUpgrade( String version ) throws Exception
     {
         initializeLatestSystemAndUsers();
         initEnterprise( version );
@@ -196,9 +196,33 @@ class SystemGraphComponentsTest
         // THEN
         inTx( tx ->
         {
-            Result result = tx.execute( "SHOW ROLE PUBLIC PRIVILEGES WHERE action = 'execute'" );
+            Result result = tx.execute( "SHOW ROLE PUBLIC PRIVILEGES WHERE action = 'execute' and segment = 'PROCEDURE(*)'" );
             assertTrue( result.hasNext() );
-            assertThat( result.next().get( "segment" ), equalTo( "PROCEDURE(*)" ) );
+        } );
+    }
+
+    @ParameterizedTest
+    @ValueSource( strings = {VERSION_36, VERSION_40, VERSION_41D1, VERSION_41, VERSION_42D4} )
+    void shouldGrantExecuteFunctionPrivilegeToPublicOnUpgrade( String version ) throws Exception
+    {
+        initializeLatestSystemAndUsers();
+        initEnterprise( version );
+
+        // THEN
+        inTx( tx ->
+        {
+            Result result = tx.execute( "SHOW ROLE PUBLIC PRIVILEGES WHERE action = 'execute' and segment = 'FUNCTION(*)'" );
+            assertFalse( result.hasNext() );
+        } );
+
+        // WHEN
+        systemGraphComponents.upgradeToCurrent( system );
+
+        // THEN
+        inTx( tx ->
+        {
+            Result result = tx.execute( "SHOW ROLE PUBLIC PRIVILEGES WHERE action = 'execute' and segment = 'FUNCTION(*)'" );
+            assertTrue( result.hasNext() );
         } );
     }
 
@@ -223,7 +247,8 @@ class SystemGraphComponentsTest
                 Arguments.arguments( VERSION_40, REQUIRES_UPGRADE ),
                 Arguments.arguments( VERSION_41D1, REQUIRES_UPGRADE ),
                 Arguments.arguments( VERSION_41, REQUIRES_UPGRADE ),
-                Arguments.arguments( VERSION_42D4, CURRENT )
+                Arguments.arguments( VERSION_42D4, REQUIRES_UPGRADE ),
+                Arguments.arguments( VERSION_42D6, CURRENT )
         );
     }
 

@@ -297,24 +297,38 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
         return rolePrivileges;
     }
 
-    void grantExecutePrivilegeTo( Transaction tx, Node roleNode )
+    void grantExecuteProcedurePrivilegeTo( Transaction tx, Node roleNode )
     {
         // Create new privilege for execute procedures
         Node procQualifier = tx.createNode( Label.label( "ProcedureQualifierAll" ) );
         procQualifier.setProperty( "type", "procedure" );
         procQualifier.setProperty( "label", "*" );
 
-        Node allDb = tx.findNode( DATABASE_ALL_LABEL, "name", "*" );
+        grantExecutePrivilegeTo( tx, roleNode, procQualifier );
+    }
 
+    void grantExecuteFunctionPrivilegeTo( Transaction tx, Node roleNode )
+    {
+        // Create new privilege for execute functions
+        Node funcQualifier = tx.createNode( Label.label( "FunctionQualifierAll" ) );
+        funcQualifier.setProperty( "type", "function" );
+        funcQualifier.setProperty( "label", "*" );
+
+        grantExecutePrivilegeTo( tx, roleNode, funcQualifier );
+    }
+
+    private void grantExecutePrivilegeTo( Transaction tx, Node roleNode, Node qualifier )
+    {
+        Node allDb = tx.findNode( DATABASE_ALL_LABEL, "name", "*" );
         Node dbResource = tx.findNode( Label.label( "Resource" ), "type", Resource.Type.DATABASE.toString() );
 
-        Node procSegment = tx.createNode( SEGMENT_LABEL );
-        procSegment.createRelationshipTo( procQualifier, QUALIFIED );
-        procSegment.createRelationshipTo( allDb, FOR );
+        Node segment = tx.createNode( SEGMENT_LABEL );
+        segment.createRelationshipTo( qualifier, QUALIFIED );
+        segment.createRelationshipTo( allDb, FOR );
 
-        Node procedurePriv = tx.createNode( PRIVILEGE_LABEL );
-        setupPrivilegeNode( procedurePriv, PrivilegeAction.EXECUTE.toString(), procSegment, dbResource );
-        roleNode.createRelationshipTo( procedurePriv, GRANTED );
+        Node privilege = tx.createNode( PRIVILEGE_LABEL );
+        setupPrivilegeNode( privilege, PrivilegeAction.EXECUTE.toString(), segment, dbResource );
+        roleNode.createRelationshipTo( privilege, GRANTED );
     }
 
     @Override

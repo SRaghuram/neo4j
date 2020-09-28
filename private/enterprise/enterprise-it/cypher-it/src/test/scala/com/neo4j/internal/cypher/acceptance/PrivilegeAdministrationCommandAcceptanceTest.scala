@@ -199,7 +199,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
      // WHEN
     execute("SHOW USER neo4j PRIVILEGES YIELD * RETURN user, collect(role) as roles").toSet should be(
-      Set(Map("user" -> "neo4j", "roles" -> List("PUBLIC", "PUBLIC", "admin", "admin", "admin", "admin", "admin", "admin", "admin", "admin", "admin")))
+      Set(Map("user" -> "neo4j", "roles" -> List("PUBLIC", "PUBLIC", "PUBLIC", "admin", "admin", "admin", "admin", "admin", "admin", "admin", "admin", "admin")))
     )
   }
 
@@ -428,13 +428,12 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
   test("should show privileges for specific user YIELD access, resource, role, segment WHERE role = 'PUBLIC'") {
 
-    val expected = defaultUserPrivileges.toList
+    val expected = defaultUserPrivileges
       .map(_.filterKeys(Set("access", "resource", "role", "segment").contains))
       .filter(map => map.get("role").contains("PUBLIC"))
 
     // WHEN
-    execute("SHOW USER neo4j PRIVILEGES YIELD access, resource, role, segment WHERE role = 'PUBLIC'")
-      .toList should be(expected)
+    execute("SHOW USER neo4j PRIVILEGES YIELD access, resource, role, segment WHERE role = 'PUBLIC'").toSet should be(expected)
   }
 
   test("should not show privileges when WHERE references column omitted from YIELD") {
@@ -464,26 +463,26 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     exception.getMessage should startWith("Variable `foo` not defined (line 1, column 34 (offset: 33))")
   }
 
-    test("should show privileges for specific user RETURN user, count(access) AS count") {
-      val expected = Set(Map("user" -> "neo4j", "count" -> 11))
+  test("should show privileges for specific user RETURN user, count(access) AS count") {
+    val expected = Set(Map("user" -> "neo4j", "count" -> 12))
 
-      // WHEN
-      execute("SHOW USER neo4j PRIVILEGES YIELD user, access RETURN user, count(access) AS count")
-        .toSet should be (expected)
-    }
+    // WHEN
+    execute("SHOW USER neo4j PRIVILEGES YIELD user, access RETURN user, count(access) AS count")
+      .toSet should be(expected)
+  }
 
-    test("should show privileges for specific user RETURN count(access) AS count") {
-      val expected = Set(Map("count" -> 11))
+  test("should show privileges for specific user RETURN count(access) AS count") {
+    val expected = Set(Map("count" -> 12))
 
-      // WHEN
-      execute("SHOW USER neo4j PRIVILEGES YIELD access RETURN count(access) AS count")
-        .toSet should be (expected)
-    }
+    // WHEN
+    execute("SHOW USER neo4j PRIVILEGES YIELD access RETURN count(access) AS count")
+      .toSet should be(expected)
+  }
 
   test("should show privileges for specific user RETURN user ORDER BY graph") {
     // WHEN
     execute("SHOW USER neo4j PRIVILEGES YIELD user, access, graph RETURN user ORDER BY graph")
-      .toList should be (List.fill(11)(Map("user" -> "neo4j")))
+      .toList should be (List.fill(12)(Map("user" -> "neo4j")))
   }
 
   test("should show privileges for current user RETURN user ORDER BY graph") {
@@ -491,12 +490,11 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     setupUserWithCustomRole()
 
     // WHEN
-    executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES YIELD user, access, graph RETURN user ", resultHandler = (row, index) => {
+    executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES YIELD user, access, graph RETURN user ", resultHandler = (row, _) => {
       // THEN
       row.get("user") should be("joe")
     })
   }
-
 
   test("should not show privileges for specific user RETURN user, count(access) AS count ORDER BY graph") {
     // WHEN
@@ -530,31 +528,30 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     })
   }
 
-
   test("should show user privileges for current user as non admin") {
     // GIVEN
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
 
-    val expected = publicPrivileges("joe").toSeq
+    val expected = publicPrivileges("joe").toSeq.sortBy( p => p.get("segment") )
 
     // WHEN
-    executeOnSystem("joe", "soap", "SHOW USER joe PRIVILEGES", resultHandler = (row, idx) => {
+    executeOnSystem("joe", "soap", "SHOW USER joe PRIVILEGES YIELD * ORDER BY segment", resultHandler = (row, idx) => {
       // THEN
       asPrivilegesResult(row) should be(expected(idx))
-    }) should be(2)
+    }) should be(3)
   }
 
   test("should show user privileges for current user as non admin without specifying the user name") {
     // GIVEN
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
 
-    val expected = publicPrivileges("joe").toSeq
+    val expected = publicPrivileges("joe").toSeq.sortBy( p => p.get("segment") )
 
     // WHEN
-    executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES", resultHandler = (row, idx) => {
+    executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES YIELD * ORDER BY segment", resultHandler = (row, idx) => {
       // THEN
       asPrivilegesResult(row) should be(expected(idx))
-    }) should be(2)
+    }) should be(3)
   }
 
   test("should give nothing when showing privileges for non-existing user") {
@@ -1271,19 +1268,19 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     // GIVEN
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
 
-    val expected = publicPrivileges("joe").toSeq
+    val expected = publicPrivileges("joe").toSeq.sortBy( p => p.get("segment") )
 
     // WHEN using a parameter name that used to be internal, but is not any more, it should work
-    executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES", resultHandler = (row, idx) => {
+    executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES YIELD * ORDER BY segment", resultHandler = (row, idx) => {
       // THEN
       asPrivilegesResult(row) should be(expected(idx))
-    }, params = Map[String, Object]("currentUser" -> "neo4j").asJava) should be(2)
+    }, params = Map[String, Object]("currentUser" -> "neo4j").asJava) should be(3)
 
     // WHEN using a parameter name that is the new internal name, an error should occur
     the[QueryExecutionException] thrownBy {
       executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES",
         params = Map[String, Object]("__internal_currentUser" -> "neo4j").asJava)
-    } should have message ("The query contains a parameter with an illegal name: '__internal_currentUser'")
+    } should have message "The query contains a parameter with an illegal name: '__internal_currentUser'"
   }
 
   withAllSystemGraphVersions(allSupported) {

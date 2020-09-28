@@ -38,6 +38,7 @@ import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.kernel.api.security.FunctionSegment;
 import org.neo4j.internal.kernel.api.security.ProcedureSegment;
 import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.logging.AssertableLogProvider;
@@ -346,6 +347,8 @@ class SystemGraphRealmIT
                 new ResourcePrivilege( GRANT, ACCESS, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.DEFAULT );
         ResourcePrivilege executeProcedurePrivilege =
                 new ResourcePrivilege( GRANT, EXECUTE, new Resource.DatabaseResource(), ProcedureSegment.ALL, SpecialDatabase.ALL );
+        ResourcePrivilege executeFunctionPrivilege =
+                new ResourcePrivilege( GRANT, EXECUTE, new Resource.DatabaseResource(), FunctionSegment.ALL, SpecialDatabase.ALL );
         ResourcePrivilege accessPrivilege =
                 new ResourcePrivilege( GRANT, ACCESS, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
         ResourcePrivilege matchNodePrivilege =
@@ -369,7 +372,7 @@ class SystemGraphRealmIT
                 containsInAnyOrder( accessPrivilege, matchNodePrivilege, matchRelPrivilege ) );
 
         assertThat( privilegesFor( realm, PredefinedRoles.PUBLIC ),
-                containsInAnyOrder( defaultAccessPrivilege, executeProcedurePrivilege ) );
+                containsInAnyOrder( defaultAccessPrivilege, executeProcedurePrivilege, executeFunctionPrivilege ) );
 
         assertThat( privilegesFor( realm, PredefinedRoles.EDITOR ),
                 containsInAnyOrder( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege ) );

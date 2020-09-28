@@ -56,13 +56,13 @@ import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersio
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41;
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41D1;
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D4;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D6;
 
 @TestDirectoryExtension
 @TestInstance( PER_CLASS )
 class EnterpriseSecurityGraphComponentTest
 {
     @Inject
-    @SuppressWarnings( "unused" )
     private static TestDirectory directory;
 
     private static DatabaseManagementService dbms;
@@ -146,7 +146,8 @@ class EnterpriseSecurityGraphComponentTest
                 Arguments.of( VERSION_40, List.of( ADMIN, ARCHITECT, PUBLISHER, EDITOR, READER ), REQUIRES_UPGRADE ),
                 Arguments.of( VERSION_41D1, PredefinedRoles.roles, REQUIRES_UPGRADE ),
                 Arguments.of( VERSION_41, PredefinedRoles.roles, REQUIRES_UPGRADE ),
-                Arguments.of( VERSION_42D4, PredefinedRoles.roles, CURRENT )
+                Arguments.of( VERSION_42D4, PredefinedRoles.roles, REQUIRES_UPGRADE ),
+                Arguments.of( VERSION_42D6, PredefinedRoles.roles, CURRENT )
         );
     }
 

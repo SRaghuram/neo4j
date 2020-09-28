@@ -224,6 +224,11 @@ abstract class SecurityGraphCompatibilityTestBase
             new PrivilegeCommand( "EXECUTE BOOSTED PROCEDURE * ON DBMS", GRANT_DENY_REVOKE )
     );
 
+    static Set<PrivilegeCommand> PRIVILEGES_ADDED_IN_42D5 = Set.of(
+            new PrivilegeCommand( "EXECUTE FUNCTION * ON DBMS", GRANT_DENY_REVOKE ),
+            new PrivilegeCommand( "EXECUTE BOOSTED FUNCTION * ON DBMS", GRANT_DENY_REVOKE )
+    );
+
     static Set<PrivilegeCommand> ALL_PRIVILEGES = new HashSet<>();
 
     static
@@ -232,6 +237,7 @@ abstract class SecurityGraphCompatibilityTestBase
         ALL_PRIVILEGES.addAll( PRIVILEGES_ADDED_IN_41D1 );
         ALL_PRIVILEGES.addAll( PRIVILEGES_ADDED_IN_41 );
         ALL_PRIVILEGES.addAll( PRIVILEGES_ADDED_IN_42D4 );
+        ALL_PRIVILEGES.addAll( PRIVILEGES_ADDED_IN_42D5 );
     }
 
     static class PrivilegeCommand

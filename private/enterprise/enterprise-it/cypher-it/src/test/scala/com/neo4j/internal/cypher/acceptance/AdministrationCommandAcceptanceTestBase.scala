@@ -245,6 +245,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
 
   def publicPrivileges(user: String): Set[Map[String, String]] = Set(
     granted(executeProcedure).user(user).role(PUBLIC).map,
+    granted(executeFunction).user(user).role(PUBLIC).map,
     granted(access).database(DEFAULT).user(user).role(PUBLIC).map
   )
 
@@ -598,6 +599,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute(s"REVOKE ACCESS ON DEFAULT DATABASE FROM ${PredefinedRoles.PUBLIC}")
     execute(s"REVOKE EXECUTE PROCEDURES * ON DBMS FROM ${PredefinedRoles.PUBLIC}")
+    execute(s"REVOKE EXECUTE FUNCTION * ON DBMS FROM ${PredefinedRoles.PUBLIC}")
     execute("SHOW ROLE PUBLIC PRIVILEGES").toList should be(empty)
   }
 

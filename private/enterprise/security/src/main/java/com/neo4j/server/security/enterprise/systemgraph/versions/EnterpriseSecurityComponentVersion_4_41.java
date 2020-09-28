@@ -62,7 +62,8 @@ public class EnterpriseSecurityComponentVersion_4_41 extends SupportedEnterprise
                 format("Latest version should be %s but was %s", LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION, latest.version ));
         setVersionProperty( tx, latest.version );
         Node publicRole = tx.findNode( ROLE_LABEL, "name", PUBLIC );
-        grantExecutePrivilegeTo( tx, publicRole );
+        grantExecuteProcedurePrivilegeTo( tx, publicRole );
+        grantExecuteFunctionPrivilegeTo( tx, publicRole );
     }
 
     @Override

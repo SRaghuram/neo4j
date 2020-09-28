@@ -61,7 +61,8 @@ class PrivilegeResolverTest
 
         // THEN
         assertThat( privilegeResolver.getPrivilegesGrantedThroughConfig() ).containsExactlyInAnyOrder(
-                privilegeFor( "role", "*", true )
+                procedurePrivilegeFor( "role", "*", true ),
+                functionPrivilegeFor( "role", "*", true )
         );
     }
 
@@ -77,9 +78,12 @@ class PrivilegeResolverTest
 
         // THEN
         assertThat( privilegeResolver.getPrivilegesGrantedThroughConfig() ).containsExactlyInAnyOrder(
-                privilegeFor( "role", "*", true ),
-                privilegeFor( "role", "xyz", false ),
-                privilegeFor( "anotherRole", "xyz", true )
+                procedurePrivilegeFor( "role", "*", true ),
+                procedurePrivilegeFor( "role", "xyz", false ),
+                procedurePrivilegeFor( "anotherRole", "xyz", true ),
+                functionPrivilegeFor( "role", "*", true ),
+                functionPrivilegeFor( "role", "xyz", false ),
+                functionPrivilegeFor( "anotherRole", "xyz", true )
         );
     }
 
@@ -95,9 +99,12 @@ class PrivilegeResolverTest
 
         // THEN
         assertThat( privilegeResolver.getPrivilegesGrantedThroughConfig() ).containsExactlyInAnyOrder(
-                privilegeFor( "role", "*", true ),
-                privilegeFor( "role", "x?z*", false ),
-                privilegeFor( "anotherRole", "x?z*", true )
+                procedurePrivilegeFor( "role", "*", true ),
+                procedurePrivilegeFor( "role", "x?z*", false ),
+                procedurePrivilegeFor( "anotherRole", "x?z*", true ),
+                functionPrivilegeFor( "role", "*", true ),
+                functionPrivilegeFor( "role", "x?z*", false ),
+                functionPrivilegeFor( "anotherRole", "x?z*", true )
         );
     }
 
@@ -110,7 +117,8 @@ class PrivilegeResolverTest
 
         // THEN
         assertThat( privilegeResolver.getPrivilegesGrantedThroughConfig() ).containsExactlyInAnyOrder(
-                privilegeFor( "role", "xyz*", true )
+                procedurePrivilegeFor( "role", "xyz*", true ),
+                functionPrivilegeFor( "role", "xyz*", true )
         );
     }
 
@@ -135,9 +143,12 @@ class PrivilegeResolverTest
 
         // THEN
         assertThat( privilegeResolver.getPrivilegesGrantedThroughConfig() ).containsExactlyInAnyOrder(
-                privilegeFor( "apoc_reader", "apoc.convert.*", true ),
-                privilegeFor( "apoc_writer", "apoc.load.json", true ),
-                privilegeFor( "TriggerHappy", "apoc.trigger.add", true )
+                procedurePrivilegeFor( "apoc_reader", "apoc.convert.*", true ),
+                procedurePrivilegeFor( "apoc_writer", "apoc.load.json", true ),
+                procedurePrivilegeFor( "TriggerHappy", "apoc.trigger.add", true ),
+                functionPrivilegeFor( "apoc_reader", "apoc.convert.*", true ),
+                functionPrivilegeFor( "apoc_writer", "apoc.load.json", true ),
+                functionPrivilegeFor( "TriggerHappy", "apoc.trigger.add", true )
         );
     }
 
@@ -150,12 +161,18 @@ class PrivilegeResolverTest
 
         // THEN
         assertThat( privilegeResolver.getPrivilegesGrantedThroughConfig() ).containsExactlyInAnyOrder(
-                privilegeFor( "role1", "xyz*", true ),
-                privilegeFor( "role2", "xyz*", true ),
-                privilegeFor( "role3", "xyz*", true ),
-                privilegeFor( "role4", "xyz*", true ),
-                privilegeFor( "role1", "abc", true ),
-                privilegeFor( "role3", "abc", true )
+                procedurePrivilegeFor( "role1", "xyz*", true ),
+                procedurePrivilegeFor( "role2", "xyz*", true ),
+                procedurePrivilegeFor( "role3", "xyz*", true ),
+                procedurePrivilegeFor( "role4", "xyz*", true ),
+                procedurePrivilegeFor( "role1", "abc", true ),
+                procedurePrivilegeFor( "role3", "abc", true ),
+                functionPrivilegeFor( "role1", "xyz*", true ),
+                functionPrivilegeFor( "role2", "xyz*", true ),
+                functionPrivilegeFor( "role3", "xyz*", true ),
+                functionPrivilegeFor( "role4", "xyz*", true ),
+                functionPrivilegeFor( "role1", "abc", true ),
+                functionPrivilegeFor( "role3", "abc", true )
         );
     }
 
@@ -171,22 +188,41 @@ class PrivilegeResolverTest
 
         // THEN
         assertThat( privilegeResolver.getPrivilegesGrantedThroughConfig() ).containsExactlyInAnyOrder(
-                privilegeFor( "apoc", "apoc.*", true ),
-                privilegeFor( "loader", "apoc.load.*", true ),
-                privilegeFor( "trigger", "apoc.trigger.*", true ),
+                procedurePrivilegeFor( "apoc", "apoc.*", true ),
+                procedurePrivilegeFor( "loader", "apoc.load.*", true ),
+                procedurePrivilegeFor( "trigger", "apoc.trigger.*", true ),
 
-                privilegeFor( "default", "apoc.*", false ),
-                privilegeFor( "default", "apoc.load.*", true ),
-                privilegeFor( "default", "apoc.trigger.*", false ),
-                privilegeFor( "default", "*", true )
+                procedurePrivilegeFor( "default", "apoc.*", false ),
+                procedurePrivilegeFor( "default", "apoc.load.*", true ),
+                procedurePrivilegeFor( "default", "apoc.trigger.*", false ),
+                procedurePrivilegeFor( "default", "*", true ),
+
+                functionPrivilegeFor( "apoc", "apoc.*", true ),
+                functionPrivilegeFor( "loader", "apoc.load.*", true ),
+                functionPrivilegeFor( "trigger", "apoc.trigger.*", true ),
+
+                functionPrivilegeFor( "default", "apoc.*", false ),
+                functionPrivilegeFor( "default", "apoc.load.*", true ),
+                functionPrivilegeFor( "default", "apoc.trigger.*", false ),
+                functionPrivilegeFor( "default", "*", true )
         );
     }
 
-    Map<String,String> privilegeFor( String role, String procedure, boolean granted )
+    Map<String,String> procedurePrivilegeFor( String role, String procedure, boolean granted )
     {
         return Map.of( "role", role,
                 "graph", "*",
                 "segment", String.format( "PROCEDURE(%s)", procedure ),
+                "resource", "database",
+                "action", EXECUTE_BOOSTED_FROM_CONFIG,
+                "access", granted ? "GRANTED" : "DENIED" );
+    }
+
+    Map<String,String> functionPrivilegeFor( String role, String procedure, boolean granted )
+    {
+        return Map.of( "role", role,
+                "graph", "*",
+                "segment", String.format( "FUNCTION(%s)", procedure ),
                 "resource", "database",
                 "action", EXECUTE_BOOSTED_FROM_CONFIG,
                 "access", granted ? "GRANTED" : "DENIED" );
