@@ -103,7 +103,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     failWithError(
       Configs.All,
       "CALL db.labels() YIELD label WHERE label <> 'A'",
-      List("Cannot use standalone call with WHERE"))
+      "Cannot use standalone call with WHERE")
   }
 
   test("should be able to find labels from built-in-procedure") {
@@ -404,7 +404,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
   test("yield from void procedure should return correct error msg") {
     failWithError(Configs.All,
       "CALL db.createLabel('Label') yield node",
-      List("Cannot yield value from void procedure."))
+      "Cannot yield value from void procedure.")
   }
 
   test("should create index from built-in-procedure") {

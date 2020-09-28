@@ -102,7 +102,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
     // WHEN
     failWithError(Configs.All, "match (n)-->() using index n:Person(name) where n.name = 'kabam' return n",
-      List("Unknown variable `n`.", "Cannot use index hint in this context. Must use label on node that hint is referring to."))
+      "Cannot use index hint in this context. Must use label on node that hint is referring to.")
   }
 
   test("fail if using a variable with label not used in match (named index)") {
@@ -111,14 +111,14 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
     // WHEN
     failWithError(Configs.All, "match (n)-->() using index n:Person(name) where n.name = 'kabam' return n",
-      List("Unknown variable `n`.", "Cannot use index hint in this context. Must use label on node that hint is referring to."))
+      "Cannot use index hint in this context. Must use label on node that hint is referring to.")
   }
 
   test("fail if using an hint for a non existing index") {
     // GIVEN: NO INDEX
 
     // WHEN
-    failWithError(Configs.All, "match (n:Person)-->() using index n:Person(name) where n.name = 'kabam' return n", List("No such index"))
+    failWithError(Configs.All, "match (n:Person)-->() using index n:Person(name) where n.name = 'kabam' return n", "No such index")
   }
 
   test("fail if using hints with unusable equality predicate") {
@@ -126,7 +126,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     graph.createIndex("Person", "name")
 
     // WHEN
-    failWithError(Configs.All, "match (n:Person)-->() using index n:Person(name) where n.name <> 'kabam' return n", List("Cannot use index hint in this context"))
+    failWithError(Configs.All, "match (n:Person)-->() using index n:Person(name) where n.name <> 'kabam' return n","Cannot use index hint in this context")
   }
 
   test("fail if using hints with unusable equality predicate (named index)") {
@@ -134,7 +134,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     graph.createIndexWithName("my_index", "Person", "name")
 
     // WHEN
-    failWithError(Configs.All, "match (n:Person)-->() using index n:Person(name) where n.name <> 'kabam' return n", List("Cannot use index hint in this context"))
+    failWithError(Configs.All, "match (n:Person)-->() using index n:Person(name) where n.name <> 'kabam' return n", "Cannot use index hint in this context")
   }
 
   test("fail if joining index hints in equality predicates") {
@@ -145,10 +145,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     // WHEN
     failWithError(Configs.All,
       "match (n:Person)-->(m:Food) using index n:Person(name) using index m:Food(name) where n.name = m.name return n",
-      List("Failed to fulfil the hints of the query.",
-        "Unknown variable",
-        "Cannot use index hint in this context",
-        "The given query is not currently supported in the selected cost-based planner"))
+      "Failed to fulfil the hints of the query.")
   }
 
   test("scan hints are handled by ronja") {
@@ -161,7 +158,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
     // WHEN
     failWithError(Configs.All, "match (n)-->() using index n:Person(name) where n.name = 'kabam' OR n.name = 'kaboom' return n",
-      List("Cannot use index hint in this context. Must use label on node that hint is referring to."))
+      "Cannot use index hint in this context. Must use label on node that hint is referring to.")
   }
 
   test("correct status code when no index") {
@@ -174,7 +171,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         |RETURN n""".stripMargin
 
     // WHEN
-    failWithError(Configs.All, query, List("No such index"), params = Map("foo" -> 42))
+    failWithError(Configs.All, query, "No such index", params = Map("foo" -> 42))
   }
 
   test("should succeed (i.e. no warnings or errors) if executing a query using a 'USING INDEX' which can be fulfilled") {
@@ -344,7 +341,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         "USING INDEX n:Entity(source) " +
         "WHERE n.first_name = \"John\" AND n.source = \"form1\" " +
         "RETURN n;",
-      List("Multiple index hints for same variable are not supported"))
+     "Multiple index hints for same variable are not supported")
   }
 
   test("does not accept multiple index hints for the same variable (named indexes)") {
@@ -362,7 +359,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         "USING INDEX n:Entity(source) " +
         "WHERE n.first_name = \"John\" AND n.source = \"form1\" " +
         "RETURN n;",
-      List("Multiple index hints for same variable are not supported"))
+      "Multiple index hints for same variable are not supported")
   }
 
   test("does not accept multiple scan hints for the same variable") {
@@ -372,7 +369,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         "USING SCAN n:Entity " +
         "WHERE n.first_name = \"John\" AND n.source = \"form1\" " +
         "RETURN n;",
-      List("Multiple index hints for same variable are not supported"))
+      "Multiple index hints for same variable are not supported")
 
   }
 
@@ -383,7 +380,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         "USING INDEX n:Entity(first_name) " +
         "WHERE n.first_name = \"John\" AND n.source = \"form1\" " +
         "RETURN n;",
-      List("Multiple index hints for same variable are not supported"))
+      "Multiple index hints for same variable are not supported")
   }
 
   test("does not accept multiple join hints for the same variables") {
@@ -392,14 +389,14 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         |USING JOIN ON liskov, cs
         |USING JOIN ON liskov, cs
         |RETURN wing.born AS column""".stripMargin,
-      List("Multiple join hints for same variable are not supported"))
+      "Multiple join hints for same variable are not supported")
   }
 
   test("scan hint must fail if using a variable not used in the query") {
     // GIVEN
 
     // WHEN
-    failWithError(Configs.All, "MATCH (n:Person)-->() USING SCAN x:Person return n", List("Variable `x` not defined", "x not defined"))
+    failWithError(Configs.All, "MATCH (n:Person)-->() USING SCAN x:Person return n", "Variable `x` not defined")
   }
 
   test("scan hint must fail if using label not used in the query") {
@@ -407,7 +404,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
     // WHEN
     failWithError(Configs.All, "MATCH (n)-->() USING SCAN n:Person return n",
-      List("Cannot use label scan hint in this context.", "Parentheses are required to identify nodes in patterns, i.e. (n)"))
+      "Cannot use label scan hint in this context.")
   }
 
   test("should succeed (i.e. no warnings or errors) if executing a query using a 'USING SCAN'") {
@@ -505,7 +502,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
          |MATCH (a:A)-->(b:B)<--(c:C)
          |USING JOIN ON d
          |RETURN a.prop""".stripMargin,
-      List("Variable `d` not defined", "d not defined"))
+      "Variable `d` not defined")
   }
 
   test("should fail when join hint is applied to a single node") {
@@ -514,7 +511,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
          |MATCH (a:A)
          |USING JOIN ON a
          |RETURN a.prop""".stripMargin,
-      List("Cannot use join hint for single node pattern"))
+      "Cannot use join hint for single node pattern")
   }
 
   test("should fail when join hint is applied to a relationship") {
@@ -523,7 +520,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
          |MATCH (a:A)-[r1]->(b:B)-[r2]->(c:C)
          |USING JOIN ON r1
          |RETURN a.prop""".stripMargin,
-      List("Type mismatch: expected Node but was Relationship"))
+      "Type mismatch: expected Node but was Relationship")
   }
 
   test("should fail when join hint is applied to a path") {
@@ -532,7 +529,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
          |MATCH p=(a:A)-->(b:B)-->(c:C)
          |USING JOIN ON p
          |RETURN a.prop""".stripMargin,
-      List("Type mismatch: expected Node but was Path"))
+      "Type mismatch: expected Node but was Path")
   }
 
   test("should be able to use join hints for multiple hop pattern") {

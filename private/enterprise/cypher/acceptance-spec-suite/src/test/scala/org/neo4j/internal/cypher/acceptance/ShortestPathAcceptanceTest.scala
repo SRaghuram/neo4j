@@ -384,7 +384,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val expectedToFail = Configs.All
 
     failWithError(expectedToFail,
-      "MATCH p = shortestPath((src:A)-[*2..3]->(dst:D)) RETURN nodes(p) AS nodes", List("shortestPath(...) does not support a minimal length different from 0 or 1"))
+      "MATCH p = shortestPath((src:A)-[*2..3]->(dst:D)) RETURN nodes(p) AS nodes", "shortestPath(...) does not support a minimal length different from 0 or 1")
   }
 
   test("if asked for also return paths of length 0") {
@@ -790,7 +790,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
       """.stripMargin
 
     val errorMsg = "A shortestPath(...) requires bound nodes when not part of a MATCH clause."
-    failWithError(Configs.All, query, Seq(errorMsg), Seq("SyntaxException"))
+    failWithError(Configs.All, query, errorMsg, "SyntaxException")
   }
 
   test("unbound node in shortest path in WHERE clause should fail in semantic checking") {
@@ -804,7 +804,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
       """.stripMargin
 
     val errorMsg = "A shortestPath(...) requires bound nodes when not part of a MATCH clause."
-    failWithError(Configs.All, query, Seq(errorMsg), Seq("SyntaxException"))
+    failWithError(Configs.All, query, errorMsg, "SyntaxException")
   }
 
   test("unbound node in shortest path in WITH clause should fail in semantic checking") {
@@ -818,7 +818,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
       """.stripMargin
 
     val errorMsg = "A shortestPath(...) requires bound nodes when not part of a MATCH clause."
-    failWithError(Configs.All, query, Seq(errorMsg), Seq("SyntaxException"))
+    failWithError(Configs.All, query, errorMsg, "SyntaxException")
   }
 
   private def createLdbc14Model(): Unit = {

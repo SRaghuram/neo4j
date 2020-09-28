@@ -554,7 +554,7 @@ class LoadCsvAcceptanceTest
 
   test("should fail gracefully when loading missing file") {
     failWithError(Configs.InterpretedAndSlotted, "LOAD CSV FROM 'file:///./these_are_not_the_droids_you_are_looking_for.csv' AS line CREATE (a {name:line[0]})",
-      List("Couldn't load the external resource at: file:/./these_are_not_the_droids_you_are_looking_for.csv"))
+      "Couldn't load the external resource at: file:/./these_are_not_the_droids_you_are_looking_for.csv")
     resourceMonitor.assertClosedAndClear(0)
   }
 
@@ -576,46 +576,46 @@ class LoadCsvAcceptanceTest
 
   test("should fail gracefully when getting 404") {
     failWithError(Configs.InterpretedAndSlotted, s"LOAD CSV FROM 'http://127.0.0.1:$port/these_are_not_the_droids_you_are_looking_for/' AS line CREATE (a {name:line[0]})",
-      List("Couldn't load the external resource at"))
+      "Couldn't load the external resource at")
     resourceMonitor.assertClosedAndClear(0)
   }
 
   test("should fail gracefully when loading non existent (local) site") {
     failWithError(Configs.InterpretedAndSlotted, "LOAD CSV FROM 'http://127.0.0.1:9999/these_are_not_the_droids_you_are_looking_for/' AS line CREATE (a {name:line[0]})",
-      List("Couldn't load the external resource at"))
+     "Couldn't load the external resource at")
     resourceMonitor.assertClosedAndClear(0)
   }
 
   test("should reject URLs that are not valid") {
 
     failWithError(Configs.InterpretedAndSlotted, s"LOAD CSV FROM 'morsecorba://sos' AS line CREATE (a {name:line[0]})",
-      List("Invalid URL 'morsecorba://sos': unknown protocol: morsecorba"))
+      "Invalid URL 'morsecorba://sos': unknown protocol: morsecorba")
     resourceMonitor.assertClosedAndClear(0)
 
     failWithError(Configs.InterpretedAndSlotted, s"LOAD CSV FROM '://' AS line CREATE (a {name:line[0]})",
-      List("Invalid URL '://': no protocol: ://"))
+      "Invalid URL '://': no protocol: ://")
     resourceMonitor.assertClosedAndClear(0)
 
     failWithError(Configs.InterpretedAndSlotted, s"LOAD CSV FROM 'foo.bar' AS line CREATE (a {name:line[0]})",
-      List("Invalid URL 'foo.bar': no protocol: foo.bar"))
+      "Invalid URL 'foo.bar': no protocol: foo.bar")
     resourceMonitor.assertClosedAndClear(0)
 
     failWithError(Configs.InterpretedAndSlotted, s"LOAD CSV FROM 'jar:file:///tmp/bar.jar' AS line CREATE (a {name:line[0]})",
-      List("Invalid URL 'jar:file:///tmp/bar.jar': no !/ in spec"))
+      "Invalid URL 'jar:file:///tmp/bar.jar': no !/ in spec")
     resourceMonitor.assertClosedAndClear(0)
 
     failWithError(Configs.InterpretedAndSlotted, "LOAD CSV FROM 'file://./blah.csv' AS line CREATE (a {name:line[0]})",
-      List("Cannot load from URL 'file://./blah.csv': file URL may not contain an authority section (i.e. it should be 'file:///')"))
+      "Cannot load from URL 'file://./blah.csv': file URL may not contain an authority section (i.e. it should be 'file:///')")
     resourceMonitor.assertClosedAndClear(0)
 
     failWithError(Configs.InterpretedAndSlotted, "LOAD CSV FROM 'file:///tmp/blah.csv?q=foo' AS line CREATE (a {name:line[0]})",
-      List("Cannot load from URL 'file:///tmp/blah.csv?q=foo': file URL may not contain a query component"))
+      "Cannot load from URL 'file:///tmp/blah.csv?q=foo': file URL may not contain a query component")
     resourceMonitor.assertClosedAndClear(0)
   }
 
   test("should deny URLs for blocked protocols") {
     failWithError(Configs.InterpretedAndSlotted, s"LOAD CSV FROM 'jar:file:///tmp/bar.jar!/blah/foo.csv' AS line CREATE (a {name:line[0]})",
-      List("Cannot load from URL 'jar:file:///tmp/bar.jar!/blah/foo.csv': loading resources via protocol 'jar' is not permitted"))
+      "Cannot load from URL 'jar:file:///tmp/bar.jar!/blah/foo.csv': loading resources via protocol 'jar' is not permitted")
     resourceMonitor.assertClosedAndClear(0)
   }
 

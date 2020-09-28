@@ -71,7 +71,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
 
     // when
     failWithError(Configs.InterpretedAndSlotted, "MATCH (n) SET n.property = [['foo'],['bar']] RETURN n.property",
-      List("Collections containing collections can not be stored in properties."))
+      "Collections containing collections can not be stored in properties.")
   }
 
   test("should not be able to set property to collection with null value") {
@@ -80,7 +80,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
 
     // when
     failWithError(Configs.InterpretedAndSlotted, "MATCH (n) SET n.property = [null,null] RETURN n.property",
-      List("Collections containing null values can not be stored in properties."))
+      "Collections containing null values can not be stored in properties.")
 
   }
 
@@ -177,9 +177,8 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
   //Not suitable for the TCK
   test("should fail at runtime when the expression is not a node or a relationship") {
     failWithError(Configs.InterpretedAndSlotted + Configs.Pipelined, "SET (CASE WHEN true THEN $node END).name = 'neo4j' RETURN count(*)",
-      List("The expression GenericCase(Vector((true,$node)),None) should have been a node or a relationship",
-        "Type mismatch: expected Map, Node, Relationship, Point, Duration, Date, Time, LocalTime, LocalDateTime or DateTime but was Integer"
-      ), params = Map("node" -> 42))
+      "Type mismatch: expected Map, Node, Relationship, Point, Duration, Date, Time, LocalTime, LocalDateTime or DateTime but was Integer",
+      params = Map("node" -> 42))
   }
 
   //Not suitable for the TCK

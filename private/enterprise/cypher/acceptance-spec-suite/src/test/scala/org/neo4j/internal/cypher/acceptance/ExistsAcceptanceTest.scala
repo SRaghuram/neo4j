@@ -890,7 +890,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name, dog.name
       """.stripMargin
 
-    failWithError(Configs.All, query, errorType = Seq("SyntaxException"), message = Seq("Variable `dog` not defined"))
+    failWithError(Configs.All, query,"Variable `dog` not defined", "SyntaxException")
   }
 
   test("should support variable length pattern") {
@@ -1489,7 +1489,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN foo
       """.stripMargin
 
-    failWithError(Configs.All, query, Seq("The EXISTS subclause is not valid inside a WITH or RETURN clause."), Seq("SyntaxException"))
+    failWithError(Configs.All, query, "The EXISTS subclause is not valid inside a WITH or RETURN clause.", "SyntaxException")
   }
 
   test("exists in RETURN should return a syntax error at parsing") {
@@ -1502,7 +1502,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |}
       """.stripMargin
 
-    failWithError(Configs.All, query, Seq("The EXISTS subclause is not valid inside a WITH or RETURN clause."), Seq("SyntaxException"))
+    failWithError(Configs.All, query, "The EXISTS subclause is not valid inside a WITH or RETURN clause.", "SyntaxException")
   }
 
   test("exists deep in RETURN should return a syntax error at parsing") {
@@ -1515,7 +1515,8 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |}
       """.stripMargin
 
-    failWithError(Configs.All, query, Seq("EXISTS is only valid in a WHERE clause as a standalone predicate or as part of a boolean expression (AND / OR / NOT)"), Seq("SyntaxException"))
+    failWithError(Configs.All, query,
+      "EXISTS is only valid in a WHERE clause as a standalone predicate or as part of a boolean expression (AND / OR / NOT)", "SyntaxException")
   }
 
   test("exists is not valid as part of an equality check") {
@@ -1528,7 +1529,8 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person
         |""".stripMargin
 
-    failWithError(Configs.All, query, Seq("EXISTS is only valid in a WHERE clause as a standalone predicate or as part of a boolean expression (AND / OR / NOT)"), Seq("SyntaxException"))
+    failWithError(Configs.All, query,
+      "EXISTS is only valid in a WHERE clause as a standalone predicate or as part of a boolean expression (AND / OR / NOT)", "SyntaxException")
   }
 
   test("not exists is not valid as part of an equality check") {
@@ -1540,8 +1542,8 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |})
         |RETURN person
         |""".stripMargin
-
-    failWithError(Configs.All, query, Seq("EXISTS is only valid in a WHERE clause as a standalone predicate or as part of a boolean expression (AND / OR / NOT)"), Seq("SyntaxException"))
+    failWithError(Configs.All, query,
+      "EXISTS is only valid in a WHERE clause as a standalone predicate or as part of a boolean expression (AND / OR / NOT)", "SyntaxException")
   }
 
   test("Cannot use exists subclause as a function parameter") {
@@ -1554,7 +1556,8 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person
         |""".stripMargin
 
-    failWithError(Configs.All, query, Seq("EXISTS is only valid in a WHERE clause as a standalone predicate or as part of a boolean expression (AND / OR / NOT)"), Seq("SyntaxException"))
+    failWithError(Configs.All, query,
+      "EXISTS is only valid in a WHERE clause as a standalone predicate or as part of a boolean expression (AND / OR / NOT)", "SyntaxException")
   }
 
   test("Cannot set a property to the value of an exists subclause") {
@@ -1567,7 +1570,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person
         |""".stripMargin
 
-    failWithError(Configs.All, query, Seq("The EXISTS subclause is not valid inside a SET clause."), Seq("SyntaxException"))
+    failWithError(Configs.All, query, "The EXISTS subclause is not valid inside a SET clause.", "SyntaxException")
   }
 
   test("Cannot use exists as part of a create") {
@@ -1579,8 +1582,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person
         |""".stripMargin
 
-    failWithError(Configs.All, query, Seq("EXISTS is only valid in a WHERE clause as a standalone predicate or as part of a boolean expression (AND / OR / NOT)"), Seq("SyntaxException"))
+    failWithError(Configs.All, query,
+      "EXISTS is only valid in a WHERE clause as a standalone predicate or as part of a boolean expression (AND / OR / NOT)", "SyntaxException")
   }
-
-
 }

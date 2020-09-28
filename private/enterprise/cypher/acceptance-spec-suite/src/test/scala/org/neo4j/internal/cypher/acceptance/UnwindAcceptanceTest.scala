@@ -188,7 +188,7 @@ class UnwindAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
     failWithError(Configs.All,
       "MATCH (p:Person) UNWIND ['j', count(*)] AS var RETURN var",
-      List("Can't use aggregating expressions inside of expressions executing over lists")
+     "Can't use aggregating expressions inside of expressions executing over lists"
     )
   }
 

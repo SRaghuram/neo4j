@@ -8,7 +8,6 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.runtime.PathImpl
-import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.Node
 import org.neo4j.graphdb.Path
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
@@ -24,8 +23,8 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     createNode()
     failWithError(Configs.All,
       "PROFILE MATCH (n) RETURN n + $x as res",
-      Seq("Type mismatch for parameter 'x': expected List<T> but was Integer"),
-      Seq("SyntaxException"),
+      "Type mismatch for parameter 'x': expected List<T> but was Integer",
+      "SyntaxException",
       Map("x" -> 5)
     )
   }

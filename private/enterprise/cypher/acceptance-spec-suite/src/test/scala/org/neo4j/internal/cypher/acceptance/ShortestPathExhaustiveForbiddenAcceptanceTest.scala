@@ -32,7 +32,7 @@ class ShortestPathExhaustiveForbiddenAcceptanceTest extends ExecutionEngineFunSu
       s"""MATCH p = shortestPath((src:$topLeft)-[*0..]-(dst:$topLeft))
          |WHERE ANY(n in nodes(p) WHERE n:$topRight)
          |RETURN nodes(p) AS nodes""".stripMargin,
-      List(ExhaustiveShortestPathForbiddenException.ERROR_MSG)
+      ExhaustiveShortestPathForbiddenException.ERROR_MSG
     )
   }
 

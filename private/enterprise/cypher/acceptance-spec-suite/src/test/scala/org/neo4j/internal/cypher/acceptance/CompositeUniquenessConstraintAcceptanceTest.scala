@@ -61,7 +61,7 @@ class CompositeUniquenessConstraintAcceptanceTest extends ExecutionEngineFunSuit
 
     failWithError(Configs.All,
       "CREATE CONSTRAINT ON (n:Person) ASSERT (n.firstname,n.lastname) IS UNIQUE",
-      List("Only single property uniqueness constraints are supported"))
+      "Only single property uniqueness constraints are supported")
 
     // Then
     graph should not(haveConstraints("UNIQUENESS:Person(firstname,lastname)"))
@@ -71,7 +71,7 @@ class CompositeUniquenessConstraintAcceptanceTest extends ExecutionEngineFunSuit
     // When
     failWithError(Configs.All,
       "DROP CONSTRAINT ON (n:Person) ASSERT (n.firstname,n.lastname) IS UNIQUE",
-      List("Only single property uniqueness constraints are supported"))
+      "Only single property uniqueness constraints are supported")
 
     // Then
     graph should not(haveConstraints("UNIQUENESS:Person(firstname,lastname)"))

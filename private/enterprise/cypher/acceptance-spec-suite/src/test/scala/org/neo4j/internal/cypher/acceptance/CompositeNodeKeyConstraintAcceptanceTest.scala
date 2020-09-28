@@ -9,8 +9,8 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.util.helpers.StringHelper.RichString
 import org.neo4j.cypher.QueryStatisticsTestSupport
+import org.neo4j.cypher.internal.util.helpers.StringHelper.RichString
 import org.neo4j.graphdb.ConstraintViolationException
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
@@ -162,7 +162,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     // Then
     val query = "CREATE CONSTRAINT ON (n:User) ASSERT (n.firstname,n.lastname) IS NODE KEY"
     val errorMessage = "Both Node(%d) and Node(%d) have the label `User` and properties `firstname` = 'Joe', `lastname` = 'Soap'".format(a, c)
-    failWithError(Configs.All, query, List(errorMessage))
+    failWithError(Configs.All, query, errorMessage)
   }
 
   test("trying to add duplicate node when node key constraint exists") {
@@ -172,7 +172,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       Configs.InterpretedAndSlotted,
       "CREATE (n:Person) SET n.name = 'A'",
-      List("Node(0) already exists with label `Person` and property `name` = 'A'")
+      "Node(0) already exists with label `Person` and property `name` = 'A'"
     )
   }
 
@@ -183,7 +183,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       Configs.InterpretedAndSlotted,
       "CREATE (n:Person) SET n.name = 'A', n.surname = 'B'",
-      List(String.format("Node(0) already exists with label `Person` and properties `name` = 'A', `surname` = 'B'"))
+      String.format("Node(0) already exists with label `Person` and properties `name` = 'A', `surname` = 'B'")
     )
   }
 
@@ -194,8 +194,8 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       Configs.All,
       "CREATE CONSTRAINT ON (person:Person) ASSERT (person.name, person.surname) IS NODE KEY",
-      List(("Unable to create Constraint( name='constraint_745a766d', type='NODE KEY', schema=(:Person {name, surname}) ):%s" +
-        "Both Node(%d) and Node(%d) have the label `Person` and properties `name` = 'A', `surname` = 'B'").format(String.format("%n"), a, b))
+      ("Unable to create Constraint( name='constraint_745a766d', type='NODE KEY', schema=(:Person {name, surname}) ):%s" +
+        "Both Node(%d) and Node(%d) have the label `Person` and properties `name` = 'A', `surname` = 'B'").format(String.format("%n"), a, b)
     )
   }
 
@@ -206,8 +206,8 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       Configs.All,
       "CREATE CONSTRAINT ON (person:Person) ASSERT (person.name) IS NODE KEY",
-      List(("Unable to create Constraint( name='constraint_9b73711d', type='NODE KEY', schema=(:Person {name}) ):%s" +
-        "Both Node(%d) and Node(%d) have the label `Person` and property `name` = 'A'").format(String.format("%n"), a, b))
+      ("Unable to create Constraint( name='constraint_9b73711d', type='NODE KEY', schema=(:Person {name}) ):%s" +
+        "Both Node(%d) and Node(%d) have the label `Person` and property `name` = 'A'").format(String.format("%n"), a, b)
     )
   }
 
@@ -218,8 +218,8 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       Configs.All,
       "CREATE CONSTRAINT person_constraint ON (person:Person) ASSERT (person.name) IS NODE KEY",
-      List(("Unable to create Constraint( name='person_constraint', type='NODE KEY', schema=(:Person {name}) ):%s" +
-        "Both Node(%d) and Node(%d) have the label `Person` and property `name` = 'A'").format(String.format("%n"), a, b))
+      ("Unable to create Constraint( name='person_constraint', type='NODE KEY', schema=(:Person {name}) ):%s" +
+        "Both Node(%d) and Node(%d) have the label `Person` and property `name` = 'A'").format(String.format("%n"), a, b)
     )
   }
 
@@ -227,7 +227,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       Configs.All,
       "DROP CONSTRAINT ON (person:Person) ASSERT (person.name) IS NODE KEY",
-      List("No such constraint")
+      "No such constraint"
     )
   }
 
@@ -238,7 +238,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       Configs.InterpretedAndSlotted,
       "CREATE (n:Person) SET n.name = 'A', n.surname = 'B'",
-      List(String.format("Node(0) already exists with label `Person` and properties `name` = 'A', `surname` = 'B'"))
+      String.format("Node(0) already exists with label `Person` and properties `name` = 'A', `surname` = 'B'")
     )
   }
 
@@ -249,8 +249,8 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     // then
     failWithError(Configs.All,
       "CREATE CONSTRAINT ON (n:Person) ASSERT (n.firstname,n.lastname) IS NODE KEY",
-      List("There already exists an index (:Person {firstname, lastname}). " +
-        "A constraint cannot be created until the index has been dropped."))
+      "There already exists an index (:Person {firstname, lastname}). " +
+        "A constraint cannot be created until the index has been dropped.")
   }
 
   test("should give appropriate error message when there is already an index (named constraint)") {
@@ -260,8 +260,8 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     // then
     failWithError(Configs.All,
       "CREATE CONSTRAINT my_contraint ON (n:Person) ASSERT (n.firstname,n.lastname) IS NODE KEY",
-      List("There already exists an index (:Person {firstname, lastname}). " +
-        "A constraint cannot be created until the index has been dropped."))
+      "There already exists an index (:Person {firstname, lastname}). " +
+        "A constraint cannot be created until the index has been dropped.")
   }
 
   test("should give appropriate error message when there is already an named index") {
@@ -271,8 +271,8 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     // then
     failWithError(Configs.All,
       "CREATE CONSTRAINT ON (n:Person) ASSERT (n.firstname,n.lastname) IS NODE KEY",
-      List("There already exists an index (:Person {firstname, lastname}). " +
-        "A constraint cannot be created until the index has been dropped."))
+      "There already exists an index (:Person {firstname, lastname}). " +
+        "A constraint cannot be created until the index has been dropped.")
   }
 
   test("should give appropriate error message when there is already an named index (named constraint)") {
@@ -282,8 +282,8 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     // then
     failWithError(Configs.All,
       "CREATE CONSTRAINT my_constraint ON (n:Person) ASSERT (n.firstname,n.lastname) IS NODE KEY",
-      List("There already exists an index (:Person {firstname, lastname}). " +
-        "A constraint cannot be created until the index has been dropped."))
+      "There already exists an index (:Person {firstname, lastname}). " +
+        "A constraint cannot be created until the index has been dropped.")
   }
 
   test("should give appropriate error message when there is already an named index (same name and schema for constraint)") {
@@ -293,7 +293,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     // then
     failWithError(Configs.All,
       "CREATE CONSTRAINT my_person ON (n:Person) ASSERT (n.firstname,n.lastname) IS NODE KEY",
-      List("There already exists an index called 'my_person'."))
+      "There already exists an index called 'my_person'.")
   }
 
   test("should give appropriate error message when there is already an named index (same name for constraint, different schema)") {
@@ -303,7 +303,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     // then
     failWithError(Configs.All,
       "CREATE CONSTRAINT my_person ON (n:Person) ASSERT (n.firstname,n.surname) IS NODE KEY",
-      List("There already exists an index called 'my_person'."))
+      "There already exists an index called 'my_person'.")
   }
 
   test("should give appropriate error message when there is already a NODE KEY constraint") {
@@ -314,8 +314,8 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       Configs.All,
       "CREATE INDEX FOR (n:Person) ON (n.firstname, n.lastname)",
-      List("There is a uniqueness constraint on (:Person {firstname, lastname}), " +
-        "so an index is already created that matches this."))
+      "There is a uniqueness constraint on (:Person {firstname, lastname}), " +
+        "so an index is already created that matches this.")
   }
 
   test("should give appropriate error message when there is already a named NODE KEY constraint") {
@@ -326,8 +326,8 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       Configs.All,
       "CREATE INDEX FOR (n:Person) ON (n.firstname, n.lastname)",
-      List("There is a uniqueness constraint on (:Person {firstname, lastname}), " +
-        "so an index is already created that matches this."))
+      "There is a uniqueness constraint on (:Person {firstname, lastname}), " +
+        "so an index is already created that matches this.")
   }
 
   test("should give appropriate error message when there is already a NODE KEY constraint (named index)") {
@@ -338,8 +338,8 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       Configs.All,
       "CREATE INDEX my_index FOR (n:Person) ON (n.firstname, n.lastname)",
-      List("There is a uniqueness constraint on (:Person {firstname, lastname}), " +
-        "so an index is already created that matches this."))
+      "There is a uniqueness constraint on (:Person {firstname, lastname}), " +
+        "so an index is already created that matches this.")
   }
 
   test("should give appropriate error message when there is already a named NODE KEY constraint (named index)") {
@@ -350,8 +350,8 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       Configs.All,
       "CREATE INDEX my_index FOR (n:Person) ON (n.firstname, n.lastname)",
-      List("There is a uniqueness constraint on (:Person {firstname, lastname}), " +
-        "so an index is already created that matches this."))
+      "There is a uniqueness constraint on (:Person {firstname, lastname}), " +
+        "so an index is already created that matches this.")
   }
 
   test("should give appropriate error message when there is already a named NODE KEY constraint (same name and schema for index)") {
@@ -362,7 +362,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       Configs.All,
       "CREATE INDEX my_person FOR (n:Person) ON (n.firstname, n.lastname)",
-      List("There already exists a constraint called 'my_person'."))
+      "There already exists a constraint called 'my_person'.")
   }
 
 
@@ -374,7 +374,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       Configs.All,
       "CREATE INDEX my_person FOR (n:Person) ON (n.firstname, n.lastname)",
-      List("There already exists a constraint called 'my_person'."))
+      "There already exists a constraint called 'my_person'.")
   }
 
   test("Should give a nice error message when trying to remove property with node key constraint") {
@@ -385,7 +385,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     // Expect
     failWithError(Configs.InterpretedAndSlotted,
       "MATCH (p:Person {firstname: 'John', surname: 'Wood'}) REMOVE p.surname",
-      List(s"Node($id) with label `Person` must have the properties (firstname, surname)"))
+      s"Node($id) with label `Person` must have the properties (firstname, surname)")
 
   }
 

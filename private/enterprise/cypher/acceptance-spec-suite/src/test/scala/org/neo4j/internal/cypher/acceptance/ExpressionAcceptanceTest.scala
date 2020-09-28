@@ -235,7 +235,7 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     val config =  Configs.All
 
     failWithError(config, query,
-      List("Unknown function 'not'. If you intended to use the negation expression, surround it with parentheses."))
+      "Unknown function 'not'. If you intended to use the negation expression, surround it with parentheses.")
   }
 
   test("NOT(), when right of a =, should give a helpful error message") {
@@ -245,7 +245,7 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     val config =  Configs.All
 
     failWithError(config, query,
-      List("Unknown function 'NOT'. If you intended to use the negation expression, surround it with parentheses."))
+      "Unknown function 'NOT'. If you intended to use the negation expression, surround it with parentheses.")
   }
 
   test("should be able to divide long property") {

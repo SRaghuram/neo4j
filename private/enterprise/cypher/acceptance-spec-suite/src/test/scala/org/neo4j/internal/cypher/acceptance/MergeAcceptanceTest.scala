@@ -86,14 +86,14 @@ class MergeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test(s"correct error message on null MERGE should not expose internally generated variable names") {
     failWithError(Configs.InterpretedAndSlotted, "MERGE (:Order {OrderId:null})",
-      Seq("Cannot merge the following node because of null property value for 'OrderId': (:Order {OrderId: null})"))
+      "Cannot merge the following node because of null property value for 'OrderId': (:Order {OrderId: null})")
   }
 
-  test(s"correct error message on null MERGE with any amout of labels should work") {
+  test(s"correct error message on null MERGE with any amount of labels should work") {
     failWithError(Configs.InterpretedAndSlotted, "MERGE (:Order:Priority {OrderId:null})",
-      Seq("Cannot merge the following node because of null property value for 'OrderId': (:Order:Priority {OrderId: null})"))
+      "Cannot merge the following node because of null property value for 'OrderId': (:Order:Priority {OrderId: null})")
     failWithError(Configs.InterpretedAndSlotted, "MERGE ({OrderId:null})",
-      Seq("Cannot merge the following node because of null property value for 'OrderId': ( {OrderId: null})"))
+      "Cannot merge the following node because of null property value for 'OrderId': ( {OrderId: null})")
   }
 
   test(s"correct error message on null MERGE on relationship") {
@@ -105,13 +105,13 @@ class MergeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test(s"correct error message on null MERGE on relationship should not expose internally generated variable names") {
     failWithError(Configs.InterpretedAndSlotted, "MERGE (:Order)-[:ORDERED_BY {date:null}]->(:Customer)",
-      Seq("Cannot merge the following relationship because of null property value for 'date': ()-[:ORDERED_BY {date: null}]->()"))
+      "Cannot merge the following relationship because of null property value for 'date': ()-[:ORDERED_BY {date: null}]->()")
     failWithError(Configs.InterpretedAndSlotted, "MERGE (x:Order)-[:ORDERED_BY {date:null}]->(y:Customer)",
-      Seq("Cannot merge the following relationship because of null property value for 'date': (x)-[:ORDERED_BY {date: null}]->(y)"))
+      "Cannot merge the following relationship because of null property value for 'date': (x)-[:ORDERED_BY {date: null}]->(y)")
     failWithError(Configs.InterpretedAndSlotted, "MERGE (x:Order)-[:ORDERED_BY {date:null}]->(:Customer)",
-      Seq("Cannot merge the following relationship because of null property value for 'date': (x)-[:ORDERED_BY {date: null}]->()"))
+      "Cannot merge the following relationship because of null property value for 'date': (x)-[:ORDERED_BY {date: null}]->()")
     failWithError(Configs.InterpretedAndSlotted, "MERGE (:Order)-[:ORDERED_BY {date:null}]->(z:Customer)",
-      Seq("Cannot merge the following relationship because of null property value for 'date': ()-[:ORDERED_BY {date: null}]->(z)"))
+      "Cannot merge the following relationship because of null property value for 'date': ()-[:ORDERED_BY {date: null}]->(z)")
     failWithError(Configs.InterpretedAndSlotted, "MERGE (:Order)-[x:ORDERED_BY {date:null}]->(:Customer)",
       Seq("Cannot merge the following relationship because of null property value for 'date': ()-[x:ORDERED_BY {date: null}]->()",
         "Cannot merge the following relationship because of null property value for 'date': ()-[:ORDERED_BY {date: null}]->()"))
@@ -124,12 +124,10 @@ class MergeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |MERGE (a)-[r:X]->()
       """.stripMargin
 
-    failWithError(Configs.InterpretedAndSlotted, query, Seq(
-      "Expected to find a node, but found instead: null",
-      "Expected to find a node at a but found nothing Some(null)",
+    failWithError(Configs.InterpretedAndSlotted, query,
       "Failed to create relationship `r`, node `a` is missing. " +
         "If you prefer to simply ignore rows where a relationship node is missing, " +
-        "set 'cypher.lenient_create_relationship = true' in neo4j.conf"))
+        "set 'cypher.lenient_create_relationship = true' in neo4j.conf")
   }
 
   test("should handle cached node properties with merge relationship") {

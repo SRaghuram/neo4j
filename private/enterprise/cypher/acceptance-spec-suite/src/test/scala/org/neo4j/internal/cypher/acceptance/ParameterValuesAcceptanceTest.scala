@@ -207,31 +207,31 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   test("match with missing parameter should return error for empty db") {
-    failWithError(Configs.All, "MATCH (n:Person {name:$name}) RETURN n", Seq("Expected parameter(s): name"))
+    failWithError(Configs.All, "MATCH (n:Person {name:$name}) RETURN n", "Expected parameter(s): name")
   }
 
   test("match with missing parameter should return error for non-empty db") {
-    failWithError(Configs.InterpretedAndSlotted, "CREATE (n:Person) WITH n MATCH (n:Person {name:$name}) RETURN n", Seq("Expected parameter(s): name"))
+    failWithError(Configs.InterpretedAndSlotted, "CREATE (n:Person) WITH n MATCH (n:Person {name:$name}) RETURN n", "Expected parameter(s): name")
   }
 
   test("match with multiple missing parameters should return error for empty db") {
-    failWithError(Configs.All, "MATCH (n:Person {name:$name, age:$age}) RETURN n", Seq("Expected parameter(s): name, age"))
+    failWithError(Configs.All, "MATCH (n:Person {name:$name, age:$age}) RETURN n", "Expected parameter(s): name, age")
   }
 
   test("match with multiple missing parameters should return error for non-empty db") {
-    failWithError(Configs.InterpretedAndSlotted, "CREATE (n:Person) WITH n MATCH (n:Person {name:$name, age:$age}) RETURN n", Seq("Expected parameter(s): name, age"))
+    failWithError(Configs.InterpretedAndSlotted, "CREATE (n:Person) WITH n MATCH (n:Person {name:$name, age:$age}) RETURN n", "Expected parameter(s): name, age")
   }
 
   test("match with misspelled parameter should return error for empty db") {
-    failWithError(Configs.All, "MATCH (n:Person {name:$name}) RETURN n", Seq("Expected parameter(s): name"), params = Map("nam" -> "Neo"))
+    failWithError(Configs.All, "MATCH (n:Person {name:$name}) RETURN n", "Expected parameter(s): name", params = Map("nam" -> "Neo"))
   }
 
   test("match with misspelled parameter should return error for non-empty db") {
-    failWithError(Configs.InterpretedAndSlotted, "CREATE (n:Person) WITH n MATCH (n:Person {name:$name}) RETURN n", Seq("Expected parameter(s): name"), params = Map("nam" -> "Neo"))
+    failWithError(Configs.InterpretedAndSlotted, "CREATE (n:Person) WITH n MATCH (n:Person {name:$name}) RETURN n", "Expected parameter(s): name", params = Map("nam" -> "Neo"))
   }
 
   test("name of missing parameters should only be returned once") {
-    failWithError(Configs.All, "RETURN $p + $p + $p", Seq("Expected parameter(s): p"))
+    failWithError(Configs.All, "RETURN $p + $p + $p", "Expected parameter(s): p")
   }
 
   test("explain with missing parameter should NOT return error for empty db") {

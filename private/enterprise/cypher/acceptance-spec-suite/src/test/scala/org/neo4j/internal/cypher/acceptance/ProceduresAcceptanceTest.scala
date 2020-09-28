@@ -182,8 +182,8 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
 
     val (n, r) = createNodeAndRelationship()
 
-    failWithError(Configs.ProcedureCallWrite, "CALL org.neo4j.setProperty($node, 'prop', 'glass')", params = Map("node" -> n), message = Seq("NotInTransaction"))
-    failWithError(Configs.ProcedureCallWrite, "CALL org.neo4j.setProperty($rel, 'prop', 'glass')", params = Map("rel" -> r), message = Seq("NotInTransaction"))
+    failWithError(Configs.ProcedureCallWrite, "CALL org.neo4j.setProperty($node, 'prop', 'glass')", params = Map("node" -> n), message = "NotInTransaction")
+    failWithError(Configs.ProcedureCallWrite, "CALL org.neo4j.setProperty($rel, 'prop', 'glass')", params = Map("rel" -> r), message = "NotInTransaction")
   }
 
   test( "should allow to modify entities in other transaction") {
@@ -215,14 +215,14 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
         |CALL org.neo4j.setProperty(n, 'prop', 'glass') YIELD node
         |RETURN node.prop
         |""".stripMargin,
-      Seq("NotInTransactionException"))
+      "NotInTransactionException")
 
     failWithError(Configs.ProcedureCallWrite,
       """CALL org.neo4j.matchNodeAndRelationship() YIELD relationship AS r
         |CALL org.neo4j.setProperty(r, 'prop', 'glace') YIELD relationship
         |RETURN relationship.prop
         |""".stripMargin,
-      Seq("NotInTransactionException"))
+      "NotInTransactionException")
   }
 
   test("should fail to modify entities created in nested UDF tx") {
@@ -236,7 +236,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
         |RETURN node.prop
         |""".stripMargin,
       params = Map("nodeId" -> n.getId),
-      message = Seq("NotInTransactionException"))
+      message = "NotInTransactionException")
   }
 
   test("should be able to pass entities returned from another transaction, if transaction is open") {

@@ -175,8 +175,7 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     val config = Configs.NodeIndexEndsWithScan
     val query = "MATCH (l:Location) WHERE l.name ENDS WITH $param RETURN l"
-    val message = List("Expected a string value, but got 42","Expected a string value, but got Int(42)","Expected two strings, but got London and 42",
-      "Type mismatch for parameter 'param': expected String but was Integer")
+    val message = "Type mismatch for parameter 'param': expected String but was Integer"
 
     failWithError(config, query, message, params = Map("param" -> 42))
   }

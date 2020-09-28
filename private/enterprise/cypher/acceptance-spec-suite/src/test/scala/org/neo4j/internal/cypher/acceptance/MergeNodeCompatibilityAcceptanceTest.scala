@@ -94,7 +94,7 @@ class MergeNodeCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
 
       // when + then
       failWithError(Configs.InterpretedAndSlotted, "merge (a:Person:User {id: 23}) return a",
-        List("can not create a new node due to conflicts with existing unique nodes"))
+        "can not create a new node due to conflicts with existing unique nodes")
       countNodes() should equal(2)
     }
 

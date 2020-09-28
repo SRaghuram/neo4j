@@ -284,7 +284,7 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test("shouldComplainWhenMissingParams") {
     createNode()
-    failWithError(Configs.NodeById, "match (pA) where id(pA) = $a return pA", List("Expected a parameter named a", "Expected parameter(s): a"))
+    failWithError(Configs.NodeById, "match (pA) where id(pA) = $a return pA", "Expected parameter(s): a")
   }
 
   test("shouldSupportMultipleRegexes") {
@@ -820,7 +820,7 @@ order by a.COL1""".format(a, b))
   }
 
   test("merge should not support map parameters for defining properties") {
-    failWithError(Configs.All, "MERGE (n:User $merge_map)", List("Parameter maps cannot be used in MERGE patterns"), params = Map("merge_map" -> Map("email" -> "test")))
+    failWithError(Configs.All, "MERGE (n:User $merge_map)", "Parameter maps cannot be used in MERGE patterns", params = Map("merge_map" -> Map("email" -> "test")))
   }
 
   test("should return null on all comparisons against null") {

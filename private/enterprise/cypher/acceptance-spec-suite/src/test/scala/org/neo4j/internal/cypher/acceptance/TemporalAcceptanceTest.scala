@@ -341,7 +341,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
   test("should not create date time with conflicting time zones") {
     val query = "WITH datetime('1984-07-07T12:34+03:00[Europe/Stockholm]') as d RETURN d"
     val errorMsg = "Timezone and offset do not match"
-    failWithError(Configs.UDF, query, Seq(errorMsg), Seq("InvalidArgumentException"))
+    failWithError(Configs.UDF, query, errorMsg, "InvalidArgumentException")
   }
 
   // Failing when providing wrong values
@@ -417,8 +417,8 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     val query1 = s"WITH localtime({hour: 12, minute: 34, second: 56}) as x RETURN localdatetime({time:x})"
     val query2 = s"WITH localtime({hour: 12, minute: 34, second: 56}) as x RETURN datetime({time:x})"
 
-    failWithError(Configs.UDF, query1, Seq("year must be specified"), Seq("InvalidArgumentException"))
-    failWithError(Configs.UDF, query2, Seq("year must be specified"), Seq("InvalidArgumentException"))
+    failWithError(Configs.UDF, query1, "year must be specified", "InvalidArgumentException")
+    failWithError(Configs.UDF, query2, "year must be specified", "InvalidArgumentException")
   }
 
   test("should not select only date for datetime and localdatetime") {
@@ -855,7 +855,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (arg <- Seq("P1.5Y1M", "P1Y1.5M1D", "P1Y1M1.5DT1H", "P1Y1M1DT1.5H1M", "P1Y1M1DT1H1.5M1S")) {
       val query = s"RETURN duration('$arg')"
       withClue(s"Executing $query") {
-        failWithError(Configs.UDF, query, Seq("Text cannot be parsed to a Duration"))
+        failWithError(Configs.UDF, query, "Text cannot be parsed to a Duration")
       }
     }
   }
@@ -934,8 +934,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (func <- Seq("time", "localtime", "date", "datetime", "localdatetime", "duration")) {
       val query = s"RETURN $func('', '', '', '')"
       withClue(s"Executing $query") {
-        failWithError(Configs.All, query,
-          Seq("Function call does not provide the required number of arguments"))
+        failWithError(Configs.All, query, "Function call does not provide the required number of arguments")
       }
     }
   }
@@ -973,19 +972,22 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
         | RETURN t
       """.stripMargin
 
-    failWithError(Configs.UDF, query, Seq("Using a named time zone e.g. [UTC] is not valid for a time without a date. Instead, use a specific time zone string e.g. +00:00."))
+    failWithError(Configs.UDF, query,
+      "Using a named time zone e.g. [UTC] is not valid for a time without a date. Instead, use a specific time zone string e.g. +00:00.")
   }
 
   test("parse time with matching named and un-named time zone should not be supported") {
     val query = "RETURN time('07:54:02.129790999+00:00[UTC]') as invalidTime"
 
-    failWithError(Configs.UDF, query, Seq("Using a named time zone e.g. [UTC] is not valid for a time without a date. Instead, use a specific time zone string e.g. +00:00."))
+    failWithError(Configs.UDF, query,
+      "Using a named time zone e.g. [UTC] is not valid for a time without a date. Instead, use a specific time zone string e.g. +00:00.")
   }
 
   test("parse time with non-matching named and un-named time zone should not be supported") {
     val query = "RETURN time('07:54:02.129790999+01:00[UTC]') as invalidTime"
 
-    failWithError(Configs.UDF, query, Seq("Using a named time zone e.g. [UTC] is not valid for a time without a date. Instead, use a specific time zone string e.g. +00:00."))
+    failWithError(Configs.UDF, query,
+      "Using a named time zone e.g. [UTC] is not valid for a time without a date. Instead, use a specific time zone string e.g. +00:00.")
   }
 
   test("parse datetime with matching named and un-named time zone should be supported") {
@@ -999,7 +1001,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
   test("parse datetime with non-matching named and un-named time zone should not be supported") {
     val query = "RETURN datetime('2019-10-30T07:54:02.129790999+01:00[UTC]') as invalidTime"
 
-    failWithError(Configs.UDF, query, Seq("Timezone and offset do not match: 2019-10-30T07:54:02.129790999+01:00[UTC]"))
+    failWithError(Configs.UDF, query, "Timezone and offset do not match: 2019-10-30T07:54:02.129790999+01:00[UTC]")
   }
 
   test("create time with named time zone should be supported") {
@@ -1046,7 +1048,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (receiver <- receivers; arg <- args) {
       val query = s"RETURN $receiver.truncate('$truncationUnit', $arg)"
       withClue(s"Executing $query") {
-        failWithError(Configs.UDF, query, Seq(errorMsg), Seq("UnsupportedTemporalUnitException"))
+        failWithError(Configs.UDF, query, errorMsg, "UnsupportedTemporalUnitException")
       }
     }
   }

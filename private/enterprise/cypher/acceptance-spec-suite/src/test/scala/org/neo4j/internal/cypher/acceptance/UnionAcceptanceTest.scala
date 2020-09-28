@@ -130,7 +130,7 @@ class UnionAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonS
         |M, N
       """.stripMargin
 
-    failWithError(Configs.All, query, message = Seq("All sub queries in an UNION must have the same column names"))
+    failWithError(Configs.All, query, message = "All sub queries in an UNION must have the same column names")
   }
 
   test("Should work when doing union with permutated return variables") {

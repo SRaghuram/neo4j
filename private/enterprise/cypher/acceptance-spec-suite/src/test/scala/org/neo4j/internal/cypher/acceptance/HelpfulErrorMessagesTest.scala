@@ -15,36 +15,33 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
   test("should provide sensible error message when omitting colon before relationship type on create") {
 
     failWithError(Configs.All,
-
       "CREATE (a)-[ASSOCIATED_WITH]->(b)",
-      Seq("Exactly one relationship type must be specified for CREATE. Did you forget to prefix your relationship type with a ':'?"))
+      "Exactly one relationship type must be specified for CREATE. Did you forget to prefix your relationship type with a ':'?")
   }
 
   test("should provide sensible error message when trying to add multiple relationship types on create") {
     failWithError(Configs.All,
       "CREATE (a)-[:ASSOCIATED_WITH|KNOWS]->(b)",
-      Seq("A single relationship type must be specified for CREATE",
-        "The given query is not currently supported in the selected cost-based planner" ))
+      "A single relationship type must be specified for CREATE")
   }
 
   test("should provide sensible error message when omitting colon before relationship type on merge") {
     failWithError(Configs.All,
       "MERGE (a)-[ASSOCIATED_WITH]->(b)",
-      Seq("Exactly one relationship type must be specified for MERGE. Did you forget to prefix your relationship type with a ':'?"))
+      "Exactly one relationship type must be specified for MERGE. Did you forget to prefix your relationship type with a ':'?")
   }
 
   test("should provide sensible error message when trying to add multiple relationship types on merge") {
     failWithError(Configs.All,
       "MERGE (a)-[:ASSOCIATED_WITH|KNOWS]->(b)",
-      Seq("A single relationship type must be specified for MERGE",
-        "The given query is not currently supported in the selected cost-based planner"))
+      "A single relationship type must be specified for MERGE")
   }
 
   test("should provide sensible error message when using colon in the separation of alternative relationship types in failing cases") {
-    val errorMessage = Seq(
+    val errorMessage =
       """The semantics of using colon in the separation of alternative relationship types in conjunction with
         |the use of variable binding, inlined property predicates, or variable length is no longer supported.
-        |Please separate the relationships types using `:A|B|C` instead""".stripMargin)
+        |Please separate the relationships types using `:A|B|C` instead""".stripMargin
 
     val failingQuery1 = "MATCH (a)-[x:A|:B|:C]-() RETURN a" // variable binding
     val failingQuery2 = "MATCH (a)-[:A|:B|:C {foo:'bar'}]-(b) RETURN a,b" // inlined property predicates
@@ -71,47 +68,47 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
   test("should provide sensible error message for invalid regex syntax together with index") {
     executeSingle("CREATE (n:Person {text:'abcxxxdefyyyfff'})")
     failWithError(Configs.CachedProperty,
-      "MATCH (x:Person) WHERE x.text =~ '*xxx*yyy*' RETURN x.text", List("Invalid Regex:"))
+      "MATCH (x:Person) WHERE x.text =~ '*xxx*yyy*' RETURN x.text", "Invalid Regex:")
   }
 
   test("should provide sensible error message for removed toInt() function") {
     val query = "RETURN toInt('1')"
-    failWithError(Configs.All, query, Seq("The function toInt() is no longer supported. Please use toInteger() instead"))
+    failWithError(Configs.All, query, "The function toInt() is no longer supported. Please use toInteger() instead")
   }
 
   test("should provide sensible error message for removed lower() function") {
     val query = "RETURN lower('BAR')"
-    failWithError(Configs.All, query, Seq("The function lower() is no longer supported. Please use toLower() instead"))
+    failWithError(Configs.All, query, "The function lower() is no longer supported. Please use toLower() instead")
   }
 
   test("should provide sensible error message for removed upper() function") {
     val query = "RETURN upper('foo')"
-    failWithError(Configs.All, query, Seq("The function upper() is no longer supported. Please use toUpper() instead"))
+    failWithError(Configs.All, query, "The function upper() is no longer supported. Please use toUpper() instead")
   }
 
   test("should provide sensible error message for removed rels() function") {
     val query = "MATCH p = ()-->() RETURN rels(p) AS r"
-    failWithError(Configs.All, query, Seq("The function rels() is no longer supported. Please use relationships() instead"))
+    failWithError(Configs.All, query, "The function rels() is no longer supported. Please use relationships() instead")
   }
 
   test("should provide sensible error message for filter") {
     val query = "WITH [1,2,3] AS list RETURN filter(x IN list WHERE x % 2 = 1) AS odds"
-    failWithError(Configs.All, query, Seq("Filter is no longer supported. Please use list comprehension instead"))
+    failWithError(Configs.All, query, "Filter is no longer supported. Please use list comprehension instead")
   }
 
   test("should provide sensible error message for extract") {
     val query = "WITH [1,2,3] AS list RETURN extract(x IN list | x * 10) AS tens"
-    failWithError(Configs.All, query, Seq("Extract is no longer supported. Please use list comprehension instead"))
+    failWithError(Configs.All, query, "Extract is no longer supported. Please use list comprehension instead")
   }
 
   test("should provide sensible error message for old parameter syntax") {
     val query = "RETURN {param} as parameter"
-    failWithError(Configs.All, query, Seq("The old parameter syntax `{param}` is no longer supported. Please use `$param` instead"))
+    failWithError(Configs.All, query, "The old parameter syntax `{param}` is no longer supported. Please use `$param` instead")
   }
 
   test("should provide sensible error message for old parameter syntax for property map") {
     val query = "CREATE (:Label {props})"
-    failWithError(Configs.All, query, Seq("The old parameter syntax `{param}` is no longer supported. Please use `$param` instead"))
+    failWithError(Configs.All, query, "The old parameter syntax `{param}` is no longer supported. Please use `$param` instead")
   }
 
   test("should give correct error message with invalid number literal in a subtract") {
@@ -132,16 +129,16 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
       "flo: 2.9 })")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.num + n.loc", List("Cannot add `Long` and `Point`"))
+      "MATCH (n:Test) RETURN n.num + n.loc", "Cannot add `Long` and `Point`")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.num + n.dur", List("Cannot add `Long` and `Duration`"))
+      "MATCH (n:Test) RETURN n.num + n.dur", "Cannot add `Long` and `Duration`")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.num + n.dat", List("Cannot add `Long` and `DateTime`"))
+      "MATCH (n:Test) RETURN n.num + n.dat", "Cannot add `Long` and `DateTime`")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.flo + n.bool", List("Cannot add `Double` and `Boolean`"))
+      "MATCH (n:Test) RETURN n.flo + n.bool", "Cannot add `Double` and `Boolean`")
   }
 
   test("should provide sensible error message when trying to multiply incompatible types") {
@@ -157,16 +154,16 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
       "str: 's' })")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.num * n.loc", List("Cannot multiply `Long` and `Point`"))
+      "MATCH (n:Test) RETURN n.num * n.loc", "Cannot multiply `Long` and `Point`")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.num * n.dat", List("Cannot multiply `Long` and `DateTime`"))
+      "MATCH (n:Test) RETURN n.num * n.dat", "Cannot multiply `Long` and `DateTime`")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.flo * n.bool", List("Cannot multiply `Double` and `Boolean`"))
+      "MATCH (n:Test) RETURN n.flo * n.bool", "Cannot multiply `Double` and `Boolean`")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.lst * n.str", List("Cannot multiply `LongArray` and `String`"))
+      "MATCH (n:Test) RETURN n.lst * n.str", "Cannot multiply `LongArray` and `String`")
   }
 
   test("should provide sensible error message when trying to subtract incompatible types") {
@@ -182,16 +179,16 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
       "str: 's' })")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.num - n.loc", List("Cannot subtract `Point` from `Long`"))
+      "MATCH (n:Test) RETURN n.num - n.loc", "Cannot subtract `Point` from `Long`")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.num - n.dat", List("Cannot subtract `DateTime` from `Long`"))
+      "MATCH (n:Test) RETURN n.num - n.dat", "Cannot subtract `DateTime` from `Long`")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.flo - n.bool", List("Cannot subtract `Boolean` from `Double`"))
+      "MATCH (n:Test) RETURN n.flo - n.bool", "Cannot subtract `Boolean` from `Double`")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.lst - n.str", List("Cannot subtract `String` from `LongArray`"))
+      "MATCH (n:Test) RETURN n.lst - n.str", "Cannot subtract `String` from `LongArray`")
   }
 
   test("should provide sensible error message when trying to calculate modulus of incompatible types") {
@@ -207,16 +204,16 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
       "str: 's' })")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.num % n.loc", List("Cannot calculate modulus of `Long` and `Point`"))
+      "MATCH (n:Test) RETURN n.num % n.loc", "Cannot calculate modulus of `Long` and `Point`")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.num % n.dat", List("Cannot calculate modulus of `Long` and `DateTime`"))
+      "MATCH (n:Test) RETURN n.num % n.dat", "Cannot calculate modulus of `Long` and `DateTime`")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.flo % n.bool", List("Cannot calculate modulus of `Double` and `Boolean`"))
+      "MATCH (n:Test) RETURN n.flo % n.bool", "Cannot calculate modulus of `Double` and `Boolean`")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.lst % n.str", List("Cannot calculate modulus of `LongArray` and `String`"))
+      "MATCH (n:Test) RETURN n.lst % n.str", "Cannot calculate modulus of `LongArray` and `String`")
   }
 
   test("should provide sensible error message when trying to divide incompatible types") {
@@ -232,16 +229,16 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
       "str: 's' })")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.num / n.loc", List("Cannot divide `Long` by `Point`"))
+      "MATCH (n:Test) RETURN n.num / n.loc", "Cannot divide `Long` by `Point`")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.num / n.dat", List("Cannot divide `Long` by `DateTime`"))
+      "MATCH (n:Test) RETURN n.num / n.dat", "Cannot divide `Long` by `DateTime`")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.flo / n.bool", List("Cannot divide `Double` by `Boolean`"))
+      "MATCH (n:Test) RETURN n.flo / n.bool", "Cannot divide `Double` by `Boolean`")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.lst / n.str", List("Cannot divide `LongArray` by `String`"))
+      "MATCH (n:Test) RETURN n.lst / n.str", "Cannot divide `LongArray` by `String`")
   }
 
   test("should provide sensible error message when trying to raise to the power of incompatible types") {
@@ -257,16 +254,16 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
       "str: 's' })")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.num ^ n.loc", List("Cannot raise `Long` to the power of `Point`"))
+      "MATCH (n:Test) RETURN n.num ^ n.loc", "Cannot raise `Long` to the power of `Point`")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.num ^ n.dat", List("Cannot raise `Long` to the power of `DateTime`"))
+      "MATCH (n:Test) RETURN n.num ^ n.dat", "Cannot raise `Long` to the power of `DateTime`")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.flo ^ n.bool", List("Cannot raise `Double` to the power of `Boolean`"))
+      "MATCH (n:Test) RETURN n.flo ^ n.bool", "Cannot raise `Double` to the power of `Boolean`")
 
     failWithError(Configs.All,
-      "MATCH (n:Test) RETURN n.lst ^ n.str", List("Cannot raise `LongArray` to the power of `String`"))
+      "MATCH (n:Test) RETURN n.lst ^ n.str", "Cannot raise `LongArray` to the power of `String`")
   }
 
   test("should provide sensible error message for using compiled expression with interpreted") {

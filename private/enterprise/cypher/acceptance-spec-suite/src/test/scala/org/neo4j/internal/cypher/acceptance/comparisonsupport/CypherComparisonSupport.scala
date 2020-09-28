@@ -140,6 +140,23 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
     kernelMonitors.addMonitorListener(NewPlannerMonitor)
   }
 
+  // Error message
+  protected def failWithError(expectedSpecificFailureFrom: TestConfiguration, query: String, message: String): Unit =
+    validateError(expectedSpecificFailureFrom, innerExecuteTransactionally(_, Map.empty), query, Seq(message), Seq.empty)
+
+  // Error message & error type
+  protected def failWithError(expectedSpecificFailureFrom: TestConfiguration, query: String, message: String, errorType: String): Unit =
+    validateError(expectedSpecificFailureFrom, innerExecuteTransactionally(_, Map.empty), query, Seq(message), Seq(errorType))
+
+  // Error message & parameters
+  protected def failWithError(expectedSpecificFailureFrom: TestConfiguration, query: String, message: String, params: Map[String, Any]): Unit =
+    validateError(expectedSpecificFailureFrom, innerExecuteTransactionally(_, params), query, Seq(message), Seq.empty)
+
+  // Error message, error type & parameters
+  protected def failWithError(expectedSpecificFailureFrom: TestConfiguration, query: String, message: String, errorType:String, params: Map[String, Any]): Unit =
+    validateError(expectedSpecificFailureFrom, innerExecuteTransactionally(_, params), query, Seq(message), Seq(errorType))
+
+  // Only error type or multiple error messages/error types
   protected def failWithError(expectedSpecificFailureFrom: TestConfiguration,
                               query: String,
                               message: Seq[String] = Seq.empty,
@@ -162,18 +179,18 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
     val explicitlyRequestedExperimentalScenarios = expectedSpecificFailureFrom.scenarios intersect Configs.Experimental.scenarios
     val scenariosToExecute = Configs.All.scenarios ++ Configs.Experimental.scenarios
     for (thisScenario <- scenariosToExecute) {
-      val expectedToFailWithSpecificMessage = expectedSpecificFailureFrom.containsScenario(thisScenario)
+      val expectedToFailWithSpecificFailure = expectedSpecificFailureFrom.containsScenario(thisScenario)
       val silentUnexpectedSuccess = shouldSilenceUnexpectedSuccess(thisScenario, explicitlyRequestedExperimentalScenarios)
       val tryResult = Try(executeQuery(s"CYPHER ${thisScenario.preparserOptions} $query"))
     tryResult match {
       case Success(_) =>
-        if (expectedToFailWithSpecificMessage) {
+        if (expectedToFailWithSpecificFailure) {
           fail("Unexpectedly Succeeded in " + thisScenario.name)
         }
       // It was not expected to fail with the specified error message, do nothing
       case Failure(e: Throwable) =>
-        val actualErrorType = e.toString
-        if (expectedToFailWithSpecificMessage) {
+        val actualErrorType = e.getClass.toString
+        if (expectedToFailWithSpecificFailure) {
           if (!correctError(actualErrorType, errorType)) {
             fail("Correctly failed in " + thisScenario.name + " but instead of one the given error types, the error was '" + actualErrorType + "'", e)
           }

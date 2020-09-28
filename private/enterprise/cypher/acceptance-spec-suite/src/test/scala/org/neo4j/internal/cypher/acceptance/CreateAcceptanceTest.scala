@@ -10,8 +10,9 @@ import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
-import scala.concurrent.ExecutionContext.Implicits.global
+
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 
@@ -196,11 +197,8 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
     })
   }
 
-  val MISSING_NODE_ERRORS = List("Failed to create relationship `r`, node `c` is missing. If you prefer to simply ignore rows " +
-    "where a relationship node is missing, set 'cypher.lenient_create_relationship = true' in neo4j.conf",
-    "Expected to find a node, but found instead: null",
-    "Expected to find a node at c but found nothing Some(null)",
-    "Other node is null")
+  private val MISSING_NODE_ERROR = "Failed to create relationship `r`, node `c` is missing. If you prefer to simply ignore rows " +
+  "where a relationship node is missing, set 'cypher.lenient_create_relationship = true' in neo4j.conf"
 
   // No CLG decision on this AFAIK, so not TCK material
   test("should throw on CREATE relationship if start-point is missing") {
@@ -213,7 +211,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
                             |OPTIONAL MATCH (b)-[:LINK_TO]->(c)
                             |CREATE (b)-[:LINK_TO]->(a)
                             |CREATE (c)-[r:MISSING_C]->(a)""".stripMargin,
-      errorType = MISSING_NODE_ERRORS)
+      MISSING_NODE_ERROR)
   }
 
   // No CLG decision on this AFAIK, so not TCK material
@@ -227,7 +225,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
                             |OPTIONAL MATCH (b)-[:LINK_TO]->(c)
                             |CREATE (b)-[:LINK_TO]->(a)
                             |CREATE (a)-[r:MISSING_C]->(c)""".stripMargin,
-      errorType = MISSING_NODE_ERRORS)
+      MISSING_NODE_ERROR)
   }
 
   test("should allow function in DELETE expression") {

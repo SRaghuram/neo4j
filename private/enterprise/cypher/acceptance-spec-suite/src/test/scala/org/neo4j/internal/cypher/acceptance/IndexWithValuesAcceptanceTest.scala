@@ -603,7 +603,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
   test("index-backed property values should be removed on node delete") {
     val query = "MATCH (n:Awesome) WHERE n.prop1 = 42 DETACH DELETE n RETURN n.prop1"
-    failWithError(Configs.InterpretedAndSlotted, query, Seq(/* Node with id 4 */ "has been deleted in this transaction"))
+    failWithError(Configs.InterpretedAndSlotted, query, /* Node with id 4 */ "has been deleted in this transaction")
   }
 
   test("index-backed property values should not exist after node deleted") {

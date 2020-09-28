@@ -185,7 +185,7 @@ class ForeachAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
 
     // when
     val config = Configs.InterpretedAndSlotted
-    failWithError(config, query, List("Expected to find a node at"))
+    failWithError(config, query, "Expected to find a node at")
   }
 
   test("foreach with inner function invocation should work ") {
