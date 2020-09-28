@@ -13,6 +13,7 @@ import org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERS
 class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase with EnterpriseComponentVersionTestSupport {
 
   // Privilege tests
+
   test("should grant dbms privileges") {
     // GIVEN
     execute("CREATE ROLE custom")
@@ -94,7 +95,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
   }
 
   private def dbmsPrivilegesNotIn40(): Seq[String] = {
-    dbmsPrivileges.keys.filter(!_.contains("ROLE")).toSeq
+    dbmsCommands.filter(!_.contains("ROLE")).toSeq
   }
 
   private def dbmsPrivilegesNotIn41d01(): Seq[String] = {

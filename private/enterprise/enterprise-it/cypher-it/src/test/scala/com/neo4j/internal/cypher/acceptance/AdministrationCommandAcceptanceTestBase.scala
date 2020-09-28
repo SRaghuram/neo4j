@@ -333,7 +333,6 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     "EXECUTE PROCEDURE" -> executeProcedure,
     "EXECUTE BOOSTED PROCEDURE" -> executeBoosted
   )
-  val executeCommands: Iterable[String] = executePrivileges.keys
 
   // Collection of all database privileges
 
@@ -342,7 +341,6 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     "START" -> startDatabase,
     "STOP" -> stopDatabase
   )
-  val basicDatabaseCommands: Iterable[String] = basicDatabasePrivileges.keys
 
   val schemaPrivileges: Map[String, Map[String, String]] = Map(
     "CREATE INDEX" -> createIndex,
@@ -357,14 +355,12 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     "NAME MANAGEMENT" -> nameManagement,
     "ALL DATABASE PRIVILEGES" -> allDatabasePrivilege
   )
-  val schemaCommands: Iterable[String] = schemaPrivileges.keys
 
   val transactionPrivileges: Map[String, Map[String, String]] = Map(
     "SHOW TRANSACTION" -> showTransaction("*"),
     "TERMINATE TRANSACTION" -> terminateTransaction("*"),
     "TRANSACTION MANAGEMENT" -> transaction("*")
   )
-  val transactionCommands: Iterable[String] = transactionPrivileges.keys
 
   // Collection of all kinds of graph privileges,
   // except MERGE since that is not valid for (REVOKE) DENY
@@ -381,7 +377,6 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
                                                   setProperty ++ Map("segment" -> "RELATIONSHIP(*)", "resource" -> "property(prop)", "graph" -> "DEFAULT")),
     "ALL GRAPH PRIVILEGES ON GRAPH *" -> Set(allGraphPrivileges)
   )
-  val graphCommands: Iterable[String] = graphPrivileges.keys
 
   // Collection of all kind of privileges
 
