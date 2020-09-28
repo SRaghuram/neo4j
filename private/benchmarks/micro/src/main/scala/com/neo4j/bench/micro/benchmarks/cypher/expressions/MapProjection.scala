@@ -12,6 +12,7 @@ import com.neo4j.bench.micro.benchmarks.RNGState
 import com.neo4j.bench.micro.benchmarks.cypher.AbstractCypherBenchmark
 import com.neo4j.bench.micro.benchmarks.cypher.ExecutablePlan
 import com.neo4j.bench.micro.benchmarks.cypher.Slotted
+import com.neo4j.bench.micro.benchmarks.cypher.TestSetup
 import com.neo4j.bench.micro.data.DataGeneratorConfig
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
 import com.neo4j.bench.micro.data.Plans.IdGen
@@ -67,7 +68,7 @@ class MapProjection extends AbstractCypherBenchmark {
       .isReusableStore(true)
       .build()
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val resultColumns = List("result")
     val mapProjections = (0 until size).map(i => s"k$i" -> astLiteralFor(s"updated%i", STR_SML))
     val expression = astMapProjection("map", includeAllProps, mapProjections)
@@ -79,7 +80,7 @@ class MapProjection extends AbstractCypherBenchmark {
     val projection1 = plans.Projection(leaf, Map("map" -> astParameter("map", symbols.CTAny)))(IdGen)
     val projection = plans.Projection(projection1, Map("result" -> expression))(IdGen)
     val produceResult = plans.ProduceResult(projection, columns = resultColumns)(IdGen)
-    (produceResult, SemanticTable(), resultColumns)
+    TestSetup(produceResult, SemanticTable(), resultColumns)
   }
 
   @Benchmark

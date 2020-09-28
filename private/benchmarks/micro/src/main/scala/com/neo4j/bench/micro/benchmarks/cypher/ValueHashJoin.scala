@@ -70,7 +70,7 @@ class ValueHashJoin extends AbstractCypherBenchmark {
       .isReusableStore(true)
       .build()
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val nodeLeft = astVariable("nodeLeft")
     val nodeRight = astVariable("nodeRight")
     val lhs = plans.NodeIndexScan(
@@ -94,7 +94,7 @@ class ValueHashJoin extends AbstractCypherBenchmark {
 
     val table = SemanticTable().addNode(nodeLeft)
 
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

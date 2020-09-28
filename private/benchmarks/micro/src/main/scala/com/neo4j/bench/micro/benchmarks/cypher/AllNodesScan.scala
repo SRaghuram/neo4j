@@ -63,7 +63,7 @@ class AllNodesScan extends AbstractCypherBenchmark {
         .withSetting(GraphDatabaseSettings.auth_enabled, auth.toString).build())
       .build()
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val node = "node"
     val allNodesScan = plans.AllNodesScan(node, Set.empty)(IdGen)
     val resultColumns = List(node)
@@ -71,7 +71,7 @@ class AllNodesScan extends AbstractCypherBenchmark {
 
     val table = SemanticTable().addNode(astVariable(node))
 
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

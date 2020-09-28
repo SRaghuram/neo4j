@@ -106,7 +106,7 @@ class SetNodeProperty extends AbstractCypherBenchmark {
         .withSetting(GraphDatabaseSettings.auth_enabled, auth.toString).build())
       .build()
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val node = "node"
     val valueParam = astParameter("value", symbols.CTNumber)
     val idParam = astParameter("id", symbols.CTNumber)
@@ -120,7 +120,7 @@ class SetNodeProperty extends AbstractCypherBenchmark {
 
     val table = SemanticTable().addNode(astVariable(node))
 
-    (empty, table, List.empty)
+    TestSetup(empty, table, List.empty)
   }
 
   val randGen: Random = Random

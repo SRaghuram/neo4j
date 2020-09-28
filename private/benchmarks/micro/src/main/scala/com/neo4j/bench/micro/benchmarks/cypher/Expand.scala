@@ -69,7 +69,7 @@ class Expand extends AbstractCypherBenchmark {
         .withSetting(GraphDatabaseSettings.auth_enabled, auth.toString).build())
       .build()
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val relTypeNames = RELATIONSHIP_DEFINITIONS.map(rel => Plans.astRelTypeName(rel.`type`()))
     val allNodesScan = plans.AllNodesScan("a", Set.empty)(IdGen)
     val expand = plans.Expand(allNodesScan, "a", OUTGOING, relTypeNames, "b", "r1", ExpandAll)(IdGen)
@@ -81,7 +81,7 @@ class Expand extends AbstractCypherBenchmark {
       addNode(astVariable("b")).
       addRelationship(astVariable("r1"))
 
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

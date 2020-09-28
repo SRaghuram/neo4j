@@ -86,12 +86,18 @@ import org.openjdk.jmh.infra.Blackhole
 
 import scala.collection.mutable
 
+case class TestSetup(
+  logicalPlan: LogicalPlan,
+  semanticTable: SemanticTable,
+  resultColumns: List[String],
+  leveragedOrders: LeveragedOrders = new LeveragedOrders
+)
+
 abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
   private val defaultPlannerName: PlannerName = CostBasedPlannerName.default
   private val solveds = new Solveds
   private val cardinalities = new Cardinalities
   private val providedOrders = new ProvidedOrders
-  private val leveragedOrders = new LeveragedOrders
   val users: mutable.Map[String, LoginContext] = mutable.Map[String, LoginContext]()
 
   class CountSubscriber(bh: Blackhole) extends QuerySubscriberAdapter {
@@ -110,7 +116,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
 
   override def isThreadSafe = false
 
-  def getLogicalPlanAndSemanticTable(planContext: PlanContext): (LogicalPlan, SemanticTable, List[String])
+  def setup(planContext: PlanContext): TestSetup
 
   override protected def afterDatabaseStart(config: DataGeneratorConfig): Unit = {
     val authManager = db.asInstanceOf[GraphDatabaseAPI].getDependencyResolver.resolveDependency(classOf[AuthManager])
@@ -230,9 +236,9 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       val lifeSupport = dependencyResolver.resolveDependency( classOf[Database] ).getLife
       val workerManager = dependencyResolver.resolveDependency( classOf[WorkerManagement] )
       val runtimeContext = getContext(cypherRuntime, planContext, useCompiledExpressions, schemaRead, cursors, lifeSupport, workerManager)
-      val (logicalPlan, semanticTable, resultColumns) = getLogicalPlanAndSemanticTable(planContext)
-      solve(logicalPlan)
-      val compilationStateBefore = getLogicalQuery(logicalPlan, semanticTable, resultColumns)
+      val testSetup = setup(planContext)
+      solve(testSetup.logicalPlan)
+      val compilationStateBefore = getLogicalQuery(testSetup)
       val runtime = EnterpriseRuntimeFactory.getRuntime(cypherRuntimeOption(cypherRuntime), disallowFallback = true)
       val executionPlan = runtime.compileToExecutable(compilationStateBefore, runtimeContext)
 
@@ -282,18 +288,18 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
 
   private def transactionalContextWrapper(txContext: TransactionalContext) = TransactionalContextWrapper(txContext)
 
-  private def getLogicalQuery(logicalPlan: LogicalPlan, semanticTable: SemanticTable, resultColumns: List[String]): LogicalQuery = {
+  private def getLogicalQuery(testSetup: TestSetup): LogicalQuery = {
     // Dummy query to get a statement
-    val queryText = "return " + resultColumns.mkString(",")
+    val queryText = "return " + testSetup.resultColumns.mkString(",")
     LogicalQuery(
-      logicalPlan,
+      testSetup.logicalPlan,
       queryText,
       readOnly = true,
-      resultColumns.toArray,
-      semanticTable,
+      testSetup.resultColumns.toArray,
+      testSetup.semanticTable,
       cardinalities,
       providedOrders,
-      leveragedOrders,
+      testSetup.leveragedOrders,
       hasLoadCSV = false,
       Option.empty,
       Plans.IdGen)

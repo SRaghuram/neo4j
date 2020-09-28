@@ -54,7 +54,7 @@ class ExpandExpand extends AbstractCypherBenchmark {
       .isReusableStore(true)
       .build()
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val allNodesScan = plans.AllNodesScan("a", Set.empty)(IdGen)
     val relTypeNames = Seq(Plans.astRelTypeName(RELATIONSHIP_TYPE))
     val exp1 = plans.Expand(allNodesScan, "a", OUTGOING, relTypeNames, "b", "r1", ExpandAll)(IdGen)
@@ -70,7 +70,7 @@ class ExpandExpand extends AbstractCypherBenchmark {
       addRelationship(astVariable("r1")).
       addRelationship(astVariable("r2"))
 
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

@@ -49,14 +49,14 @@ class NodeByLabelScan extends AbstractCypherBenchmark {
       .isReusableStore(true)
       .build()
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val nodeByLabelScan = plans.NodeByLabelScan("node", astLabelName(LABEL), Set.empty, IndexOrderNone)(IdGen)
     val resultColumns = List("node")
     val produceResults = plans.ProduceResult(nodeByLabelScan, columns = resultColumns)(IdGen)
 
     val table = SemanticTable()
 
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

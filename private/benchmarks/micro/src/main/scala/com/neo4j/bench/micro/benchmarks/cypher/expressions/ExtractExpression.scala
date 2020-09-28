@@ -12,6 +12,7 @@ import com.neo4j.bench.micro.benchmarks.RNGState
 import com.neo4j.bench.micro.benchmarks.cypher.AbstractCypherBenchmark
 import com.neo4j.bench.micro.benchmarks.cypher.ExecutablePlan
 import com.neo4j.bench.micro.benchmarks.cypher.Slotted
+import com.neo4j.bench.micro.benchmarks.cypher.TestSetup
 import com.neo4j.bench.micro.data.Plans.IdGen
 import com.neo4j.bench.micro.data.Plans.Pos
 import com.neo4j.bench.micro.data.Plans.astAdd
@@ -55,7 +56,7 @@ class ExtractExpression extends AbstractCypherBenchmark {
 
   override def description = "UNWIND 10000_element_list AS no_used RETURN [n in $x | n + n] AS result"
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val resultColumns = List("result")
     val parameter = Parameter("x", symbols.CTAny)(Pos)
     val expression = astExtract("n", parameter, astAdd(astVariable("n"), astVariable("n")))
@@ -66,7 +67,7 @@ class ExtractExpression extends AbstractCypherBenchmark {
     val leaf = plans.UnwindCollection(plans.Argument()(IdGen), unwindVariableName, unwindListParameter)(IdGen)
     val projection = plans.Projection(leaf, Map("result" -> expression))(IdGen)
     val produceResult = plans.ProduceResult(projection, columns = resultColumns)(IdGen)
-    (produceResult, SemanticTable(), resultColumns)
+    TestSetup(produceResult, SemanticTable(), resultColumns)
   }
 
   @Benchmark

@@ -55,7 +55,7 @@ class Unwind extends AbstractCypherBenchmark {
 
   var params: MapValue = _
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val listElementType = cypherTypeFor(propertyType)
     val listType = symbols.CTList(listElementType)
     val parameter = astParameter("list", listType)
@@ -66,7 +66,7 @@ class Unwind extends AbstractCypherBenchmark {
 
     val table = SemanticTable(types = ASTAnnotationMap.empty.updated(unwindVariable, ExpressionTypeInfo(listElementType.invariant, None)))
 
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

@@ -83,7 +83,7 @@ class NodeHashJoin extends AbstractCypherBenchmark {
       .build()
   }
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val node = astVariable("node")
     val nodeIdName = node.name
     val queryExpression = SingleQueryExpression(SignedDecimalIntegerLiteral(VALUE.toString)(Pos))
@@ -101,7 +101,7 @@ class NodeHashJoin extends AbstractCypherBenchmark {
 
     val table = SemanticTable().addNode(node)
 
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

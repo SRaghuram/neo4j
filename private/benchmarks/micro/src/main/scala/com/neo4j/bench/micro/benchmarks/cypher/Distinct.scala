@@ -82,7 +82,7 @@ class Distinct extends AbstractCypherBenchmark {
     case TWO_COLUMNS_PRIMITIVE_LNG | TWO_COLUMNS_PRIMITIVE_STR_SML => builder.withNodeProperties(randPropertyFor(columnDefinition.split("-")(1), PROPERTY))
   }
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val table = SemanticTable()
       .addNode(astVariable(NODE_A))
       .addNode(astVariable(NODE_B))
@@ -94,7 +94,7 @@ class Distinct extends AbstractCypherBenchmark {
         val distinct = plans.Distinct(cartesianProduct, Map(NODE_B -> astVariable(NODE_B)))(IdGen)
         val resultColumns = List(NODE_B)
         val produceResults = plans.ProduceResult(distinct, columns = resultColumns)(IdGen)
-        (produceResults, table, resultColumns)
+        TestSetup(produceResults, table, resultColumns)
 
       case ONE_COLUMN_LNG | ONE_COLUMN_STR_SML =>
         val allNodesScanA = plans.AllNodesScan(NODE_A, Set.empty)(IdGen)
@@ -109,7 +109,7 @@ class Distinct extends AbstractCypherBenchmark {
           Map(PROPERTY -> nodePropertyA))(IdGen)
         val resultColumns = List(PROPERTY)
         val produceResults = plans.ProduceResult(distinct, columns = resultColumns)(IdGen)
-        (produceResults, table, resultColumns)
+        TestSetup(produceResults, table, resultColumns)
 
       case TWO_COLUMNS_PRIMITIVE =>
         val allNodesScanA = plans.AllNodesScan(NODE_A, Set.empty)(IdGen)
@@ -120,7 +120,7 @@ class Distinct extends AbstractCypherBenchmark {
           Map(NODE_A -> astVariable(NODE_A), NODE_B -> astVariable(NODE_B)))(IdGen)
         val resultColumns = List(NODE_A, NODE_B)
         val produceResults = plans.ProduceResult(distinct, columns = resultColumns)(IdGen)
-        (produceResults, table, resultColumns)
+        TestSetup(produceResults, table, resultColumns)
 
       case TWO_COLUMNS_PRIMITIVE_LNG | TWO_COLUMNS_PRIMITIVE_STR_SML =>
         val allNodesScanA = plans.AllNodesScan(NODE_A, Set.empty)(IdGen)
@@ -135,7 +135,7 @@ class Distinct extends AbstractCypherBenchmark {
           Map(PROPERTY -> nodePropertyA, NODE_B -> astVariable(NODE_B)))(IdGen)
         val resultColumns = List(PROPERTY, NODE_B)
         val produceResults = plans.ProduceResult(distinct, columns = resultColumns)(IdGen)
-        (produceResults, table, resultColumns)
+        TestSetup(produceResults, table, resultColumns)
     }
   }
 

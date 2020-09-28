@@ -68,7 +68,7 @@ class Eager extends AbstractCypherBenchmark {
       .isReusableStore(true)
       .build()
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val nodeName = s"n$primitiveColumns"
     val leftAllNodesScan = plans.AllNodesScan(nodeName, Set.empty)(IdGen)
     val (cartesianProducts, table, nodeNames) = buildCartesianProducts(
@@ -82,7 +82,7 @@ class Eager extends AbstractCypherBenchmark {
     val eager = plans.Eager(projection)(IdGen)
     val resultColumns = nodeNames ++ projectColumns.keys.toList
     val produceResult = plans.ProduceResult(eager, columns = resultColumns)(IdGen)
-    (produceResult, table, resultColumns)
+    TestSetup(produceResult, table, resultColumns)
   }
 
   private def buildCartesianProducts(count: Int, left: LogicalPlan, table: SemanticTable, nodeNames: List[String]): (plans.LogicalPlan, SemanticTable, List[String]) = {

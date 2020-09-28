@@ -95,7 +95,7 @@ class LetAntiSemiApply extends AbstractCypherBenchmark {
     tx.close()
   }
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val lhs = "lhs"
     val idName = "idName"
     val lhsAllNodesScan = plans.AllNodesScan(lhs, Set.empty)(IdGen)
@@ -117,7 +117,7 @@ class LetAntiSemiApply extends AbstractCypherBenchmark {
       .addNode(astVariable(lhs))
       .addNode(node)
 
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

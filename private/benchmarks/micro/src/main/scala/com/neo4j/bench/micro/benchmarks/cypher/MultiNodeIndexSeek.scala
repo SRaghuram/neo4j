@@ -100,7 +100,7 @@ class MultiNodeIndexSeek extends AbstractCypherBenchmark {
     maxExpectedRowCount = Math.pow(maxSingleSeekRowCount, indexes).toInt
   }
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val indexCreator: String => plans.NodeIndexSeek = plans.NodeIndexSeek(
       _,
       astLabelToken(LABEL, planContext),
@@ -123,7 +123,7 @@ class MultiNodeIndexSeek extends AbstractCypherBenchmark {
 
     val produceResults = plans.ProduceResult(finalCartesianProduct, columns)(IdGen)
 
-    (produceResults, finalTable, columns)
+    TestSetup(produceResults, finalTable, columns)
   }
 
   @scala.annotation.tailrec

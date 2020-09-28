@@ -65,7 +65,7 @@ class ProcedureCallingCypher extends AbstractProcedureCall {
     new plans.QualifiedName(Array[String]("bench"), "cypher")
   }
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val query = astLiteralFor("MATCH (n) RETURN n", TypeParamValues.STR_SML)
     val range = astFunctionInvocation("range", astLiteralFor(1, TypeParamValues.LNG), astLiteralFor(inputRows, TypeParamValues.LNG))
     val unwindVariable = astVariable("value")
@@ -74,7 +74,7 @@ class ProcedureCallingCypher extends AbstractProcedureCall {
     val resultColumns = List("value")
     val produceResults = plans.ProduceResult(procedureCall, resultColumns)(IdGen)
     val table = SemanticTable()
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

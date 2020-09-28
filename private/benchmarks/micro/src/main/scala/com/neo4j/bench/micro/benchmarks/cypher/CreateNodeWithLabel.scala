@@ -77,12 +77,12 @@ class CreateNodeWithLabel extends AbstractCypherBenchmark {
         .withSetting(GraphDatabaseSettings.auth_enabled, auth.toString).build())
       .build()
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val createNode = ir.CreateNode("a", Seq(LabelName("A")(InputPosition.NONE)), None)
     val create = plans.Create(plans.Argument()(IdGen), Seq(createNode), Seq.empty)(IdGen)
     val empty = plans.EmptyResult(create)(IdGen)
 
-    (empty, SemanticTable(), List.empty)
+    TestSetup(empty, SemanticTable(), List.empty)
   }
 
   var subscriber: CountSubscriber = _

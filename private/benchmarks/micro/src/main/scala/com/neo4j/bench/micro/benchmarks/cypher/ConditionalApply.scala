@@ -79,7 +79,7 @@ class ConditionalApply extends AbstractCypherBenchmark {
       .isReusableStore(true)
       .build()
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val rhs = "rhs"
     val listType = symbols.CTList(symbols.CTAny)
     val unwindListParameter = astParameter("list", listType)
@@ -95,7 +95,7 @@ class ConditionalApply extends AbstractCypherBenchmark {
     val table = SemanticTable()
       .addNode(astVariable(rhs))
 
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

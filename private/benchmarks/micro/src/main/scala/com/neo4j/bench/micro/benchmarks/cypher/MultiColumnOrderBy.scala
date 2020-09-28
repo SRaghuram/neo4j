@@ -84,7 +84,7 @@ class MultiColumnOrderBy extends AbstractCypherBenchmark {
     }
   }
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val listElementType = toInnerType(propertyType)
     val listType = symbols.CTList(listElementType)
     val parameter = astParameter("list", listType)
@@ -105,7 +105,7 @@ class MultiColumnOrderBy extends AbstractCypherBenchmark {
 
     val table = SemanticTable(types = ASTAnnotationMap.empty.updated(unwindVariable, ExpressionTypeInfo(listElementType.invariant, None)))
 
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   private def toInnerType(columnType: String): ListType = symbols.CTList(cypherTypeFor(columnType))

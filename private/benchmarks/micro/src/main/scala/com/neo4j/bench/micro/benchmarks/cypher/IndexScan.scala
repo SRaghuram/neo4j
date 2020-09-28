@@ -73,7 +73,7 @@ class IndexScan extends AbstractCypherBenchmark {
       .isReusableStore(true)
       .build()
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val node = astVariable("node")
     val indexSeek = plans.NodeIndexScan(
       node.name,
@@ -86,7 +86,7 @@ class IndexScan extends AbstractCypherBenchmark {
 
     val table = SemanticTable().addNode(node)
 
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

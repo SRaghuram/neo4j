@@ -11,6 +11,7 @@ import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.cypher.AbstractCypherBenchmark
 import com.neo4j.bench.micro.benchmarks.cypher.ExecutablePlan
 import com.neo4j.bench.micro.benchmarks.cypher.Slotted
+import com.neo4j.bench.micro.benchmarks.cypher.TestSetup
 import com.neo4j.bench.micro.data.DataGeneratorConfig
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
 import com.neo4j.bench.micro.data.Plans
@@ -63,7 +64,7 @@ class PathExpression extends AbstractCypherBenchmark {
       .isReusableStore(true)
       .build()
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val resultColumns = List("result")
     val allNodesScan = plans.AllNodesScan("a", Set.empty)(IdGen)
     val relTypeNames = Seq(Plans.astRelTypeName(RELATIONSHIP_TYPE))
@@ -86,7 +87,7 @@ class PathExpression extends AbstractCypherBenchmark {
       addRelationship(astVariable("r1")).
       addRelationship(astVariable("r2"))
 
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

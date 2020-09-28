@@ -115,7 +115,7 @@ class StringEndsWithIndexScan extends AbstractCypherBenchmark {
       .build()
   }
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val node = astVariable("node")
     val value = suffixForSelectivity(selectivity)
     val literal = StringLiteral(value)(Pos)
@@ -132,7 +132,7 @@ class StringEndsWithIndexScan extends AbstractCypherBenchmark {
 
     val table = SemanticTable().addNode(node)
 
-    (produceResults, table, resultColumn)
+    TestSetup(produceResults, table, resultColumn)
   }
 
   @Benchmark

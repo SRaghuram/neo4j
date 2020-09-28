@@ -84,7 +84,7 @@ class DirectedRelationshipByIdSeek extends AbstractCypherBenchmark {
         .withSetting(GraphDatabaseSettings.auth_enabled, auth.toString).build())
       .build()
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val cols = List("a", "rel", "b")
 
     val seek = plans.DirectedRelationshipByIdSeek("rel", ManySeekableArgs(astParameter("ids", symbols.CTList(symbols.CTInteger))), "a", "b", Set.empty)(IdGen)
@@ -92,7 +92,7 @@ class DirectedRelationshipByIdSeek extends AbstractCypherBenchmark {
 
     val table = SemanticTable().addNode(astVariable("a")).addNode(astVariable("b")).addRelationship(astVariable("rel"))
 
-    (produceResults, table, cols)
+    TestSetup(produceResults, table, cols)
   }
 
   @Benchmark

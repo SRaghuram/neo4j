@@ -82,7 +82,7 @@ class GreaterThanIndexSeek extends AbstractCypherBenchmark {
       .isReusableStore(true)
       .build()
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val node = astVariable("node")
     val offsetForSelectivity = Math.round(NODE_COUNT * selectivity)
     val lowerValue = NODE_COUNT - offsetForSelectivity
@@ -102,7 +102,7 @@ class GreaterThanIndexSeek extends AbstractCypherBenchmark {
 
     val table = SemanticTable().addNode(node)
 
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

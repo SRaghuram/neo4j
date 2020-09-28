@@ -11,14 +11,13 @@ import com.neo4j.bench.micro.benchmarks.RNGState
 import com.neo4j.bench.micro.benchmarks.cypher.AbstractCypherBenchmark
 import com.neo4j.bench.micro.benchmarks.cypher.ExecutablePlan
 import com.neo4j.bench.micro.benchmarks.cypher.Slotted
+import com.neo4j.bench.micro.benchmarks.cypher.TestSetup
 import com.neo4j.bench.micro.data.Plans.astAny
 import com.neo4j.bench.micro.data.Plans.astGt
 import com.neo4j.bench.micro.data.Plans.astLiteralFor
 import com.neo4j.bench.micro.data.Plans.astParameter
 import com.neo4j.bench.micro.data.Plans.astVariable
 import com.neo4j.bench.micro.data.TypeParamValues.LNG
-import org.neo4j.cypher.internal.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
@@ -50,7 +49,7 @@ class AnyInListExpression extends AbstractCypherBenchmark with ListExpressionsHe
 
   override def description = "UNWIND 10000_element_list AS no_used RETURN any(n in $x WHERE n > <literal>) AS result"
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val listParameter = astParameter("x", symbols.CTAny)
     val listExpression = astAny("n", listParameter, astGt(astVariable("n"), astLiteralFor(midPoint, LNG)))
     listExpressionPlan(planContext, listParameter, listExpression)

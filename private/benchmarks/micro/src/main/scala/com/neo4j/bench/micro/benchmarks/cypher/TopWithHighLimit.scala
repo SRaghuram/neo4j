@@ -62,7 +62,7 @@ class TopWithHighLimit extends AbstractCypherBenchmark {
 
   var params: MapValue = _
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val listElementType = cypherTypeFor(sort_type)
     val listType = symbols.CTList(listElementType)
     val unwindListParameter = astParameter("list", listType)
@@ -75,7 +75,7 @@ class TopWithHighLimit extends AbstractCypherBenchmark {
 
     val table = SemanticTable(types = ASTAnnotationMap.empty.updated(unwindVariable, ExpressionTypeInfo(listElementType.invariant, None)))
 
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

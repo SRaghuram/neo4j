@@ -70,7 +70,7 @@ class OperatorFusionWithUnwind extends AbstractCypherBenchmark {
     defaultRuntimeConfig.copy(operatorFusionOverPipelineLimit = limit)
   }
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val listType = symbols.CTList(listElementType)
     val biglistParameter = astParameter("biglist", listType)
     val onelistParameter = astParameter("onelist", listType)
@@ -90,7 +90,7 @@ class OperatorFusionWithUnwind extends AbstractCypherBenchmark {
     val resultColumns = List(v0.name, s"v${i}")
     val produceResults = plans.ProduceResult(plan, resultColumns)(IdGen)
 
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

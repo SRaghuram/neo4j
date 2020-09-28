@@ -118,7 +118,7 @@ class VarExpandWithPredicates extends AbstractCypherBenchmark {
       .withSetting(GraphDatabaseSettings.auth_enabled, auth.toString).build())
     .build()
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val startNode = astVariable("start")
     val endNode = astVariable("end")
     val rel = astVariable("rel")
@@ -165,7 +165,7 @@ class VarExpandWithPredicates extends AbstractCypherBenchmark {
       .addNode(endNode)
     val table = nodesTable.copy(types = nodesTable.types.updated(rel, ExpressionTypeInfo(symbols.CTList(symbols.CTRelationship), None)))
 
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

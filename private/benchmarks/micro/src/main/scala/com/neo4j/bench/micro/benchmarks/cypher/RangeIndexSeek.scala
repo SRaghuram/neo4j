@@ -82,7 +82,7 @@ class RangeIndexSeek extends AbstractCypherBenchmark {
       .isReusableStore(true)
       .build()
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val node = astVariable("node")
     val lowerValue = NODE_COUNT / 2
     val offsetForSelectivity = Math.round(NODE_COUNT * selectivity)
@@ -104,7 +104,7 @@ class RangeIndexSeek extends AbstractCypherBenchmark {
 
     val table = SemanticTable().addNode(node)
 
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

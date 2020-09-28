@@ -7,7 +7,6 @@ package com.neo4j.bench.micro.benchmarks.cypher
 
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
-import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.data.DataGeneratorConfig
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
@@ -69,7 +68,7 @@ class Union extends AbstractCypherBenchmark {
     expectedRowCount = rows + rows
   }
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val a = "a"
     val projectedNames = (0 until columns).map(i => s"a_$i").toList
     val projectionsAsNodes = projectedNames.map(name => name -> astVariable(a)).toMap
@@ -99,7 +98,7 @@ class Union extends AbstractCypherBenchmark {
       case (t, name) => t.addVariable(astVariable(name))
     }
 
-    (produceResults, table, projectedNames)
+    TestSetup(produceResults, table, projectedNames)
   }
 
   @Benchmark

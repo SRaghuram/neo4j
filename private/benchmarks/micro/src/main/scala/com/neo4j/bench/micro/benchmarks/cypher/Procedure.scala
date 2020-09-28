@@ -57,7 +57,7 @@ class Procedure extends AbstractProcedureCall {
     new plans.QualifiedName(Array[String]("bench"), "procedure")
   }
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val rowCount = astLiteralFor(outputRowsPerInputRow, TypeParamValues.LNG)
     val range = astFunctionInvocation("range", astLiteralFor(1, TypeParamValues.LNG), astLiteralFor(inputRows, TypeParamValues.LNG))
     val unwindVariable = astVariable("value")
@@ -66,7 +66,7 @@ class Procedure extends AbstractProcedureCall {
     val resultColumns = List("value")
     val produceResults = plans.ProduceResult(procedureCall, resultColumns)(IdGen)
     val table = SemanticTable()
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

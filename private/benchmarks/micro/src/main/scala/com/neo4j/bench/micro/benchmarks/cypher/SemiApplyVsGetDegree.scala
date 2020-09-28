@@ -73,7 +73,7 @@ class SemiApplyVsGetDegree extends AbstractCypherBenchmark {
       .isReusableStore(true)
       .build()
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val allNodesScan = plans.AllNodesScan("a", Set.empty)(IdGen)
 
     val relTypeName = RelTypeName("A")(Pos)
@@ -96,7 +96,7 @@ class SemiApplyVsGetDegree extends AbstractCypherBenchmark {
       addNode(astVariable("b")).
       addRelationship(astVariable("r"))
 
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

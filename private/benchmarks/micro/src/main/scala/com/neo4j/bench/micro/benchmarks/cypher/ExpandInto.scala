@@ -50,7 +50,7 @@ class ExpandInto extends AbstractCypherBenchmark {
       .isReusableStore(true)
       .build()
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val allNodesScan = plans.AllNodesScan("a", Set.empty)(IdGen)
     val expand = plans.Expand(allNodesScan, "a", OUTGOING, Seq.empty, "b", "r1", plans.ExpandAll)(IdGen)
     val expandInto = plans.Expand(expand, "b", INCOMING, Seq.empty, "a", "r2", plans.ExpandInto)(IdGen)
@@ -63,7 +63,7 @@ class ExpandInto extends AbstractCypherBenchmark {
 
 
     val produceResults = plans.ProduceResult(expandInto, columns = resultColumns)(IdGen)
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

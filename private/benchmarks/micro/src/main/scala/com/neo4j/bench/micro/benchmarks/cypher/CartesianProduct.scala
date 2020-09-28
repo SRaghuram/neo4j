@@ -54,7 +54,7 @@ class CartesianProduct extends AbstractCypherBenchmark {
     expectedRowCount = rows * rows
   }
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val a = "a"
     val b = "b"
     val allNodesScanA = plans.AllNodesScan(a, Set.empty)(IdGen)
@@ -65,7 +65,7 @@ class CartesianProduct extends AbstractCypherBenchmark {
 
     val table = SemanticTable().addNode(astVariable(a)).addNode(astVariable(b))
 
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

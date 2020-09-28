@@ -195,7 +195,7 @@ class FixedDensityPointIndexSeek extends AbstractSpatialBenchmark {
       .build()
   }
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val node = astVariable("node")
     val point = astParameter("point", symbols.CTPoint)
     val distance = computeQueryDistance(crsSetting.crs(),
@@ -216,7 +216,7 @@ class FixedDensityPointIndexSeek extends AbstractSpatialBenchmark {
 
     val table = SemanticTable().addNode(node)
 
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

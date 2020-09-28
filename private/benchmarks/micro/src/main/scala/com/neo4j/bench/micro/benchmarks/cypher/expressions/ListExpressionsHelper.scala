@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher.expressions
 
+import com.neo4j.bench.micro.benchmarks.cypher.TestSetup
 import com.neo4j.bench.micro.data.Plans.IdGen
 import com.neo4j.bench.micro.data.Plans.astParameter
 import com.neo4j.bench.micro.data.Plans.astVariable
@@ -25,7 +26,7 @@ trait ListExpressionsHelper {
 
   def listExpressionPlan(planContext: PlanContext,
                          listParameter: Parameter,
-                         listExpression: Expression): (plans.LogicalPlan, SemanticTable, List[String]) = {
+                         listExpression: Expression): TestSetup = {
     val listType = symbols.CTList(symbols.CTAny)
     val unwindListParameter = astParameter("list", listType)
     val unwindVariable = astVariable("value")
@@ -33,7 +34,7 @@ trait ListExpressionsHelper {
     val projection = plans.Projection(leaf, Map("result" -> listExpression))(IdGen)
     val resultColumns = List("result")
     val produceResult = plans.ProduceResult(projection, columns = resultColumns)(IdGen)
-    (produceResult, SemanticTable(), resultColumns)
+    TestSetup(produceResult, SemanticTable(), resultColumns)
   }
 
   def getParams(size: Int): MapValue = {

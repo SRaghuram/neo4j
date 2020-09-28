@@ -14,6 +14,7 @@ import com.neo4j.bench.micro.benchmarks.RNGState
 import com.neo4j.bench.micro.benchmarks.cypher.AbstractCypherBenchmark
 import com.neo4j.bench.micro.benchmarks.cypher.ExecutablePlan
 import com.neo4j.bench.micro.benchmarks.cypher.Slotted
+import com.neo4j.bench.micro.benchmarks.cypher.TestSetup
 import com.neo4j.bench.micro.data.DataGeneratorConfig
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
 import com.neo4j.bench.micro.data.Plans.IdGen
@@ -78,7 +79,7 @@ class In extends AbstractCypherBenchmark {
       .build()
 
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val resultColumns = List("result")
     val parameter = astParameter("x", symbols.CTAny)
     val expression = astIn(parameter, listExpression)
@@ -90,7 +91,7 @@ class In extends AbstractCypherBenchmark {
     val leaf = plans.UnwindCollection(plans.Argument()(IdGen), unwindVariableName, unwindListParameter)(IdGen)
     val projection = plans.Projection(leaf, Map("result" -> expression))(IdGen)
     val produceResult = plans.ProduceResult(projection, columns = resultColumns)(IdGen)
-    (produceResult, SemanticTable(), resultColumns)
+    TestSetup(produceResult, SemanticTable(), resultColumns)
   }
 
   private def listExpression =

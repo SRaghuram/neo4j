@@ -82,7 +82,7 @@ class RollUpApply extends AbstractCypherBenchmark {
       ManagedStore.getManagementService.shutdown()
     }
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val lhs = "lhs"
     val rhs = "rhs"
     val list = "list"
@@ -97,7 +97,7 @@ class RollUpApply extends AbstractCypherBenchmark {
       .addNode(astVariable(rhs))
       .addVariable(astVariable(list))
 
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

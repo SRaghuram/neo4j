@@ -12,7 +12,6 @@ import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.data.DataGeneratorConfig
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
 import com.neo4j.bench.micro.data.Plans.IdGen
-import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.QualifiedName
 import org.neo4j.cypher.internal.planner.spi.PlanContext
@@ -55,9 +54,9 @@ class StandAloneProcedureCall extends AbstractProcedureCall {
       .build()
   }
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val call = plans.ProcedureCall(plans.Argument()(IdGen), resolvedCall(Seq.empty))(IdGen)
-    (plans.ProduceResult(call, columns)(IdGen),semanticTable, columns.toList)
+    TestSetup(plans.ProduceResult(call, columns)(IdGen), semanticTable, columns.toList)
   }
 
   @Benchmark

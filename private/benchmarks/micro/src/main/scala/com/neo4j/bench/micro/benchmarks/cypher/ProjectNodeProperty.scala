@@ -56,7 +56,7 @@ class ProjectNodeProperty extends AbstractCypherBenchmark {
       .isReusableStore(true)
       .build()
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val node = astVariable("n")
     val nodeIdName = node.name
     val allNodeScan = plans.AllNodesScan(nodeIdName, Set.empty)(IdGen)
@@ -67,7 +67,7 @@ class ProjectNodeProperty extends AbstractCypherBenchmark {
 
     val table = SemanticTable().addNode(node)
 
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark

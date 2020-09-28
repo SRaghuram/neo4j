@@ -56,7 +56,7 @@ class OptionalExpand extends AbstractCypherBenchmark {
       .isReusableStore(true)
       .build()
 
-  override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
+  override def setup(planContext: PlanContext): TestSetup = {
     val n1 = astVariable("n1")
     val r = astVariable("r")
     val n2 = astVariable("n2")
@@ -83,7 +83,7 @@ class OptionalExpand extends AbstractCypherBenchmark {
       .addNode(n2)
       .addRelationship(r)
 
-    (produceResults, table, resultColumns)
+    TestSetup(produceResults, table, resultColumns)
   }
 
   @Benchmark
