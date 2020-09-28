@@ -10,6 +10,8 @@ import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 
 class AdministrationCommandPlannerTest extends AdministrationCommandAcceptanceTestBase {
+  private val newLine = System.lineSeparator()
+  private val doubleNewLine = newLine + newLine
 
   override protected def initTest() {
     super.initTest()
@@ -70,7 +72,7 @@ class AdministrationCommandPlannerTest extends AdministrationCommandAcceptanceTe
 
   test("Should show correct plan for management commands") {
     managementCommands.foreach { command =>
-      withClue(s"Command: $command ${System.lineSeparator()}${System.lineSeparator()}") {
+      withClue(s"Command: $command $doubleNewLine") {
         assertAdminCommandPlan(execute(s"EXPLAIN $command").executionPlanString())
       }
     }
@@ -78,7 +80,7 @@ class AdministrationCommandPlannerTest extends AdministrationCommandAcceptanceTe
 
   test("Should show correct plan for grant commands") {
     allPrivilegeCommandsWithMerge.foreach { command =>
-      withClue(s"Command: $command ${System.lineSeparator()}${System.lineSeparator()}") {
+      withClue(s"Command: $command $doubleNewLine") {
         assertAdminCommandPlan(execute(s"EXPLAIN GRANT $command TO reader,editor").executionPlanString())
       }
     }
@@ -86,7 +88,7 @@ class AdministrationCommandPlannerTest extends AdministrationCommandAcceptanceTe
 
   test("Should show correct plan for deny commands") {
     allPrivilegeCommands.foreach { command =>
-      withClue(s"Command: $command ${System.lineSeparator()}${System.lineSeparator()}") {
+      withClue(s"Command: $command $doubleNewLine") {
         assertAdminCommandPlan(execute(s"EXPLAIN DENY $command TO $$role", Map("role" -> "editor")).executionPlanString())
       }
     }
@@ -94,7 +96,7 @@ class AdministrationCommandPlannerTest extends AdministrationCommandAcceptanceTe
 
   test("Should show correct plan for revoke commands") {
     allPrivilegeCommandsWithMerge.foreach { command =>
-      withClue(s"Command: $command ${System.lineSeparator()}${System.lineSeparator()}") {
+      withClue(s"Command: $command $doubleNewLine") {
         assertAdminCommandPlan(execute(s"EXPLAIN REVOKE $command FROM reader").executionPlanString())
       }
     }
@@ -102,7 +104,7 @@ class AdministrationCommandPlannerTest extends AdministrationCommandAcceptanceTe
 
   test("Should show correct plan for revoke grant commands") {
     allPrivilegeCommandsWithMerge.foreach { command =>
-      withClue(s"Command: $command ${System.lineSeparator()}${System.lineSeparator()}") {
+      withClue(s"Command: $command $doubleNewLine") {
         assertAdminCommandPlan(execute(s"EXPLAIN REVOKE GRANT $command FROM reader").executionPlanString())
       }
     }
@@ -110,16 +112,13 @@ class AdministrationCommandPlannerTest extends AdministrationCommandAcceptanceTe
 
   test("Should show correct plan for revoke deny commands") {
     allPrivilegeCommands.foreach { command =>
-      withClue(s"Command: $command ${System.lineSeparator()}${System.lineSeparator()}") {
+      withClue(s"Command: $command $doubleNewLine") {
         assertAdminCommandPlan(execute(s"EXPLAIN REVOKE DENY $command FROM reader").executionPlanString())
       }
     }
   }
 
-  private def assertAdminCommandPlan(plan: String): Unit = {
-    val newLine = System.lineSeparator()
-    val doubleNewLine = newLine + newLine
-
+  private def assertAdminCommandPlan(plan: String): Unit =
     plan should be(
       "Compiler CYPHER 4.2" + doubleNewLine +
         "Planner ADMINISTRATION" + doubleNewLine +
@@ -132,5 +131,4 @@ class AdministrationCommandPlannerTest extends AdministrationCommandAcceptanceTe
         "+------------------------+" + doubleNewLine +
         "Total database accesses: ?" + newLine
     )
-  }
 }
