@@ -23,6 +23,7 @@ import org.neo4j.cypher.internal.util.bottomUp
 case class cartesianProductLeveragedOrderToApplyPreserveOrder(cardinalities: Cardinalities,
                                                               providedOrders: ProvidedOrders,
                                                               leveragedOrders: LeveragedOrders,
+                                                              parallelExecution: Boolean,
                                                               idGen: IdGen,
                                                               stopper: AnyRef => Boolean) extends Rewriter {
   private val instance: Rewriter = bottomUp(Rewriter.lift {
@@ -32,10 +33,15 @@ case class cartesianProductLeveragedOrderToApplyPreserveOrder(cardinalities: Car
 
   override def apply(input: AnyRef): AnyRef = instance.apply(input)
 
-  private def preserveOrder(rhs: LogicalPlan) = {
-    val preserveOrder = PreserveOrder(rhs)(idGen)
-    cardinalities.copy(rhs.id, preserveOrder.id)
-    providedOrders.copy(rhs.id, preserveOrder.id)
-    preserveOrder
+  private def preserveOrder(rhs: LogicalPlan): LogicalPlan = {
+    if (parallelExecution) {
+      val preserveOrder = PreserveOrder(rhs)(idGen)
+      cardinalities.copy(rhs.id, preserveOrder.id)
+      providedOrders.copy(rhs.id, preserveOrder.id)
+      preserveOrder
+    } else {
+      // In single-threaded execution order is inherently preserved by Apply
+      rhs
+    }
   }
 }

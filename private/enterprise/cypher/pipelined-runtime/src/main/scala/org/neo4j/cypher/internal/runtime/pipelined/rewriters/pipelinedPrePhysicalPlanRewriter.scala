@@ -26,12 +26,13 @@ case object pipelinedPrePhysicalPlanRewriter {
   def rewrite(cardinalities: Cardinalities,
               providedOrders: ProvidedOrders,
               leveragedOrders: LeveragedOrders,
+              parallelExecution: Boolean,
               idGen: IdGen): AnyRef => AnyRef = {
     inSequence(
       fixedPoint(
         combineCartesianProductOfMultipleIndexSeeks(cardinalities, leveragedOrders, stopper = stopper)
       ),
-      cartesianProductLeveragedOrderToApplyPreserveOrder(cardinalities, providedOrders, leveragedOrders, idGen, stopper),
+      cartesianProductLeveragedOrderToApplyPreserveOrder(cardinalities, providedOrders, leveragedOrders, parallelExecution, idGen, stopper),
       semiApplyToLimitApply(cardinalities, providedOrders, idGen, stopper),
       antiSemiApplyToAntiLimitApply(cardinalities, providedOrders, idGen, stopper),
       rollupApplyToAggregationApply(cardinalities, providedOrders, idGen, stopper),
@@ -47,9 +48,9 @@ case object pipelinedPrePhysicalPlanRewriter {
     case _ => false
   }
 
-  def apply(query: LogicalQuery): LogicalPlan = {
+  def apply(query: LogicalQuery, parallelExecution: Boolean): LogicalPlan = {
     val inputPlan = query.logicalPlan
-    val rewrittenPlan = inputPlan.endoRewrite(rewrite(query.cardinalities, query.providedOrders, query.leveragedOrders, query.idGen))
+    val rewrittenPlan = inputPlan.endoRewrite(rewrite(query.cardinalities, query.providedOrders, query.leveragedOrders, parallelExecution, query.idGen))
     rewrittenPlan
   }
 }

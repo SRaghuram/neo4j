@@ -152,7 +152,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                           warnings: Set[InternalNotification]): ExecutionPlan = {
     val batchSize = selectBatchSize(query, context)
 
-    val logicalPlan = pipelinedPrePhysicalPlanRewriter(query)
+    val logicalPlan = pipelinedPrePhysicalPlanRewriter(query, parallelExecution)
 
     PipelinedBlacklist.throwOnUnsupportedPlan(logicalPlan, parallelExecution, query.leveragedOrders, name)
 

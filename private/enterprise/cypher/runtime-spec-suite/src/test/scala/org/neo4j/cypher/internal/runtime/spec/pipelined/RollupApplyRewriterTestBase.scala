@@ -33,7 +33,7 @@ abstract class RollupApplyRewriterTestBase[CONTEXT <: RuntimeContext](
       .build()
 
     //when
-    val rewrittenPlan = pipelinedPrePhysicalPlanRewriter(logicalQuery)
+    val rewrittenPlan = pipelinedPrePhysicalPlanRewriter(logicalQuery, parallelExecution = false)
 
     //then
     logicalQuery.logicalPlan shouldEqual (rewrittenPlan)
@@ -53,7 +53,7 @@ abstract class RollupApplyRewriterTestBase[CONTEXT <: RuntimeContext](
       .build()
 
     //when
-    val rewrittenPlan = pipelinedPrePhysicalPlanRewriter(logicalQuery)
+    val rewrittenPlan = pipelinedPrePhysicalPlanRewriter(logicalQuery, parallelExecution = false)
 
     //then
     logicalQuery.logicalPlan shouldNot equal (rewrittenPlan)
