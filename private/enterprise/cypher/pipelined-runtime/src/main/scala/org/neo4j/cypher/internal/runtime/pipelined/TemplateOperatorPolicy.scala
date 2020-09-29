@@ -18,17 +18,17 @@ import org.neo4j.cypher.internal.util.attribution.Id
 
 object TemplateOperatorPolicy {
 
-  def apply(fusionEnabled: Boolean, fusionOverPipelinesEnabled: Boolean, readOnly: Boolean, parallelExecution: Boolean): OperatorFusionPolicy =
+  def apply(fusionEnabled: Boolean, fusionOverPipelinesEnabled: Boolean, fusionOverPipelineLimit: Int, readOnly: Boolean, parallelExecution: Boolean): OperatorFusionPolicy =
     if (fusionEnabled)
-      new TemplateOperatorPolicy(fusionOverPipelinesEnabled, readOnly, parallelExecution)
+      new TemplateOperatorPolicy(fusionOverPipelinesEnabled, fusionOverPipelineLimit, readOnly, parallelExecution)
     else
       OPERATOR_FUSION_DISABLED
 }
 
 class TemplateOperatorPolicy(override val fusionOverPipelineEnabled: Boolean,
+                             override val fusionOverPipelineLimit: Int,
                              readOnly: Boolean,
-                             parallelExecution: Boolean,
-                             override val fusionOverPipelineLimit: Int = 8)
+                             parallelExecution: Boolean)
   extends TemplateOperators(readOnly, parallelExecution, fusionOverPipelineEnabled) with OperatorFusionPolicy {
 
   override def fusionEnabled: Boolean = true

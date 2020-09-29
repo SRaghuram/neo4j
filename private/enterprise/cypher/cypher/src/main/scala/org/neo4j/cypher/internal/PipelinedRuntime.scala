@@ -114,7 +114,11 @@ class PipelinedRuntime private(parallelExecution: Boolean,
         throw new CantCompileQueryException("Periodic commit is not supported by Pipelined runtime")
 
       val shouldFuseOperators = context.operatorEngine == CypherOperatorEngineOption.compiled
-      val operatorFusionPolicy = TemplateOperatorPolicy(shouldFuseOperators, fusionOverPipelinesEnabled = !parallelExecution, query.readOnly, parallelExecution)
+      val operatorFusionPolicy = TemplateOperatorPolicy(shouldFuseOperators,
+                                                        fusionOverPipelinesEnabled = !parallelExecution,
+                                                        fusionOverPipelineLimit = context.config.operatorFusionOverPipelineLimit,
+                                                        query.readOnly,
+                                                        parallelExecution)
 
       compilePlan(operatorFusionPolicy,
         query,
@@ -286,10 +290,10 @@ class PipelinedRuntime private(parallelExecution: Boolean,
         val nextOperatorFusionPolicy =
           if (operatorFusionPolicy.fusionOverPipelineEnabled)
           // Try again with fusion within pipeline enabled
-            TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = false, query.readOnly, parallelExecution)
+            TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = false, context.config.operatorFusionOverPipelineLimit, query.readOnly, parallelExecution)
           else
           // Try again with fusion disabled
-            TemplateOperatorPolicy(fusionEnabled = false, fusionOverPipelinesEnabled = false, query.readOnly, parallelExecution)
+            TemplateOperatorPolicy(fusionEnabled = false, fusionOverPipelinesEnabled = false, context.config.operatorFusionOverPipelineLimit, query.readOnly, parallelExecution)
 
         if (DebugSupport.PHYSICAL_PLANNING.enabled) {
           DebugSupport.PHYSICAL_PLANNING.log("Could not compile pipeline because of %s. Retrying with %s", e, nextOperatorFusionPolicy)
