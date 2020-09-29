@@ -15,6 +15,7 @@ import org.neo4j.cypher.GraphDatabaseTestSupport
 import org.neo4j.cypher.internal.compiler.CypherPlanner
 import org.neo4j.cypher.internal.compiler.CypherPlannerConfiguration
 import org.neo4j.cypher.internal.compiler.CypherPlannerFactory
+import org.neo4j.cypher.internal.compiler.StatsDivergenceCalculator
 import org.neo4j.cypher.internal.compiler.defaultUpdateStrategy
 import org.neo4j.cypher.internal.compiler.phases.Compatibility4_3
 import org.neo4j.cypher.internal.compiler.phases.PlannerContext
@@ -27,7 +28,6 @@ import org.neo4j.cypher.internal.compiler.planner.logical.idp.IDPQueryGraphSolve
 import org.neo4j.cypher.internal.compiler.planner.logical.idp.SingleComponentPlanner
 import org.neo4j.cypher.internal.compiler.planner.logical.idp.cartesianProductsOrValueJoins
 import org.neo4j.cypher.internal.compiler.planner.logical.simpleExpressionEvaluator
-import org.neo4j.cypher.internal.config.StatsDivergenceCalculator
 import org.neo4j.cypher.internal.frontend.phases.CompilationPhaseTracer
 import org.neo4j.cypher.internal.options.CypherDebugOptions
 import org.neo4j.cypher.internal.planner.spi.IDPPlannerName
