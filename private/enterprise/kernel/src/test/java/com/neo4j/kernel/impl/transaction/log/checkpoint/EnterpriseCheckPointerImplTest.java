@@ -31,7 +31,6 @@ import org.neo4j.kernel.impl.transaction.log.files.checkpoint.CheckpointFile;
 import org.neo4j.kernel.impl.transaction.log.pruning.LogPruneStrategyFactory;
 import org.neo4j.kernel.impl.transaction.log.pruning.LogPruning;
 import org.neo4j.kernel.impl.transaction.log.pruning.LogPruningImpl;
-import org.neo4j.kernel.impl.transaction.tracing.LogCheckPointEvent;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.DatabaseHealth;
@@ -76,7 +75,6 @@ class EnterpriseCheckPointerImplTest
                 .withTransactionIdStore( metaDataProvider )
                 .withLogVersionRepository( metaDataProvider )
                 .withStoreId( new StoreId( 99 ) )
-                .withSeparateFilesForCheckpoint( false )
                 .build();
         Config config = Config.defaults( GraphDatabaseSettings.keep_logical_logs, "3 files" );
         NullLogProvider logProvider = NullLogProvider.getInstance();
@@ -110,7 +108,8 @@ class EnterpriseCheckPointerImplTest
             logFile.rotate();
             appendAndCloseTestTransaction( transactionLogWriter, metaDataProvider );
             logFile.rotate();
-            checkpointAppender.checkPoint( LogCheckPointEvent.NULL, logPositionOf( metaDataProvider.getLastClosedTransaction() ), clock.instant(), "test" );
+            // Write a legacy checkpoint to get the checkpoint in the transaction log files instead of the separate files.
+            logFile.getTransactionLogWriter().legacyCheckPoint( logPositionOf( metaDataProvider.getLastClosedTransaction() ) );
 
             // when checking whether or not checkpoint is needed
             checkPointer.checkPointIfNeeded( new SimpleTriggerInfo( "Test trigger, should not actually trigger" ) );

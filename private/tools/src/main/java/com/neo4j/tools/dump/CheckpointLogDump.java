@@ -23,6 +23,7 @@ import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.ReadAheadLogChannel;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryDetachedCheckpoint;
+import org.neo4j.kernel.impl.transaction.log.entry.TransactionLogVersionSelector;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.files.RangeLogVersionVisitor;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesContext;
@@ -106,7 +107,7 @@ public class CheckpointLogDump
         return new TransactionLogFilesContext( new AtomicLong( 0 ), new AtomicBoolean(), null,
                 () -> -1, () -> -1, () -> LogPosition.UNSPECIFIED, null,
                 fileSystem, NullLogProvider.getInstance(), DatabaseTracers.EMPTY, null, new AbsentNativeAccess(), EmptyMemoryTracker.INSTANCE, new Monitors(),
-                false, new DatabaseHealth( PanicEventGenerator.NO_OP, NullLog.getInstance() ), false,
+                false, new DatabaseHealth( PanicEventGenerator.NO_OP, NullLog.getInstance() ), TransactionLogVersionSelector.LATEST::version,
                 Clock.systemUTC(), Config.defaults() );
     }
 

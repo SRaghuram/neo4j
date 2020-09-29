@@ -299,10 +299,13 @@ class RestoreDatabaseCommandIT
                 .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
                 .build();
         assertThat( toStoreLogFiles.logFiles() ).isEmpty();
-        assertThat( customLogLocationLogFiles.logFiles() ).hasSize( 1 );
+        assertThat( customLogLocationLogFiles.logFiles() ).hasSize( 2 );
         LogFile logFile = fromStoreLogFiles.getLogFile();
         assertThat( Files.size( logFile.getLogFileForVersion( 0 ) ) ).isGreaterThan( 0L );
         assertEquals( Files.size( logFile.getLogFileForVersion( 0 ) ), Files.size( customLogLocationLogFiles.getLogFile().getLogFileForVersion( 0 ) ) );
+        Path checkpointFile = fromStoreLogFiles.getCheckpointFile().getCurrentFile();
+        assertThat( Files.size( checkpointFile ) ).isGreaterThan( 0L );
+        assertEquals( Files.size( checkpointFile ), Files.size( customLogLocationLogFiles.getCheckpointFile().getCurrentFile() ) );
     }
 
     @Test

@@ -47,7 +47,7 @@ public class StoreInfoCommandIT extends AbstractCommandIT
         }
 
         managementService.shutdownDatabase( "foo" );
-        RecoveryHelpers.removeLastCheckpointRecordFromLastLogFile( fooDb.databaseLayout(), fileSystem, false );
+        RecoveryHelpers.removeLastCheckpointRecordFromLastLogFile( fooDb.databaseLayout(), fileSystem );
 
         var format = RecordFormatSelector.defaultFormat();
         var expected = "Database name:                foo" + System.lineSeparator() +

@@ -24,6 +24,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.lifecycle.Lifespan;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
@@ -134,7 +135,7 @@ class TransactionLogRecoveryIT
 
     private void writePartialTx( DatabaseLayout databaseLayout ) throws IOException
     {
-        LogFiles logFiles = LogFilesBuilder.activeFilesBuilder( databaseLayout, fs, pageCache ).build();
+        LogFiles logFiles = LogFilesBuilder.activeFilesBuilder( databaseLayout, fs, pageCache ).withStoreId( StoreId.UNKNOWN ).build();
         try ( Lifespan ignored = new Lifespan( logFiles ) )
         {
             var logFile = logFiles.getLogFile();

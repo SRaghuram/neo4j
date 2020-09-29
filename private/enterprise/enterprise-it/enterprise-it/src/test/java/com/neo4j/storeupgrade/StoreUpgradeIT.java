@@ -481,7 +481,7 @@ public class StoreUpgradeIT
             Path newTransactionLogsLocation = transactionLogsRoot.resolve( startedDatabaseName );
             assertTrue( fileSystem.fileExists( newTransactionLogsLocation ) );
             Set<String> transactionLogFilesAfterMigration = getTransactionLogFileNames( newTransactionLogsLocation, fileSystem );
-            assertEquals( transactionLogFilesBeforeMigration, transactionLogFilesAfterMigration );
+            assertThat( transactionLogFilesAfterMigration ).containsAll( transactionLogFilesBeforeMigration );
         }
 
         private void assumeStoreNot4_0()
@@ -515,7 +515,7 @@ public class StoreUpgradeIT
             Path newTransactionLogsLocation = transactionLogsRoot.resolve( startedDatabaseName );
             assertTrue( fileSystem.fileExists( newTransactionLogsLocation ) );
             Set<String> transactionLogFilesAfterMigration = getTransactionLogFileNames( newTransactionLogsLocation, fileSystem );
-            assertEquals( transactionLogFilesBeforeMigration, transactionLogFilesAfterMigration );
+            assertThat( transactionLogFilesAfterMigration ).containsAll( transactionLogFilesBeforeMigration );
         }
 
         @Test
@@ -731,10 +731,10 @@ public class StoreUpgradeIT
 
         private static Set<String> getTransactionLogFileNames( Path databaseDirectory, FileSystemAbstraction fileSystem ) throws IOException
         {
-            Path[] availableLogFilesBeforeMigration = getAvailableTransactionLogFiles( databaseDirectory, fileSystem );
-            assertThat( availableLogFilesBeforeMigration ).isNotEmpty();
+            Path[] availableTransactionLogFiles = getAvailableTransactionLogFiles( databaseDirectory, fileSystem );
+            assertThat( availableTransactionLogFiles ).isNotEmpty();
 
-            return stream( availableLogFilesBeforeMigration ).map( Path::getFileName ).map( Path::toString ).collect( toSet() );
+            return stream( availableTransactionLogFiles ).map( Path::getFileName ).map( Path::toString ).collect( toSet() );
         }
 
         private static Path[] getAvailableTransactionLogFiles( Path databaseDirectory, FileSystemAbstraction fileSystem ) throws IOException

@@ -547,7 +547,7 @@ public final class CausalClusteringTestHelpers
         {
             return 0;
         }
-        var position = checkpointInfos.get( checkpointInfos.size() - 1 ).getLogPosition();
+        var position = checkpointInfos.get( checkpointInfos.size() - 1 ).getCheckpointEntryPosition();
         fs.truncate( logFiles.getCheckpointFile().getCurrentFile(), position.getByteOffset() );
         return checkpointInfos.size();
     }

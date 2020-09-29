@@ -132,7 +132,7 @@ public class CheckTxLogs
         List<CheckpointInfo> checkpointInfos = logFiles.getCheckpointFile().reachableCheckpoints();
         for ( CheckpointInfo checkpointInfo : checkpointInfos )
         {
-            LogPosition logPosition = checkpointInfo.getLogPosition();
+            LogPosition logPosition = checkpointInfo.getTransactionLogPosition();
             if ( logPosition.getLogVersion() < lowestLogVersion )
             {
                 continue;
@@ -140,7 +140,7 @@ public class CheckTxLogs
             long size = logFileSizes.getIfAbsent( logPosition.getLogVersion(), -1 );
             if ( logPosition.getByteOffset() < 0 || size < 0 || logPosition.getByteOffset() > size )
             {
-                handler.reportInconsistentCheckPoint( checkpointInfo.getEntryPosition().getLogVersion(), logPosition, size );
+                handler.reportInconsistentCheckPoint( checkpointInfo.getCheckpointEntryPosition().getLogVersion(), logPosition, size );
                 success = false;
             }
         }

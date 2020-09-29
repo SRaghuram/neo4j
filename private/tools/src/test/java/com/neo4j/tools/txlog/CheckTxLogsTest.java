@@ -730,7 +730,7 @@ class CheckTxLogsTest
 
         assertEquals( 0, handler.checkPointInconsistencies.get( 0 ).logVersion );
         assertEquals( logPosition, handler.checkPointInconsistencies.get( 0 ).logPosition );
-        assertEquals( CURRENT_FORMAT_LOG_HEADER_SIZE + 22, handler.checkPointInconsistencies.get( 0 ).size );
+        assertEquals( CURRENT_FORMAT_LOG_HEADER_SIZE, handler.checkPointInconsistencies.get( 0 ).size );
     }
 
     @Test

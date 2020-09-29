@@ -297,8 +297,8 @@ class TransactionLogCatchUpWriterIT
         }
 
         assertNotNull( tailInformation.lastCheckPoint );
-        assertEquals( 0, tailInformation.lastCheckPoint.getLogPosition().getLogVersion() );
-        assertEquals( CURRENT_FORMAT_LOG_HEADER_SIZE, tailInformation.lastCheckPoint.getLogPosition().getByteOffset() );
+        assertEquals( 0, tailInformation.lastCheckPoint.getTransactionLogPosition().getLogVersion() );
+        assertEquals( CURRENT_FORMAT_LOG_HEADER_SIZE, tailInformation.lastCheckPoint.getTransactionLogPosition().getByteOffset() );
         assertTrue( tailInformation.commitsAfterLastCheckpoint() );
     }
 

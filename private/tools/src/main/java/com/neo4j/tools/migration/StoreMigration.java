@@ -159,7 +159,7 @@ public final class StoreMigration
         {
             var checkpointAppender = logFiles.getCheckpointFile().getCheckpointAppender();
             LogTailInformation tailInformation = logFiles.getTailInformation();
-            LogPosition logPosition = tailInformation.lastCheckPoint.getLogPosition();
+            LogPosition logPosition = tailInformation.lastCheckPoint.getTransactionLogPosition();
             checkpointAppender.checkPoint( LogCheckPointEvent.NULL, logPosition, Instant.now(), "Store migration tool." );
         }
     }

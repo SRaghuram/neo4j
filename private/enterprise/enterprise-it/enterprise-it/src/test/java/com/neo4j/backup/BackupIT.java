@@ -484,11 +484,11 @@ class BackupIT
                                                  .build();
 
         executeBackup( db );
-        assertThat( backupLogFiles.logFiles() ).hasSize( 1 );
+        assertThat( backupLogFiles.logFiles() ).hasSize( 2 );
 
         DbRepresentation representation = addLotsOfData( db );
         executeBackupWithoutFallbackToFull( db );
-        assertThat( backupLogFiles.logFiles() ).hasSize( 1 );
+        assertThat( backupLogFiles.logFiles() ).hasSize( 2 );
 
         assertEquals( representation, getBackupDbRepresentation() );
 
