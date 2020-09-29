@@ -15,7 +15,7 @@ import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import com.neo4j.bench.jmh.api.config.Validation;
 import com.neo4j.bench.micro.benchmarks.test.NoOpBenchmark;
 import com.neo4j.bench.test.BaseEndToEndIT;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -37,7 +37,7 @@ class EndToEndIT extends BaseEndToEndIT
 
         List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC, ProfilerType.GC );
 
-        try ( Resources resources = new Resources( temporaryFolder.resolve( "resources" ) ) )
+        try ( Resources resources = new Resources( Files.createDirectory( temporaryFolder.resolve( "resources" ) ) ) )
         {
             runReportBenchmarks( resources,
                                  scriptName(),

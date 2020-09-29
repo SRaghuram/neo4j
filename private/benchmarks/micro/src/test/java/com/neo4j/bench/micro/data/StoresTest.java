@@ -8,29 +8,35 @@ package com.neo4j.bench.micro.data;
 import com.neo4j.bench.common.profiling.FullBenchmarkName;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkGroup;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collections;
 
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
+
 import static java.util.UUID.randomUUID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@TestDirectoryExtension
 public class StoresTest
 {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @Inject
+    public TestDirectory temporaryFolder;
 
     @Test
     public void storeUsageShouldBeEmptyWhenFirstCreated() throws IOException
     {
-        Path workDir = temporaryFolder.newFolder().toPath();
+        Path workDir = temporaryFolder.directory( "dir" ).toPath();
         Stores.StoreUsage storeUsage = Stores.StoreUsage.loadOrCreateIfAbsent( workDir );
 
         assertThat( storeUsage.allStoreBenchmarkInfo().isEmpty(), is( true ) );
@@ -39,7 +45,7 @@ public class StoresTest
     @Test
     public void storeUsageShouldRegister() throws IOException
     {
-        Path workDir = temporaryFolder.newFolder().toPath();
+        Path workDir = temporaryFolder.directory( "dir" ).toPath();
         Stores.StoreUsage storeUsage = Stores.StoreUsage.loadOrCreateIfAbsent( workDir );
 
         String store1 = randomUUID().toString();
@@ -71,7 +77,7 @@ public class StoresTest
     @Test
     public void storeUsageShouldBeTheSameAfterReload() throws IOException
     {
-        Path workDir = temporaryFolder.newFolder().toPath();
+        Path workDir = temporaryFolder.directory( "dir" ).toPath();
         Stores.StoreUsage storeUsageBefore = Stores.StoreUsage.loadOrCreateIfAbsent( workDir );
 
         String store = randomUUID().toString();
@@ -90,10 +96,10 @@ public class StoresTest
         assertThat( storeUsageAfter.allStoreBenchmarkInfo(), equalTo( storeUsageBefore.allStoreBenchmarkInfo() ) );
     }
 
-    @Test( expected = IllegalStateException.class )
+    @Test
     public void storeUsageShouldNotAllowRegisteringSameBenchmarkTwice() throws IOException
     {
-        Path workDir = temporaryFolder.newFolder().toPath();
+        Path workDir = temporaryFolder.directory( "dir" ).toPath();
         Stores.StoreUsage storeUsageBefore = Stores.StoreUsage.loadOrCreateIfAbsent( workDir );
 
         String store = randomUUID().toString();
@@ -101,7 +107,7 @@ public class StoresTest
         Benchmark benchmark = randomBenchmark();
         storeUsageBefore.register( store, benchmarkGroup, benchmark );
 
-        storeUsageBefore.register( store, benchmarkGroup, benchmark );
+        assertThrows( IllegalStateException.class, () -> storeUsageBefore.register( store, benchmarkGroup, benchmark ) );
     }
 
     private static BenchmarkGroup randomBenchmarkGroup()

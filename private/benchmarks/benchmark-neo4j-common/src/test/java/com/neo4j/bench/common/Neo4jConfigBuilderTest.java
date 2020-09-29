@@ -9,8 +9,7 @@ import com.google.common.collect.Lists;
 import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.bench.model.util.JsonUtil;
 import org.apache.commons.io.FileUtils;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
@@ -22,17 +21,21 @@ import java.util.List;
 import java.util.Map;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@TestDirectoryExtension
 public class Neo4jConfigBuilderTest
 {
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @Inject
+    public TestDirectory temporaryFolder;
 
     private File defaultNeo4jConfigFile = FileUtils.toFile( Neo4jConfigBuilderTest.class.getResource( "/neo4j.conf" ) );
 
@@ -77,7 +80,7 @@ public class Neo4jConfigBuilderTest
     public void shouldSerializeNeo4jConfigFromFile() throws IOException
     {
         // given
-        File neo4jConfig = temporaryFolder.newFile();
+        File neo4jConfig = temporaryFolder.file( "config" );
         FileWriter fileWriter = new FileWriter( neo4jConfig );
         fileWriter.append( "key1=value1" );
         fileWriter.append( "\n" );
@@ -95,7 +98,7 @@ public class Neo4jConfigBuilderTest
     @Test
     public void shouldStoreSettingInFile() throws Exception
     {
-        Path neo4jConfigFile = temporaryFolder.newFile().toPath();
+        Path neo4jConfigFile = temporaryFolder.file( "config" ).toPath();
         Neo4jConfigBuilder.fromFile( defaultNeo4jConfigFile )
                           .withSetting( GraphDatabaseSettings.auth_enabled, "false" )
                           .writeToFile( neo4jConfigFile );
@@ -117,7 +120,7 @@ public class Neo4jConfigBuilderTest
 
     private Object serializeAndDeserialize( Object before ) throws IOException
     {
-        File jsonFile = temporaryFolder.newFile();
+        File jsonFile = temporaryFolder.file( "config" );
         JsonUtil.serializeJson( jsonFile.toPath(), before );
         Object after = JsonUtil.deserializeJson( jsonFile.toPath(), before.getClass() );
         assertThat( before, equalTo( after ) );
@@ -126,7 +129,7 @@ public class Neo4jConfigBuilderTest
 
     private void assertSerialization( Neo4jConfig config0 ) throws IOException
     {
-        Path configFile = temporaryFolder.newFile().toPath();
+        Path configFile = temporaryFolder.file( "config" ).toPath();
         Neo4jConfigBuilder.writeToFile( config0, configFile );
         Neo4jConfig config1 = Neo4jConfigBuilder.fromFile( configFile ).build();
         assertThat( config0, equalTo( config1 ) );

@@ -5,29 +5,31 @@
  */
 package com.neo4j.bench.common.profiling;
 
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.junit.Assert.assertThat;
+import com.google.common.collect.ImmutableMap;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
-import com.google.common.collect.ImmutableMap;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 
+@TestDirectoryExtension
 public class StackCollapseWriterTest
 {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @Inject
+    public TestDirectory temporaryFolder;
 
     @Test
     public void writeStackCollapse() throws IOException
     {
         // given
-        File file = temporaryFolder.newFile();
+        File file = temporaryFolder.file( "stackcollapse" );
         ImmutableMap<String,Long> map = ImmutableMap.of( "stack1", 500L, "stack1;stack2", 600L );
         StackCollapse stackCollapse =
                 consumer -> map.entrySet().forEach( entry -> consumer.accept( entry.getKey(), entry.getValue() ) );

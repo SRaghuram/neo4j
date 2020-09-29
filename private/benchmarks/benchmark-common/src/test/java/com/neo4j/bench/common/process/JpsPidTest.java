@@ -8,9 +8,7 @@ package com.neo4j.bench.common.process;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.model.process.JvmArgs;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,15 +18,15 @@ import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collections;
 
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.rule.TestDirectory;
+
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 public class JpsPidTest
 {
     private static final Logger LOG = LoggerFactory.getLogger( JpsPidTest.class );
-
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     public static class JustForMain
     {
@@ -58,7 +56,7 @@ public class JpsPidTest
     public void shouldFindPidWithJPSAndPgrepAndPS()
     {
         Jvm jvm = Jvm.defaultJvm();
-        JvmArgs jvmArgs = JvmArgs.from(  "-Xmx4g" );
+        JvmArgs jvmArgs = JvmArgs.from( "-Xmx4g" );
         JvmProcessArgs jvmProcessArgs = JvmProcessArgs.argsForJvmProcess( Collections.emptyList(),
                                                                           jvm,
                                                                           jvmArgs,

@@ -18,9 +18,9 @@ import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.JvmVersion;
 import com.neo4j.bench.common.util.Resources;
 import org.apache.commons.io.filefilter.RegexFileFilter;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
@@ -33,22 +33,24 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
+
 import static com.neo4j.bench.model.model.Benchmark.Mode;
 import static com.neo4j.bench.model.model.Benchmark.benchmarkFor;
 import static java.lang.String.format;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class OOMProfilerTest
 {
 
     private static final Pattern HEAP_DUMP_FILE_PATTERN = Pattern.compile( "java_pid([0-9]+)\\.hprof" );
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     private JvmVersion jvmVersion;
     private BenchmarkGroup benchmarkGroup;
@@ -56,15 +58,15 @@ public class OOMProfilerTest
     private ForkDirectory forkDirectory;
     private Path forkDirectoryPath;
 
-    @Before
-    public void setUp() throws Exception
+    @BeforeEach
+    public void setUp( @TempDir Path path ) throws Exception
     {
         // given
         Jvm jvm = Jvm.defaultJvmOrFail();
         jvmVersion = jvm.version();
 
         benchmarkGroup = new BenchmarkGroup( "group" );
-        BenchmarkGroupDirectory benchmarkGroupDirectory = BenchmarkGroupDirectory.findOrCreateAt( temporaryFolder.newFolder().toPath(), benchmarkGroup );
+        BenchmarkGroupDirectory benchmarkGroupDirectory = BenchmarkGroupDirectory.findOrCreateAt( path, benchmarkGroup );
 
         benchmark = benchmarkFor(
                 "description",
@@ -179,7 +181,7 @@ public class OOMProfilerTest
                     .redirectOutput( ProcessBuilder.Redirect.INHERIT )
                     .start();
             int waitFor = process.waitFor();
-            assertNotEquals( "process should exit with non-zero code", 0, waitFor );
+            assertNotEquals( 0, waitFor, "process should exit with non-zero code" );
         }
         // then
         Path oomDirectory = OOMProfiler.getOOMDirectory( forkDirectory );

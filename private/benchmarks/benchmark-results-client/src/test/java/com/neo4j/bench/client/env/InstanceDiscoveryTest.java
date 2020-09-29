@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2019 "Neo4j,"
+ * Copyright (c) 2002-2020 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
@@ -11,9 +11,8 @@ import com.amazonaws.services.batch.model.ComputeResource;
 import com.amazonaws.services.batch.model.DescribeComputeEnvironmentsResult;
 import com.neo4j.bench.model.model.Instance;
 import org.apache.commons.lang3.SystemUtils;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import oshi.SystemInfo;
 
@@ -22,15 +21,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static java.util.Collections.emptyList;
-import static org.junit.Assert.assertEquals;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 
 public class InstanceDiscoveryTest
 {
-
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
 
     @Test
     public void discoverServerInstance() throws Exception
@@ -90,8 +88,6 @@ public class InstanceDiscoveryTest
 
         InstanceDiscovery instanceDiscovery = new InstanceDiscovery( () -> awsBatch );
         // when
-        expectedException.expect( RuntimeException.class );
-        expectedException.expectMessage( "unexpected empty instance types" );
-        instanceDiscovery.currentInstance( sysenv );
+        assertThrows( RuntimeException.class, () -> instanceDiscovery.currentInstance( sysenv ), "unexpected empty instance types" );
     }
 }
