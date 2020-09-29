@@ -95,7 +95,7 @@ class RollUpApply extends AbstractCypherBenchmark {
     val table = SemanticTable()
       .addNode(astVariable(lhs))
       .addNode(astVariable(rhs))
-      .addVariable(astVariable(list))
+      .addTypeInfoCTAny(astVariable(list))
 
     TestSetup(produceResults, table, resultColumns)
   }

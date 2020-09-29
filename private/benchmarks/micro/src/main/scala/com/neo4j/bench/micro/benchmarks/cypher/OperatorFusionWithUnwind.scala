@@ -77,7 +77,7 @@ class OperatorFusionWithUnwind extends AbstractCypherBenchmark {
 
     val v0 = astVariable("v0")
     val unwind = plans.UnwindCollection(plans.Argument()(IdGen), v0.name, biglistParameter)(IdGen)
-    var table = SemanticTable().addVariable(v0)
+    var table = SemanticTable().addTypeInfoCTAny(v0)
     var plan: LogicalPlan = unwind
 
     var i = 0
@@ -85,7 +85,7 @@ class OperatorFusionWithUnwind extends AbstractCypherBenchmark {
       i += 1
       val v1 = astVariable(s"v${i}")
       plan = plans.UnwindCollection(plan, v1.name, onelistParameter)(IdGen)
-      table = table.addVariable(v1)
+      table = table.addTypeInfoCTAny(v1)
     }
     val resultColumns = List(v0.name, s"v${i}")
     val produceResults = plans.ProduceResult(plan, resultColumns)(IdGen)

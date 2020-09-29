@@ -37,7 +37,7 @@ class ExecutionGraphDefinitionBuilder(operatorFuserFactory: OperatorFuserFactory
   }
 
   override def newVariable(variable: Variable): Unit = {
-    semanticTable = semanticTable.addVariable(variable)
+    semanticTable = semanticTable.addTypeInfoCTAny(variable)
   }
 
   def withBreak(): this.type = {

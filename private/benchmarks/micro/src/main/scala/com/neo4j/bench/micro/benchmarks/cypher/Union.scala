@@ -95,7 +95,7 @@ class Union extends AbstractCypherBenchmark {
     val produceResults = plans.ProduceResult(union, columns = projectedNames)(IdGen)
 
     val table = (a +: projectedNames).foldLeft(SemanticTable()) {
-      case (t, name) => t.addVariable(astVariable(name))
+      case (t, name) => t.addTypeInfoCTAny(astVariable(name))
     }
 
     TestSetup(produceResults, table, projectedNames)
