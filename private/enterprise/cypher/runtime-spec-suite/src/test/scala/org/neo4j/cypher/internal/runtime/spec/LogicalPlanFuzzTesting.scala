@@ -130,7 +130,7 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with 
     val randVals = RandomValues.create(new Random(seed.long._1))
     val parameters = state.parameters.map(_ -> randVals.nextValue().asObject()).toMap
 
-    val cost = CardinalityCostModel(logicalQuery.logicalPlan, QueryGraphSolverInput.empty, logicalQuery.cardinalities)
+    val cost = CardinalityCostModel.costFor(logicalQuery.logicalPlan, QueryGraphSolverInput.empty, logicalQuery.cardinalities)
 
     val clues = Seq(
       s"plan = $plan",
