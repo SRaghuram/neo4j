@@ -707,6 +707,11 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
       "Variable `x` not defined (line 1, column 18 (offset: 17))")
   }
 
+  test("Should disallow introducing variables in pattern expressions") {
+    executeAndEnsureError("MATCH (x) WHERE (x)-[r]-(y) RETURN x",
+      "PatternExpressions are not allowed to introduce new variables: 'r'. (line 1, column 22 (offset: 21))")
+  }
+
   private def executeAndEnsureErrorForAllRuntimes(query: String, expected: String, params: (String,Any)*): Unit = {
     executeAndEnsureErrorForAllRuntimes(query, List(expected), params:_*)
   }
