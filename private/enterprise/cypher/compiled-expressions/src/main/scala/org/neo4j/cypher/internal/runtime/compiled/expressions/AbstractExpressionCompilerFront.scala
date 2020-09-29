@@ -1730,7 +1730,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                           maxDegreeExpression: Expression,
                           comparison: (IntermediateRepresentation, IntermediateRepresentation) => IntermediateRepresentation,
                           computeMax: IntermediateRepresentation => IntermediateRepresentation): Option[IntermediateExpression] = {
-    val methodName = degreeMethod(dir)
+    val methodName = s"${degreeMethod(dir)}WithMax"
     val localDegree = namer.nextVariableName("degree")
     val localDegreeInt = namer.nextVariableName("degreeInt")
 

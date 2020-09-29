@@ -44,39 +44,39 @@ abstract class CheckDegreePrimitive(offset: Int, typ: Option[String], maxDegree:
 case class HasDegreeGreaterThanPrimitive(offset: Int, typ: Option[String], direction: SemanticDirection, maxDegree: Expression)
   extends CheckDegreePrimitive(offset, typ, maxDegree) {
   override protected def computePredicate(state: QueryState, node: Long, max: Int): Boolean =
-    state.query.nodeGetDegree(max + 1, node, direction, state.cursors.nodeCursor) > max
+    state.query.nodeGetDegreeWithMax(max + 1, node, direction, state.cursors.nodeCursor) > max
   override protected def computePredicate(state: QueryState, node: Long, relType:Int, max: Int): Boolean =
-    state.query.nodeGetDegree(max + 1, node, direction, relType, state.cursors.nodeCursor) > max
+    state.query.nodeGetDegreeWithMax(max + 1, node, direction, relType, state.cursors.nodeCursor) > max
 }
 
 case class HasDegreeGreaterThanOrEqualPrimitive(offset: Int, typ: Option[String], direction: SemanticDirection, maxDegree: Expression)
   extends CheckDegreePrimitive(offset, typ, maxDegree) {
   override protected def computePredicate(state: QueryState, node: Long, max: Int): Boolean =
-    state.query.nodeGetDegree(max, node, direction, state.cursors.nodeCursor) >= max
+    state.query.nodeGetDegreeWithMax(max, node, direction, state.cursors.nodeCursor) >= max
   override protected def computePredicate(state: QueryState, node: Long, relType:Int, max: Int): Boolean =
-    state.query.nodeGetDegree(max, node, direction, relType, state.cursors.nodeCursor) >= max
+    state.query.nodeGetDegreeWithMax(max, node, direction, relType, state.cursors.nodeCursor) >= max
 }
 
 case class HasDegreePrimitive(offset: Int, typ: Option[String], direction: SemanticDirection, maxDegree: Expression)
   extends CheckDegreePrimitive(offset, typ, maxDegree) {
   override protected def computePredicate(state: QueryState, node: Long, max: Int): Boolean =
-    state.query.nodeGetDegree(max + 1, node, direction, state.cursors.nodeCursor) == max
+    state.query.nodeGetDegreeWithMax(max + 1, node, direction, state.cursors.nodeCursor) == max
   override protected def computePredicate(state: QueryState, node: Long, relType:Int, max: Int): Boolean =
-    state.query.nodeGetDegree(max + 1, node, direction, relType, state.cursors.nodeCursor) == max
+    state.query.nodeGetDegreeWithMax(max + 1, node, direction, relType, state.cursors.nodeCursor) == max
 }
 
 case class HasDegreeLessThanPrimitive(offset: Int, typ: Option[String], direction: SemanticDirection, maxDegree: Expression)
   extends CheckDegreePrimitive(offset, typ, maxDegree) {
   override protected def computePredicate(state: QueryState, node: Long, max: Int): Boolean =
-    state.query.nodeGetDegree(max, node, direction, state.cursors.nodeCursor) < max
+    state.query.nodeGetDegreeWithMax(max, node, direction, state.cursors.nodeCursor) < max
   override protected def computePredicate(state: QueryState, node: Long, relType:Int, max: Int): Boolean =
-    state.query.nodeGetDegree(max, node, direction, relType, state.cursors.nodeCursor) < max
+    state.query.nodeGetDegreeWithMax(max, node, direction, relType, state.cursors.nodeCursor) < max
 }
 
 case class HasDegreeLessThanOrEqualPrimitive(offset: Int, typ: Option[String], direction: SemanticDirection, maxDegree: Expression)
   extends CheckDegreePrimitive(offset, typ, maxDegree) {
   override protected def computePredicate(state: QueryState, node: Long, max: Int): Boolean =
-    state.query.nodeGetDegree(max + 1 , node, direction, state.cursors.nodeCursor) <= max
+    state.query.nodeGetDegreeWithMax(max + 1 , node, direction, state.cursors.nodeCursor) <= max
   override protected def computePredicate(state: QueryState, node: Long, relType:Int, max: Int): Boolean =
-    state.query.nodeGetDegree(max + 1, node, direction, relType, state.cursors.nodeCursor) <=  max
+    state.query.nodeGetDegreeWithMax(max + 1, node, direction, relType, state.cursors.nodeCursor) <=  max
 }
