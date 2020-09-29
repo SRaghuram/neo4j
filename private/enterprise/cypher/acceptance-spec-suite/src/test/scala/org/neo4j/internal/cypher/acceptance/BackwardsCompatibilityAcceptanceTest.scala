@@ -291,6 +291,50 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     graph.getMaybeNodeConstraint("Label", Seq("prop")).isDefined should be(true)
   }
 
+  test("create node key constraint with IF NOT EXISTS should not work with CYPHER 3.5") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 CREATE CONSTRAINT IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS NODE KEY")
+    }
+    exception.getMessage should include("Creating node key constraint using `IF NOT EXISTS` is not supported in this Cypher version.")
+
+    // THEN
+    graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
+  }
+
+  test("create uniqueness constraint with IF NOT EXISTS should not work with CYPHER 3.5") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 CREATE CONSTRAINT IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS UNIQUE")
+    }
+    exception.getMessage should include("Creating uniqueness constraint using `IF NOT EXISTS` is not supported in this Cypher version.")
+
+    // THEN
+    graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
+  }
+
+  test("create node existence constraint with IF NOT EXISTS should not work with CYPHER 3.5") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 CREATE CONSTRAINT IF NOT EXISTS ON (n:Label) ASSERT EXISTS(n.prop)")
+    }
+    exception.getMessage should include("Creating node existence constraint using `IF NOT EXISTS` is not supported in this Cypher version.")
+
+    // THEN
+    graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
+  }
+
+  test("create relationship existence constraint with IF NOT EXISTS should not work with CYPHER 3.5") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS(n.prop)")
+    }
+    exception.getMessage should include("Creating relationship existence constraint using `IF NOT EXISTS` is not supported in this Cypher version.")
+
+    // THEN
+    graph.getMaybeRelationshipConstraint("Label", "prop").isEmpty should be(true)
+  }
+
   test("existential subquery should not work with CYPHER 3.5") {
     // WHEN
     val exception = the[SyntaxException] thrownBy {
@@ -387,112 +431,5 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
       executeSingle("CYPHER 4.1 REVOKE EXECUTE ADMIN PROCEDURES ON DBMS FROM custom")
     }
     exception.getMessage should include("EXECUTE ADMIN PROCEDURES is not supported in this Cypher version.")
-  }
-
-  test("create index with IF NOT EXISTS syntax should not work with CYPHER 4.1") {
-    // WHEN
-    val exception41 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 CREATE INDEX my_index IF NOT EXISTS FOR (n:Label) ON (n.prop)")
-    }
-    exception41.getMessage should include("Creating index using `IF NOT EXISTS` is not supported in this Cypher version.")
-
-    // THEN
-    graph.getMaybeIndex("Label", Seq("prop")).isEmpty should be(true)
-  }
-
-  test("drop index syntax with IF EXISTS should not work with CYPHER 4.1") {
-    // GIVEN
-    graph.createIndexWithName("my_index", "Label", "prop")
-
-    // WHEN
-    val exception41 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 DROP INDEX my_index IF EXISTS")
-    }
-    exception41.getMessage should include("Dropping index using `IF EXISTS` is not supported in this Cypher version.")
-
-    // THEN
-    graph.getMaybeIndex("Label", Seq("prop")).isDefined should be(true)
-  }
-
-  test("create node key constraint with IF NOT EXISTS should not work with CYPHER 3.5-4.1") {
-    // WHEN
-    val exception35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 CREATE CONSTRAINT IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS NODE KEY")
-    }
-    exception35.getMessage should include("Creating node key constraint using `IF NOT EXISTS` is not supported in this Cypher version.")
-
-    // WHEN
-    val exception41 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 CREATE CONSTRAINT my_constraint IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS NODE KEY")
-    }
-    exception41.getMessage should include("Creating node key constraint using `IF NOT EXISTS` is not supported in this Cypher version.")
-
-    // THEN
-    graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
-  }
-
-  test("create uniqueness constraint with IF NOT EXISTS should not work with CYPHER 3.5-4.1") {
-    // WHEN
-    val exception35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 CREATE CONSTRAINT IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS UNIQUE")
-    }
-    exception35.getMessage should include("Creating uniqueness constraint using `IF NOT EXISTS` is not supported in this Cypher version.")
-
-    // WHEN
-    val exception41 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 CREATE CONSTRAINT IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS UNIQUE")
-    }
-    exception41.getMessage should include("Creating uniqueness constraint using `IF NOT EXISTS` is not supported in this Cypher version.")
-
-    // THEN
-    graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
-  }
-
-  test("create node existence constraint with IF NOT EXISTS should not work with CYPHER 3.5-4.1") {
-    // WHEN
-    val exception35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 CREATE CONSTRAINT IF NOT EXISTS ON (n:Label) ASSERT EXISTS(n.prop)")
-    }
-    exception35.getMessage should include("Creating node existence constraint using `IF NOT EXISTS` is not supported in this Cypher version.")
-
-    // WHEN
-    val exception41 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 CREATE CONSTRAINT my_constraint IF NOT EXISTS ON (n:Label) ASSERT EXISTS(n.prop)")
-    }
-    exception41.getMessage should include("Creating node existence constraint using `IF NOT EXISTS` is not supported in this Cypher version.")
-
-    // THEN
-    graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
-  }
-
-  test("create relationship existence constraint with IF NOT EXISTS should not work with CYPHER 3.5-4.1") {
-    // WHEN
-    val exception35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS(n.prop)")
-    }
-    exception35.getMessage should include("Creating relationship existence constraint using `IF NOT EXISTS` is not supported in this Cypher version.")
-
-    // WHEN
-    val exception41 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS(n.prop)")
-    }
-    exception41.getMessage should include("Creating relationship existence constraint using `IF NOT EXISTS` is not supported in this Cypher version.")
-
-    // THEN
-    graph.getMaybeRelationshipConstraint("Label", "prop").isEmpty should be(true)
-  }
-
-  test("drop constraint syntax with IF EXISTS should not work with CYPHER 4.1") {
-    // GIVEN
-    graph.createNodeKeyConstraintWithName("my_constraint", "Label", "prop")
-
-    // WHEN
-    val exception41 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 DROP CONSTRAINT my_constraint IF EXISTS")
-    }
-    exception41.getMessage should include("Dropping constraint using `IF EXISTS` is not supported in this Cypher version.")
-
-    // THEN
-    graph.getMaybeNodeConstraint("Label", Seq("prop")).isDefined should be(true)
   }
 }
