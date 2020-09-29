@@ -16,7 +16,7 @@ case class UserDefinedAggregator(callToken: Int, allowed: Array[String]) extends
   override def newConcurrentReducer: Reducer = throw new UnsupportedOperationException
 
   override val standardShallowSize: Long =
-    HeapEstimator.shallowSizeOfInstance(classOf[PercentileContStandardReducer])
+    HeapEstimator.shallowSizeOfInstance(classOf[UserDefinedStandardReducer])
 }
 
 object UserDefinedAggregator {
