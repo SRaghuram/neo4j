@@ -29,14 +29,16 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     globalProcedures.registerFunction(classOf[TestFunction])
     globalProcedures.registerAggregationFunction(classOf[TestFunction])
     selectDatabase(SYSTEM_DATABASE_NAME)
+    execute(s"REVOKE ACCESS ON DEFAULT DATABASE FROM ${PredefinedRoles.PUBLIC}")
     execute(s"REVOKE EXECUTE FUNCTION * ON DBMS FROM ${PredefinedRoles.PUBLIC}")
-    //    execute("SHOW ROLE PUBLIC PRIVILEGES").toList should be(List(granted(executeBoostedFromConfig).procedure("dbms.security.listUsers").role("PUBLIC").map))
+    execute(s"REVOKE EXECUTE PROCEDURE * ON DBMS FROM ${PredefinedRoles.PUBLIC}")
+    execute("SHOW ROLE PUBLIC PRIVILEGES").toSet should be(grantedFromConfig("public.function", "PUBLIC"))
   }
 
   //noinspection ScalaDeprecation
   override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(
     GraphDatabaseSettings.auth_enabled -> TRUE,
-    GraphDatabaseSettings.procedure_roles -> "db.labels:funcRole,default;db.property*:funcRole;dbms.security.listUsers:PUBLIC",
+    GraphDatabaseSettings.procedure_roles -> "test.safe.read.property:funcRole,default;test.safe.read.sum.*:funcRole;public.function:PUBLIC",
     GraphDatabaseSettings.default_allowed -> "default"
   )
 
@@ -124,6 +126,28 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     }) should be(1)
   }
 
+  test("should execute builtin function with DENY") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+    execute("DENY EXECUTE FUNCTION toLower ON DBMS TO custom")
+
+    // THEN
+    executeOnDefault("foo", "bar", "RETURN toLower('A')", resultHandler = (row, _) => {
+      row.get("toLower('A')") should equal("a")
+    }) should be(1)
+  }
+
+  test("should execute builtin (user defined) function with DENY") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+    execute("DENY EXECUTE FUNCTION * ON DBMS TO custom")
+
+    // THEN
+    executeOnDefault("foo", "bar", "RETURN date('2020-09-25').year AS year", resultHandler = (row, _) => {
+      row.get("year") should equal(2020)
+    }) should be(1)
+  }
+
   test("should fail execute user defined function without any function privileges") {
     // GIVEN
     setupUserAndGraph("foo", "bar")
@@ -197,7 +221,6 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
           executeOnDefault("foo", "bar", "RETURN test.function() AS result")
         }).getMessage should include(FAIL_EXECUTE_FUNC)
       }
-
   }
 
   test("should get default result when executing user defined function without privilege required inside") {
@@ -309,6 +332,17 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
   test("should execute builtin aggregation function without any function privileges") {
     // GIVEN
     setupUserAndGraph("foo", "bar")
+
+    // THEN
+    executeOnDefault("foo", "bar", "UNWIND [1,2,3] AS x RETURN sum(x)", resultHandler = (row, _) => {
+      row.get("sum(x)") should equal(6)
+    }) should be(1)
+  }
+
+  test("should execute builtin aggregation function with DENY") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+    execute("DENY EXECUTE FUNCTION sum ON DBMS TO custom")
 
     // THEN
     executeOnDefault("foo", "bar", "UNWIND [1,2,3] AS x RETURN sum(x)", resultHandler = (row, _) => {
@@ -497,7 +531,179 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
 
   // ALL ON DBMS
 
+  test("should execute any function boosted with ALL ON DBMS") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
 
+    // WHEN
+    execute("GRANT TRAVERSE ON GRAPH * NODES B TO custom")
+    execute("GRANT ALL ON DBMS TO custom")
+
+    // THEN
+    executeOnDefault("foo", "bar", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result", resultHandler = (row, _) => {
+      row.get("result") should equal(6)
+    }) should be(1)
+  }
+
+  test("should execute function without boosting when granted all on dbms denied execute boosted") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT TRAVERSE ON GRAPH * NODES B TO custom")
+    execute("GRANT ALL ON DBMS TO custom")
+    execute("DENY EXECUTE BOOSTED FUNCTION * ON DBMS TO custom")
+
+    // THEN
+    executeOnDefault("foo", "bar", "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
+      row.get("result") should equal(0)
+    }) should be(1)
+  }
+
+  test("should fail execute function when denied all on dbms granted execute") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
+
+    // WHEN
+    execute("GRANT EXECUTE FUNCTION test.function ON DBMS TO custom")
+    execute("DENY ALL ON DBMS TO custom")
+
+    // THEN
+    (the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("foo", "bar", "RETURN test.function()")
+    }).getMessage should include(FAIL_EXECUTE_FUNC)
+  }
+
+  // EXECUTE BOOSTED FUNCTION from config settings
+
+  test("executing function with boosted privileges from procedure_roles config") {
+    // GIVEN
+    setupUserAndGraph(rolename = "funcRole")
+    execute("GRANT TRAVERSE ON GRAPH * NODES B TO funcRole")
+
+    // THEN
+    executeOnDefault("joe", "soap", "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
+      row.get("result") should equal(6)
+    }) should be(1)
+  }
+
+  test("should not be boosted when not matching procedure_roles config") {
+    // GIVEN
+    setupUserAndGraph(rolename = "funcRole")
+    execute("GRANT TRAVERSE ON GRAPH * NODES B TO funcRole")
+
+    // THEN
+    withClue("Without EXECUTE privilege") {
+      (the[AuthorizationViolationException] thrownBy {
+        executeOnDefault("joe", "soap", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result")
+      }).getMessage should include(FAIL_EXECUTE_AGG_FUNC)
+    }
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT EXECUTE FUNCTION * ON DBMS TO funcRole")
+
+    // THEN
+    withClue("With EXECUTE privilege") {
+      (the[QueryExecutionException] thrownBy {
+      executeOnDefault("joe", "soap", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result")
+      }).getMessage should include("No such property")
+    }
+  }
+
+  test("executing function with boosted privileges from procedure_roles and default_allowed config") {
+    // GIVEN
+    setupUserAndGraph(rolename = "default")
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO default")
+
+    // THEN
+    executeOnDefault("joe", "soap", "MATCH (a:A) RETURN test.safe.read.property(a, 'prop', 'N/A') AS result", resultHandler = (row, _) => {
+      row.get("result") should equal(1)
+    }) should be(1)
+  }
+
+  test("executing function with boosted privileges from default_allowed config") {
+    // GIVEN
+    setupUserAndGraph(rolename = "default")
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO default")
+
+    // THEN
+    executeOnDefault("joe", "soap", "MATCH (a:A) RETURN test.read.property(a, 'prop') AS result", resultHandler = (row, _) => {
+      row.get("result") should equal(1)
+    }) should be(1)
+  }
+
+  test("should not be boosted for default_allowed when function matching procedure_roles config") {
+    // GIVEN
+    setupUserAndGraph(rolename = "default")
+    execute("GRANT TRAVERSE ON GRAPH * NODES B TO default")
+
+    // THEN
+    withClue("Without EXECUTE privilege") {
+      (the[AuthorizationViolationException] thrownBy {
+        executeOnDefault("joe", "soap", "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result")
+      }).getMessage should include(FAIL_EXECUTE_AGG_FUNC)
+    }
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT EXECUTE FUNCTION * ON DBMS TO default")
+
+    // THEN
+    withClue("With EXECUTE privilege") {
+      executeOnDefault("joe", "soap", "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result", resultHandler = (row, _) => {
+        row.get("result") should equal(0)
+      }) should be(1)
+    }
+  }
+
+  test("should respect combined privileges from config and system graph") {
+    // GIVEN
+    setupUserAndGraph(rolename = "funcRole")
+    execute("GRANT TRAVERSE ON GRAPH * NODES B TO funcRole")
+    execute("DENY EXECUTE FUNCTION * ON DBMS TO funcRole")
+
+    // THEN
+    withClue("With DENY EXECUTE privilege") {
+      (the[AuthorizationViolationException] thrownBy {
+        executeOnDefault("joe", "soap", "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result")
+      }).getMessage should include(FAIL_EXECUTE_AGG_FUNC)
+    }
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("REVOKE DENY EXECUTE FUNCTION * ON DBMS FROM funcRole")
+    execute("DENY EXECUTE BOOSTED FUNCTION * ON DBMS TO funcRole")
+
+    // THEN
+    withClue("With DENY EXECUTE BOOSTED privilege") {
+      (the[AuthorizationViolationException] thrownBy {
+        executeOnDefault("joe", "soap", "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result")
+      }).getMessage should include(FAIL_EXECUTE_AGG_FUNC)
+    }
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT EXECUTE FUNCTION * ON DBMS TO funcRole")
+
+    // THEN
+    withClue("With GRANT EXECUTE and DENY EXECUTE BOOSTED privilege") {
+      executeOnDefault("joe", "soap", "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result", resultHandler = (row, _) => {
+        row.get("result") should equal(0)
+      }) should be(1)
+    }
+  }
+
+  test("should get privilege for PUBLIC from config") {
+    // GIVEN
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+    execute("GRANT ACCESS ON DATABASE * TO PUBLIC")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "RETURN public.function() AS result", resultHandler = (row, _) => {
+      row.get("result") should be(42)
+    }) should be(1)
+  }
 
   // Helper methods
 
@@ -514,6 +720,9 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
 class TestFunction {
   @UserFunction( "test.function" )
   def function(): String = "OK"
+
+  @UserFunction( "public.function" )
+  def publicFunction(): Long = 42
 
   @UserFunction( "test.read.property" )
   def readProperty(@Name("node") node: Node, @Name("propertyKey") propertyKey: String): AnyRef = node.getProperty(propertyKey)
