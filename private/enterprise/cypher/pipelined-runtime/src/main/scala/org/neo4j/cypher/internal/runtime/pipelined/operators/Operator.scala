@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.interpreted.profiler.InterpretedProfileInformation
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException
-import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.AccumulatorAndMorselInput
+import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.AccumulatorAndPayloadInput
 import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.DataInput
 import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.MorselAccumulatorsInput
 import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.MorselParallelizerInput
@@ -23,7 +23,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndData
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndPayload
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
@@ -48,14 +48,14 @@ trait OperatorInput {
    * @param n the maximum number of accumulators to take
    * @return the input accumulator, or `null` if no input is available
    */
-  def takeAccumulators[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](n: Int): IndexedSeq[ACC]
+  def takeAccumulators[ACC_DATA <: AnyRef, ACC <: MorselAccumulator[ACC_DATA]](n: Int): IndexedSeq[ACC]
 
   /**
    * Take the next input accumulator from the LHS and payload (e.g., morsel) from the RHS.
    *
    * @return the input accumulator and the morsel, or `null` if no input is available
    */
-  def takeAccumulatorAndData[DATA <: AnyRef, ACC <: MorselAccumulator[DATA], PAYLOAD <: AnyRef](): AccumulatorAndData[DATA, ACC, PAYLOAD]
+  def takeAccumulatorAndPayload[ACC_DATA <: AnyRef, ACC <: MorselAccumulator[ACC_DATA], PAYLOAD <: AnyRef](): AccumulatorAndPayload[ACC_DATA, ACC, PAYLOAD]
 
   /**
    * Take the next data.
@@ -257,27 +257,27 @@ trait AccumulatorsInputOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DA
   def nextTasks(input: IndexedSeq[ACC], resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[DATA, ACC]]
 }
 
-trait AccumulatorsAndMorselInputOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA], PAYLOAD <: AnyRef] extends OperatorState {
+trait AccumulatorsAndMorselInputOperatorState[ACC_DATA <: AnyRef, ACC <: MorselAccumulator[ACC_DATA], PAYLOAD <: AnyRef] extends OperatorState {
 
   final override def nextTasks(state: PipelinedQueryState,
                                operatorInput: OperatorInput,
                                parallelism: Int,
                                resources: QueryResources,
-                               argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[DATA, ACC]] = {
-    val accAndMorsel = operatorInput.takeAccumulatorAndData[DATA, ACC, PAYLOAD]()
+                               argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[ACC_DATA, ACC]] = {
+    val accAndMorsel = operatorInput.takeAccumulatorAndPayload[ACC_DATA, ACC, PAYLOAD]()
     if (accAndMorsel != null) {
       try {
         nextTasks(accAndMorsel)
       } catch {
         case NonFatalCypherError(t) =>
-          throw SchedulingInputException(AccumulatorAndMorselInput(accAndMorsel), t)
+          throw SchedulingInputException(AccumulatorAndPayloadInput(accAndMorsel), t)
       }
     } else {
       null
     }
   }
 
-  def nextTasks(input: AccumulatorAndData[DATA, ACC, PAYLOAD]): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[DATA, ACC]]
+  def nextTasks(input: AccumulatorAndPayload[ACC_DATA, ACC, PAYLOAD]): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[ACC_DATA, ACC]]
 }
 
 trait DataInputOperatorState[DATA <: AnyRef] extends OperatorState {
@@ -436,7 +436,7 @@ trait ContinuableOperatorTaskWithMorsel extends ContinuableOperatorTask {
   override def estimatedHeapUsage: Long = inputMorsel.estimatedHeapUsage
 }
 
-trait ContinuableOperatorTaskWithAccumulators[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extends ContinuableOperatorTask {
+trait ContinuableOperatorTaskWithAccumulators[ACC_DATA <: AnyRef, ACC <: MorselAccumulator[ACC_DATA]] extends ContinuableOperatorTask {
   val accumulators: IndexedSeq[ACC]
 
   override protected def closeInput(operatorCloser: OperatorCloser): Unit = {
@@ -464,7 +464,7 @@ trait ContinuableOperatorTaskWithAccumulators[DATA <: AnyRef, ACC <: MorselAccum
   override def estimatedHeapUsage: Long = 0
 }
 
-trait ContinuableOperatorTaskWithMorselAndAccumulator[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]]
+trait ContinuableOperatorTaskWithMorselAndAccumulator[ACC_DATA <: AnyRef, ACC <: MorselAccumulator[ACC_DATA]]
   extends ContinuableOperatorTaskWithMorsel {
   val accumulator: ACC
 

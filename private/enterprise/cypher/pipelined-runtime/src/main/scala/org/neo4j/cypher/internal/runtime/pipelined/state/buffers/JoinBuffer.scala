@@ -10,14 +10,14 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndData
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndPayload
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.DataHolder
 
-trait JoinBuffer[DATA <: AnyRef,
-  LHS_ACC <: MorselAccumulator[DATA],
+trait JoinBuffer[ACC_DATA <: AnyRef,
+  LHS_ACC <: MorselAccumulator[ACC_DATA],
   PAYLOAD <: AnyRef
 ] extends ArgumentCountUpdater
-  with Source[AccumulatorAndData[DATA, LHS_ACC, PAYLOAD]]
+  with Source[AccumulatorAndPayload[ACC_DATA, LHS_ACC, PAYLOAD]]
   with DataHolder {
 
   def filterCancelledArguments(accumulator: MorselAccumulator[_], rhsMorsel: Morsel): Boolean

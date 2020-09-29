@@ -62,7 +62,7 @@ class ValueHashJoinOperator(val workIdentity: WorkIdentity,
     this
   }
 
-  override def nextTasks(accAndMorsel: Buffers.AccumulatorAndData[Morsel, HashTable, Morsel]): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[Morsel, HashTable]] =
+  override def nextTasks(accAndMorsel: Buffers.AccumulatorAndPayload[Morsel, HashTable, Morsel]): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[Morsel, HashTable]] =
     Array(new OTask(accAndMorsel.acc, accAndMorsel.payload))
 
   class OTask(override val accumulator: HashTable, rhsMorsel: Morsel)

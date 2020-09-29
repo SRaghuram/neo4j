@@ -27,7 +27,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndData
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndPayload
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.JoinBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
 import org.neo4j.util.Preconditions
@@ -143,8 +143,8 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     buffers.source[ACC](bufferId).take(n)
   }
 
-  override def takeAccumulatorAndData[DATA <: AnyRef, ACC <: MorselAccumulator[DATA], PAYLOAD <: AnyRef](bufferId: BufferId): AccumulatorAndData[DATA, ACC, PAYLOAD] = {
-    buffers.source[AccumulatorAndData[DATA, ACC, PAYLOAD]](bufferId).take()
+  override def takeAccumulatorAndPayload[ACC_DATA <: AnyRef, ACC <: MorselAccumulator[ACC_DATA], PAYLOAD <: AnyRef](bufferId: BufferId): AccumulatorAndPayload[ACC_DATA, ACC, PAYLOAD] = {
+    buffers.source[AccumulatorAndPayload[ACC_DATA, ACC, PAYLOAD]](bufferId).take()
   }
 
   override def takeData[DATA <: AnyRef](bufferId: BufferId): DATA = {
@@ -237,9 +237,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   override def unlock(pipeline: ExecutablePipeline): Unit = pipelineLocks(pipeline.id.x).unlock()
 
   override def canContinueOrTake(pipeline: ExecutablePipeline): Boolean = {
-    val hasContinuation = continuations(pipeline.id.x).hasData
-    val hasData = buffers.hasData(pipeline.inputBuffer.id)
-    val hasWork = hasContinuation || hasData
+    val hasWork = continuations(pipeline.id.x).hasData || buffers.hasData(pipeline.inputBuffer.id)
     hasWork && queryState.flowControl.hasDemand
   }
 

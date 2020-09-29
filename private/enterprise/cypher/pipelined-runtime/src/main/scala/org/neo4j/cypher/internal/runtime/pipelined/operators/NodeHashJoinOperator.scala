@@ -65,7 +65,7 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
     this
   }
 
-  override def nextTasks(accAndMorsel: Buffers.AccumulatorAndData[Morsel, HashTable, Morsel]): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[Morsel, HashTable]] =
+  override def nextTasks(accAndMorsel: Buffers.AccumulatorAndPayload[Morsel, HashTable, Morsel]): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[Morsel, HashTable]] =
     singletonIndexedSeq(new OTask(accAndMorsel.acc, accAndMorsel.payload))
 
   // Extending InputLoopTask first to get the correct producingWorkUnitEvent implementation
@@ -133,7 +133,8 @@ object NodeHashJoinOperator {
       while (cursor.next()) {
         val key = new Array[Long](lhsOffsets.length)
         fillKeyArray(cursor, key, lhsOffsets, lhsIsReference)
-        if (acceptNulls || !NullChecker.entityIsNull(key(0))) {
+        val isNullKey = NullChecker.entityIsNull(key(0))
+        if (acceptNulls || !isNullKey) {
           // TODO optimize this to something like this
           //        val lastMorsel = morselsForKey.last
           //        if (!lastMorsel.hasNextRow) {
@@ -142,7 +143,7 @@ object NodeHashJoinOperator {
           //        lastMorsel.moveToNextRow()
           //        lastMorsel.copyFrom(morsel)
           val view = morsel.view(cursor.row, cursor.row + 1)
-          val keyValue = if (NullChecker.entityIsNull(key(0))) Values.NO_VALUE else Values.longArray(key)
+          val keyValue = if (isNullKey) Values.NO_VALUE else Values.longArray(key)
           table.put(keyValue, view) // NOTE: ProbeTable will also track estimated heap usage of the view until the table is closed
         }
       }

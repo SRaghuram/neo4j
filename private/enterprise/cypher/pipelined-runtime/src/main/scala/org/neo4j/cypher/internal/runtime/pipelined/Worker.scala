@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.NonFatalCypherError
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.AccumulatorAndMorselInput
+import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.AccumulatorAndPayloadInput
 import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.DataInput
 import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.MorselAccumulatorsInput
 import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.MorselParallelizerInput
@@ -165,7 +165,7 @@ class Worker(val workerId: Int,
         SchedulingResult(null, someTaskWasFilteredOut = true)
 
       // Failure in nextTask of a pipeline, after taking AccumulatorAndMorsel
-      case NextTaskException(pipeline, SchedulingInputException(AccumulatorAndMorselInput(accAndMorsel), cause)) =>
+      case NextTaskException(pipeline, SchedulingInputException(AccumulatorAndPayloadInput(accAndMorsel), cause)) =>
         executingQuery.executionState.closeDataAndAccumulatorTask(pipeline, accAndMorsel.payload, accAndMorsel.acc)
         executingQuery.executionState.failQuery(cause, resources, pipeline)
         SchedulingResult(null, someTaskWasFilteredOut = true)

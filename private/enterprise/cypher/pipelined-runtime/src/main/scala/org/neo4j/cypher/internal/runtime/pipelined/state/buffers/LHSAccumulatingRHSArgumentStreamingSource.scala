@@ -21,16 +21,16 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndData
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndPayload
 
-class LHSAccumulatingRHSArgumentStreamingSource[DATA <: AnyRef,
-                                                   LHS_ACC <: MorselAccumulator[DATA]]
+class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
+                                                   LHS_ACC <: MorselAccumulator[ACC_DATA]]
                                         (tracker: QueryCompletionTracker,
                                          downstreamArgumentReducers: ReadOnlyArray[AccumulatingBuffer],
                                          override val argumentStateMaps: ArgumentStateMaps,
                                          val lhsArgumentStateMapId: ArgumentStateMapId,
                                          val rhsArgumentStateMapId: ArgumentStateMapId,
-                                       ) extends JoinBuffer[DATA, LHS_ACC, MorselData] {
+                                       ) extends JoinBuffer[ACC_DATA, LHS_ACC, MorselData] {
 
   private val lhsArgumentStateMap = argumentStateMaps(lhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[LHS_ACC]]
   private val rhsArgumentStateMap = argumentStateMaps(rhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[ArgumentStreamArgumentStateBuffer]]
@@ -52,13 +52,13 @@ class LHSAccumulatingRHSArgumentStreamingSource[DATA <: AnyRef,
     })
   }
 
-  override def take(): AccumulatorAndData[DATA, LHS_ACC, MorselData] = {
+  override def take(): AccumulatorAndPayload[ACC_DATA, LHS_ACC, MorselData] = {
     val lhsAccs = lhsArgumentStateMap.peekCompleted()
     while (lhsAccs.hasNext) {
       val lhsAcc = lhsAccs.next()
       val rhsMorselData = tryTakeRhs(lhsAcc)
       if (rhsMorselData != null) {
-        return AccumulatorAndData[DATA, LHS_ACC, MorselData](lhsAcc, rhsMorselData)
+        return AccumulatorAndPayload[ACC_DATA, LHS_ACC, MorselData](lhsAcc, rhsMorselData)
       }
     }
     null

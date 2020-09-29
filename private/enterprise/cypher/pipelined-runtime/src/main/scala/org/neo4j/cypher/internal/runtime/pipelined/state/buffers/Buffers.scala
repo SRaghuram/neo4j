@@ -401,5 +401,5 @@ object Buffers {
   /**
    * Output of lhsAccumulatingRhsStreamingBuffers.
    */
-  case class AccumulatorAndData[DATA <: AnyRef, ACC <: MorselAccumulator[DATA], PAYLOAD <: AnyRef](acc: ACC, payload: PAYLOAD)
+  case class AccumulatorAndPayload[ACC_DATA <: AnyRef, ACC <: MorselAccumulator[ACC_DATA], PAYLOAD <: AnyRef](acc: ACC, payload: PAYLOAD)
 }

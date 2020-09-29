@@ -73,7 +73,7 @@ class NodeRightOuterHashJoinOperator(val workIdentity: WorkIdentity,
     this
   }
 
-  override def nextTasks(accAndMorsel: Buffers.AccumulatorAndData[Morsel, HashTable, Morsel]): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[Morsel, HashTable]] =
+  override def nextTasks(accAndMorsel: Buffers.AccumulatorAndPayload[Morsel, HashTable, Morsel]): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[Morsel, HashTable]] =
     singletonIndexedSeq(new OTask(accAndMorsel.acc, accAndMorsel.payload))
 
   // Extending InputLoopTask first to get the correct producingWorkUnitEvent implementation

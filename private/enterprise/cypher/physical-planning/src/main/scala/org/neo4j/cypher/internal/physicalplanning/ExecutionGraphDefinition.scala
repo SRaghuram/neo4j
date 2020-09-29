@@ -135,15 +135,15 @@ case class ConditionalBufferVariant(onTrue: BufferDefinition, onFalse: BufferDef
  */
 case class ArgumentStateBufferVariant(argumentStateMapId: ArgumentStateMapId) extends BufferVariant
 
-/**
- * This buffer maps to a LHSAccumulatingSink. It sits after a hash join build.
- */
 sealed trait JoinVariant
 case object CartesianProductVariant extends JoinVariant
 case object InnerVariant extends JoinVariant
 case object RightOuterVariant extends JoinVariant
 case object LeftOuterVariant extends JoinVariant
 
+/**
+ * This buffer maps to a LHSAccumulatingSink. It sits after a hash join build.
+ */
 case class LHSAccumulatingBufferVariant(lhsArgumentStateMapId: ArgumentStateMapId,
                                         rhsArgumentStateMapId: ArgumentStateMapId,
                                         joinVariant: JoinVariant) extends BufferVariant

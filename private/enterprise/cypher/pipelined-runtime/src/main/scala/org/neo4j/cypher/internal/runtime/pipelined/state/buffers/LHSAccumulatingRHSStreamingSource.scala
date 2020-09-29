@@ -11,7 +11,6 @@ import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.ReadOnlyArray
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.PipelinedDebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.PipelinedDebugSupport.prettyMorselWithHeader
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
@@ -22,7 +21,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndData
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndPayload
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.JoinBuffer.removeArgumentStatesIfRhsBufferIsEmpty
 
 /**
@@ -69,14 +68,14 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.JoinBuffer.remo
  * ............|==|
  * ............\__/
  **/
-class LHSAccumulatingRHSStreamingSource[DATA <: AnyRef,
-                                        LHS_ACC <: MorselAccumulator[DATA]
+class LHSAccumulatingRHSStreamingSource[ACC_DATA <: AnyRef,
+                                        LHS_ACC <: MorselAccumulator[ACC_DATA]
                                        ](tracker: QueryCompletionTracker,
                                          downstreamArgumentReducers: ReadOnlyArray[AccumulatingBuffer],
                                          override val argumentStateMaps: ArgumentStateMaps,
                                          val lhsArgumentStateMapId: ArgumentStateMapId,
                                          val rhsArgumentStateMapId: ArgumentStateMapId,
-                                       ) extends JoinBuffer[DATA, LHS_ACC, Morsel] {
+                                       ) extends JoinBuffer[ACC_DATA, LHS_ACC, Morsel] {
 
   private val lhsArgumentStateMap = argumentStateMaps(lhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[LHS_ACC]]
   private val rhsArgumentStateMap = argumentStateMaps(rhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[ArgumentStateBuffer]]
@@ -98,7 +97,7 @@ class LHSAccumulatingRHSStreamingSource[DATA <: AnyRef,
     })
   }
 
-  override def take(): AccumulatorAndData[DATA, LHS_ACC, Morsel] = {
+  override def take(): AccumulatorAndPayload[ACC_DATA, LHS_ACC, Morsel] = {
     val it = lhsArgumentStateMap.peekCompleted()
     while (it.hasNext) {
       val lhsAcc = it.next()
@@ -109,7 +108,7 @@ class LHSAccumulatingRHSStreamingSource[DATA <: AnyRef,
           if (DebugSupport.BUFFERS.enabled) {
             DebugSupport.BUFFERS.log(s"[take] $this -> $lhsAcc & ${PipelinedDebugSupport.prettyMorselWithHeader("", rhsMorsel).reduce(_ + _)}")
           }
-          return AccumulatorAndData(lhsAcc, rhsMorsel)
+          return AccumulatorAndPayload(lhsAcc, rhsMorsel)
         }
       }
     }

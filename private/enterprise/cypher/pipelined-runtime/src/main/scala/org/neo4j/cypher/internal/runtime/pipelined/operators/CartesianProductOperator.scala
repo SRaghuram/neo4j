@@ -40,7 +40,7 @@ class CartesianProductOperator(val workIdentity: WorkIdentity,
     this
   }
 
-  override def nextTasks(input: Buffers.AccumulatorAndData[Morsel, LHSMorsel, Morsel]): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[Morsel, LHSMorsel]] =
+  override def nextTasks(input: Buffers.AccumulatorAndPayload[Morsel, LHSMorsel, Morsel]): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[Morsel, LHSMorsel]] =
     Array(new OTask(input.acc, input.payload))
 
   // Extending InputLoopTask first to get the correct producingWorkUnitEvent implementation

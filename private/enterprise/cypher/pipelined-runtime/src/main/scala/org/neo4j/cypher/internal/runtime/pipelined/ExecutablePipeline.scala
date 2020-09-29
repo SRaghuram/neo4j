@@ -36,7 +36,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndData
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndPayload
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -247,8 +247,8 @@ class PipelineState(val pipeline: ExecutablePipeline,
     executionState.takeAccumulators(pipeline.inputBuffer.id, n)
   }
 
-  override def takeAccumulatorAndData[DATA <: AnyRef, ACC <: MorselAccumulator[DATA], PAYLOAD <: AnyRef](): AccumulatorAndData[DATA, ACC, PAYLOAD] = {
-    executionState.takeAccumulatorAndData(pipeline.inputBuffer.id)
+  override def takeAccumulatorAndPayload[ACC_DATA <: AnyRef, ACC <: MorselAccumulator[ACC_DATA], PAYLOAD <: AnyRef](): AccumulatorAndPayload[ACC_DATA, ACC, PAYLOAD] = {
+    executionState.takeAccumulatorAndPayload(pipeline.inputBuffer.id)
   }
 
   override def takeData[DATA <: AnyRef](): DATA = {

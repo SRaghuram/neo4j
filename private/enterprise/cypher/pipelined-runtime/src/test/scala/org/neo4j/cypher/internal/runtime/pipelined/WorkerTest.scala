@@ -10,7 +10,7 @@ import org.mockito.Mockito.never
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.when
-import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.AccumulatorAndMorselInput
+import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.AccumulatorAndPayloadInput
 import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.DataInput
 import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.MorselAccumulatorsInput
 import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException.MorselParallelizerInput
@@ -21,7 +21,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QuerySchedulingPolicy
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndData
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndPayload
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
 class WorkerTest extends CypherFunSuite {
@@ -137,12 +137,12 @@ class WorkerTest extends CypherFunSuite {
     val cause = new Exception
     val acc = mock[MorselAccumulator[AnyRef]]
     val morsel = mock[Morsel]
-    val input = AccumulatorAndData[AnyRef, MorselAccumulator[AnyRef], Morsel](acc, morsel)
+    val input = AccumulatorAndPayload[AnyRef, MorselAccumulator[AnyRef], Morsel](acc, morsel)
     val pipeline = mock[ExecutablePipeline]
 
     val schedulingPolicy: QuerySchedulingPolicy =
       (_: QueryResources) =>
-        throw NextTaskException(pipeline, SchedulingInputException(AccumulatorAndMorselInput(input), cause))
+        throw NextTaskException(pipeline, SchedulingInputException(AccumulatorAndPayloadInput(input), cause))
 
     val query = mockExecutingQuery(schedulingPolicy)
     val executionState = mock[ExecutionState]

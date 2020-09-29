@@ -486,7 +486,6 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           buffer.rhsArgumentStateMapId,
           lhsKeyOffsets,
           rhsKeyOffsets,
-          rhsSlots,
           rhsSlotMappings)(id)
 
       case _: ConditionalApply |
