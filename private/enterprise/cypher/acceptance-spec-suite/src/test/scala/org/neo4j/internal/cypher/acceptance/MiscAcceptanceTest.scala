@@ -313,4 +313,9 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     val expectedResult = nodes.map(n => Map("n" -> n, "x" -> n, "c" -> nodes.size)).toSet
     result.toSet shouldBe expectedResult
   }
+
+  test("should throw if checking multiple labels of a non-node") {
+    relate(createNode(), createNode())
+    failWithError(Configs.All,"MATCH (a)-[r]->(b) WITH a, r, b UNWIND [a, b, r] AS x RETURN x:A:B")
+  }
 }

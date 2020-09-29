@@ -2418,8 +2418,11 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     //this is the inner block of the condition
     val inner = (e: IntermediateExpression) => {
       val exceptionName = namer.nextVariableName()
-      val loadValue = tryCatch[RuntimeException](exceptionName)(assign(returnValue, noValueOr(e)(invokeStatic(ASSERT_PREDICATE, e.ir))))(
-        assign(error, load(exceptionName)))
+      val loadValue = tryCatch[RuntimeException](exceptionName)(
+        block(
+          assign(returnValue, constant(null)),
+          assign(returnValue, noValueOr(e)(invokeStatic(ASSERT_PREDICATE, e.ir))))
+      )(assign(error, load(exceptionName)))
 
       if (nullable) {
         Seq(loadValue,
@@ -2465,14 +2468,16 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           assign(error, constant(null)),
           //assign returnValue to head of expressions
           tryCatch[RuntimeException](exceptionName)(
-            assign(returnValue, noValueOr(firstExpression)(invokeStatic(ASSERT_PREDICATE, firstExpression.ir))))(
-            assign(error, load(exceptionName)))) ++ nullCheckAssign ++ Seq(
-          //generated unrolls tail of expression
-          loop(expressions.tail),
-          //checks if there was an error and that we never evaluated to breakValue, if so throw
-          condition(and(notEqual(load(error), constant(null)), notEqual(load(returnValue), breakValue)))(
-            fail(load(error))),
-          actualReturnValue): _*)
+            block(
+              assign(returnValue, constant(null)),
+              assign(returnValue, noValueOr(firstExpression)(invokeStatic(ASSERT_PREDICATE, firstExpression.ir)))
+            ))(assign(error, load(exceptionName)))) ++ nullCheckAssign ++ Seq(
+                //generated unrolls tail of expression
+                loop(expressions.tail),
+                //checks if there was an error and that we never evaluated to breakValue, if so throw
+                condition(and(notEqual(load(error), constant(null)), notEqual(load(returnValue), breakValue)))(
+                fail(load(error))),
+                actualReturnValue): _*)
     IntermediateExpression(ir,
                            expressions.foldLeft(Seq.empty[Field])((a,b) => a ++ b.fields),
                            expressions.foldLeft(Seq.empty[LocalVariable])((a,b) => a ++ b.variables) :+ local,
