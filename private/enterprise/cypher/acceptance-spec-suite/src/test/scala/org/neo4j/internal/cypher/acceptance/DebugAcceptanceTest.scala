@@ -11,7 +11,7 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSu
 
 class DebugAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport{
 
-  test("CYPHER DEBUG=dumpcosts should dump costs") {
+  test("CYPHER DEBUG=reportCostComparisonsAsRows should dump costs") {
     graph.createIndex("Person", "number")
     val x = createLabeledNode(Map("name" -> "x", "number" -> 0), "Person")
     val y = createLabeledNode(Map("name" -> "y", "number" -> 1), "Person")
@@ -20,7 +20,7 @@ class DebugAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonS
     relate(y, z)
 
     val query =
-      """CYPHER DEBUG=dumpcosts MATCH(n)-[]-(p) WHERE n.number = 2 RETURN n""".stripMargin
+      """CYPHER DEBUG=reportCostComparisonsAsRows MATCH(n)-[]-(p) WHERE n.number = 2 RETURN n""".stripMargin
 
       val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
       result.columns should contain theSameElementsInOrderAs List("#", "planId", "planText", "planCost", "cost", "est cardinality", "winner")
