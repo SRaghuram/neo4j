@@ -63,6 +63,7 @@ case object PercentileContDistinctAggregator extends Aggregator {
 }
 
 abstract class PercentileStandardReducer(memoryTracker: MemoryTracker) extends DirectStandardReducer {
+  protected var estimatedNumberSize: Long = -1L
   protected val tmp: HeapTrackingArrayList[NumberValue] = HeapTrackingCollections.newArrayList[NumberValue](memoryTracker)
   protected var percent: Double = -1
   // Reducer
@@ -90,6 +91,7 @@ abstract class PercentileStandardReducer(memoryTracker: MemoryTracker) extends D
     memoryTracker.allocateHeap(estimatedNumberSize)
   }
 }
+
 class PercentileContStandardReducer(memoryTracker: MemoryTracker) extends PercentileStandardReducer(memoryTracker) {
   override def result: AnyValue = {
     tmp.sort((o1: NumberValue, o2: NumberValue) => java.lang.Double.compare(o1.doubleValue(), o2.doubleValue()))

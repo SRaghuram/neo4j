@@ -106,5 +106,4 @@ trait StandardReducer extends Reducer with Updater {
 trait DirectStandardReducer extends StandardReducer {
   override final def isDirect: Boolean = true
   override final def applyUpdates(): Unit = {}
-  var estimatedNumberSize: Long = -1
 }
