@@ -10,9 +10,11 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
+import org.neo4j.internal.kernel.api.security.LabelSegment;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.ProcedureSegment;
+import org.neo4j.internal.kernel.api.security.RelTypeSegment;
 import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.kernel.impl.newapi.Labels;
 

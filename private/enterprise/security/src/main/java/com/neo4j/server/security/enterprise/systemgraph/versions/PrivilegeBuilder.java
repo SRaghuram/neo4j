@@ -5,8 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph.versions;
 
-import com.neo4j.server.security.enterprise.auth.LabelSegment;
-import com.neo4j.server.security.enterprise.auth.RelTypeSegment;
+import org.neo4j.internal.kernel.api.security.LabelSegment;
+import org.neo4j.internal.kernel.api.security.RelTypeSegment;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;

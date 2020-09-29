@@ -23,6 +23,7 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
+import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.systemgraph.ComponentVersion;
@@ -65,7 +66,8 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
         return false;
     }
 
-    public abstract void assertUpdateWithAction( PrivilegeAction action, SpecialDatabase specialDatabase ) throws UnsupportedOperationException;
+    public abstract void assertUpdateWithAction( PrivilegeAction action, SpecialDatabase specialDatabase, Segment segment )
+            throws UnsupportedOperationException;
 
     public abstract void setUpDefaultPrivileges( Transaction tx );
 

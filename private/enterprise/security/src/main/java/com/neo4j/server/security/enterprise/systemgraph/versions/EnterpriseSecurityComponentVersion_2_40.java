@@ -22,6 +22,7 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.ProcedureSegment;
+import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.systemgraph.ComponentVersion;
@@ -303,7 +304,7 @@ public class EnterpriseSecurityComponentVersion_2_40 extends SupportedEnterprise
     }
 
     @Override
-    public void assertUpdateWithAction( PrivilegeAction action, SpecialDatabase specialDatabase ) throws UnsupportedOperationException
+    public void assertUpdateWithAction( PrivilegeAction action, SpecialDatabase specialDatabase, Segment segment ) throws UnsupportedOperationException
     {
         if ( !supportsUpdateAction( action ) || SpecialDatabase.DEFAULT == specialDatabase )
         {

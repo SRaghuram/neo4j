@@ -99,6 +99,7 @@ import org.neo4j.cypher.internal.logical.plans.WaitForCompletion
 import org.neo4j.cypher.internal.procs.ActionMapper
 import org.neo4j.cypher.internal.procs.LoggingSystemCommandExecutionPlan
 import org.neo4j.cypher.internal.procs.PredicateExecutionPlan
+import org.neo4j.cypher.internal.procs.QualifierMapper
 import org.neo4j.cypher.internal.procs.QueryHandler
 import org.neo4j.cypher.internal.procs.SystemCommandExecutionPlan
 import org.neo4j.cypher.internal.procs.UpdatingSystemCommandExecutionPlan
@@ -1033,7 +1034,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         },
       source,
       parameterConverter = (tx, p) => databaseConverter(tx, qualifierConverter(tx, nameFields.nameConverter(tx, p))),
-      assertPrivilegeAction = tx => enterpriseSecurityGraphComponent.assertUpdateWithAction(tx, privilegeAction, specialDatabase)
+      assertPrivilegeAction = tx => enterpriseSecurityGraphComponent.assertUpdateWithAction(tx, privilegeAction, specialDatabase, QualifierMapper.asKernelQualifier(qualifier))
     )
   }
 
@@ -1093,7 +1094,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       }),
       source,
       parameterConverter = (tx, p) => databaseConverter(tx, qualifierConverter(tx, nameFields.nameConverter(tx, p))),
-      assertPrivilegeAction = tx => enterpriseSecurityGraphComponent.assertUpdateWithAction(tx, privilegeAction, specialDatabase)
+      assertPrivilegeAction = tx => enterpriseSecurityGraphComponent.assertUpdateWithAction(tx, privilegeAction, specialDatabase, QualifierMapper.asKernelQualifier(qualifier))
     )
   }
 

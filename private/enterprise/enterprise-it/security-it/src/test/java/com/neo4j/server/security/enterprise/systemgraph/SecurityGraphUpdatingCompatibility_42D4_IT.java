@@ -18,7 +18,6 @@ import org.neo4j.kernel.api.KernelTransaction;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41D1;
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D4;
 
 class SecurityGraphUpdatingCompatibility_42D4_IT extends SecurityGraphCompatibilityTestBase
@@ -53,7 +52,7 @@ class SecurityGraphUpdatingCompatibility_42D4_IT extends SecurityGraphCompatibil
             {
                 var exception = assertThrows( UnsupportedOperationException.class, () -> tx.execute( query ), query );
                 assertThat( exception.getMessage() )
-                        .contains( "This operation is not supported while running in compatibility mode with version " + VERSION_41D1 );
+                        .contains( "This operation is not supported while running in compatibility mode with version " + VERSION_42D4 );
             }
         }
     }

@@ -14,7 +14,9 @@ import java.util.Set;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.kernel.api.security.FunctionSegment;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
+import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.systemgraph.ComponentVersion;
 import org.neo4j.util.Preconditions;
@@ -89,6 +91,16 @@ public class EnterpriseSecurityComponentVersion_5_42D4 extends SupportedEnterpri
 
         default:
             return previous.supportsUpdateAction( action );
+        }
+    }
+
+    @Override
+    public void assertUpdateWithAction( PrivilegeAction action, ResourcePrivilege.SpecialDatabase specialDatabase, Segment segment )
+            throws UnsupportedOperationException
+    {
+        if ( !supportsUpdateAction( action ) || segment == FunctionSegment.ALL )
+        {
+            throw unsupportedAction();
         }
     }
 

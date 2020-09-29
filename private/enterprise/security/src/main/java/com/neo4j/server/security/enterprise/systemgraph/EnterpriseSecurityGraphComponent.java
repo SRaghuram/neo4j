@@ -35,6 +35,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
+import org.neo4j.internal.kernel.api.security.Segment;
 import com.neo4j.causalclustering.catchup.v4.metadata.DatabaseSecurityCommandsProvider;
 import com.neo4j.causalclustering.catchup.v4.metadata.DatabaseSecurityCommands;
 import org.neo4j.logging.Log;
@@ -167,10 +168,11 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         }
     }
 
-    public void assertUpdateWithAction( Transaction tx, PrivilegeAction action, SpecialDatabase specialDatabase ) throws UnsupportedOperationException
+    public void assertUpdateWithAction( Transaction tx, PrivilegeAction action, SpecialDatabase specialDatabase, Segment segment )
+            throws UnsupportedOperationException
     {
         KnownEnterpriseSecurityComponentVersion component = knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx );
-        component.assertUpdateWithAction( action, specialDatabase );
+        component.assertUpdateWithAction( action, specialDatabase, segment );
     }
 
     public KnownEnterpriseSecurityComponentVersion findSecurityGraphComponentVersion( String substring )

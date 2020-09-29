@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
+import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.auth.ListSnapshot;
 import org.neo4j.server.security.systemgraph.ComponentVersion;
@@ -73,7 +74,7 @@ public class EnterpriseSecurityComponentVersion_0_35 extends KnownEnterpriseSecu
     }
 
     @Override
-    public void assertUpdateWithAction( PrivilegeAction action, SpecialDatabase specialDatabase ) throws UnsupportedOperationException
+    public void assertUpdateWithAction( PrivilegeAction action, SpecialDatabase specialDatabase, Segment segment ) throws UnsupportedOperationException
     {
         throw unsupported();
     }

@@ -17,9 +17,11 @@ import java.util.Set;
 
 import org.neo4j.internal.kernel.api.security.AdminActionOnResource;
 import org.neo4j.internal.kernel.api.security.FunctionSegment;
+import org.neo4j.internal.kernel.api.security.LabelSegment;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.ProcedureSegment;
+import org.neo4j.internal.kernel.api.security.RelTypeSegment;
 import org.neo4j.internal.kernel.api.security.Segment;
 
 import static com.neo4j.server.security.enterprise.auth.Resource.Type.ALL_LABELS;

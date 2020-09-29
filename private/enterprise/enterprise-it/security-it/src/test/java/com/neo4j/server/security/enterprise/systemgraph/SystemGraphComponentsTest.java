@@ -43,6 +43,7 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
+import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
@@ -376,7 +377,8 @@ class SystemGraphComponentsTest
         }
 
         @Override
-        public void assertUpdateWithAction( PrivilegeAction action, ResourcePrivilege.SpecialDatabase specialDatabase ) throws UnsupportedOperationException
+        public void assertUpdateWithAction( PrivilegeAction action, ResourcePrivilege.SpecialDatabase specialDatabase, Segment segment )
+                throws UnsupportedOperationException
         {
             // Current version supports all current commands
         }
