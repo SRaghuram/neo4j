@@ -261,7 +261,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     }
 
     // THEN
-    exception.getMessage should startWith("The RETURN clause is not valid without a YIELD")
+    exception.getMessage should startWith("Invalid input 'R': expected whitespace, comment, WITH, YIELD, WHERE, ';' or end of input")
     exception.getMessage should include("(line 1, column 16 (offset: 15))")
   }
 
@@ -275,7 +275,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     }
 
     // THEN
-    exception.getMessage should startWith("The RETURN clause is not valid without a YIELD")
+    exception.getMessage should startWith("Invalid input 'R'")
     exception.getMessage should include("(line 1, column 36 (offset: 35))")
   }
 
@@ -287,7 +287,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val exception = the[SyntaxException] thrownBy {
       execute("SHOW ALL ROLES YIELD role RETURN foo")
     }
-
     // THEN
     exception.getMessage should startWith("Variable `foo` not defined")
     exception.getMessage should include("(line 1, column 34 (offset: 33))")

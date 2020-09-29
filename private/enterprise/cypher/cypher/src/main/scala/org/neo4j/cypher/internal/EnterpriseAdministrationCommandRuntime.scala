@@ -204,14 +204,13 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     }
 
     // SHOW USERS
-    case ShowUsers(source, symbols, yields, where, returns) => (context, parameterMapping) =>
+    case ShowUsers(source, symbols, yields, returns) => (context, parameterMapping) =>
       SystemCommandExecutionPlan("ShowUsers", normalExecutionEngine,
         s"""MATCH (u:User)
           |OPTIONAL MATCH (u)-[:HAS_ROLE]->(r:Role)
           |WITH u, r.name as roleNames ORDER BY roleNames
           |WITH u, collect(roleNames) as roles
           |WITH u.name as user, roles + 'PUBLIC' as roles, u.passwordChangeRequired AS passwordChangeRequired, u.suspended AS suspended
-          ${AdministrationShowCommandUtils.generateWhereClause(where)}
           ${AdministrationShowCommandUtils.generateReturnClause(symbols, yields, returns, Seq("user"))}
           |""".stripMargin,
         VirtualValues.EMPTY_MAP, source = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
@@ -231,7 +230,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       makeAlterUserExecutionPlan(userName, isEncryptedPassword, password, requirePasswordChange, suspended)(sourcePlan, normalExecutionEngine)
 
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
-    case ShowRoles(source, withUsers, showAll, symbols, yields, where, returns) => (context, parameterMapping) =>
+    case ShowRoles(source, withUsers, showAll, symbols, yields, returns) => (context, parameterMapping) =>
       val userWithColumns = if (withUsers) ", u.name as member" else ""
       val userReturnColumns = if (withUsers) ", member" else ""
       val maybeMatchUsers = if (withUsers) "OPTIONAL MATCH (u:User)" else ""
@@ -243,7 +242,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         case (false, _) =>
           "MATCH (r:Role)<-[:HAS_ROLE]-(u:User)"
       }
-      val whereClause = AdministrationShowCommandUtils.generateWhereClause(where)
       val returnClause = AdministrationShowCommandUtils.generateReturnClause(symbols, yields, returns, Seq("role"))
       SystemCommandExecutionPlan("ShowRoles", normalExecutionEngine,
         s"""
@@ -257,8 +255,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
            |WITH DISTINCT r.name as role $userWithColumns
            |RETURN role $userReturnColumns
            |}
-           |WITH *
-           |$whereClause
            |$returnClause
         """.stripMargin,
         VirtualValues.EMPTY_MAP,
@@ -445,7 +441,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke $actionName privilege from role '${runtimeValue(roleName, params)}'")
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES
-    case ShowPrivileges(source, scope, symbols, yields, where, returns) => (context, parameterMapping) =>
+    case ShowPrivileges(source, scope, symbols, yields, returns) => (context, parameterMapping) =>
       val currentUserKey = internalKey("currentUser")
       val currentUserRolesKey = internalKey("currentUserRoles")
       val privilegeMatch =
@@ -486,7 +482,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       val temporaryPrivileges = VirtualValues.list(authManager.getPrivilegesGrantedThroughConfig.asScala.map(m => VirtualValues.map(m.asScala.keys.toArray, m.asScala.values.map(Values.of).toArray)): _*)
       val temporaryPrivilegesKey = internalKey("temporaryPrivileges")
 
-      val filtering = AdministrationShowCommandUtils.generateWhereClause(where)
       val returnClause = AdministrationShowCommandUtils.generateReturnClause(symbols, yields, returns, Seq("user", "role", "graph", "segment", "resource", "action", "access"))
 
       //noinspection ScalaUnnecessaryParentheses
@@ -518,7 +513,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
                |$innerReturn
                |}
                |WITH *
-               |$filtering
                |$returnClause
           """.stripMargin
           )
@@ -559,8 +553,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
                |WHERE role IN $$`$rolesKey`
                |$innerReturn, user
                |}
-               |WITH *
-               |$filtering
                |$returnClause
           """.stripMargin
           )
@@ -629,8 +621,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
                |WITH temporary.role AS role, temporary.graph AS graph, temporary.segment AS segment, temporary.resource AS resource, temporary.action AS action, temporary.access AS access, u.name as user
                |$innerReturn, user
                |}
-               |WITH *
-               |$filtering
                |$returnClause
           """.stripMargin
           )
@@ -649,8 +639,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
                |WHERE role IN $$`$currentUserRolesKey`
                |$innerReturn, user
                |}
-               |WITH *
-               |$filtering
                |$returnClause
           """.stripMargin
           )
@@ -667,8 +655,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
              |WITH temporary.role AS role, temporary.graph AS graph, temporary.segment AS segment, temporary.resource AS resource, temporary.action AS action, temporary.access AS access
              |$innerReturn
              |}
-             |WITH *
-             |$filtering
              |$returnClause
           """.stripMargin
         )
