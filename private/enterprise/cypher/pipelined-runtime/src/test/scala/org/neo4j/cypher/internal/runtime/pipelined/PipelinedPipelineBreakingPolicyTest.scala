@@ -77,7 +77,7 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
     val plan = given(_
       .expand("(a)-->(c)")
       .apply()
-      .|.sort(Seq(Ascending("a"))) // TODO use .notFusable
+      .|.nonFuseable()
       .|.argument("a")
       .allNodeScan("a")
     )
@@ -88,6 +88,183 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
 
     //then
     policy.breakOn(plan, Id.INVALID_ID) shouldBe true
+  }
+
+  test("should break on expand at fusion over pipeline limit") {
+    // given
+    val plan = given(_
+                       .expand("(a)-->(b)")
+                       .filter("a.prop < 10")
+                       .expand("(a)-->(b)")
+                       .filter("a.prop < 10")
+                       .expand("(a)-->(b)")
+                       .allNodeScan("a")
+                     )
+
+    // positive case
+    {
+      // when
+      val fusionOverPipelineLimit = 3
+      val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = fusionOverPipelineLimit, readOnly = true, parallelExecution = false),
+                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+
+      //then
+      policy.breakOn(plan, Id.INVALID_ID) shouldBe true
+    }
+
+    // negative case
+    {
+      // when
+      val fusionOverPipelineLimit = 4
+      val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = fusionOverPipelineLimit, readOnly = true, parallelExecution = false),
+                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+
+      //then
+      policy.breakOn(plan, Id.INVALID_ID) shouldBe false
+    }
+  }
+
+  test("should break on expand when fusion over pipeline limit is zero") {
+    // given
+    val plan = given(_
+                       .expand("(a)-->(b)")
+                       .filter("a.prop < 10")
+                       .allNodeScan("a")
+                     )
+
+    // when
+    val fusionOverPipelineLimit = 0
+    val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = fusionOverPipelineLimit, readOnly = true, parallelExecution = false),
+                                                 InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+
+    //then
+    policy.breakOn(plan, Id.INVALID_ID) shouldBe true
+  }
+
+  test("should not break on filter when fusion over pipeline limit is zero") {
+    // given
+    val plan = given(_
+                       .filter("a.prop < 10")
+                       .allNodeScan("a")
+                     )
+
+    // when
+    val fusionOverPipelineLimit = 0
+    val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = fusionOverPipelineLimit, readOnly = true, parallelExecution = false),
+                                                 InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+
+    //then
+    policy.breakOn(plan, Id.INVALID_ID) shouldBe false
+  }
+
+  test("should break on expand at fusion over pipeline limit, with apply") {
+    // given
+    val plan = given(_
+                       .expand("(a)-->(b)")
+                       .apply()
+                       .|.filter("a.prop < 10")
+                       .|.expand("(a)-->(b)")
+                       .|.filter("a.prop < 10")
+                       .|.expand("(a)-->(b)")
+                       .|.argument("a")
+                       .allNodeScan("a")
+                     )
+
+    // positive case
+    {
+      // when
+      val fusionOverPipelineLimit = 3
+      val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = fusionOverPipelineLimit, readOnly = true, parallelExecution = false),
+                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+
+      //then
+      policy.breakOn(plan, Id.INVALID_ID) shouldBe true
+    }
+
+    // negative case
+    {
+      // when
+      val fusionOverPipelineLimit = 4
+      val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = fusionOverPipelineLimit, readOnly = true, parallelExecution = false),
+                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+
+      //then
+      policy.breakOn(plan, Id.INVALID_ID) shouldBe false
+    }
+  }
+
+  test("should break on expand at fusion over pipeline limit, with non-fusable two-children plan") {
+    // given
+    val plan = given(_
+                       .expand("(a)-->(b)")
+                       .expand("(a)-->(b)")
+                       .filter("a.prop < 10")
+                       .expand("(a)-->(b)")
+                       .nodeHashJoin("a") // Not fusable over pipelines
+                       .|.filter("b.prop < 10")
+                       .|.expand("(a)-->(b)")
+                       .|.allNodeScan("a")
+                       .allNodeScan("a")
+                     )
+
+    // positive case
+    {
+      // when
+      val fusionOverPipelineLimit = 2
+      val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = fusionOverPipelineLimit, readOnly = true, parallelExecution = false),
+                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+
+      //then
+      policy.breakOn(plan, Id.INVALID_ID) shouldBe true
+    }
+
+    // negative case
+    {
+      // when
+      val fusionOverPipelineLimit = 3
+      val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = fusionOverPipelineLimit, readOnly = true, parallelExecution = false),
+                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+
+      //then
+      policy.breakOn(plan, Id.INVALID_ID) shouldBe false
+    }
+  }
+
+  test("should break on expand at fusion over pipeline limit, with non-fusable and apply") {
+    // given
+    val plan = given(_
+                       .expand("(a)-->(b)")
+                       .apply()
+                       .|.filter("a.prop < 10")
+                       .|.expand("(a)-->(b)")
+                       .|.filter("a.prop < 10")
+                       .|.nonFuseable()
+                       .|.expand("(a)-->(b)")
+                       .|.argument("a")
+                       .allNodeScan("a")
+                     )
+
+    // positive case
+    {
+      // when
+      val fusionOverPipelineLimit = 1
+      val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = fusionOverPipelineLimit, readOnly = true, parallelExecution = false),
+                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+
+      //then
+      policy.breakOn(plan, Id.INVALID_ID) shouldBe true
+    }
+
+    // negative case
+    {
+      // when
+      val fusionOverPipelineLimit = 2
+      val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = fusionOverPipelineLimit, readOnly = true, parallelExecution = false),
+                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+
+      //then
+      policy.breakOn(plan, Id.INVALID_ID) shouldBe false
+    }
   }
 
   private def given(subBuilder: LogicalPlanBuilder => LogicalPlanBuilder)= {

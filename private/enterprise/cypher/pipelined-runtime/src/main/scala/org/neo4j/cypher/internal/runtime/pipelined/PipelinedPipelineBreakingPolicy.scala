@@ -95,8 +95,11 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
       // Build upon an already cached source plan
       // NOTE: This assumes that the first use of this policy, which will build up the cache,
       //       is traversing the plan tree in a producer-to-consumer order (i.e. starting from the leftmost leaf).
-      //       This should hold true for SlotAllocation, which is the first currently known usage of this policy
-      val sourceFuseOverPipelineCount = findSourcePlanFuseOverPipelineCount(lp)
+      //       This should hold true for SlotAllocation, which is the first currently known usage of this policy, as well as PipelineTreeBuilder.
+      //       As a fallback it will rely on recursion, which _could_ cause stack overflow (e.g. when called on the root first on a very big plan),
+      //       but this kind of usage pattern is currently only expected from tests. (If we for some reason need to be able to use the breaking policy
+      //       like this in production we could reuse the mechanics of TreeBuilder, which maintains its own stack)
+      val sourceFuseOverPipelineCount = findSourcePlanFuseOverPipelineCount(lp, outerApplyPlanId)
       val break = computeBreakOn(lp, outerApplyPlanId, sourceFuseOverPipelineCount)
       if (DebugSupport.PHYSICAL_PLANNING.enabled) {
         DebugSupport.PHYSICAL_PLANNING.log(f" + Breaking policy for ${s"${lp.getClass.getSimpleName}(${lp.id.x})"}%-32s break=${break._1}%-8s fuseOverPipelineCount=${break._2}%3d")
@@ -108,24 +111,17 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
     }
   }
 
-  private def findSourcePlanFuseOverPipelineCount(lp: LogicalPlan) = {
+  private def findSourcePlanFuseOverPipelineCount(lp: LogicalPlan, outerApplyPlanId: Id) = {
     (lp.lhs, lp.rhs) match {
-      // For Apply we follow the right-hand side
-      case (Some(_), Some(rhs)) if lp.isInstanceOf[Apply] && cache.isDefinedAt(rhs.id) =>
-        val (_, sourceFuseOverPipelineCount) = cache.get(rhs.id)
+      case (Some(source), None) =>
+        val (_, sourceFuseOverPipelineCount) = breakOnInternal(source, outerApplyPlanId)
         sourceFuseOverPipelineCount
-      case (Some(Apply(_, rhs)), None) if cache.isDefinedAt(rhs.id) =>
-        // Special case for Apply. When source of a one-child plan is an Apply, it may not yet be cached, but its rhs may be.
-        val (_, sourceFuseOverPipelineCount) = cache.get(rhs.id)
+      case (Some(_), Some(rhs)) if lp.isInstanceOf[Apply] =>
+        // For Apply we follow the right-hand side
+        val (_, sourceFuseOverPipelineCount) = breakOnInternal(rhs, outerApplyPlanId)
         sourceFuseOverPipelineCount
-      case (Some(source), None) if cache.isDefinedAt(source.id) =>
-        val (_, sourceFuseOverPipelineCount) = cache.get(source.id)
-        sourceFuseOverPipelineCount
-      case (None, None) =>
-        0
       case _ =>
-        // We did not find a fusable source in the cache, assume that we the first plan following a pipeline break
-        DebugSupport.PHYSICAL_PLANNING.log(s"  no cached source found for $lp")
+        // In the other cases (leaf or two-children plans) we assume that lp is the first plan following a pipeline break
         0
     }
   }
