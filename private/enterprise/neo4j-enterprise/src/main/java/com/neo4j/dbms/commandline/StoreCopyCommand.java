@@ -94,7 +94,7 @@ public class StoreCopyCommand extends AbstractCommand
             names = "--to-format",
             defaultValue = "same",
             description = "Set the format for the new database. Must be one of ${COMPLETION-CANDIDATES}. 'same' will use the same format as the source. " +
-                          "WARNING: If you go from 'high_limit' to 'standard' there is no validation that the data will actually fit."
+                          "WARNING: If you go from 'high_limit' to 'standard' or 'aligned' there is no validation that the data will actually fit."
     )
     private StoreCopy.FormatEnum format;
 

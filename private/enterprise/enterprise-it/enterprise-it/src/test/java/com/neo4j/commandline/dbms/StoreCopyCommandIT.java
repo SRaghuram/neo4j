@@ -46,6 +46,7 @@ import org.neo4j.kernel.impl.store.PropertyKeyTokenStore;
 import org.neo4j.kernel.impl.store.format.FormatFamily;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
+import org.neo4j.kernel.impl.store.format.aligned.AlignedFormatFamily;
 import org.neo4j.kernel.impl.store.format.standard.StandardFormatFamily;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.kernel.internal.locker.FileLockException;
@@ -834,9 +835,14 @@ class StoreCopyCommandIT extends AbstractCommandIT
         managementService.shutdownDatabase( databaseName );
 
         String highLimitCopyName = getCopyName( databaseName, "copy-hl" );
+        String highLimitCopyName2 = getCopyName( databaseName, "copy-hl2" );
         String standardCopyName = getCopyName( databaseName, "copy-std" );
+        String standardCopyName2 = getCopyName( databaseName, "copy-std2" );
+        String alignedCopyName = getCopyName( databaseName, "copy-align" );
+        String alignedCopyName2 = getCopyName( databaseName, "copy-align2" );
         String standardSameCopyName = getCopyName( databaseName, "copy-same-std" );
         String highLimitSameCopyName = getCopyName( databaseName, "copy-same-hl" );
+        String alignedSameCopyName = getCopyName( databaseName, "copy-same-align" );
 
         // Standard -> high limit
         copyDatabase( "--from-database=" + databaseName, "--to-database=" + highLimitCopyName, "--to-format=high_limit" );
@@ -844,21 +850,46 @@ class StoreCopyCommandIT extends AbstractCommandIT
         // High limit -> standard
         copyDatabase( "--from-database=" + highLimitCopyName, "--to-database=" + standardCopyName, "--to-format=standard" );
 
+        // Standard -> aligned
+        copyDatabase( "--from-database=" + databaseName, "--to-database=" + alignedCopyName, "--to-format=aligned" );
+
+        // High limit -> aligned
+        copyDatabase( "--from-database=" + highLimitCopyName, "--to-database=" + alignedCopyName2, "--to-format=aligned" );
+
+        // Aligned -> high limit
+        copyDatabase( "--from-database=" + alignedCopyName, "--to-database=" + highLimitCopyName2, "--to-format=high_limit" );
+
+        // Aligned -> standard
+        copyDatabase( "--from-database=" + alignedCopyName, "--to-database=" + standardCopyName2, "--to-format=standard" );
+
         // Standard -> same
         copyDatabase( "--from-database=" + standardCopyName, "--to-database=" + standardSameCopyName, "--to-format=same" );
 
         // High limit -> same
         copyDatabase( "--from-database=" + highLimitCopyName, "--to-database=" + highLimitSameCopyName, "--to-format=same" );
 
+        // Aligned -> same
+        copyDatabase( "--from-database=" + alignedCopyName, "--to-database=" + alignedSameCopyName, "--to-format=same" );
+
         assertRecordFormat( highLimitCopyName, HighLimitFormatFamily.INSTANCE );
+        assertRecordFormat( highLimitCopyName2, HighLimitFormatFamily.INSTANCE );
         assertRecordFormat( standardCopyName, StandardFormatFamily.INSTANCE );
+        assertRecordFormat( standardCopyName2, StandardFormatFamily.INSTANCE );
+        assertRecordFormat( alignedCopyName, AlignedFormatFamily.INSTANCE );
+        assertRecordFormat( alignedCopyName2, AlignedFormatFamily.INSTANCE );
         assertRecordFormat( standardSameCopyName, StandardFormatFamily.INSTANCE );
         assertRecordFormat( highLimitSameCopyName, HighLimitFormatFamily.INSTANCE );
+        assertRecordFormat( alignedSameCopyName, AlignedFormatFamily.INSTANCE );
 
         validateCopyContents( highLimitCopyName );
+        validateCopyContents( highLimitCopyName2 );
         validateCopyContents( standardCopyName );
+        validateCopyContents( standardCopyName2 );
+        validateCopyContents( alignedCopyName );
+        validateCopyContents( alignedCopyName2 );
         validateCopyContents( standardSameCopyName );
         validateCopyContents( highLimitSameCopyName );
+        validateCopyContents( alignedSameCopyName );
     }
 
     private void validateCopyContents( String dbName )

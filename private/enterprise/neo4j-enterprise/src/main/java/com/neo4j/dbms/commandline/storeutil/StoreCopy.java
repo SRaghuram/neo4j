@@ -73,6 +73,7 @@ import org.neo4j.kernel.impl.store.StoreFactory;
 import org.neo4j.kernel.impl.store.StoreHeader;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
+import org.neo4j.kernel.impl.store.format.aligned.PageAligned;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogInitializer;
@@ -137,7 +138,8 @@ public class StoreCopy
     {
         same,
         standard,
-        high_limit
+        high_limit,
+        aligned
     }
 
     public StoreCopy( DatabaseLayout from, Config config, FormatEnum format,
@@ -505,6 +507,10 @@ public class StoreCopy
             {
                 throw new IllegalArgumentException( "Unable to load high-limit format, make sure you are using the correct version of neo4j.", e );
             }
+        }
+        else if ( format == FormatEnum.aligned )
+        {
+            return PageAligned.LATEST_RECORD_FORMATS;
         }
         else
         {

@@ -71,10 +71,11 @@ class StoreCopyCommandTest
                 "      --force                Force the command to run even if the integrity of%n" +
                 "                               the database can not be verified.%n" +
                 "      --to-format=<format>   Set the format for the new database. Must be one%n" +
-                "                               of same, standard, high_limit. 'same' will use%n" +
-                "                               the same format as the source. WARNING: If you%n" +
-                "                               go from 'high_limit' to 'standard' there is no%n" +
-                "                               validation that the data will actually fit.%n" +
+                "                               of same, standard, high_limit, aligned. 'same'%n" +
+                "                               will use the same format as the source. WARNING:%n" +
+                "                               If you go from 'high_limit' to 'standard' or%n" +
+                "                               'aligned' there is no validation that the data%n" +
+                "                               will actually fit.%n" +
                 "                               Default: same%n" +
                 "      --delete-nodes-with-labels=<label>[,<label>...]%n" +
                 "                             A comma separated list of labels. All nodes that%n" +
