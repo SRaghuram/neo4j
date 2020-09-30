@@ -359,66 +359,128 @@ class CommandsRoutingTest
 
     // Multiple statement types tests
 
-    private static final String queryString = "RETURN 1";
-    private static final String queryType = "Query";
-    private static final String schemaStringCreate = "CREATE INDEX myIndex FOR (n:Label) ON (n.prop)";
-    private static final String schemaStringDrop = "DROP INDEX myIndex";
-    private static final String schemaType = "Schema modification";
-    private static final String adminString = "SHOW DATABASES";
-    private static final String adminType = "Administration command";
-
-    @Test
-    void testQueryFollowsQuery()
+    private static class Statement
     {
-        doInNeo4jTx( tx ->
+        final String statement;
+        final String type;
+
+        private Statement( String statement, String type )
         {
-            tx.run( queryString ).consume();
-            tx.run( queryString ).consume();
-        } );
+            this.statement = statement;
+            this.type = type;
+        }
+
+        @Override
+        public String toString()
+        {
+            return statement + " (" + type + ")";
+        }
     }
 
-    @Test
-    void testSchemaFollowsSchema()
-    {
-        doInNeo4jTx( tx ->
-        {
-            tx.run( schemaStringCreate ).consume();
-            tx.run( schemaStringDrop ).consume();
-        } );
-    }
+    private static final Statement readQuery = new Statement( "RETURN 1", "Read query" );
+    private static final Statement readProcedure = new Statement( "CALL db.constraints()", "Read query" );
+    private static final Statement writeQuery = new Statement( "MATCH (n:Unknown) SET n.x = 1", "Write query" );
+    private static final Statement schemaCreate = new Statement( "CREATE INDEX myIndex IF NOT EXISTS FOR (n:Label) ON (n.prop)", "Schema modification" );
+    private static final Statement admin = new Statement( "SHOW DATABASES", "Administration command" );
 
-    @Test
-    void testAdminFollowsAdmin()
+    private static Stream<Arguments> validStatementTypePairs()
     {
-        doInNeo4jTx( tx ->
-        {
-            tx.run( adminString ).consume();
-            tx.run( adminString ).consume();
-        } );
+        return Stream.of(
+                Arguments.of( readQuery, readQuery ),
+                Arguments.of( writeQuery, writeQuery ),
+                Arguments.of( readProcedure, readProcedure ),
+
+                Arguments.of( readQuery, writeQuery ),
+                Arguments.of( writeQuery, readQuery ),
+
+                Arguments.of( readProcedure, writeQuery ),
+                Arguments.of( writeQuery, readProcedure ),
+
+                Arguments.of( readQuery, schemaCreate ),
+                Arguments.of( schemaCreate, readQuery ),
+
+                Arguments.of( readProcedure, schemaCreate ),
+                Arguments.of( schemaCreate, readProcedure ),
+
+                Arguments.of( schemaCreate, schemaCreate ),
+                Arguments.of( admin, admin )
+        );
     }
 
     @ParameterizedTest
-    @MethodSource( "getStatementTypeCombinations" )
-    void testMixingStatementTypesShouldFail( String firstStatement, String firstType, String secondStatement, String secondType )
+    @MethodSource( "validStatementTypePairs" )
+    void testValidStatementTypePairs( Statement first, Statement second )
+    {
+        doInNeo4jTx( tx ->
+                     {
+                         tx.run( first.statement ).consume();
+                         tx.run( second.statement ).consume();
+                         tx.rollback();
+                     } );
+    }
+
+    private static Stream<Arguments> invalidStatementTypePairs()
+    {
+        return Stream.of(
+                Arguments.of( readQuery, admin ),
+                Arguments.of( admin, readQuery ),
+
+                Arguments.of( readProcedure, admin ),
+                Arguments.of( admin, readProcedure ),
+
+                Arguments.of( writeQuery, schemaCreate ),
+                Arguments.of( schemaCreate, writeQuery ),
+
+                Arguments.of( writeQuery, admin ),
+                Arguments.of( admin, writeQuery ),
+
+                Arguments.of( schemaCreate, admin ),
+                Arguments.of( admin, schemaCreate )
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource( "invalidStatementTypePairs" )
+    void testInvalidStatementTypePairsShouldFail( Statement first, Statement second )
     {
         doInNeo4jTx( tx ->
         {
-            tx.run( firstStatement ).consume();
+            tx.run( first.statement ).consume();
             assertThat( catchThrowable( () ->
-                    tx.run( secondStatement ).consume()
-            ) ).hasMessageContaining( String.format( "Tried to execute %s after executing %s", secondType, firstType ) );
+                    tx.run( second.statement ).consume()
+            ) ).hasMessageContaining( String.format( "Tried to execute %s after executing %s", second.type, first.type ) );
             tx.rollback();
         } );
+    }
 
-        // Possible clean-up
-        try
-        {
-            doInNeo4jTx( tx -> tx.run( schemaStringDrop ).consume() );
-        }
-        catch ( Throwable e )
-        {
-            // ignore
-        }
+    private static Stream<Arguments> invalidStatementTypeTriplets()
+    {
+        return Stream.of(
+                // Upgraded to write query
+                Arguments.of( readQuery, writeQuery, schemaCreate, writeQuery.type ),
+                Arguments.of( readQuery, writeQuery, admin, writeQuery.type ),
+                // Stays as write query
+                Arguments.of( writeQuery, readQuery, schemaCreate, writeQuery.type ),
+                Arguments.of( writeQuery, readQuery, admin, writeQuery.type ),
+                // Upgraded to schema
+                Arguments.of( readQuery, schemaCreate, writeQuery, schemaCreate.type ),
+                Arguments.of( readQuery, schemaCreate, admin, schemaCreate.type )
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource( "invalidStatementTypeTriplets" )
+    void testInvalidStatementTypeTripletsShouldFail( Statement first, Statement second, Statement third, String typeInErrorMsg )
+    {
+        doInNeo4jTx( tx ->
+                     {
+                         tx.run( first.statement ).consume();
+                         tx.run( second.statement ).consume();
+                         assertThat( catchThrowable( () ->
+                                tx.run( third.statement ).consume()
+                         ) ).hasMessageContaining( String.format( "Tried to execute %s after executing %s", third.type, typeInErrorMsg ) );
+                         tx.rollback();
+                     } );
     }
 
     // Help methods
@@ -441,17 +503,5 @@ class CommandsRoutingTest
     private static Function<Record,String> stringColumn( String column )
     {
         return row -> row.get( column ).asString();
-    }
-
-    private static Stream<Arguments> getStatementTypeCombinations()
-    {
-        return Stream.of(
-                Arguments.of( queryString, queryType, schemaStringCreate, schemaType ),
-                Arguments.of( queryString, queryType, adminString, adminType ),
-                Arguments.of( schemaStringCreate, schemaType, adminString, adminType ),
-                Arguments.of( schemaStringCreate, schemaType, queryString, queryType ),
-                Arguments.of( adminString, adminType, schemaStringCreate, schemaType ),
-                Arguments.of( adminString, adminType, queryString, queryType )
-        );
     }
 }
