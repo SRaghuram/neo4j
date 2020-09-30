@@ -50,8 +50,8 @@ abstract class VarExpandCursor(val fromNode: Long,
   private var pathLength: Int = 0
   private var event: OperatorProfileEvent = _
 
-  private val relTraCursors: GrowingArray[RelationshipTraversalCursor] = new GrowingArray[RelationshipTraversalCursor]()
-  private val selectionCursors: GrowingArray[RelationshipTraversalCursor] = new GrowingArray[RelationshipTraversalCursor]()
+  private val relTraversalCursors: GrowingArray[RelationshipTraversalCursor] = new GrowingArray[RelationshipTraversalCursor](memoryTracker)
+  private val selectionCursors: GrowingArray[RelationshipTraversalCursor] = new GrowingArray[RelationshipTraversalCursor](memoryTracker)
 
   // this needs to be explicitly managed on every work unit, to avoid parallel workers accessing each others cursorPools.
   private var cursorPools: CursorPools = _
@@ -134,7 +134,7 @@ abstract class VarExpandCursor(val fromNode: Long,
       if (!nodeCursor.next()) {
         emptyTraversalCursor(read)
       } else {
-        val traversalCursor = relTraCursors.computeIfAbsent(pathLength, () => {
+        val traversalCursor = relTraversalCursors.computeIfAbsent(pathLength, () => {
           val cursor = cursorPools.relationshipTraversalCursorPool.allocateAndTrace()
           cursor.setTracer(event)
           cursor
@@ -175,12 +175,18 @@ abstract class VarExpandCursor(val fromNode: Long,
   def setTracer(event: OperatorProfileEvent): Unit = {
     this.event = event
     nodeCursor.setTracer(event)
-    relTraCursors.foreach(_.setTracer(event))
+    relTraversalCursors.foreach(_.setTracer(event))
   }
 
   def free(cursorPools: CursorPools): Unit = {
     cursorPools.nodeCursorPool.free(nodeCursor)
-    relTraCursors.foreach(cursor => cursorPools.relationshipTraversalCursorPool.free(cursor))
+    relTraversalCursors.foreach(cursor => cursorPools.relationshipTraversalCursorPool.free(cursor))
+    if (relTraversalCursors != null) {
+      relTraversalCursors.close()
+    }
+    if (selectionCursors != null) {
+      selectionCursors.close()
+    }
   }
 }
 
