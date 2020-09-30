@@ -43,6 +43,7 @@ object ContextHelper extends MockitoSugar {
   private val runtimeConfig = CypherRuntimeConfiguration(
     pipelinedBatchSizeSmall = morselSize,
     pipelinedBatchSizeBig = morselSize,
+    operatorFusionOverPipelineLimit = GraphDatabaseInternalSettings.cypher_pipelined_operator_fusion_over_pipeline_limit.defaultValue(),
     schedulerTracing = NoSchedulerTracing,
     lenientCreateRelationship = false,
     memoryTrackingController = new ConfigMemoryTrackingController(Config.defaults()),
