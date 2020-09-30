@@ -5,13 +5,14 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import com.neo4j.server.security.enterprise.auth.LabelSegment;
 import com.neo4j.server.security.enterprise.auth.RelTypeSegment;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -19,19 +20,24 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.ProcedureSegment;
 import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.internal.kernel.api.security.UserSegment;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
+import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.server.security.auth.SecurityTestUtils;
 
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,9 +46,28 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ACCESS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ALTER_USER;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ASSIGN_PRIVILEGE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ASSIGN_ROLE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CONSTRAINT;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CREATE_CONSTRAINT;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CREATE_DATABASE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CREATE_ELEMENT;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CREATE_INDEX;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CREATE_LABEL;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CREATE_PROPERTYKEY;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CREATE_RELTYPE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CREATE_ROLE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CREATE_USER;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DATABASE_ACTIONS;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DATABASE_MANAGEMENT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DBMS_ACTIONS;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DELETE_ELEMENT;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DROP_CONSTRAINT;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DROP_DATABASE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DROP_INDEX;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DROP_ROLE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DROP_USER;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE_ADMIN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE_BOOSTED;
@@ -50,39 +75,50 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.GRAPH_ACTIO
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.INDEX;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.MATCH;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.MERGE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.PRIVILEGE_MANAGEMENT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.READ;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_LABEL;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_PRIVILEGE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_ROLE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ROLE_MANAGEMENT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_LABEL;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_PASSWORDS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_PROPERTY;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_USER_STATUS;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SHOW_CONNECTION;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SHOW_PRIVILEGE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SHOW_ROLE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SHOW_TRANSACTION;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SHOW_USER;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.START_DATABASE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.STOP_DATABASE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TERMINATE_CONNECTION;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TERMINATE_TRANSACTION;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRANSACTION_MANAGEMENT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRAVERSE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.USER_MANAGEMENT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.WRITE;
 
 class PrivilegesAsCommandsIT
 {
     static final String DB_PARAM = "database";
-    static DatabaseManagementService dbms;
-    GraphDatabaseAPI system;
-
-    @BeforeAll
-    static void setup()
-    {
-        dbms = new TestEnterpriseDatabaseManagementServiceBuilder().impermanent().build();
-    }
+    static Config defaultConfig = Config.defaults( GraphDatabaseSettings.auth_enabled, true );
+    static DatabaseManagementService dbms = new TestEnterpriseDatabaseManagementServiceBuilder().setConfig( defaultConfig ).impermanent().build();
+    static GraphDatabaseAPI system = (GraphDatabaseAPI) dbms.database( SYSTEM_DATABASE_NAME );
+    static EnterpriseAuthManager authManager = system.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
 
     @AfterAll
-    static void teardown()
+    static void teardown() throws Exception
     {
         dbms.shutdown();
+        authManager.shutdown();
     }
 
     @BeforeEach
-    void resetSystemDb()
+    void setupTest()
     {
-        system = getCleanSystemDB();
+        cleanSystemDB();
     }
 
     @Test
@@ -92,110 +128,115 @@ class PrivilegesAsCommandsIT
         String role = "role";
         String user = "user";
 
+        Predicate<PrivilegeAction> usesDatabaseResourceAndGeneralSegment = action ->
+                ACCESS == action ||
+                CREATE_LABEL == action ||
+                CREATE_RELTYPE == action ||
+                CREATE_PROPERTYKEY == action ||
+                CREATE_INDEX == action ||
+                DROP_INDEX == action ||
+                CREATE_CONSTRAINT == action ||
+                DROP_CONSTRAINT == action ||
+                START_DATABASE == action ||
+                STOP_DATABASE == action ||
+                CREATE_DATABASE == action ||
+                DROP_DATABASE == action ||
+                SHOW_USER == action ||
+                CREATE_USER == action ||
+                SET_USER_STATUS == action ||
+                SET_PASSWORDS == action ||
+                DROP_USER == action ||
+                SHOW_ROLE == action ||
+                CREATE_ROLE == action ||
+                DROP_ROLE == action ||
+                ASSIGN_ROLE == action ||
+                REMOVE_ROLE == action ||
+                SHOW_PRIVILEGE == action ||
+                ASSIGN_PRIVILEGE == action ||
+                REMOVE_PRIVILEGE == action ||
+
+                // collections of multiple actions
+                ADMIN == action ||
+                TOKEN == action ||
+                CONSTRAINT == action ||
+                INDEX == action ||
+                DATABASE_MANAGEMENT == action ||
+                USER_MANAGEMENT == action ||
+                ALTER_USER == action ||
+                ROLE_MANAGEMENT == action ||
+                PRIVILEGE_MANAGEMENT == action ||
+                DATABASE_ACTIONS == action ||
+                DBMS_ACTIONS == action;
+
+        Predicate<PrivilegeAction> usesGraphResource = action ->
+                TRAVERSE == action ||
+                WRITE == action ||
+                CREATE_ELEMENT == action ||
+                DELETE_ELEMENT == action ||
+
+                // collection of multiple actions
+                GRAPH_ACTIONS == action;
+
+        Predicate<PrivilegeAction> usesPropertyResource = action ->
+                READ == action ||
+                SET_PROPERTY == action ||
+
+                // collections of multiple actions
+                MERGE == action ||
+                MATCH == action;
+
+        Predicate<PrivilegeAction> usesLabelResource = action ->
+                SET_LABEL == action ||
+                REMOVE_LABEL == action;
+
         for ( ResourcePrivilege.GrantOrDeny privilegeType : ResourcePrivilege.GrantOrDeny.values() )
         {
             for ( PrivilegeAction action : PrivilegeAction.values() )
             {
-                if ( ACCESS.satisfies( action ) )
+                if ( SHOW_TRANSACTION == action ||
+                     TERMINATE_TRANSACTION == action ||
+                     SHOW_CONNECTION == action ||
+                     TERMINATE_CONNECTION == action ||
+                     TRANSACTION_MANAGEMENT == action )
+                {
+                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.DatabaseResource(), UserSegment.ALL ) );
+                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.DatabaseResource(), new UserSegment( "A" ) ) );
+                }
+                else if ( EXECUTE == action ||
+                          EXECUTE_BOOSTED == action ||
+                          EXECUTE_ADMIN == action )
+                {
+                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.DatabaseResource(), ProcedureSegment.ALL ) );
+                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.DatabaseResource(), new ProcedureSegment( "A" ) ) );
+                }
+                else if ( usesDatabaseResourceAndGeneralSegment.test( action ) )
                 {
                     commands.addAll( getGrantFor( role, privilegeType, action, new Resource.DatabaseResource(), Segment.ALL ) );
                 }
-                else if ( TRAVERSE.satisfies( action ) )
+                else if ( usesGraphResource.test( action ) )
                 {
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.GraphResource(), LabelSegment.ALL ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.GraphResource(), RelTypeSegment.ALL ) );
+                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.GraphResource(), LabelSegment.ALL) );
+                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.GraphResource(), new LabelSegment( "A" ) ) );
+                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.GraphResource(), RelTypeSegment.ALL) );
+                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.GraphResource(), new RelTypeSegment( "A" ) ) );
                 }
-                else if ( READ.satisfies( action ) )
-                {
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.AllPropertiesResource(), LabelSegment.ALL ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.AllPropertiesResource(), RelTypeSegment.ALL ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.PropertyResource( "foo" ), LabelSegment.ALL ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.PropertyResource( "foo" ), RelTypeSegment.ALL ) );
-                }
-                else if ( MATCH.satisfies( action ) )
+                else if ( usesPropertyResource.test( action ) )
                 {
                     commands.addAll( getGrantFor( role, privilegeType, action, new Resource.AllPropertiesResource(), LabelSegment.ALL ) );
+                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.AllPropertiesResource(), new LabelSegment( "A" ) ) );
                     commands.addAll( getGrantFor( role, privilegeType, action, new Resource.AllPropertiesResource(), RelTypeSegment.ALL ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.PropertyResource( "foo" ), LabelSegment.ALL ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.PropertyResource( "foo" ), RelTypeSegment.ALL ) );
+                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.AllPropertiesResource(), new RelTypeSegment( "A" ) ) );
+                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.PropertyResource( "A" ), LabelSegment.ALL ) );
+                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.PropertyResource( "A" ), new LabelSegment( "A" ) ) );
+                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.PropertyResource( "A" ), RelTypeSegment.ALL ) );
+                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.PropertyResource( "A" ), new RelTypeSegment( "A" ) ) );
                 }
-                else if ( SET_LABEL.satisfies( action ) )
+                else if ( usesLabelResource.test( action ) )
                 {
                     commands.addAll( getGrantFor( role, privilegeType, action, new Resource.AllLabelsResource(), LabelSegment.ALL ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.LabelResource( "foo" ), LabelSegment.ALL ) );
-                }
-                else if ( REMOVE_LABEL.satisfies( action ) )
-                {
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.AllLabelsResource(), LabelSegment.ALL ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.LabelResource( "foo" ), LabelSegment.ALL ) );
-                }
-                else if ( SET_PROPERTY.satisfies( action ) )
-                {
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.AllPropertiesResource(), LabelSegment.ALL ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.AllPropertiesResource(), RelTypeSegment.ALL ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.PropertyResource( "foo" ), LabelSegment.ALL ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.PropertyResource( "foo" ), RelTypeSegment.ALL ) );
-                }
-                else if ( WRITE.satisfies( action ) )
-                {
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.GraphResource(), LabelSegment.ALL ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.GraphResource(), RelTypeSegment.ALL ) );
-                }
-                else if ( MERGE.satisfies( action ) )
-                {
-                    if ( privilegeType == ResourcePrivilege.GrantOrDeny.DENY )
-                    {
-                        // not supported
-                    }
-                    else
-                    {
-                        commands.addAll( getGrantFor( role, privilegeType, action, new Resource.AllPropertiesResource(), LabelSegment.ALL ) );
-                        commands.addAll( getGrantFor( role, privilegeType, action, new Resource.AllPropertiesResource(), RelTypeSegment.ALL ) );
-                        commands.addAll( getGrantFor( role, privilegeType, action, new Resource.PropertyResource( "foo" ), LabelSegment.ALL ) );
-                        commands.addAll( getGrantFor( role, privilegeType, action, new Resource.PropertyResource( "foo" ), RelTypeSegment.ALL ) );
-                    }
-                }
-                else if ( TRANSACTION_MANAGEMENT.satisfies( action ) )
-                {
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.DatabaseResource(), new UserSegment( user ) ) );
-                }
-                else if ( DBMS_ACTIONS.satisfies( action ) ||
-                          START_DATABASE.satisfies( action ) ||
-                          STOP_DATABASE.satisfies( action ) || action == ADMIN )
-                {
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.DatabaseResource(), Segment.ALL ) );
-                }
-                else if ( INDEX.satisfies( action ) )
-                {
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.DatabaseResource(), Segment.ALL ) );
-                }
-                else if ( CONSTRAINT.satisfies( action ) )
-                {
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.DatabaseResource(), Segment.ALL ) );
-                }
-                else if ( TOKEN.satisfies( action ) )
-                {
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.DatabaseResource(), Segment.ALL ) );
-                }
-                else if ( EXECUTE.satisfies( action ) )
-                {
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.DatabaseResource(), ProcedureSegment.ALL ) );
-                }
-                else if ( EXECUTE_BOOSTED.satisfies( action ) )
-                {
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.DatabaseResource(), ProcedureSegment.ALL ) );
-                }
-                else if ( EXECUTE_ADMIN.satisfies( action ) )
-                {
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.DatabaseResource(), ProcedureSegment.ALL ) );
-                }
-                else if ( GRAPH_ACTIONS.satisfies( action ) )
-                {
-                    // grouping of other privileges that are already tested
-                }
-                else if ( DATABASE_ACTIONS.satisfies( action ) )
-                {
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.DatabaseResource(), Segment.ALL ) );
+                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.AllLabelsResource(), new LabelSegment( "A" ) ) );
+                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.LabelResource( "A" ), LabelSegment.ALL ) );
+                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.LabelResource( "A" ), new LabelSegment( "A" ) ) );
                 }
                 else
                 {
@@ -209,15 +250,27 @@ class PrivilegesAsCommandsIT
             tx.execute( String.format( "CREATE ROLE %s", role ) );
             tx.execute( String.format( "CREATE USER %s SET PASSWORD 'abc123'", user ) );
             tx.execute( String.format( "GRANT ROLE %s TO %s", role, user ) );
-            // all commands should be valid Cypher syntax
-            commands.forEach( command -> tx.execute( command, Map.of( DB_PARAM, DEFAULT_DATABASE_NAME ) ) );
             tx.commit();
         }
 
-        BackupCommands backupCommands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true );
-        assertThat( backupCommands.roleSetup ).filteredOn( c -> !c.startsWith( "CREATE" ) )
-                                              .containsExactlyInAnyOrderElementsOf( commands );
-        assertThat( backupCommands.userSetup ).hasSize( 2 );
+        for ( String command : commands )
+        {
+            try ( Transaction tx = system.beginTx() )
+            {
+                // all commands should be valid Cypher syntax
+                tx.execute( command, Map.of( DB_PARAM, DEFAULT_DATABASE_NAME ) );
+                tx.commit();
+            }
+
+            BackupCommands backupCommands = getBackupCommands( system, DEFAULT_DATABASE_NAME, false, true );
+            assertThat( backupCommands.roleSetup ).filteredOn( c -> !c.startsWith( "CREATE" ) )
+                                                  .containsExactlyElementsOf( List.of( command ) );
+            try ( Transaction tx = system.beginTx() )
+            {
+                tx.execute( "REVOKE " + command.replace( " TO ", " FROM " ), Map.of( DB_PARAM, DEFAULT_DATABASE_NAME ) );
+                tx.commit();
+            }
+        }
     }
 
     @Test
@@ -342,7 +395,7 @@ class PrivilegesAsCommandsIT
         {
             tx.execute( "CREATE ROLE role" );
             tx.execute( "GRANT TRAVERSE ON DEFAULT GRAPH NODES * TO role" );
-            tx.execute( "CREATE USER user SET PASSWORD 'abc123'" );
+            tx.execute( "CREATE USER user SET PASSWORD 'abc123' CHANGE NOT REQUIRED" );
             tx.execute( "GRANT ROLE role TO user" );
             tx.commit();
         }
@@ -360,6 +413,7 @@ class PrivilegesAsCommandsIT
         assertThat( commands.userSetup ).contains( "GRANT ROLE `role` TO `user`" );
         assertThat( commands.userSetup ).hasSize( 2 );
         assertRecreatesOriginal( commands, DEFAULT_DATABASE_NAME, true );
+        assertCanLogin( "user", "abc123", AuthenticationResult.SUCCESS );
     }
 
     @Test
@@ -425,6 +479,7 @@ class PrivilegesAsCommandsIT
         assertThat( commands.userSetup ).contains( "GRANT ROLE `foo` TO `user`" );
         assertThat( commands.userSetup ).hasSize( 2 );
         assertRecreatesOriginal( commands, DEFAULT_DATABASE_NAME, true );
+        assertCanLogin( "user", "abc123", AuthenticationResult.PASSWORD_CHANGE_REQUIRED );
     }
 
     @Test
@@ -464,8 +519,8 @@ class PrivilegesAsCommandsIT
         {
             tx.execute( "CREATE ROLE role" );
             tx.execute( "GRANT WRITE ON DEFAULT GRAPH TO role" );
-            tx.execute( "CREATE USER foo SET PASSWORD 'abc123'" );
-            tx.execute( "CREATE USER bar SET PASSWORD 'abc123'" );
+            tx.execute( "CREATE USER foo SET PASSWORD 'secret'" );
+            tx.execute( "CREATE USER bar SET PASSWORD 'm0r3s3Cr37' CHANGE NOT REQUIRED" );
 
             tx.execute( "GRANT ROLE role TO foo" );
             tx.execute( "GRANT ROLE role TO bar" );
@@ -483,6 +538,8 @@ class PrivilegesAsCommandsIT
         assertThat( commands.userSetup ).filteredOn( c -> c.startsWith( "CREATE USER `bar` IF NOT EXISTS SET ENCRYPTED PASSWORD" ) ).hasSize( 1 );
         assertThat( commands.userSetup ).hasSize( 2 );
         assertRecreatesOriginal( commands, DEFAULT_DATABASE_NAME, false );
+        assertCanLogin( "foo", "secret", AuthenticationResult.PASSWORD_CHANGE_REQUIRED );
+        assertCanLogin( "bar", "m0r3s3Cr37", AuthenticationResult.SUCCESS );
     }
 
     @Test
@@ -539,6 +596,38 @@ class PrivilegesAsCommandsIT
     }
 
     @Test
+    void shouldIgnoreDbCase()
+    {
+        // GIVEN
+        String database = "ThisIsWeirDCaSE";
+
+        try ( Transaction tx = system.beginTx() )
+        {
+            tx.execute( "CREATE DATABASE ThisIsWeirDCaSE" );
+            tx.execute( "CREATE ROLE role" );
+            tx.execute( "GRANT ACCESS ON DATABASE * TO role" );
+            tx.execute( "CREATE USER foo SET PASSWORD 'abc123'" );
+            tx.execute( "GRANT ROLE role TO foo" );
+            tx.commit();
+        }
+
+        // WHEN
+        BackupCommands weirdCaseCommands = getBackupCommands( system, database.toLowerCase(), true, true );
+        BackupCommands neo4jCommands = getBackupCommands( system, "NEo4J", true, true );
+
+        // THEN
+        assertThat( weirdCaseCommands.roleSetup )
+                .containsExactlyInAnyOrderElementsOf( neo4jCommands.roleSetup )
+                .containsExactlyInAnyOrder(
+                    String.format( "CREATE DATABASE $%s IF NOT EXISTS", DB_PARAM ),
+                    "CREATE ROLE `role` IF NOT EXISTS",
+                    String.format( "GRANT ACCESS ON DATABASE $%s TO `role`", DB_PARAM )
+                );
+        assertRecreatesOriginal( weirdCaseCommands, "newDb", true );
+        assertRecreatesOriginal( neo4jCommands, "newDb", true );
+    }
+
+    @Test
     void shouldRecreateOfflineDatabaseAsOffline()
     {
         // GIVEN
@@ -575,7 +664,7 @@ class PrivilegesAsCommandsIT
 
         BackupCommands commands = getBackupCommands( system, "database", true, true );
 
-        GraphDatabaseAPI newSystem = getCleanSystemDB();
+        cleanSystemDB();
 
         try ( Transaction tx = system.beginTx() )
         {
@@ -586,7 +675,38 @@ class PrivilegesAsCommandsIT
             commands.userSetup.forEach( tx::execute );
             tx.commit();
         }
-        var newCommands = getBackupCommands( newSystem, "database", true, true );
+        var newCommands = getBackupCommands( system, "database", true, true );
+
+        // THEN
+        assertThat( newCommands.roleSetup ).containsExactlyInAnyOrderElementsOf( commands.roleSetup );
+        assertThat( newCommands.userSetup ).containsExactlyInAnyOrderElementsOf( commands.userSetup );
+    }
+
+    @Test
+    void shouldRestoreWithAllConflicting()
+    {
+        // GIVEN
+        try ( Transaction tx = system.beginTx() )
+        {
+            tx.execute( "CREATE DATABASE database" );
+            tx.execute( "CREATE ROLE role" );
+            tx.execute( "GRANT READ {*} ON GRAPH database NODES * TO role" );
+            tx.execute( "CREATE USER foo SET PASSWORD 'password'" );
+            tx.execute( "GRANT ROLE role TO foo" );
+            tx.commit();
+        }
+
+        BackupCommands commands = getBackupCommands( system, "database", true, true );
+
+        try ( Transaction tx = system.beginTx() )
+        {
+            // WHEN
+            commands.roleSetup.forEach( c -> tx.execute( c, Map.of( "database", "database" ) ) );
+            commands.userSetup.forEach( tx::execute );
+            tx.commit();
+        }
+
+        BackupCommands newCommands = getBackupCommands( system, "database", true, true );
 
         // THEN
         assertThat( newCommands.roleSetup ).containsExactlyInAnyOrderElementsOf( commands.roleSetup );
@@ -609,7 +729,7 @@ class PrivilegesAsCommandsIT
 
         BackupCommands commands = getBackupCommands( system, "foo", true, true );
 
-        GraphDatabaseAPI newSystem = getCleanSystemDB();
+        cleanSystemDB();
 
         try ( Transaction tx = system.beginTx() )
         {
@@ -618,7 +738,7 @@ class PrivilegesAsCommandsIT
             commands.userSetup.forEach( tx::execute );
             tx.commit();
         }
-        BackupCommands newCommands = getBackupCommands( newSystem, "bar", true, true );
+        BackupCommands newCommands = getBackupCommands( system, "bar", true, true );
 
         // THEN
         assertThat( newCommands.roleSetup ).containsExactlyInAnyOrderElementsOf( commands.roleSetup );
@@ -651,9 +771,8 @@ class PrivilegesAsCommandsIT
     /**
      * Get a clean system database, only keeping Version node, system database and default database nodes, and PUBLIC role.
      */
-    private GraphDatabaseAPI getCleanSystemDB()
+    private void cleanSystemDB()
     {
-        GraphDatabaseService system = dbms.database( SYSTEM_DATABASE_NAME );
         try ( Transaction tx = system.beginTx() )
         {
             for ( Node node : tx.getAllNodes() )
@@ -672,7 +791,6 @@ class PrivilegesAsCommandsIT
             }
             tx.commit();
         }
-        return (GraphDatabaseAPI) system;
     }
 
     private List<String> getGrantFor( String role, ResourcePrivilege.GrantOrDeny privilegeType, PrivilegeAction action, Resource resource, Segment segment )
@@ -693,7 +811,7 @@ class PrivilegesAsCommandsIT
 
     private void assertRecreatesOriginal( BackupCommands backup, String databaseName, boolean saveRoles )
     {
-        GraphDatabaseAPI system = getCleanSystemDB();
+        cleanSystemDB();
         try ( Transaction tx = system.beginTx() )
         {
             backup.roleSetup.forEach( c -> tx.execute( c, Map.of( DB_PARAM, databaseName ) ) );
@@ -710,6 +828,20 @@ class PrivilegesAsCommandsIT
         else
         {
             assertThat( newBackup.userSetup ).isEmpty();
+        }
+    }
+
+    private void assertCanLogin( String username, String password, AuthenticationResult expectedResult )
+    {
+        try
+        {
+            EnterpriseLoginContext login = authManager.login( SecurityTestUtils.authToken( username, password ) );
+            AuthenticationResult result = login.subject().getAuthenticationResult();
+            assertThat( result ).isEqualTo( expectedResult );
+        }
+        catch ( InvalidAuthTokenException e )
+        {
+            fail();
         }
     }
 }

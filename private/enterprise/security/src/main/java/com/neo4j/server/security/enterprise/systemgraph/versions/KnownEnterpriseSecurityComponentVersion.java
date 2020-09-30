@@ -42,7 +42,6 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
     static final Label PRIVILEGE_LABEL = Label.label( "Privilege" );
 
     public static final RelationshipType GRANTED = RelationshipType.withName( "GRANTED" );
-    public static final RelationshipType DENIED = RelationshipType.withName( "DENIED" );
     private static final RelationshipType USER_TO_ROLE = RelationshipType.withName( "HAS_ROLE" );
     public static final RelationshipType SCOPE = RelationshipType.withName( "SCOPE" );
     static final RelationshipType APPLIES_TO = RelationshipType.withName( "APPLIES_TO" );
@@ -82,6 +81,7 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
         throw unsupported();
     }
 
+    // should only be called with lower-case database name
     public abstract BackupCommands getBackupCommands( Transaction tx, String databaseName, boolean saveUsers, boolean saveRoles );
 
     public boolean isEmpty()

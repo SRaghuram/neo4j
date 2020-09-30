@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import java.util.Collections;
 import java.util.List;
 
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
@@ -147,8 +146,16 @@ public class ResourcePrivilege
                                            role ) );
 
         case MERGE:
-            return List.of( String.format( "%s MERGE {%s} ON GRAPH %s %s TO `%s`", privilegeType.prefix, resource.toString(), database, segment.toString(),
-                                           role ) );
+            if ( privilegeType.prefix.equals( GrantOrDeny.GRANT.prefix ) )
+            {
+                return List.of( String.format( "%s MERGE {%s} ON GRAPH %s %s TO `%s`", privilegeType.prefix, resource.toString(), database, segment.toString(),
+                                               role ) );
+            }
+            else
+            {
+                // not supported
+                return List.of();
+            }
 
         case WRITE:
             return List.of( String.format( "%s WRITE ON GRAPH %s TO `%s`", privilegeType.prefix, database, role ) );

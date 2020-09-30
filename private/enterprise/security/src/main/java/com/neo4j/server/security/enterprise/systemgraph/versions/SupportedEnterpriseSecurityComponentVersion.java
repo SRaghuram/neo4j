@@ -331,10 +331,8 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
         ArrayList<String> roleSetup = new ArrayList<>();
         ArrayList<String> userSetup = new ArrayList<>();
 
-        String defaultDatabaseName = getDefaultDatabaseName( tx );
-
         roleSetup.add( String.format( "CREATE DATABASE $%s IF NOT EXISTS", DB_PARAM ) );
-        Node databaseNode = tx.findNode( Label.label("Database"), "name", databaseName.toLowerCase() );
+        Node databaseNode = tx.findNode( Label.label("Database"), "name", databaseName );
         if ( databaseNode != null && databaseNode.getProperty( "status" ).equals( "offline" ) )
         {
             roleSetup.add( String.format( "STOP DATABASE $%s", DB_PARAM ) );
@@ -349,38 +347,12 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
                              .collect( Collectors.toList() );
         }
 
-        List<String> relevantRoles = new ArrayList<>();
-        for ( String role : roles )
-        {
-            Set<ResourcePrivilege> privileges = currentGetPrivilegeForRole( tx, role );
-            Predicate<ResourcePrivilege> isRelevantPrivilege = p -> p.appliesToAll() ||
-                                                                    p.getDbName().equals( databaseName.toLowerCase() ) ||
-                                                                    databaseName.toLowerCase().equals( defaultDatabaseName ) &&
-                                                                    p.appliesToDefault();
-            Set<ResourcePrivilege> relevantPrivileges = privileges.stream()
-                                                                  .filter( isRelevantPrivilege )
-                                                                  .filter( p -> !p.isDbmsPrivilege() )
-                                                                  .collect( Collectors.toSet() );
-            if ( !relevantPrivileges.isEmpty() )
-            {
-                relevantRoles.add( role );
-            }
+        Map<String,ArrayList<String>> roleToPrivileges = getRelevantRolesAndPrivileges( tx, databaseName, roles, saveRoles );
+        Set<String> relevantRoles = roleToPrivileges.keySet();
 
-            if ( !relevantPrivileges.isEmpty() && saveRoles )
-            {
-                roleSetup.add( String.format( "CREATE ROLE `%s` IF NOT EXISTS", role ) );
-                for ( ResourcePrivilege privilege : relevantPrivileges )
-                {
-                    try
-                    {
-                        roleSetup.addAll( privilege.asGrantFor( role, DB_PARAM ) );
-                    }
-                    catch ( RuntimeException e )
-                    {
-                        log.warn( "Failed to write restore command for privilege '%s': %s", privilege.toString(), e.getMessage() );
-                    }
-                }
-            }
+        if ( saveRoles )
+        {
+            relevantRoles.forEach( role -> roleSetup.addAll( roleToPrivileges.get( role ) ) );
         }
 
         if ( saveUsers )
@@ -391,7 +363,53 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
         return new BackupCommands( roleSetup, userSetup );
     }
 
-    private List<String> getUsersAsCommands( Transaction tx, List<String> relevantRoles, Boolean withRoleGrants )
+    private Map<String,ArrayList<String>> getRelevantRolesAndPrivileges( Transaction tx, String databaseName, List<String> roles, boolean savePrivileges )
+    {
+        Map<String,ArrayList<String>> roleToPrivileges = new HashMap<>();
+        String defaultDatabaseName = getDefaultDatabaseName( tx );
+
+        for ( String role : roles )
+        {
+            Set<ResourcePrivilege> privileges = currentGetPrivilegeForRole( tx, role );
+            Predicate<ResourcePrivilege> isRelevantPrivilege = p -> p.appliesToAll() ||
+                                                                    p.getDbName().equals( databaseName ) ||
+                                                                    databaseName.equals( defaultDatabaseName ) &&
+                                                                    p.appliesToDefault();
+            Set<ResourcePrivilege> relevantPrivileges = privileges.stream()
+                                                                  .filter( isRelevantPrivilege )
+                                                                  .filter( p -> !p.isDbmsPrivilege() )
+                                                                  .collect( Collectors.toSet() );
+            if ( !relevantPrivileges.isEmpty() )
+            {
+                roleToPrivileges.put( role, new ArrayList<>() );
+            }
+
+            if ( !relevantPrivileges.isEmpty() && savePrivileges )
+            {
+                roleToPrivileges.get( role ).add( String.format( "CREATE ROLE `%s` IF NOT EXISTS", role ) );
+
+                Set<String> rolePrivileges = new HashSet<>();
+
+                for ( ResourcePrivilege privilege : relevantPrivileges )
+                {
+                    try
+                    {
+                        rolePrivileges.addAll( privilege.asGrantFor( role, DB_PARAM ) );
+                    }
+                    catch ( RuntimeException e )
+                    {
+                        log.error( "Failed to write restore command for privilege '%s': %s", privilege.toString(), e.getMessage() );
+                    }
+                }
+
+                roleToPrivileges.get( role ).addAll( rolePrivileges );
+            }
+        }
+
+        return roleToPrivileges;
+    }
+
+    private List<String> getUsersAsCommands( Transaction tx, Set<String> relevantRoles, boolean withRoleGrants )
     {
         Map<String, String> users = new HashMap<>();
         Map<String, List<String>> userToRoles = new HashMap<>();
@@ -420,7 +438,7 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
                 }
                 catch ( InvalidArgumentsException e )
                 {
-                    log.warn( "Failed to write restore command for user '%s': %s", username, e.getMessage() );
+                    log.error( "Failed to write restore command for user '%s': %s", username, e.getMessage() );
                 }
             } );
         }
