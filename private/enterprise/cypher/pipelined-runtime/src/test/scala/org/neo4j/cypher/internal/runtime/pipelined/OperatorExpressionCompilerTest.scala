@@ -5,16 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined
 
-import org.neo4j.codegen.api.CodeGeneration.ByteCodeGeneration
-import org.neo4j.codegen.api.CodeGeneration.CodeGenerationMode
-import org.neo4j.codegen.api.CodeGeneration.CodeSaver
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
-import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.cast
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.load
+import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.print
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.Load

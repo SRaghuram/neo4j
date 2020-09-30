@@ -58,7 +58,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.getArgumentSlotOffset
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.peekState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.removeState
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.setMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
@@ -212,7 +211,7 @@ abstract class BaseDistinctSinglePrimitiveOperatorTaskTemplate(val inner: Operat
 
   private var expression: IntermediateExpression = _
   protected val distinctStateField: InstanceField = field[DistinctSinglePrimitiveState](codeGen.namer.nextVariableName("distinctState"), initializeState)
-  protected val memoryTrackerField: InstanceField = field[MemoryTracker](codeGen.namer.nextVariableName("memoryTracker"))
+  protected val memoryTracker: IntermediateRepresentation = codeGen.registerMemoryTracker(id)
 
   protected def initializeState: IntermediateRepresentation
   protected def beginOperate: IntermediateRepresentation
@@ -245,9 +244,9 @@ abstract class BaseDistinctSinglePrimitiveOperatorTaskTemplate(val inner: Operat
       })
   }
 
-  override def genCreateState: IntermediateRepresentation = block(setMemoryTracker(memoryTrackerField, id.x), createState, inner.genCreateState)
+  override def genCreateState: IntermediateRepresentation = block(inner.genCreateState, createState)
   override def genExpressions: Seq[IntermediateExpression] = Seq(expression)
-  override def genFields: Seq[Field] = Seq(distinctStateField, memoryTrackerField) ++ genMoreFields
+  override def genFields: Seq[Field] = distinctStateField +: genMoreFields
   override def genLocalVariables: Seq[LocalVariable] = Seq.empty
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
   override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
@@ -283,8 +282,7 @@ class SerialTopLevelDistinctSinglePrimitiveOperatorTaskTemplate(inner: OperatorT
   override protected def beginOperate: IntermediateRepresentation = noop()
   override protected def createState: IntermediateRepresentation =
       invoke(loadField(distinctStateField),
-        method[DistinctSinglePrimitiveState, Unit, MemoryTracker]("setMemoryTracker"),
-        loadField(memoryTrackerField))
+        method[DistinctSinglePrimitiveState, Unit, MemoryTracker]("setMemoryTracker"), memoryTracker)
 
   override protected def genMoreFields: Seq[Field] = Seq.empty
 }
@@ -321,8 +319,7 @@ class SerialDistinctOnRhsOfApplySinglePrimitiveOperatorTaskTemplate(inner: Opera
           assign(localArgument, load(argumentVarName(argumentStateMapId))),
           setField(distinctStateField, cast[DistinctSinglePrimitiveState](OperatorCodeGenHelperTemplates.fetchState(loadField(argumentMaps), argumentStateMapId))),
           invoke(loadField(distinctStateField),
-            method[DistinctSinglePrimitiveState, Unit, MemoryTracker]("setMemoryTracker"),
-            loadField(memoryTrackerField))
+            method[DistinctSinglePrimitiveState, Unit, MemoryTracker]("setMemoryTracker"), memoryTracker)
         )
       })
 }

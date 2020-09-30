@@ -370,7 +370,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           tempNodeOffset,
           tempRelationshipOffset,
           nodePredicate.map(x => converters.toCommandExpression(id, x.predicate)).getOrElse(True()),
-          relationshipPredicate.map(x => converters.toCommandExpression(id, x.predicate)).getOrElse(True()))
+          relationshipPredicate.map(x => converters.toCommandExpression(id, x.predicate)).getOrElse(True()),
+          id)
 
       case plans.OptionalExpand(_, fromName, dir, types, to, relName, plans.ExpandAll, maybePredicate, expandProperties) =>
         val (nodePropsToCache, relPropsToCache) = getExpandProperties(slots, tokenContext, expandProperties)

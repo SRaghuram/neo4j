@@ -20,6 +20,7 @@ import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.allCursor
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.incomingCursor
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.outgoingCursor
 import org.neo4j.kernel.impl.newapi.Cursors.emptyTraversalCursor
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.ListValue
 import org.neo4j.values.virtual.RelationshipValue
@@ -42,7 +43,8 @@ abstract class VarExpandCursor(val fromNode: Long,
                                dbAccess: DbAccess,
                                params: Array[AnyValue],
                                cursors: ExpressionCursors,
-                               expressionVariables: Array[AnyValue]) {
+                               expressionVariables: Array[AnyValue],
+                               val memoryTracker: MemoryTracker) {
 
   private var expandStatus: ExpandStatus = NOT_STARTED
   private var pathLength: Int = 0
@@ -194,7 +196,8 @@ object VarExpandCursor {
             read: Read,
             dbAccess: DbAccess,
             nodePredicate: VarExpandPredicate[Long],
-            relationshipPredicate: VarExpandPredicate[RelationshipTraversalCursor]): VarExpandCursor = direction match {
+            relationshipPredicate: VarExpandPredicate[RelationshipTraversalCursor],
+            memoryTracker: MemoryTracker): VarExpandCursor = direction match {
     case SemanticDirection.OUTGOING =>
       new OutgoingVarExpandCursor(fromNode,
         targetToNode,
@@ -208,7 +211,8 @@ object VarExpandCursor {
         dbAccess,
         null,
         null,
-        null) {
+        null,
+        memoryTracker) {
 
         override protected def satisfyPredicates(executionContext: CypherRow,
                                                  dbAccess: DbAccess,
@@ -231,7 +235,8 @@ object VarExpandCursor {
         dbAccess,
         null,
         null,
-        null) {
+        null,
+        memoryTracker) {
         override protected def satisfyPredicates(executionContext: CypherRow,
                                                  dbAccess: DbAccess,
                                                  params: Array[AnyValue],
@@ -253,7 +258,8 @@ object VarExpandCursor {
         dbAccess,
         null,
         null,
-        null) {
+        null,
+        memoryTracker) {
         override protected def satisfyPredicates(executionContext: CypherRow,
                                                  dbAccess: DbAccess,
                                                  params: Array[AnyValue],
@@ -293,7 +299,8 @@ abstract class OutgoingVarExpandCursor(override val fromNode: Long,
                                        dbAccess: DbAccess,
                                        params: Array[AnyValue],
                                        cursors: ExpressionCursors,
-                                       expressionVariables: Array[AnyValue])
+                                       expressionVariables: Array[AnyValue],
+                                       memoryTracker: MemoryTracker)
   extends VarExpandCursor(fromNode,
     targetToNode,
     nodeCursor,
@@ -306,7 +313,8 @@ abstract class OutgoingVarExpandCursor(override val fromNode: Long,
     dbAccess,
     params,
     cursors,
-    expressionVariables) {
+    expressionVariables,
+    memoryTracker) {
 
   override protected def selectionCursor(traversalCursor: RelationshipTraversalCursor,
                                          node: NodeCursor,
@@ -325,7 +333,8 @@ abstract class IncomingVarExpandCursor(fromNode: Long,
                                        dbAccess: DbAccess,
                                        params: Array[AnyValue],
                                        cursors: ExpressionCursors,
-                                       expressionVariables: Array[AnyValue])
+                                       expressionVariables: Array[AnyValue],
+                                       memoryTracker: MemoryTracker)
   extends VarExpandCursor(fromNode,
     targetToNode,
     nodeCursor,
@@ -338,7 +347,8 @@ abstract class IncomingVarExpandCursor(fromNode: Long,
     dbAccess,
     params,
     cursors,
-    expressionVariables) {
+    expressionVariables,
+    memoryTracker) {
 
   override protected def selectionCursor(traversalCursor: RelationshipTraversalCursor,
                                          node: NodeCursor,
@@ -360,7 +370,8 @@ abstract class AllVarExpandCursor(fromNode: Long,
                                   dbAccess: DbAccess,
                                   params: Array[AnyValue],
                                   cursors: ExpressionCursors,
-                                  expressionVariables: Array[AnyValue])
+                                  expressionVariables: Array[AnyValue],
+                                  memoryTracker: MemoryTracker)
   extends VarExpandCursor(fromNode,
     targetToNode,
     nodeCursor,
@@ -373,7 +384,8 @@ abstract class AllVarExpandCursor(fromNode: Long,
     dbAccess,
     params,
     cursors,
-    expressionVariables) {
+    expressionVariables,
+    memoryTracker) {
 
   override protected def selectionCursor(traversalCursor: RelationshipTraversalCursor,
                                          node: NodeCursor,

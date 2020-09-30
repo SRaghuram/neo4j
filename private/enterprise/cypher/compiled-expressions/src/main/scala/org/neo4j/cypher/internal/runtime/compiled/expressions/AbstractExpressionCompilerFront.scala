@@ -191,6 +191,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilat
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.vPROPERTY_CURSOR
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.vRELATIONSHIP_CURSOR
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeCollectExpression
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.symbols.CTBoolean
 import org.neo4j.cypher.internal.util.symbols.CTDate
@@ -264,8 +265,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                                                val readOnly: Boolean,
                                                val namer: VariableNamer) extends ExpressionCompilerFront {
 
-  override def compileGroupingKey(orderedGroupings: Seq[Expression]): Option[IntermediateExpression] = {
-    val projections = orderedGroupings.flatMap(compileExpression)
+  override def compileGroupingKey(orderedGroupings: Seq[Expression], id: Id): Option[IntermediateExpression] = {
+    val projections = orderedGroupings.flatMap(p => compileExpression(p, id))
     if (projections.size < orderedGroupings.size) None
     else {
       require(projections.nonEmpty)
@@ -280,16 +281,16 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     }
   }
 
-  override def compileExpression(expression: Expression): Option[IntermediateExpression] = expression match {
+  override def compileExpression(expression: Expression, id: Id): Option[IntermediateExpression] = expression match {
 
     //functions
     case f: FunctionInvocation if f.function.isInstanceOf[AggregatingFunction] => None
-    case c: FunctionInvocation => compileFunction(c)
+    case c: FunctionInvocation => compileFunction(c, id)
 
     //math
     case expressions.Multiply(lhs, rhs) =>
-      for {l <- compileExpression(lhs)
-           r <- compileExpression(rhs)
+      for {l <- compileExpression(lhs, id)
+           r <- compileExpression(rhs, id)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("multiply"), l.ir, r.ir),
@@ -297,19 +298,19 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case expressions.Add(lhs, rhs) =>
-      for {l <- compileExpression(lhs)
-           r <- compileExpression(rhs)
+      for {l <- compileExpression(lhs, id)
+           r <- compileExpression(rhs, id)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("add"), l.ir, r.ir),
           l.fields ++ r.fields, l.variables ++ r.variables, l.nullChecks ++ r.nullChecks)
       }
 
-    case UnaryAdd(source) => compileExpression(source)
+    case UnaryAdd(source) => compileExpression(source, id)
 
     case expressions.Subtract(lhs, rhs) =>
-      for {l <- compileExpression(lhs)
-           r <- compileExpression(rhs)
+      for {l <- compileExpression(lhs, id)
+           r <- compileExpression(rhs, id)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("subtract"), l.ir, r.ir),
@@ -317,7 +318,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case UnarySubtract(source) =>
-      for {arg <- compileExpression(source)
+      for {arg <- compileExpression(source, id)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("subtract"),
@@ -325,8 +326,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case Divide(lhs, rhs) =>
-      for {l <- compileExpression(lhs)
-           r <- compileExpression(rhs)
+      for {l <- compileExpression(lhs, id)
+           r <- compileExpression(rhs, id)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("divide"), l.ir, r.ir),
@@ -336,8 +337,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case Modulo(lhs, rhs) =>
-      for {l <- compileExpression(lhs)
-           r <- compileExpression(rhs)
+      for {l <- compileExpression(lhs, id)
+           r <- compileExpression(rhs, id)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("modulo"), l.ir, r.ir),
@@ -345,8 +346,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case Pow(lhs, rhs) =>
-      for {l <- compileExpression(lhs)
-           r <- compileExpression(rhs)
+      for {l <- compileExpression(lhs, id)
+           r <- compileExpression(rhs, id)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("pow"), l.ir, r.ir),
@@ -367,7 +368,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     case _: True => Some(IntermediateExpression(trueValue, Seq.empty, Seq.empty, Set.empty, requireNullCheck = false))
     case _: False => Some(IntermediateExpression(falseValue, Seq.empty, Seq.empty, Set.empty, requireNullCheck = false))
     case ListLiteral(args) =>
-      val in = args.flatMap(compileExpression)
+      val in = args.flatMap(a => compileExpression(a, id))
       if (in.size < args.size) None
       else {
         val fields: Seq[Field] = in.foldLeft(Seq.empty[Field])((a, b) => a ++ b.fields)
@@ -379,7 +380,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
     case MapExpression(items) =>
       val compiled = (for {(k, v) <- items
-                           c <- compileExpression(v)} yield k -> c).toMap
+                           c <- compileExpression(v, id)} yield k -> c).toMap
       if (compiled.size < items.size) None
       else if (compiled.isEmpty) {
         Some(IntermediateExpression(
@@ -405,9 +406,9 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
     case DesugaredMapProjection(name, items, includeAllProps) =>
       for {
-        nameExpr <- compileExpression(name)
+        nameExpr <- compileExpression(name, id)
         (expressionMap, expressionsFields, expressionsVariables) <- {
-          val expressions = items.flatMap(i => compileExpression(i.exp))
+          val expressions = items.flatMap(i => compileExpression(i.exp, id))
           if (expressions.size < items.size) None
           else Some((
             items.map(_.key.name).zip(expressions),
@@ -458,11 +459,11 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         }
       }
 
-    case ListSlice(collection, None, None) => compileExpression(collection)
+    case ListSlice(collection, None, None) => compileExpression(collection, id)
 
     case ListSlice(collection, Some(from), None) =>
-      for {c <- compileExpression(collection)
-           f <- compileExpression(from)
+      for {c <- compileExpression(collection, id)
+           f <- compileExpression(from, id)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, ListValue, AnyValue, AnyValue]("fromSlice"), c.ir, f.ir),
@@ -471,8 +472,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case ListSlice(collection, None, Some(to)) =>
-      for {c <- compileExpression(collection)
-           t <- compileExpression(to)
+      for {c <- compileExpression(collection, id)
+           t <- compileExpression(to, id)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, ListValue, AnyValue, AnyValue]("toSlice"), c.ir, t.ir),
@@ -480,9 +481,9 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case ListSlice(collection, Some(from), Some(to)) =>
-      for {c <- compileExpression(collection)
-           f <- compileExpression(from)
-           t <- compileExpression(to)
+      for {c <- compileExpression(collection, id)
+           f <- compileExpression(from, id)
+           t <- compileExpression(to, id)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, ListValue, AnyValue, AnyValue, AnyValue]("fullSlice"), c.ir, f.ir, t.ir),
@@ -522,8 +523,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
        */
       val innerVariable = ExpressionVariable.cast(scope.variable)
       val iterVariable = namer.nextVariableName()
-      for {collection <- compileExpression(collectionExpression)
-           inner <- compileExpression(scope.innerPredicate.get)
+      for {collection <- compileExpression(collectionExpression, id)
+           inner <- compileExpression(scope.innerPredicate.get, id)
       } yield {
         val listVar = namer.nextVariableName()
         val currentValue = namer.nextVariableName()
@@ -612,8 +613,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
        */
       val innerVariable = ExpressionVariable.cast(scope.variable)
       val iterVariable = namer.nextVariableName()
-      for {collection <- compileExpression(collectionExpression)
-           inner <- compileExpression(scope.innerPredicate.get)
+      for {collection <- compileExpression(collectionExpression, id)
+           inner <- compileExpression(scope.innerPredicate.get, id)
       } yield {
         val listVar = namer.nextVariableName()
         val currentValue = namer.nextVariableName()
@@ -694,8 +695,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
        */
       val innerVariable = ExpressionVariable.cast(scope.variable)
       val iterVariable = namer.nextVariableName()
-      for {collection <- compileExpression(collectionExpression)
-           inner <- compileExpression(scope.innerPredicate.get)
+      for {collection <- compileExpression(collectionExpression, id)
+           inner <- compileExpression(scope.innerPredicate.get, id)
       } yield {
         val listVar = namer.nextVariableName()
         val currentValue = namer.nextVariableName()
@@ -768,8 +769,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
        */
       val innerVariable = ExpressionVariable.cast(scope.variable)
       val iterVariable = namer.nextVariableName()
-      for {collection <- compileExpression(collectionExpression)
-           inner <- compileExpression(scope.innerPredicate.get)
+      for {collection <- compileExpression(collectionExpression, id)
+           inner <- compileExpression(scope.innerPredicate.get, id)
       } yield {
         val listVar = namer.nextVariableName()
         val currentValue = namer.nextVariableName()
@@ -813,14 +814,14 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
     case ListComprehension(scope, list) =>
       val filter = scope.innerPredicate match {
-        case Some(_: True) | None => compileExpression(list)
-        case Some(inner) => filterExpression(compileExpression(list),
-                                             inner, ExpressionVariable.cast(scope.variable))
+        case Some(_: True) | None => compileExpression(list, id)
+        case Some(inner) => filterExpression(compileExpression(list, id),
+                                             inner, ExpressionVariable.cast(scope.variable), id)
       }
       scope.extractExpression match {
         case None => filter
         case Some(extract) =>
-          extractExpression(filter, extract, ExpressionVariable.cast(scope.variable))
+          extractExpression(filter, extract, ExpressionVariable.cast(scope.variable), id)
       }
 
     case ReduceExpression(scope, initExpression, collectionExpression) =>
@@ -839,9 +840,9 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       val innerVar = ExpressionVariable.cast(scope.variable)
 
       val iterVariable = namer.nextVariableName()
-      for {collection <- compileExpression(collectionExpression)
-           init <- compileExpression(initExpression)
-           inner <- compileExpression(scope.expression)
+      for {collection <- compileExpression(collectionExpression, id)
+           init <- compileExpression(initExpression, id)
+           inner <- compileExpression(scope.expression, id)
       } yield {
         val listVar = namer.nextVariableName()
         val currentValue = namer.nextVariableName()
@@ -876,8 +877,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
     //boolean operators
     case Or(lhs, rhs) =>
-      for {l <- compileExpression(lhs)
-           r <- compileExpression(rhs)
+      for {l <- compileExpression(lhs, id)
+           r <- compileExpression(rhs, id)
       } yield {
         val left = if (isPredicate(lhs)) l else coerceToPredicate(l)
         val right = if (isPredicate(rhs)) r else coerceToPredicate(r)
@@ -888,7 +889,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       val compiled = expressions.foldLeft[Option[List[(IntermediateExpression, Boolean)]]](Some(List.empty))
         { (acc, current) =>
           for {l <- acc
-               e <- compileExpression(current)} yield l :+ (e -> isPredicate(current))
+               e <- compileExpression(current, id)} yield l :+ (e -> isPredicate(current))
         }
 
       for (e <- compiled) yield e match {
@@ -904,8 +905,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case Xor(lhs, rhs) =>
-      for {l <- compileExpression(lhs)
-           r <- compileExpression(rhs)
+      for {l <- compileExpression(lhs, id)
+           r <- compileExpression(rhs, id)
       } yield {
         val left = if (isPredicate(lhs)) l else coerceToPredicate(l)
         val right = if (isPredicate(rhs)) r else coerceToPredicate(r)
@@ -915,8 +916,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case And(lhs, rhs) =>
-      for {l <- compileExpression(lhs)
-           r <- compileExpression(rhs)
+      for {l <- compileExpression(lhs, id)
+           r <- compileExpression(rhs, id)
       } yield {
         val left = if (isPredicate(lhs)) l else coerceToPredicate(l)
         val right = if (isPredicate(rhs)) r else coerceToPredicate(r)
@@ -927,7 +928,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       val compiled = expressions.foldLeft[Option[List[(IntermediateExpression, Boolean)]]](Some(List.empty))
         { (acc, current) =>
           for {l <- acc
-               e <- compileExpression(current)} yield l :+ (e -> isPredicate(current))
+               e <- compileExpression(current, id)} yield l :+ (e -> isPredicate(current))
         }
 
       for (e <- compiled) yield e match {
@@ -943,20 +944,20 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case AndedPropertyInequalities(_, _, inequalities) =>
-      val compiledInequalities = inequalities.toIndexedSeq.flatMap(i => compileExpression(i))
+      val compiledInequalities = inequalities.toIndexedSeq.flatMap(i => compileExpression(i, id))
       if (compiledInequalities.size < inequalities.size) None
       else Some(generateAnds(compiledInequalities.toList))
 
     case expressions.Not(arg) =>
-      compileExpression(arg).map(a => {
+      compileExpression(arg, id).map(a => {
         val in = if (isPredicate(arg)) a else coerceToPredicate(a)
         IntermediateExpression(
           invokeStatic(method[CypherBoolean, Value, AnyValue]("not"), in.ir), in.fields, in.variables, in.nullChecks)
       })
 
     case Equals(lhs, rhs) =>
-      for {l <- compileExpression(lhs)
-           r <- compileExpression(rhs)
+      for {l <- compileExpression(lhs, id)
+           r <- compileExpression(rhs, id)
       } yield {
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName, noValueOr(l, r)(
@@ -967,8 +968,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case NotEquals(lhs, rhs) =>
-      for {l <- compileExpression(lhs)
-           r <- compileExpression(rhs)
+      for {l <- compileExpression(lhs, id)
+           r <- compileExpression(rhs, id)
       } yield {
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName, noValueOr(l, r)(
@@ -979,11 +980,11 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         IntermediateExpression(ops, l.fields ++ r.fields, l.variables ++ r.variables, Set(nullChecks), requireNullCheck = false)
       }
 
-    case CoerceToPredicate(inner) => compileExpression(inner).map(coerceToPredicate)
+    case CoerceToPredicate(inner) => compileExpression(inner, id).map(coerceToPredicate)
 
     case RegexMatch(lhs, rhs) => rhs match {
       case expressions.StringLiteral(name) =>
-        for (e <- compileExpression(lhs)) yield {
+        for (e <- compileExpression(lhs, id)) yield {
           val f = field[regex.Pattern](namer.nextVariableName())
           val regexVar = namer.nextVariableName("regex")
           val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], regexVar, nullCheckIfRequired(e)))
@@ -999,8 +1000,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         }
 
       case _ =>
-        for {l <- compileExpression(lhs)
-             r <- compileExpression(rhs)
+        for {l <- compileExpression(lhs, id)
+             r <- compileExpression(rhs, id)
         } yield {
           val regexVar = namer.nextVariableName("regex")
           val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], regexVar, nullCheckIfRequired(l)))
@@ -1015,8 +1016,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     }
 
     case StartsWith(lhs, rhs) =>
-      for {l <- compileExpression(lhs)
-           r <- compileExpression(rhs)} yield {
+      for {l <- compileExpression(lhs, id)
+           r <- compileExpression(rhs, id)} yield {
         val leftVariableName = namer.nextVariableName()
         val rightVariableName = namer.nextVariableName()
         val lazyLeft = oneTime(declareAndAssign(typeRefOf[AnyValue], leftVariableName, nullCheckIfRequired(l)))
@@ -1032,8 +1033,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case EndsWith(lhs, rhs) =>
-      for {l <- compileExpression(lhs)
-           r <- compileExpression(rhs)} yield {
+      for {l <- compileExpression(lhs, id)
+           r <- compileExpression(rhs, id)} yield {
         val leftVariableName = namer.nextVariableName()
         val rightVariableName = namer.nextVariableName()
         val lazyLeft = oneTime(declareAndAssign(typeRefOf[AnyValue], leftVariableName, nullCheckIfRequired(l)))
@@ -1049,8 +1050,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case Contains(lhs, rhs) =>
-      for {l <- compileExpression(lhs)
-           r <- compileExpression(rhs)} yield {
+      for {l <- compileExpression(lhs, id)
+           r <- compileExpression(rhs, id)} yield {
         val leftVariableName = namer.nextVariableName()
         val rightVariableName = namer.nextVariableName()
         val lazyLeft = oneTime(declareAndAssign(typeRefOf[AnyValue], leftVariableName, nullCheckIfRequired(l)))
@@ -1066,22 +1067,22 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case expressions.IsNull(test) =>
-      for (e <- compileExpression(test)) yield {
+      for (e <- compileExpression(test, id)) yield {
         IntermediateExpression(
           nullCheck(e)(trueValue)(falseValue), e.fields, e.variables, Set.empty
         )
       }
 
     case expressions.IsNotNull(test) =>
-      for (e <- compileExpression(test)) yield {
+      for (e <- compileExpression(test, id)) yield {
         IntermediateExpression(
           nullCheck(e)(falseValue)(trueValue), e.fields, e.variables, Set.empty
         )
       }
 
     case LessThan(lhs, rhs) =>
-      for {l <- compileExpression(lhs)
-           r <- compileExpression(rhs)} yield {
+      for {l <- compileExpression(lhs, id)
+           r <- compileExpression(rhs, id)} yield {
 
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName,
@@ -1095,8 +1096,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case LessThanOrEqual(lhs, rhs) =>
-      for {l <- compileExpression(lhs)
-           r <- compileExpression(rhs)} yield {
+      for {l <- compileExpression(lhs, id)
+           r <- compileExpression(rhs, id)} yield {
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName,
                                                noValueOr(l, r)(
@@ -1109,8 +1110,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case GreaterThan(lhs, rhs) =>
-      for {l <- compileExpression(lhs)
-           r <- compileExpression(rhs)} yield {
+      for {l <- compileExpression(lhs, id)
+           r <- compileExpression(rhs, id)} yield {
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName,
                                                noValueOr(l, r)(
@@ -1123,8 +1124,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case GreaterThanOrEqual(lhs, rhs) =>
-      for {l <- compileExpression(lhs)
-           r <- compileExpression(rhs)} yield {
+      for {l <- compileExpression(lhs, id)
+           r <- compileExpression(rhs, id)} yield {
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName,
                                                noValueOr(l, r)(invokeStatic(
@@ -1149,7 +1150,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         case _ => false
       }
       val onNotFound = if (containsNull) noValue else falseValue
-      for (l <- compileExpression(lhs)) yield {
+      for (l <- compileExpression(lhs, id)) yield {
         val setField = staticConstant[util.HashSet[AnyValue]](namer.nextVariableName(), set)
         IntermediateExpression(
           ternary(invoke(getStatic[util.HashSet[AnyValue]](setField.name), method[util.Set[AnyValue], Boolean, Object]("contains"), l.ir),
@@ -1158,7 +1159,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
     // misc
     case CoerceTo(expr, typ) =>
-      for (e <- compileExpression(expr)) yield {
+      for (e <- compileExpression(expr, id)) yield {
         typ match {
           case CTAny => e
           case CTString =>
@@ -1246,7 +1247,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     //data access
-    case ContainerIndex(container, index) => containerIndexAccess(container, index, exists = false)
+    case ContainerIndex(container, index) => containerIndexAccess(container, index, exists = false, id)
 
     case ParameterFromSlot(offset, name, _) =>
       val parameterVariable = namer.parameterName(name)
@@ -1258,16 +1259,16 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     case CaseExpression(Some(innerExpression), alternativeExpressions, defaultExpression) =>
 
       val maybeDefault = defaultExpression match {
-        case Some(e) => compileExpression(e)
+        case Some(e) => compileExpression(e, id)
         case None => Some(IntermediateExpression(noValue, Seq.empty, Seq.empty, Set(constant(true))))
       }
       val (checkExpressions, loadExpressions) = alternativeExpressions.unzip
 
-      val checks = checkExpressions.flatMap(compileExpression)
-      val loads = loadExpressions.flatMap(compileExpression)
+      val checks = checkExpressions.flatMap(e => compileExpression(e, id))
+      val loads = loadExpressions.flatMap(e => compileExpression(e, id))
       if (checks.size != loads.size || checks.isEmpty || maybeDefault.isEmpty) None
       else {
-        for {inner: IntermediateExpression <- compileExpression(innerExpression)
+        for {inner: IntermediateExpression <- compileExpression(innerExpression, id)
         } yield {
 
           //AnyValue compare = inner;
@@ -1296,16 +1297,16 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
     case CaseExpression(None, alternativeExpressions, defaultExpression) =>
       val maybeDefault = defaultExpression match {
-        case Some(e) => compileExpression(e)
+        case Some(e) => compileExpression(e, id)
         case None => Some(IntermediateExpression(noValue, Seq.empty, Seq.empty, Set(constant(true))))
       }
       val (checkExpressions, loadExpressions) = alternativeExpressions.unzip
       val checks = checkExpressions.flatMap { e =>
-        if (isPredicate(e)) compileExpression(e)
-        else compileExpression(e).map(coerceToPredicate)
+        if (isPredicate(e)) compileExpression(e, id)
+        else compileExpression(e, id).map(coerceToPredicate)
       }
 
-      val loads = loadExpressions.flatMap(compileExpression)
+      val loads = loadExpressions.flatMap(e => compileExpression(e, id))
       if (checks.size != loads.size || maybeDefault.isEmpty) None
       else {
 
@@ -1333,7 +1334,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case Property(targetExpression, PropertyKeyName(key)) =>
-      for (map <- compileExpression(targetExpression)) yield {
+      for (map <- compileExpression(targetExpression, id)) yield {
         val variableName = namer.nextVariableName()
         val propertyGet = getProperty(key, nullCheckIfRequired(map))
         val call = noValueOr(map)(propertyGet)
@@ -1534,7 +1535,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         tokenFields, Seq(vNODE_CURSOR), Set.empty, requireNullCheck = false))
 
     case HasLabels(nodeExpression, labels) if labels.nonEmpty =>
-      for (node <- compileExpression(nodeExpression)) yield {
+      for (node <- compileExpression(nodeExpression, id)) yield {
         val (tokenFields, inits) = tokenFieldsForLabels(labels.map(_.name))
 
         val predicate: IntermediateRepresentation = ternary(tokenFields.map { token =>
@@ -1584,24 +1585,24 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case HasDegreeGreaterThanPrimitive(offset, typ, dir, maxDegreeExpression) =>
-     checkDegree(offset, typ, dir, maxDegreeExpression, greaterThan, d => add(d, constant(1)))
+     checkDegree(offset, typ, dir, maxDegreeExpression, greaterThan, d => add(d, constant(1)), id)
 
     case HasDegreeGreaterThanOrEqualPrimitive(offset, typ, dir, maxDegreeExpression) =>
-      checkDegree(offset, typ, dir, maxDegreeExpression, greaterThanOrEqual, identity)
+      checkDegree(offset, typ, dir, maxDegreeExpression, greaterThanOrEqual, identity, id)
 
     case HasDegreePrimitive(offset, typ, dir, maxDegreeExpression) =>
-      checkDegree(offset, typ, dir, maxDegreeExpression, equal, d => add(d, constant(1)))
+      checkDegree(offset, typ, dir, maxDegreeExpression, equal, d => add(d, constant(1)), id)
 
     case HasDegreeLessThanPrimitive(offset, typ, dir, maxDegreeExpression) =>
-      checkDegree(offset, typ, dir, maxDegreeExpression, lessThan, identity)
+      checkDegree(offset, typ, dir, maxDegreeExpression, lessThan, identity, id)
 
     case HasDegreeLessThanOrEqualPrimitive(offset, typ, dir, maxDegreeExpression) =>
-      checkDegree(offset, typ, dir, maxDegreeExpression, lessThanOrEqual, d => add(d, constant(1)))
+      checkDegree(offset, typ, dir, maxDegreeExpression, lessThanOrEqual, d => add(d, constant(1)), id)
 
     case f@ResolvedFunctionInvocation(name, Some(signature), args) if !f.isAggregate =>
       val inputArgs = args.map(Some(_))
         .zipAll(signature.inputSignature.map(_.default), None, None).flatMap {
-        case (Some(given), _) => compileExpression(given)
+        case (Some(given), _) => compileExpression(given, id)
         case (_, Some(default)) =>
           val constant = staticConstant[AnyValue](namer.nextVariableName().toUpperCase(), asAnyValue(default))
           Some(IntermediateExpression(getStatic[AnyValue](constant.name), Seq(constant), Seq.empty, Set.empty))
@@ -1635,8 +1636,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         case NilPathStep => true
       }
 
-      if (isStaticallyKnown(steps)) compileStaticPath(steps)
-      else compileDynamicPath(steps)
+      if (isStaticallyKnown(steps)) compileStaticPath(steps, id)
+      else compileDynamicPath(steps, id)
 
     //slotted operations
     case ReferenceFromSlot(offset, name) =>
@@ -1682,24 +1683,24 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case PrimitiveEquals(lhs, rhs) =>
-      for {l <- compileExpression(lhs)
-           r <- compileExpression(rhs)
+      for {l <- compileExpression(lhs, id)
+           r <- compileExpression(rhs, id)
       } yield
         IntermediateExpression(
           ternary(invoke(l.ir, method[AnyValue, Boolean, AnyRef]("equals"), r.ir), trueValue, falseValue),
           l.fields ++ r.fields, l.variables ++ r.variables, l.nullChecks ++ r.nullChecks)
 
     case NullCheck(offset, inner) =>
-      compileExpression(inner).map(i => i.copy(nullChecks = i.nullChecks + equal(getLongAt(offset), constant(-1L)), requireNullCheck = true))
+      compileExpression(inner, id).map(i => i.copy(nullChecks = i.nullChecks + equal(getLongAt(offset), constant(-1L)), requireNullCheck = true))
 
     case NullCheckVariable(offset, inner) =>
-      compileExpression(inner).map(i => i.copy(nullChecks = i.nullChecks + equal(getLongAt(offset), constant(-1L)), requireNullCheck = true))
+      compileExpression(inner, id).map(i => i.copy(nullChecks = i.nullChecks + equal(getLongAt(offset), constant(-1L)), requireNullCheck = true))
 
     case NullCheckProperty(offset, inner) =>
-      compileExpression(inner).map(i => i.copy(nullChecks = i.nullChecks + equal(getLongAt(offset), constant(-1L)), requireNullCheck = true))
+      compileExpression(inner, id).map(i => i.copy(nullChecks = i.nullChecks + equal(getLongAt(offset), constant(-1L)), requireNullCheck = true))
 
     case NullCheckReferenceProperty(offset, inner) =>
-      compileExpression(inner).map(i => i.copy(nullChecks = i.nullChecks + equal(getRefAt(offset), noValue), requireNullCheck = true))
+      compileExpression(inner, id).map(i => i.copy(nullChecks = i.nullChecks + equal(getRefAt(offset), noValue), requireNullCheck = true))
 
     case IsPrimitiveNull(offset) =>
       Some(IntermediateExpression(ternary(equal(getLongAt(offset), constant(-1L)), trueValue, falseValue),
@@ -1729,14 +1730,15 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                           dir: SemanticDirection,
                           maxDegreeExpression: Expression,
                           comparison: (IntermediateRepresentation, IntermediateRepresentation) => IntermediateRepresentation,
-                          computeMax: IntermediateRepresentation => IntermediateRepresentation): Option[IntermediateExpression] = {
+                          computeMax: IntermediateRepresentation => IntermediateRepresentation,
+                          id: Id): Option[IntermediateExpression] = {
     val methodName = s"${degreeMethod(dir)}WithMax"
     val localDegree = namer.nextVariableName("degree")
     val localDegreeInt = namer.nextVariableName("degreeInt")
 
     typ match {
       case None =>
-        for (maxDegree <- compileExpression(maxDegreeExpression)) yield {
+        for (maxDegree <- compileExpression(maxDegreeExpression, id)) yield {
           val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], localDegree, nullCheckIfRequired(maxDegree)))
           val nullCheck = Set(block(lazySet, equal(load(localDegree), noValue)))
           IntermediateExpression(
@@ -1755,7 +1757,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
       case Some(t) =>
         val f = field[Int](namer.nextVariableName(), constant(-1))
-        for (maxDegree <- compileExpression(maxDegreeExpression)) yield {
+        for (maxDegree <- compileExpression(maxDegreeExpression, id)) yield {
           val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], localDegree, nullCheckIfRequired(maxDegree)))
           val nullCheck = Set(block(lazySet, equal(load(localDegree), noValue)))
           IntermediateExpression(
@@ -1775,47 +1777,48 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         }
     }
   }
-  def compileFunction(c: FunctionInvocation): Option[IntermediateExpression] = c.function match {
+
+  def compileFunction(c: FunctionInvocation, id: Id): Option[IntermediateExpression] = c.function match {
     case functions.Acos =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("acos"), in.ir), in.fields, in.variables, in.nullChecks))
     case functions.Cos =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("cos"), in.ir), in.fields, in.variables, in.nullChecks))
     case functions.Cot =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("cot"), in.ir), in.fields, in.variables, in.nullChecks))
     case functions.Asin =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("asin"), in.ir), in.fields, in.variables, in.nullChecks))
     case functions.Haversin =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("haversin"), in.ir), in.fields, in.variables, in.nullChecks))
     case functions.Sin =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("sin"), in.ir), in.fields, in.variables, in.nullChecks))
     case functions.Atan =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("atan"), in.ir), in.fields, in.variables, in.nullChecks))
     case functions.Atan2 =>
-      for {y <- compileExpression(c.args(0))
-           x <- compileExpression(c.args(1))
+      for {y <- compileExpression(c.args(0), id)
+           x <- compileExpression(c.args(1), id)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, DoubleValue, AnyValue, AnyValue]("atan2"), y.ir, x.ir),
           y.fields ++ x.fields, y.variables ++ x.variables, y.nullChecks ++ x.nullChecks)
       }
     case functions.Tan =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("tan"), in.ir), in.fields, in.variables, in.nullChecks))
 
     case functions.Round if c.args.length == 1 =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("round"), in.ir), in.fields, in.variables, in.nullChecks))
 
     case functions.Round if c.args.length == 2 =>
-      for {value <- compileExpression(c.args(0))
-           precision <- compileExpression(c.args(1))
+      for {value <- compileExpression(c.args(0), id)
+           precision <- compileExpression(c.args(1), id)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, DoubleValue, AnyValue, AnyValue]("round"), value.ir, precision.ir),
@@ -1823,9 +1826,9 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case functions.Round if c.args.length == 3 =>
-      for {value <- compileExpression(c.args(0))
-           precision <- compileExpression(c.args(1))
-           mode <- compileExpression(c.args(2))
+      for {value <- compileExpression(c.args(0), id)
+           precision <- compileExpression(c.args(1), id)
+           mode <- compileExpression(c.args(2), id)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, DoubleValue, AnyValue, AnyValue, AnyValue]("round"), value.ir, precision.ir, mode.ir),
@@ -1840,48 +1843,48 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       Some(IntermediateExpression(invokeStatic(method[CypherFunctions, TextValue]("randomUuid")),
                                   Seq.empty, Seq.empty, Set.empty))
     case functions.Abs =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, NumberValue, AnyValue]("abs"), in.ir), in.fields, in.variables, in.nullChecks))
     case functions.Ceil =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("ceil"), in.ir), in.fields, in.variables, in.nullChecks))
     case functions.Floor =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("floor"), in.ir), in.fields, in.variables, in.nullChecks))
     case functions.Degrees =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("toDegrees"), in.ir), in.fields, in.variables, in.nullChecks))
     case functions.Exp =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("exp"), in.ir), in.fields, in.variables, in.nullChecks))
     case functions.Log =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("log"), in.ir), in.fields, in.variables, in.nullChecks))
     case functions.Log10 =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("log10"), in.ir), in.fields, in.variables, in.nullChecks))
     case functions.Radians =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("toRadians"), in.ir), in.fields, in.variables, in.nullChecks))
     case functions.Sign =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, LongValue, AnyValue]("signum"), in.ir), in.fields, in.variables, in.nullChecks))
     case functions.Sqrt =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("sqrt"), in.ir), in.fields, in.variables, in.nullChecks))
 
     case functions.Range  if c.args.length == 2 =>
-      for {start <- compileExpression(c.args(0))
-           end <- compileExpression(c.args(1))
+      for {start <- compileExpression(c.args(0), id)
+           end <- compileExpression(c.args(1), id)
       } yield IntermediateExpression(invokeStatic(method[CypherFunctions, ListValue, AnyValue, AnyValue]("range"),
                                                   nullCheckIfRequired(start), nullCheckIfRequired(end)),
                                      start.fields ++ end.fields,
                                      start.variables ++ end.variables, Set.empty)
 
     case functions.Range  if c.args.length == 3 =>
-      for {start <- compileExpression(c.args(0))
-           end <- compileExpression(c.args(1))
-           step <- compileExpression(c.args(2))
+      for {start <- compileExpression(c.args(0), id)
+           end <- compileExpression(c.args(1), id)
+           step <- compileExpression(c.args(2), id)
       } yield IntermediateExpression(invokeStatic(method[CypherFunctions, ListValue, AnyValue, AnyValue, AnyValue]("range"),
                                                   nullCheckIfRequired(start), nullCheckIfRequired(end), nullCheckIfRequired(step)),
                                      start.fields ++ end.fields ++ step.fields,
@@ -1891,7 +1894,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     case functions.E => Some(IntermediateExpression(getStatic[Values, DoubleValue]("E"), Seq.empty, Seq.empty, Set.empty))
 
     case functions.Coalesce =>
-      val args = c.args.flatMap(compileExpression)
+      val args = c.args.flatMap(e => compileExpression(e, id))
       if (args.size < c.args.size) None
       else {
         val tempVariable = namer.nextVariableName()
@@ -1923,8 +1926,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case functions.Distance =>
-      for {p1 <- compileExpression(c.args(0))
-           p2 <- compileExpression(c.args(1))
+      for {p1 <- compileExpression(c.args(0), id)
+           p2 <- compileExpression(c.args(1), id)
       } yield {
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
@@ -1935,27 +1938,27 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case functions.StartNode =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, NodeValue, AnyValue, DbAccess, RelationshipScanCursor]("startNode"),
                      in.ir, DB_ACCESS, RELATIONSHIP_CURSOR), in.fields, in.variables :+ vRELATIONSHIP_CURSOR, in.nullChecks))
 
     case functions.EndNode =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, NodeValue, AnyValue, DbAccess, RelationshipScanCursor]("endNode"), in.ir,
                                       DB_ACCESS, RELATIONSHIP_CURSOR), in.fields, in.variables :+ vRELATIONSHIP_CURSOR, in.nullChecks))
 
     case functions.Nodes =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, ListValue, AnyValue]("nodes"), in.ir), in.fields, in.variables, in.nullChecks))
 
     case functions.Relationships =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, ListValue, AnyValue]("relationships"), in.ir), in.fields, in.variables, in.nullChecks))
 
     case functions.Exists =>
       c.arguments.head match {
         case property: Property =>
-          compileExpression(property.map).map(in => IntermediateExpression(
+          compileExpression(property.map, id).map(in => IntermediateExpression(
             invokeStatic(method[CypherFunctions, BooleanValue, String, AnyValue, DbAccess,
                                   NodeCursor, RelationshipScanCursor, PropertyCursor]("propertyExists"),
                            constant(property.propertyKey.name),
@@ -1964,7 +1967,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
         case property: ASTCachedProperty => cachedExists(property)
         case containerIndex: ContainerIndex =>
-          containerIndexAccess(containerIndex.expr, containerIndex.idx, exists = true)
+          containerIndexAccess(containerIndex.expr, containerIndex.idx, exists = true, id)
         case _: PatternExpression => None//TODO
         case _: NestedPipeCollectExpression => None//TODO?
         case _: NestedPlanExpression => throw new InternalException("should have been rewritten away")
@@ -1972,7 +1975,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case functions.Head =>
-      compileExpression(c.args.head).map(in => {
+      compileExpression(c.args.head, id).map(in => {
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
                                                noValueOr(in)(invokeStatic(method[CypherFunctions, AnyValue, AnyValue]("head"), in.ir))))
@@ -1984,22 +1987,22 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       })
 
     case functions.Id =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, LongValue, AnyValue]("id"), in.ir),
         in.fields, in.variables, in.nullChecks))
 
     case functions.Labels =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, ListValue, AnyValue, DbAccess, NodeCursor]("labels"), in.ir, DB_ACCESS, NODE_CURSOR),
         in.fields, in.variables :+ vNODE_CURSOR, in.nullChecks))
 
     case functions.Type =>
-      compileExpression(c.args.head).map(in => IntermediateExpression(
+      compileExpression(c.args.head, id).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, TextValue, AnyValue]("type"), in.ir),
         in.fields, in.variables, in.nullChecks))
 
     case functions.Last =>
-      compileExpression(c.args.head).map(in => {
+      compileExpression(c.args.head, id).map(in => {
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
                                                noValueOr(in)(invokeStatic(method[CypherFunctions, AnyValue, AnyValue]("last"), in.ir))))
@@ -2011,8 +2014,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       })
 
     case functions.Left =>
-      for {in <- compileExpression(c.args(0))
-           endPos <- compileExpression(c.args(1))
+      for {in <- compileExpression(c.args(0), id)
+           endPos <- compileExpression(c.args(1), id)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, TextValue, AnyValue, AnyValue]("left"), in.ir, endPos.ir),
@@ -2020,30 +2023,30 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case functions.LTrim =>
-      for (in <- compileExpression(c.args.head)) yield {
+      for (in <- compileExpression(c.args.head, id)) yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, TextValue, AnyValue]("ltrim"), in.ir),
           in.fields, in.variables, in.nullChecks)
       }
 
     case functions.RTrim =>
-      for (in <- compileExpression(c.args.head)) yield {
+      for (in <- compileExpression(c.args.head, id)) yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, TextValue, AnyValue]("rtrim"), in.ir),
           in.fields, in.variables, in.nullChecks)
       }
 
     case functions.Trim =>
-      for (in <- compileExpression(c.args.head)) yield {
+      for (in <- compileExpression(c.args.head, id)) yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, TextValue, AnyValue]("trim"), in.ir),
           in.fields, in.variables, in.nullChecks)
       }
 
     case functions.Replace =>
-      for {original <- compileExpression(c.args(0))
-           search <- compileExpression(c.args(1))
-           replaceWith <- compileExpression(c.args(2))
+      for {original <- compileExpression(c.args(0), id)
+           search <- compileExpression(c.args(1), id)
+           replaceWith <- compileExpression(c.args(2), id)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, TextValue, AnyValue, AnyValue, AnyValue]("replace"),
@@ -2053,14 +2056,14 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case functions.Reverse =>
-      for (in <- compileExpression(c.args.head)) yield {
+      for (in <- compileExpression(c.args.head, id)) yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, AnyValue, AnyValue]("reverse"), in.ir), in.fields, in.variables, in.nullChecks)
       }
 
     case functions.Right =>
-      for {in <- compileExpression(c.args(0))
-           len <- compileExpression(c.args(1))
+      for {in <- compileExpression(c.args(0), id)
+           len <- compileExpression(c.args(1), id)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, TextValue, AnyValue, AnyValue]("right"), in.ir, len.ir),
@@ -2068,8 +2071,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case functions.Split =>
-      for {original <- compileExpression(c.args(0))
-           sep <- compileExpression(c.args(1))
+      for {original <- compileExpression(c.args(0), id)
+           sep <- compileExpression(c.args(1), id)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, ListValue, AnyValue, AnyValue]("split"), original.ir, sep.ir),
@@ -2078,8 +2081,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case functions.Substring if c.args.size == 2 =>
-      for {original <- compileExpression(c.args(0))
-           start <- compileExpression(c.args(1))
+      for {original <- compileExpression(c.args(0), id)
+           start <- compileExpression(c.args(1), id)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, TextValue, AnyValue, AnyValue]("substring"), original.ir, start.ir),
@@ -2087,9 +2090,9 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case functions.Substring  =>
-      for {original <- compileExpression(c.args(0))
-           start <- compileExpression(c.args(1))
-           len <- compileExpression(c.args(2))
+      for {original <- compileExpression(c.args(0), id)
+           start <- compileExpression(c.args(1), id)
+           len <- compileExpression(c.args(2), id)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, TextValue, AnyValue, AnyValue, AnyValue]("substring"),
@@ -2099,21 +2102,21 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case functions.ToLower =>
-      for (in <- compileExpression(c.args.head)) yield {
+      for (in <- compileExpression(c.args.head, id)) yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, TextValue, AnyValue]("toLower"), in.ir),
           in.fields, in.variables, in.nullChecks)
       }
 
     case functions.ToUpper =>
-      for (in <- compileExpression(c.args.head)) yield {
+      for (in <- compileExpression(c.args.head, id)) yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, TextValue, AnyValue]("toUpper"), in.ir),
           in.fields, in.variables, in.nullChecks)
       }
 
     case functions.Point =>
-      for (in <- compileExpression(c.args.head)) yield {
+      for (in <- compileExpression(c.args.head, id)) yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, Value, AnyValue, DbAccess, ExpressionCursors]("point"),
             in.ir, DB_ACCESS, CURSORS),
@@ -2121,7 +2124,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case functions.Keys =>
-      for (in <- compileExpression(c.args.head)) yield {
+      for (in <- compileExpression(c.args.head, id)) yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, ListValue, AnyValue, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor]("keys"),
             in.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
@@ -2129,28 +2132,28 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case functions.Size =>
-      for (in <- compileExpression(c.args.head)) yield {
+      for (in <- compileExpression(c.args.head, id)) yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, IntegralValue, AnyValue]("size"), in.ir),
           in.fields, in.variables, in.nullChecks)
       }
 
     case functions.Length =>
-      for (in <- compileExpression(c.args.head)) yield {
+      for (in <- compileExpression(c.args.head, id)) yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, IntegralValue, AnyValue]("length"), in.ir),
           in.fields, in.variables, in.nullChecks)
       }
 
     case functions.Tail =>
-      for (in <- compileExpression(c.args.head)) yield {
+      for (in <- compileExpression(c.args.head, id)) yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, ListValue, AnyValue]("tail"), in.ir),
           in.fields, in.variables, in.nullChecks)
       }
 
     case functions.ToBoolean =>
-      for (in <- compileExpression(c.args.head)) yield {
+      for (in <- compileExpression(c.args.head, id)) yield {
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
                                                noValueOr(in)(invokeStatic(method[CypherFunctions, Value, AnyValue]("toBoolean"), in.ir))))
@@ -2162,7 +2165,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case functions.ToFloat =>
-      for (in <- compileExpression(c.args.head)) yield {
+      for (in <- compileExpression(c.args.head, id)) yield {
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
                                                noValueOr(in)(invokeStatic(method[CypherFunctions, Value, AnyValue]("toFloat"), in.ir))))
@@ -2174,7 +2177,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case functions.ToInteger =>
-      for (in <- compileExpression(c.args.head)) yield {
+      for (in <- compileExpression(c.args.head, id)) yield {
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
                                                noValueOr(in)(invokeStatic(method[CypherFunctions, Value, AnyValue]("toInteger"), in.ir))))
@@ -2186,12 +2189,12 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       }
 
     case functions.ToString =>
-      for (in <- compileExpression(c.args.head)) yield {
+      for (in <- compileExpression(c.args.head, id)) yield {
         IntermediateExpression(invokeStatic(method[CypherFunctions, TextValue, AnyValue]("toString"), in.ir), in.fields, in.variables, in.nullChecks)
       }
 
     case functions.Properties =>
-      for (in <- compileExpression(c.args.head)) yield {
+      for (in <- compileExpression(c.args.head, id)) yield {
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName, noValueOr(in)(invokeStatic(
           method[CypherFunctions, MapValue, AnyValue, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor]("properties"),
@@ -2207,10 +2210,10 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       None
   }
 
-  override def compileProjection(projections: Map[String, Expression]): Option[IntermediateExpression] = {
+  override def compileProjection(projections: Map[String, Expression], id: Id): Option[IntermediateExpression] = {
     val removed = projections.keys.count(slots(_).isLongSlot)
     val compiled = for {(k, v) <- projections.toSeq
-                        c <- compileExpression(v) if !slots(k).isLongSlot}
+                        c <- compileExpression(v, id) if !slots(k).isLongSlot}
       yield slots(k).offset -> c
     if (compiled.size + removed < projections.size) None
     else {
@@ -2223,8 +2226,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
   }
 
   override def compileGroupingExpression(orderedGroupings: Seq[(Slot, IntermediateExpression)],
-                                         keyName: String
-                                        ): IntermediateGroupingExpression = {
+                                         keyName: String,
+                                         id: Id): IntermediateGroupingExpression = {
     require(orderedGroupings.nonEmpty)
     val listVar = namer.nextVariableName()
     val singleValue = orderedGroupings.size == 1
@@ -2665,7 +2668,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
   private def filterExpression(collectionExpression: Option[IntermediateExpression],
                                innerPredicate: Expression,
-                               innerVariable: ExpressionVariable): Option[IntermediateExpression] = {
+                               innerVariable: ExpressionVariable,
+                                id: Id): Option[IntermediateExpression] = {
     /*
        ListValue list = [evaluate collection expression];
        ArrayList<AnyValue> filtered = new ArrayList<>();
@@ -2684,7 +2688,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       */
     val iterVariable = namer.nextVariableName()
     for {collection <- collectionExpression
-         inner <- compileExpression(innerPredicate)
+         inner <- compileExpression(innerPredicate, id)
     } yield {
       val listVar = namer.nextVariableName()
       val filteredVars = namer.nextVariableName()
@@ -2735,7 +2739,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
   private def extractExpression(collectionExpression: Option[IntermediateExpression],
                                 extractExpression: Expression,
-                                innerVariable: ExpressionVariable): Option[IntermediateExpression] = {
+                                innerVariable: ExpressionVariable,
+                                id: Id): Option[IntermediateExpression] = {
     /*
         The generated code will be something along the line of:
 
@@ -2749,7 +2754,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
        */
     val iterVariable = namer.nextVariableName()
     for {collection <- collectionExpression
-         inner <- compileExpression(extractExpression)
+         inner <- compileExpression(extractExpression, id)
     } yield {
       val returnVar = namer.nextVariableName()
       val listVar = namer.nextVariableName()
@@ -2806,21 +2811,21 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     *
     * return VirtualValues.path( new NodeValue[]{a, b, c, d), new RelationshipValue[]{r1, r2, r3};
     */
-  private def compileStaticPath(steps: PathStep) = {
+  private def compileStaticPath(steps: PathStep, id: Id) = {
 
     @tailrec
     def compileSteps(step: PathStep,
                      nodeOps: Seq[IntermediateExpression] = ArrayBuffer.empty,
                      relOps: Seq[IntermediateExpression] = ArrayBuffer.empty): Option[(Seq[IntermediateExpression], Seq[IntermediateExpression])] = step match {
-      case NodePathStep(node, next) => compileSteps(next, nodeOps ++ compileExpression(node), relOps)
+      case NodePathStep(node, next) => compileSteps(next, nodeOps ++ compileExpression(node, id), relOps)
 
       case SingleRelationshipPathStep(relExpression, _, Some(targetExpression), next) =>
-        (compileExpression(relExpression), compileExpression(targetExpression)) match {
+        (compileExpression(relExpression, id), compileExpression(targetExpression, id)) match {
           case (Some(rel), Some(target)) => compileSteps(next, nodeOps :+ target, relOps :+ rel)
           case _ => None
         }
 
-      case SingleRelationshipPathStep(rel, SemanticDirection.BOTH, _, next) => compileExpression(rel) match {
+      case SingleRelationshipPathStep(rel, SemanticDirection.BOTH, _, next) => compileExpression(rel, id) match {
         case Some(compiled) =>
           val relVar = variable[RelationshipValue](namer.nextVariableName(), constant(null))
           val lazyRel = oneTime(assign(relVar.name, cast[RelationshipValue](compiled.ir)))
@@ -2837,7 +2842,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         case None => None
       }
 
-      case SingleRelationshipPathStep(rel, direction, _, next) => compileExpression(rel) match {
+      case SingleRelationshipPathStep(rel, direction, _, next) => compileExpression(rel, id) match {
         case Some(compiled) =>
           val methodName = if (direction == SemanticDirection.INCOMING) "startNode" else "endNode"
           val relVar = variable[RelationshipValue](namer.nextVariableName(), constant(null))
@@ -2882,12 +2887,12 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     }
   }
 
-  private def compileDynamicPath(steps: PathStep) = {
+  private def compileDynamicPath(steps: PathStep, id: Id) = {
 
     val builderVar = namer.nextVariableName()
     @tailrec
     def compileSteps(step: PathStep, acc: Seq[IntermediateExpression] = ArrayBuffer.empty): Option[Seq[IntermediateExpression]] = step match {
-      case NodePathStep(node, next) => compileExpression(node) match {
+      case NodePathStep(node, next) => compileExpression(node, id) match {
         case Some(nodeOps) =>
           val addNode =
             if (nodeOps.nullChecks.isEmpty) invokeSideEffect(load(builderVar),
@@ -2901,7 +2906,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
       //For this case end node is known
       case SingleRelationshipPathStep(rel, direction, Some(targetExpression), next) =>
-        (compileExpression(rel), compileExpression(targetExpression)) match {
+        (compileExpression(rel, id), compileExpression(targetExpression, id)) match {
           case (Some(relOps), Some(target)) =>
             //this will generate something like
             //builder.addNode(n);
@@ -2926,7 +2931,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         }
 
       //Here end node is not known and will require lookup
-      case SingleRelationshipPathStep(rel, direction, _, next) =>  compileExpression(rel) match {
+      case SingleRelationshipPathStep(rel, direction, _, next) =>  compileExpression(rel, id) match {
         case Some(relOps) =>
           val methodName = direction match {
             case SemanticDirection.INCOMING => "addIncoming"
@@ -2943,7 +2948,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           compileSteps(next, acc :+ relOps.copy(ir = addRel))
         case None => None
       }
-      case MultiRelationshipPathStep(rel, direction, maybeTarget, next) => compileExpression(rel) match {
+      case MultiRelationshipPathStep(rel, direction, maybeTarget, next) => compileExpression(rel, id) match {
         case Some(relOps) =>
           val methodName = direction match {
             case SemanticDirection.INCOMING => "addMultipleIncoming"
@@ -2951,7 +2956,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
             case _ => "addMultipleUndirected"
           }
 
-          val addRels = maybeTarget.flatMap(t => compileExpression(t)) match {
+          val addRels = maybeTarget.flatMap(t => compileExpression(t, id)) match {
             case Some(target) =>
               if (relOps.nullChecks.isEmpty && target.nullChecks.isEmpty) {
                 invokeSideEffect(load(builderVar),
@@ -3004,9 +3009,9 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     set
   }
 
-  private def containerIndexAccess(container: Expression, index: Expression, exists: Boolean) = {
-    for {c <- compileExpression(container)
-         idx <- compileExpression(index)
+  private def containerIndexAccess(container: Expression, index: Expression, exists: Boolean, id: Id) = {
+    for {c <- compileExpression(container, id)
+         idx <- compileExpression(index, id)
          } yield {
       val variableName = namer.nextVariableName()
       val invocation = if (exists) {

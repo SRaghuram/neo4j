@@ -48,7 +48,7 @@ class ProjectOperatorTemplate(override val inner: OperatorTaskTemplate,
 
   override def genOperate: IntermediateRepresentation = {
     if (projections == null) {
-      projections = codeGen.compileProjection(projectionOps).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $projectionOps"))
+      projections = codeGen.compileProjection(projectionOps, id).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $projectionOps"))
     }
     block(
       projections.ir,

@@ -9,6 +9,7 @@ package org.neo4j.cypher.internal.runtime.pipelined
 import java.util
 
 import org.neo4j.codegen.api.Field
+import org.neo4j.codegen.api.InstanceField
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
@@ -70,6 +71,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.nodeHasProperty
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.relationshipGetProperty
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.relationshipHasProperty
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.operations.CursorUtils
 import org.neo4j.cypher.operations.InCache
 import org.neo4j.internal.kernel.api.NodeCursor
@@ -79,6 +81,7 @@ import org.neo4j.internal.kernel.api.PropertyCursor
 import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
 import org.neo4j.values.virtual.ListValue
@@ -431,7 +434,9 @@ object OperatorExpressionCompiler {
 trait OverrideDefaultCompiler {
   self: AbstractExpressionCompilerFront =>
 
-  protected def fallBack(expression: Expression): Option[IntermediateExpression]
+  protected def fallBack(expression: Expression, id: Id): Option[IntermediateExpression]
+
+  protected def registerMemoryTracker(id: Id): IntermediateRepresentation
 
   /**
    * Extends expression compiler to add pipelined optimizations.
@@ -439,12 +444,15 @@ trait OverrideDefaultCompiler {
    * In most cases we should just call the base class but in some cases we can
    * do better than normal compiled expressions.
    */
-  override def compileExpression(expression: Expression): Option[IntermediateExpression] = expression match {
-    case In(_, ListLiteral(expressions)) if expressions.isEmpty =>fallBack(expression)
-    case In(_, ListLiteral(expressions)) if expressions.forall(e => e.isInstanceOf[Literal]) => fallBack(expression)
+  override def compileExpression(expression: Expression, id: Id): Option[IntermediateExpression] = expression match {
+    case In(_, ListLiteral(expressions)) if expressions.isEmpty => fallBack(expression, id)
+    case In(_, ListLiteral(expressions)) if expressions.forall(e => e.isInstanceOf[Literal]) => fallBack(expression, id)
     case In(lhs, rhs) =>
-      for {l <- compileExpression(lhs)
-           r <- compileExpression(rhs)} yield {
+      for {l <- compileExpression(lhs, id)
+           r <- compileExpression(rhs, id)} yield {
+
+        val memoryTracker = registerMemoryTracker(id)
+
         val variableName = namer.nextVariableName()
         val setName = namer.nextVariableName()
         val set = variable[InCache](setName, newInstance(constructor[InCache]))
@@ -452,17 +460,16 @@ trait OverrideDefaultCompiler {
           oneTime(
             declareAndAssign(typeRefOf[Value], variableName,
               noValueOr(r)(invoke(load(setName),
-                method[InCache, Value, AnyValue, ListValue]("check"), nullCheckIfRequired(l), asListValue(r.ir)))
+                method[InCache, Value, AnyValue, ListValue, MemoryTracker]("check"), nullCheckIfRequired(l), asListValue(r.ir), memoryTracker))
             )
           )
 
         val ops = block(lazySet, load(variableName))
         val nullChecks = block(lazySet, equal(load(variableName), noValue))
-
         IntermediateExpression(ops, l.fields ++ r.fields, (l.variables ++ r.variables) :+ set, Set(nullChecks), requireNullCheck = false)
       }
 
-    case _ => fallBack(expression)
+    case _ => fallBack(expression, id)
   }
 }
 
@@ -497,6 +504,8 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
    */
   private val cursors = mutable.Map.empty[String, CursorRepresentation]
 
+  private val _memoryTracker = mutable.Map.empty[Id, InstanceField]
+
   /**
    * Registers a cursor that points at the entity with the given name
    * @param name the name of the variable that the cursor is traversing
@@ -507,6 +516,12 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
   }
 
   override def cursorFor(name: String): Option[CursorRepresentation] = cursors.get(name)
+
+  override def registerMemoryTracker(id: Id): IntermediateRepresentation = {
+    loadField(_memoryTracker.getOrElseUpdate(id, field[MemoryTracker](namer.nextVariableName(s"memoryTrackerFor${id.x}"))))
+  }
+
+  def memoryTrackers: Map[Id, InstanceField] = _memoryTracker.toMap
 
   /**
    * Uses a local slot variable if one is already defined, otherwise declares and assigns a new local slot variable
@@ -574,8 +589,9 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     )
   }
 
-  override protected def fallBack(expression: Expression): Option[IntermediateExpression] =
-    super[AbstractExpressionCompilerFront].compileExpression(expression)
+  //TODO
+  override protected def fallBack(expression: Expression, id: Id): Option[IntermediateExpression] =
+    super[AbstractExpressionCompilerFront].compileExpression(expression, id)
 
   // Testing hooks
   protected def didInitializeCachedPropertyFromStore(): Unit = {}

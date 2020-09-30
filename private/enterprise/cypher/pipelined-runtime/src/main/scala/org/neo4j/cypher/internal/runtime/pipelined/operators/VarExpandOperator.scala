@@ -92,6 +92,7 @@ import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.ListValue
@@ -113,7 +114,8 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
                         tempNodeOffset: Int,
                         tempRelationshipOffset: Int,
                         nodePredicate: Expression,
-                        relationshipPredicate: Expression) extends StreamingOperator {
+                        relationshipPredicate: Expression,
+                        id: Id) extends StreamingOperator {
 
   //===========================================================================
   // Compile-time initializations
@@ -203,7 +205,8 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
           state.queryContext.transactionalContext.dataRead,
           state.queryContext,
           nodeVarExpandPredicate,
-          relVarExpandPredicate)
+          relVarExpandPredicate,
+          state.memoryTracker.memoryTrackerForOperator(id.x))
         varExpandCursor.enterWorkUnit(resources.cursorPools)
         varExpandCursor.setTracer(executionEvent)
         true
@@ -264,23 +267,25 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
   private val missingTypeField = field[Array[String]](codeGen.namer.nextVariableName("missingType"),
     arrayOf[String](missingTypes.map(constant):_*))
   private val varExpandCursorField = field[VarExpandCursor](codeGen.namer.nextVariableName("varExpandCursor"))
+  private val memoryTracker = codeGen.registerMemoryTracker(id)
   private val toOffset = toSlot.offset
   private val projectBackwards = VarLengthExpandPipe.projectBackwards(dir, projectedDir)
   private var startNodePredicate: Option[IntermediateExpression] = _
   private var nodePredicate: Option[IntermediateExpression] = _
   private var relPredicate: Option[IntermediateExpression] = _
 
+
   override final def scopeId: String = "varExpand" + id.x
 
   override def genMoreFields: Seq[Field] = {
     val localFields =
-      ArrayBuffer(typeField,
-        varExpandCursorField)
+      ArrayBuffer(typeField, varExpandCursorField)
     if (missingTypes.nonEmpty) {
       localFields += missingTypeField
     }
     localFields ++ nodePredicate.map(_.fields).getOrElse(Seq.empty) ++ relPredicate.map(_.fields).getOrElse(Seq.empty)
   }
+
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
 
@@ -314,7 +319,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
     def generateStartNodePredicate() = {
       if (startNodePredicate == null) {
         startNodePredicate = maybeNodeVariablePredicate
-          .map(p => codeGen.compileExpression(p.predicate)
+          .map(p => codeGen.compileExpression(p.predicate, id)
             .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile ${p.predicate}")))
       }
 
@@ -357,7 +362,8 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
             DB_ACCESS,
             PARAMS,
             CURSORS,
-            EXPRESSION_VARIABLES)),
+            EXPRESSION_VARIABLES,
+            memoryTracker)),
           invokeSideEffect(loadField(varExpandCursorField), method[VarExpandCursor, Unit, CursorPools]("enterWorkUnit"), CURSOR_POOL),
           invokeSideEffect(loadField(varExpandCursorField), method[VarExpandCursor, Unit, OperatorProfileEvent]("setTracer"), loadField(executionEventField)),
 
@@ -489,8 +495,8 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
     //accessing fromNode and toNode which we already have stored in fields.
     val newScopeExpressionCompiler = new DefaultExpressionCompilerFront(codeGen.slots, codeGen.readOnly, codeGen.namer) with OverrideDefaultCompiler {
 
-      override protected def fallBack(expression: expressions.Expression): Option[IntermediateExpression] =
-        super[DefaultExpressionCompilerFront].compileExpression(expression)
+      override protected def fallBack(expression: expressions.Expression, id: Id): Option[IntermediateExpression] =
+        super[DefaultExpressionCompilerFront].compileExpression(expression, id)
 
       override protected def getLongAt(offset: Int): IntermediateRepresentation =
         if (fromSlot.isLongSlot && offset == fromSlot.offset) {
@@ -518,17 +524,20 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
           super.getRefAt(offset)
         }
       }
+
+      override protected def registerMemoryTracker(id: Id): IntermediateRepresentation =
+        invoke(self(), method[VarExpandCursor, MemoryTracker]("memoryTracker"))
     }
 
     if (nodePredicate == null) {
       nodePredicate = maybeNodeVariablePredicate
-        .map(p => newScopeExpressionCompiler.compileExpression(p.predicate)
+        .map(p => newScopeExpressionCompiler.compileExpression(p.predicate, id)
           .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile ${p.predicate}")))
     }
 
     if (relPredicate == null) {
       relPredicate = maybeRelVariablePredicate
-        .map(p => newScopeExpressionCompiler.compileExpression(p.predicate)
+        .map(p => newScopeExpressionCompiler.compileExpression(p.predicate, id)
           .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile ${p.predicate}")))
     }
 
@@ -555,7 +564,9 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
         param[DbAccess](ExpressionCompilation.DB_ACCESS_NAME),
         param[Array[AnyValue]](ExpressionCompilation.PARAMS_NAME),
         param[ExpressionCursors](ExpressionCompilation.CURSORS_NAME),
-        param[Array[AnyValue]](ExpressionCompilation.EXPRESSION_VARIABLES_NAME)),
+        param[Array[AnyValue]](ExpressionCompilation.EXPRESSION_VARIABLES_NAME),
+        param[MemoryTracker]("memoryTracker")
+      ),
       Seq(methodDeclaration[Boolean]("satisfyPredicates",
         generatePredicate,
         () => locals.toSeq,

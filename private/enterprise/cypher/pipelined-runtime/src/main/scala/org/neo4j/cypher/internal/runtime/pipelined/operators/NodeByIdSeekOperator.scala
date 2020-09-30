@@ -154,7 +154,7 @@ class SingleNodeByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     if (nodeId == null) {
-      nodeId = codeGen.compileExpression(nodeIdExpr).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $nodeIdExpr"))
+      nodeId = codeGen.compileExpression(nodeIdExpr, id).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $nodeIdExpr"))
     }
 
     /**
@@ -221,7 +221,7 @@ class ManyNodeByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     if (nodeIds == null) {
-      nodeIds = codeGen.compileExpression(nodeIdsExpr).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $nodeIdsExpr"))
+      nodeIds = codeGen.compileExpression(nodeIdsExpr, id).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $nodeIdsExpr"))
     }
 
     /**

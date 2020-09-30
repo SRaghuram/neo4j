@@ -152,7 +152,7 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
                                    slots: SlotConfiguration,
                                    orderToLeverage: Seq[Expression]): () => IntermediateExpression = {
               val orderedGroupingExpressions = orderGroupingKeyExpressions(astExpressions, orderToLeverage)(slots).map(_._2)
-              () => ctx.expressionCompiler.compileGroupingKey(orderedGroupingExpressions)
+              () => ctx.expressionCompiler.compileGroupingKey(orderedGroupingExpressions, p.id)
                 .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $astExpressions"))
             }
 
@@ -181,7 +181,7 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
                   argumentSlotOffset,
                   aggregators.result(),
                   argumentStateMapId,
-                  () => aggregationAstExpressions.flatMap(a => a.map(e => ctx.compileExpression(e)())),
+                  () => aggregationAstExpressions.flatMap(a => a.map(e => ctx.compileExpression(e, p.id)())),
                   compileGroupingKey(groupingExpressions, outputSlots, orderToLeverage = Seq.empty),
                   serialExecutionOnly)(ctx.expressionCompiler)
               } else {
@@ -190,7 +190,7 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
                   argumentSlotOffset,
                   aggregators.result(),
                   argumentStateMapId,
-                  () => aggregationAstExpressions.map(a => a.map(e => ctx.compileExpression(e)())),
+                  () => aggregationAstExpressions.map(a => a.map(e => ctx.compileExpression(e, p.id)())),
                   compileGroupingKey(groupingExpressions, outputSlots, orderToLeverage = Seq.empty),
                   serialExecutionOnly)(ctx.expressionCompiler)
               }
@@ -201,7 +201,7 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
                   argumentSlotOffset,
                   aggregators.result(),
                   argumentStateMapId,
-                  () => aggregationAstExpressions.flatMap(a => a.map(e => ctx.compileExpression(e)())),
+                  () => aggregationAstExpressions.flatMap(a => a.map(e => ctx.compileExpression(e, p.id)())),
                   serialExecutionOnly)(ctx.expressionCompiler)
               } else {
                 new AggregationMapperOperatorNoGroupingTaskTemplate(ctx.innermost,
@@ -209,7 +209,7 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
                   argumentSlotOffset,
                   aggregators.result(),
                   argumentStateMapId,
-                  () => aggregationAstExpressions.map(a => a.map(e => ctx.compileExpression(e)())),
+                  () => aggregationAstExpressions.map(a => a.map(e => ctx.compileExpression(e, p.id)())),
                   serialExecutionOnly)(ctx.expressionCompiler)
               }
             }

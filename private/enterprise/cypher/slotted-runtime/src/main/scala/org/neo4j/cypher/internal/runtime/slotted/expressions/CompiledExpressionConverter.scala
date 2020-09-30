@@ -17,7 +17,6 @@ import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.WritableRow
-import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerTracer
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledExpression
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledExpressionContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledGroupingExpression
@@ -59,7 +58,7 @@ class CompiledExpressionConverter(log: Log,
     case e if sizeOf(e) > COMPILE_LIMIT => try {
       log.debug(s"Compiling expression: $expression")
       StandaloneExpressionCompiler.default(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode, compiledExpressionsContext)
-        .compileExpression(e)
+        .compileExpression(e, id)
         .map(CompileWrappingExpression(_, inner.toCommandExpression(id, expression)))
     } catch {
       case NonFatalCypherError(t) =>
@@ -87,7 +86,7 @@ class CompiledExpressionConverter(log: Log,
       if (totalSize > COMPILE_LIMIT) {
         log.debug(s" Compiling projection: $projections")
         StandaloneExpressionCompiler.default(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode, compiledExpressionsContext)
-          .compileProjection(projections)
+          .compileProjection(projections, id)
           .map(CompileWrappingProjection(_, projections.isEmpty))
       } else None
     }
@@ -116,7 +115,7 @@ class CompiledExpressionConverter(log: Log,
         if (totalSize > COMPILE_LIMIT) {
           log.debug(s" Compiling grouping expression: $projections")
           StandaloneExpressionCompiler.default(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode, compiledExpressionsContext)
-            .compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage))
+            .compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage), id)
             .map(CompileWrappingDistinctGroupingExpression(_, projections.isEmpty))
         } else None
       }

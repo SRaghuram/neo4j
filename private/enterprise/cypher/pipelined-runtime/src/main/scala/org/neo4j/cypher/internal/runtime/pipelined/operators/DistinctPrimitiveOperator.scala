@@ -55,7 +55,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.getArgumentSlotOffset
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.peekState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.removeState
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.setMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
@@ -121,7 +120,7 @@ abstract class BaseDistinctPrimitiveOperatorTaskTemplate(val inner: OperatorTask
   private var groupingExpression: IntermediateGroupingExpression = _
 
   protected val distinctStateField: InstanceField = field[DistinctState](codeGen.namer.nextVariableName("distinctState"), initializeState)
-  protected val memoryTrackerField: InstanceField = field[MemoryTracker](codeGen.namer.nextVariableName("memoryTracker"))
+  protected val memoryTracker: IntermediateRepresentation = codeGen.registerMemoryTracker(id)
   protected val primitiveSlotsField: StaticField = staticConstant[Array[Int]]("primitiveSlots", primitiveSlots)
 
   protected def initializeState: IntermediateRepresentation
@@ -134,12 +133,12 @@ abstract class BaseDistinctPrimitiveOperatorTaskTemplate(val inner: OperatorTask
   override protected def genOperate: IntermediateRepresentation = {
     val compiled = groupings.map {
       case (s, e) =>
-        s -> codeGen.compileExpression(e).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $e"))
+        s -> codeGen.compileExpression(e, id).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $e"))
     }
     val groupingKeyAsArrayVar = codeGen.namer.nextVariableName("groupingKeyAsArray")
     //note that this key ir read later also by project
     val keyVar = codeGen.namer.nextVariableName("groupingKey")
-    groupingExpression = codeGen.compileGroupingExpression(compiled, keyVar)
+    groupingExpression = codeGen.compileGroupingExpression(compiled, keyVar, id)
 
     /**
      * val groupingKeyAsArray = buildGroupingKey
@@ -163,9 +162,9 @@ abstract class BaseDistinctPrimitiveOperatorTaskTemplate(val inner: OperatorTask
       })
   }
 
-  override def genCreateState: IntermediateRepresentation = block(setMemoryTracker(memoryTrackerField, id.x), createState, inner.genCreateState)
+  override def genCreateState: IntermediateRepresentation = block(inner.genCreateState, createState)
   override def genExpressions: Seq[IntermediateExpression] = Seq(groupingExpression.computeKey, groupingExpression.projectKey)
-  override def genFields: Seq[Field] = Seq(distinctStateField, memoryTrackerField, primitiveSlotsField) ++ genMoreFields
+  override def genFields: Seq[Field] = Seq(distinctStateField, primitiveSlotsField) ++ genMoreFields
   override def genLocalVariables: Seq[LocalVariable] = Seq.empty
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
   override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
@@ -199,8 +198,7 @@ class SerialTopLevelDistinctPrimitiveOperatorTaskTemplate(inner: OperatorTaskTem
   override protected def initializeState: IntermediateRepresentation = peekState[DistinctState](argumentStateMapId)
   override protected def beginOperate: IntermediateRepresentation = noop()
   override protected def createState: IntermediateRepresentation = invoke(loadField(distinctStateField),
-    method[DistinctState, Unit, MemoryTracker]("setMemoryTracker"),
-    loadField(memoryTrackerField))
+    method[DistinctState, Unit, MemoryTracker]("setMemoryTracker"), memoryTracker)
   override protected def genMoreFields: Seq[Field] = Seq.empty
 }
 
@@ -227,8 +225,7 @@ class SerialDistinctOnRhsOfApplyPrimitiveOperatorTaskTemplate(inner: OperatorTas
           assign(localArgument, load(argumentVarName(argumentStateMapId))),
           setField(distinctStateField, cast[DistinctState](OperatorCodeGenHelperTemplates.fetchState(loadField(argumentMaps), argumentStateMapId))),
           invoke(loadField(distinctStateField),
-            method[DistinctState, Unit, MemoryTracker]("setMemoryTracker"),
-            loadField(memoryTrackerField))
+            method[DistinctState, Unit, MemoryTracker]("setMemoryTracker"), memoryTracker)
         )
       })
 

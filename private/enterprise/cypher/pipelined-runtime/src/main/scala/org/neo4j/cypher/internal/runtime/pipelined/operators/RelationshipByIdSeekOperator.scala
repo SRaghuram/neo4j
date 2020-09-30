@@ -325,7 +325,7 @@ abstract class SingleRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTemplat
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     if (relationshipExpression == null) {
-      relationshipExpression = codeGen.compileExpression(relIdExpr)
+      relationshipExpression = codeGen.compileExpression(relIdExpr, id)
         .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $relIdExpr"))
     }
 
@@ -490,7 +490,7 @@ abstract class ManyRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     if (relationshipExpression == null) {
-      relationshipExpression = codeGen.compileExpression(relIdsExpr).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $relIdsExpr"))
+      relationshipExpression = codeGen.compileExpression(relIdsExpr, id).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $relIdsExpr"))
     }
 
     /**

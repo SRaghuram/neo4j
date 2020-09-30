@@ -165,9 +165,10 @@ trait ProcedureCaller {
    */
   def createArgsWithDefaultValue(args: Seq[expressions.Expression],
                                  signature: ProcedureSignature,
-                                 codeGen: OperatorExpressionCompiler): Seq[() => IntermediateExpression] = args.map(Some(_)).zipAll(signature.inputSignature.map(_.default), None, None).map {
+                                 codeGen: OperatorExpressionCompiler,
+                                 id: Id): Seq[() => IntermediateExpression] = args.map(Some(_)).zipAll(signature.inputSignature.map(_.default), None, None).map {
     case (Some(arg), _) => () =>
-      val v = compile(arg, codeGen)
+      val v = compile(arg, codeGen, id)
       v.copy(ir = nullCheckIfRequired(v))
     case (_, Some(defaultValue)) => () =>
       val defaultValueField = staticConstant[AnyValue](codeGen.namer.nextVariableName(), defaultValue)
@@ -209,8 +210,10 @@ trait ProcedureCaller {
     }
   }
 
-  private def compile(e: expressions.Expression, codeGen: OperatorExpressionCompiler): IntermediateExpression =
-    codeGen.compileExpression(e).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $e"))
+  private def compile(e: expressions.Expression,
+                      codeGen: OperatorExpressionCompiler,
+                      id: Id): IntermediateExpression =
+    codeGen.compileExpression(e, id).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $e"))
 }
 
 /**
@@ -227,7 +230,7 @@ class VoidProcedureOperatorTemplate(val inner: OperatorTaskTemplate,
   override def genInit: IntermediateRepresentation = {
     inner.genInit
   }
-  private val callArgumentsGenerator = createArgsWithDefaultValue(args, signature, codeGen)
+  private val callArgumentsGenerator = createArgsWithDefaultValue(args, signature, codeGen, id)
   private var argExpression: Array[IntermediateExpression] = _
   private val callModeField: StaticField = staticConstant[ProcedureCallMode](codeGen.namer.nextVariableName("callMode"), callMode)
   private val originalVariablesField: StaticField = staticConstant[Array[String]](codeGen.namer.nextVariableName("vars"), originalVariables)
@@ -285,7 +288,7 @@ class ProcedureOperatorTaskTemplate(inner: OperatorTaskTemplate,
   private val originalVariablesField = staticConstant[Array[String]](codeGen.namer.nextVariableName("vars"), originalVariables)
   private var argExpression: Array[IntermediateExpression] = _
   private val nextVar = field[Array[AnyValue]](codeGen.namer.nextVariableName("next"))
-  private val callArgumentsGenerator = createArgsWithDefaultValue(args, signature, codeGen)
+  private val callArgumentsGenerator = createArgsWithDefaultValue(args, signature, codeGen, id)
 
   override final def scopeId: String = "procedureCall" + id.x
 

@@ -62,7 +62,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.directionRepresentation
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.freeCursor
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.setMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
@@ -230,23 +229,20 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
   private val missingTypeField = field[Array[String]](codeGen.namer.nextVariableName("missingType"),
     arrayOf[String](missingTypes.map(constant):_*))
   private val expandIntoField = field[CachingExpandInto](codeGen.namer.nextVariableName("expandInto"))
-  private val memoryTrackerField = field[MemoryTracker](codeGen.namer.nextVariableName("memoryTracker"))
-
+  private val memoryTracker = codeGen.registerMemoryTracker(id)
   codeGen.registerCursor(relName, RelationshipCursorRepresentation(loadField(relationshipsField)))
 
   override def scopeId: String = "expandInto" + id.x
 
   override def genMoreFields: Seq[Field] = {
     val localFields =
-      ArrayBuffer(nodeCursorField, traversalCursorField, relationshipsField, typeField, expandIntoField, memoryTrackerField)
+      ArrayBuffer(nodeCursorField, traversalCursorField, relationshipsField, typeField, expandIntoField)
     if (missingTypes.nonEmpty) {
       localFields += missingTypeField
     }
 
     localFields
   }
-
-  override def genCreateState: IntermediateRepresentation = block(setMemoryTracker(memoryTrackerField, id.x), inner.genCreateState)
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
 
@@ -380,7 +376,7 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
       loadTypes(types, missingTypes, typeField, missingTypeField),
       condition(isNull(loadField(expandIntoField)))(
         setField(expandIntoField, newInstance(constructor[CachingExpandInto, Read, Direction, MemoryTracker],
-          loadField(DATA_READ), directionRepresentation(dir), loadField(memoryTrackerField)))),
+          loadField(DATA_READ), directionRepresentation(dir), memoryTracker))),
       allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR),
       allocateAndTraceCursor(traversalCursorField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
       setField(relationshipsField, invoke(loadField(expandIntoField),

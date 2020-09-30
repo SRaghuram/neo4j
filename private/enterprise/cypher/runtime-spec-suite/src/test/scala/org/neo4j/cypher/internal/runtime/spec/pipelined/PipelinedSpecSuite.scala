@@ -364,12 +364,12 @@ class PipelinedUnionTest extends UnionTestBase(FUSING, PIPELINED, SIZE_HINT) wit
 class PipelinedUnionNoFusingTest extends UnionTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // SEMI APPLY
-class PipelinedSemiApplyTest extends SemiApplyTestBase(FUSING, PIPELINED, SIZE_HINT)
-class PipelinedSemiApplyNoFusingTest extends SemiApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+class PipelinedSemiApplyTest extends SemiApplyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedSemiApplyNoFusingTest extends SemiApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // ANTI SEMI APPLY
-class PipelinedAntiSemiApplyTest extends AntiSemiApplyTestBase(FUSING, PIPELINED, SIZE_HINT)
-class PipelinedAntiSemiApplyNoFusingTest extends AntiSemiApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+class PipelinedAntiSemiApplyTest extends AntiSemiApplyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedAntiSemiApplyNoFusingTest extends AntiSemiApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 class PipelinedSemiApplyRewriterTest extends SemiApplyRewriterTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedSemiApplyRewriterNoFusingTest extends SemiApplyRewriterTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
@@ -387,34 +387,34 @@ class PipelinedLetSelectOrAntiSemiApplyTest extends LetSelectOrAntiSemiApplyTest
 class PipelinedLetSelectOrAntiSemiApplyNoFusingTest extends LetSelectOrAntiSemiApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // SELECT OR SEMI APPLY
-class PipelinedSelectOrSemiApplyTest extends SelectOrSemiApplyTestBase(FUSING, PIPELINED, SIZE_HINT)
-class PipelinedSelectOrSemiApplyNoFusingTest extends SelectOrSemiApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
-class PipelinedSelectOrAntiSemiApplyTest extends SelectOrAntiSemiApplyTestBase(FUSING, PIPELINED, SIZE_HINT)
-class PipelinedSelectOrAntiSemiApplyNoFusingTest extends SelectOrAntiSemiApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+class PipelinedSelectOrSemiApplyTest extends SelectOrSemiApplyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedSelectOrSemiApplyNoFusingTest extends SelectOrSemiApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedSelectOrAntiSemiApplyTest extends SelectOrAntiSemiApplyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedSelectOrAntiSemiApplyNoFusingTest extends SelectOrAntiSemiApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // LET SELECT OR SEMI APPLY
-class PipelinedLetSelectOrSemiApplyTest extends LetSelectOrSemiApplyTestBase(FUSING, PIPELINED, SIZE_HINT)
-class PipelinedLetSelectOrSemiApplyNoFusingTest extends LetSelectOrSemiApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+class PipelinedLetSelectOrSemiApplyTest extends LetSelectOrSemiApplyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedLetSelectOrSemiApplyNoFusingTest extends LetSelectOrSemiApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 //CONDITIONAL APPLY
-class PipelinedConditionalApplyTest extends ConditionalApplyTestBase(FUSING, PIPELINED, SIZE_HINT)
-class PipelinedConditionalApplyNoFusingTest extends ConditionalApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+class PipelinedConditionalApplyTest extends ConditionalApplyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedConditionalApplyNoFusingTest extends ConditionalApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 //ANTI ITIONAL APPLY
-class PipelinedAntiConditionalApplyTest extends AntiConditionalApplyTestBase(FUSING, PIPELINED, SIZE_HINT)
-class PipelinedAntiConditionalApplyNoFusingTest extends AntiConditionalApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+class PipelinedAntiConditionalApplyTest extends AntiConditionalApplyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedAntiConditionalApplyNoFusingTest extends AntiConditionalApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // ROLLUP APPLY
-class PipelinedRollupApplyTest extends RollupApplyTestBase(FUSING, PIPELINED, SIZE_HINT)
-class PipelinedRollupApplyNoFusingTest extends RollupApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+class PipelinedRollupApplyTest extends RollupApplyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedRollupApplyNoFusingTest extends RollupApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // ROLLUP APPLY REWRITER
 class PipelinedRollupApplyRewriterTest extends RollupApplyRewriterTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedRollupApplyRewriterNoFusingTest extends RollupApplyRewriterTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // DROP RESULT
-class PipelinedDropResultTest extends DropResultTestBase(FUSING, PIPELINED, SIZE_HINT)
-class PipelinedDropResultNoFusingTest extends DropResultTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+class PipelinedDropResultTest extends DropResultTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedDropResultNoFusingTest extends DropResultTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // TRIADIC SELECTION
 class PipelinedTriadicSelectionTest extends TriadicSelectionTestBase(FUSING, PIPELINED, SIZE_HINT)
@@ -426,9 +426,11 @@ class PipelinedMiscNoFusingTest extends MiscTestBase(NO_FUSING, PIPELINED) with 
 class PipelinedExpressionTest extends ExpressionTestBase(FUSING, PIPELINED)
                               with ThreadUnsafeExpressionTests[EnterpriseRuntimeContext]
                               with ExpressionWithTxStateChangesTests[EnterpriseRuntimeContext]
+                              with PipelinedSpecSuite
 class PipelinedExpressionNoFusingTest extends ExpressionTestBase(NO_FUSING, PIPELINED)
                                       with ThreadUnsafeExpressionTests[EnterpriseRuntimeContext]
                                       with ExpressionWithTxStateChangesTests[EnterpriseRuntimeContext]
+                                      with PipelinedSpecSuite
 class PipelinedFusingNotificationTest extends PipelinedFusingNotificationTestBase(FUSING, PIPELINED) // not PipelinedSpecSuite, since we expect fusing to fail
 class PipelinedSchedulerTracerTest extends SchedulerTracerTestBase(PIPELINED) with PipelinedSpecSuite
 class PipelinedMemoryManagementTest extends MemoryManagementTestBase(FUSING, PIPELINED)

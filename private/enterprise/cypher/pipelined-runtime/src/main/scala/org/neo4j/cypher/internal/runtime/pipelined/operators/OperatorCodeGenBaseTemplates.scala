@@ -93,6 +93,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.belowLimitVarName
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.closeEvent
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.getArgumentSlotOffset
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.setMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
@@ -892,7 +893,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
   }
 
   override def genFields: Seq[Field] =
-    limits.map(argumentStateMapId => field[Int](argumentSlotOffsetFieldName(argumentStateMapId), getArgumentSlotOffset(argumentStateMapId)))
+    limits.map(argumentStateMapId => field[Int](argumentSlotOffsetFieldName(argumentStateMapId), getArgumentSlotOffset(argumentStateMapId))) ++ codeGen.memoryTrackers.values
 
   override def genLocalVariables: Seq[LocalVariable] = {
     val seq = Seq.newBuilder[LocalVariable]
@@ -915,7 +916,11 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
 
   override def genCloseInput: IntermediateRepresentation = noop()
 
-  override def genCreateState: IntermediateRepresentation = noop()
+  override def genCreateState: IntermediateRepresentation = {
+    block(codeGen.memoryTrackers.map {
+      case (id, field) => setMemoryTracker(field, id.x)
+    }.toSeq :_*)
+  }
 
   override def genOutputBuffer: Option[IntermediateRepresentation] = None
 

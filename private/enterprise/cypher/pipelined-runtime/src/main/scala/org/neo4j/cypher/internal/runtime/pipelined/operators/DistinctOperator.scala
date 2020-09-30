@@ -56,7 +56,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.getArgumentSlotOffset
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.peekState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.removeState
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.setMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
@@ -212,7 +211,7 @@ abstract class BaseDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate,
 
   private var groupingExpression: IntermediateGroupingExpression = _
   protected val distinctStateField: InstanceField = field[DistinctState](codeGen.namer.nextVariableName("distinctState"), initializeState)
-  protected val memoryTrackerField: InstanceField = field[MemoryTracker](codeGen.namer.nextVariableName("memoryTracker"))
+  protected val memoryTracker: IntermediateRepresentation = codeGen.registerMemoryTracker(id)
 
   protected def initializeState: IntermediateRepresentation
   protected def beginOperate: IntermediateRepresentation
@@ -224,11 +223,11 @@ abstract class BaseDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate,
   override protected def genOperate: IntermediateRepresentation = {
     val compiled = groupings.map {
       case (s, e) =>
-        s -> codeGen.compileExpression(e).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $e"))
+        s -> codeGen.compileExpression(e, id).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $e"))
     }
     //note that this key ir read later also by project
     val keyVar = codeGen.namer.nextVariableName("groupingKey")
-    groupingExpression = codeGen.compileGroupingExpression(compiled, keyVar)
+    groupingExpression = codeGen.compileGroupingExpression(compiled, keyVar, id)
 
     /**
      * val key = [computeKey]
@@ -249,9 +248,9 @@ abstract class BaseDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate,
       })
   }
 
-  override def genCreateState: IntermediateRepresentation = block(setMemoryTracker(memoryTrackerField, id.x), createState, inner.genCreateState)
+  override def genCreateState: IntermediateRepresentation = block(inner.genCreateState, createState)
   override def genExpressions: Seq[IntermediateExpression] = Seq(groupingExpression.computeKey, groupingExpression.projectKey)
-  override def genFields: Seq[Field] = Seq(distinctStateField, memoryTrackerField) ++ genMoreFields
+  override def genFields: Seq[Field] = distinctStateField +: genMoreFields
   override def genLocalVariables: Seq[LocalVariable] = Seq.empty
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
   override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
@@ -272,8 +271,7 @@ class SerialTopLevelDistinctOperatorTaskTemplate(inner: OperatorTaskTemplate,
   override protected def beginOperate: IntermediateRepresentation = noop()
   override protected def createState: IntermediateRepresentation =
     invoke(loadField(distinctStateField),
-      method[DistinctState, Unit, MemoryTracker]("setMemoryTracker"),
-      loadField(memoryTrackerField))
+      method[DistinctState, Unit, MemoryTracker]("setMemoryTracker"), memoryTracker)
   override protected def genMoreFields: Seq[Field] = Seq.empty
 }
 
@@ -305,8 +303,7 @@ class SerialDistinctOnRhsOfApplyOperatorTaskTemplate(override val inner: Operato
           assign(localArgument, load(argumentVarName(argumentStateMapId))),
           setField(distinctStateField, cast[DistinctState](fetchState(loadField(argumentMaps), argumentStateMapId))),
           invoke(loadField(distinctStateField),
-            method[DistinctState, Unit, MemoryTracker]("setMemoryTracker"),
-            loadField(memoryTrackerField))
+            method[DistinctState, Unit, MemoryTracker]("setMemoryTracker"), memoryTracker)
         )
       })
 

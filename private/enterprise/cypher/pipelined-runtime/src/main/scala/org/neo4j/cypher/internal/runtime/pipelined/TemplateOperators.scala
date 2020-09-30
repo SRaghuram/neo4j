@@ -127,6 +127,7 @@ import org.neo4j.cypher.internal.util.Many
 import org.neo4j.cypher.internal.util.One
 import org.neo4j.cypher.internal.util.Zero
 import org.neo4j.cypher.internal.util.ZeroOneOrMany
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.IndexQuery
@@ -162,8 +163,8 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                              innermost: DelegateOperatorTaskTemplate,
                              expressionCompiler: OperatorExpressionCompiler) {
 
-    def compileExpression(astExpression: Expression): () => IntermediateExpression =
-      () => expressionCompiler.compileExpression(astExpression)
+    def compileExpression(astExpression: Expression, id: Id): () => IntermediateExpression =
+      () => expressionCompiler.compileExpression(astExpression, id)
         .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $astExpression"))
   }
 
@@ -224,7 +225,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               SlottedIndexedProperty(node, property, ctx.slots),
               ctx.indexRegistrator.registerQueryIndex(label, property),
               asKernelIndexOrder(indexOrder),
-              ctx.compileExpression(seekExpression),
+              ctx.compileExpression(seekExpression, plan.id),
               stringContainsScan,
               ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
 
@@ -238,7 +239,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               SlottedIndexedProperty(node, property, ctx.slots),
               ctx.indexRegistrator.registerQueryIndex(label, property),
               asKernelIndexOrder(indexOrder),
-              ctx.compileExpression(seekExpression),
+              ctx.compileExpression(seekExpression, plan.id),
               stringEndsWithScan,
               ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
 
@@ -395,7 +396,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   dir,
                   typeTokens.toArray,
                   missingTypes.toArray,
-                  maybePredicate.map(ctx.compileExpression),
+                  maybePredicate.map(ctx.compileExpression(_, plan.id)),
                   nodePropsToCache,
                   relPropsToCache)(ctx.expressionCompiler)
               case ExpandInto =>
@@ -410,7 +411,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   dir,
                   typeTokens.toArray,
                   missingTypes.toArray,
-                  maybePredicate.map(ctx.compileExpression))(ctx.expressionCompiler)
+                  maybePredicate.map(ctx.compileExpression(_, plan.id)))(ctx.expressionCompiler)
             }
 
         case plan@plans.VarExpand(_,
@@ -491,7 +492,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
 
         case plan@plans.Selection(predicate, _) =>
           ctx: TemplateContext =>
-            new FilterOperatorTemplate(ctx.inner, plan.id, ctx.compileExpression(predicate))(ctx.expressionCompiler)
+            new FilterOperatorTemplate(ctx.inner, plan.id, ctx.compileExpression(predicate, plan.id))(ctx.expressionCompiler)
 
         case plan@plans.Projection(_, projections) =>
           ctx: TemplateContext =>
@@ -583,7 +584,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                     argumentStateMapId,
                     toSlot,
                     offsets.head,
-                    ctx.compileExpression(expression))(ctx.expressionCompiler),
+                    ctx.compileExpression(expression, plan.id))(ctx.expressionCompiler),
                   Some(argumentStateMapId -> DistinctSinglePrimitiveState.DistinctStateFactory))
                 } else {
                   TemplateAndArgumentStateFactory(
@@ -592,7 +593,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                       argumentStateMapId,
                       toSlot,
                       offsets.head,
-                      ctx.compileExpression(expression))(ctx.expressionCompiler),
+                      ctx.compileExpression(expression, plan.id))(ctx.expressionCompiler),
                     Some(argumentStateMapId -> DistinctSinglePrimitiveState.DistinctStateFactory))
                 }
               case DistinctAllPrimitive(offsets, _) =>
@@ -643,7 +644,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   plan.id,
                   ctx.innermost,
                   argumentStateMapId,
-                  ctx.compileExpression(countExpression))(ctx.expressionCompiler),
+                  ctx.compileExpression(countExpression, plan.id))(ctx.expressionCompiler),
                 Some(argumentStateMapId -> SerialLimitStateFactory)
               )
             } else {
@@ -652,7 +653,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                 new SerialLimitOnRhsOfApplyOperatorTaskTemplate(ctx.inner,
                   plan.id,
                   argumentStateMapId,
-                  ctx.compileExpression(countExpression))(ctx.expressionCompiler),
+                  ctx.compileExpression(countExpression, plan.id))(ctx.expressionCompiler),
                 Some(argumentStateMapId -> SerialLimitStateFactory)
               )
             }
@@ -667,7 +668,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   plan.id,
                   ctx.innermost,
                   argumentStateMapId,
-                  ctx.compileExpression(countExpression))(ctx.expressionCompiler),
+                  ctx.compileExpression(countExpression, plan.id))(ctx.expressionCompiler),
                 Some(argumentStateMapId -> SerialSkipStateFactory)
               )
             } else {
@@ -675,7 +676,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                 new SerialSkipOnRhsOfApplyOperatorTaskTemplate(ctx.inner,
                   plan.id,
                   argumentStateMapId,
-                  ctx.compileExpression(countExpression))(ctx.expressionCompiler),
+                  ctx.compileExpression(countExpression, plan.id))(ctx.expressionCompiler),
                 Some(argumentStateMapId -> SerialSkipStateFactory)
               )
             }
@@ -777,9 +778,9 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
 
   //We support multiple bounds such as a < 3 AND a < 5, this is quite esoteric and forces us to do stuff at runtime
   //hence we have specialized versions for the more common case of single bound ranges, i.e. a < 7, a >= 10, or 10 <= a < 12
-  def computeInequalityRange(ctx: TemplateContext, inequality: InequalitySeekRange[Expression], property: IndexedProperty): SeekExpression = inequality match {
+  def computeInequalityRange(ctx: TemplateContext, inequality: InequalitySeekRange[Expression], property: IndexedProperty, id: Id): SeekExpression = inequality match {
     case RangeLessThan(bounds) =>
-      val (expressions, inclusive) = bounds.map(e => (ctx.compileExpression(e.endPoint), e.isInclusive)).toIndexedSeq.unzip
+      val (expressions, inclusive) = bounds.map(e => (ctx.compileExpression(e.endPoint, id), e.isInclusive)).toIndexedSeq.unzip
       val call = if (expressions.size == 1)
         (in: Seq[IntermediateRepresentation]) => lessThanSeek(property.propertyKeyId, inclusive.head, in.head)
       else
@@ -787,7 +788,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
       SeekExpression(expressions, call, single = true)
 
     case RangeGreaterThan(bounds) =>
-      val (expressions, inclusive) = bounds.map(e => (ctx.compileExpression(e.endPoint), e.isInclusive)).toIndexedSeq.unzip
+      val (expressions, inclusive) = bounds.map(e => (ctx.compileExpression(e.endPoint, id), e.isInclusive)).toIndexedSeq.unzip
       val call = if (expressions.size == 1)
         (in: Seq[IntermediateRepresentation]) => greaterThanSeek(property.propertyKeyId, inclusive.head, in.head)
       else
@@ -795,8 +796,8 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
       SeekExpression(expressions, call, single = true)
 
     case RangeBetween(RangeGreaterThan(gtBounds), RangeLessThan(ltBounds)) =>
-      val (gtExpressions, gtInclusive) = gtBounds.map(e => (ctx.compileExpression(e.endPoint), e.isInclusive)).toIndexedSeq.unzip
-      val (ltExpressions, ltInclusive) = ltBounds.map(e => (ctx.compileExpression(e.endPoint), e.isInclusive)).toIndexedSeq.unzip
+      val (gtExpressions, gtInclusive) = gtBounds.map(e => (ctx.compileExpression(e.endPoint, id), e.isInclusive)).toIndexedSeq.unzip
+      val (ltExpressions, ltInclusive) = ltBounds.map(e => (ctx.compileExpression(e.endPoint, id), e.isInclusive)).toIndexedSeq.unzip
 
       val call = if (gtExpressions.size == 1 && ltExpressions.size == 1) {
         in: Seq[IntermediateRepresentation] =>
@@ -814,44 +815,45 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
   }
 
   def computeRangeExpression(rangeWrapper: Expression,
-                             property: IndexedProperty): Option[TemplateContext => SeekExpression] =
+                             property: IndexedProperty,
+                             id: Id): Option[TemplateContext => SeekExpression] =
     rangeWrapper match {
       case InequalitySeekRangeWrapper(inner) =>
-        Some((ctx: TemplateContext) => computeInequalityRange(ctx, inner, property))
+        Some((ctx: TemplateContext) => computeInequalityRange(ctx, inner, property, id))
 
       case PrefixSeekRangeWrapper(range) =>
         Some((ctx: TemplateContext) =>
             SeekExpression(
-              Seq(ctx.compileExpression(range.prefix)),
+              Seq(ctx.compileExpression(range.prefix, id)),
               in => stringPrefixSeek(property.propertyKeyId, in.head),
               single = true))
 
       case PointDistanceSeekRangeWrapper(range) =>
         Some((ctx: TemplateContext) =>
             SeekExpression(
-              Seq(ctx.compileExpression(range.point), ctx.compileExpression(range.distance)),
+              Seq(ctx.compileExpression(range.point, id), ctx.compileExpression(range.distance, id)),
               in => pointDistanceSeek(property.propertyKeyId, in.head, in.tail.head, range.inclusive)
             ))
 
       case _ => None
     }
 
-  def computeCompositeQueries(query: QueryExpression[Expression], property: IndexedProperty): Option[TemplateContext => SeekExpression]  =
+  def computeCompositeQueries(query: QueryExpression[Expression], property: IndexedProperty, id: Id): Option[TemplateContext => SeekExpression]  =
     query match {
       case SingleQueryExpression(inner) =>
         Some(
           (ctx: TemplateContext) =>
-            SeekExpression(Seq(ctx.compileExpression(inner)),
+            SeekExpression(Seq(ctx.compileExpression(inner, id)),
                            in => arrayOf[IndexQuery](exactSeek(property.propertyKeyId, in.head))))
 
       case ManyQueryExpression(expr) =>
         Some(
           (ctx: TemplateContext) =>
-            SeekExpression(Seq(ctx.compileExpression(expr)),
+            SeekExpression(Seq(ctx.compileExpression(expr, id)),
                            in => manyExactSeek(property.propertyKeyId, in.head)))
 
       case RangeQueryExpression(rangeWrapper) =>
-        computeRangeExpression(rangeWrapper, property).map(
+        computeRangeExpression(rangeWrapper, property, id).map(
           maybeSeek => {
             ctx: TemplateContext => {
               maybeSeek(ctx) match {
@@ -893,7 +895,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
             node,
             ctx.slots.getLongOffsetFor(node),
             property,
-            ctx.compileExpression(expr),
+            ctx.compileExpression(expr, plan.id),
             ctx.indexRegistrator.registerQueryIndex(label, properties),
             ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
 
@@ -908,14 +910,14 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
             ctx.innermost,
             ctx.slots.getLongOffsetFor(node),
             property,
-            SeekExpression(Seq(ctx.compileExpression(expr)), in => manyExactSeek(property.propertyKeyId, in.head)),
+            SeekExpression(Seq(ctx.compileExpression(expr, plan.id)), in => manyExactSeek(property.propertyKeyId, in.head)),
             ctx.indexRegistrator.registerQueryIndex(label, properties),
             order,
             ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
 
       case RangeQueryExpression(rangeWrapper) if !needsLockingUnique =>
         require(properties.length == 1)
-        computeRangeExpression(rangeWrapper, properties.head).map(
+        computeRangeExpression(rangeWrapper, properties.head, plan.id).map(
           seek => {
             ctx: TemplateContext => {
               val slottedIndexedProperties = properties.map(SlottedIndexedProperty(node, _, ctx.slots))
@@ -951,7 +953,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
       case CompositeQueryExpression(parts) if !needsLockingUnique =>
         require(parts.lengthCompare(properties.length) == 0)
         val predicates = parts.zip(properties).flatMap {
-          case (e, p) => computeCompositeQueries(e, p)
+          case (e, p) => computeCompositeQueries(e, p, plan.id)
         }
 
         if (predicates.size != properties.length) None

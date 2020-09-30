@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.compiled.expressions
 import org.neo4j.codegen.api.CodeGeneration
 import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
   * Expression compiler which performs full compilation from ast to compiled byte-code.
@@ -19,8 +20,8 @@ class StandaloneExpressionCompiler(front: AbstractExpressionCompilerFront, back:
     * @param e the expression to compile
     * @return an instance of [[CompiledExpression]] corresponding to the provided expression
     */
-  def compileExpression(e: Expression): Option[CompiledExpression] = {
-    front.compileExpression(e).map(back.compileExpression)
+  def compileExpression(e: Expression, id: Id): Option[CompiledExpression] = {
+    front.compileExpression(e, id).map(back.compileExpression)
   }
 
   /**
@@ -28,8 +29,8 @@ class StandaloneExpressionCompiler(front: AbstractExpressionCompilerFront, back:
     * @param projections the projection to compile
     * @return an instance of [[CompiledProjection]] corresponding to the provided projection
     */
-  def compileProjection(projections: Map[String, Expression]): Option[CompiledProjection] = {
-    front.compileProjection(projections).map(back.compileProjection)
+  def compileProjection(projections: Map[String, Expression], id: Id): Option[CompiledProjection] = {
+    front.compileProjection(projections, id).map(back.compileProjection)
   }
 
   /**
@@ -37,13 +38,13 @@ class StandaloneExpressionCompiler(front: AbstractExpressionCompilerFront, back:
     * @param orderedGroupings the groupings to compile
     * @return an instance of [[CompiledGroupingExpression]] corresponding to the provided groupings
     */
-  def compileGrouping(orderedGroupings:  SlotConfiguration => Seq[(String, Expression, Boolean)]): Option[CompiledGroupingExpression] = {
+  def compileGrouping(orderedGroupings:  SlotConfiguration => Seq[(String, Expression, Boolean)], id: Id): Option[CompiledGroupingExpression] = {
     val orderedGroupingsBySlots = orderedGroupings(front.slots) // Apply the slot configuration to get the complete order
     val compiled = for {(k, v, _) <- orderedGroupingsBySlots
-                        c <- front.compileExpression(v)} yield front.slots(k) -> c
+                        c <- front.compileExpression(v, id)} yield front.slots(k) -> c
     if (compiled.size < orderedGroupingsBySlots.size) None
     else {
-      val grouping = front.compileGroupingExpression(compiled, ExpressionCompilation.GROUPING_KEY_NAME)
+      val grouping = front.compileGroupingExpression(compiled, ExpressionCompilation.GROUPING_KEY_NAME, id)
       Some(back.compileGrouping(grouping))
     }
   }

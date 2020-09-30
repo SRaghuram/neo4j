@@ -31,8 +31,7 @@ class BinaryOperatorExpressionCompiler(slots: SlotConfiguration,
                                        lhsSlotConfiguration: SlotConfiguration,
                                        rhsSlotConfiguration: SlotConfiguration,
                                        readOnly: Boolean,
-                                       namer: VariableNamer
-                                     ) extends OperatorExpressionCompiler(slots, inputSlotConfiguration, readOnly, namer) {
+                                       namer: VariableNamer) extends OperatorExpressionCompiler(slots, inputSlotConfiguration, readOnly, namer) {
   val fromLHSName: String = namer.nextVariableName("fromLHS")
 
   /**
