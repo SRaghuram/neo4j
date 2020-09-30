@@ -15,6 +15,7 @@ import com.neo4j.bench.micro.data.Plans
 import com.neo4j.bench.micro.data.PropertyDefinition
 import com.neo4j.bench.micro.data.RelationshipDefinition
 import org.neo4j.cypher.CypherRuntimeOption
+import org.neo4j.cypher.internal.CypherRuntimeConfiguration
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.EnterpriseRuntimeFactory
 import org.neo4j.cypher.internal.ExecutionPlan
@@ -258,7 +259,10 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       cursors = cursors,
       lifeSupport = lifeSupport,
       workerManager = workerManager,
-      materializedEntitiesMode = materializedEntitiesMode)
+      materializedEntitiesMode = materializedEntitiesMode,
+      runtimeConfig = getRuntimeConfig)
+
+  protected def getRuntimeConfig: CypherRuntimeConfiguration = ContextHelper.runtimeConfig
 
   private def getPlanContext(tx: TransactionalContext): PlanContext =
     new TransactionBoundPlanContext(

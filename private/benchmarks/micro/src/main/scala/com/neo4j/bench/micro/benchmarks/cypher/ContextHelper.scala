@@ -36,11 +36,11 @@ object ContextHelper extends MockitoSugar {
   // Always use the big morsel size here, since the generated plans do not have cardinality information
   // and we would otherwise end up using the small morsel size even though the micro benchmarks
   // typically have lots of result rows.
-  private val morselSize = GraphDatabaseInternalSettings.cypher_pipelined_batch_size_big.defaultValue()
+  val morselSize = GraphDatabaseInternalSettings.cypher_pipelined_batch_size_big.defaultValue()
 
   private val cacheFactory = new ExecutorBasedCaffeineCacheFactory(Executors.newWorkStealingPool());
 
-  private val runtimeConfig = CypherRuntimeConfiguration(
+  val runtimeConfig = CypherRuntimeConfiguration(
     pipelinedBatchSizeSmall = morselSize,
     pipelinedBatchSizeBig = morselSize,
     operatorFusionOverPipelineLimit = GraphDatabaseInternalSettings.cypher_pipelined_operator_fusion_over_pipeline_limit.defaultValue(),
@@ -59,7 +59,8 @@ object ContextHelper extends MockitoSugar {
              cursors: CursorFactory,
              lifeSupport: LifeSupport,
              workerManager: WorkerManagement,
-             materializedEntitiesMode: Boolean = false): EnterpriseRuntimeContext = {
+             materializedEntitiesMode: Boolean = false,
+             runtimeConfig: CypherRuntimeConfiguration): EnterpriseRuntimeContext = {
     EnterpriseRuntimeContext(
       planContext,
       schemaRead,
