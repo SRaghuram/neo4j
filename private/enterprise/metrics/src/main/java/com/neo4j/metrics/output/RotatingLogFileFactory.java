@@ -13,5 +13,5 @@ import org.neo4j.logging.log4j.RotatingLogFileWriter;
 @FunctionalInterface
 public interface RotatingLogFileFactory
 {
-    RotatingLogFileWriter createWriter( FileSystemAbstraction fs, Path logPath, long rotationThreshold, int maxArchives, String header );
+    RotatingLogFileWriter createWriter( FileSystemAbstraction fs, Path logPath, long rotationThreshold, int maxArchives, String fileSuffix, String header );
 }

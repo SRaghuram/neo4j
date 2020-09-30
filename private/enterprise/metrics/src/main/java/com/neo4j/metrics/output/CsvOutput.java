@@ -56,7 +56,7 @@ public class CsvOutput implements Lifecycle
         Integer maxArchives = config.get( MetricsSettings.csv_max_archives );
         outputPath = absoluteFileOrRelativeTo( extensionContext.directory(), configuredPath );
         csvReporter = new RotatableCsvReporter( registry, fileSystem, ensureDirectoryExists( outputPath ), rotationThreshold, maxArchives,
-                RotatingLogFileWriter::new );
+                config.get( MetricsSettings.csv_archives_compression ), RotatingLogFileWriter::new );
     }
 
     @Override

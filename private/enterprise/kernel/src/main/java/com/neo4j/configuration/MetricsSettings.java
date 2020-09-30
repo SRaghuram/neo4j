@@ -32,6 +32,7 @@ import static org.neo4j.configuration.SettingValueParsers.PATH;
 import static org.neo4j.configuration.SettingValueParsers.SOCKET_ADDRESS;
 import static org.neo4j.configuration.SettingValueParsers.STRING;
 import static org.neo4j.configuration.SettingValueParsers.listOf;
+import static org.neo4j.configuration.SettingValueParsers.ofEnum;
 
 @ServiceProvider
 @PublicApi
@@ -194,6 +195,17 @@ public class MetricsSettings implements SettingsDeclaration
     public static final Setting<Integer> csv_max_archives = newBuilder( "metrics.csv.rotation.keep_number", INT, 7 )
             .addConstraint( min( 1 ) )
             .build();
+
+    @Description( "Decides what compression to use for the csv history files." )
+    public static final Setting<CompressionOption> csv_archives_compression =
+            newBuilder( "metrics.csv.rotation.compression", ofEnum( CompressionOption.class ), CompressionOption.NONE ).build();
+
+    public enum CompressionOption
+    {
+        NONE,
+        ZIP,
+        GZ
+    }
 
     // Graphite settings
     @Description( "Set to `true` to enable exporting metrics to Graphite." )

@@ -15,6 +15,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.ScheduledReporter;
 import com.codahale.metrics.Snapshot;
 import com.codahale.metrics.Timer;
+import com.neo4j.configuration.MetricsSettings;
 
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -27,6 +28,8 @@ import org.neo4j.io.IOUtils;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.log4j.RotatingLogFileWriter;
 
+import static com.neo4j.configuration.MetricsSettings.CompressionOption.NONE;
+
 public class RotatableCsvReporter extends ScheduledReporter
 {
     private final Path directory;
@@ -34,18 +37,20 @@ public class RotatableCsvReporter extends ScheduledReporter
     private final FileSystemAbstraction fileSystemAbstraction;
     private final long rotationThreshold;
     private final int maxArchives;
+    private final MetricsSettings.CompressionOption compression;
     private final RotatingLogFileFactory logFileFactory;
 
     private boolean stopped;
 
     RotatableCsvReporter( MetricRegistry registry, FileSystemAbstraction fileSystemAbstraction, Path directory, long rotationThreshold, int maxArchives,
-            RotatingLogFileFactory logFileFactory )
+            MetricsSettings.CompressionOption compression, RotatingLogFileFactory logFileFactory )
     {
         super( registry, "csv-reporter", MetricFilter.ALL, TimeUnit.SECONDS, TimeUnit.MILLISECONDS );
         this.directory = directory;
         this.fileSystemAbstraction = fileSystemAbstraction;
         this.rotationThreshold = rotationThreshold;
         this.maxArchives = maxArchives;
+        this.compression = compression;
         this.logFileFactory = logFileFactory;
         this.writers = new HashMap<>();
     }
@@ -144,7 +149,8 @@ public class RotatableCsvReporter extends ScheduledReporter
         Path file = directory.resolve( name + ".csv" );
 
         RotatingLogFileWriter csvWriter = writers.computeIfAbsent( file,
-                fileName -> logFileFactory.createWriter( fileSystemAbstraction, fileName, rotationThreshold, maxArchives, "t," + header + "%n" ) );
+                fileName -> logFileFactory.createWriter( fileSystemAbstraction, fileName, rotationThreshold, maxArchives,
+                        compression == NONE ? "" : "." + compression.name().toLowerCase(), "t," + header + "%n" ) );
         csvWriter.printf( String.format( Locale.US, "%d,%s", timestamp, line ), values );
     }
 }
