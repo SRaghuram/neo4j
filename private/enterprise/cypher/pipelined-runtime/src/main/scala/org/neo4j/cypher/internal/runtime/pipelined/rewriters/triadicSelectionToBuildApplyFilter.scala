@@ -32,7 +32,8 @@ import org.neo4j.cypher.internal.util.bottomUp
  */
 case class triadicSelectionToBuildApplyFilter(cardinalities: Cardinalities,
                                               providedOrders: ProvidedOrders,
-                                              idGen: IdGen) extends Rewriter {
+                                              idGen: IdGen,
+                                              stopper: AnyRef => Boolean) extends Rewriter {
   private val instance: Rewriter = bottomUp(Rewriter.lift {
     case triSelection @ TriadicSelection(lhs, rhs, positivePredicate, sourceId, seenId, targetId) =>
       val triBuild = TriadicBuild(lhs, sourceId, seenId, Some(triSelection.id))(idGen)
@@ -48,7 +49,7 @@ case class triadicSelectionToBuildApplyFilter(cardinalities: Cardinalities,
       providedOrders.copy(from = triSelection.id, to = triFilter.id)
 
       triFilter
-  })
+  }, stopper)
 
   override def apply(input: AnyRef): AnyRef = instance.apply(input)
 }

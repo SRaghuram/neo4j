@@ -408,6 +408,10 @@ class PipelinedAntiConditionalApplyNoFusingTest extends AntiConditionalApplyTest
 class PipelinedRollupApplyTest extends RollupApplyTestBase(FUSING, PIPELINED, SIZE_HINT)
 class PipelinedRollupApplyNoFusingTest extends RollupApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
 
+// ROLLUP APPLY REWRITER
+class PipelinedRollupApplyRewriterTest extends RollupApplyRewriterTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedRollupApplyRewriterNoFusingTest extends RollupApplyRewriterTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
 // DROP RESULT
 class PipelinedDropResultTest extends DropResultTestBase(FUSING, PIPELINED, SIZE_HINT)
 class PipelinedDropResultNoFusingTest extends DropResultTestBase(NO_FUSING, PIPELINED, SIZE_HINT)

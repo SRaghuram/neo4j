@@ -25,13 +25,14 @@ import org.neo4j.cypher.internal.util.bottomUp
  */
 case class semiApplyToLimitApply(cardinalities: Cardinalities,
                                  providedOrders: ProvidedOrders,
-                                 idGen: IdGen) extends Rewriter {
+                                 idGen: IdGen,
+                                 stopper: AnyRef => Boolean) extends Rewriter {
   private val instance: Rewriter = bottomUp(Rewriter.lift {
     case o @ SemiApply(lhs: LogicalPlan, rhs: LogicalPlan) =>
       Apply(lhs, newRhs(lhs, rhs))(SameId(o.id))
     case o @ SelectOrSemiApply(lhs: LogicalPlan, rhs: LogicalPlan, _) =>
       o.copy(right = newRhs(lhs, rhs))(SameId(o.id))
-  })
+  }, stopper)
 
   override def apply(input: AnyRef): AnyRef = instance.apply(input)
 

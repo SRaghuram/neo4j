@@ -30,7 +30,8 @@ object combineCartesianProductOfMultipleIndexSeeks {
   */
 case class combineCartesianProductOfMultipleIndexSeeks(cardinalities: Cardinalities,
                                                        leveragedOrders: LeveragedOrders,
-                                                       threshold: Cardinality = CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD) extends Rewriter {
+                                                       threshold: Cardinality = CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD,
+                                                       stopper: AnyRef => Boolean) extends Rewriter {
   private val instance: Rewriter = bottomUp(Rewriter.lift {
     case o @ CartesianProduct(lhs: IndexSeekLeafPlan, rhs: IndexSeekLeafPlan) if leveragedOrders.get(o.id) || cardinalities.get(lhs.id) < threshold =>
       MultiNodeIndexSeek(Array(lhs, rhs))(SameId(o.id))
@@ -41,7 +42,7 @@ case class combineCartesianProductOfMultipleIndexSeeks(cardinalities: Cardinalit
     case o @ CartesianProduct(lhs: IndexSeekLeafPlan, rhs: MultiNodeIndexSeek) if leveragedOrders.get(o.id) || cardinalities.get(lhs.id) < threshold =>
       MultiNodeIndexSeek(lhs +: rhs.nodeIndexSeeks)(SameId(o.id))
 
-  })
+  }, stopper)
 
   override def apply(input: AnyRef): AnyRef = instance.apply(input)
 }

@@ -26,7 +26,8 @@ import org.neo4j.cypher.internal.util.bottomUp
  */
 case class antiSemiApplyToAntiLimitApply(cardinalities: Cardinalities,
                                          providedOrders: ProvidedOrders,
-                                         idGen: IdGen) extends Rewriter {
+                                         idGen: IdGen,
+                                         stopper: AnyRef => Boolean) extends Rewriter {
   private val instance: Rewriter = bottomUp(Rewriter.lift {
     case o@AntiSemiApply(lhs: LogicalPlan, rhs: LogicalPlan) =>
       Apply(lhs, newRhs(lhs, rhs))(SameId(o.id))

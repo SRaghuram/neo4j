@@ -22,11 +22,12 @@ import org.neo4j.cypher.internal.util.bottomUp
  */
 case class dropResultToLimitZero(cardinalities: Cardinalities,
                                  providedOrders: ProvidedOrders,
-                                 idGen: IdGen) extends Rewriter {
+                                 idGen: IdGen,
+                                 stopper: AnyRef => Boolean) extends Rewriter {
   private val instance: Rewriter = bottomUp(Rewriter.lift {
     case dropResult @ DropResult(source) =>
       Limit(source, SignedDecimalIntegerLiteral("0")(InputPosition.NONE), DoNotIncludeTies)(SameId(dropResult.id))
-  })
+  }, stopper)
 
   override def apply(input: AnyRef): AnyRef = instance.apply(input)
 }

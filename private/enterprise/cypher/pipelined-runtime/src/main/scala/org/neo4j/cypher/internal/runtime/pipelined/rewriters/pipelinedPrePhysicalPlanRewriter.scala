@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.rewriters
 
 import org.neo4j.cypher.internal.LogicalQuery
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.NestedPlanExpression
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
@@ -28,16 +29,21 @@ case object pipelinedPrePhysicalPlanRewriter {
               idGen: IdGen): AnyRef => AnyRef = {
     inSequence(
       fixedPoint(
-        combineCartesianProductOfMultipleIndexSeeks(cardinalities, leveragedOrders)
+        combineCartesianProductOfMultipleIndexSeeks(cardinalities, leveragedOrders, stopper = stopper)
       ),
-      semiApplyToLimitApply(cardinalities, providedOrders, idGen),
-      antiSemiApplyToAntiLimitApply(cardinalities, providedOrders, idGen),
-      rollupApplyToAggregationApply(cardinalities, providedOrders, idGen),
-      letAntiSemiApplyVariantsToAggregationLimitApply(cardinalities, providedOrders, idGen),
-      letSemiApplyVariantsToAggregationLimitApply(cardinalities, providedOrders, idGen),
-      dropResultToLimitZero(cardinalities, providedOrders, idGen),
-      triadicSelectionToBuildApplyFilter(cardinalities, providedOrders, idGen),
+      semiApplyToLimitApply(cardinalities, providedOrders, idGen, stopper),
+      antiSemiApplyToAntiLimitApply(cardinalities, providedOrders, idGen, stopper),
+      rollupApplyToAggregationApply(cardinalities, providedOrders, idGen, stopper),
+      letAntiSemiApplyVariantsToAggregationLimitApply(cardinalities, providedOrders, idGen, stopper),
+      letSemiApplyVariantsToAggregationLimitApply(cardinalities, providedOrders, idGen, stopper),
+      dropResultToLimitZero(cardinalities, providedOrders, idGen, stopper),
+      triadicSelectionToBuildApplyFilter(cardinalities, providedOrders, idGen, stopper),
     )
+  }
+
+  private def stopper(a: AnyRef) = a match {
+    case _: NestedPlanExpression => true
+    case _ => false
   }
 
   def apply(query: LogicalQuery): LogicalPlan = {

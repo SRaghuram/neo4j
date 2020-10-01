@@ -58,7 +58,8 @@ import org.neo4j.cypher.internal.util.bottomUp
  */
 case class letSemiApplyVariantsToAggregationLimitApply(cardinalities: Cardinalities,
                                                        providedOrders: ProvidedOrders,
-                                                       idGen: IdGen) extends Rewriter {
+                                                       idGen: IdGen,
+                                                       stopper: AnyRef => Boolean) extends Rewriter {
   private val instance: Rewriter = bottomUp(Rewriter.lift {
     case o@LetSemiApply(lhs: LogicalPlan, rhs: LogicalPlan, idName: String) =>
       val aggregation = rhsToAggregationLimit(lhs, rhs, idName)
@@ -72,7 +73,7 @@ case class letSemiApplyVariantsToAggregationLimitApply(cardinalities: Cardinalit
       providedOrders.copy(lhs.id, proj.id)
 
       SelectOrSemiApply(proj, aggregation, expr)(SameId(o.id))
-  })
+  }, stopper)
 
   private def rhsToAggregationLimit(lhs: LogicalPlan,
                                     rhs: LogicalPlan,

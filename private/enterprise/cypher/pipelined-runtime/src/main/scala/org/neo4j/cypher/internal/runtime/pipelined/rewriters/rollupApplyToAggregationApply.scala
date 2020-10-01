@@ -43,7 +43,8 @@ import org.neo4j.cypher.internal.util.bottomUp
  */
 case class rollupApplyToAggregationApply(cardinalities: Cardinalities,
                                          providedOrders: ProvidedOrders,
-                                         idGen: IdGen) extends Rewriter {
+                                         idGen: IdGen,
+                                         stopper: AnyRef => Boolean) extends Rewriter {
   private val instance: Rewriter = bottomUp(Rewriter.lift {
     case o @ RollUpApply(lhs: LogicalPlan, rhs: LogicalPlan, collectionName, variableToCollect) =>
       val toCollect = Variable(variableToCollect)(NONE)
@@ -52,7 +53,7 @@ case class rollupApplyToAggregationApply(cardinalities: Cardinalities,
       providedOrders.copy(lhs.id, aggregation.id)
 
       Apply(lhs, aggregation)(SameId(o.id))
-  })
+  }, stopper)
 
   override def apply(input: AnyRef): AnyRef = instance.apply(input)
 }
