@@ -80,7 +80,8 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
                                 nExpressionSlots,
                                 prePopulateResults,
                                 doProfile,
-                                inputDataStream)
+                                inputDataStream,
+                                stateFactory.memoryTracker)
 
     val executionState = new TheExecutionState(executionGraphDefinition,
       executablePipelines,

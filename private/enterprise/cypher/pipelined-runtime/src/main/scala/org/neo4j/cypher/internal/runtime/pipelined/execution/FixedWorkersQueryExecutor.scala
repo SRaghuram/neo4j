@@ -83,7 +83,8 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
                                 nExpressionSlots,
                                 prePopulateResults,
                                 doProfile,
-                                inputDataStream)
+                                inputDataStream,
+                                stateFactory.memoryTracker)
 
     val initializationResources = workerResourceProvider.resourcesForWorker(0)
     val executionState = new TheExecutionState(executionGraphDefinition,

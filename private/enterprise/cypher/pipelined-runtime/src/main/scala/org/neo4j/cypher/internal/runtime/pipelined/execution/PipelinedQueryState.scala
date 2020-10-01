@@ -6,8 +6,8 @@
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
 import org.neo4j.cypher.internal.runtime.InputDataStream
-import org.neo4j.cypher.internal.runtime.NoOpQueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NullPipeDecorator
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.profiler.Profiler
@@ -29,7 +29,8 @@ case class PipelinedQueryState(queryContext: QueryContext,
                                nExpressionSlots: Int,
                                override val prePopulateResults: Boolean,
                                doProfile: Boolean,
-                               override val input: InputDataStream)
+                               override val input: InputDataStream,
+                               override val memoryTracker: QueryMemoryTracker)
   extends QueryState(queryContext,
     null,
     params,
@@ -37,7 +38,7 @@ case class PipelinedQueryState(queryContext: QueryContext,
     queryIndexes,
     null,
     subscriber,
-    NoOpQueryMemoryTracker,
+    memoryTracker,
     prePopulateResults = prePopulateResults
   ) {
 
@@ -63,7 +64,7 @@ case class PipelinedQueryState(queryContext: QueryContext,
       queryIndexes,
       resources.expressionVariables(nExpressionSlots),
       subscriber,
-      NoOpQueryMemoryTracker,
+      memoryTracker,
       pipeDecorator,
       initialContext = None,
       cachedIn = cachedIn)
