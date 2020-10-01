@@ -14,6 +14,7 @@ import org.neo4j.cypher.ExecutionEngineCacheCounter
 import org.neo4j.cypher.internal.DatabaseStatus.Online
 import org.neo4j.cypher.internal.security.SecureHasher
 import org.neo4j.cypher.internal.security.SystemGraphCredential
+import org.neo4j.exceptions.DatabaseAdministrationException
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.exceptions.ParameterNotFoundException
 import org.neo4j.exceptions.ParameterWrongTypeException
@@ -340,6 +341,20 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // THEN
     exception.getMessage should startWith("Variable `bar` not defined")
     exception.getMessage should include("(line 1, column 32 (offset: 31))")
+  }
+
+  test("should not show users when not using the system database") {
+    //GIVEN
+    setup()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+
+    // WHEN
+    val exception = the[DatabaseAdministrationException] thrownBy {
+      execute("SHOW USERS YIELD * WHERE user = $name", ("name"-> "neo4j"))
+    }
+
+    // THEN
+    exception.getMessage shouldBe("This is an administration command and it should be executed against the system database: SHOW USERS")
   }
 
   // Tests for creating users

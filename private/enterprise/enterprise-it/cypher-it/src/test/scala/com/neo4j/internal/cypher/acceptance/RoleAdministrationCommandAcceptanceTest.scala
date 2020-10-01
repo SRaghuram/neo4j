@@ -9,6 +9,8 @@ import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
+import org.neo4j.exceptions.DatabaseAdministrationException
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.security.AuthorizationViolationException
@@ -234,6 +236,17 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     result.toSet should be(Set(Map("foo" -> "admin")))
+  }
+
+  test("should not show roles when not using the system database") {
+    // WHEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    val exception = the[DatabaseAdministrationException] thrownBy {
+      execute("SHOW ALL ROLES WITH USERS YIELD * WHERE member = $username", ("username"-> "neo4j"))
+    }
+
+    // THEN
+    exception.getMessage shouldBe("This is an administration command and it should be executed against the system database: SHOW ALL ROLES")
   }
 
   test("should not show role with invalid yield") {

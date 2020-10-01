@@ -6,6 +6,7 @@
 package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
+import org.neo4j.exceptions.DatabaseAdministrationException
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.security.AuthorizationViolationException
@@ -606,6 +607,19 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
     // THEN
     execute("SHOW USER bar PRIVILEGES").toSet should be(publicPrivileges("bar"))
+  }
+
+  test("should not show show user privilege when not using the system database") {
+    //GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+
+    // WHEN
+    val exception = the[DatabaseAdministrationException] thrownBy {
+      execute("SHOW USER neo4j PRIVILEGES YIELD * WHERE role = $role", ("role"-> "PUBLIC"))
+    }
+
+    // THEN
+    exception.getMessage shouldBe("This is an administration command and it should be executed against the system database: SHOW PRIVILEGE")
   }
 
   // Tests for granting and denying privileges

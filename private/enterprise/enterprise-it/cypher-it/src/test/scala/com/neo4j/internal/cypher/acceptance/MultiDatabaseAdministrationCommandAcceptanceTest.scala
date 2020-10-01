@@ -615,6 +615,20 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     exception.getMessage should include("(line 1, column 97 (offset: 96))")
   }
 
+  test("should not show database when not using the system database") {
+    //GIVEN
+    setup()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+
+    // WHEN
+    val exception = the[DatabaseAdministrationException] thrownBy {
+      execute("SHOW DEFAULT DATABASE YIELD * WHERE name = $name", ("name"-> "db1"))
+    }
+
+    // THEN
+    exception.getMessage shouldBe("This is an administration command and it should be executed against the system database: SHOW DEFAULT DATABASE")
+  }
+
   test("Should always show system even without access") {
     // GIVEN
     setup(defaultConfig)
