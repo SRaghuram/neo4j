@@ -196,6 +196,12 @@ class RaftMembershipChanger
                 return this;
             }
         }
+
+        @Override
+        public String toString()
+        {
+            return "TransferringLeadership{}";
+        }
     }
 
     private class Idle extends ActiveBaseState
