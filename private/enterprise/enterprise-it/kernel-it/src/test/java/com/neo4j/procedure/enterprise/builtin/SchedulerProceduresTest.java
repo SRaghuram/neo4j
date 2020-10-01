@@ -9,7 +9,6 @@ import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -189,6 +188,12 @@ class SchedulerProceduresTest
     @Test
     void testIndexPopulationJobMonitoring() throws Exception
     {
+        try ( Transaction tx = db.beginTx() )
+        {
+            tx.createNode();
+            tx.commit();
+        }
+
         var monitoringBlocker = new BinaryLatch();
         var indexBlocker = new BinaryLatch();
         IndexingService.MonitorAdapter blockingMonitor = new IndexingService.MonitorAdapter()
