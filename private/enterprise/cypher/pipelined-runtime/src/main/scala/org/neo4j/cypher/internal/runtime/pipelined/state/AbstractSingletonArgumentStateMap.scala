@@ -127,7 +127,7 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
 
   override def hasCompleted(argument: Long): Boolean = {
     TopLevelArgument.assertTopLevelArgument(argument)
-    controller != null && controller.isZero
+    hasController && controller.isZero
   }
 
   override def remove(argument: Long): STATE = {

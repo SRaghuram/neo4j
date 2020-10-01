@@ -139,8 +139,10 @@ class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
         // No more data will ever arrive for this argument
         val lhsAccumulator = lhsArgumentStateMap.remove(argumentRowId)
         lhsAccumulator.close()
-        Math.max(1, morselData.morsels.size)
+        // We still need to decrement away the extra increment that came from LHSSink.decrement()
+        morselData.morsels.size /*Count Type: RHS Put per Morsel*/ + 1 /*Count Type: Empty RHS*/
       case _ =>
+        // Count Type: RHS Put per Morsel
         morselData.morsels.size
     }
 
@@ -148,7 +150,6 @@ class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
       DebugSupport.BUFFERS.log(s"[close] $this -X- ${morselData.argumentStream} , $numberOfDecrements , $argumentRowIdsForReducers")
     }
 
-    // Count Type: RHS Put per Morsel
     tracker.decrementBy(numberOfDecrements)
 
     var i = 0
@@ -266,12 +267,6 @@ class LeftOuterRhsStreamingSink(val rhsArgumentStateMapId: ArgumentStateMapId,
   override def decrement(argumentRowId: Long): Unit = {
     val completedBuffer = rhsArgumentStateMap.decrement(argumentRowId)
     if (completedBuffer != null) {
-
-      if (completedBuffer.hasData) {
-        // If the RHS is NOT empty at the time of reaching zero, we need to decrement away the extra increment that came from LHSSink.decrement()
-        // Count Type: Empty RHS
-        tracker.decrement()
-      }
 
       // Decrement for an ArgumentID in RHS's accumulator
       val argumentRowIdsForReducers = completedBuffer.argumentRowIdsForReducers

@@ -33,8 +33,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStreamArgumentStateBuffer
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfEmptyStream
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfNonEmptyStream
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfStream
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
@@ -129,7 +128,7 @@ class NodeLeftOuterHashJoinOperator(val workIdentity: WorkIdentity,
 
     override def processEndOfMorselData(outputCursor: MorselWriteCursor): Unit = {
       morselData.argumentStream match {
-        case EndOfEmptyStream | EndOfNonEmptyStream =>
+        case _: EndOfStream =>
           lhsRows = new LhsRowsWithoutRhsMatch(accumulator.keysWithoutRhsMatch, accumulator.hashTable)
         case _ =>
           lhsRows = LhsRows.EMPTY
