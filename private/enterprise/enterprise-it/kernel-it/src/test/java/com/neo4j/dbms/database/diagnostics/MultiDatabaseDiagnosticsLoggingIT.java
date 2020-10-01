@@ -10,6 +10,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -35,6 +36,7 @@ class MultiDatabaseDiagnosticsLoggingIT
     {
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homePath() )
                 .setInternalLogProvider( provider )
+                .setConfig( GraphDatabaseInternalSettings.dump_diagnostics, true )
                 .build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
     }
