@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
@@ -26,6 +27,7 @@ import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
 
+import static java.util.Collections.emptyMap;
 import static org.neo4j.kernel.api.exceptions.Status.Procedure.ProcedureCallFailed;
 import static org.neo4j.kernel.api.exceptions.Status.Statement.FeatureDeprecationWarning;
 import static org.neo4j.procedure.Mode.READ;
@@ -139,22 +141,16 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Admin
     @SystemProcedure
     @Deprecated
+    @SuppressWarnings( "unchecked" )
     @Description( "List all native users." )
     @Procedure( name = "dbms.security.listUsers", mode = READ, deprecatedBy = "Administration command: SHOW USERS" )
     public Stream<UserResult> listUsers() throws ProcedureException
     {
-        return listUsers( "dbms.security.listUsers" );
-    }
-
-    @SuppressWarnings( "unchecked" )
-    private Stream<UserResult> listUsers( String callingProcedure ) throws ProcedureException
-    {
         var result = new ArrayList<UserResult>();
-        var query = "SHOW USERS";
-        try
+        var visitor = new ResultVisitor<RuntimeException>()
         {
-            Result execute = transaction.execute( query );
-            execute.accept( row ->
+            @Override
+            public boolean visit( Result.ResultRow row ) throws RuntimeException
             {
                 var user = row.getString( "user" );
                 var roles = (List<String>) row.get( "roles" );
@@ -162,12 +158,9 @@ public class UserManagementProcedures extends AuthProceduresBase
                 var suspended = row.getBoolean( "suspended" );
                 result.add( new UserResult( user, roles, changeRequired, suspended ) );
                 return true;
-            } );
-        }
-        catch ( Exception e )
-        {
-            translateException( e, callingProcedure );
-        }
+            }
+        };
+        runSystemCommandWithVisitor( "SHOW USERS", emptyMap(), "dbms.security.listUsers", visitor  );
 
         if ( result.isEmpty() )
         {
@@ -199,7 +192,7 @@ public class UserManagementProcedures extends AuthProceduresBase
                 return true;
             }
         };
-        queryForRoles( visitor, "dbms.security.listRoles" );
+        runSystemCommandWithVisitor( "SHOW ALL ROLES WITH USERS", emptyMap(), "dbms.security.listRoles", visitor );
         return result.entrySet().stream().map( e -> new RoleResult( e.getKey(), e.getValue() ) );
     }
 
@@ -209,29 +202,28 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Procedure( name = "dbms.security.listRolesForUser", mode = READ, deprecatedBy = "Administration command: SHOW USERS" )
     public Stream<StringResult> listRolesForUser( @Name( "username" ) String username ) throws ProcedureException, InvalidArgumentsException
     {
-        String procedureName = "dbms.security.listRolesForUser";
+        var userExists = new AtomicBoolean( false );
         var result = new HashSet<StringResult>();
-        var userExists = listUsers( procedureName ).anyMatch( res -> res.username.equals( username ) );
-        if ( !userExists )
-        {
-            throw new InvalidArgumentsException( String.format( "User '%s' does not exist.", username ) );
-        }
-
+        String query = "SHOW ALL ROLES WITH USERS WHERE member = $username";
+        Map<String, Object> parameters = java.util.Map.of( "username", username );
         var visitor = new ResultVisitor<RuntimeException>()
         {
             @Override
             public boolean visit( Result.ResultRow row ) throws RuntimeException
             {
+                // If the user exists, it will always occur in at least one row due to the PUBLIC role
+                userExists.set(true);
                 var role = row.getString( "role" );
-                var user = row.getString( "member" );
-                if ( username.equals( user ) )
-                {
-                    result.add( new StringResult( role ) );
-                }
+                result.add( new StringResult( role ) );
                 return true;
             }
         };
-        queryForRoles( visitor, procedureName );
+        runSystemCommandWithVisitor( query, parameters, "dbms.security.listRolesForUser", visitor );
+
+        if ( !userExists.get() )
+        {
+            throw new InvalidArgumentsException( String.format( "User '%s' does not exist.", username ) );
+        }
 
         return result.stream();
     }
@@ -245,25 +237,23 @@ public class UserManagementProcedures extends AuthProceduresBase
     {
         var roleExists = new AtomicBoolean( false );
         var result = new HashSet<StringResult>();
+        String query = "SHOW ALL ROLES WITH USERS WHERE role = $roleName";
+        Map<String, Object> parameters = java.util.Map.of( "roleName", roleName );
         var visitor = new ResultVisitor<RuntimeException>()
         {
             @Override
             public boolean visit( Result.ResultRow row ) throws RuntimeException
             {
-                var role = row.getString( "role" );
+                roleExists.set( true );
                 var user = row.getString( "member" );
-                if ( roleName.equals( role ) )
+                if ( user != null )
                 {
-                    roleExists.set( true );
-                    if ( user != null )
-                    {
-                        result.add( new StringResult( user ) );
-                    }
+                    result.add( new StringResult( user ) );
                 }
                 return true;
             }
         };
-        queryForRoles( visitor, "dbms.security.listUsersForRole" );
+        runSystemCommandWithVisitor( query, parameters, "dbms.security.listUsersForRole", visitor );
 
         if ( !roleExists.get() )
         {
@@ -300,20 +290,6 @@ public class UserManagementProcedures extends AuthProceduresBase
         return securityContext.subject().hasUsername( username );
     }
 
-    private void queryForRoles( ResultVisitor<RuntimeException> visitor, String procedureName ) throws ProcedureException
-    {
-        var query = "SHOW ALL ROLES WITH USERS";
-        try
-        {
-            Result execute = transaction.execute( query );
-            execute.accept( visitor );
-        }
-        catch ( Exception e )
-        {
-            translateException( e, procedureName );
-        }
-    }
-
     private HashSet<String> getStrings( Object rolesObj ) throws ProcedureException
     {
         var roles = new HashSet<String>();
@@ -338,6 +314,20 @@ public class UserManagementProcedures extends AuthProceduresBase
         {
             Result execute = transaction.execute( query );
             execute.accept( row -> true );
+        }
+        catch ( Exception e )
+        {
+            translateException( e, procedureName );
+        }
+    }
+
+    private void runSystemCommandWithVisitor( String query, Map<String,Object> parameters, String procedureName, ResultVisitor<RuntimeException> visitor )
+            throws ProcedureException
+    {
+        try
+        {
+            Result execute = transaction.execute( query, parameters );
+            execute.accept( visitor );
         }
         catch ( Exception e )
         {
