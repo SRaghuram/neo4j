@@ -162,7 +162,8 @@ object NodeHashJoinOperator {
 
   class ConcurrentHashTable(override val argumentRowId: Long,
                             lhsKeyOffsets: KeyOffsets,
-                            override val argumentRowIdsForReducers: Array[Long]) extends HashTable {
+                            override val argumentRowIdsForReducers: Array[Long],
+                            acceptNulls: Boolean = false) extends HashTable {
     private val table = new ConcurrentHashMap[Value, ConcurrentLinkedQueue[Morsel]]()
 
     private val lhsOffsets: Array[Int] = lhsKeyOffsets.offsets
@@ -174,7 +175,8 @@ object NodeHashJoinOperator {
       while (cursor.next()) {
         val key = new Array[Long](lhsOffsets.length)
         fillKeyArray(cursor, key, lhsOffsets, lhsIsReference)
-        if (!NullChecker.entityIsNull(key(0))) {
+        val isNullKey = NullChecker.entityIsNull(key(0))
+        if (acceptNulls || !isNullKey) {
           // TODO optimize this to something like this
           //        val lastMorsel = morselsForKey.last
           //        if (!lastMorsel.hasNextRow) {
@@ -182,7 +184,8 @@ object NodeHashJoinOperator {
           //        }
           //        lastMorsel.moveToNextRow()
           //        lastMorsel.copyFrom(morsel)
-          val lhsRows = table.computeIfAbsent(Values.longArray(key), _ => new ConcurrentLinkedQueue[Morsel]())
+          val keyValue = if (isNullKey) Values.NO_VALUE else Values.longArray(key)
+          val lhsRows = table.computeIfAbsent(keyValue, _ => new ConcurrentLinkedQueue[Morsel]())
           lhsRows.add(morsel.view(cursor.row, cursor.row + 1))
         }
       }

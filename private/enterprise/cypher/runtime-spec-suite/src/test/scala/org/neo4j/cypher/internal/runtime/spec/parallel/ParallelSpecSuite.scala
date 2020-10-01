@@ -9,7 +9,6 @@ import java.lang.System.lineSeparator
 
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.PipelinedRuntime.PARALLEL
-import org.neo4j.cypher.internal.PipelinedRuntime.PIPELINED
 import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
@@ -296,12 +295,12 @@ class ParallelRuntimeNodeHashJoinTest extends NodeHashJoinTestBase(FUSING, PARAL
 class ParallelRuntimeNodeHashJoinNoFusingTest extends NodeHashJoinTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 
 // NODE RIGHT OUTER HASH JOIN
-class ParallelRuntimeNodeRightOuterHashJoinTest extends RightOuterHashJoinTestBase(FUSING, PIPELINED, SIZE_HINT) with ParallelRuntimeSpecSuite
-class ParallelRuntimeNodeRightOuterHashJoinNoFusingTest extends RightOuterHashJoinTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeNodeRightOuterHashJoinTest extends RightOuterHashJoinTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeNodeRightOuterHashJoinNoFusingTest extends RightOuterHashJoinTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 
 // NODE LEFT OUTER HASH JOIN
-class ParallelRuntimeNodeLeftOuterHashJoinTest extends LeftOuterHashJoinTestBase(FUSING, PIPELINED, SIZE_HINT) with ParallelRuntimeSpecSuite
-class ParallelRuntimeNodeLeftOuterHashJoinNoFusingTest extends LeftOuterHashJoinTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeNodeLeftOuterHashJoinTest extends LeftOuterHashJoinTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeNodeLeftOuterHashJoinNoFusingTest extends LeftOuterHashJoinTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 
 // VALUE HASH JOIN
 class ParallelRuntimeValueHashJoinTest extends ValueHashJoinTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
@@ -327,8 +326,8 @@ class ParallelRuntimeCartesianProductTest extends CartesianProductTestBase(FUSIN
 class ParallelRuntimeCartesianProductNoFusingTest extends CartesianProductTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 
 // APPLY
-class ParallelRuntimeApplyTest extends ApplyTestBase(FUSING, PIPELINED, SIZE_HINT) with ParallelRuntimeSpecSuite
-class ParallelRuntimeApplyNoFusingTest extends ApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeApplyTest extends ApplyTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeApplyNoFusingTest extends ApplyTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 
 // SHORTEST PATH
 class ParallelRuntimeShortestPathTest extends ShortestPathTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
