@@ -62,8 +62,8 @@ class NodeLeftOuterHashJoinOperator(val workIdentity: WorkIdentity,
   private val rhsCachedPropertyMappings: Array[(Int, Int)] = rhsSlotMappings.cachedPropertyMappings
   private val rhsOffsets: Array[Int] = rhsKeyOffsets.offsets
   private val rhsIsReference: Array[Boolean] = rhsKeyOffsets.isReference
-  private val rhsLongDestinationMappings: Array[Int] = rhsLongMappings.map(_._2)
-  private val rhsRefDestinationMappings: Array[Int] = rhsRefMappings.map(_._2)
+  private val rhsLongDestinationMappings: Array[Int] = rhsLongMappings.map(_._2).sorted
+  private val rhsRefDestinationMappings: Array[Int] = rhsRefMappings.map(_._2).sorted
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
