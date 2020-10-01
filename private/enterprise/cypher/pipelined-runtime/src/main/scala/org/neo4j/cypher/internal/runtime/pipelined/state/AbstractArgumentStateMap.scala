@@ -95,7 +95,9 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
 
   override def takeIfCompletedOrElsePeek(argumentId: Long): ArgumentStateWithCompleted[STATE] = {
     val controller = controllers.get(argumentId)
-    if (controller.tryTake()) {
+    if (controller == null) {
+      null.asInstanceOf[ArgumentStateWithCompleted[STATE]]
+    } else if (controller.tryTake()) {
       controllers.remove(controller.state.argumentRowId)
       DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, controller.state.argumentRowId)
       ArgumentStateWithCompleted(controller.state, isCompleted = true)
