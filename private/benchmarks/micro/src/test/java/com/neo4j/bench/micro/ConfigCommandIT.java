@@ -160,7 +160,7 @@ public class ConfigCommandIT extends AnnotationsFixture
         System.out.println(groups);
         for ( String group : groups )
         {
-            File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
+            File benchmarkConfig = temporaryFolder.file( "benchmark.config" ).toFile();
             Main.main( new String[]{
                     "config", "groups",
                     "--path", benchmarkConfig.getAbsolutePath(),
@@ -177,7 +177,7 @@ public class ConfigCommandIT extends AnnotationsFixture
             for ( int partitionSize = 2; partitionSize < size; partitionSize *= 2 )
             {
 
-                File benchmarkConfigFolder = temporaryFolder.directory( group + partitionSize );
+                File benchmarkConfigFolder = temporaryFolder.directory( group + partitionSize ).toFile();
 
                 //when
                 Main.main( new String[]{
