@@ -10,7 +10,7 @@ import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.graphdb.Label
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 
-// Tests for actual behaviour of count() function for restricted users
+// Tests for actual behaviour of count() function on nodes for restricted users
 class CountNodeAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
   override def beforeEach(): Unit = {
