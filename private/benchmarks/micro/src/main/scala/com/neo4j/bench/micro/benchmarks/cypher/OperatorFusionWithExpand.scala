@@ -40,7 +40,7 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class OperatorFusionWithExpand extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(Pipelined.NAME, Parallel.NAME),
+    allowed = Array(Pipelined.NAME, PipelinedSourceCode.NAME, Parallel.NAME),
     base = Array(Pipelined.NAME))
   @Param(Array[String]())
   var runtime: String = _

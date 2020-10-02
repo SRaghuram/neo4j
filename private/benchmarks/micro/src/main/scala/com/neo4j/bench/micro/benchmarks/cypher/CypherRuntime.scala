@@ -11,6 +11,7 @@ object CypherRuntime {
       case Interpreted.NAME => Interpreted
       case Slotted.NAME => Slotted
       case Pipelined.NAME => Pipelined
+      case PipelinedSourceCode.NAME => PipelinedSourceCode
       case Parallel.NAME => Parallel
       case _ => throw new IllegalArgumentException(s"Invalid runtime: $cypherRuntimeString")
     }
@@ -33,6 +34,11 @@ case object Slotted extends CypherRuntime {
 case object Pipelined extends CypherRuntime {
   final val NAME = "pipelined"
   override val debugOptions: Set[String] = Set()
+}
+
+case object PipelinedSourceCode extends CypherRuntime {
+  final val NAME = "pipelined-sourcecode"
+  override val debugOptions: Set[String] = Set("generate_java_source")
 }
 
 case object Parallel extends CypherRuntime {
