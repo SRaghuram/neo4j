@@ -5,8 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
-import org.eclipse.collections.impl.factory.Stacks
-import org.eclipse.collections.impl.factory.primitive.LongStacks
+import org.neo4j.collection.trackable.HeapTrackingCollections
 import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
@@ -76,8 +75,9 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
   private def varLengthExpand(node: LNode,
                               state: QueryState,
                               row: CypherRow): Iterator[(LNode, RelationshipContainer)] = {
-    val stackOfNodes = LongStacks.mutable.empty()
-    val stackOfRelContainers = Stacks.mutable.empty[RelationshipContainer]()
+    val memoryTracker = state.memoryTracker.memoryTrackerForOperator(id.x)
+    val stackOfNodes = HeapTrackingCollections.newLongStack(memoryTracker)
+    val stackOfRelContainers = HeapTrackingCollections.newStack[RelationshipContainer](memoryTracker)
     stackOfNodes.push(node)
     stackOfRelContainers.push(RelationshipContainer.EMPTY)
 
