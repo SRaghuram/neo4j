@@ -527,6 +527,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
       override protected def registerMemoryTracker(id: Id): IntermediateRepresentation =
         invoke(self(), method[VarExpandCursor, MemoryTracker]("memoryTracker"))
+      override protected def registerExitOperation(ir: IntermediateRepresentation): Unit = {}
     }
 
     if (nodePredicate == null) {

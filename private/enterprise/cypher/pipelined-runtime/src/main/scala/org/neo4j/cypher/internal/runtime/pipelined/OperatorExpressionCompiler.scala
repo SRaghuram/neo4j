@@ -437,6 +437,7 @@ trait OverrideDefaultCompiler {
   protected def fallBack(expression: Expression, id: Id): Option[IntermediateExpression]
 
   protected def registerMemoryTracker(id: Id): IntermediateRepresentation
+  protected def registerExitOperation(ir: IntermediateRepresentation): Unit
 
   /**
    * Extends expression compiler to add pipelined optimizations.
@@ -452,10 +453,10 @@ trait OverrideDefaultCompiler {
            r <- compileExpression(rhs, id)} yield {
 
         val memoryTracker = registerMemoryTracker(id)
-
         val variableName = namer.nextVariableName()
         val setName = namer.nextVariableName()
         val set = variable[InCache](setName, newInstance(constructor[InCache]))
+        registerExitOperation(invoke(load(setName), method[InCache, Unit]("close")))
         val lazySet =
           oneTime(
             declareAndAssign(typeRefOf[Value], variableName,
@@ -506,6 +507,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
 
   private val _memoryTracker = mutable.Map.empty[Id, InstanceField]
 
+  private val _exitOperations = mutable.ArrayBuffer.empty[IntermediateRepresentation]
   /**
    * Registers a cursor that points at the entity with the given name
    * @param name the name of the variable that the cursor is traversing
@@ -522,6 +524,12 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
   }
 
   def memoryTrackers: Map[Id, InstanceField] = _memoryTracker.toMap
+
+  def registerExitOperation(ir: IntermediateRepresentation): Unit = {
+    _exitOperations.append(ir)
+  }
+
+  def exitOperations: Seq[IntermediateRepresentation] = _exitOperations
 
   /**
    * Uses a local slot variable if one is already defined, otherwise declares and assigns a new local slot variable

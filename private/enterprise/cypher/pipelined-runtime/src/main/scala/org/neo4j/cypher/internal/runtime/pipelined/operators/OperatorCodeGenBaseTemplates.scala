@@ -884,6 +884,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
     if (shouldCheckDemand) {
       updates += UPDATE_DEMAND
     }
+    codeGen.exitOperations.foreach(o => updates += o)
 
     if (updates.nonEmpty) {
       block(updates: _*)
