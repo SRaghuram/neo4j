@@ -81,7 +81,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
     stackOfNodes.push(node)
     stackOfRelContainers.push(RelationshipContainer.EMPTY)
 
-    new Iterator[(LNode, RelationshipContainer)] {
+    new ClosingIterator[(LNode, RelationshipContainer)] {
       override def next(): (LNode, RelationshipContainer) = {
         val fromNode = stackOfNodes.pop()
         val rels = stackOfRelContainers.pop()
@@ -125,7 +125,12 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
         (fromNode, projectedRels)
       }
 
-      override def hasNext: Boolean = !stackOfNodes.isEmpty
+      override def innerHasNext: Boolean = !stackOfNodes.isEmpty
+
+      override protected[this] def closeMore(): Unit = {
+        stackOfNodes.close()
+        stackOfRelContainers.close()
+      }
     }
   }
 
