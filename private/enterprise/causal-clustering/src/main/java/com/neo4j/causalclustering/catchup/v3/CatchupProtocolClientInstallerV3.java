@@ -138,7 +138,7 @@ public class CatchupProtocolClientInstallerV3 implements ProtocolInstaller<Proto
                 .add( "hnd_res_snapshot", new CoreSnapshotResponseHandler( protocol, handler ) )
                 .add( "hnd_res_copy_fin", new StoreCopyFinishedResponseHandler( protocol, handler ) )
                 .add( "hnd_res_tx_fin", new TxStreamFinishedResponseHandler( protocol, handler ) )
-                .add( "hnd_res_file_header", new FileHeaderHandler( protocol, handler ) )
+                .add( "hnd_res_file_header", new FileHeaderHandler( protocol, handler, log ) )
                 .add( "hnd_res_file_chunk", new FileChunkHandler( protocol, handler ) )
                 .add( "hnd_res_store_id", new GetStoreIdResponseHandler( protocol, handler ) )
                 .add( "hnd_res_database_id", new GetDatabaseIdResponseHandler( protocol, handler ) )

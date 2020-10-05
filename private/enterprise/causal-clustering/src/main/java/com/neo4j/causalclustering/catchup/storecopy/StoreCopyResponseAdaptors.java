@@ -50,7 +50,6 @@ public abstract class StoreCopyResponseAdaptors<T> extends CatchupResponseAdapto
     {
         try
         {
-            log.info( "Receiving file: %s", fileHeader.fileName() );
             final StoreFileStream fileStream = storeFileStreamProvider.acquire( fileHeader.fileName(), fileHeader.requiredAlignment() );
             // Make sure that each stream closes on complete but only the latest is written to
             requestOutcomeSignal.whenComplete( new CloseFileStreamOnComplete<>( fileStream, fileHeader.fileName() ) );
