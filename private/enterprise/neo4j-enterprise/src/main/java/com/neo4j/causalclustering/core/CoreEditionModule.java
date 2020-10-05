@@ -72,6 +72,7 @@ import com.neo4j.dbms.EnterpriseSystemGraphComponent;
 import com.neo4j.dbms.QuarantineOperator;
 import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
+import com.neo4j.dbms.procedures.ClusterSetDefaultDatabaseProcedure;
 import com.neo4j.dbms.procedures.ClusteredDatabaseStateProcedure;
 import com.neo4j.dbms.procedures.QuarantineProcedure;
 import com.neo4j.dbms.procedures.wait.WaitProcedure;
@@ -298,6 +299,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
                 WaitProcedure.clustered( topologyService, identityModule.myself(), globalModule.getGlobalClock(),
                                          catchupComponentsProvider.catchupClientFactory(), globalModule.getLogService().getInternalLogProvider(),
                                          new InfoProvider( databaseManager, reconcilerModule.databaseStateService() ) ) );
+        globalProcedures.register( new ClusterSetDefaultDatabaseProcedure( databaseManager.databaseIdRepository(), topologyService ) );
         // TODO: Figure out how the replication benchmark procedure should work.
 //        globalProcedures.registerComponent( Replicator.class, x -> replicationModule.getReplicator(), false );
 //        globalProcedures.registerProcedure( ReplicationBenchmarkProcedure.class );
