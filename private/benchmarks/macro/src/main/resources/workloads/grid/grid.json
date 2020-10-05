@@ -46,6 +46,21 @@
       "name": "Q9",
       "description": "Many disconnected components with join possibilities and ordering",
       "queryFile": "queries/Q9.cypher"
+    },
+    {
+      "name": "Q10",
+      "description": "Few disconnected components with no join possibilities and independent optional matches",
+      "queryFile": "queries/Q10.cypher"
+    },
+    {
+      "name": "Q11",
+      "description": "Few disconnected components with no join possibilities and independent optional matches and ordering",
+      "queryFile": "queries/Q11.cypher"
+    },
+    {
+      "name": "Q12",
+      "description": "Many dependent optional matches",
+      "queryFile": "queries/Q12.cypher"
     }
   ]
 }
