@@ -11,6 +11,9 @@ import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import com.neo4j.test.driver.ClusterChecker;
+import com.neo4j.test.driver.DriverExtension;
+import com.neo4j.test.driver.DriverFactory;
 import org.assertj.core.api.HamcrestCondition;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
@@ -18,11 +21,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.IntStream;
 
 import org.neo4j.logging.Level;
@@ -41,6 +46,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ClusterExtension
+@DriverExtension
 class AkkaDiscoveryUncleanShutdownIT
 {
     // May be possible to get rid of this with a broadcast + ack instead of a wait for stability
@@ -53,6 +59,9 @@ class AkkaDiscoveryUncleanShutdownIT
     @Inject
     private ClusterFactory clusterFactory;
 
+    @Inject
+    private DriverFactory driverFactory;
+
     private Cluster cluster;
     private List<CoreClusterMember> runningCores;
     private Set<Integer> removedCoreIds;
@@ -62,10 +71,13 @@ class AkkaDiscoveryUncleanShutdownIT
     void shouldRestartSecondOfTwoUncleanLeavers( int minimumCoreClusterSizeAtRuntime ) throws Throwable
     {
         startCluster( minimumCoreClusterSizeAtRuntime );
+        checkClusterHealthy();
 
         shutdownCoreAndWaitForRemoval( 0 );
         CoreClusterMember toRestart = shutdownCoreAndWaitForRemoval( 1 );
         startCore( toRestart );
+
+        checkClusterHealthy();
     }
 
     @Test
@@ -75,12 +87,15 @@ class AkkaDiscoveryUncleanShutdownIT
         // Allowing this scenario is the motivation for setting the default to 3
 
         startCluster( 3 );
+        checkClusterHealthy();
 
         CoreClusterMember toRestart = shutdownCoreAndWaitForRemoval( 0 );
 
         shutdownCoreAndWaitForRemoval( 1 );
 
         startCore( toRestart );
+
+        checkClusterHealthy();
     }
 
     private void startCluster( int minimumCoreClusterSizeAtRuntime ) throws Exception
@@ -143,6 +158,16 @@ class AkkaDiscoveryUncleanShutdownIT
         return core;
     }
 
+    private static ClusterConfig newClusterConfig( int minimumCoreClusterSizeAtRuntime )
+    {
+        return clusterConfig()
+                .withSharedCoreParam( minimum_core_cluster_size_at_runtime, String.valueOf( minimumCoreClusterSizeAtRuntime ) )
+                .withSharedCoreParam( middleware_logging_level, Level.DEBUG.toString() )
+                .withDiscoveryServiceType( AKKA_UNCLEAN_SHUTDOWN )
+                .withNumberOfCoreMembers( CORES )
+                .withNumberOfReadReplicas( 0 );
+    }
+
     private void assertOverviews()
     {
         int leaderCount = runningCores.size() > 1 ? 1 : 0;
@@ -159,13 +184,12 @@ class AkkaDiscoveryUncleanShutdownIT
         ClusterOverviewHelper.assertAllEventualOverviews( cluster, new HamcrestCondition<>( expected ), removedCoreIds, emptySet() );
     }
 
-    private static ClusterConfig newClusterConfig( int minimumCoreClusterSizeAtRuntime )
+    private void checkClusterHealthy() throws IOException, ExecutionException, InterruptedException
     {
-        return clusterConfig()
-                .withSharedCoreParam( minimum_core_cluster_size_at_runtime, String.valueOf( minimumCoreClusterSizeAtRuntime ) )
-                .withSharedCoreParam( middleware_logging_level, Level.DEBUG.toString() )
-                .withDiscoveryServiceType( AKKA_UNCLEAN_SHUTDOWN )
-                .withNumberOfCoreMembers( CORES )
-                .withNumberOfReadReplicas( 0 );
+        try ( ClusterChecker clusterChecker = driverFactory.clusterChecker( cluster ) )
+        {
+            clusterChecker.verifyConnectivity();
+            clusterChecker.verifyClusterStateMatchesOnAllServers();
+        }
     }
 }

@@ -5,6 +5,8 @@
  */
 package com.neo4j.clusterdockertests;
 
+import com.neo4j.test.driver.DriverExtension;
+import com.neo4j.test.driver.DriverFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -24,21 +26,25 @@ import java.util.concurrent.TimeoutException;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
 import org.neo4j.junit.jupiter.causal_cluster.CausalCluster;
 import org.neo4j.junit.jupiter.causal_cluster.CoreModifier;
 import org.neo4j.junit.jupiter.causal_cluster.NeedsCausalCluster;
 import org.neo4j.junit.jupiter.causal_cluster.Neo4jCluster;
 import org.neo4j.junit.jupiter.causal_cluster.Neo4jServer;
+import org.neo4j.test.extension.Inject;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
 @NeedsCausalCluster
+@DriverExtension
 @ExtendWith( DumpDockerLogs.class )
 public class ExampleTest
 {
     private static final AuthToken authToken = AuthTokens.basic( "neo4j", "password" );
+
+    @Inject
+    private DriverFactory driverFactory;
 
     @CausalCluster
     private static Neo4jCluster cluster;
@@ -56,7 +62,7 @@ public class ExampleTest
     @BeforeAll
     void setUp()
     {
-        this.driver = GraphDatabase.driver( cluster.getURI(), authToken );
+        driverFactory.setAuthToken( authToken );
     }
 
     @AfterAll
@@ -66,8 +72,9 @@ public class ExampleTest
     }
 
     @BeforeEach
-    void before()
+    void before() throws IOException
     {
+        driver = driverFactory.graphDatabaseDriver( cluster.getURIs() );
         // make sure that cluster is ready to go before we start
         driver.verifyConnectivity();
     }

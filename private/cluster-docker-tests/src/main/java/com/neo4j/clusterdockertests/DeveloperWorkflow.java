@@ -218,7 +218,7 @@ public final class DeveloperWorkflow
             return;
         }
 
-        if ( file.isDirectory() )
+        if ( file.isDirectory() && !file.toString().endsWith( "test-classes" ) )
         {
             for ( File child : file.listFiles() )
             {
