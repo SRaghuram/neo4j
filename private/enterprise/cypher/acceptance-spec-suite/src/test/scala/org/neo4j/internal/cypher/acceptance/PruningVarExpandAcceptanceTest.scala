@@ -6,6 +6,7 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
@@ -76,5 +77,25 @@ class PruningVarExpandAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     result.toList shouldBe List(Map("p1" -> p, "numTags" -> 1))
+  }
+
+  test("should respect predicate on start node") {
+
+    //given
+    relate(createLabeledNode("Movie", "Secure"), createLabeledNode("Person"))
+    val query =
+      """MATCH p=(a:Movie)-[*1..2]-(b:Person)
+        |WHERE none(node IN nodes(p) WHERE node:Secure)
+        |RETURN DISTINCT a, b LIMIT 10;""".stripMargin
+
+    //when
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, planComparisonStrategy =
+      ComparePlansWithAssertion(plan => {
+        plan should includeSomewhere.aPlan("VarLengthExpand(Pruning)")
+      }
+    ))
+
+    //then
+    result.toList should be(empty)
   }
 }
