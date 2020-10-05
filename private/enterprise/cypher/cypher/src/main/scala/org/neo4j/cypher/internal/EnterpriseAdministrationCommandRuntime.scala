@@ -476,7 +476,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke $actionName privilege from role '${runtimeValue(roleName, params)}'")
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES
-    case ShowPrivileges(source, scope, symbols, yields, returns) => (context, parameterMapping) =>
+    case ShowPrivileges(source, scope, asRevoke, symbols, yields, returns) => (context, parameterMapping) =>
       val currentUserKey = internalKey("currentUser")
       val currentUserRolesKey = internalKey("currentUserRoles")
       val privilegeMatch =

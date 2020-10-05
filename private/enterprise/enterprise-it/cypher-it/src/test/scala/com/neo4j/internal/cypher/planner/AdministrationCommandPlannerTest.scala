@@ -66,9 +66,14 @@ class AdministrationCommandPlannerTest extends AdministrationCommandAcceptanceTe
 
     // SHOW _ PRIVILEGES
     "SHOW PRIVILEGES WHERE role = 'PUBLIC'",
+    "SHOW PRIVILEGES AS COMMAND WHERE command CONTAINS 'WRITE'",
+    "SHOW PRIVILEGES AS REVOKE COMMAND WHERE command CONTAINS 'WRITE'",
     "SHOW ROLES reader, $role PRIVILEGES",
+    "SHOW ROLES reader, $role PRIVILEGES AS COMMAND",
     "SHOW USER neo4j PRIVILEGES",
+    "SHOW ROLES reader, $role PRIVILEGES AS REVOKE COMMAND",
     "SHOW USER PRIVILEGES",
+    "SHOW ROLES reader, $role PRIVILEGES AS COMMAND",
   )
 
   test("Should show correct plan for management commands") {
