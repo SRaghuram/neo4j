@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.catchup.v3.storecopy;
 
 import com.neo4j.causalclustering.catchup.RequestMessageType;
-import com.neo4j.causalclustering.messaging.StoreCopyRequest;
+import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 
 import java.nio.file.Path;
 import java.util.Objects;
@@ -14,19 +14,33 @@ import java.util.Objects;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.storageengine.api.StoreId;
 
-public class GetStoreFileRequest extends StoreCopyRequest
+public class GetStoreFileRequest extends CatchupProtocolMessage.WithDatabaseId
 {
     private final Path path;
+    private final StoreId expectedStoreId;
+    private final long requiredTransactionId;
 
     public GetStoreFileRequest( StoreId expectedStoreId, Path path, long requiredTransactionId, DatabaseId databaseId )
     {
-        super( RequestMessageType.STORE_FILE, databaseId, expectedStoreId, requiredTransactionId );
+        super( RequestMessageType.STORE_FILE, databaseId );
+        this.expectedStoreId = expectedStoreId;
+        this.requiredTransactionId = requiredTransactionId;
         this.path = path;
     }
 
     public Path path()
     {
         return path;
+    }
+
+    public final StoreId expectedStoreId()
+    {
+        return expectedStoreId;
+    }
+
+    public final long requiredTransactionId()
+    {
+        return requiredTransactionId;
     }
 
     @Override
@@ -45,19 +59,21 @@ public class GetStoreFileRequest extends StoreCopyRequest
             return false;
         }
         GetStoreFileRequest that = (GetStoreFileRequest) o;
-        return Objects.equals( path, that.path );
+        return requiredTransactionId == that.requiredTransactionId &&
+               Objects.equals( path, that.path ) &&
+               Objects.equals( expectedStoreId, that.expectedStoreId );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( super.hashCode(), path );
+        return Objects.hash( super.hashCode(), path, expectedStoreId, requiredTransactionId );
     }
 
     @Override
     public String describe()
     {
-        return getClass().getSimpleName() + " for " + databaseId() + ". Requesting file: " + path.getFileName() + " with required minimum tx id of: " +
+        return getClass().getSimpleName() + " for " + databaseId() + ". Requesting file: " + path.getFileName() + " with required minimum transaction id: " +
                requiredTransactionId();
     }
 
