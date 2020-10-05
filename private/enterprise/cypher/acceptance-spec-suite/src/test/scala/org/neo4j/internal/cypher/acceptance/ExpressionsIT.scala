@@ -1353,6 +1353,19 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       params(stringValue("hello"), stringValue("[")))
   }
 
+  test("regex match on nullable expressions") {
+    val nullOffset = 0
+    val slots = SlotConfiguration.empty
+      .newLong("nullNode", nullable = true, symbols.CTNode)
+    SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
+    val context = SlottedRow(slots)
+    context.setLongAt(nullOffset, -1)
+
+    evaluate(compile(regex(nullLiteral, literalString("p")), slots), context) should equal(Values.NO_VALUE)
+    evaluate(compile(regex(prop("nullNode", "prop"), literalString("p")), slots), context) should equal(Values.NO_VALUE)
+    evaluate(compile(regex(literalString("p"), prop("nullNode", "prop")), slots), context) should equal(Values.NO_VALUE)
+  }
+
   test("startsWith") {
     val compiled= compile(startsWith(parameter(0), parameter(1)))
 

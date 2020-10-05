@@ -381,4 +381,16 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN round(1.49, 1, 'FLOOR') as value")
     result.toList should be(List(Map("value" -> 1.4)))
   }
+
+  test("should support regex with toString of null parameter") {
+    //Given
+    createLabeledNode(Map("name" -> "a"), "Person")
+    createLabeledNode("Person")
+
+    //When
+    val result = executeWith(Configs.All, "MATCH (n:Person) RETURN tostring(n.name) =~ '(?i).*a.*' AS match")
+
+    //Then
+    result.toList should contain theSameElementsAs List(Map("match" -> true), Map("match" -> null))
+  }
 }

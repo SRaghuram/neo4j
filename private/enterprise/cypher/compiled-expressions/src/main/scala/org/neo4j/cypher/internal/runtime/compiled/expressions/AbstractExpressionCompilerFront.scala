@@ -993,7 +993,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
             invokeStatic(method[CypherBoolean, BooleanValue, TextValue, TextValue]("regex"),
                          cast[TextValue](l.ir),
                          invokeStatic(method[CypherFunctions, TextValue, AnyValue]("asTextValue"), r.ir)),
-            l.fields ++ r.fields, l.variables ++ r.variables, r.nullChecks + not(instanceOf[TextValue](l.ir)))
+            l.fields ++ r.fields, l.variables ++ r.variables, l.nullChecks ++ r.nullChecks + not(instanceOf[TextValue](l.ir)))
         }
     }
 
