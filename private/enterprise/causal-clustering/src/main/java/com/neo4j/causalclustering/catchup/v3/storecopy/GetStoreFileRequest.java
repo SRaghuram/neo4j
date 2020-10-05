@@ -55,6 +55,13 @@ public class GetStoreFileRequest extends StoreCopyRequest
     }
 
     @Override
+    public String describe()
+    {
+        return getClass().getSimpleName() + " for " + databaseId() + ". Requesting file: " + path.getFileName() + " with required minimum tx id of: " +
+               requiredTransactionId();
+    }
+
+    @Override
     public String toString()
     {
         return "GetStoreFileRequest{" +

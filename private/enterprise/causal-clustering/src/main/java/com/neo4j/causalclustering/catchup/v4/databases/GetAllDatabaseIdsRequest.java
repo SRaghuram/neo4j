@@ -14,4 +14,10 @@ public class GetAllDatabaseIdsRequest extends CatchupProtocolMessage
     {
         super( RequestMessageType.ALL_DATABASE_IDS_REQUEST );
     }
+
+    @Override
+    public String describe()
+    {
+        return getClass().getSimpleName();
+    }
 }

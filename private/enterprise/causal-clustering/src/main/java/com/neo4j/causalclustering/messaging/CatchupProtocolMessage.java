@@ -25,6 +25,8 @@ public abstract class CatchupProtocolMessage
         return type;
     }
 
+    public abstract String describe();
+
     public abstract static class WithDatabaseId extends CatchupProtocolMessage
     {
         private final DatabaseId databaseId;
@@ -65,7 +67,13 @@ public abstract class CatchupProtocolMessage
         @Override
         public String toString()
         {
-            return getClass().getSimpleName() + "{type=" + type + ", databaseId='" + databaseId + "'}";
+            return getClass().getSimpleName() + "{ " + type + ", " + databaseId + " }";
+        }
+
+        @Override
+        public String describe()
+        {
+            return getClass().getSimpleName() + " for " + databaseId;
         }
     }
 }

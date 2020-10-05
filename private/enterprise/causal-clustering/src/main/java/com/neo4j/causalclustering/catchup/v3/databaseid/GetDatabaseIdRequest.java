@@ -38,12 +38,18 @@ public class GetDatabaseIdRequest extends CatchupProtocolMessage
         }
         GetDatabaseIdRequest that = (GetDatabaseIdRequest) o;
         return type == that.type &&
-                Objects.equals( databaseName, that.databaseName );
+               Objects.equals( databaseName, that.databaseName );
     }
 
     @Override
     public int hashCode()
     {
         return Objects.hash( type, databaseName );
+    }
+
+    @Override
+    public String describe()
+    {
+        return getClass().getSimpleName() + " for " + databaseName;
     }
 }

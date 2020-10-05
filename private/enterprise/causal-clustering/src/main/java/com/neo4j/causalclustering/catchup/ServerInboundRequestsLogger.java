@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup;
 
+import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
@@ -23,7 +24,14 @@ public class ServerInboundRequestsLogger extends SimpleChannelInboundHandler<Obj
     @Override
     protected void channelRead0( ChannelHandlerContext ctx, Object msg )
     {
-        log.info( "Handling request [%s] from client [%s]", msg, ctx.channel().remoteAddress() );
+        if ( msg instanceof CatchupProtocolMessage )
+        {
+            log.info( "Handling %s [From: %s]", ((CatchupProtocolMessage) msg).describe(), ctx.channel().remoteAddress() );
+        }
+        else
+        {
+            log.info( "Handling unexpected message type '%s' with message '%s' from [%s]", msg.getClass().getSimpleName(), msg, ctx.channel().remoteAddress() );
+        }
         ctx.fireChannelRead( msg );
     }
 }
