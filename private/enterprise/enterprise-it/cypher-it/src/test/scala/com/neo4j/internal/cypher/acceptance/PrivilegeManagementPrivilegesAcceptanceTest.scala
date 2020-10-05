@@ -88,7 +88,7 @@ class PrivilegeManagementPrivilegesAcceptanceTest extends AdministrationCommandA
       withClue(command) {
         the[AuthorizationViolationException] thrownBy {
           executeOnSystem("foo", "bar", command)
-        } should have message "Permission denied."
+        } should have message PERMISSION_DENIED_SHOW_PRIVILEGE
       }
     )
   }
@@ -105,7 +105,7 @@ class PrivilegeManagementPrivilegesAcceptanceTest extends AdministrationCommandA
       withClue(command) {
         the[AuthorizationViolationException] thrownBy {
           executeOnSystem("foo", "bar", command)
-        } should have message "Permission denied."
+        } should have message PERMISSION_DENIED_SHOW_PRIVILEGE
       }
     )
   }
@@ -136,7 +136,7 @@ class PrivilegeManagementPrivilegesAcceptanceTest extends AdministrationCommandA
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "SHOW USER neo4j privileges")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_SHOW_PRIVILEGE_OR_USER
   }
 
   test("should fail to show user privileges without show privilege privilege") {
@@ -149,7 +149,7 @@ class PrivilegeManagementPrivilegesAcceptanceTest extends AdministrationCommandA
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "SHOW USER neo4j privileges")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_SHOW_PRIVILEGE_OR_USER
   }
 
   test("should always be able to show your own privileges") {
@@ -188,7 +188,7 @@ class PrivilegeManagementPrivilegesAcceptanceTest extends AdministrationCommandA
           // THEN
           the[AuthorizationViolationException] thrownBy {
             executeOnSystem("foo", "bar", s"GRANT $command TO otherRole")
-          } should have message "Permission denied."
+          } should have message PERMISSION_DENIED_ASSIGN_PRIVILEGE
 
           execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set.empty)
         }
@@ -217,7 +217,7 @@ class PrivilegeManagementPrivilegesAcceptanceTest extends AdministrationCommandA
           // THEN
           the[AuthorizationViolationException] thrownBy {
             executeOnSystem("foo", "bar", s"DENY $command TO otherRole")
-          } should have message "Permission denied."
+          } should have message PERMISSION_DENIED_ASSIGN_PRIVILEGE
 
           execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set.empty)
         }
@@ -237,11 +237,11 @@ class PrivilegeManagementPrivilegesAcceptanceTest extends AdministrationCommandA
         // THEN
         the[AuthorizationViolationException] thrownBy {
           executeOnSystem("foo", "bar", s"GRANT $command TO otherRole")
-        } should have message "Permission denied."
+        } should have message PERMISSION_DENIED_ASSIGN_PRIVILEGE
 
         the[AuthorizationViolationException] thrownBy {
           executeOnSystem("foo", "bar", s"DENY $command TO otherRole")
-        } should have message "Permission denied."
+        } should have message PERMISSION_DENIED_ASSIGN_PRIVILEGE
 
         execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set.empty)
       }
@@ -271,7 +271,7 @@ class PrivilegeManagementPrivilegesAcceptanceTest extends AdministrationCommandA
           // THEN
           the[AuthorizationViolationException] thrownBy {
             executeOnSystem("foo", "bar", s"REVOKE $command FROM otherRole")
-          } should have message "Permission denied."
+          } should have message PERMISSION_DENIED_REMOVE_PRIVILEGE
 
           execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(actions.map(p => granted(p).role("otherRole").map))
           execute(s"REVOKE $command FROM otherRole")
@@ -295,7 +295,7 @@ class PrivilegeManagementPrivilegesAcceptanceTest extends AdministrationCommandA
           // THEN
           the[AuthorizationViolationException] thrownBy {
             executeOnSystem("foo", "bar", s"REVOKE $command FROM otherRole")
-          } should have message "Permission denied."
+          } should have message PERMISSION_DENIED_REMOVE_PRIVILEGE
 
           execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(actions.map(p => granted(p).role("otherRole").map))
           execute(s"REVOKE $command FROM otherRole")
@@ -347,19 +347,19 @@ class PrivilegeManagementPrivilegesAcceptanceTest extends AdministrationCommandA
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "SHOW ROLE otherRole PRIVILEGES")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_SHOW_PRIVILEGE
 
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "GRANT TRAVERSE ON GRAPH * NODES B TO otherRole")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_ASSIGN_PRIVILEGE
 
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "DENY TRAVERSE ON GRAPH * NODES C TO otherRole")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_ASSIGN_PRIVILEGE
 
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "REVOKE TRAVERSE ON GRAPH * NODES A FROM otherRole")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_REMOVE_PRIVILEGE
 
     execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(
       Set(granted(traverse).node("A").role("otherRole").graph("*").map)
@@ -382,19 +382,19 @@ class PrivilegeManagementPrivilegesAcceptanceTest extends AdministrationCommandA
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "SHOW ROLE otherRole PRIVILEGES")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_SHOW_PRIVILEGE
 
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "GRANT TRAVERSE ON GRAPH * NODES B TO otherRole")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_ASSIGN_PRIVILEGE
 
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "DENY TRAVERSE ON GRAPH * NODES C TO otherRole")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_ASSIGN_PRIVILEGE
 
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "REVOKE TRAVERSE ON GRAPH * NODES A FROM otherRole")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_REMOVE_PRIVILEGE
 
     execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(
       Set(granted(traverse).node("A").role("otherRole").graph("*").map)

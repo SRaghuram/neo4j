@@ -106,7 +106,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE USER user SET PASSWORD 'abc'")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_USER
   }
 
   test("should fail when creating user when denied create user privilege") {
@@ -119,7 +119,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE USER user SET PASSWORD 'abc'")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_USER
   }
 
   test("should fail when replacing user when denied create user privilege") {
@@ -132,7 +132,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE OR REPLACE USER user SET PASSWORD 'abc'")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_OR_DROP_USER
   }
 
   test("should fail when replacing user when denied drop user privilege") {
@@ -145,7 +145,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE OR REPLACE USER user SET PASSWORD 'abc'")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_OR_DROP_USER
   }
 
   test("should fail when replacing user without create user privilege") {
@@ -158,7 +158,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE OR REPLACE USER bar SET PASSWORD 'firstPassword'")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_OR_DROP_USER
   }
 
   test("should fail when replacing user without drop user privilege") {
@@ -171,7 +171,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE OR REPLACE USER bar SET PASSWORD 'firstPassword'")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_OR_DROP_USER
   }
 
   // DROP USER
@@ -195,7 +195,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "DROP USER user")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_DROP_USER
   }
 
   test("should fail when dropping user when denied drop user privilege") {
@@ -209,7 +209,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "DROP USER user")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_DROP_USER
   }
 
   // ALTER USER
@@ -239,7 +239,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
         // THEN
         the[AuthorizationViolationException] thrownBy {
           executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD CHANGE REQUIRED")
-        } should have message "Permission denied."
+        } should have message PERMISSION_DENIED_SET_PASSWORDS
       }
 
       test(s"should fail when set password change required when denied $privilege") {
@@ -253,7 +253,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
         // THEN
         the[AuthorizationViolationException] thrownBy {
           executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD CHANGE NOT REQUIRED")
-        } should have message "Permission denied."
+        } should have message PERMISSION_DENIED_SET_PASSWORDS
       }
 
       test(s"should enforce privilege for set password with $privilege") {
@@ -273,7 +273,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
         // THEN
         the[AuthorizationViolationException] thrownBy {
           executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD '123'")
-        } should have message "Permission denied."
+        } should have message PERMISSION_DENIED_SET_PASSWORDS
       }
 
       test(s"should fail when setting password when denied $privilege") {
@@ -287,7 +287,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
         // THEN
         the[AuthorizationViolationException] thrownBy {
           executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD 'cba'")
-        } should have message "Permission denied."
+        } should have message PERMISSION_DENIED_SET_PASSWORDS
       }
   }
 
@@ -317,7 +317,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
         // THEN
         the[AuthorizationViolationException] thrownBy {
           executeOnSystem("foo", "bar", "ALTER USER user SET STATUS ACTIVE")
-        } should have message "Permission denied."
+        } should have message PERMISSION_DENIED_SET_USER_STATUS
       }
 
       test(s"should fail setting user status when denied $privilege") {
@@ -331,7 +331,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
         // THEN
         the[AuthorizationViolationException] thrownBy {
           executeOnSystem("foo", "bar", "ALTER USER user SET STATUS SUSPENDED")
-        } should have message "Permission denied."
+        } should have message PERMISSION_DENIED_SET_USER_STATUS
       }
   }
 
@@ -346,7 +346,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD CHANGE NOT REQUIRED SET STATUS SUSPENDED")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_SET_PASSWORDS_OR_USER_STATUS
 
     // WHEN
     execute(s"GRANT SET USER STATUS ON DBMS TO custom")
@@ -365,7 +365,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD CHANGE REQUIRED SET STATUS ACTIVE")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_SET_PASSWORDS_OR_USER_STATUS
   }
 
   // SHOW USER
@@ -386,7 +386,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "SHOW USERS")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_SHOW_USER
   }
 
   test("should fail when listing users when denied show user privilege") {
@@ -399,7 +399,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "SHOW USERS")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_SHOW_USER
   }
 
   // USER MANAGEMENT
@@ -424,16 +424,16 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE USER user SET PASSWORD 'abc'")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_USER
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "ALTER USER alice SET PASSWORD CHANGE NOT REQUIRED")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_SET_PASSWORDS
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "SHOW USERS")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_SHOW_USER
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "DROP USER alice")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_DROP_USER
   }
 
   test("should deny user management when denied user management privilege") {
@@ -450,15 +450,15 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE USER user SET PASSWORD 'abc'")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_USER
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "DROP USER neo4j")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_DROP_USER
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "ALTER USER foo SET PASSWORD 'abc'")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_SET_PASSWORDS
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "SHOW USERS")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_SHOW_USER
   }
 }

@@ -1862,7 +1862,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // WHEN
       executeOnSystem("alice", "abc", "CREATE USER bob SET PASSWORD 'builder' CHANGE NOT REQUIRED")
       // THEN
-    } should have message PERMISSION_DENIED
+    } should have message PERMISSION_DENIED_CREATE_USER
 
     // THEN
     execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false)))
@@ -1878,7 +1878,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // WHEN
       executeOnSystem("alice", "abc", "DROP USER bob")
       // THEN
-    } should have message PERMISSION_DENIED
+    } should have message PERMISSION_DENIED_DROP_USER
 
     // THEN
     execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false), user("bob")))
@@ -1894,7 +1894,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // WHEN
       executeOnSystem("alice", "abc", "ALTER USER bob SET STATUS SUSPENDED")
       // THEN
-    } should have message PERMISSION_DENIED
+    } should have message PERMISSION_DENIED_SET_USER_STATUS
 
     // THEN
     execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false), user("bob")))
@@ -1909,7 +1909,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // WHEN
       executeOnSystem("alice", "abc", "ALTER USER alice SET PASSWORD 'xyz' CHANGE NOT REQUIRED")
       // THEN
-    } should have message PERMISSION_DENIED
+    } should have message PERMISSION_DENIED_SET_PASSWORDS
 
     // THEN
     execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"))))
@@ -1930,7 +1930,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // WHEN
       executeOnSystem("alice", "abc", "ALTER USER alice SET STATUS SUSPENDED")
       // THEN
-    } should have message PERMISSION_DENIED
+    } should have message PERMISSION_DENIED_SET_USER_STATUS
 
     // THEN
     execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false)))

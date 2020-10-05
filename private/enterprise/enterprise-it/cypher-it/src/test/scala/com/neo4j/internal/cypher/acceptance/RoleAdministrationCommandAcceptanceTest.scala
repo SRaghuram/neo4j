@@ -847,7 +847,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // WHEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("alice", "secret",  s"DROP ROLE $READER")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_DROP_ROLE
 
     // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles - admin)

@@ -74,7 +74,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "SHOW PRIVILEGES")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_SHOW_PRIVILEGE
   }
 
   test("should show privileges for users") {
@@ -304,7 +304,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("joe", "soap", "SHOW ROLE custom PRIVILEGES")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_SHOW_PRIVILEGE
   }
 
   test("should not show role privileges on a dropped database") {
@@ -921,7 +921,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "GRANT MATCH {bar} ON GRAPH * TO custom")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_ASSIGN_PRIVILEGE
   }
 
   test("should not deny anything as non admin") {
@@ -931,7 +931,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "DENY MATCH {bar} ON GRAPH * TO custom")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_ASSIGN_PRIVILEGE
   }
 
   test("should normalize graph name for graph privileges") {

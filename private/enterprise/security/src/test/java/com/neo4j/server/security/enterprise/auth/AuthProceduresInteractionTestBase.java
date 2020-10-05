@@ -727,10 +727,10 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldNotAllowNonAdminListUserRoles()
     {
-        testFailListUserRoles( pwdSubject, "adminSubject", CHANGE_PWD_ERR_MSG );
-        testFailListUserRoles( readSubject, "adminSubject", PERMISSION_DENIED );
-        testFailListUserRoles( writeSubject, "adminSubject", PERMISSION_DENIED );
-        testFailListUserRoles( schemaSubject, "adminSubject", PERMISSION_DENIED );
+        testFailListUserRoles( pwdSubject, "adminSubject", "Permission denied for SHOW ROLE and/or SHOW USER." );
+        testFailListUserRoles( readSubject, "adminSubject", "Permission denied for SHOW ROLE and/or SHOW USER." );
+        testFailListUserRoles( writeSubject, "adminSubject", "Permission denied for SHOW ROLE and/or SHOW USER." );
+        testFailListUserRoles( schemaSubject, "adminSubject", "Permission denied for SHOW ROLE and/or SHOW USER." );
     }
 
     //---------- list users for role -----------

@@ -88,7 +88,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE ROLE role")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_ROLE
   }
 
   test("should fail when creating role when denied create role privilege") {
@@ -101,7 +101,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE ROLE role")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_ROLE
   }
 
   test("should fail when replacing role with denied create role privilege") {
@@ -114,7 +114,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE OR REPLACE ROLE myRole")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_OR_DROP_ROLE
   }
 
   test("should fail when replacing role with denied drop role privilege") {
@@ -127,7 +127,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE OR REPLACE ROLE myRole")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_OR_DROP_ROLE
   }
 
   test("should fail when replacing role without create role privilege") {
@@ -140,7 +140,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE OR REPLACE ROLE myRole")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_OR_DROP_ROLE
   }
 
   test("should fail when replacing role without drop role privilege") {
@@ -153,7 +153,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE OR REPLACE ROLE myRole")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_OR_DROP_ROLE
   }
 
   // DROP ROLE
@@ -177,7 +177,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "DROP ROLE role")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_DROP_ROLE
   }
 
   test("should fail when dropping role when denied drop role privilege") {
@@ -191,7 +191,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "DROP ROLE role")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_DROP_ROLE
   }
 
   // ASSIGN ROLE
@@ -215,7 +215,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "GRANT ROLE role TO foo")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_ASSIGN_ROLE
   }
 
   test("should fail when granting role when denied assign role privilege") {
@@ -229,7 +229,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "GRANT ROLE role TO foo")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_ASSIGN_ROLE
   }
 
   // REMOVE ROLE
@@ -254,7 +254,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "REVOKE ROLE role FROM foo")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_REMOVE_ROLE
   }
 
   test("should fail when revoking role when denied remove role privilege") {
@@ -268,7 +268,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "REVOKE ROLE role FROM foo")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_REMOVE_ROLE
   }
 
   // SHOW ROLE
@@ -289,7 +289,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "SHOW ROLES")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_SHOW_ROLE
   }
 
   test("should fail showing roles when denied show role privilege") {
@@ -302,7 +302,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "SHOW ROLES")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_SHOW_ROLE
   }
 
   test("should show roles with users with correct privileges") {
@@ -335,7 +335,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "SHOW ROLES WITH USERS")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_SHOW_ROLE_OR_USERS
   }
 
   test("should fail to show roles with users without show role privilege") {
@@ -348,7 +348,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "SHOW ROLES WITH USERS")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_SHOW_ROLE_OR_USERS
   }
 
   test("should show populated roles with only show role privilege") {
@@ -378,7 +378,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "SHOW POPULATED ROLES")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_SHOW_ROLE
   }
 
   test("should show populated roles with users with correct privileges") {
@@ -414,7 +414,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "SHOW POPULATED ROLES WITH USERS")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_SHOW_ROLE_OR_USERS
   }
 
   test("should fail to show populated roles with users without show role privilege") {
@@ -427,7 +427,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "SHOW POPULATED ROLES WITH USERS")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_SHOW_ROLE_OR_USERS
   }
 
   // ROLE MANAGEMENT
@@ -454,6 +454,6 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE ROLE role")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_ROLE
   }
 }

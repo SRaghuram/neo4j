@@ -354,7 +354,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
       // WHEN
       executeOnSystem("alice", "abc", "START DATABASE foo")
       // THEN
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_START
   }
 
   test("should start database with privilege") {
@@ -405,7 +405,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
       // WHEN
       executeOnSystem("alice", "abc", "START DATABASE foo")
       // THEN
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_START
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
@@ -439,7 +439,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
       // WHEN
       executeOnSystem("alice", "abc", "STOP DATABASE foo")
       // THEN
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_STOP
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
@@ -464,7 +464,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
       // WHEN
       executeOnSystem("alice", "abc", "START DATABASE foo")
       // THEN
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_START
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
@@ -511,7 +511,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("alice", "abc", s"START DATABASE $newDefaultDatabase")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_START
 
     // THEN: new status on default
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, onlineStatus, default = true)))
@@ -533,7 +533,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     // WHEN: Starting the databases
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("alice", "abc", s"START DATABASE $DEFAULT_DATABASE_NAME")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_START
 
     executeOnSystem("alice", "abc", s"START DATABASE $newDefaultDatabase")
 
@@ -553,7 +553,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
       // WHEN
       executeOnSystem("alice", "abc", "START DATABASE foo")
       // THEN
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_START
 
     // THEN
     execute("SHOW DATABASE foo").toSet should be(Set(db("foo", offlineStatus)))
@@ -592,7 +592,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
       // WHEN
       executeOnSystem("alice", "abc", "START DATABASE foo")
       // THEN
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_START
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
@@ -611,7 +611,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
       // WHEN
       executeOnSystem("alice", "abc", "STOP DATABASE foo")
       // THEN
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_STOP
   }
 
   test("should stop database with privilege") {
@@ -657,7 +657,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
       // WHEN
       executeOnSystem("alice", "abc", "STOP DATABASE foo")
       // THEN
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_STOP
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
@@ -692,7 +692,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
       // WHEN
       executeOnSystem("alice", "abc", "STOP DATABASE foo")
       // THEN
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_STOP
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
@@ -737,7 +737,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("alice", "abc", s"STOP DATABASE $newDefaultDatabase")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_STOP
 
     // THEN: new status on default
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, offlineStatus, default = true)))
@@ -759,7 +759,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     // WHEN: Stopping the databases
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("alice", "abc", s"STOP DATABASE $DEFAULT_DATABASE_NAME")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_STOP
 
     executeOnSystem("alice", "abc", s"STOP DATABASE $newDefaultDatabase")
 
@@ -778,7 +778,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
       // WHEN
       executeOnSystem("alice", "abc", "STOP DATABASE foo")
       // THEN
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_STOP
 
     // THEN
     execute("SHOW DATABASE foo").toSet should be(Set(db("foo", onlineStatus)))
@@ -973,13 +973,13 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     // stop database
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("Alice", "secret", "STOP DATABASE foo")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_STOP
 
     // start database
     execute("STOP DATABASE foo")
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("Alice", "secret", "START DATABASE foo")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_START
   }
 
   private def testAdminWithoutBasePrivileges(role: String, populatedRoles: Int): Unit = {

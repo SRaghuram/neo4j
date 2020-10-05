@@ -239,25 +239,25 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     // Should not be able to do role management
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE ROLE role")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_ROLE
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("custom").map, role("otherRole").map))
 
     // Should not be able to do user management
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE USER alice SET PASSWORD 'secret'")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_USER
     execute("SHOW USERS").toSet should be(Set(user("foo", Seq("custom"), passwordChangeRequired = false)))
 
     // Should not be able to do database management
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "DROP DATABASE baz")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_DROP_DATABASE
     execute("SHOW DATABASE baz").toSet should be(Set(db("baz")))
 
     // Should not be able to do privilege management
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "GRANT TRAVERSE ON GRAPH * NODES B TO otherRole")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_ASSIGN_PRIVILEGE
     execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set(granted(traverse).node("A").role("otherRole").graph("*").map))
 
     // Should not be able to execute (@admin) procedure
@@ -280,25 +280,25 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     // Should not be able to do role management
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE ROLE role")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_ROLE
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("custom").map, role("otherRole").map))
 
     // Should not be able to do user management
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "DROP USER neo4j")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_DROP_USER
     execute("SHOW USERS").toSet should be(Set(user("neo4j", Seq("admin")), user("foo", Seq("custom"), passwordChangeRequired = false)))
 
     // Should not be able to do database management
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE DATABASE baz")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_DATABASE
     execute("SHOW DATABASE baz").toSet should be(Set.empty)
 
     // Should not be able to do privilege management
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "GRANT TRAVERSE ON GRAPH * NODES A TO otherRole")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_ASSIGN_PRIVILEGE
     execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set.empty)
   }
 

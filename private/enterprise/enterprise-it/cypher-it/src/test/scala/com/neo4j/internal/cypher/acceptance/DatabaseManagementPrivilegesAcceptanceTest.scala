@@ -72,7 +72,7 @@ class DatabaseManagementPrivilegesAcceptanceTest extends AdministrationCommandAc
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE DATABASE baz")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_DATABASE
 
     execute("SHOW DATABASE baz").toSet should be(Set.empty)
   }
@@ -87,7 +87,7 @@ class DatabaseManagementPrivilegesAcceptanceTest extends AdministrationCommandAc
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE DATABASE baz")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_DATABASE
 
     execute("SHOW DATABASE baz").toSet should be(Set.empty)
   }
@@ -102,7 +102,7 @@ class DatabaseManagementPrivilegesAcceptanceTest extends AdministrationCommandAc
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE OR REPLACE DATABASE myDb")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_OR_DROP_DATABASE
   }
 
   test("should fail when replacing database with denied drop database privilege") {
@@ -115,7 +115,7 @@ class DatabaseManagementPrivilegesAcceptanceTest extends AdministrationCommandAc
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE OR REPLACE DATABASE myDb")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_OR_DROP_DATABASE
   }
 
   test("should fail when replacing database without create database privilege") {
@@ -128,7 +128,7 @@ class DatabaseManagementPrivilegesAcceptanceTest extends AdministrationCommandAc
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE OR REPLACE DATABASE myDb")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_OR_DROP_DATABASE
   }
 
   test("should fail when replacing database without drop database privilege") {
@@ -141,7 +141,7 @@ class DatabaseManagementPrivilegesAcceptanceTest extends AdministrationCommandAc
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE OR REPLACE DATABASE myDb")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_OR_DROP_DATABASE
   }
 
   // DROP DATABASE
@@ -165,7 +165,7 @@ class DatabaseManagementPrivilegesAcceptanceTest extends AdministrationCommandAc
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "DROP DATABASE baz")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_DROP_DATABASE
 
     execute("SHOW DATABASE baz").toSet should be(Set(db("baz")))
   }
@@ -181,7 +181,7 @@ class DatabaseManagementPrivilegesAcceptanceTest extends AdministrationCommandAc
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "DROP DATABASE baz")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_DROP_DATABASE
 
     execute("SHOW DATABASE baz").toSet should be(Set(db("baz")))
   }
@@ -206,10 +206,10 @@ class DatabaseManagementPrivilegesAcceptanceTest extends AdministrationCommandAc
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE DATABASE userDb")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_DATABASE
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "DROP DATABASE baz")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_DROP_DATABASE
   }
 
   test("should fail database management when denied database management privilege") {
@@ -226,9 +226,9 @@ class DatabaseManagementPrivilegesAcceptanceTest extends AdministrationCommandAc
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE DATABASE userDb")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_DATABASE
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "DROP DATABASE baz")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_DROP_DATABASE
   }
 }

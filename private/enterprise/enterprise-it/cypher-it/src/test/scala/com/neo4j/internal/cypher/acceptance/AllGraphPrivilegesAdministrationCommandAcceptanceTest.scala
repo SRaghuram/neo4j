@@ -186,7 +186,7 @@ class AllGraphPrivilegesAdministrationCommandAcceptanceTest extends Administrati
      // not allowed to run dbms command
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("joe", "soap", "CREATE ROLE role")
-    } should have message "Permission denied."
+    } should have message PERMISSION_DENIED_CREATE_ROLE
   }
 
   test("should not be allowed to access or change the graph via commands when denied all graph privileges") {

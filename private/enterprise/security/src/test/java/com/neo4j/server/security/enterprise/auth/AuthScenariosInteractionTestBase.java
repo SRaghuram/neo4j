@@ -14,7 +14,6 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
-import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 
 public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInteractionTestBase<S>
 {
@@ -509,7 +508,7 @@ public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInter
         S subject = neo.login( "Henrik", "bar" );
         neo.assertAuthenticated( subject );
 
-        testFailListUserRoles( subject, "Craig", PERMISSION_DENIED );
+        testFailListUserRoles( subject, "Craig", "Permission denied for SHOW ROLE and/or SHOW USER." );
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.listRolesForUser('Craig') YIELD value as roles RETURN roles",
                 r -> assertKeyIs( r, "roles", PUBLISHER, PUBLIC ) );
     }
