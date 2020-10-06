@@ -37,7 +37,7 @@ public class EnterpriseDbmsSupportController extends DbmsSupportController
                 getTestAnnotation( ImpermanentEnterpriseDbmsExtension.class ) );
 
         // Create service
-        var dbms = buildDbms( enterpriseDbmsExtension.configurationCallback, callback );
+        var dbms = buildDbms( enterpriseDbmsExtension, callback );
         var databaseToStart = isNotEmpty( databaseName ) ? databaseName : getDatabaseName( dbms );
         startDatabase( databaseToStart );
     }
@@ -107,15 +107,5 @@ public class EnterpriseDbmsSupportController extends DbmsSupportController
 
         throw new IllegalArgumentException( String.format( "No annotation of type \"%s\" or \"%s\" found.",
                 EnterpriseDbmsExtension.class.getSimpleName(), ImpermanentEnterpriseDbmsExtension.class.getSimpleName() )  );
-    }
-
-    private static class TestConfiguration
-    {
-        private final String configurationCallback;
-
-        private TestConfiguration( String configurationCallback )
-        {
-            this.configurationCallback = configurationCallback;
-        }
     }
 }
