@@ -73,7 +73,7 @@ object ContextHelper extends MockitoSugar {
       compileExpressions = useCompiledExpressions,
       materializedEntitiesMode = materializedEntitiesMode,
       operatorEngine = CypherOperatorEngineOption.compiled,
-      interpretedPipesFallback = CypherInterpretedPipesFallbackOption(GraphDatabaseInternalSettings.cypher_pipelined_interpreted_pipes_fallback.defaultValue().toString),
+      interpretedPipesFallback = CypherInterpretedPipesFallbackOption.default,
       compiledExpressionsContext = CompiledExpressionContext(
         new CachingExpressionCompilerCache(cacheFactory),
         CachingExpressionCompilerTracer.NONE

@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.CypherRuntimeConfiguration
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.RuntimeContextManager
 import org.neo4j.cypher.internal.RuntimeEnvironment
+import org.neo4j.cypher.internal.options.CypherDebugOptions
 import org.neo4j.cypher.internal.options.CypherInterpretedPipesFallbackOption
 import org.neo4j.cypher.internal.options.CypherOperatorEngineOption
 import org.neo4j.cypher.internal.planner.spi.TokenContext
@@ -29,7 +30,7 @@ case class TracingRuntimeContextManager(log: Log,
   override def create(tokenContext: TokenContext,
                       schemaRead: SchemaRead,
                       clock: Clock,
-                      debugOptions: Set[String],
+                      debugOptions: CypherDebugOptions,
                       compileExpressions: Boolean,
                       materializedEntitiesMode: Boolean,
                       operatorEngine: CypherOperatorEngineOption,
