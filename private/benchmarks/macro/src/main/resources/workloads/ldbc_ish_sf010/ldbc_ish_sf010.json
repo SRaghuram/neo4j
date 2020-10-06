@@ -49,6 +49,11 @@
       "parameters": {
         "file": "parameters/persons_with_many_friends.txt"
       }
+    },
+    {
+      "name": "Properties from persons",
+      "description": "Get all properties from all persons",
+      "queryFile": "queries/all_person_props.cypher"
     }
   ]
 }
