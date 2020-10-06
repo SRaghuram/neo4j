@@ -619,6 +619,48 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     exception.getMessage shouldBe("This is an administration command and it should be executed against the system database: SHOW PRIVILEGE")
   }
 
+  test("should show privileges as commands") {
+    execute("SHOW PRIVILEGES AS COMMAND").columnAs[String]("command").toSet should be(Set(
+      "GRANT ACCESS ON DEFAULT DATABASE TO `PUBLIC`",
+      "GRANT EXECUTE PROCEDURE * ON DBMS TO `PUBLIC`",
+
+      "GRANT ACCESS ON DATABASE * TO `reader`",
+      "GRANT MATCH {*} ON GRAPH * NODE * TO `reader`",
+      "GRANT MATCH {*} ON GRAPH * RELATIONSHIP * TO `reader`",
+
+      "GRANT ACCESS ON DATABASE * TO `editor`",
+      "GRANT MATCH {*} ON GRAPH * NODE * TO `editor`",
+      "GRANT MATCH {*} ON GRAPH * RELATIONSHIP * TO `editor`",
+      "GRANT WRITE ON GRAPH * TO `editor`",
+
+      "GRANT ACCESS ON DATABASE * TO `publisher`",
+      "GRANT MATCH {*} ON GRAPH * NODE * TO `publisher`",
+      "GRANT MATCH {*} ON GRAPH * RELATIONSHIP * TO `publisher`",
+      "GRANT WRITE ON GRAPH * TO `publisher`",
+      "GRANT NAME MANAGEMENT ON DATABASE * TO `publisher`",
+
+      "GRANT ACCESS ON DATABASE * TO `architect`",
+      "GRANT MATCH {*} ON GRAPH * NODE * TO `architect`",
+      "GRANT MATCH {*} ON GRAPH * RELATIONSHIP * TO `architect`",
+      "GRANT WRITE ON GRAPH * TO `architect`",
+      "GRANT CONSTRAINT MANAGEMENT ON DATABASE * TO `architect`",
+      "GRANT INDEX MANAGEMENT ON DATABASE * TO `architect`",
+      "GRANT NAME MANAGEMENT ON DATABASE * TO `architect`",
+
+      "GRANT ACCESS ON DATABASE * TO `admin`",
+      "GRANT MATCH {*} ON GRAPH * NODE * TO `admin`",
+      "GRANT MATCH {*} ON GRAPH * RELATIONSHIP * TO `admin`",
+      "GRANT WRITE ON GRAPH * TO `admin`",
+      "GRANT CONSTRAINT MANAGEMENT ON DATABASE * TO `admin`",
+      "GRANT INDEX MANAGEMENT ON DATABASE * TO `admin`",
+      "GRANT NAME MANAGEMENT ON DATABASE * TO `admin`",
+      "GRANT TRANSACTION MANAGEMENT (*) ON DATABASE $database TO `admin`",
+      "GRANT START ON DATABASE $database TO `admin`",
+      "GRANT STOP ON DATABASE $database TO `admin`",
+      "GRANT ALL DBMS PRIVILEGES ON DBMS TO `admin`"
+    ))
+  }
+
   // Tests for granting and denying privileges
 
   Seq(

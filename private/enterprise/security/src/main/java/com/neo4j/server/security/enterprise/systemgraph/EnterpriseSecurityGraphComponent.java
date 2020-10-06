@@ -6,6 +6,7 @@
 package com.neo4j.server.security.enterprise.systemgraph;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
@@ -187,6 +188,17 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         return component.getBackupCommands( tx, databaseName.toLowerCase(), saveUsers, saveRoles );
     }
 
+    public Set<ResourcePrivilege> getPrivilegesForRole( Transaction tx, String role )
+    {
+        KnownEnterpriseSecurityComponentVersion version = knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx );
+        if ( !version.runtimeSupported() )
+        {
+            return Collections.emptySet();
+        }
+        return version.currentGetPrivilegeForRole( tx, role );
+    }
+
+    // Authz
     Set<ResourcePrivilege> getPrivilegeForRoles( Transaction tx, List<String> roles, Cache<String,Set<ResourcePrivilege>> privilegeCache )
     {
         KnownEnterpriseSecurityComponentVersion version = knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx );

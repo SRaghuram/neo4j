@@ -228,7 +228,7 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
         return Collections.emptySet();
     }
 
-    private Set<ResourcePrivilege> currentGetPrivilegeForRole( Transaction tx, String roleName )
+    public Set<ResourcePrivilege> currentGetPrivilegeForRole( Transaction tx, String roleName )
     {
         Set<ResourcePrivilege> rolePrivileges = new HashSet<>();
         try
@@ -409,7 +409,7 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
                 {
                     try
                     {
-                        rolePrivileges.addAll( privilege.asGrantFor( role, DB_PARAM ) );
+                        rolePrivileges.addAll( privilege.asCommandFor( role, DB_PARAM ) );
                     }
                     catch ( RuntimeException e )
                     {

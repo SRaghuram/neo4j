@@ -798,7 +798,7 @@ class PrivilegesAsCommandsIT
             throws InvalidArgumentsException
     {
         ResourcePrivilege privilege = new ResourcePrivilege( privilegeType, action, resource, segment, ResourcePrivilege.SpecialDatabase.ALL );
-        return privilege.isDbmsPrivilege() ? Collections.emptyList() : privilege.asGrantFor( role, DB_PARAM );
+        return privilege.isDbmsPrivilege() ? Collections.emptyList() : privilege.asCommandFor( role, DB_PARAM );
     }
 
     private DatabaseSecurityCommands getBackupCommands( GraphDatabaseAPI system, String databaseName, boolean saveUsers, boolean saveRoles )

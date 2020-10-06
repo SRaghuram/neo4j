@@ -7,12 +7,14 @@ package org.neo4j.cypher.internal
 
 import java.util.UUID
 import java.util.concurrent.ThreadLocalRandom
+import java.util.stream.Collectors
 
 import com.neo4j.causalclustering.core.consensus.RaftMachine
 import com.neo4j.configuration.EnterpriseEditionSettings
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager
 import com.neo4j.server.security.enterprise.auth.PrivilegeResolver
 import com.neo4j.server.security.enterprise.auth.Resource
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.DENY
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT
@@ -91,6 +93,7 @@ import org.neo4j.cypher.internal.logical.plans.RevokeDbmsAction
 import org.neo4j.cypher.internal.logical.plans.RevokeGraphAction
 import org.neo4j.cypher.internal.logical.plans.RevokeRoleFromUser
 import org.neo4j.cypher.internal.logical.plans.ShowCurrentUser
+import org.neo4j.cypher.internal.logical.plans.ShowPrivilegeCommands
 import org.neo4j.cypher.internal.logical.plans.ShowPrivileges
 import org.neo4j.cypher.internal.logical.plans.ShowRoles
 import org.neo4j.cypher.internal.logical.plans.ShowUsers
@@ -120,7 +123,9 @@ import org.neo4j.exceptions.InternalException
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.graphdb.Direction
 import org.neo4j.graphdb.Label
+import org.neo4j.graphdb.Node
 import org.neo4j.graphdb.RelationshipType
+import org.neo4j.graphdb.ResourceIterator
 import org.neo4j.graphdb.Transaction
 import org.neo4j.internal.helpers.collection.Iterables
 import org.neo4j.internal.kernel.api.security.AuthenticationResult
@@ -142,9 +147,12 @@ import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.MapValue
 import org.neo4j.values.virtual.VirtualValues
 
+import scala.collection.JavaConverters.asScalaIterator
 import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.collection.JavaConverters.asScalaIteratorConverter
 import scala.collection.JavaConverters.asScalaSetConverter
 import scala.collection.JavaConverters.mapAsScalaMapConverter
+import scala.collection.mutable
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -475,8 +483,40 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       makeRevokeExecutionPlan(graphAction, resource, database, qualifier, roleName, revokeType,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke $actionName privilege from role '${runtimeValue(roleName, params)}'")
 
+    case ShowPrivilegeCommands(source, scope, asRevoke, symbols, yields, returns) => (context, parameterMapping) =>
+      val commandListKey = internalKey("commandList")
+
+      val paramConverter: (Transaction, MapValue) => MapValue = scope match {
+        case ShowRolesPrivileges(roles) => (tx: Transaction, params: MapValue) => MapValue.EMPTY // "role", $role
+        case ShowUserPrivileges(user)   => (tx: Transaction, params: MapValue) => MapValue.EMPTY
+        case ShowUsersPrivileges(users) => (tx: Transaction, params: MapValue) => MapValue.EMPTY
+        case ShowAllPrivileges()        => // fetch all roles in database and get privileges for them
+          (tx: Transaction, params: MapValue) => {
+            val roleNodes: ResourceIterator[Node] = tx.findNodes(Label.label("Role"))
+            val roles: Seq[String] = roleNodes.asScala.toStream.map(node => node.getProperty("name").toString)
+            val commandList: Seq[String] = roles.foldLeft(Seq.empty[String])((acc, r) => {
+              val privileges = enterpriseSecurityGraphComponent.getPrivilegesForRole(tx, r).asScala
+              acc ++ privileges.flatMap(p => p.asCommandFor(r).asScala)
+            } )
+            val commands = Values.stringArray(commandList: _*)
+            params.updatedWith(commandListKey, commands)
+          }
+      }
+
+      val returnClause = AdministrationShowCommandUtils.generateReturnClause(symbols, yields, returns, Seq("command"))
+
+      val query =
+        s"""
+          |UNWIND $$$commandListKey AS command
+          |$returnClause
+          |""".stripMargin
+      SystemCommandExecutionPlan("ShowPrivilegeCommands", normalExecutionEngine, query, MapValue.EMPTY,
+        source = source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping)),
+        parameterConverter = paramConverter
+      )
+
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES
-    case ShowPrivileges(source, scope, asRevoke, symbols, yields, returns) => (context, parameterMapping) =>
+    case ShowPrivileges(source, scope, symbols, yields, returns) => (context, parameterMapping) =>
       val currentUserKey = internalKey("currentUser")
       val currentUserRolesKey = internalKey("currentUserRoles")
       val privilegeMatch =

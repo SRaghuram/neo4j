@@ -83,6 +83,11 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
         throw unsupported();
     }
 
+    public Set<ResourcePrivilege> currentGetPrivilegeForRole( Transaction tx, String roleName )
+    {
+        throw unsupported();
+    }
+
     // should only be called with lower-case database name
     public abstract DatabaseSecurityCommands getBackupCommands( Transaction tx, String databaseName, boolean saveUsers, boolean saveRoles );
 
