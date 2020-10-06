@@ -13,9 +13,9 @@ import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.model.util.JsonUtil;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -199,8 +199,8 @@ public class SerializationTest
     void shouldSerializeBenchmarkConfigFromFile() throws IOException
     {
         // given
-        File benchmarkConfig = temporaryFolder.file( "benchmark.config" ).toFile();
-        try ( FileWriter fileWriter = new FileWriter( benchmarkConfig ) )
+        Path benchmarkConfig = temporaryFolder.file( "benchmark.config" );
+        try ( FileWriter fileWriter = new FileWriter( benchmarkConfig.toFile() ) )
         {
             fileWriter.append( "key1=value1" );
             fileWriter.append( "\n" );
@@ -208,7 +208,7 @@ public class SerializationTest
             fileWriter.flush();
         }
 
-        BenchmarkConfig before = BenchmarkConfig.from( benchmarkConfig.toPath() );
+        BenchmarkConfig before = BenchmarkConfig.from( benchmarkConfig );
         // then
 
         BenchmarkConfig after = (BenchmarkConfig) shouldSerializeAndDeserialize( before );
@@ -369,7 +369,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializeTestRunWithProfile() throws IOException
+    void shouldSerializeTestRunWithProfile()
     {
         // given
         TestRun before = new TestRun( "id", 1, 2, 3, 1, "user" );
@@ -422,9 +422,9 @@ public class SerializationTest
 
     private Object shouldSerializeAndDeserialize( Object before )
     {
-        File jsonFile = temporaryFolder.file( "file.json" ).toFile();
-        JsonUtil.serializeJson( jsonFile.toPath(), before );
-        Object after = JsonUtil.deserializeJson( jsonFile.toPath(), before.getClass() );
+        Path jsonFile = temporaryFolder.file( "file.json" );
+        JsonUtil.serializeJson( jsonFile, before );
+        Object after = JsonUtil.deserializeJson( jsonFile, before.getClass() );
         assertThat( before, equalTo( after ) );
         return after;
     }

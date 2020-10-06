@@ -8,9 +8,9 @@ package com.neo4j.bench.common.profiling;
 import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -29,13 +29,13 @@ public class StackCollapseWriterTest
     public void writeStackCollapse() throws IOException
     {
         // given
-        File file = temporaryFolder.file( "stackcollapse" );
+        Path file = temporaryFolder.file( "stackcollapse" );
         ImmutableMap<String,Long> map = ImmutableMap.of( "stack1", 500L, "stack1;stack2", 600L );
         StackCollapse stackCollapse =
                 consumer -> map.entrySet().forEach( entry -> consumer.accept( entry.getKey(), entry.getValue() ) );
         // when
-        StackCollapseWriter.write( stackCollapse, file.toPath() );
+        StackCollapseWriter.write( stackCollapse, file );
         // then
-        assertThat( Files.readAllLines( file.toPath() ), containsInAnyOrder( "stack1 500", "stack1;stack2 600" ) );
+        assertThat( Files.readAllLines( file ), containsInAnyOrder( "stack1 500", "stack1;stack2 600" ) );
     }
 }

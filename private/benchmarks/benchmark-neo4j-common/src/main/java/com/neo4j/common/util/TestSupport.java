@@ -20,7 +20,7 @@ public class TestSupport
     {
         DatabaseManagementService managementService =
                 new EnterpriseDatabaseManagementServiceBuilder( homeDir )
-                        .loadPropertiesFromFile( neo4jConfigFile )
+                        .loadPropertiesFromFile( neo4jConfigFile.toString() )
                         .build();
         managementService.shutdown();
         return Neo4jStore.createFrom( homeDir );
@@ -40,7 +40,7 @@ public class TestSupport
     {
         DatabaseManagementService managementService =
                 new EnterpriseDatabaseManagementServiceBuilder( homeDir )
-                        .loadPropertiesFromFile( neo4jConfigFile )
+                        .loadPropertiesFromFile( neo4jConfigFile.toString() )
                         .build();
         managementService.shutdown();
         return Neo4jStore.createTemporaryFrom( homeDir );

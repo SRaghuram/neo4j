@@ -8,11 +8,8 @@ package com.neo4j.bench.micro.data;
 import com.neo4j.bench.common.profiling.FullBenchmarkName;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkGroup;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.TemporaryFolder;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collections;
 
@@ -34,18 +31,18 @@ public class StoresTest
     public TestDirectory temporaryFolder;
 
     @Test
-    public void storeUsageShouldBeEmptyWhenFirstCreated() throws IOException
+    public void storeUsageShouldBeEmptyWhenFirstCreated()
     {
-        Path workDir = temporaryFolder.directory( "dir" ).toPath();
+        Path workDir = temporaryFolder.directory( "dir" );
         Stores.StoreUsage storeUsage = Stores.StoreUsage.loadOrCreateIfAbsent( workDir );
 
         assertThat( storeUsage.allStoreBenchmarkInfo().isEmpty(), is( true ) );
     }
 
     @Test
-    public void storeUsageShouldRegister() throws IOException
+    public void storeUsageShouldRegister()
     {
-        Path workDir = temporaryFolder.directory( "dir" ).toPath();
+        Path workDir = temporaryFolder.directory( "dir" );
         Stores.StoreUsage storeUsage = Stores.StoreUsage.loadOrCreateIfAbsent( workDir );
 
         String store1 = randomUUID().toString();
@@ -75,9 +72,9 @@ public class StoresTest
     }
 
     @Test
-    public void storeUsageShouldBeTheSameAfterReload() throws IOException
+    public void storeUsageShouldBeTheSameAfterReload()
     {
-        Path workDir = temporaryFolder.directory( "dir" ).toPath();
+        Path workDir = temporaryFolder.directory( "dir" );
         Stores.StoreUsage storeUsageBefore = Stores.StoreUsage.loadOrCreateIfAbsent( workDir );
 
         String store = randomUUID().toString();
@@ -97,9 +94,9 @@ public class StoresTest
     }
 
     @Test
-    public void storeUsageShouldNotAllowRegisteringSameBenchmarkTwice() throws IOException
+    public void storeUsageShouldNotAllowRegisteringSameBenchmarkTwice()
     {
-        Path workDir = temporaryFolder.directory( "dir" ).toPath();
+        Path workDir = temporaryFolder.directory( "dir" );
         Stores.StoreUsage storeUsageBefore = Stores.StoreUsage.loadOrCreateIfAbsent( workDir );
 
         String store = randomUUID().toString();
