@@ -68,7 +68,7 @@ public class RaftServerFactory
     private final NettyPipelineBuilderFactory pipelineBuilderFactory;
     private final Collection<ModifierSupportedProtocols> supportedModifierProtocols;
     private final DatabaseIdRepository databaseIdRepository;
-    private final ServerLogService serverLogService;
+    private final ServerNameService serverNameService;
     private final LogProvider internalLogProvider;
 
     RaftServerFactory( GlobalModule globalModule, ClusteringIdentityModule clusteringIdentityModule, NettyPipelineBuilderFactory pipelineBuilderFactory,
@@ -82,8 +82,8 @@ public class RaftServerFactory
         this.pipelineBuilderFactory = pipelineBuilderFactory;
         this.supportedModifierProtocols = supportedModifierProtocols;
         this.databaseIdRepository = databaseIdRepository;
-        this.serverLogService = new ServerLogService( globalModule.getLogService(), RAFT_SERVER_NAME );
-        this.internalLogProvider = serverLogService.getInternalLogProvider();
+        this.serverNameService = new ServerNameService( globalModule.getLogService(), RAFT_SERVER_NAME );
+        this.internalLogProvider = serverNameService.getInternalLogProvider();
     }
 
     Server createRaftServer( RaftMessageDispatcher raftMessageDispatcher, ChannelInboundHandler installedProtocolsHandler )
@@ -113,7 +113,7 @@ public class RaftServerFactory
         var raftListenAddress = config.get( CausalClusteringSettings.raft_listen_address );
 
         var raftServerExecutor = globalModule.getJobScheduler().executor( Group.RAFT_SERVER );
-        var raftServer = new Server( channelInitializer, installedProtocolsHandler, serverLogService, raftListenAddress, RAFT_SERVER_NAME, raftServerExecutor,
+        var raftServer = new Server( channelInitializer, installedProtocolsHandler, serverNameService, raftListenAddress, raftServerExecutor,
                 globalModule.getConnectorPortRegister(), BootstrapConfiguration.serverConfig( config ) );
 
         var myself = /*RaftMessageLogger*/ RaftMemberId.from( clusteringIdentityModule.memberId() );

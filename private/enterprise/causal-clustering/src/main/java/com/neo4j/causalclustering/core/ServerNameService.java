@@ -11,20 +11,25 @@ import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.PrefixedLogProvider;
 import org.neo4j.logging.internal.SimpleLogService;
 
-public class ServerLogService extends AbstractLogService
+public class ServerNameService extends AbstractLogService
 {
     private final LogService delegate;
     private final String serverName;
 
-    public ServerLogService( LogService delegate, String serverName )
+    public ServerNameService( LogService delegate, String serverName )
     {
         this.delegate = delegate;
         this.serverName = serverName;
     }
 
-    public ServerLogService( LogProvider debugLogProvider, LogProvider userLogProvider, String serverName )
+    public ServerNameService( LogProvider debugLogProvider, LogProvider userLogProvider, String serverName )
     {
         this( new SimpleLogService( userLogProvider, debugLogProvider ), serverName );
+    }
+
+    public String getServerName()
+    {
+        return serverName;
     }
 
     @Override

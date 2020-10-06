@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.net;
 
-import com.neo4j.causalclustering.core.ServerLogService;
+import com.neo4j.causalclustering.core.ServerNameService;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInboundHandler;
@@ -29,28 +29,28 @@ public class Server extends LifecycleAdapter
 {
     private final Log debugLog;
     private final Log userLog;
-    private final String serverName;
 
     private final Executor executor;
     private final BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration;
     private final ChildInitializer childInitializer;
     private final ChannelInboundHandler parentHandler;
     private final ConnectorPortRegister portRegister;
+    private final ServerNameService serverNameService;
 
     private EventLoopGroup workerGroup;
     private Channel channel;
     private SocketAddress listenAddress;
 
-    public Server( ChildInitializer childInitializer, ChannelInboundHandler parentHandler, ServerLogService serverLogService,
-            SocketAddress listenAddress, String serverName, Executor executor, ConnectorPortRegister portRegister,
+    public Server( ChildInitializer childInitializer, ChannelInboundHandler parentHandler, ServerNameService serverNameService,
+            SocketAddress listenAddress, Executor executor, ConnectorPortRegister portRegister,
             BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration )
     {
         this.childInitializer = childInitializer;
         this.parentHandler = parentHandler;
+        this.serverNameService = serverNameService;
         this.listenAddress = listenAddress;
-        this.debugLog = serverLogService.getInternalLogProvider().getLog( getClass() );
-        this.userLog = serverLogService.getUserLogProvider().getLog( getClass() );
-        this.serverName = serverName;
+        this.debugLog = serverNameService.getInternalLogProvider().getLog( getClass() );
+        this.userLog = serverNameService.getUserLogProvider().getLog( getClass() );
         this.executor = executor;
         this.portRegister = portRegister;
         this.bootstrapConfiguration = bootstrapConfiguration;
@@ -133,7 +133,7 @@ public class Server extends LifecycleAdapter
 
     public String name()
     {
-        return serverName;
+        return serverNameService.getServerName();
     }
 
     public SocketAddress address()
@@ -144,7 +144,7 @@ public class Server extends LifecycleAdapter
     @Override
     public String toString()
     {
-        return format( "Server[%s]", serverName );
+        return format( "Server[%s]", serverNameService.getServerName() );
     }
 
     private SocketAddress actualListenAddress( Channel channel )
@@ -160,11 +160,11 @@ public class Server extends LifecycleAdapter
 
     private void registerListenAddress()
     {
-        portRegister.register( serverName, listenAddress );
+        portRegister.register( serverNameService.getServerName(), listenAddress );
     }
 
     private void deregisterListenAddress()
     {
-        portRegister.deregister( serverName );
+        portRegister.deregister( serverNameService.getServerName() );
     }
 }

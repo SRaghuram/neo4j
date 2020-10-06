@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstallerV3;
 import com.neo4j.causalclustering.catchup.v4.CatchupProtocolServerInstallerV4;
-import com.neo4j.causalclustering.core.ServerLogService;
+import com.neo4j.causalclustering.core.ServerNameService;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.ChildInitializer;
 import com.neo4j.causalclustering.net.Server;
@@ -43,8 +43,8 @@ class TestCatchupServer extends Server
 {
     TestCatchupServer( CatchupServerHandler catchupServerHandler, LogProvider logProvider, ExecutorService executor )
     {
-        super( childInitializer( catchupServerHandler, logProvider ), null, new ServerLogService( logProvider, logProvider, "fake-catchup-server" ),
-                new SocketAddress( "localhost", 0 ), "fake-catchup-server", executor,
+        super( childInitializer( catchupServerHandler, logProvider ), null, new ServerNameService( logProvider, logProvider, "fake-catchup-server" ),
+                new SocketAddress( "localhost", 0 ), executor,
                 new ConnectorPortRegister(), BootstrapConfiguration.serverConfig( Config.defaults() ) );
     }
 

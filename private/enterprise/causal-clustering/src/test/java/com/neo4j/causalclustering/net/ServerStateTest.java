@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.net;
 
-import com.neo4j.causalclustering.core.ServerLogService;
+import com.neo4j.causalclustering.core.ServerNameService;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -133,7 +133,7 @@ class ServerStateTest
     private Server createServer( String name, ConnectorPortRegister portRegister )
     {
         return new Server( channel ->
-        {}, null, new ServerLogService( logProvider, logProvider, name ), new SocketAddress( "localhost", 0 ), name, executor, portRegister,
+        {}, null, new ServerNameService( logProvider, logProvider, name ), new SocketAddress( "localhost", 0 ), executor, portRegister,
                 BootstrapConfiguration.serverConfig( Config.defaults() ) );
     }
 

@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
-import com.neo4j.causalclustering.core.ServerLogService;
+import com.neo4j.causalclustering.core.ServerNameService;
 import com.neo4j.causalclustering.net.Server;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -51,7 +51,7 @@ class ConnectionInfoIT
         ExecutorService executor = Executors.newCachedThreadPool();
         Server catchupServer = new Server( channel ->
         {
-        }, null, new ServerLogService( logProvider, userLogProvider, "server-name" ), listenSocketAddress, "server-name", executor,
+        }, null, new ServerNameService( logProvider, userLogProvider, "server-name" ), listenSocketAddress, executor,
                 new ConnectorPortRegister(), serverConfig( Config.defaults() ) );
 
         //then

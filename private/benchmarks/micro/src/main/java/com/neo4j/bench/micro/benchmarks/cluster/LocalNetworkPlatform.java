@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.cluster;
 
-import com.neo4j.causalclustering.core.ServerLogService;
+import com.neo4j.causalclustering.core.ServerNameService;
 import com.neo4j.causalclustering.helper.ErrorHandler;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.Server;
@@ -44,7 +44,7 @@ public class LocalNetworkPlatform
     {
         executor = Executors.newCachedThreadPool();
         var benchmarkServer = "BenchmarkServer";
-        var serverLogService = new ServerLogService( logProvider, logProvider, benchmarkServer );
+        var serverLogService = new ServerNameService( logProvider, logProvider, benchmarkServer );
         this.log = serverLogService.getInternalLog( getClass() );
         try
         {
@@ -52,7 +52,7 @@ public class LocalNetworkPlatform
             ProtocolInstaller<ProtocolInstaller.Orientation.Server> serverProtocolInstaller = serverClientContext.serverInstaller();
             SocketAddress listenSocketAddress = new SocketAddress( "localhost", SOME_BULLSHIT_PORT );
             this.log.info( "Starting server. Binding to: %s", listenSocketAddress );
-            server = new Server( serverProtocolInstaller::install, null, serverLogService, listenSocketAddress, benchmarkServer, executor,
+            server = new Server( serverProtocolInstaller::install, null, serverLogService, listenSocketAddress, executor,
                     new ConnectorPortRegister(), BootstrapConfiguration.serverConfig( Config.defaults() ) );
             server.init();
             server.start();
