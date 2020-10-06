@@ -713,7 +713,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         //we want to propagate starting with source and then all upstream pipelines
         onPipeline(source)
         markCancellerInUpstreamBuffers(source.inputBuffer, argument, asm.id, onPipeline)
-        source.fuseOrInterpret(plan, isBreaking = true)
+        source.fuseOrInterpret(plan, breakingPolicy.breakOn(plan, applyPlans(plan.id)))
         source
 
       case _: Distinct | _: OrderedDistinct | _: Skip =>
