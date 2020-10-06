@@ -45,26 +45,26 @@ public class LocalNetworkPlatform
         executor = Executors.newCachedThreadPool();
         var benchmarkServer = "BenchmarkServer";
         var serverLogService = new ServerNameService( logProvider, logProvider, benchmarkServer );
-        this.log = serverLogService.getInternalLog( getClass() );
+        log = serverLogService.getInternalLog( getClass() );
         try
         {
-            this.log.info( "BEGIN start" );
+            log.info( "BEGIN start" );
             ProtocolInstaller<ProtocolInstaller.Orientation.Server> serverProtocolInstaller = serverClientContext.serverInstaller();
             SocketAddress listenSocketAddress = new SocketAddress( "localhost", SOME_BULLSHIT_PORT );
-            this.log.info( "Starting server. Binding to: %s", listenSocketAddress );
+            log.info( "Starting server. Binding to: %s", listenSocketAddress );
             server = new Server( serverProtocolInstaller::install, null, serverLogService, listenSocketAddress, executor,
                     new ConnectorPortRegister(), BootstrapConfiguration.serverConfig( Config.defaults() ) );
             server.init();
             server.start();
 
             client = new Client( serverClientContext.clientInstaller() );
-            this.log.info( "Client channel connecting to: %s", listenSocketAddress );
+            log.info( "Client channel connecting to: %s", listenSocketAddress );
             // connect
             client.getOrConnect();
         }
         catch ( Throwable t )
         {
-            this.log.error( "Exception when starting", t );
+            log.error( "Exception when starting", t );
             // best effort stop
             try
             {
@@ -77,7 +77,7 @@ public class LocalNetworkPlatform
         }
         finally
         {
-            this.log.info( "END start" );
+            log.info( "END start" );
         }
     }
 
