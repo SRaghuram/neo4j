@@ -2379,6 +2379,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     *    catch( RuntimeException e)
     *    {
     *      error = e;
+    *      //we must reset to null so that we don't end up using an old value here
+    *      returnValue = null;
     *    }
     *    seenValue = returnValue == TRUE ? false : (seenValue ? true : returnValue == NO_VALUE);
     *    if ( returnValue != TRUE )
@@ -2390,6 +2392,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     *       catch( RuntimeException e)
     *       {
     *         error = e;
+    *         //we must reset to null so that we don't end up using an old value here
+    *         returnValue = null;
     *       }
     *       seenValue = returnValue == TRUE ? false : (seenValue ? true : returnValue == NO_VALUE);
     *       ...[continue unroll until we are at the end of expressions]
@@ -2419,10 +2423,12 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     val inner = (e: IntermediateExpression) => {
       val exceptionName = namer.nextVariableName()
       val loadValue = tryCatch[RuntimeException](exceptionName)(
-        block(
-          assign(returnValue, constant(null)),
-          assign(returnValue, noValueOr(e)(invokeStatic(ASSERT_PREDICATE, e.ir))))
-      )(assign(error, load(exceptionName)))
+        //try
+        assign(returnValue, noValueOr(e)(invokeStatic(ASSERT_PREDICATE, e.ir)))
+      )(block(//catch
+        assign(error, load(exceptionName)),
+        assign(returnValue, constant(null)))
+      )
 
       if (nullable) {
         Seq(loadValue,
@@ -2444,12 +2450,16 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     //  if (returnValue != breakValue ) {
     //    try {
     //        returnValue = ...;
-    //    } catch ( RuntimeException e) { error = e}
+    //    } catch ( RuntimeException e) {
+    //        error = e
+    //        //we must reset to null so that we don't end up using an old value here
+    //        returnValue = null;
+    //    }
     //    ...
-    def loop(e: List[IntermediateExpression]): IntermediateRepresentation = e match {
+    def unroll(e: List[IntermediateExpression]): IntermediateRepresentation = e match {
       case Nil => throw new InternalException("we should never get here")
       case a :: Nil => ifNotBreakValue(block(inner(a):_*))
-      case hd::tl => ifNotBreakValue(block(inner(hd) :+ loop(tl):_*))
+      case hd::tl => ifNotBreakValue(block(inner(hd) :+ unroll(tl):_*))
     }
 
     val firstExpression = expressions.head
@@ -2468,12 +2478,15 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           assign(error, constant(null)),
           //assign returnValue to head of expressions
           tryCatch[RuntimeException](exceptionName)(
-            block(
-              assign(returnValue, constant(null)),
+              //try
               assign(returnValue, noValueOr(firstExpression)(invokeStatic(ASSERT_PREDICATE, firstExpression.ir)))
-            ))(assign(error, load(exceptionName)))) ++ nullCheckAssign ++ Seq(
+          )(block(
+                //catch
+                assign(error, load(exceptionName)),
+                assign(returnValue, constant(null))))
+        ) ++ nullCheckAssign ++ Seq(
                 //generated unrolls tail of expression
-                loop(expressions.tail),
+                unroll(expressions.tail),
                 //checks if there was an error and that we never evaluated to breakValue, if so throw
                 condition(and(notEqual(load(error), constant(null)), notEqual(load(returnValue), breakValue)))(
                 fail(load(error))),
