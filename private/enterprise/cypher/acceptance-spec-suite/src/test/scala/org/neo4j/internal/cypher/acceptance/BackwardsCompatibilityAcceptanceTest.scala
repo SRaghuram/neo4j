@@ -167,6 +167,7 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
   }
 
   // Additions in 4.0 and 4.1
+
   test("The USE clause should not work with CYPHER 3.5") {
     // WHEN
     val exception = the[SyntaxException] thrownBy {
@@ -455,5 +456,16 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
       executeSingle("CYPHER 4.1 DENY EXECUTE BOOSTED FUNCTION * ON DBMS TO custom")
     }
     exception.getMessage should include("EXECUTE BOOSTED FUNCTION is not supported in this Cypher version.")
+  }
+
+  test("create index with options should not work with CYPHER 4.1") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.1 CREATE INDEX my_index FOR (n:Label) ON (n.prop) OPTIONS {irrelevantValue: 'CantBeEmptyMap'}")
+    }
+
+    // THEN
+    exception.getMessage should include("Creating index with options is not supported in this Cypher version.")
+    graph.getMaybeIndex("Label", Seq("prop")).isEmpty should be(true)
   }
 }

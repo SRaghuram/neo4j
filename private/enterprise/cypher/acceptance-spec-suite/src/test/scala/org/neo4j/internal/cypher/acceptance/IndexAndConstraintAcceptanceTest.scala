@@ -11,7 +11,18 @@ import org.neo4j.exceptions.CypherExecutionException
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.Label
 import org.neo4j.graphdb.RelationshipType
+import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_CARTESIAN_3D_MAX
+import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_CARTESIAN_3D_MIN
+import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_CARTESIAN_MAX
+import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_CARTESIAN_MIN
+import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_WGS84_3D_MAX
+import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_WGS84_3D_MIN
+import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_WGS84_MAX
+import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_WGS84_MIN
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
+import org.neo4j.kernel.impl.index.schema.GenericNativeIndexProvider
+import org.neo4j.kernel.impl.index.schema.fusion.NativeLuceneFusionIndexProviderFactory30
 
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 
@@ -221,6 +232,81 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     properties should be(Seq("name"))
   }
 
+  test("should be able to set index provider when creating index") {
+    // WHEN
+    executeSingle("CREATE INDEX myIndex FOR (n:Person) ON (n.name) OPTIONS {indexProvider : 'native-btree-1.0'}")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    val provider = graph.getIndexProvider("myIndex")
+    provider should be(GenericNativeIndexProvider.DESCRIPTOR)
+  }
+
+  test("should be able to set config values when creating index") {
+    // WHEN
+    executeSingle(
+      """CREATE INDEX myIndex FOR (n:Person) ON (n.name) OPTIONS {indexConfig: {
+        | `spatial.cartesian.min`: [-100.0, -100.0],
+        | `spatial.cartesian.max`: [100.0, 100.0],
+        | `spatial.cartesian-3d.min`: [-100.0, -100.0, -100.0],
+        | `spatial.cartesian-3d.max`: [100.0, 100.0, 100.0],
+        | `spatial.wgs-84.min`: [-60.0, -40.0],
+        | `spatial.wgs-84.max`: [60.0, 40.0],
+        | `spatial.wgs-84-3d.min`: [-60.0, -40.0, -100.0],
+        | `spatial.wgs-84-3d.max`: [60.0, 40.0, 100.0]
+        |}}""".stripMargin)
+    graph.awaitIndexesOnline()
+
+    // THEN
+    val configuration = graph.getIndexConfig("myIndex")
+    configuration(SPATIAL_CARTESIAN_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-100.0, -100.0)
+    configuration(SPATIAL_CARTESIAN_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(100.0, 100.0)
+    configuration(SPATIAL_CARTESIAN_3D_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-100.0, -100.0, -100.0)
+    configuration(SPATIAL_CARTESIAN_3D_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(100.0, 100.0, 100.0)
+    configuration(SPATIAL_WGS84_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-60.0, -40.0)
+    configuration(SPATIAL_WGS84_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(60.0, 40.0)
+    configuration(SPATIAL_WGS84_3D_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-60.0, -40.0, -100.0)
+    configuration(SPATIAL_WGS84_3D_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(60.0, 40.0, 100.0)
+  }
+
+  test("should be able to set both index provider and config when creating index") {
+    // WHEN
+    executeSingle(
+      """CREATE INDEX myIndex FOR (n:Person) ON (n.name) OPTIONS {
+        | indexProvider : 'lucene+native-3.0',
+        | indexConfig: {`spatial.cartesian.min`: [-60.0, -40.0], `spatial.cartesian.max`: [60.0, 40.0]}
+        |}""".stripMargin)
+    graph.awaitIndexesOnline()
+
+    // THEN
+    val provider = graph.getIndexProvider("myIndex")
+    val configuration = graph.getIndexConfig("myIndex")
+
+    provider should be(NativeLuceneFusionIndexProviderFactory30.DESCRIPTOR)
+    configuration(SPATIAL_CARTESIAN_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-60.0, -40.0)
+    configuration(SPATIAL_CARTESIAN_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(60.0, 40.0)
+  }
+
+  test("should get default values when creating index with empty OPTIONS map when creating index") {
+    // WHEN
+    executeSingle("CREATE INDEX myIndex FOR (n:Person) ON (n.name) OPTIONS {}")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    val provider = graph.getIndexProvider("myIndex")
+    val configuration = graph.getIndexConfig("myIndex")
+
+    provider should be(GenericNativeIndexProvider.DESCRIPTOR)
+    configuration(SPATIAL_CARTESIAN_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-1000000.0, -1000000.0)
+    configuration(SPATIAL_CARTESIAN_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(1000000.0, 1000000.0)
+    configuration(SPATIAL_CARTESIAN_3D_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-1000000.0, -1000000.0, -1000000.0)
+    configuration(SPATIAL_CARTESIAN_3D_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(1000000.0, 1000000.0, 1000000.0)
+    configuration(SPATIAL_WGS84_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-180.0, -90.0)
+    configuration(SPATIAL_WGS84_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(180.0, 90.0)
+    configuration(SPATIAL_WGS84_3D_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-180.0, -90.0, -1000000.0)
+    configuration(SPATIAL_WGS84_3D_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(180.0, 90.0, 1000000.0)
+  }
+
   test("should fail to create multiple indexes with same schema (old syntax)") {
     // GIVEN
     executeSingle("CREATE INDEX ON :Person(name)")
@@ -325,6 +411,110 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       executeSingle("CREATE OR REPLACE INDEX IF NOT EXISTS FOR (n:Person) ON (n.name)")
     }
     error4.getMessage should startWith (errorMessage)
+  }
+
+  test("should fail to create index with invalid options") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CREATE INDEX FOR (n:Person) ON (n.name) OPTIONS {nonValidOption : 42}")
+    }
+    // THEN
+    exception.getMessage should include("Failed to create index: Invalid option provided, valid options are `indexProvider` and `indexConfig`.")
+  }
+
+  test("should fail to create index with invalid options (config map directly)") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CREATE INDEX FOR (n:Person) ON (n.name) OPTIONS {`spatial.cartesian.max`: [100.0, 100.0]}")
+    }
+    // THEN
+    exception.getMessage should include("Failed to create index: Invalid option provided, valid options are `indexProvider` and `indexConfig`.")
+  }
+
+  test("should fail to create index with invalid provider: wrong provider type") {
+    // WHEN
+    val exception = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE INDEX FOR (n:Person) ON (n.name) OPTIONS {indexProvider : 2}")
+    }
+    // THEN
+    exception.getMessage should include("Could not create index with specified index provider '2'. Expected String value.")
+  }
+
+  test("should fail to create index with invalid provider: misspelled provider") {
+    // WHEN
+    val exception = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE INDEX FOR (n:Person) ON (n.name) OPTIONS {indexProvider : 'native-btree-1'}")
+    }
+    // THEN
+    exception.getMessage should include("Could not create index with specified index provider 'native-btree-1'.")
+  }
+
+  test("should fail to create index with invalid provider: fulltext provider") {
+    // WHEN
+    val exception = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE INDEX FOR (n:Person) ON (n.name) OPTIONS {indexProvider : 'fulltext-1.0'}")
+    }
+    // THEN
+    exception.getMessage should include(
+      """Could not create index with specified index provider 'fulltext-1.0'.
+        |To create fulltext index, please use 'db.index.fulltext.createNodeIndex' or 'db.index.fulltext.createRelationshipIndex'.""".stripMargin)
+  }
+
+  test("should fail to create index with invalid config: not a setting") {
+    // WHEN
+    val exception = the[IllegalArgumentException] thrownBy {
+      executeSingle("CREATE INDEX FOR (n:Person) ON (n.name) OPTIONS {indexConfig: {`not.a.setting`: [4.0, 2.0]}}")
+    }
+    // THEN
+    exception.getMessage should include("Invalid index config key 'not.a.setting', it was not recognized as an index setting.")
+  }
+
+  test("should fail to create index with invalid config: not a config map") {
+    // WHEN
+    val exception = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE INDEX FOR (n:Person) ON (n.name) OPTIONS {indexConfig : 2}")
+    }
+    // THEN
+    exception.getMessage should include("Could not create index with specified index config '2'. Expected a map from String to Double[].")
+  }
+
+  test("should fail to create index with invalid config: config value not a list") {
+    // WHEN
+    val exception = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE INDEX FOR (n:Person) ON (n.name) OPTIONS {indexConfig : {`spatial.cartesian.max`: 100.0}}")
+    }
+    // THEN
+    exception.getMessage should include("Could not create index with specified index config '{spatial.cartesian.max: 100.0}'. Expected a map from String to Double[].")
+  }
+
+  test("should fail to create index with invalid config: config value includes non-valid types") {
+    // WHEN
+    val exception = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE INDEX FOR (n:Person) ON (n.name) OPTIONS {indexConfig : {`spatial.cartesian.max`: [100.0,'hundred']}}")
+    }
+    // THEN
+    exception.getMessage should include(
+      "Could not create index with specified index config '{spatial.cartesian.max: [100.0, hundred]}'. Expected a map from String to Double[].")
+  }
+
+  test("should fail to create index with invalid config: fulltext config values") {
+    // WHEN
+    val exceptionBoolean = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE INDEX FOR (n:Person) ON (n.name) OPTIONS {indexConfig : {`fulltext.eventually_consistent`: true}}")
+    }
+    // THEN
+    exceptionBoolean.getMessage should include(
+      """Could not create index with specified index config '{fulltext.eventually_consistent: true}', contains fulltext config options.
+        |To create fulltext index, please use 'db.index.fulltext.createNodeIndex' or 'db.index.fulltext.createRelationshipIndex'.""".stripMargin)
+
+    // WHEN
+    val exceptionList = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE INDEX FOR (n:Person) ON (n.name) OPTIONS {indexConfig : {`fulltext.analyzer`: [100.0], `spatial.cartesian.max`: [100.0, 100.0]}}")
+    }
+    // THEN
+    exceptionList.getMessage should include(
+      """Could not create index with specified index config '{fulltext.analyzer: [100.0], spatial.cartesian.max: [100.0, 100.0]}', contains fulltext config options.
+        |To create fulltext index, please use 'db.index.fulltext.createNodeIndex' or 'db.index.fulltext.createRelationshipIndex'.""".stripMargin)
   }
 
   // Drop index
