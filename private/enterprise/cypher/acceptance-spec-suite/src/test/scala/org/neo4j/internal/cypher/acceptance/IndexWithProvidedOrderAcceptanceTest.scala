@@ -1617,6 +1617,29 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       result.toList should equal(List(expected))
     }
 
+    test(s"$cypherToken-$functionName: should use provided index order with no predicate") {
+      val result = executeWith(Configs.Optional,
+        s"MATCH (n:Awesome) RETURN $functionName(n.prop1)", executeBefore = createSomeNodes)
+
+      result.executionPlanDescription() should
+        includeSomewhere.aPlan("Optional")
+          .onTopOf(aPlan("Limit")
+            .onTopOf(aPlan("Projection")
+              .onTopOf(aPlan("NodeIndexScan")
+                .withExactVariables("n")
+                .containingArgumentForCachedProperty("n", "prop1")
+                .withOrder(providedOrder(prop("n", "prop1"))))
+            )
+          )
+
+      val expected = expectedOrder(List(
+        Map("min(n.prop1)" -> 40),
+        Map("max(n.prop1)" -> 44)
+      )).head
+      result.toList should equal(List(expected))
+    }
+
+
     test(s"$cypherToken-$functionName: should use provided index order with range") {
       val result = executeWith(Configs.Optional,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 RETURN $functionName(n.prop1)", executeBefore = createSomeNodes)
