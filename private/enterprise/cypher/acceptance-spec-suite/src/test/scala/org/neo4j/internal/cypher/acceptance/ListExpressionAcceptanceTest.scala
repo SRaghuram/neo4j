@@ -253,6 +253,31 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       "someFalseWithNull" -> false))
   }
 
+  test("should all predicate on relationships") {
+    val n1 = createLabeledNode(Map("x" -> 1), "Label")
+    val n2 = createLabeledNode(Map("x" -> 2), "Label")
+    val n3 = createLabeledNode(Map("x" -> 3), "Label")
+    relate(n1, n2, "T", Map("x" -> 1))
+    relate(n2, n3, "T", Map("x" -> 2))
+    val result = executeWith(Configs.VarExpand,
+      query =
+        "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
+          "WHERE all(r IN relationships(p) WHERE r:T)" +
+          "RETURN " +
+          " all(r IN relationships(p) WHERE r.x > 0) AS allTrue, " +
+          " all(r IN relationships(p) WHERE r.x > 1) AS someFalse," +
+          " all(r IN relationships(p) WHERE null) AS nullPredicate," +
+          " all(r IN relationships(p) + [null] WHERE r.x > 0) AS allTrueWithNull," +
+          " all(r IN relationships(p) + [null] WHERE r.x > 1) AS someFalseWithNull")
+
+    result.toList.head should equal(Map(
+      "allTrue" -> true,
+      "someFalse" -> false,
+      "nullPredicate" -> null,
+      "allTrueWithNull" -> null,
+      "someFalseWithNull" -> false))
+  }
+
   test("should any predicate on values") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       query = "RETURN " +
@@ -288,6 +313,31 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
           " any(n IN nodes(p) WHERE null) AS nullPredicate," +
           " any(n IN nodes(p)+[null] WHERE n.x = 1) AS someTrueWithNull," +
           " any(n IN nodes(p)+[null] WHERE n.x = 0) AS allFalseWithNull")
+
+    result.toList.head should equal(Map(
+      "someTrue" -> true,
+      "allFalse" -> false,
+      "nullPredicate" -> null,
+      "someTrueWithNull" -> true,
+      "allFalseWithNull" -> null))
+  }
+
+  test("should any predicate on relationships") {
+    val n1 = createLabeledNode(Map("x" -> 1), "Label")
+    val n2 = createLabeledNode(Map("x" -> 2), "Label")
+    val n3 = createLabeledNode(Map("x" -> 3), "Label")
+    relate(n1, n2, "T", Map("x" -> 1))
+    relate(n2, n3, "T", Map("x" -> 2))
+    val result = executeWith(Configs.VarExpand,
+      query =
+        "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
+          "WHERE any(r IN relationships(p) r:T) " +
+          "RETURN " +
+          " any(r IN relationships(p) WHERE r.x = 1) AS someTrue," +
+          " any(r IN relationships(p) WHERE r.x = 0) AS allFalse," +
+          " any(r IN relationships(p) WHERE null) AS nullPredicate," +
+          " any(r IN relationships(p)+[null] WHERE r.x = 1) AS someTrueWithNull," +
+          " any(r IN relationships(p)+[null] WHERE r.x = 0) AS allFalseWithNull")
 
     result.toList.head should equal(Map(
       "someTrue" -> true,
@@ -333,6 +383,32 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
           " none(n IN nodes(p) WHERE null) AS nullValue," +
           " none(n IN nodes(p) + [null] WHERE n.x = 0) AS allFalseWithNull," +
           " none(n IN nodes(p) + [null] WHERE n.x = 1) AS someTrueWithNull")
+
+    result.toList.head should equal(Map(
+      "allFalse" -> true,
+      "someTrue" -> false,
+      "nullValue" -> null,
+      "allFalseWithNull" -> null,
+      "someTrueWithNull" -> false
+    ))
+  }
+
+  test("should none predicate on relationships") {
+    val n1 = createLabeledNode(Map("x" -> 1), "Label")
+    val n2 = createLabeledNode(Map("x" -> 2), "Label")
+    val n3 = createLabeledNode(Map("x" -> 3), "Label")
+    relate(n1, n2, "T", Map("x" -> 1))
+    relate(n2, n3, "T", Map("x" -> 2))
+    val result = executeWith(Configs.VarExpand,
+      query =
+        "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
+          "WHERE none(r IN relationships(p) WHERE r:Fake) " +
+          "RETURN " +
+          " none(r IN relationships(p) WHERE r.x = 0) AS allFalse," +
+          " none(r IN relationships(p) WHERE r.x = 1) AS someTrue, " +
+          " none(r IN relationships(p) WHERE null) AS nullValue," +
+          " none(r IN relationships(p) + [null] WHERE r.x = 0) AS allFalseWithNull," +
+          " none(r IN relationships(p) + [null] WHERE r.x = 1) AS someTrueWithNull")
 
     result.toList.head should equal(Map(
       "allFalse" -> true,
@@ -392,6 +468,37 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
           " single(n IN nodes(p) + [null] WHERE n.x = 0) AS noneTrueWithNull," +
           " single(n IN nodes(p) + [null] WHERE n.x = 1) AS oneTrueWithNull," +
           " single(n IN nodes(p) + [null] WHERE n.x <= 2) AS twoTrueWithNull")
+
+    result.toList.head should equal(Map(
+      "noneTrue" -> false,
+      "oneTrue" -> true,
+      "twoTrue" -> false,
+      "nullPredicate" -> null,
+      "noneTrueWithNull" -> null,
+      "oneTrueWithNull" -> null,
+      "twoTrueWithNull" -> false))
+  }
+
+  test("should single predicate on relationships") {
+    val n1 = createLabeledNode(Map("x" -> 1), "Label")
+    val n2 = createLabeledNode(Map("x" -> 2), "Label")
+    val n3 = createLabeledNode(Map("x" -> 3), "Label")
+    val n4 = createLabeledNode(Map("x" -> 4), "Label")
+    relate(n1, n2, "T", Map("x" -> 1))
+    relate(n2, n3, "T", Map("x" -> 2))
+    relate(n3, n4, "T", Map("x" -> 3))
+    val result = executeWith(Configs.VarExpand,
+      query =
+        "MATCH p=(n1:Label {x:1})-[*3]-(n4:Label {x:4}) " +
+          "WHERE single(r IN relationships(p) WHERE r.x = 1) " +
+          "RETURN " +
+          " single(r IN relationships(p) WHERE r.x = 0) AS noneTrue," +
+          " single(r IN relationships(p) WHERE r.x = 1) AS oneTrue, " +
+          " single(r IN relationships(p) WHERE r.x <= 2) AS twoTrue, " +
+          " single(r IN relationships(p) WHERE null) AS nullPredicate," +
+          " single(r IN relationships(p) + [null] WHERE r.x = 0) AS noneTrueWithNull," +
+          " single(r IN relationships(p) + [null] WHERE r.x = 1) AS oneTrueWithNull," +
+          " single(r IN relationships(p) + [null] WHERE r.x <= 2) AS twoTrueWithNull")
 
     result.toList.head should equal(Map(
       "noneTrue" -> false,
