@@ -4563,6 +4563,31 @@ class CompiledExpressionsIT extends ExpressionsIT {
       .getOrElse(fail(s"Failed to compile grouping $projections"))
 }
 
+class CodeChainExpressionsIT extends ExpressionsIT {
+
+  private val codeGenerationMode = ByteCodeGeneration(new CodeSaver(false, false))
+  private val compiledExpressionsContext = CompiledExpressionContext(new CachingExpressionCompilerCache(TestExecutorCaffeineCacheFactory),
+    CachingExpressionCompilerTracer.NONE)
+
+  private def fallback(slots: SlotConfiguration) =
+    new DefaultExpressionCompilerFront(slots, readOnly = false, new VariableNamer) with OverrideDefaultCompiler {
+      override protected def fallBack(expression: Expression): Option[IntermediateExpression] = super[DefaultExpressionCompilerFront].compileExpression(expression)
+    }
+
+  override def compile(e: Expression, slots: SlotConfiguration = SlotConfiguration.empty): CompiledExpression =
+    StandaloneExpressionCompiler.codeChain(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext, fallback(slots))
+      .compileExpression(e).getOrElse(fail(s"Failed to compile expression $e"))
+
+  override def compileProjection(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledProjection =
+    StandaloneExpressionCompiler.codeChain(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext, fallback(slots))
+      .compileProjection(projections).getOrElse(fail(s"Failed to compile projection $projections"))
+
+  override def compileGroupingExpression(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledGroupingExpression =
+    StandaloneExpressionCompiler.codeChain(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext, fallback(slots))
+      .compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage = Seq.empty))
+      .getOrElse(fail(s"Failed to compile grouping $projections"))
+}
+
 class InterpretedExpressionIT extends ExpressionsIT {
   override  def compile(e: Expression, slots: SlotConfiguration): CompiledExpression = {
     val expression = converter(slots, (converter, id) => converter.toCommandExpression(id, e))

@@ -16,7 +16,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.add
 import org.neo4j.codegen.api.IntermediateRepresentation.and
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayLoad
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayOf
-import org.neo4j.codegen.api.IntermediateRepresentation.arraySet
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
 import org.neo4j.codegen.api.IntermediateRepresentation.cast
@@ -174,9 +173,11 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilat
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.PROPERTY_CURSOR
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.RELATIONSHIP_CURSOR
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.ROW
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.loadExpressionVariable
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.noValueOr
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheck
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.setExpressionVariable
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.vCURSORS
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.vNODE_CURSOR
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.vPROPERTY_CURSOR
@@ -3052,14 +3053,6 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     case _ => None
   }
 
-  private def setExpressionVariable(ev: ExpressionVariable, value: IntermediateRepresentation): IntermediateRepresentation = {
-    arraySet(ExpressionCompilation.EXPRESSION_VARIABLES, ev.offset, value)
-  }
-
-  private def loadExpressionVariable(ev: ExpressionVariable): IntermediateRepresentation = {
-    arrayLoad(ExpressionCompilation.EXPRESSION_VARIABLES, ev.offset)
-  }
-
   private def getEntityId(offsetIsForLongSlot: Boolean, offset: Int, entityType: EntityType, nullable: Boolean): IntermediateRepresentation = {
     if (offsetIsForLongSlot) getLongAt(offset)
     else {
@@ -3100,7 +3093,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
 object AbstractExpressionCompilerFront {
 
-  private val ASSERT_PREDICATE = method[CompiledHelpers, Value, AnyValue]("assertBooleanOrNoValue")
+  val ASSERT_PREDICATE = method[CompiledHelpers, Value, AnyValue]("assertBooleanOrNoValue")
 
   private val GET_TX_STATE_NODE_PROP: Method = method[DbAccess, Value, Long, Int]("getTxStateNodePropertyOrNull")
   private val GET_TX_STATE_RELATIONSHIP_PROP: Method = method[DbAccess, Value, Long, Int]("getTxStateRelationshipPropertyOrNull")

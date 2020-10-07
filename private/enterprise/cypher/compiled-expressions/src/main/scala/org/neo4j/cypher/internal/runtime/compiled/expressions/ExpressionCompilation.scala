@@ -6,6 +6,8 @@
 package org.neo4j.cypher.internal.runtime.compiled.expressions
 
 import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.arrayLoad
+import org.neo4j.codegen.api.IntermediateRepresentation.arraySet
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.method
@@ -15,6 +17,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.ternary
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
+import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.PropertyCursor
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
@@ -48,6 +51,14 @@ object ExpressionCompilation {
 
   val EXPRESSION_VARIABLES_NAME: String = "expressionVariables"
   val EXPRESSION_VARIABLES: IntermediateRepresentation = load(EXPRESSION_VARIABLES_NAME)
+
+  def setExpressionVariable(ev: ExpressionVariable, value: IntermediateRepresentation): IntermediateRepresentation = {
+    arraySet(ExpressionCompilation.EXPRESSION_VARIABLES, ev.offset, value)
+  }
+
+  def loadExpressionVariable(ev: ExpressionVariable): IntermediateRepresentation = {
+    arrayLoad(ExpressionCompilation.EXPRESSION_VARIABLES, ev.offset)
+  }
 
   val GROUPING_KEY_NAME: String = "key"
 

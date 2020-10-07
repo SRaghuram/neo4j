@@ -17,8 +17,9 @@ class VariableNamer {
   }
 
   def nextVariableName(suffix: String): String = {
-    def maybeUnderscore = if (suffix.isEmpty) "" else "_"
-    val nextName = s"v$counter$maybeUnderscore$suffix"
+    val cleanSuffix = suffix.filter(Character.isJavaIdentifierPart)
+    def maybeUnderscore = if (cleanSuffix.isEmpty) "" else "_"
+    val nextName = s"v$counter$maybeUnderscore$cleanSuffix"
     counter += 1
     nextName
   }

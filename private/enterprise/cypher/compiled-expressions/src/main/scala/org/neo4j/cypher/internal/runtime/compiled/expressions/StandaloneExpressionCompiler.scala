@@ -74,4 +74,24 @@ object StandaloneExpressionCompiler {
     }
     new StandaloneExpressionCompiler(front, back)
   }
+
+  def codeChain(slots: SlotConfiguration,
+                readOnly: Boolean,
+                codeGenerationMode: CodeGeneration.CodeGenerationMode,
+                compiledExpressionsContext: CompiledExpressionContext,
+                fallback: AbstractExpressionCompilerFront): StandaloneExpressionCompiler = {
+    val front = new CodeChainExpressionCompiler(
+      slots, new VariableNamer) {
+      override def compileExpression(expression: Expression): Option[IntermediateExpression] = {
+        try {
+          super.compileExpression(expression)
+        } catch {
+          case _: MatchError => fallback.compileExpression(expression)
+          case _: NotImplementedError => fallback.compileExpression(expression)
+        }
+      }
+    }
+
+    withFront(front, codeGenerationMode, compiledExpressionsContext)
+  }
 }
