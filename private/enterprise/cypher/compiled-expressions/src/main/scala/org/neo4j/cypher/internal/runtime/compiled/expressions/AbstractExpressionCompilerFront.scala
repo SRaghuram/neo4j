@@ -2607,7 +2607,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         // ListValue list = [evaluate collection expression];
         // ArrayList<AnyValue> filtered = new ArrayList<>();
         declare[ListValue](listVar),
-        assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
+        assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), nullCheckIfRequired(collection))),
         declare[java.util.ArrayList[AnyValue]](filteredVars),
         assign(filteredVars, newInstance(constructor[java.util.ArrayList[AnyValue]])),
         // Iterator<AnyValue> listIterator = list.iterator();

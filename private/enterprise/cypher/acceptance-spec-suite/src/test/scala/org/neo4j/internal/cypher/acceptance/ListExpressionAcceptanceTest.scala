@@ -443,4 +443,20 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     //then
     result shouldNot be(empty)
   }
+
+  test("list expression on top of nullable") {
+    //given
+    createLabeledNode("A")
+    createLabeledNode("B")
+
+    //when
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      """MATCH (a:A)
+        |MATCH (b:B)
+        |OPTIONAL MATCH p=(a)-->(b)
+        |RETURN [r IN relationships(p) WHERE type(r)='T' | r] AS result""".stripMargin)
+
+    //then
+    result.toList should equal(List(Map("result" -> null)))
+  }
 }

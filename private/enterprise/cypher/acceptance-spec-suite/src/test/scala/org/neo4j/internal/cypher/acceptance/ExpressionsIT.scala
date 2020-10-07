@@ -2557,6 +2557,15 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiled, 1) should equal(list(stringValue("aa"), stringValue("aaa")))
   }
 
+  test("filter that requires nullcheck") {
+    //When, [bar IN nodes($p) WHERE bar IS NOT NULL]
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(listComprehension(bar, function("nodes", parameter(0)), Some(isNotNull(bar)), None))
+
+    //Then
+    evaluate(compiled, 1, Array(NO_VALUE)) should equal(NO_VALUE)
+  }
+
   test("filter accessing outer scope") {
     //Given
     val context = new MapCypherRow(mutable.Map("foo" -> stringValue("aa")))
