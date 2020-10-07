@@ -76,13 +76,19 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
 
   override def allocateRelationshipTraversalCursor(cursorTracer: PageCursorTracer): RelationshipTraversalCursor = relationshipTraversalCursorPool.allocate()
 
+  override def allocateFullAccessRelationshipTraversalCursor(cursorTracer: PageCursorTracer): RelationshipTraversalCursor = fail("FullAccessRelationshipTraversalCursor")
+
   override def allocatePropertyCursor(cursorTracer: PageCursorTracer, memoryTracker: MemoryTracker): PropertyCursor = fail("PropertyCursor")
 
   override def allocateFullAccessPropertyCursor(cursorTracer: PageCursorTracer, memoryTracker: MemoryTracker): PropertyCursor = fail("FullAccessPropertyCursor")
 
   override def allocateNodeValueIndexCursor(cursorTracer: PageCursorTracer, memoryTracker: MemoryTracker): NodeValueIndexCursor = nodeValueIndexCursorPool.allocate()
 
+  override def allocateFullAccessNodeValueIndexCursor(cursorTracer: PageCursorTracer, memoryTracker: MemoryTracker): NodeValueIndexCursor = fail("FullAccessNodeValueIndexCursor")
+
   override def allocateNodeLabelIndexCursor(cursorTracer: PageCursorTracer): NodeLabelIndexCursor = nodeLabelIndexCursorPool.allocate()
+
+  override def allocateFullAccessNodeLabelIndexCursor(cursorTracer: PageCursorTracer): NodeLabelIndexCursor = fail("FullAccessNodeLabelIndexCursor")
 
   override def allocateRelationshipIndexCursor(cursorTracer: PageCursorTracer): RelationshipIndexCursor = fail("RelationshipIndexCursor")
 
