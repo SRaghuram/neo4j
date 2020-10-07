@@ -48,8 +48,8 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val DEFAULT: String = "DEFAULT"
   val FAIL_EXECUTE_ADMIN_PROC: String = "Executing admin procedure is not allowed"
   val FAIL_EXECUTE_PROC: String = "Executing procedure is not allowed"
-  val FAIL_EXECUTE_FUNC: String = "Executing user defined function is not allowed"
-  val FAIL_EXECUTE_AGG_FUNC: String = "Executing aggregating user defined function is not allowed"
+  val FAIL_EXECUTE_FUNC: String = "Executing a user defined function is not allowed"
+  val FAIL_EXECUTE_AGG_FUNC: String = "Executing a user defined aggregating function is not allowed"
 
   private val helpfulCheckUserPrivilegeErrorText: String = " Try executing SHOW USER PRIVILEGES to determine the missing or denied privileges. " +
     "In case of missing privileges, they need to be granted (See GRANT). In case of denied privileges, they need to be revoked (See REVOKE) and granted."
