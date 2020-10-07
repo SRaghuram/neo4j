@@ -294,7 +294,7 @@ class ExecuteFromSettingPrivilegeAcceptanceTest extends AdministrationCommandAcc
     (the[InvalidArgumentsException] thrownBy {
       execute("REVOKE EXECUTE BOOSTED FUNCTION db.property* ON DBMS FROM configRole")
     }).getMessage should be
-    """Failed to revoke execute_boosted privilege from role 'configRole': This privilege was granted through the config.
+    """Failed to revoke execute_boosted privilege from role 'configRole': This privilege was granted through the configuration file.
       |Altering the settings 'dbms.security.procedures.roles' and 'dbms.security.procedures.default_allowed' will affect this privilege after restart.""".stripMargin
 
     // THEN
@@ -312,7 +312,7 @@ class ExecuteFromSettingPrivilegeAcceptanceTest extends AdministrationCommandAcc
     (the[InvalidArgumentsException] thrownBy {
       execute("REVOKE EXECUTE BOOSTED PROCEDURE db.property* ON DBMS FROM configRole")
     }).getMessage should be
-    """Failed to revoke execute_boosted privilege from role 'configRole': This privilege was granted through the config.
+    """Failed to revoke execute_boosted privilege from role 'configRole': This privilege was granted through the configuration file.
       |Altering the settings 'dbms.security.procedures.roles' and 'dbms.security.procedures.default_allowed' will affect this privilege after restart.""".stripMargin
 
     // THEN
@@ -330,7 +330,7 @@ class ExecuteFromSettingPrivilegeAcceptanceTest extends AdministrationCommandAcc
     (the[InvalidArgumentsException] thrownBy {
       execute("REVOKE EXECUTE BOOSTED FUNCTION * ON DBMS FROM default")
     }).getMessage should be
-    """Failed to revoke execute_boosted privilege from role 'default': This privilege was granted through the config.
+    """Failed to revoke execute_boosted privilege from role 'default': This privilege was granted through the configuration file.
       |Altering the settings 'dbms.security.procedures.roles' and 'dbms.security.procedures.default_allowed' will affect this privilege after restart.""".stripMargin
 
     // THEN
@@ -350,7 +350,7 @@ class ExecuteFromSettingPrivilegeAcceptanceTest extends AdministrationCommandAcc
     (the[InvalidArgumentsException] thrownBy {
       execute("REVOKE EXECUTE BOOSTED PROCEDURE * ON DBMS FROM default")
     }).getMessage should be
-    """Failed to revoke execute_boosted privilege from role 'default': This privilege was granted through the config.
+    """Failed to revoke execute_boosted privilege from role 'default': This privilege was granted through the configuration file.
       |Altering the settings 'dbms.security.procedures.roles' and 'dbms.security.procedures.default_allowed' will affect this privilege after restart.""".stripMargin
 
     // THEN

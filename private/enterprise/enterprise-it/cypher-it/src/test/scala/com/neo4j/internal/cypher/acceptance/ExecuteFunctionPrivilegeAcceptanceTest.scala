@@ -235,9 +235,15 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     executeOnDefault("foo", "bar", "MATCH (a:A) RETURN test.safe.read.property(a, 'prop', 'N/A') AS result", resultHandler = (row, _) => {
       row.get("result") should equal("N/A")
     }) should be(1)
+  }
+
+  test("should get default result when executing user defined function with deny privilege required inside") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
 
     // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+    execute("GRANT EXECUTE FUNCTION * ON DBMS TO custom")
     execute("GRANT EXECUTE BOOSTED FUNCTION * ON DBMS TO custom")
     execute("DENY EXECUTE BOOSTED FUNCTION test.safe.* ON DBMS TO custom")
 
@@ -287,9 +293,15 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     (the[QueryExecutionException] thrownBy {
       executeOnDefault("foo", "bar", "MATCH (a:A) RETURN test.read.property(a, 'prop') AS result")
     }).getMessage should include("No such property")
+  }
+
+  test("should fail execute user defined function with deny privilege required inside") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
 
     // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+    execute("GRANT EXECUTE FUNCTION * ON DBMS TO custom")
     execute("GRANT EXECUTE BOOSTED FUNCTION * ON DBMS TO custom")
     execute("DENY EXECUTE BOOSTED FUNCTION test.* ON DBMS TO custom")
 
@@ -437,9 +449,15 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     executeOnDefault("foo", "bar", "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
       row.get("result") should equal(0)
     }) should be(1)
+  }
+
+  test("should get default result when executing user defined aggregation function with deny privilege required inside") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
 
     // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES B TO custom")
+    execute("GRANT EXECUTE FUNCTION * ON DBMS TO custom")
     execute("GRANT EXECUTE BOOSTED FUNCTION * ON DBMS TO custom")
     execute("DENY EXECUTE BOOSTED FUNCTION test.safe.* ON DBMS TO custom")
 
@@ -489,9 +507,15 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     (the[QueryExecutionException] thrownBy {
       executeOnDefault("foo", "bar", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result")
     }).getMessage should include("No such property")
+  }
+
+  test("should fail execute user defined aggregation function with deny privilege required inside") {
+    // GIVEN
+    setupUserAndGraph("foo", "bar")
 
     // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES B TO custom")
+    execute("GRANT EXECUTE FUNCTION * ON DBMS TO custom")
     execute("GRANT EXECUTE BOOSTED FUNCTION * ON DBMS TO custom")
     execute("DENY EXECUTE BOOSTED FUNCTION test.read.* ON DBMS TO custom")
 

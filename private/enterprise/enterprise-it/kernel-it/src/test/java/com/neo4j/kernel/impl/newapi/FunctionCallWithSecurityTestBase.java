@@ -32,9 +32,9 @@ import org.neo4j.values.storable.Values;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTAny;
 import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTInteger;
 import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTString;
-import static org.neo4j.internal.kernel.api.procs.UserFunctionSignature.functionName;
 import static org.neo4j.internal.kernel.api.procs.UserFunctionSignature.functionSignature;
 import static org.neo4j.values.storable.Values.NO_VALUE;
 
@@ -79,8 +79,8 @@ public abstract class FunctionCallWithSecurityTestBase<G extends KernelAPIWriteT
     private static AuthManager authManager;
     private final AnyValue[] functionArgument = {Values.stringValue( "foo" )};
     private final TextValue expectedResult = Values.stringValue( "foo" );
-    private final String FAIL_EXECUTE_FUNC = "Executing user defined function is not allowed for user";
-    private final String FAIL_EXECUTE_AGG_FUNC = "Executing aggregating user defined function is not allowed for user";
+    private final String FAIL_EXECUTE_FUNC = "Executing a user defined function is not allowed for user";
+    private final String FAIL_EXECUTE_AGG_FUNC = "Executing a user defined aggregating function is not allowed for user";
 
     @Override
     public void createSystemGraph( GraphDatabaseService graphDb )
@@ -206,6 +206,11 @@ public abstract class FunctionCallWithSecurityTestBase<G extends KernelAPIWriteT
     private LoginContext getTestUserLoginContext() throws InvalidAuthTokenException
     {
         return authManager.login( Map.of( "principal", "testUser", "credentials", "abc123".getBytes( StandardCharsets.UTF_8 ), "scheme", "basic" ) );
+    }
+
+    private QualifiedName functionName( String... namespaceAndName )
+    {
+        return functionSignature( namespaceAndName ).out( NTAny ).build().name();
     }
 
     private static CallableUserFunction function( final UserFunctionSignature signature )

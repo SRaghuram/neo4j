@@ -1087,7 +1087,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         val roleName = params.get(nameFields.nameKey).asInstanceOf[TextValue].stringValue()
         if (isTemporaryPrivilege(privilegeAction, qualifier, revokeType, roleName))
           Some(new InvalidArgumentsException(
-            s"""${startOfErrorMessage(params)}: This privilege was granted through the config.
+            s"""${startOfErrorMessage(params)}: This privilege was granted through the configuration file.
                |Altering the settings 'dbms.security.procedures.roles' and 'dbms.security.procedures.default_allowed' will affect this privilege after restart.""".stripMargin))
         else
           None

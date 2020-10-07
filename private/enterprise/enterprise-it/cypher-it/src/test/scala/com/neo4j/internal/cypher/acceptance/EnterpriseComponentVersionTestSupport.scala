@@ -70,9 +70,9 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
   def withAllSystemGraphVersions(expectToFail: String => Option[Class[_]])(block: => Any): Unit = withVersions(allSystemGraphVersions: _*)(expectToFail)(block)
 
   def translatePrivileges(privileges: Set[Map[String, AnyRef]], version: String): Set[Map[String, AnyRef]] = version match {
-    case VERSION_40 => translatePrivilegesTo40(privileges)
+    case VERSION_40   => translatePrivilegesTo40(privileges)
     case VERSION_41D1 => translatePrivilegesTo41(privileges)
-    case VERSION_41 => translatePrivilegesTo41(privileges)
+    case VERSION_41   => translatePrivilegesTo41(privileges)
     case VERSION_42D4 => translatePrivilegesTo41(privileges)
     case VERSION_42D6 => translatePrivilegesTo41(privileges)
     case _            => throw new IllegalArgumentException(s"Unsupported version: $version")
