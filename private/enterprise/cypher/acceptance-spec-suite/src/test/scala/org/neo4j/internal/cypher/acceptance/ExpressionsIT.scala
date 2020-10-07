@@ -56,6 +56,7 @@ import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreeLessThanOrEqualPr
 import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreeLessThanPrimitive
 import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreePrimitive
 import org.neo4j.cypher.internal.physicalplanning.ast.HasLabelsFromSlot
+import org.neo4j.cypher.internal.physicalplanning.ast.HasTypesFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.IdFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.IsPrimitiveNull
 import org.neo4j.cypher.internal.physicalplanning.ast.LabelsFromSlot
@@ -1750,6 +1751,85 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     // Then
     context.setLongAt(offset, n.id)
+    evaluate(compiled, context) should equal(Values.FALSE)
+  }
+
+  test("HasTypesFromSlot - resolved - positive") {
+    // Given
+    val typeName = "A"
+    val r = ValueUtils.fromRelationshipEntity(relate(createNode(), createNode(), typeName))
+
+    val offset = 0
+    val resolvedLabelTokenId = query.getRelTypeId(typeName)
+    resolvedLabelTokenId should be >= 0
+
+    val expression = HasTypesFromSlot(offset, Seq(resolvedLabelTokenId), Seq.empty)
+    val slots = SlotConfiguration.empty.newLong("r", nullable = true, symbols.CTRelationship)
+    val context = SlottedRow(slots)
+
+    // When
+    val compiled = compile(expression, slots)
+
+    // Then
+    context.setLongAt(offset, r.id)
+    evaluate(compiled, context) should equal(Values.TRUE)
+  }
+
+  test("HasTypesFromSlot - resolved - negative") {
+    // Given
+    val typeName = "A"
+    val r = ValueUtils.fromRelationshipEntity(relate(createNode(), createNode(), "B"))
+
+    val offset = 0
+    val resolvedLabelTokenId = query.getRelTypeId(typeName)
+    resolvedLabelTokenId should be >= 0
+
+    val expression = HasTypesFromSlot(offset, Seq(resolvedLabelTokenId), Seq.empty)
+    val slots = SlotConfiguration.empty.newLong("r", nullable = true, symbols.CTRelationship)
+    val context = SlottedRow(slots)
+
+    // When
+    val compiled = compile(expression, slots)
+
+    // Then
+    context.setLongAt(offset, r.id)
+    evaluate(compiled, context) should equal(Values.FALSE)
+  }
+
+  test("HasTypesFromSlot - late - positive") {
+    // Given
+    val typeName = "A"
+    val r = ValueUtils.fromRelationshipEntity(relate(createNode(), createNode(), typeName))
+
+    val offset = 0
+    val expression = HasTypesFromSlot(offset, Seq.empty, Seq(typeName))
+    val slots = SlotConfiguration.empty.newLong("r", nullable = true, symbols.CTRelationship)
+    val context = SlottedRow(slots)
+
+    // When
+    val compiled = compile(expression, slots)
+
+    // Then
+    context.setLongAt(offset, r.id)
+    evaluate(compiled, context) should equal(Values.TRUE)
+  }
+
+  test("HasTypesFromSlot - late - negative") {
+    // Given
+    // Given
+    val typeName = "A"
+    val r = ValueUtils.fromRelationshipEntity(relate(createNode(), createNode(), typeName))
+
+    val offset = 0
+    val expression = HasTypesFromSlot(offset, Seq.empty, Seq("B"))
+    val slots = SlotConfiguration.empty.newLong("r", nullable = true, symbols.CTRelationship)
+    val context = SlottedRow(slots)
+
+    // When
+    val compiled = compile(expression, slots)
+
+    // Then
+    context.setLongAt(offset, r.id)
     evaluate(compiled, context) should equal(Values.FALSE)
   }
 

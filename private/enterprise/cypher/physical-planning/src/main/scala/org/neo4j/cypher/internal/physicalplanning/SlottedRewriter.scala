@@ -18,6 +18,8 @@ import org.neo4j.cypher.internal.expressions.HasDegreeGreaterThanOrEqual
 import org.neo4j.cypher.internal.expressions.HasDegreeLessThan
 import org.neo4j.cypher.internal.expressions.HasDegreeLessThanOrEqual
 import org.neo4j.cypher.internal.expressions.HasLabels
+import org.neo4j.cypher.internal.expressions.HasLabelsOrTypes
+import org.neo4j.cypher.internal.expressions.HasTypes
 import org.neo4j.cypher.internal.expressions.IsNotNull
 import org.neo4j.cypher.internal.expressions.IsNull
 import org.neo4j.cypher.internal.expressions.LabelName
@@ -28,6 +30,7 @@ import org.neo4j.cypher.internal.expressions.Or
 import org.neo4j.cypher.internal.expressions.Property
 import org.neo4j.cypher.internal.expressions.PropertyKeyName
 import org.neo4j.cypher.internal.expressions.RELATIONSHIP_TYPE
+import org.neo4j.cypher.internal.expressions.RelTypeName
 import org.neo4j.cypher.internal.expressions.True
 import org.neo4j.cypher.internal.expressions.Variable
 import org.neo4j.cypher.internal.logical.plans.AggregatingPlan
@@ -48,6 +51,7 @@ import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreeLessThanOrEqualPr
 import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreeLessThanPrimitive
 import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreePrimitive
 import org.neo4j.cypher.internal.physicalplanning.ast.HasLabelsFromSlot
+import org.neo4j.cypher.internal.physicalplanning.ast.HasTypesFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.IdFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.IsPrimitiveNull
 import org.neo4j.cypher.internal.physicalplanning.ast.LabelsFromSlot
@@ -431,11 +435,6 @@ class SlottedRewriter(tokenContext: TokenContext) {
         }
 
       case e@HasLabels(Variable(k), labels) =>
-        def resolveLabelTokens(labels: Seq[LabelName]): (Seq[Int], Seq[String]) = {
-          val maybeTokens = labels.map(l => (tokenContext.getOptLabelId(l.name), l.name))
-          val (resolvedLabelTokens, lateLabels) = maybeTokens.partition(_._1.isDefined)
-          (resolvedLabelTokens.flatMap(_._1), lateLabels.map(_._2))
-        }
 
         slotConfiguration(k) match {
           case LongSlot(offset, false, CTNode) =>
@@ -445,6 +444,41 @@ class SlottedRewriter(tokenContext: TokenContext) {
           case LongSlot(offset, true, CTNode) =>
             val (resolvedLabelTokens, lateLabels) = resolveLabelTokens(labels)
             NullCheck(offset, HasLabelsFromSlot(offset, resolvedLabelTokens, lateLabels))
+
+          case _ => e // Don't know how to specialize this
+        }
+
+      case e@HasTypes(Variable(k), types) =>
+        slotConfiguration(k) match {
+          case LongSlot(offset, false, CTRelationship) =>
+            val (resolvedLabelTokens, lateLabels) = resolveTypeTokens(types)
+            HasTypesFromSlot(offset, resolvedLabelTokens, lateLabels)
+
+          case LongSlot(offset, true, CTRelationship) =>
+            val (resolvedLabelTokens, lateLabels) = resolveTypeTokens(types)
+            NullCheck(offset, HasTypesFromSlot(offset, resolvedLabelTokens, lateLabels))
+
+          case _ => e // Don't know how to specialize this
+        }
+
+      case e@HasLabelsOrTypes(Variable(k), labels) =>
+        slotConfiguration(k) match {
+          case LongSlot(offset, false, CTNode) =>
+            val (resolvedLabelTokens, lateLabels) = resolveLabelTokens(labels)
+            HasLabelsFromSlot(offset, resolvedLabelTokens, lateLabels)
+
+          case LongSlot(offset, true, CTNode) =>
+            val (resolvedLabelTokens, lateLabels) = resolveLabelTokens(labels)
+            NullCheck(offset, HasLabelsFromSlot(offset, resolvedLabelTokens, lateLabels))
+
+          case LongSlot(offset, false, CTRelationship) =>
+            val (resolvedLabelTokens, lateLabels) = resolveTypeTokens(labels.map(l => RelTypeName(l.name)(l.position)))
+            HasTypesFromSlot(offset, resolvedLabelTokens, lateLabels)
+
+          case LongSlot(offset, true, CTRelationship) =>
+            val (resolvedLabelTokens, lateLabels) = resolveTypeTokens(labels.map(l => RelTypeName(l.name)(l.position)))
+            NullCheck(offset, HasTypesFromSlot(offset, resolvedLabelTokens, lateLabels))
+
 
           case _ => e // Don't know how to specialize this
         }
@@ -476,6 +510,18 @@ class SlottedRewriter(tokenContext: TokenContext) {
           e
     }
     topDown(rewriter = innerRewriter, stopper = stopAtOtherLogicalPlans(thisPlan))
+  }
+
+  private def resolveLabelTokens(labels: Seq[LabelName]): (Seq[Int], Seq[String]) = {
+    val maybeTokens = labels.map(l => (tokenContext.getOptLabelId(l.name), l.name))
+    val (resolvedLabelTokens, lateLabels) = maybeTokens.partition(_._1.isDefined)
+    (resolvedLabelTokens.flatMap(_._1), lateLabels.map(_._2))
+  }
+
+  def resolveTypeTokens(types: Seq[RelTypeName]): (Seq[Int], Seq[String]) = {
+    val maybeTokens = types.map(l => (tokenContext.getOptRelTypeId(l.name), l.name))
+    val (resolvedTypeTokens, lateTypes) = maybeTokens.partition(_._1.isDefined)
+    (resolvedTypeTokens.flatMap(_._1), lateTypes.map(_._2))
   }
 
   private def primitiveEqualityChecks(slots: SlotConfiguration,

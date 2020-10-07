@@ -110,7 +110,9 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan, maybeOwningPi
       case physicalplanning.ast.LabelsFromSlot(offset) =>
         Some(slotted.expressions.LabelsFromSlot(offset))
       case e: physicalplanning.ast.HasLabelsFromSlot =>
-        Some(hasLabelsFromSlot(id, e, self))
+        Some(hasLabelsFromSlot(e))
+      case e: physicalplanning.ast.HasTypesFromSlot =>
+        Some(hasTypesFromSlot(e))
       case physicalplanning.ast.RelationshipTypeFromSlot(offset) =>
         Some(slotted.expressions.RelationshipTypeFromSlot(offset))
       case physicalplanning.ast.NodePropertyLate(offset, propKey, _) =>
@@ -180,13 +182,24 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan, maybeOwningPi
         None
     }
 
-  private def hasLabelsFromSlot(id: Id, e: physicalplanning.ast.HasLabelsFromSlot, self: ExpressionConverters): Predicate = {
+  private def hasLabelsFromSlot(e: physicalplanning.ast.HasLabelsFromSlot): Predicate = {
     val preds =
       e.resolvedLabelTokens.map { labelId =>
         HasLabelFromSlot(e.offset, labelId)
       } ++
         e.lateLabels.map { labelName =>
           HasLabelFromSlotLate(e.offset, labelName): Predicate
+        }
+    commands.predicates.Ands(preds: _*)
+  }
+
+  private def hasTypesFromSlot(e: physicalplanning.ast.HasTypesFromSlot): Predicate = {
+    val preds =
+      e.resolvedTypeTokens.map { typeId =>
+        HasTypeFromSlot(e.offset, typeId)
+      } ++
+        e.lateTypes.map { typeName =>
+          HasTypeFromSlotLate(e.offset, typeName): Predicate
         }
     commands.predicates.Ands(preds: _*)
   }
