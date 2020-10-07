@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -25,6 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.function.Predicates;
+import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.util.CountingJobScheduler;
 import org.neo4j.logging.LogProvider;
@@ -62,6 +64,7 @@ class CoreDownloaderServiceTest
         databaseManager.givenDatabaseWithConfig()
                        .withDatabaseId( new TestDatabaseIdRepository().defaultDatabase() )
                        .register();
+        when( downloadContext.databaseId() ).thenReturn( DatabaseIdFactory.from( "foo", UUID.randomUUID() ) );
     }
 
     private CoreDownloaderService createDownloader()
