@@ -14,6 +14,7 @@ import com.neo4j.dbms.ReplicatedDatabaseEventService;
 
 import java.util.Optional;
 
+import org.neo4j.common.Subject;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
@@ -21,6 +22,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
+import org.neo4j.scheduler.JobMonitoringParams;
 import org.neo4j.scheduler.JobScheduler;
 
 import static com.neo4j.dbms.DatabaseStartAborter.PreventReason.STORE_COPY;
@@ -69,9 +71,10 @@ public class CoreDownloaderService extends LifecycleAdapter
 
         if ( currentJob == null || currentJob.hasCompleted() )
         {
+            var jobMonitorParams = new JobMonitoringParams( Subject.SYSTEM, context.databaseId().name(), "Store copy" );
             currentJob = new PersistentSnapshotDownloader( addressProvider, applicationProcess, downloader, snapshotService, databaseEventService, context, log,
                     backoffStrategy, panicker, monitors );
-            jobHandle = jobScheduler.schedule( Group.DOWNLOAD_SNAPSHOT, currentJob );
+            jobHandle = jobScheduler.schedule( Group.DOWNLOAD_SNAPSHOT, jobMonitorParams, currentJob );
             return Optional.of( jobHandle );
         }
         return Optional.of( jobHandle );
