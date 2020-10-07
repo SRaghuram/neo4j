@@ -140,6 +140,7 @@ import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreeLessThanOrEqualPr
 import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreeLessThanPrimitive
 import org.neo4j.cypher.internal.physicalplanning.ast.HasDegreePrimitive
 import org.neo4j.cypher.internal.physicalplanning.ast.HasLabelsFromSlot
+import org.neo4j.cypher.internal.physicalplanning.ast.HasTypesFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.IdFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.IsPrimitiveNull
 import org.neo4j.cypher.internal.physicalplanning.ast.LabelsFromSlot
@@ -1534,6 +1535,18 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       Some(IntermediateExpression(block(inits :+ predicate:_*),
         tokenFields, Seq(vNODE_CURSOR), Set.empty, requireNullCheck = false))
 
+    case HasTypesFromSlot(offset, resolvedTypeTokens, lateTypes) if resolvedTypeTokens.nonEmpty || lateTypes.nonEmpty =>
+      val (tokenFields, inits) = tokenFieldsForTypes(lateTypes)
+
+      val predicate: IntermediateRepresentation = ternary(
+        (resolvedTypeTokens.map { tokenId => isTypeSetOnRelationship(constant(tokenId), offset)
+        } ++
+          tokenFields.map { tokenField => isTypeSetOnRelationship(loadField(tokenField), offset)
+          }).reduceLeft(and), trueValue, falseValue)
+
+      Some(IntermediateExpression(block(inits :+ predicate:_*),
+        tokenFields, Seq(vRELATIONSHIP_CURSOR), Set.empty, requireNullCheck = false))
+
     case HasLabels(nodeExpression, labels) if labels.nonEmpty =>
       for (node <- compileExpression(nodeExpression, id)) yield {
         val (tokenFields, inits) = tokenFieldsForLabels(labels.map(_.name))
@@ -1776,6 +1789,16 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
             ), maxDegree.fields :+ f, maxDegree.variables :+ vNODE_CURSOR, nullCheck)
         }
     }
+  }
+
+  private def tokenFieldsForTypes(types: Seq[String]): (Seq[InstanceField], Seq[IntermediateRepresentation]) = {
+    val tokensAndInits = types.map(typ => {
+      val tokenField = field[Int](namer.variableName(typ), constant(-1))
+      val init = condition(equal(loadField(tokenField), constant(-1)))(setField(tokenField,
+        invoke(DB_ACCESS, method[DbAccess, Int, String]("relationshipType"), constant(typ))))
+      (tokenField, init)
+    })
+    tokensAndInits.unzip
   }
 
   def compileFunction(c: FunctionInvocation, id: Id): Option[IntermediateExpression] = c.function match {
@@ -2308,6 +2331,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
   protected def getCachedPropertyAt(property: SlottedCachedProperty, getFromStore: IntermediateRepresentation): IntermediateRepresentation
 
   protected def isLabelSetOnNode(labelToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation
+
+  protected def isTypeSetOnRelationship(typeToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation
 
   protected def getNodeProperty(propertyToken: IntermediateRepresentation, offset: Int, offsetIsForLongSlot: Boolean, nullable: Boolean): IntermediateRepresentation
 

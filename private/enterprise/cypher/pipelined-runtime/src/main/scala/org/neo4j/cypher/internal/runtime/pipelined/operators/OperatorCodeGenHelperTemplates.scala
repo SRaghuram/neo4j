@@ -366,6 +366,15 @@ object OperatorCodeGenHelperTemplates {
       ExpressionCompilation.PROPERTY_CURSOR,
       propertyToken)
 
+  def relationshipHasType(rel: IntermediateRepresentation, typeToken: IntermediateRepresentation): IntermediateRepresentation = {
+    invokeStatic(
+      method[CursorUtils, Boolean, Read, RelationshipScanCursor, Long, Int]("relationshipHasType"),
+      loadField(OperatorCodeGenHelperTemplates.DATA_READ),
+      ExpressionCompilation.RELATIONSHIP_CURSOR,
+      rel,
+      typeToken)
+  }
+
   def nodeIndexScan(indexReadSession: IntermediateRepresentation,
                     cursor: IntermediateRepresentation,
                     order: IndexOrder,

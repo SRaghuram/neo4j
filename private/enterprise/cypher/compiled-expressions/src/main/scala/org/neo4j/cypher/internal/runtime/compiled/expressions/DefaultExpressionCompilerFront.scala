@@ -76,6 +76,14 @@ class DefaultExpressionCompilerFront(slots: SlotConfiguration,
       getNodeIdAt(offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT, DEFAULT_NULLABLE),
       NODE_CURSOR)
 
+  override protected def isTypeSetOnRelationship(typeToken: IntermediateRepresentation,
+                                                 offset: Int): IntermediateRepresentation =
+    invoke(DB_ACCESS,
+      method[DbAccess, Boolean, Int, Long, RelationshipScanCursor]("isTypeSetOnRelationship"),
+      typeToken,
+      getRelationshipIdAt(offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT, DEFAULT_NULLABLE),
+      RELATIONSHIP_CURSOR)
+
   override protected def getNodeProperty(propertyToken: IntermediateRepresentation,
                                          offset: Int,
                                          offsetIsForLongSlot: Boolean,

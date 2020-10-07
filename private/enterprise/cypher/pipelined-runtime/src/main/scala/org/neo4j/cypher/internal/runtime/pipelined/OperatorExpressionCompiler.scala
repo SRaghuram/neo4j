@@ -72,6 +72,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.relationshipGetProperty
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.relationshipHasProperty
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.relationshipHasType
 import org.neo4j.cypher.operations.CursorUtils
 import org.neo4j.cypher.operations.InCache
 import org.neo4j.internal.kernel.api.NodeCursor
@@ -707,6 +708,14 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     slots.nameOfSlot(offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT).flatMap(cursorFor) match {
       case Some(cursor) => cursor.hasLabel(labelToken)
       case None => nodeHasLabel(getNodeIdAt(offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT, DEFAULT_NULLABLE), labelToken)
+    }
+  }
+
+  override protected def isTypeSetOnRelationship(typeToken: IntermediateRepresentation,
+                                                 offset: Int): IntermediateRepresentation = {
+    slots.nameOfSlot(offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT).flatMap(cursorFor) match {
+      case Some(cursor) => equal(cursor.relationshipType, typeToken)
+      case None => relationshipHasType(getRelationshipIdAt(offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT, DEFAULT_NULLABLE), typeToken)
     }
   }
 
