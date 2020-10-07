@@ -778,6 +778,81 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     properties should be(Seq("name"))
   }
 
+  test("should be able to set index provider when creating node key constraint") {
+    // WHEN
+    executeSingle("CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexProvider : 'native-btree-1.0'}")
+    graph.awaitIndexesOnline()
+
+    // THEN: for the index backing the constraint
+    val provider = graph.getIndexProvider("myConstraint")
+    provider should be(GenericNativeIndexProvider.DESCRIPTOR)
+  }
+
+  test("should be able to set config values when creating node key constraint") {
+    // WHEN
+    executeSingle(
+      """CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexConfig: {
+        | `spatial.cartesian.min`: [-100.0, -100.0],
+        | `spatial.cartesian.max`: [100.0, 100.0],
+        | `spatial.cartesian-3d.min`: [-100.0, -100.0, -100.0],
+        | `spatial.cartesian-3d.max`: [100.0, 100.0, 100.0],
+        | `spatial.wgs-84.min`: [-60.0, -40.0],
+        | `spatial.wgs-84.max`: [60.0, 40.0],
+        | `spatial.wgs-84-3d.min`: [-60.0, -40.0, -100.0],
+        | `spatial.wgs-84-3d.max`: [60.0, 40.0, 100.0]
+        |}}""".stripMargin)
+    graph.awaitIndexesOnline()
+
+    // THEN: for the index backing the constraint
+    val configuration = graph.getIndexConfig("myConstraint")
+    configuration(SPATIAL_CARTESIAN_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-100.0, -100.0)
+    configuration(SPATIAL_CARTESIAN_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(100.0, 100.0)
+    configuration(SPATIAL_CARTESIAN_3D_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-100.0, -100.0, -100.0)
+    configuration(SPATIAL_CARTESIAN_3D_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(100.0, 100.0, 100.0)
+    configuration(SPATIAL_WGS84_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-60.0, -40.0)
+    configuration(SPATIAL_WGS84_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(60.0, 40.0)
+    configuration(SPATIAL_WGS84_3D_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-60.0, -40.0, -100.0)
+    configuration(SPATIAL_WGS84_3D_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(60.0, 40.0, 100.0)
+  }
+
+  test("should be able to set both index provider and config when creating node key constraint") {
+    // WHEN
+    executeSingle(
+      """CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {
+        | indexProvider : 'lucene+native-3.0',
+        | indexConfig: {`spatial.cartesian.min`: [-60.0, -40.0], `spatial.cartesian.max`: [60.0, 40.0]}
+        |}""".stripMargin)
+    graph.awaitIndexesOnline()
+
+    // THEN: for the index backing the constraint
+    val provider = graph.getIndexProvider("myConstraint")
+    val configuration = graph.getIndexConfig("myConstraint")
+
+    provider should be(NativeLuceneFusionIndexProviderFactory30.DESCRIPTOR)
+    configuration(SPATIAL_CARTESIAN_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-60.0, -40.0)
+    configuration(SPATIAL_CARTESIAN_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(60.0, 40.0)
+  }
+
+  test("should get default values when creating index with empty OPTIONS map when creating node key constraint") {
+    // WHEN
+    executeSingle("CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {}")
+    graph.awaitIndexesOnline()
+
+    // THEN: for the index backing the constraint
+    val provider = graph.getIndexProvider("myConstraint")
+    val configuration = graph.getIndexConfig("myConstraint")
+
+    provider should be(GenericNativeIndexProvider.DESCRIPTOR)
+    configuration(SPATIAL_CARTESIAN_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-1000000.0, -1000000.0)
+    configuration(SPATIAL_CARTESIAN_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(1000000.0, 1000000.0)
+    configuration(SPATIAL_CARTESIAN_3D_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-1000000.0, -1000000.0, -1000000.0)
+    configuration(SPATIAL_CARTESIAN_3D_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(1000000.0, 1000000.0, 1000000.0)
+    configuration(SPATIAL_WGS84_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-180.0, -90.0)
+    configuration(SPATIAL_WGS84_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(180.0, 90.0)
+    configuration(SPATIAL_WGS84_3D_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-180.0, -90.0, -1000000.0)
+    configuration(SPATIAL_WGS84_3D_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(180.0, 90.0, 1000000.0)
+  }
+
   test("should fail to create node key constraint with OR REPLACE") {
     val errorMessage = "Failed to create node key constraint: `OR REPLACE` cannot be used together with this command."
 
@@ -800,6 +875,110 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       executeSingle("CREATE OR REPLACE CONSTRAINT IF NOT EXISTS ON (n:Person) ASSERT (n.name) IS NODE KEY")
     }
     error4.getMessage should startWith (errorMessage)
+  }
+
+  test("should fail to create node key constraint with invalid options") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {nonValidOption : 42}")
+    }
+    // THEN
+    exception.getMessage should include("Failed to create node key constraint: Invalid option provided, valid options are `indexProvider` and `indexConfig`.")
+  }
+
+  test("should fail to create node key constraint with invalid options (config map directly)") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {`spatial.cartesian.max`: [100.0, 100.0]}")
+    }
+    // THEN
+    exception.getMessage should include("Failed to create node key constraint: Invalid option provided, valid options are `indexProvider` and `indexConfig`.")
+  }
+
+  test("should fail to create node key constraint with invalid provider: wrong provider type") {
+    // WHEN
+    val exception = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexProvider : 2}")
+    }
+    // THEN
+    exception.getMessage should include("Could not create node key constraint with specified index provider '2'. Expected String value.")
+  }
+
+  test("should fail to create node key constraint with invalid provider: misspelled provider") {
+    // WHEN
+    val exception = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexProvider : 'native-btree-1'}")
+    }
+    // THEN
+    exception.getMessage should include("Could not create node key constraint with specified index provider 'native-btree-1'.")
+  }
+
+  test("should fail to create node key constraint with invalid provider: fulltext provider") {
+    // WHEN
+    val exception = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexProvider : 'fulltext-1.0'}")
+    }
+    // THEN
+    exception.getMessage should include(
+      """Could not create node key constraint with specified index provider 'fulltext-1.0'.
+        |To create fulltext index, please use 'db.index.fulltext.createNodeIndex' or 'db.index.fulltext.createRelationshipIndex'.""".stripMargin)
+  }
+
+  test("should fail to create node key constraint with invalid config: not a setting") {
+    // WHEN
+    val exception = the[IllegalArgumentException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexConfig: {`not.a.setting`: [4.0, 2.0]}}")
+    }
+    // THEN
+    exception.getMessage should include("Invalid index config key 'not.a.setting', it was not recognized as an index setting.")
+  }
+
+  test("should fail to create node key constraint with invalid config: not a config map") {
+    // WHEN
+    val exception = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexConfig : 2}")
+    }
+    // THEN
+    exception.getMessage should include("Could not create node key constraint with specified index config '2'. Expected a map from String to Double[].")
+  }
+
+  test("should fail to create node key constraint with invalid config: config value not a list") {
+    // WHEN
+    val exception = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexConfig : {`spatial.cartesian.max`: 100.0}}")
+    }
+    // THEN
+    exception.getMessage should include("Could not create node key constraint with specified index config '{spatial.cartesian.max: 100.0}'. Expected a map from String to Double[].")
+  }
+
+  test("should fail to create node key constraint with invalid config: config value includes non-valid types") {
+    // WHEN
+    val exception = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexConfig : {`spatial.cartesian.max`: [100.0,'hundred']}}")
+    }
+    // THEN
+    exception.getMessage should include(
+      "Could not create node key constraint with specified index config '{spatial.cartesian.max: [100.0, hundred]}'. Expected a map from String to Double[].")
+  }
+
+  test("should fail to create node key constraint with invalid config: fulltext config values") {
+    // WHEN
+    val exceptionBoolean = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexConfig : {`fulltext.eventually_consistent`: true}}")
+    }
+    // THEN
+    exceptionBoolean.getMessage should include(
+      """Could not create node key constraint with specified index config '{fulltext.eventually_consistent: true}', contains fulltext config options.
+        |To create fulltext index, please use 'db.index.fulltext.createNodeIndex' or 'db.index.fulltext.createRelationshipIndex'.""".stripMargin)
+
+    // WHEN
+    val exceptionList = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexConfig : {`fulltext.analyzer`: [100.0], `spatial.cartesian.max`: [100.0, 100.0]}}")
+    }
+    // THEN
+    exceptionList.getMessage should include(
+      """Could not create node key constraint with specified index config '{fulltext.analyzer: [100.0], spatial.cartesian.max: [100.0, 100.0]}', contains fulltext config options.
+        |To create fulltext index, please use 'db.index.fulltext.createNodeIndex' or 'db.index.fulltext.createRelationshipIndex'.""".stripMargin)
   }
 
   // Uniqueness
@@ -914,6 +1093,81 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     properties should be(Seq("name"))
   }
 
+  test("should be able to set index provider when creating unique property constraint") {
+    // WHEN
+    executeSingle("CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexProvider : 'lucene+native-3.0'}")
+    graph.awaitIndexesOnline()
+
+    // THEN: for the index backing the constraint
+    val provider = graph.getIndexProvider("myConstraint")
+    provider should be(NativeLuceneFusionIndexProviderFactory30.DESCRIPTOR)
+  }
+
+  test("should be able to set config values when creating unique property constraint") {
+    // WHEN
+    executeSingle(
+      """CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexConfig: {
+        | `spatial.cartesian.min`: [-100.0, -100.0],
+        | `spatial.cartesian.max`: [100.0, 100.0],
+        | `spatial.cartesian-3d.min`: [-100.0, -100.0, -100.0],
+        | `spatial.cartesian-3d.max`: [100.0, 100.0, 100.0],
+        | `spatial.wgs-84.min`: [-60.0, -40.0],
+        | `spatial.wgs-84.max`: [60.0, 40.0],
+        | `spatial.wgs-84-3d.min`: [-60.0, -40.0, -100.0],
+        | `spatial.wgs-84-3d.max`: [60.0, 40.0, 100.0]
+        |}}""".stripMargin)
+    graph.awaitIndexesOnline()
+
+    // THEN: for the index backing the constraint
+    val configuration = graph.getIndexConfig("myConstraint")
+    configuration(SPATIAL_CARTESIAN_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-100.0, -100.0)
+    configuration(SPATIAL_CARTESIAN_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(100.0, 100.0)
+    configuration(SPATIAL_CARTESIAN_3D_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-100.0, -100.0, -100.0)
+    configuration(SPATIAL_CARTESIAN_3D_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(100.0, 100.0, 100.0)
+    configuration(SPATIAL_WGS84_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-60.0, -40.0)
+    configuration(SPATIAL_WGS84_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(60.0, 40.0)
+    configuration(SPATIAL_WGS84_3D_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-60.0, -40.0, -100.0)
+    configuration(SPATIAL_WGS84_3D_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(60.0, 40.0, 100.0)
+  }
+
+  test("should be able to set both index provider and config when creating unique property constraint") {
+    // WHEN
+    executeSingle(
+      """CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {
+        | indexProvider : 'native-btree-1.0',
+        | indexConfig: {`spatial.cartesian.min`: [-60.0, -40.0], `spatial.cartesian.max`: [60.0, 40.0]}
+        |}""".stripMargin)
+    graph.awaitIndexesOnline()
+
+    // THEN: for the index backing the constraint
+    val provider = graph.getIndexProvider("myConstraint")
+    val configuration = graph.getIndexConfig("myConstraint")
+
+    provider should be(GenericNativeIndexProvider.DESCRIPTOR)
+    configuration(SPATIAL_CARTESIAN_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-60.0, -40.0)
+    configuration(SPATIAL_CARTESIAN_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(60.0, 40.0)
+  }
+
+  test("should get default values when creating index with empty OPTIONS map when creating unique property constraint") {
+    // WHEN
+    executeSingle("CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {}")
+    graph.awaitIndexesOnline()
+
+    // THEN: for the index backing the constraint
+    val provider = graph.getIndexProvider("myConstraint")
+    val configuration = graph.getIndexConfig("myConstraint")
+
+    provider should be(GenericNativeIndexProvider.DESCRIPTOR)
+    configuration(SPATIAL_CARTESIAN_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-1000000.0, -1000000.0)
+    configuration(SPATIAL_CARTESIAN_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(1000000.0, 1000000.0)
+    configuration(SPATIAL_CARTESIAN_3D_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-1000000.0, -1000000.0, -1000000.0)
+    configuration(SPATIAL_CARTESIAN_3D_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(1000000.0, 1000000.0, 1000000.0)
+    configuration(SPATIAL_WGS84_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-180.0, -90.0)
+    configuration(SPATIAL_WGS84_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(180.0, 90.0)
+    configuration(SPATIAL_WGS84_3D_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-180.0, -90.0, -1000000.0)
+    configuration(SPATIAL_WGS84_3D_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(180.0, 90.0, 1000000.0)
+  }
+
   test("should fail to create composite unique property constraint") {
     val exception = the[SyntaxException] thrownBy {
       // WHEN
@@ -954,6 +1208,110 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       executeSingle("CREATE OR REPLACE CONSTRAINT IF NOT EXISTS ON (n:Person) ASSERT (n.name) IS UNIQUE")
     }
     error4.getMessage should startWith (errorMessage)
+  }
+
+  test("should fail to create unique property constraint with invalid options") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {nonValidOption : 42}")
+    }
+    // THEN
+    exception.getMessage should include("Failed to create uniqueness constraint: Invalid option provided, valid options are `indexProvider` and `indexConfig`.")
+  }
+
+  test("should fail to create unique property constraint with invalid options (config map directly)") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {`spatial.cartesian.max`: [100.0, 100.0]}")
+    }
+    // THEN
+    exception.getMessage should include("Failed to create uniqueness constraint: Invalid option provided, valid options are `indexProvider` and `indexConfig`.")
+  }
+
+  test("should fail to create unique property constraint with invalid provider: wrong provider type") {
+    // WHEN
+    val exception = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexProvider : 2}")
+    }
+    // THEN
+    exception.getMessage should include("Could not create uniqueness constraint with specified index provider '2'. Expected String value.")
+  }
+
+  test("should fail to create unique property constraint with invalid provider: misspelled provider") {
+    // WHEN
+    val exception = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexProvider : 'native-btree-1'}")
+    }
+    // THEN
+    exception.getMessage should include("Could not create uniqueness constraint with specified index provider 'native-btree-1'.")
+  }
+
+  test("should fail to create unique property constraint with invalid provider: fulltext provider") {
+    // WHEN
+    val exception = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexProvider : 'fulltext-1.0'}")
+    }
+    // THEN
+    exception.getMessage should include(
+      """Could not create uniqueness constraint with specified index provider 'fulltext-1.0'.
+        |To create fulltext index, please use 'db.index.fulltext.createNodeIndex' or 'db.index.fulltext.createRelationshipIndex'.""".stripMargin)
+  }
+
+  test("should fail to create unique property constraint with invalid config: not a setting") {
+    // WHEN
+    val exception = the[IllegalArgumentException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexConfig: {`not.a.setting`: [4.0, 2.0]}}")
+    }
+    // THEN
+    exception.getMessage should include("Invalid index config key 'not.a.setting', it was not recognized as an index setting.")
+  }
+
+  test("should fail to create unique property constraint with invalid config: not a config map") {
+    // WHEN
+    val exception = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexConfig : 2}")
+    }
+    // THEN
+    exception.getMessage should include("Could not create uniqueness constraint with specified index config '2'. Expected a map from String to Double[].")
+  }
+
+  test("should fail to create unique property constraint with invalid config: config value not a list") {
+    // WHEN
+    val exception = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexConfig : {`spatial.cartesian.max`: 100.0}}")
+    }
+    // THEN
+    exception.getMessage should include("Could not create uniqueness constraint with specified index config '{spatial.cartesian.max: 100.0}'. Expected a map from String to Double[].")
+  }
+
+  test("should fail to create unique property constraint with invalid config: config value includes non-valid types") {
+    // WHEN
+    val exception = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexConfig : {`spatial.cartesian.max`: [100.0,'hundred']}}")
+    }
+    // THEN
+    exception.getMessage should include(
+      "Could not create uniqueness constraint with specified index config '{spatial.cartesian.max: [100.0, hundred]}'. Expected a map from String to Double[].")
+  }
+
+  test("should fail to create unique property constraint with invalid config: fulltext config values") {
+    // WHEN
+    val exceptionBoolean = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexConfig : {`fulltext.eventually_consistent`: true}}")
+    }
+    // THEN
+    exceptionBoolean.getMessage should include(
+      """Could not create uniqueness constraint with specified index config '{fulltext.eventually_consistent: true}', contains fulltext config options.
+        |To create fulltext index, please use 'db.index.fulltext.createNodeIndex' or 'db.index.fulltext.createRelationshipIndex'.""".stripMargin)
+
+    // WHEN
+    val exceptionList = the[InvalidArgumentsException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexConfig : {`fulltext.analyzer`: [100.0], `spatial.cartesian.max`: [100.0, 100.0]}}")
+    }
+    // THEN
+    exceptionList.getMessage should include(
+      """Could not create uniqueness constraint with specified index config '{fulltext.analyzer: [100.0], spatial.cartesian.max: [100.0, 100.0]}', contains fulltext config options.
+        |To create fulltext index, please use 'db.index.fulltext.createNodeIndex' or 'db.index.fulltext.createRelationshipIndex'.""".stripMargin)
   }
 
   // Node property existence
@@ -1808,6 +2166,28 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // Node property existence constraint
     val resN = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT EXISTS (n.prop4)")
     assertStats(resN, existenceConstraintsAdded = 0)
+  }
+
+  test("should not be able to create unique property constraint when existing node key constraint (same schema, different options)") {
+    // When
+    executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NODE KEY OPTIONS {indexProvider: 'lucene+native-3.0'}")
+    graph.awaitIndexesOnline()
+
+    // Then
+    the[CypherExecutionException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS UNIQUE OPTIONS {indexProvider: 'native-btree-1.0'}")
+    } should have message "Constraint already exists: Constraint( id=2, name='constraint_f6242497', type='NODE KEY', schema=(:Label {prop}), ownedIndex=1 )"
+  }
+
+  test("should not be able to create node key constraint when existing unique property constraint (same schema, different options)") {
+    // When
+    executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS UNIQUE OPTIONS {indexProvider: 'lucene+native-3.0'}")
+    graph.awaitIndexesOnline()
+
+    // Then
+    the[CypherExecutionException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NODE KEY OPTIONS {indexProvider: 'native-btree-1.0'}")
+    } should have message "Constraint already exists: Constraint( id=2, name='constraint_952591e6', type='UNIQUENESS', schema=(:Label {prop}), ownedIndex=1 )"
   }
 
   // Drop constraint
@@ -2756,5 +3136,43 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // THEN no error
     val resR = executeSingle("DROP INDEX mine4 IF EXISTS")
     assertStats(resR, indexesRemoved = 0)
+  }
+
+  test("should not be able to create constraints when existing index (same schema, different options)") {
+    // When
+    executeSingle("CREATE INDEX FOR (n:Label) ON (n.prop) OPTIONS {indexProvider: 'lucene+native-3.0'}")
+    graph.awaitIndexesOnline()
+
+    // Then
+    the[CypherExecutionException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NODE KEY OPTIONS {indexProvider: 'native-btree-1.0'}")
+    } should have message "There already exists an index (:Label {prop}). A constraint cannot be created until the index has been dropped."
+
+    // Then
+    the[CypherExecutionException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS UNIQUE OPTIONS {indexProvider: 'native-btree-1.0'}")
+    } should have message "There already exists an index (:Label {prop}). A constraint cannot be created until the index has been dropped."
+  }
+
+  test("should not be able to create index when existing node key constraint (same schema, different options)") {
+    // When
+    executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NODE KEY OPTIONS {indexProvider: 'lucene+native-3.0'}")
+    graph.awaitIndexesOnline()
+
+    // Then
+    the[CypherExecutionException] thrownBy {
+      executeSingle("CREATE INDEX FOR (n:Label) ON (n.prop) OPTIONS {indexProvider: 'native-btree-1.0'}")
+    } should have message "There is a uniqueness constraint on (:Label {prop}), so an index is already created that matches this."
+  }
+
+  test("should not be able to create index when existing unique property constraint (same schema, different options)") {
+    // When
+    executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS UNIQUE OPTIONS {indexProvider: 'lucene+native-3.0'}")
+    graph.awaitIndexesOnline()
+
+    // Then
+    the[CypherExecutionException] thrownBy {
+      executeSingle("CREATE INDEX FOR (n:Label) ON (n.prop) OPTIONS {indexProvider: 'native-btree-1.0'}")
+    } should have message "There is a uniqueness constraint on (:Label {prop}), so an index is already created that matches this."
   }
 }

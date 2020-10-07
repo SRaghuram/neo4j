@@ -468,4 +468,30 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     exception.getMessage should include("Creating index with options is not supported in this Cypher version.")
     graph.getMaybeIndex("Label", Seq("prop")).isEmpty should be(true)
   }
+
+  test("create node key constraint with options should not work with CYPHER 3.5 - 4.1") {
+    Seq("CYPHER 3.5", "CYPHER 4.1").foreach(version => withClue(version) {
+      // WHEN
+      val exception = the[SyntaxException] thrownBy {
+        executeSingle(s"$version CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NODE KEY OPTIONS {irrelevantValue: 'CantBeEmptyMap'}")
+      }
+
+      // THEN
+      exception.getMessage should include("Creating node key constraint with options is not supported in this Cypher version.")
+      graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
+    })
+  }
+
+  test("create uniqueness constraint with options should not work with CYPHER 3.5 - 4.1") {
+    Seq("CYPHER 3.5", "CYPHER 4.1").foreach(version => withClue(version) {
+      // WHEN
+      val exception = the[SyntaxException] thrownBy {
+        executeSingle(s"$version CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS UNIQUE OPTIONS {irrelevantValue: 'CantBeEmptyMap'}")
+      }
+
+      // THEN
+      exception.getMessage should include("Creating uniqueness constraint with options is not supported in this Cypher version.")
+      graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
+    })
+  }
 }
