@@ -32,6 +32,7 @@ import org.neo4j.time.SystemNanoClock;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 public final class OnlineBackupExecutor
 {
@@ -127,8 +128,9 @@ public final class OnlineBackupExecutor
             BackupCopyService copyService = new BackupCopyService( fs, new FileMoveProvider( fs ), storeFiles, internalLogProvider, pageCacheTracer );
 
             final var databaseIdStore = new DatabaseIdStore( fs, internalLogProvider );
-            final var strategy = new DefaultBackupStrategy( supportingClasses.getBackupDelegator(), internalLogProvider, storeFiles, pageCacheTracer,
-                                                            databaseIdStore );
+            final var metadataStore = new MetadataStore( fs );
+            final var strategy = new DefaultBackupStrategy( metadataStore, supportingClasses.getBackupDelegator(), internalLogProvider, storeFiles,
+                                                            pageCacheTracer, databaseIdStore );
             final var wrapper = new BackupStrategyWrapper( strategy, copyService, fs, pageCache, userLogProvider, internalLogProvider );
 
             final var coordinator = new BackupStrategyCoordinator( fs, consistencyCheckService, internalLogProvider,
@@ -167,6 +169,11 @@ public final class OnlineBackupExecutor
 
         // consistency check report is placed directly into the specified directory, verify its existence
         checkDestination( context.getReportDir() );
+
+        if ( context.getIncludeMetadata().isPresent() && context.getDatabaseName().equals( SYSTEM_DATABASE_NAME ) )
+        {
+            throw new BackupExecutionException( "Include metadata parameter is invalid for backing up system database" );
+        }
     }
 
     private void checkDestination( Path path ) throws BackupExecutionException

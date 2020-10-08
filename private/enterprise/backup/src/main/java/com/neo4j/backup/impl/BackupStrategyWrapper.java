@@ -5,8 +5,11 @@
  */
 package com.neo4j.backup.impl;
 
+import com.neo4j.causalclustering.catchup.v4.metadata.IncludeMetadata;
+
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Optional;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
@@ -61,19 +64,20 @@ class BackupStrategyWrapper
 
     private void performBackupWithoutLifecycle( OnlineBackupContext onlineBackupContext ) throws BackupExecutionException
     {
-        Path backupLocation = onlineBackupContext.getDatabaseBackupDir();
-        SocketAddress address = onlineBackupContext.getAddress();
-        Config config = onlineBackupContext.getConfig();
+        var backupLocation = onlineBackupContext.getDatabaseBackupDir();
+        var address = onlineBackupContext.getAddress();
+        var config = onlineBackupContext.getConfig();
         var memoryTracker = onlineBackupContext.getMemoryTracker();
-        DatabaseLayout backupLayout = DatabaseLayout.ofFlat( backupLocation );
+        var backupLayout = DatabaseLayout.ofFlat( backupLocation );
+        var includeMetadata = onlineBackupContext.getIncludeMetadata();
 
-        boolean previousBackupExists = backupCopyService.backupExists( backupLayout );
-        boolean fallbackToFull = onlineBackupContext.fallbackToFullBackupEnabled();
+        var previousBackupExists = backupCopyService.backupExists( backupLayout );
+        var fallbackToFull = onlineBackupContext.fallbackToFullBackupEnabled();
 
         if ( previousBackupExists )
         {
             debugLog.info( "Previous backup found, trying incremental backup." );
-            if ( tryIncrementalBackup( backupLayout, config, address, fallbackToFull, onlineBackupContext.getDatabaseName(), memoryTracker ) )
+            if ( tryIncrementalBackup( backupLayout, config, address, fallbackToFull, onlineBackupContext.getDatabaseName(), includeMetadata, memoryTracker ) )
             {
                 return;
             }
@@ -96,11 +100,12 @@ class BackupStrategyWrapper
     }
 
     private boolean tryIncrementalBackup( DatabaseLayout backupLayout, Config config, SocketAddress address, boolean fallbackToFullAllowed,
-            String databaseName, MemoryTracker memoryTracker ) throws BackupExecutionException
+                                          String databaseName, Optional<IncludeMetadata> includeMetadata, MemoryTracker memoryTracker )
+            throws BackupExecutionException
     {
         try
         {
-            backupStrategy.performIncrementalBackup( backupLayout, address, databaseName );
+            backupStrategy.performIncrementalBackup( backupLayout, address, databaseName, includeMetadata );
             performRecovery( config, backupLayout, memoryTracker );
             return true;
         }
@@ -131,10 +136,10 @@ class BackupStrategyWrapper
      */
     private void fullBackupWithTemporaryFolderResolutions( OnlineBackupContext onlineBackupContext, String databaseName ) throws BackupExecutionException
     {
-        Path userSpecifiedBackupLocation = onlineBackupContext.getDatabaseBackupDir();
+        var userSpecifiedBackupLocation = onlineBackupContext.getDatabaseBackupDir();
         var memoryTracker = onlineBackupContext.getMemoryTracker();
-        Path temporaryFullBackupLocation = backupCopyService.findAnAvailableLocationForNewFullBackup( userSpecifiedBackupLocation );
-        boolean backupToATemporaryLocation = !userSpecifiedBackupLocation.equals( temporaryFullBackupLocation );
+        var temporaryFullBackupLocation = backupCopyService.findAnAvailableLocationForNewFullBackup( userSpecifiedBackupLocation );
+        var backupToATemporaryLocation = !userSpecifiedBackupLocation.equals( temporaryFullBackupLocation );
 
         if ( backupToATemporaryLocation )
         {
@@ -143,9 +148,10 @@ class BackupStrategyWrapper
                     temporaryFullBackupLocation, userSpecifiedBackupLocation );
         }
 
-        SocketAddress address = onlineBackupContext.getAddress();
-        DatabaseLayout backupLayout = DatabaseLayout.ofFlat( temporaryFullBackupLocation );
-        backupStrategy.performFullBackup( backupLayout, address, databaseName );
+        var address = onlineBackupContext.getAddress();
+        var backupLayout = DatabaseLayout.ofFlat( temporaryFullBackupLocation );
+        var includeMetadata = onlineBackupContext.getIncludeMetadata();
+        backupStrategy.performFullBackup( backupLayout, address, databaseName, includeMetadata );
 
         performRecovery( onlineBackupContext.getConfig(), backupLayout, memoryTracker );
 

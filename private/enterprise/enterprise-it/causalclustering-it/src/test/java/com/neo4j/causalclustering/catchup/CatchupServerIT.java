@@ -13,6 +13,7 @@ import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -23,6 +24,7 @@ import java.util.concurrent.Executors;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
@@ -112,8 +114,9 @@ class CatchupServerIT
         databaseIdRepository = databaseManager.databaseIdRepository();
         databaseStateService = db.getDependencyResolver().resolveDependency(
                 DatabaseStateService.class );
+        final var dependencyResolver = Mockito.mock( DependencyResolver.class );
         MultiDatabaseCatchupServerHandler catchupServerHandler =
-                new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fs, 32768, LOG_PROVIDER );
+                new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fs, 32768, LOG_PROVIDER, dependencyResolver );
 
         executor = Executors.newCachedThreadPool();
         catchupServer = new TestCatchupServer( catchupServerHandler, LOG_PROVIDER, executor );

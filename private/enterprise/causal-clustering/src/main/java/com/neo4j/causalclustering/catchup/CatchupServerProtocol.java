@@ -24,6 +24,7 @@ public class CatchupServerProtocol extends Protocol<CatchupServerProtocol.State>
         PREPARE_STORE_COPY,
         GET_DATABASE_ID,
         GET_ALL_DATABASE_IDS,
+        GET_METADATA,
         GET_INFO;
     }
 }

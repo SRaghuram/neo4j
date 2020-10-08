@@ -9,7 +9,7 @@ import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDataba
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
-import com.neo4j.server.security.enterprise.systemgraph.BackupCommands;
+import com.neo4j.causalclustering.catchup.v4.metadata.DatabaseSecurityCommands;
 import com.neo4j.server.security.enterprise.systemgraph.CustomSecurityInitializer;
 
 import java.util.ArrayList;
@@ -79,7 +79,7 @@ public class EnterpriseSecurityComponentVersion_0_35 extends KnownEnterpriseSecu
     }
 
     @Override
-    public BackupCommands getBackupCommands( Transaction tx, String databaseName, boolean saveUsers, boolean saveRoles )
+    public DatabaseSecurityCommands getBackupCommands( Transaction tx, String databaseName, boolean saveUsers, boolean saveRoles )
     {
         throw unsupported();
     }

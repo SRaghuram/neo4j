@@ -49,17 +49,19 @@ class RestoreDatabaseCliTest
                 "                    paths may be separated by a comma, but paths themselves%n" +
                 "                    must not contain commas.%n" +
                 "      --database=<database>%n" +
-                "                  Name of the database after restore. Use of this option is%n" +
-                "                    only allowed if a single is provided to the --from option%n" +
+                "                  Name of the database after restore. Usage of this option is%n" +
+                "                    only allowed if --from parameter point to exact one%n" +
+                "                    directory%n" +
                 "      --force     If an existing database should be replaced.%n" +
                 "      --move      Moves the backup files to the destination, rather than%n" +
                 "                    copying.%n" +
                 "      --to-data-directory=<path>%n" +
-                "                  Base directory for databases. Use of this option is only%n" +
-                "                    allowed if a single is provided to the --from option%n" +
+                "                  Base directory for databases. Usage of this option is only%n" +
+                "                    allowed if --from parameter point to exact one directory%n" +
                 "      --to-data-tx-directory=<path>%n" +
-                "                  Base directory for transaction logs. Use of this option is%n" +
-                "                    only allowed if a single is provided to the --from option"
+                "                  Base directory for transaction logs. Usage of this option is%n" +
+                "                    only allowed if --from parameter point to exact one%n" +
+                "                    directory"
         ) ) );
     }
 }

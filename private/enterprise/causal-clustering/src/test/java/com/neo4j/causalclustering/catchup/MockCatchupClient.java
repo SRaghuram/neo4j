@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
 import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequest;
 import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponse;
 import com.neo4j.causalclustering.catchup.v4.info.InfoResponse;
+import com.neo4j.causalclustering.catchup.v4.metadata.GetMetadataResponse;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.helper.OperationProgressMonitor;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
@@ -216,6 +217,12 @@ public class MockCatchupClient implements VersionedCatchupClients
         public PreparedRequest<InfoResponse> getReconciledInfo( NamedDatabaseId databaseId )
         {
             return handler -> completedFuture( responses.reconciledInfoResponse );
+        }
+
+        @Override
+        public PreparedRequest<GetMetadataResponse> getMetadata( String databaseName, String includeMetadata )
+        {
+            throw new IllegalStateException( "Method is not implemented" );
         }
     }
 

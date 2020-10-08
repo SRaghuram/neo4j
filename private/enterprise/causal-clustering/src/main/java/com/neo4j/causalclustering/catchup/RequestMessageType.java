@@ -18,6 +18,7 @@ public enum RequestMessageType
     DATABASE_ID( (byte) 7 ),
     ALL_DATABASE_IDS_REQUEST( (byte) 8 ),
     INFO( (byte) 9 ),
+    METADATA_REQUEST( (byte) 10 ),
     UNKNOWN( (byte) 404 );
 
     private byte messageType;

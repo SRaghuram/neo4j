@@ -20,6 +20,7 @@ public enum ResponseMessageType
     DATABASE_ID_RESPONSE( (byte) 9 ),
     ALL_DATABASE_IDS_RESPONSE( (byte) 10 ),
     INFO_RESPONSE( (byte) 11 ),
+    METADATA_RESPONSE( (byte) 12 ),
     ERROR( (byte) 199 ),
     UNKNOWN( (byte) 200 );
 

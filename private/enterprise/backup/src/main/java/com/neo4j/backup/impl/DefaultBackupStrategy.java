@@ -9,10 +9,12 @@ import com.neo4j.causalclustering.catchup.storecopy.DatabaseIdDownloadFailedExce
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
+import com.neo4j.causalclustering.catchup.v4.metadata.IncludeMetadata;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -34,8 +36,10 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
     private final Log log;
     private final StoreFiles storeFiles;
     private final PageCacheTracer pageCacheTracer;
+    private final MetadataStore metadataStore;
 
-    DefaultBackupStrategy( BackupDelegator backupDelegator,
+    DefaultBackupStrategy( MetadataStore metadataStore,
+                           BackupDelegator backupDelegator,
                            LogProvider logProvider,
                            StoreFiles storeFiles,
                            PageCacheTracer pageCacheTracer,
@@ -46,10 +50,12 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
         this.storeFiles = storeFiles;
         this.pageCacheTracer = pageCacheTracer;
         this.databaseIdStore = databaseIdStore;
+        this.metadataStore = metadataStore;
     }
 
     @Override
-    public void performFullBackup( DatabaseLayout targetDbLayout, SocketAddress address, String databaseName ) throws BackupExecutionException
+    public void performFullBackup( DatabaseLayout targetDbLayout, SocketAddress address, String databaseName,
+                                   Optional<IncludeMetadata> includeMetadata ) throws BackupExecutionException
     {
         BackupInfo backupInfo = prepareForBackup( targetDbLayout, address, databaseName );
 
@@ -64,6 +70,7 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
         {
             backupDelegator.copy( backupInfo.remoteAddress, backupInfo.remoteStoreId, backupInfo.namedDatabaseId, targetDbLayout );
             writeDatabaseId( targetDbLayout.databaseDirectory(), backupInfo.namedDatabaseId.databaseId() );
+            includeMetadata.ifPresent( value -> createMetadataFile( address, targetDbLayout.databaseDirectory(), databaseName, value ) );
         }
         catch ( StoreCopyFailedException e )
         {
@@ -72,7 +79,8 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
     }
 
     @Override
-    public void performIncrementalBackup( DatabaseLayout targetDbLayout, SocketAddress address, String databaseName ) throws BackupExecutionException
+    public void performIncrementalBackup( DatabaseLayout targetDbLayout, SocketAddress address, String databaseName,
+                                          Optional<IncludeMetadata> includeMetadata ) throws BackupExecutionException
     {
         BackupInfo backupInfo = prepareForBackup( targetDbLayout, address, databaseName );
 
@@ -86,6 +94,7 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
         catchup( backupInfo.remoteAddress, backupInfo.remoteStoreId, backupInfo.namedDatabaseId, targetDbLayout );
 
         writeDatabaseId( targetDbLayout.databaseDirectory(), backupInfo.namedDatabaseId.databaseId() );
+        includeMetadata.ifPresent( value -> createMetadataFile( address, targetDbLayout.databaseDirectory(), databaseName, value ) );
     }
 
     @Override
@@ -150,6 +159,25 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
         catch ( StoreCopyFailedException e )
         {
             throw new BackupExecutionException( e );
+        }
+    }
+
+    private void createMetadataFile( SocketAddress fromAddress, Path folder, String databaseName, IncludeMetadata includeMetadata )
+    {
+        final var commands = backupDelegator.getMetadata( fromAddress, databaseName, includeMetadata.name() );
+        if ( commands.isEmpty() )
+        {
+            return;
+        }
+
+        try
+        {
+            metadataStore.write( folder, commands );
+        }
+        catch ( IOException e )
+        {
+            log.error( "Can't create metadata script", e );
+            throw new IllegalStateException( e );
         }
     }
 

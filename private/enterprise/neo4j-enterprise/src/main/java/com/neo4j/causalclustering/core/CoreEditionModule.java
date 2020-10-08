@@ -255,7 +255,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     {
         int maxChunkSize = globalConfig.get( CausalClusteringSettings.store_copy_chunk_size );
         CatchupServerHandler catchupServerHandler =
-                new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fileSystem, maxChunkSize, logProvider );
+                new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fileSystem, maxChunkSize, logProvider,
+                                                       globalModule.getGlobalDependencies() );
         Server catchupServer = catchupComponentsProvider.createCatchupServer( serverInstalledProtocolHandler, catchupServerHandler );
         life.add( catchupServer );
         // used by ReadReplicaHierarchicalCatchupIT
@@ -295,8 +296,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
                 globalModule.getGlobalClock(), globalConfig.get( GraphDatabaseSettings.db_timezone ).getZoneId() ) );
         globalProcedures.register(
                 WaitProcedure.clustered( topologyService, identityModule.myself(), globalModule.getGlobalClock(),
-                        catchupComponentsProvider.catchupClientFactory(), globalModule.getLogService().getInternalLogProvider(),
-                        new InfoProvider( databaseManager, reconcilerModule.databaseStateService() ) ) );
+                                         catchupComponentsProvider.catchupClientFactory(), globalModule.getLogService().getInternalLogProvider(),
+                                         new InfoProvider( databaseManager, reconcilerModule.databaseStateService() ) ) );
         // TODO: Figure out how the replication benchmark procedure should work.
 //        globalProcedures.registerComponent( Replicator.class, x -> replicationModule.getReplicator(), false );
 //        globalProcedures.registerProcedure( ReplicationBenchmarkProcedure.class );

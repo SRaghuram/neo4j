@@ -297,7 +297,8 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
                 internalLogProvider, supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration(),
                 supportedProtocolCreator.createSupportedModifierProtocols(),
                 pipelineBuilders.backupServer(),
-                new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fs, maxChunkSize, internalLogProvider ),
+                new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fs, maxChunkSize, internalLogProvider,
+                                                       globalModule.getGlobalDependencies() ),
                 new InstalledProtocolHandler(),
                 jobScheduler,
                 portRegister );

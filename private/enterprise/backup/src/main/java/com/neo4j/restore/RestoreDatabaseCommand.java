@@ -6,8 +6,10 @@
 package com.neo4j.restore;
 
 import com.neo4j.backup.impl.DatabaseIdStore;
+import com.neo4j.backup.impl.MetadataStore;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -29,22 +31,33 @@ import static org.neo4j.commandline.Util.isSameOrChildFile;
 
 public class RestoreDatabaseCommand
 {
+    static final String RESTORE_METADATA = "restore_metadata.cypher";
+
     private final FileSystemAbstraction fs;
+    private final PrintStream consoleOutput;
     private final Path fromDatabasePath;
     private final DatabaseLayout targetDatabaseLayout;
     private final Path raftGroupDirectory;
+    private final Path scriptDirectory;
     private final boolean forceOverwrite;
     private final boolean moveFiles;
 
-    public RestoreDatabaseCommand( FileSystemAbstraction fs, Path fromDatabasePath, DatabaseLayout targetDatabaseLayout, Path raftGroupDirectory,
-                                   boolean forceOverwrite, boolean moveFiles )
+    public RestoreDatabaseCommand( FileSystemAbstraction fs,
+                                   PrintStream consoleOutput,
+                                   Path fromDatabasePath,
+                                   DatabaseLayout targetDatabaseLayout,
+                                   Path raftGroupDirectory,
+                                   boolean forceOverwrite,
+                                   boolean moveFiles )
     {
         this.fs = fs;
+        this.consoleOutput = consoleOutput;
         this.fromDatabasePath = fromDatabasePath;
         this.forceOverwrite = forceOverwrite;
         this.moveFiles = moveFiles;
         this.targetDatabaseLayout = targetDatabaseLayout;
         this.raftGroupDirectory = raftGroupDirectory;
+        this.scriptDirectory = targetDatabaseLayout.getScriptDirectory();
     }
 
     public void execute() throws IOException
@@ -68,6 +81,10 @@ public class RestoreDatabaseCommand
         {
             throw new IllegalArgumentException( format( "Database with name [%s] already exists at %s", targetDatabaseLayout.getDatabaseName(),
                     targetDatabaseLayout.databaseDirectory() ) );
+        }
+        if ( fs.fileExists( getMetadataScript(  ) ) && !forceOverwrite )
+        {
+            throw new IllegalArgumentException( String.format( "Metadata file [%s] already exists", getMetadataScript().toAbsolutePath().toString() ) );
         }
 
         if ( fs.fileExists( raftGroupDirectory ) )
@@ -115,6 +132,10 @@ public class RestoreDatabaseCommand
         {
             fs.deleteRecursively( transactionLogsDirectory );
         }
+        if ( fs.fileExists( getMetadataScript() ) )
+        {
+            fs.delete( getMetadataScript() );
+        }
     }
 
     private void restoreDatabaseFiles() throws IOException
@@ -144,6 +165,22 @@ public class RestoreDatabaseCommand
                         fs.copyRecursively( file, destination );
                     }
                 }
+                else if ( MetadataStore.isMetadataFile( file ) )
+                {
+                    if ( moveFiles )
+                    {
+                        fs.moveToDirectory( file, scriptDirectory );
+                    }
+                    else
+                    {
+                        fs.mkdirs( scriptDirectory );
+                        fs.copyToDirectory( file, scriptDirectory );
+                    }
+                    fs.renameFile( scriptDirectory.resolve( file.getFileName() ), getMetadataScript() );
+                    consoleOutput.println( String.format( "You need to execute %s. To execute the file use cypher-shell command with parameter %s",
+                                                          getMetadataScript(  ).toAbsolutePath().toString(),
+                                                          targetDatabaseLayout.getDatabaseName() ) );
+                }
                 else
                 {
                     var targetDirectory = transactionLogFiles.isLogFile( file ) ? transactionLogsDirectory : databaseDirectory;
@@ -165,5 +202,9 @@ public class RestoreDatabaseCommand
             {
                 fs.deleteRecursively( fromDatabasePath );
             }
+    }
+    Path getMetadataScript()
+    {
+        return scriptDirectory.resolve( RESTORE_METADATA );
     }
 }

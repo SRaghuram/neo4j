@@ -8,11 +8,14 @@ package com.neo4j.backup;
 import com.neo4j.backup.impl.BackupExecutionException;
 import com.neo4j.backup.impl.ConsistencyCheckExecutionException;
 import com.neo4j.backup.impl.DatabaseIdStore;
+import com.neo4j.backup.impl.MetadataStore;
+import com.neo4j.backup.impl.OnlineBackupCommand;
 import com.neo4j.backup.impl.OnlineBackupContext;
 import com.neo4j.backup.impl.OnlineBackupExecutor;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
+import com.neo4j.causalclustering.catchup.v4.metadata.IncludeMetadata;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import com.neo4j.test.TestWithRecordFormats;
 import org.eclipse.collections.impl.factory.Maps;
@@ -22,7 +25,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
-import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -35,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -134,6 +137,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseInternalSettings.databases_root_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.dense_node_threshold;
 import static org.neo4j.configuration.GraphDatabaseSettings.keep_logical_logs;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
@@ -1091,6 +1095,46 @@ class BackupIT
         assertThat( exception.getCause() ).hasMessageContaining( "stored on the file system doesn't match with the server one" );
     }
 
+    @Test
+    void shouldThrowExceptionIfBackupSystemDatabaseWithIncludeMetadata()
+    {
+        //given
+        var defaultDB = startDb( serverHomeDir );
+
+        //when
+        var contextBuilder = defaultBackupContextBuilder( backupAddress( defaultDB ) )
+                .withIncludeMetadata( Optional.of( IncludeMetadata.all ) )
+                .withDatabaseNamePattern( new DatabaseNamePattern( SYSTEM_DATABASE_NAME ) );
+        var exception = assertThrows( BackupExecutionException.class, () -> executeBackup( contextBuilder ) );
+        assertThat( getRootCause( exception ).getMessage() ).contains( "Include metadata parameter is invalid for backing up system database" );
+    }
+
+    @TestWithRecordFormats
+    void metadataScriptShouldBeCreatedWhenIncludeMetadataIsDefined( String recordFormatName ) throws Exception
+    {
+        //given
+        createInitialDataSet( serverHomeDir, recordFormatName );
+        var defaultDB = startDb( serverHomeDir );
+        var natureDB = "nature";
+        var natureDBExpectedRepresentation = createDatabase( natureDB );
+
+        var contextBuilder = defaultBackupContextBuilder( backupAddress( defaultDB ) )
+                .withDatabaseNamePattern( new DatabaseNamePattern( "nature" ) )
+                .withIncludeMetadata( Optional.of( IncludeMetadata.all ) );
+
+        //when
+        executeBackup( contextBuilder );
+
+        //then backup is successful
+        final var databaseLayout = DatabaseLayout.ofFlat( backupsDir.resolve( natureDB ) );
+        var natureDBRepresentation = DbRepresentation.of( databaseLayout, getConfig() );
+        assertEquals( natureDBExpectedRepresentation, natureDBRepresentation );
+
+        //and metadata file exists
+        assertThat( MetadataStore.getFilePath( databaseLayout.databaseDirectory() ) ).exists();
+        assertThat( fs.getFileSize( MetadataStore.getFilePath( databaseLayout.databaseDirectory() ) ) ).isGreaterThan( 0 );
+    }
+
     private void createTransactionWithWeirdRelationshipGroupRecord( GraphDatabaseService db )
     {
         Node node;
@@ -1406,6 +1450,7 @@ class BackupIT
                                   .withBackupDirectory( dir )
                                   .withReportsDirectory( dir )
                                   .withConfig( Config.defaults( experimental_catchup_protocol, true ) )
+                                  .withIncludeMetadata( Optional.empty() )
                                   .withConsistencyCheckRelationshipTypeScanStore( enable_relationship_type_scan_store.defaultValue() );
     }
 

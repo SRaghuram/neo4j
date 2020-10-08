@@ -5,6 +5,7 @@
  */
 package com.neo4j.backup.impl;
 
+import com.neo4j.causalclustering.catchup.v4.metadata.IncludeMetadata;
 import com.neo4j.configuration.OnlineBackupSettings;
 
 import java.nio.file.Path;
@@ -33,10 +34,11 @@ public class OnlineBackupContext
     private final ConsistencyFlags consistencyFlags;
     private final Config config;
     private final MemoryTracker memoryTracker;
+    private final Optional<IncludeMetadata> includeMetadata;
 
     private OnlineBackupContext( SocketAddress address, DatabaseNamePattern databaseNamePattern, Path backupDirectoryWithDBName,
                                  Path reportDir, boolean fallbackToFullBackup, boolean consistencyCheck, ConsistencyFlags consistencyFlags, Config config,
-                                 MemoryTracker memoryTracker )
+                                 MemoryTracker memoryTracker, Optional<IncludeMetadata> includeMetadata )
     {
         this.address = address;
         this.databaseNamePattern = databaseNamePattern;
@@ -47,6 +49,7 @@ public class OnlineBackupContext
         this.consistencyFlags = consistencyFlags;
         this.config = config;
         this.memoryTracker = memoryTracker;
+        this.includeMetadata = includeMetadata;
     }
 
     public static Builder builder()
@@ -84,6 +87,11 @@ public class OnlineBackupContext
         return reportDir;
     }
 
+    public Optional<IncludeMetadata> getIncludeMetadata()
+    {
+        return includeMetadata;
+    }
+
     Config getConfig()
     {
         return config;
@@ -105,6 +113,7 @@ public class OnlineBackupContext
         private DatabaseNamePattern databaseNamePattern;
         private Path backupDirectory;
         private Path reportsDirectory;
+        private Optional<IncludeMetadata> includeMetadata = Optional.empty();
         private boolean fallbackToFullBackup = true;
         private Config config;
         private boolean consistencyCheck = true;
@@ -208,6 +217,12 @@ public class OnlineBackupContext
             return this;
         }
 
+        public Builder withIncludeMetadata( Optional<IncludeMetadata> includeMetadata )
+        {
+            this.includeMetadata = includeMetadata;
+            return this;
+        }
+
         public Config getConfig()
         {
             return Optional.ofNullable( config ).orElse( Config.defaults() );
@@ -216,7 +231,7 @@ public class OnlineBackupContext
         public DatabaseNamePattern getDatabaseNamePattern()
         {
             return Optional.ofNullable( databaseNamePattern )
-                    .orElse( new DatabaseNamePattern( getConfig().get( GraphDatabaseSettings.default_database ) ) );
+                           .orElse( new DatabaseNamePattern( getConfig().get( GraphDatabaseSettings.default_database ) ) );
         }
 
         public SocketAddress getAddress()
@@ -233,6 +248,7 @@ public class OnlineBackupContext
                     .withReportsDirectory( reportsDirectory )
                     .withFallbackToFullBackup( fallbackToFullBackup )
                     .withConfig( config )
+                    .withIncludeMetadata( includeMetadata )
                     .withConsistencyCheck( consistencyCheck )
                     .withConsistencyCheckGraph( consistencyCheckGraph )
                     .withConsistencyCheckIndexes( consistencyCheckIndexes )
@@ -276,7 +292,7 @@ public class OnlineBackupContext
             var memoryTracker = EmptyMemoryTracker.INSTANCE;
 
             return new OnlineBackupContext( socketAddress, databaseNamePattern, databaseBackupDirectory, reportsDirectory,
-                                            fallbackToFullBackup, consistencyCheck, consistencyFlags, config, memoryTracker );
+                                            fallbackToFullBackup, consistencyCheck, consistencyFlags, config, memoryTracker, includeMetadata );
         }
 
         private SocketAddress buildAddress()

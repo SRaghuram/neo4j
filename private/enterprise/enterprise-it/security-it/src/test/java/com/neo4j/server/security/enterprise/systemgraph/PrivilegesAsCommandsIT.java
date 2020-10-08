@@ -35,6 +35,7 @@ import org.neo4j.internal.kernel.api.security.ProcedureSegment;
 import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.internal.kernel.api.security.UserSegment;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
+import com.neo4j.causalclustering.catchup.v4.metadata.DatabaseSecurityCommands;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.server.security.auth.SecurityTestUtils;
@@ -262,9 +263,9 @@ class PrivilegesAsCommandsIT
                 tx.commit();
             }
 
-            BackupCommands backupCommands = getBackupCommands( system, DEFAULT_DATABASE_NAME, false, true );
-            assertThat( backupCommands.roleSetup ).filteredOn( c -> !c.startsWith( "CREATE" ) )
-                                                  .containsExactlyElementsOf( List.of( command ) );
+            DatabaseSecurityCommands databaseSecurityCommands = getBackupCommands( system, DEFAULT_DATABASE_NAME, false, true );
+            assertThat( databaseSecurityCommands.roleSetup ).filteredOn( c -> !c.startsWith( "CREATE" ) )
+                                                            .containsExactlyElementsOf( List.of( command ) );
             try ( Transaction tx = system.beginTx() )
             {
                 tx.execute( "REVOKE " + command.replace( " TO ", " FROM " ), Map.of( DB_PARAM, DEFAULT_DATABASE_NAME ) );
@@ -281,7 +282,7 @@ class PrivilegesAsCommandsIT
         GraphDatabaseAPI system = (GraphDatabaseAPI) dbms.database( SYSTEM_DATABASE_NAME );
 
         // WHEN
-        BackupCommands commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true );
+        DatabaseSecurityCommands commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true );
 
         // THEN
         assertThat( commands.roleSetup ).isNotEmpty();
@@ -306,7 +307,7 @@ class PrivilegesAsCommandsIT
         }
 
         // WHEN
-        BackupCommands commands = getBackupCommands( system, "graph.db", true, true );
+        DatabaseSecurityCommands commands = getBackupCommands( system, "graph.db", true, true );
 
         // THEN
         assertThat( commands.roleSetup ).containsExactlyInAnyOrder(
@@ -327,7 +328,7 @@ class PrivilegesAsCommandsIT
         }
 
         // WHEN
-        BackupCommands commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true );
+        DatabaseSecurityCommands commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true );
 
         // THEN
         assertThat( commands.roleSetup ).containsExactlyInAnyOrder(
@@ -352,7 +353,7 @@ class PrivilegesAsCommandsIT
         }
 
         // WHEN
-        BackupCommands commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true );
+        DatabaseSecurityCommands commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true );
 
         // THEN
         assertThat( commands.roleSetup ).containsExactlyInAnyOrder(
@@ -378,7 +379,7 @@ class PrivilegesAsCommandsIT
         }
 
         // WHEN
-        BackupCommands commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true );
+        DatabaseSecurityCommands commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true );
 
         // THEN
         assertThat( commands.roleSetup ).containsExactlyInAnyOrder(
@@ -401,7 +402,7 @@ class PrivilegesAsCommandsIT
         }
 
         // WHEN
-        BackupCommands commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true );
+        DatabaseSecurityCommands commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true );
 
         // THEN
         assertThat( commands.roleSetup ).containsExactlyInAnyOrder(
@@ -440,7 +441,7 @@ class PrivilegesAsCommandsIT
         }
 
         // WHEN
-        BackupCommands commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true );
+        DatabaseSecurityCommands commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true );
 
         // THEN
         assertThat( commands.userSetup ).filteredOn( c -> c.contains( "CHANGE REQUIRED" ) ).hasSize( 4 );
@@ -466,7 +467,7 @@ class PrivilegesAsCommandsIT
         }
 
         // WHEN
-        BackupCommands commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true );
+        DatabaseSecurityCommands commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true );
 
         // THEN
         assertThat( commands.roleSetup ).containsExactlyInAnyOrder(
@@ -499,7 +500,7 @@ class PrivilegesAsCommandsIT
         }
 
         // WHEN
-        BackupCommands commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, false, true );
+        DatabaseSecurityCommands commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, false, true );
 
         // THEN
         assertThat( commands.roleSetup ).containsExactlyInAnyOrder(
@@ -528,7 +529,7 @@ class PrivilegesAsCommandsIT
         }
 
         // WHEN
-        BackupCommands commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, false );
+        DatabaseSecurityCommands commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, false );
 
         // THEN
         assertThat( commands.roleSetup ).containsExactlyInAnyOrder(
@@ -559,7 +560,7 @@ class PrivilegesAsCommandsIT
         }
 
         // WHEN
-        BackupCommands commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, false, false );
+        DatabaseSecurityCommands commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, false, false );
 
         // THEN
         assertThat( commands.roleSetup ).containsExactlyInAnyOrder(
@@ -584,7 +585,7 @@ class PrivilegesAsCommandsIT
         }
 
         // WHEN
-        BackupCommands commands = getBackupCommands( system, "newDb", true, true );
+        DatabaseSecurityCommands commands = getBackupCommands( system, "newDb", true, true );
 
         // THEN
         assertThat( commands.roleSetup ).containsExactlyInAnyOrder(
@@ -612,8 +613,8 @@ class PrivilegesAsCommandsIT
         }
 
         // WHEN
-        BackupCommands weirdCaseCommands = getBackupCommands( system, database.toLowerCase(), true, true );
-        BackupCommands neo4jCommands = getBackupCommands( system, "NEo4J", true, true );
+        DatabaseSecurityCommands weirdCaseCommands = getBackupCommands( system, database.toLowerCase(), true, true );
+        DatabaseSecurityCommands neo4jCommands = getBackupCommands( system, "NEo4J", true, true );
 
         // THEN
         assertThat( weirdCaseCommands.roleSetup )
@@ -642,7 +643,7 @@ class PrivilegesAsCommandsIT
             tx.commit();
         }
 
-        BackupCommands commands = getBackupCommands( system, "newDb", true, true );
+        DatabaseSecurityCommands commands = getBackupCommands( system, "newDb", true, true );
         assertThat( commands.roleSetup ).filteredOn( c -> c.startsWith( "CREATE DATABASE" ) ).hasSize( 1 );
         assertThat( commands.roleSetup ).filteredOn( c -> c.startsWith( "STOP DATABASE" ) ).hasSize( 1 );
         assertRecreatesOriginal( commands, "newDb", true );
@@ -662,7 +663,7 @@ class PrivilegesAsCommandsIT
             tx.commit();
         }
 
-        BackupCommands commands = getBackupCommands( system, "database", true, true );
+        DatabaseSecurityCommands commands = getBackupCommands( system, "database", true, true );
 
         cleanSystemDB();
 
@@ -696,7 +697,7 @@ class PrivilegesAsCommandsIT
             tx.commit();
         }
 
-        BackupCommands commands = getBackupCommands( system, "database", true, true );
+        DatabaseSecurityCommands commands = getBackupCommands( system, "database", true, true );
 
         try ( Transaction tx = system.beginTx() )
         {
@@ -706,7 +707,7 @@ class PrivilegesAsCommandsIT
             tx.commit();
         }
 
-        BackupCommands newCommands = getBackupCommands( system, "database", true, true );
+        DatabaseSecurityCommands newCommands = getBackupCommands( system, "database", true, true );
 
         // THEN
         assertThat( newCommands.roleSetup ).containsExactlyInAnyOrderElementsOf( commands.roleSetup );
@@ -727,7 +728,7 @@ class PrivilegesAsCommandsIT
             tx.commit();
         }
 
-        BackupCommands commands = getBackupCommands( system, "foo", true, true );
+        DatabaseSecurityCommands commands = getBackupCommands( system, "foo", true, true );
 
         cleanSystemDB();
 
@@ -738,7 +739,7 @@ class PrivilegesAsCommandsIT
             commands.userSetup.forEach( tx::execute );
             tx.commit();
         }
-        BackupCommands newCommands = getBackupCommands( system, "bar", true, true );
+        DatabaseSecurityCommands newCommands = getBackupCommands( system, "bar", true, true );
 
         // THEN
         assertThat( newCommands.roleSetup ).containsExactlyInAnyOrderElementsOf( commands.roleSetup );
@@ -759,7 +760,7 @@ class PrivilegesAsCommandsIT
         }
 
         // WHEN
-        BackupCommands commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true );
+        DatabaseSecurityCommands commands = getBackupCommands( system, DEFAULT_DATABASE_NAME, true, true );
 
         // THEN
         assertThat( commands.roleSetup ).containsExactlyInAnyOrder(
@@ -800,7 +801,7 @@ class PrivilegesAsCommandsIT
         return privilege.isDbmsPrivilege() ? Collections.emptyList() : privilege.asGrantFor( role, DB_PARAM );
     }
 
-    private BackupCommands getBackupCommands( GraphDatabaseAPI system, String databaseName, boolean saveUsers, boolean saveRoles )
+    private DatabaseSecurityCommands getBackupCommands( GraphDatabaseAPI system, String databaseName, boolean saveUsers, boolean saveRoles )
     {
         var component = system.getDependencyResolver().resolveDependency( EnterpriseSecurityGraphComponent.class );
         try ( Transaction tx = system.beginTx() )
@@ -809,7 +810,7 @@ class PrivilegesAsCommandsIT
         }
     }
 
-    private void assertRecreatesOriginal( BackupCommands backup, String databaseName, boolean saveRoles )
+    private void assertRecreatesOriginal( DatabaseSecurityCommands backup, String databaseName, boolean saveRoles )
     {
         cleanSystemDB();
         try ( Transaction tx = system.beginTx() )
@@ -818,7 +819,7 @@ class PrivilegesAsCommandsIT
             backup.userSetup.forEach( tx::execute );
             tx.commit();
         }
-        BackupCommands newBackup = getBackupCommands( system, databaseName, true, true );
+        DatabaseSecurityCommands newBackup = getBackupCommands( system, databaseName, true, true );
         assertThat( newBackup.roleSetup ).containsExactlyInAnyOrderElementsOf( backup.roleSetup );
 
         if ( saveRoles )

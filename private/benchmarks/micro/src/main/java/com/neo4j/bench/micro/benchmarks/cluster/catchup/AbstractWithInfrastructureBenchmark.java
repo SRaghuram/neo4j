@@ -123,7 +123,7 @@ abstract class AbstractWithInfrastructureBenchmark extends EditionModuleBackedAb
                 .catchupServerHandler( new MultiDatabaseCatchupServerHandler( dependencyResolver.resolveDependency( DatabaseManager.class ),
                         databaseStateService, dependencyResolver.resolveDependency( FileSystemAbstraction.class ),
                         config().get( CausalClusteringSettings.store_copy_chunk_size ),
-                        logProvider ) )
+                        logProvider, dependencyResolver ) )
                 .catchupProtocols( supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration() )
                 .modifierProtocols( supportedProtocolCreator.createSupportedModifierProtocols() )
                 .pipelineBuilder( NettyPipelineBuilderFactory.insecure() )

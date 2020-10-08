@@ -20,6 +20,7 @@ import com.neo4j.causalclustering.catchup.v4.CatchupProtocolClientInstallerV4;
 import com.neo4j.causalclustering.catchup.v4.CatchupProtocolServerInstallerV4;
 import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponse;
 import com.neo4j.causalclustering.catchup.v4.info.InfoResponse;
+import com.neo4j.causalclustering.catchup.v4.metadata.GetMetadataResponse;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
@@ -32,6 +33,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.function.Function;
 
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
@@ -91,7 +93,9 @@ abstract class EnterpriseCatchupTest
                 .withStoreId( StoreId.UNKNOWN )
                 .withDatabaseAvailabilityGuard( availabilityGuard )
                 .register();
-        serverResponseHandler = new MultiDatabaseCatchupServerHandler( databaseManager, mock( DatabaseStateService.class ), fsa, 32768, LOG_PROVIDER );
+        final var dependencyResolver = mock( DependencyResolver.class );
+        serverResponseHandler =
+                new MultiDatabaseCatchupServerHandler( databaseManager, mock( DatabaseStateService.class ), fsa, 32768, LOG_PROVIDER, dependencyResolver );
     }
 
     void executeTestScenario( Function<DatabaseManager<?>,RequestResponse> responseFunction ) throws Exception
@@ -279,6 +283,12 @@ abstract class EnterpriseCatchupTest
 
         @Override
         public void onInfo( InfoResponse msg )
+        {
+            unexpected();
+        }
+
+        @Override
+        public void onGetMetadataResponse( GetMetadataResponse response )
         {
             unexpected();
         }

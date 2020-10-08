@@ -59,7 +59,8 @@ public final class BackupTestUtil
         final var clusterStateLayout = ClusterStateLayout.of( config.get( CausalClusteringSettings.cluster_state_directory ) );
         final var raftGroupDirectory = clusterStateLayout.raftGroupDir( databaseName );
         final var databaseLayout = Neo4jLayout.of( config ).databaseLayout( databaseName );
-        RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( fsa, fromDatabasePath, databaseLayout, raftGroupDirectory, true, false );
+        RestoreDatabaseCommand restoreDatabaseCommand =
+                new RestoreDatabaseCommand( fsa, new PrintStream( System.out ), fromDatabasePath, databaseLayout, raftGroupDirectory, true, false );
         restoreDatabaseCommand.execute();
     }
 

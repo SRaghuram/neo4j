@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdResponse;
 import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponse;
 import com.neo4j.causalclustering.catchup.v4.info.InfoResponse;
+import com.neo4j.causalclustering.catchup.v4.metadata.GetMetadataResponse;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 
 import java.nio.channels.ClosedChannelException;
@@ -134,6 +135,12 @@ class TrackingResponseHandler implements CatchupResponseHandler
     public void onInfo( InfoResponse response )
     {
         ifNotCancelled( () -> delegate.onInfo( requestOutcomeSignal, response ) );
+    }
+
+    @Override
+    public void onGetMetadataResponse( GetMetadataResponse response )
+    {
+        ifNotCancelled( () -> delegate.onGetMetadataResponse( requestOutcomeSignal, response ) );
     }
 
     private void ifNotCancelled( Runnable runnable )

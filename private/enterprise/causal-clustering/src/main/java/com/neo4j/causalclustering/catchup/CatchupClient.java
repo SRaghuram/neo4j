@@ -17,6 +17,8 @@ import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsRequest;
 import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponse;
 import com.neo4j.causalclustering.catchup.v4.info.InfoRequest;
 import com.neo4j.causalclustering.catchup.v4.info.InfoResponse;
+import com.neo4j.causalclustering.catchup.v4.metadata.GetMetadataRequest;
+import com.neo4j.causalclustering.catchup.v4.metadata.GetMetadataResponse;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequest;
 import com.neo4j.causalclustering.helper.OperationProgressMonitor;
@@ -273,6 +275,12 @@ class CatchupClient implements VersionedCatchupClients
         public PreparedRequest<InfoResponse> getReconciledInfo( NamedDatabaseId namedDatabaseId )
         {
             return handler -> makeBlockingRequest( new InfoRequest( namedDatabaseId ), handler, channel );
+        }
+
+        @Override
+        public PreparedRequest<GetMetadataResponse> getMetadata( String databaseName, String includeMetadata )
+        {
+            return handler -> makeBlockingRequest( new GetMetadataRequest( databaseName, includeMetadata ), handler, channel );
         }
     }
 

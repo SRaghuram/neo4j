@@ -34,6 +34,8 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
+import com.neo4j.causalclustering.catchup.v4.metadata.DatabaseSecurityCommandsProvider;
+import com.neo4j.causalclustering.catchup.v4.metadata.DatabaseSecurityCommands;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.systemgraph.KnownSystemComponentVersions;
@@ -52,7 +54,7 @@ import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersio
  *
  * (:Privilege)-[:SCOPE]->(s:Segment)-[:APPLIES_TO]->(:Resource), (s)-[:FOR]->(database), (s)-[:Qualified]->(qualifier)
  */
-public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphComponent
+public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphComponent implements DatabaseSecurityCommandsProvider
 {
     private final UserRepository defaultAdminRepository;
     private final KnownSystemComponentVersions<KnownEnterpriseSecurityComponentVersion> knownSecurityComponentVersions =
@@ -173,7 +175,8 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         return knownSecurityComponentVersions.findSecurityGraphVersion( substring );
     }
 
-    public BackupCommands getBackupCommands( Transaction tx, String databaseName, boolean saveUsers, boolean saveRoles )
+    @Override
+    public DatabaseSecurityCommands getBackupCommands( Transaction tx, String databaseName, boolean saveUsers, boolean saveRoles )
     {
         KnownEnterpriseSecurityComponentVersion component = knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx );
         return component.getBackupCommands( tx, databaseName.toLowerCase(), saveUsers, saveRoles );

@@ -19,6 +19,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
 
@@ -70,7 +71,8 @@ class ConvertNonCausalClusteringStoreIT
             final var clusterStateLayout = ClusterStateLayout.of( core.config().get( CausalClusteringSettings.cluster_state_directory ) );
             final var raftGroupDirectory = clusterStateLayout.raftGroupDir( databaseName );
             final var databaseLayout = Neo4jLayout.of( core.config() ).databaseLayout( databaseName );
-            new RestoreDatabaseCommand( testDirectory.getFileSystem(), classicNeo4jDatabase, databaseLayout, raftGroupDirectory, true, false ).execute();
+            new RestoreDatabaseCommand( testDirectory.getFileSystem(), new PrintStream( System.out ), classicNeo4jDatabase, databaseLayout, raftGroupDirectory,
+                                        true, false ).execute();
         }
 
         cluster.start();

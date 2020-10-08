@@ -16,8 +16,10 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
 import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdResponse;
 import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponse;
+import com.neo4j.causalclustering.catchup.v4.metadata.GetMetadataResponse;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -134,6 +136,33 @@ class BackupDelegator extends LifecycleAdapter
         {
             logProvider.getLog( getClass() ).error( "Error in execution get all database ids", ex );
             return Set.of();
+        }
+    }
+
+    public List<String> getMetadata( SocketAddress fromAddress, String databaseName, String includeMetadata )
+    {
+        final CatchupResponseAdaptor<GetMetadataResponse> responseHandler = new CatchupResponseAdaptor<>()
+        {
+            @Override
+            public void onGetMetadataResponse( CompletableFuture<GetMetadataResponse> signal, GetMetadataResponse response )
+            {
+                signal.complete( response );
+            }
+        };
+
+        try
+        {
+            return catchUpClient.getClient( fromAddress, logProvider.getLog( getClass() ) )
+                                .v3( client -> client.getMetadata( databaseName, includeMetadata ) )
+                                .v4( client -> client.getMetadata( databaseName, includeMetadata ) )
+                                .withResponseHandler( responseHandler )
+                                .request()
+                    .commands;
+        }
+        catch ( Exception ex )
+        {
+            logProvider.getLog( getClass() ).error( "Error in execution of get metadata", ex );
+            return List.of();
         }
     }
 }

@@ -9,7 +9,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
-import com.neo4j.server.security.enterprise.systemgraph.BackupCommands;
+import com.neo4j.causalclustering.catchup.v4.metadata.DatabaseSecurityCommands;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -326,7 +326,7 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
         }
     }
 
-    public BackupCommands getBackupCommands( Transaction tx, String databaseName, boolean saveUsers, boolean saveRoles )
+    public DatabaseSecurityCommands getBackupCommands( Transaction tx, String databaseName, boolean saveUsers, boolean saveRoles )
     {
         ArrayList<String> roleSetup = new ArrayList<>();
         ArrayList<String> userSetup = new ArrayList<>();
@@ -360,7 +360,7 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
             userSetup.addAll( getUsersAsCommands( tx, relevantRoles, saveRoles ) );
         }
 
-        return new BackupCommands( roleSetup, userSetup );
+        return new DatabaseSecurityCommands( roleSetup, userSetup );
     }
 
     private Map<String,ArrayList<String>> getRelevantRolesAndPrivileges( Transaction tx, String databaseName, List<String> roles, boolean savePrivileges )

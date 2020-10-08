@@ -13,6 +13,8 @@ import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsRequestD
 import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponseEncoder;
 import com.neo4j.causalclustering.catchup.v4.info.InfoRequestDecoder;
 import com.neo4j.causalclustering.catchup.v4.info.InfoResponseEncoder;
+import com.neo4j.causalclustering.catchup.v4.metadata.GetMetadataRequestDecoder;
+import com.neo4j.causalclustering.catchup.v4.metadata.GetMetadataResponseEncoder;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
@@ -47,16 +49,18 @@ public class CatchupProtocolServerInstallerV4 extends CatchupProtocolServerInsta
     protected ServerNettyPipelineBuilder encoders( ServerNettyPipelineBuilder builder, CatchupServerProtocol state )
     {
         return super.encoders( builder, state )
-                .add( "enc_res_all_databases_id", new GetAllDatabaseIdsResponseEncoder() )
-                .add( "enc_res_info", new InfoResponseEncoder() );
+                    .add( "enc_res_all_databases_id", new GetAllDatabaseIdsResponseEncoder() )
+                    .add( "enc_res_info", new InfoResponseEncoder() )
+                    .add( "enc_res_metadata", new GetMetadataResponseEncoder() );
     }
 
     @Override
     protected ServerNettyPipelineBuilder handlers( ServerNettyPipelineBuilder builder, CatchupServerProtocol state )
     {
         return super.handlers( builder, state )
-                .add( "hnd_req_get_info", handler().getInfo( state ) )
-                .add( "hnd_req_all_databases_id", handler().getAllDatabaseIds( state ) );
+                    .add( "hnd_req_get_info", handler().getInfo( state ) )
+                    .add( "hnd_req_all_databases_id", handler().getAllDatabaseIds( state ) )
+                    .add( "hnd_req_metadata", handler().getMetadata( state ) );
     }
 
     @Override
@@ -65,5 +69,6 @@ public class CatchupProtocolServerInstallerV4 extends CatchupProtocolServerInsta
         super.decoders( decoderDispatcher );
         decoderDispatcher.register( CatchupServerProtocol.State.GET_ALL_DATABASE_IDS, new GetAllDatabaseIdsRequestDecoder() );
         decoderDispatcher.register( CatchupServerProtocol.State.GET_INFO, new InfoRequestDecoder() );
+        decoderDispatcher.register( CatchupServerProtocol.State.GET_METADATA, new GetMetadataRequestDecoder() );
     }
 }

@@ -15,6 +15,9 @@ import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponse
 import com.neo4j.causalclustering.catchup.v4.info.InfoRequestEncoder;
 import com.neo4j.causalclustering.catchup.v4.info.InfoResponseDecoder;
 import com.neo4j.causalclustering.catchup.v4.info.InfoResponseHandler;
+import com.neo4j.causalclustering.catchup.v4.metadata.GetMetadataRequestEncoder;
+import com.neo4j.causalclustering.catchup.v4.metadata.GetMetadataResponseDecoder;
+import com.neo4j.causalclustering.catchup.v4.metadata.GetMetadataResponseHandler;
 import com.neo4j.causalclustering.protocol.ClientNettyPipelineBuilder;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
@@ -52,16 +55,18 @@ public class CatchupProtocolClientInstallerV4 extends CatchupProtocolClientInsta
     protected ClientNettyPipelineBuilder encoders( ClientNettyPipelineBuilder builder )
     {
         return super.encoders( builder )
-                .add( "enc_get_all_database_ids", new GetAllDatabaseIdsRequestEncoder() )
-                .add( "enc_req_info", new InfoRequestEncoder() );
+                    .add( "enc_get_all_database_ids", new GetAllDatabaseIdsRequestEncoder() )
+                    .add( "enc_req_info", new InfoRequestEncoder() )
+                    .add( "enc_get_metadata", new GetMetadataRequestEncoder() );
     }
 
     @Override
     protected ClientNettyPipelineBuilder handlers( ClientNettyPipelineBuilder builder, CatchupClientProtocol protocol )
     {
         return super.handlers( builder, protocol )
-                .add( "hnd_info", new InfoResponseHandler( handler(), protocol ) )
-                .add( "hnd_get_all_database_ids", new GetAllDatabaseIdsResponseHandler( handler(), protocol ) );
+                    .add( "hnd_info", new InfoResponseHandler( handler(), protocol ) )
+                    .add( "hnd_get_all_database_ids", new GetAllDatabaseIdsResponseHandler( handler(), protocol ) )
+                    .add( "hnd_get_metadata", new GetMetadataResponseHandler( handler(), protocol ) );
     }
 
     @Override
@@ -70,5 +75,6 @@ public class CatchupProtocolClientInstallerV4 extends CatchupProtocolClientInsta
         super.decoders( decoderDispatcher );
         decoderDispatcher.register( CatchupClientProtocol.State.GET_ALL_DATABASE_IDS, new GetAllDatabaseIdsResponseDecoder() );
         decoderDispatcher.register( CatchupClientProtocol.State.GET_INFO, new InfoResponseDecoder() );
+        decoderDispatcher.register( CatchupClientProtocol.State.GET_METADATA, new GetMetadataResponseDecoder() );
     }
 }

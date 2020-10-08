@@ -11,11 +11,10 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
 import java.nio.file.Path;
-import java.util.Objects;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.neo4j.cli.AbstractCommand;
 import org.neo4j.cli.CommandFailedException;
@@ -47,7 +46,7 @@ public class RestoreDatabaseCli extends AbstractCommand
             converter = FromPathsConverter.class )
     private FromPaths fromPaths;
     @Option( names = "--database",
-            description = "Name of the database after restore. Use of this option is only allowed if a single is provided to the --from option",
+            description = "Name of the database after restore. Usage of this option is only allowed if --from parameter point to exact one directory",
             showDefaultValue = NEVER,
             converter = DatabaseNameConverter.class )
     private NormalizedDatabaseName database;
@@ -59,16 +58,15 @@ public class RestoreDatabaseCli extends AbstractCommand
             arity = "0",
             description = "Moves the backup files to the destination, rather than copying." )
     private boolean move;
-
     @Option(
             names = "--to-data-directory",
-            description = "Base directory for databases. Use of this option is only allowed if a single is provided to the --from option",
+            description = "Base directory for databases. Usage of this option is only allowed if --from parameter point to exact one directory",
             paramLabel = "<path>"
     )
     private Path databaseRootDirectory;
     @Option(
             names = "--to-data-tx-directory",
-            description = "Base directory for transaction logs. Use of this option is only allowed if a single is provided to the --from option",
+            description = "Base directory for transaction logs. Usage of this option is only allowed if --from parameter point to exact one directory",
             paramLabel = "<path>"
     )
     private Path txRootDirectory;
@@ -103,16 +101,16 @@ public class RestoreDatabaseCli extends AbstractCommand
         final var clusterStateLayout = ClusterStateLayout.of( config.get( CausalClusteringSettings.cluster_state_directory ) );
         final var exceptions = execute( paths, neo4jLayout, clusterStateLayout );
 
-        exceptions.collect( Collectors.toList() )
-                  .stream()
-                  .findFirst()
-                  .ifPresent( exception ->
-                              {
-                                  throw exception;
-                              } );
+        exceptions.forEach( this::printRestoreResult );
+
+        final var hasFailedRestore = exceptions.stream().anyMatch( r -> r.exception.isPresent() );
+        if ( hasFailedRestore )
+        {
+            throw new CommandFailedException( "Restore command wasn't execute successfully" );
+        }
     }
 
-    private Stream<CommandFailedException> execute( Set<Path> filteredPaths, Neo4jLayout neo4jLayout, ClusterStateLayout clusterStateLayout )
+    private List<RestoreResult> execute( Set<Path> filteredPaths, Neo4jLayout neo4jLayout, ClusterStateLayout clusterStateLayout )
     {
 
         return filteredPaths.stream().map( fromPath ->
@@ -123,18 +121,17 @@ public class RestoreDatabaseCli extends AbstractCommand
                                                    final var databaseLayout = neo4jLayout.databaseLayout( databaseName );
                                                    final var raftGroupDirectory = clusterStateLayout.raftGroupDir( databaseName );
                                                    RestoreDatabaseCommand restoreDatabaseCommand =
-                                                           new RestoreDatabaseCommand( ctx.fs(), fromPath, databaseLayout, raftGroupDirectory, force, move );
+                                                           new RestoreDatabaseCommand( ctx.fs(), ctx.out(), fromPath, databaseLayout, raftGroupDirectory, force,
+                                                                                       move );
                                                    restoreDatabaseCommand.execute();
 
-                                                   ctx.out().printf( "Database with path %s was restored", fromPath );
-                                                   return null;
+                                                   return new RestoreResult( fromPath );
                                                }
                                                catch ( Exception e )
                                                {
-                                                   ctx.err().printf( "Database with path %s wasn't restored", fromPath );
-                                                   return new CommandFailedException( "Error in executing restore for path " + fromPath, e );
+                                                   return new RestoreResult( fromPath, Optional.of( e ) );
                                                }
-                                           } ).filter( Objects::nonNull );
+                                           } ).collect( Collectors.toList() );
     }
 
     private String getDatabaseName( Path fromPath, NormalizedDatabaseName database )
@@ -170,6 +167,32 @@ public class RestoreDatabaseCli extends AbstractCommand
         if ( txRootDirectory != null && !fromPaths.isSingle() )
         {
             throw new CommandFailedException( "--to-data-tx-directory parameter can be applied only when --from match single path" );
+        }
+    }
+
+    private void printRestoreResult( RestoreResult restoreResults )
+    {
+        final var status = restoreResults.exception.isPresent() ? "failed" : "successful";
+        final var reason = restoreResults.exception.map( Throwable::getMessage ).orElse( "" );
+
+        ctx.out()
+           .println( String.format( "restorePath=%s, restoreStatus=%s, reason=%s", restoreResults.fromPath.toAbsolutePath().toString(), status, reason ) );
+    }
+
+    private static final class RestoreResult
+    {
+        private final Optional<Exception> exception;
+        private final Path fromPath;
+
+        private RestoreResult( Path fromPath )
+        {
+            this( fromPath, Optional.empty() );
+        }
+
+        private RestoreResult( Path fromPath, Optional<Exception> exception )
+        {
+            this.fromPath = fromPath;
+            this.exception = exception;
         }
     }
 }

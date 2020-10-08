@@ -11,6 +11,7 @@ import static com.neo4j.causalclustering.catchup.RequestMessageType.ALL_DATABASE
 import static com.neo4j.causalclustering.catchup.RequestMessageType.CORE_SNAPSHOT;
 import static com.neo4j.causalclustering.catchup.RequestMessageType.DATABASE_ID;
 import static com.neo4j.causalclustering.catchup.RequestMessageType.INFO;
+import static com.neo4j.causalclustering.catchup.RequestMessageType.METADATA_REQUEST;
 import static com.neo4j.causalclustering.catchup.RequestMessageType.PREPARE_STORE_COPY;
 import static com.neo4j.causalclustering.catchup.RequestMessageType.STORE;
 import static com.neo4j.causalclustering.catchup.RequestMessageType.STORE_FILE;
@@ -32,8 +33,8 @@ class RequestMessageTypeTest
 
         RequestMessageType[] expectedStates =
                 new RequestMessageType[]{TX_PULL_REQUEST, STORE, CORE_SNAPSHOT, STORE_ID, PREPARE_STORE_COPY, STORE_FILE, DATABASE_ID, ALL_DATABASE_IDS_REQUEST,
-                                         INFO, UNKNOWN};
-        byte[] expectedValues = new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9, (byte) 404};
+                                         INFO, METADATA_REQUEST, UNKNOWN};
+        byte[] expectedValues = new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, (byte) 404};
 
         assertEquals( expectedStates.length, givenStates.length );
         assertEquals( expectedStates.length, expectedValues.length );

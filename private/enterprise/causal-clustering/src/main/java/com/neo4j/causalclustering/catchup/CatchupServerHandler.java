@@ -24,4 +24,6 @@ public interface CatchupServerHandler
     ChannelHandler getAllDatabaseIds( CatchupServerProtocol catchupServerProtocol );
 
     ChannelHandler getInfo( CatchupServerProtocol catchupServerProtocol );
+
+    ChannelHandler getMetadata( CatchupServerProtocol catchupServerProtocol );
 }

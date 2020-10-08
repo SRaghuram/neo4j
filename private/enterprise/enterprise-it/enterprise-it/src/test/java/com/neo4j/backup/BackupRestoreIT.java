@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
@@ -194,8 +195,8 @@ public class BackupRestoreIT
         final var clusterStateLayout = ClusterStateLayout.of( config.get( cluster_state_directory ) );
         final var databaseName = "target-database";
         final var raftGroupDirectory = clusterStateLayout.raftGroupDir( databaseName );
-        new RestoreDatabaseCommand( new DefaultFileSystemAbstraction(), fromDatabasePath, targetLayout, raftGroupDirectory, forceOverwrite, false )
-                .execute();
+        new RestoreDatabaseCommand( new DefaultFileSystemAbstraction(), new PrintStream( System.out ), fromDatabasePath, targetLayout, raftGroupDirectory,
+                                    forceOverwrite, false ).execute();
     }
 
     private static Config configWith( Neo4jLayout layout )

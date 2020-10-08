@@ -128,7 +128,8 @@ class StoreCopyCheckpointMutexIT
                 databaseManager,
                 databaseStateService, injectingFS,
                 32768,
-                new Log4jLogProvider( System.out ) );
+                new Log4jLogProvider( System.out ),
+                db.getDependencyResolver() );
 
         return CatchupServerBuilder.builder()
                 .catchupServerHandler( regularCatchupServerHandler )

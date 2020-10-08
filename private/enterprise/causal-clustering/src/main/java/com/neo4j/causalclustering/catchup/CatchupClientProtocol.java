@@ -27,6 +27,7 @@ public class CatchupClientProtocol extends Protocol<CatchupClientProtocol.State>
         ERROR_RESPONSE,
         DATABASE_ID,
         GET_ALL_DATABASE_IDS,
+        GET_METADATA,
         GET_INFO;
     }
 }

@@ -242,7 +242,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
 
         int maxChunkSize = globalConfig.get( CausalClusteringSettings.store_copy_chunk_size );
         var catchupServerHandler =
-                new MultiDatabaseCatchupServerHandler( databaseManager, reconcilerModule.databaseStateService(), fileSystem, maxChunkSize, logProvider );
+                new MultiDatabaseCatchupServerHandler( databaseManager, reconcilerModule.databaseStateService(), fileSystem, maxChunkSize, logProvider,
+                                                       globalModule.getGlobalDependencies() );
         var installedProtocolsHandler = new InstalledProtocolHandler();
 
         var catchupServer = catchupComponentsProvider.createCatchupServer( installedProtocolsHandler, catchupServerHandler );

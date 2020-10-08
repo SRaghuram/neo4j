@@ -96,6 +96,7 @@ public interface AbstractEnterpriseEditionModule
             );
             securityModule.setup();
             globalModule.getGlobalLife().add( securityModule.authManager() );
+            globalModule.getGlobalDependencies().satisfyDependency( securityComponent );
             return securityModule;
         }
         return EnterpriseNoAuthSecurityProvider.INSTANCE;

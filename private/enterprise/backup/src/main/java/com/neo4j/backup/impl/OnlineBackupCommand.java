@@ -5,12 +5,14 @@
  */
 package com.neo4j.backup.impl;
 
+import com.neo4j.causalclustering.catchup.v4.metadata.IncludeMetadata;
 import com.neo4j.configuration.OnlineBackupSettings;
 import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Optional;
 
 import org.neo4j.cli.AbstractCommand;
 import org.neo4j.cli.CommandFailedException;
@@ -85,6 +87,14 @@ public class OnlineBackupCommand extends AbstractCommand
     @Option( names = "--additional-config", paramLabel = "<path>", description = "Configuration file to supply additional configuration in." )
     private Path additionalConfig;
 
+    @Option( names = "--include-metadata", paramLabel = "<all/users/roles>",
+            description = "Include metadata in file. Can't be used for backing system database.\n" +
+                          "roles - commands to create the roles and privileges (for both database and graph) that affect the use of the database\n" +
+                          "users - commands to create the users that can use the database and their role assignments \n" +
+                          "all - include roles and users"
+    )
+    private IncludeMetadata includeMetadata;
+
     public OnlineBackupCommand( ExecutionContext ctx )
     {
         super( ctx );
@@ -98,19 +108,21 @@ public class OnlineBackupCommand extends AbstractCommand
         final var configFile = ctx.confDir().resolve( Config.DEFAULT_CONFIG_FILE_NAME );
         final var config = buildConfig( configFile, additionalConfig, backupDir );
         final var contextBuilder = OnlineBackupContext.builder()
-                .withBackupDirectory( requireExisting( backupDir ) )
-                .withReportsDirectory( consistencyCheckOptions.getReportDir() )
-                .withAddress( address )
-                .withDatabaseNamePattern( database )
-                .withConfig( config )
-                .withFallbackToFullBackup( fallbackToFull )
-                .withConsistencyCheck( checkConsistency )
-                .withConsistencyCheckGraph( consistencyCheckOptions.isCheckGraph() )
-                .withConsistencyCheckIndexes( consistencyCheckOptions.isCheckIndexes() )
-                .withConsistencyCheckIndexStructure( consistencyCheckOptions.isCheckIndexStructure() )
-                .withConsistencyCheckPropertyOwners( consistencyCheckOptions.isCheckPropertyOwners() )
-                .withConsistencyCheckLabelScanStore( consistencyCheckOptions.isCheckLabelScanStore() )
-                .withConsistencyCheckRelationshipTypeScanStore( consistencyCheckOptions.isCheckRelationshipTypeScanStore() );
+                                                      .withBackupDirectory( requireExisting( backupDir ) )
+                                                      .withReportsDirectory( consistencyCheckOptions.getReportDir() )
+                                                      .withAddress( address )
+                                                      .withDatabaseNamePattern( database )
+                                                      .withConfig( config )
+                                                      .withIncludeMetadata( Optional.ofNullable( includeMetadata ) )
+                                                      .withFallbackToFullBackup( fallbackToFull )
+                                                      .withConsistencyCheck( checkConsistency )
+                                                      .withConsistencyCheckGraph( consistencyCheckOptions.isCheckGraph() )
+                                                      .withConsistencyCheckIndexes( consistencyCheckOptions.isCheckIndexes() )
+                                                      .withConsistencyCheckIndexStructure( consistencyCheckOptions.isCheckIndexStructure() )
+                                                      .withConsistencyCheckPropertyOwners( consistencyCheckOptions.isCheckPropertyOwners() )
+                                                      .withConsistencyCheckLabelScanStore( consistencyCheckOptions.isCheckLabelScanStore() )
+                                                      .withConsistencyCheckRelationshipTypeScanStore(
+                                                              consistencyCheckOptions.isCheckRelationshipTypeScanStore() );
 
         final var userLogProvider = Util.configuredLogProvider( config, ctx.out() );
         final var errorLogProvider = Util.configuredLogProvider( config, ctx.err() );

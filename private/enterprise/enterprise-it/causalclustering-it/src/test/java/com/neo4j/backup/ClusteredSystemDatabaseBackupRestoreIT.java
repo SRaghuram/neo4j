@@ -24,6 +24,7 @@ import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
@@ -179,7 +180,8 @@ class ClusteredSystemDatabaseBackupRestoreIT
         final var clusterStateLayout = ClusterStateLayout.of( restoreCommandConfig.get( CausalClusteringSettings.cluster_state_directory ) );
         final var raftGroupDirectory = clusterStateLayout.raftGroupDir( databaseName );
         final var databaseLayout = Neo4jLayout.of( restoreCommandConfig ).databaseLayout( databaseName );
-        new RestoreDatabaseCommand( fs, backupLocation.resolve( databaseName ), databaseLayout, raftGroupDirectory, true, false ).execute();
+        new RestoreDatabaseCommand( fs, new PrintStream( System.out ), backupLocation.resolve( databaseName ), databaseLayout, raftGroupDirectory,
+                                    true, false ).execute();
     }
 
     private static boolean runBackupSameJvm( Path neo4jHome, String host, String databaseName )
