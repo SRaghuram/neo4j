@@ -634,6 +634,8 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   // Create constraint
 
+  // Node key
+
   test("should create node key constraint") {
     // WHEN
     executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY")
@@ -650,6 +652,22 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     properties should be(Seq("name"))
   }
 
+  test("should create named node key constraint") {
+    // WHEN
+    executeSingle("CREATE CONSTRAINT my_constraint ON (n:Person) ASSERT (n.name) IS NODE KEY")
+    graph.awaitIndexesOnline()
+
+    // THEN
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("my_constraint")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("my_constraint")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
   test("should create composite node key constraint") {
     // WHEN
     executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name, n.age) IS NODE KEY")
@@ -662,6 +680,22 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // get by name
     val (label, properties) = graph.getConstraintSchemaByName("constraint_c11599ca")
+    label should be("Person")
+    properties should be(Seq("name", "age"))
+  }
+
+  test("should create named composite node key constraint") {
+    // WHEN
+    executeSingle("CREATE CONSTRAINT my_constraint ON (n:Person) ASSERT (n.name, n.age) IS NODE KEY")
+    graph.awaitIndexesOnline()
+
+    // THEN
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name", "age")).getName should be("my_constraint")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("my_constraint")
     label should be("Person")
     properties should be(Seq("name", "age"))
   }
@@ -744,6 +778,32 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     properties should be(Seq("name"))
   }
 
+  test("should fail to create node key constraint with OR REPLACE") {
+    val errorMessage = "Failed to create node key constraint: `OR REPLACE` cannot be used together with this command."
+
+    val error1 = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS NODE KEY")
+    }
+    error1.getMessage should startWith (errorMessage)
+
+    val error2 = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY")
+    }
+    error2.getMessage should startWith (errorMessage)
+
+    val error3 = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint IF NOT EXISTS ON (n:Person) ASSERT (n.name) IS NODE KEY")
+    }
+    error3.getMessage should startWith (errorMessage)
+
+    val error4 = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT IF NOT EXISTS ON (n:Person) ASSERT (n.name) IS NODE KEY")
+    }
+    error4.getMessage should startWith (errorMessage)
+  }
+
+  // Uniqueness
+
   test("should create unique property constraint") {
     // WHEN
     executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE")
@@ -756,6 +816,22 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // get by name
     val (label, properties) = graph.getConstraintSchemaByName("constraint_e26b1a8b")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  test("should create named unique property constraint") {
+    // WHEN
+    executeSingle("CREATE CONSTRAINT my_constraint ON (n:Person) ASSERT (n.name) IS UNIQUE")
+    graph.awaitIndexesOnline()
+
+    // THEN
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("my_constraint")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("my_constraint")
     label should be("Person")
     properties should be(Seq("name"))
   }
@@ -847,6 +923,41 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     exception.getMessage should include("Only single property uniqueness constraints are supported")
   }
 
+  test("should fail to create named composite unique property constraint") {
+    val exception = the[SyntaxException] thrownBy {
+      // WHEN
+      executeSingle("CREATE CONSTRAINT my_constraint ON (n:Person) ASSERT (n.name, n.age) IS UNIQUE")
+      // THEN
+    }
+    exception.getMessage should include("Only single property uniqueness constraints are supported")
+  }
+
+  test("should fail to create unique property constraint with OR REPLACE") {
+    val errorMessage = "Failed to create uniqueness constraint: `OR REPLACE` cannot be used together with this command."
+
+    val error1 = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS UNIQUE")
+    }
+    error1.getMessage should startWith (errorMessage)
+
+    val error2 = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE")
+    }
+    error2.getMessage should startWith (errorMessage)
+
+    val error3 = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint IF NOT EXISTS ON (n:Person) ASSERT (n.name) IS UNIQUE")
+    }
+    error3.getMessage should startWith (errorMessage)
+
+    val error4 = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT IF NOT EXISTS ON (n:Person) ASSERT (n.name) IS UNIQUE")
+    }
+    error4.getMessage should startWith (errorMessage)
+  }
+
+  // Node property existence
+
   test("should create node property existence constraint") {
     // WHEN
     executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT EXISTS (n.name)")
@@ -858,6 +969,21 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // get by name
     val (label, properties) = graph.getConstraintSchemaByName("constraint_6ced8351")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  test("should create named node property existence constraint") {
+    // WHEN
+    executeSingle("CREATE CONSTRAINT my_constraint ON (n:Person) ASSERT EXISTS (n.name)")
+
+    // THEN
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("my_constraint")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("my_constraint")
     label should be("Person")
     properties should be(Seq("name"))
   }
@@ -934,6 +1060,32 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     properties should be(Seq("name"))
   }
 
+  test("should fail to create node property existence constraint with OR REPLACE") {
+    val errorMessage = "Failed to create node property existence constraint: `OR REPLACE` cannot be used together with this command."
+
+    val error1 = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint ON (n:Person) ASSERT exists(n.name)")
+    }
+    error1.getMessage should startWith (errorMessage)
+
+    val error2 = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT ON (n:Person) ASSERT exists(n.name)")
+    }
+    error2.getMessage should startWith (errorMessage)
+
+    val error3 = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint IF NOT EXISTS ON (n:Person) ASSERT exists(n.name)")
+    }
+    error3.getMessage should startWith (errorMessage)
+
+    val error4 = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT IF NOT EXISTS ON (n:Person) ASSERT exists(n.name)")
+    }
+    error4.getMessage should startWith (errorMessage)
+  }
+
+  // Relationship property existence
+
   test("should create relationship property existence constraint") {
     // WHEN
     executeSingle("CREATE CONSTRAINT ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
@@ -945,6 +1097,21 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // get by name
     val (relType, properties) = graph.getConstraintSchemaByName("constraint_6c4e7adb")
+    relType should be("HasPet")
+    properties should be(Seq("since"))
+  }
+
+  test("should create named relationship property existence constraint") {
+    // WHEN
+    executeSingle("CREATE CONSTRAINT my_constraint ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+
+    // THEN
+
+    // get by schema
+    graph.getRelationshipConstraint("HasPet", "since").getName should be("my_constraint")
+
+    // get by name
+    val (relType, properties) = graph.getConstraintSchemaByName("my_constraint")
     relType should be("HasPet")
     properties should be(Seq("since"))
   }
@@ -1021,92 +1188,31 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     properties should be(Seq("since"))
   }
 
-  test("should create named node key constraint") {
-    // WHEN
-    executeSingle("CREATE CONSTRAINT my_constraint ON (n:Person) ASSERT (n.name) IS NODE KEY")
-    graph.awaitIndexesOnline()
+  test("should fail to create relationship property existence constraint with OR REPLACE") {
+    val errorMessage = "Failed to create relationship property existence constraint: `OR REPLACE` cannot be used together with this command."
 
-    // THEN
-
-    // get by schema
-    graph.getNodeConstraint("Person", Seq("name")).getName should be("my_constraint")
-
-    // get by name
-    val (label, properties) = graph.getConstraintSchemaByName("my_constraint")
-    label should be("Person")
-    properties should be(Seq("name"))
-  }
-
-  test("should create named composite node key constraint") {
-    // WHEN
-    executeSingle("CREATE CONSTRAINT my_constraint ON (n:Person) ASSERT (n.name, n.age) IS NODE KEY")
-    graph.awaitIndexesOnline()
-
-    // THEN
-
-    // get by schema
-    graph.getNodeConstraint("Person", Seq("name", "age")).getName should be("my_constraint")
-
-    // get by name
-    val (label, properties) = graph.getConstraintSchemaByName("my_constraint")
-    label should be("Person")
-    properties should be(Seq("name", "age"))
-  }
-
-  test("should create named unique property constraint") {
-    // WHEN
-    executeSingle("CREATE CONSTRAINT my_constraint ON (n:Person) ASSERT (n.name) IS UNIQUE")
-    graph.awaitIndexesOnline()
-
-    // THEN
-
-    // get by schema
-    graph.getNodeConstraint("Person", Seq("name")).getName should be("my_constraint")
-
-    // get by name
-    val (label, properties) = graph.getConstraintSchemaByName("my_constraint")
-    label should be("Person")
-    properties should be(Seq("name"))
-  }
-
-  test("should fail to create named composite unique property constraint") {
-    val exception = the[SyntaxException] thrownBy {
-      // WHEN
-      executeSingle("CREATE CONSTRAINT my_constraint ON (n:Person) ASSERT (n.name, n.age) IS UNIQUE")
-      // THEN
+    val error1 = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
     }
-    exception.getMessage should include("Only single property uniqueness constraints are supported")
+    error1.getMessage should startWith (errorMessage)
+
+    val error2 = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+    }
+    error2.getMessage should startWith (errorMessage)
+
+    val error3 = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+    }
+    error3.getMessage should startWith (errorMessage)
+
+    val error4 = the[SyntaxException] thrownBy {
+      executeSingle("CREATE OR REPLACE CONSTRAINT IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+    }
+    error4.getMessage should startWith (errorMessage)
   }
 
-  test("should create named node property existence constraint") {
-    // WHEN
-    executeSingle("CREATE CONSTRAINT my_constraint ON (n:Person) ASSERT EXISTS (n.name)")
-
-    // THEN
-
-    // get by schema
-    graph.getNodeConstraint("Person", Seq("name")).getName should be("my_constraint")
-
-    // get by name
-    val (label, properties) = graph.getConstraintSchemaByName("my_constraint")
-    label should be("Person")
-    properties should be(Seq("name"))
-  }
-
-  test("should create named relationship property existence constraint") {
-    // WHEN
-    executeSingle("CREATE CONSTRAINT my_constraint ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
-
-    // THEN
-
-    // get by schema
-    graph.getRelationshipConstraint("HasPet", "since").getName should be("my_constraint")
-
-    // get by name
-    val (relType, properties) = graph.getConstraintSchemaByName("my_constraint")
-    relType should be("HasPet")
-    properties should be(Seq("since"))
-  }
+  // Multiple constraints
 
   test("should fail to create multiple constraints with same schema") {
     // Node key constraint
@@ -1702,102 +1808,6 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // Node property existence constraint
     val resN = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT EXISTS (n.prop4)")
     assertStats(resN, existenceConstraintsAdded = 0)
-  }
-
-  test("should fail to create node key constraint with OR REPLACE") {
-    val errorMessage = "Failed to create node key constraint: `OR REPLACE` cannot be used together with this command."
-
-    val error1 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS NODE KEY")
-    }
-    error1.getMessage should startWith (errorMessage)
-
-    val error2 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY")
-    }
-    error2.getMessage should startWith (errorMessage)
-
-    val error3 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint IF NOT EXISTS ON (n:Person) ASSERT (n.name) IS NODE KEY")
-    }
-    error3.getMessage should startWith (errorMessage)
-
-    val error4 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT IF NOT EXISTS ON (n:Person) ASSERT (n.name) IS NODE KEY")
-    }
-    error4.getMessage should startWith (errorMessage)
-  }
-
-  test("should fail to create property unique constraint with OR REPLACE") {
-    val errorMessage = "Failed to create uniqueness constraint: `OR REPLACE` cannot be used together with this command."
-
-    val error1 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS UNIQUE")
-    }
-    error1.getMessage should startWith (errorMessage)
-
-    val error2 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE")
-    }
-    error2.getMessage should startWith (errorMessage)
-
-    val error3 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint IF NOT EXISTS ON (n:Person) ASSERT (n.name) IS UNIQUE")
-    }
-    error3.getMessage should startWith (errorMessage)
-
-    val error4 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT IF NOT EXISTS ON (n:Person) ASSERT (n.name) IS UNIQUE")
-    }
-    error4.getMessage should startWith (errorMessage)
-  }
-
-  test("should fail to create node property existence constraint with OR REPLACE") {
-    val errorMessage = "Failed to create node property existence constraint: `OR REPLACE` cannot be used together with this command."
-
-    val error1 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint ON (n:Person) ASSERT exists(n.name)")
-    }
-    error1.getMessage should startWith (errorMessage)
-
-    val error2 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT ON (n:Person) ASSERT exists(n.name)")
-    }
-    error2.getMessage should startWith (errorMessage)
-
-    val error3 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint IF NOT EXISTS ON (n:Person) ASSERT exists(n.name)")
-    }
-    error3.getMessage should startWith (errorMessage)
-
-    val error4 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT IF NOT EXISTS ON (n:Person) ASSERT exists(n.name)")
-    }
-    error4.getMessage should startWith (errorMessage)
-  }
-
-  test("should fail to create relationship property existence constraint with OR REPLACE") {
-    val errorMessage = "Failed to create relationship property existence constraint: `OR REPLACE` cannot be used together with this command."
-
-    val error1 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
-    }
-    error1.getMessage should startWith (errorMessage)
-
-    val error2 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
-    }
-    error2.getMessage should startWith (errorMessage)
-
-    val error3 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
-    }
-    error3.getMessage should startWith (errorMessage)
-
-    val error4 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
-    }
-    error4.getMessage should startWith (errorMessage)
   }
 
   // Drop constraint
