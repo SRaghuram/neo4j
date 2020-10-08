@@ -1850,6 +1850,12 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     an [InvalidArgumentException] should be thrownBy evaluate(compiled, params(listValue, longValue(Int.MaxValue + 1L)))
   }
 
+  test("containerIndex on nullable") {
+    val compiled = compile(containerIndex(function("toString", parameter(0)), function("toString", parameter(1))))
+
+    evaluate(compiled, params(NO_VALUE, NO_VALUE)) should equal(NO_VALUE)
+  }
+
   test("handle list literals") {
     val literal = listOf(trueLiteral, literalInt(5), nullLiteral, falseLiteral)
 
@@ -2131,6 +2137,15 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiledNone, 1) should equal(booleanValue(false))
     evaluate(compiledSingle, 1) should equal(booleanValue(true))
     evaluate(compiledMany, 1) should equal(booleanValue(false))
+  }
+
+  test("single that requires nullcheck") {
+    //When, single(bar IN nodes($p) WHERE bar IS NOT NULL)
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(singleInList(bar, function("nodes", parameter(0)), isNotNull(bar)))
+
+    //Then
+    evaluate(compiled, 1, Array(NO_VALUE)) should equal(NO_VALUE)
   }
 
   test("single in list accessing variable") {
