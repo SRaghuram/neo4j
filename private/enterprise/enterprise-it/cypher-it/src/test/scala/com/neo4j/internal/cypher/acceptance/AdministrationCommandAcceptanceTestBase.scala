@@ -49,29 +49,32 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val FAIL_EXECUTE_ADMIN_PROC: String = "Executing admin procedure is not allowed"
   val FAIL_EXECUTE_PROC: String = "Executing procedure is not allowed"
 
-  val PERMISSION_DENIED_SHOW_USER: String = "Permission denied for SHOW USER."
-  val PERMISSION_DENIED_SHOW_PRIVILEGE: String = "Permission denied for SHOW PRIVILEGE."
-  val PERMISSION_DENIED_SHOW_PRIVILEGE_OR_USER: String = "Permission denied for SHOW PRIVILEGE and/or SHOW USER."
-  val PERMISSION_DENIED_ASSIGN_PRIVILEGE: String = "Permission denied for ASSIGN PRIVILEGE."
-  val PERMISSION_DENIED_REMOVE_PRIVILEGE: String = "Permission denied for REMOVE PRIVILEGE."
-  val PERMISSION_DENIED_START: String = "Permission denied for START."
-  val PERMISSION_DENIED_STOP: String = "Permission denied for STOP."
-  val PERMISSION_DENIED_CREATE_DATABASE: String = "Permission denied for CREATE DATABASE."
-  val PERMISSION_DENIED_DROP_DATABASE: String = "Permission denied for DROP DATABASE."
-  val PERMISSION_DENIED_CREATE_OR_DROP_DATABASE: String = "Permission denied for CREATE DATABASE and/or DROP DATABASE."
-  val PERMISSION_DENIED_CREATE_ROLE: String = "Permission denied for CREATE ROLE."
-  val PERMISSION_DENIED_DROP_ROLE: String = "Permission denied for DROP ROLE."
-  val PERMISSION_DENIED_CREATE_OR_DROP_ROLE: String = "Permission denied for CREATE ROLE and/or DROP ROLE."
-  val PERMISSION_DENIED_CREATE_USER: String = "Permission denied for CREATE USER."
-  val PERMISSION_DENIED_DROP_USER: String = "Permission denied for DROP USER."
-  val PERMISSION_DENIED_CREATE_OR_DROP_USER: String = "Permission denied for CREATE USER and/or DROP USER."
-  val PERMISSION_DENIED_SHOW_ROLE: String = "Permission denied for SHOW ROLE."
-  val PERMISSION_DENIED_SHOW_ROLE_OR_USERS: String = "Permission denied for SHOW ROLE and/or SHOW USER."
-  val PERMISSION_DENIED_ASSIGN_ROLE: String = "Permission denied for ASSIGN ROLE."
-  val PERMISSION_DENIED_REMOVE_ROLE: String = "Permission denied for REMOVE ROLE."
-  val PERMISSION_DENIED_SET_PASSWORDS: String = "Permission denied for SET PASSWORDS."
-  val PERMISSION_DENIED_SET_USER_STATUS: String = "Permission denied for SET USER STATUS."
-  val PERMISSION_DENIED_SET_PASSWORDS_OR_USER_STATUS: String = "Permission denied for SET PASSWORDS and/or SET USER STATUS."
+  private val helpfulCheckUserPrivilegeErrorText: String = " Try executing SHOW USER PRIVILEGES to determine the missing or denied privileges. " +
+    "In case of missing privileges, they need to be granted (See GRANT). In case of denied privileges, they need to be revoked (See REVOKE) and granted."
+
+  val PERMISSION_DENIED_SHOW_USER: String = "Permission denied for SHOW USER." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_SHOW_PRIVILEGE: String = "Permission denied for SHOW PRIVILEGE." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_SHOW_PRIVILEGE_OR_USER: String = "Permission denied for SHOW PRIVILEGE and/or SHOW USER." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_ASSIGN_PRIVILEGE: String = "Permission denied for ASSIGN PRIVILEGE." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_REMOVE_PRIVILEGE: String = "Permission denied for REMOVE PRIVILEGE." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_START: String = "Permission denied for START DATABASE." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_STOP: String = "Permission denied for STOP DATABASE." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_CREATE_DATABASE: String = "Permission denied for CREATE DATABASE." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_DROP_DATABASE: String = "Permission denied for DROP DATABASE." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_CREATE_OR_DROP_DATABASE: String = "Permission denied for CREATE DATABASE and/or DROP DATABASE." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_CREATE_ROLE: String = "Permission denied for CREATE ROLE." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_DROP_ROLE: String = "Permission denied for DROP ROLE." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_CREATE_OR_DROP_ROLE: String = "Permission denied for CREATE ROLE and/or DROP ROLE." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_CREATE_USER: String = "Permission denied for CREATE USER." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_DROP_USER: String = "Permission denied for DROP USER." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_CREATE_OR_DROP_USER: String = "Permission denied for CREATE USER and/or DROP USER." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_SHOW_ROLE: String = "Permission denied for SHOW ROLE." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_SHOW_ROLE_OR_USERS: String = "Permission denied for SHOW ROLE and/or SHOW USER." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_ASSIGN_ROLE: String = "Permission denied for ASSIGN ROLE." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_REMOVE_ROLE: String = "Permission denied for REMOVE ROLE." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_SET_PASSWORDS: String = "Permission denied for SET PASSWORDS." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_SET_USER_STATUS: String = "Permission denied for SET USER STATUS." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_SET_PASSWORDS_OR_USER_STATUS: String = "Permission denied for SET PASSWORDS and/or SET USER STATUS." + helpfulCheckUserPrivilegeErrorText
 
   val neo4jUser: Map[String, Any] = adminUser("neo4j")
   val neo4jUserActive: Map[String, Any] = adminUser("neo4j", passwordChangeRequired = false)
