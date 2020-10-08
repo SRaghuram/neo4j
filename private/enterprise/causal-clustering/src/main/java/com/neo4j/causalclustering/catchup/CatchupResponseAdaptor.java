@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdResponse;
 import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponse;
+import com.neo4j.causalclustering.catchup.v4.info.InfoResponse;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 
 import java.util.concurrent.CompletableFuture;
@@ -79,6 +80,12 @@ public class CatchupResponseAdaptor<T> implements CatchupResponseCallback<T>
 
     @Override
     public void onGetAllDatabaseIdsResponse( CompletableFuture<T> signal, GetAllDatabaseIdsResponse response )
+    {
+        unimplementedMethod( signal, response );
+    }
+
+    @Override
+    public void onInfo( CompletableFuture<T> signal, InfoResponse response )
     {
         unimplementedMethod( signal, response );
     }

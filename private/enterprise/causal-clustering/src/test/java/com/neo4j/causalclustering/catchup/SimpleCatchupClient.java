@@ -9,8 +9,10 @@ import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyResponseAdaptors;
 import com.neo4j.causalclustering.catchup.storecopy.StreamToDiskProvider;
+import com.neo4j.causalclustering.catchup.v4.info.InfoResponse;
 
 import java.nio.file.Path;
+import java.util.concurrent.CompletableFuture;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.IOUtils;
@@ -117,5 +119,20 @@ class SimpleCatchupClient implements AutoCloseable
     private PageCache createPageCache()
     {
         return StandalonePageCacheFactory.createPageCache( fsa, jobScheduler, PageCacheTracer.NULL );
+    }
+
+    public InfoResponse requestReconcilerInfo( NamedDatabaseId namedDatabaseId ) throws Exception
+    {
+        return catchUpClientFactory.getClient( from, log )
+                .v3( c -> c.getReconciledInfo( namedDatabaseId ) )
+                .v4( c -> c.getReconciledInfo( namedDatabaseId ) )
+                .withResponseHandler( new CatchupResponseAdaptor<>()
+                {
+                    @Override
+                    public void onInfo( CompletableFuture<InfoResponse> signal, InfoResponse response )
+                    {
+                        signal.complete( response );
+                    }
+                } ).request();
     }
 }

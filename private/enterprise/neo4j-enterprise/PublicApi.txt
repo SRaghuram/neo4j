@@ -36,3 +36,9 @@ com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder::databaseDependenc
 com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder::getDbmsInfo(org.neo4j.configuration.Config) org.neo4j.kernel.impl.factory.DbmsInfo protected
 com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder::getEdition() java.lang.String public
 com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder::getEditionFactory(org.neo4j.configuration.Config) java.util.function.Function<org.neo4j.graphdb.factory.module.GlobalModule,org.neo4j.graphdb.factory.module.edition.AbstractEditionModule> protected
+com.neo4j.dbms.procedures.wait.WaitResponseState public final enum extends java.lang.Enum<com.neo4j.dbms.procedures.wait.WaitResponseState>
+com.neo4j.dbms.procedures.wait.WaitResponseState::CaughtUp com.neo4j.dbms.procedures.wait.WaitResponseState public static final
+com.neo4j.dbms.procedures.wait.WaitResponseState::Failed com.neo4j.dbms.procedures.wait.WaitResponseState public static final
+com.neo4j.dbms.procedures.wait.WaitResponseState::Incomplete com.neo4j.dbms.procedures.wait.WaitResponseState public static final
+com.neo4j.dbms.procedures.wait.WaitResponseState::valueOf(java.lang.String) com.neo4j.dbms.procedures.wait.WaitResponseState public static
+com.neo4j.dbms.procedures.wait.WaitResponseState::values() com.neo4j.dbms.procedures.wait.WaitResponseState[] public static

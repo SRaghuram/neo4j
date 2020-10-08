@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.CatchupServerProvider;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
+import com.neo4j.causalclustering.catchup.v4.info.InfoProvider;
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
@@ -76,6 +77,7 @@ import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.dbms.procedures.ClusteredDatabaseStateProcedure;
 import com.neo4j.dbms.procedures.QuarantineProcedure;
+import com.neo4j.dbms.procedures.wait.WaitProcedure;
 import com.neo4j.enterprise.edition.AbstractEnterpriseEditionModule;
 import com.neo4j.fabric.bootstrap.EnterpriseFabricServicesBootstrap;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
@@ -251,10 +253,12 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
                 .setParallelism( Group.RAFT_HANDLER, globalConfig.get( CausalClusteringSettings.raft_handler_parallelism ) );
     }
 
-    private void createCoreServers( LifeSupport life, DatabaseManager<?> databaseManager, FileSystemAbstraction fileSystem )
+    private void createCoreServers( LifeSupport life, DatabaseManager<?> databaseManager, DatabaseStateService databaseStateService,
+            FileSystemAbstraction fileSystem )
     {
         int maxChunkSize = globalConfig.get( CausalClusteringSettings.store_copy_chunk_size );
-        CatchupServerHandler catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, fileSystem, maxChunkSize, logProvider );
+        CatchupServerHandler catchupServerHandler =
+                new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fileSystem, maxChunkSize, logProvider );
         Server catchupServer = catchupComponentsProvider.createCatchupServer( serverInstalledProtocolHandler, catchupServerHandler );
         life.add( catchupServer );
         // used by ReadReplicaHierarchicalCatchupIT
@@ -292,6 +296,10 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         globalProcedures.register( new InstalledProtocolsProcedure( clientInstalledProtocols, serverInstalledProtocols ) );
         globalProcedures.register( new QuarantineProcedure( quarantineOperator,
                 globalModule.getGlobalClock(), globalConfig.get( GraphDatabaseSettings.db_timezone ).getZoneId() ) );
+        globalProcedures.register(
+                WaitProcedure.clustered( topologyService, identityModule.myself(), globalModule.getGlobalClock(),
+                        catchupComponentsProvider.catchupClientFactory(), globalModule.getLogService().getInternalLogProvider(),
+                        new InfoProvider( databaseManager, reconcilerModule.databaseStateService() ) ) );
         // TODO: Figure out how the replication benchmark procedure should work.
 //        globalProcedures.registerComponent( Replicator.class, x -> replicationModule.getReplicator(), false );
 //        globalProcedures.registerProcedure( ReplicationBenchmarkProcedure.class );
@@ -382,7 +390,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         globalModule.getGlobalDependencies().satisfyDependencies( raftServer ); // resolved in tests
         globalLife.add( raftServer );
 
-        createCoreServers( globalLife, databaseManager, fileSystem );
+        createCoreServers( globalLife, databaseManager, reconcilerModule.databaseStateService(), fileSystem );
 
         // Reconciler module starts actual databases, which depend on all of the above components at runtime.
         globalLife.add( reconcilerModule );

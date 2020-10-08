@@ -17,10 +17,12 @@ import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequestHandler;
 import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
 import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequest;
 import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsRequestHandler;
+import com.neo4j.causalclustering.catchup.v4.info.InfoRequestHandler;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequest;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequestHandler;
 import io.netty.channel.ChannelHandler;
 
+import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.database.Database;
@@ -34,11 +36,14 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
     private final DatabaseManager<?> databaseManager;
     private final LogProvider logProvider;
     private final FileSystemAbstraction fs;
+    private final DatabaseStateService databaseStateService;
     private final int maxChunkSize;
 
-    public MultiDatabaseCatchupServerHandler( DatabaseManager<?> databaseManager, FileSystemAbstraction fs, int maxChunkSize, LogProvider logProvider )
+    public MultiDatabaseCatchupServerHandler( DatabaseManager<?> databaseManager, DatabaseStateService databaseStateService,
+            FileSystemAbstraction fs, int maxChunkSize, LogProvider logProvider )
     {
         this.databaseManager = databaseManager;
+        this.databaseStateService = databaseStateService;
         this.maxChunkSize = maxChunkSize;
         this.logProvider = logProvider;
         this.fs = fs;
@@ -89,6 +94,18 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
     public ChannelHandler getAllDatabaseIds( CatchupServerProtocol protocol )
     {
         return buildGetAllDatabaseIdsRequestHandler( protocol, databaseManager );
+    }
+
+    @Override
+    public ChannelHandler getInfo( CatchupServerProtocol protocol )
+    {
+        return buildInfoHandler( protocol, databaseManager, databaseStateService );
+    }
+
+    private static InfoRequestHandler buildInfoHandler( CatchupServerProtocol protocol, DatabaseManager<?> databaseManager,
+            DatabaseStateService databaseStateService )
+    {
+        return new InfoRequestHandler( protocol, databaseManager, databaseStateService );
     }
 
     private TxPullRequestHandler buildTxPullRequestHandler( Database db, CatchupServerProtocol protocol )

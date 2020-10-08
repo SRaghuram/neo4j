@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.Label;
@@ -103,7 +104,7 @@ class StoreCopyCheckpointMutexIT
         // and a custom catchup server that will simulate heavy workload and continuous checkpointing during store copy.
         var realFS = resolve( db, FileSystemAbstraction.class );
         var injectingFS = new InjectingFileSystemAbstraction( realFS, db, checkPointer );
-        var catchupServer = life.add( buildCatchupServer( db, injectingFS ) );
+        var catchupServer = life.add( buildCatchupServer( db, db.getDependencyResolver().resolveDependency( DatabaseStateService.class ), injectingFS ) );
 
         // When performing a backup, Then store should be consistent
         performBackupWithConsistencyCheck( catchupServer.address() );
@@ -116,16 +117,16 @@ class StoreCopyCheckpointMutexIT
     /**
      * Build custom catchup server using bits and pieces from the real embedded db.
      *
-     * @param db The db that we are creating the catchup server against.
+     * @param db          The db that we are creating the catchup server against.
      * @param injectingFS The custom fs that will inject data and try checkpoint on every file read.
      * @return Our custom catchup server.
      */
-    private static Server buildCatchupServer( GraphDatabaseAPI db, InjectingFileSystemAbstraction injectingFS )
+    private static Server buildCatchupServer( GraphDatabaseAPI db, DatabaseStateService databaseStateService, InjectingFileSystemAbstraction injectingFS )
     {
         var databaseManager = resolve( db, DatabaseManager.class );
         var regularCatchupServerHandler = new MultiDatabaseCatchupServerHandler(
                 databaseManager,
-                injectingFS,
+                databaseStateService, injectingFS,
                 32768,
                 new Log4jLogProvider( System.out ) );
 

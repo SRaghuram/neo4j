@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.readreplica;
 import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
+import com.neo4j.causalclustering.catchup.v4.info.InfoProvider;
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
@@ -35,6 +36,7 @@ import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.dbms.procedures.ClusteredDatabaseStateProcedure;
 import com.neo4j.dbms.procedures.QuarantineProcedure;
+import com.neo4j.dbms.procedures.wait.WaitProcedure;
 import com.neo4j.enterprise.edition.AbstractEnterpriseEditionModule;
 import com.neo4j.fabric.bootstrap.EnterpriseFabricServicesBootstrap;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
@@ -183,7 +185,10 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         globalProcedures.register( new ClusteredDatabaseStateProcedure( databaseManager.databaseIdRepository(), topologyService ) );
         globalProcedures.register( new QuarantineProcedure( quarantineOperator,
                 globalModule.getGlobalClock(), globalConfig.get( GraphDatabaseSettings.db_timezone ).getZoneId() ) );
-
+        globalProcedures.register(
+                WaitProcedure.clustered( topologyService, identityModule.myself(), globalModule.getGlobalClock(),
+                        catchupComponentsProvider.catchupClientFactory(), globalModule.getLogService().getInternalLogProvider(),
+                        new InfoProvider( databaseManager, reconcilerModule.databaseStateService() ) ) );
     }
 
     @Override
@@ -238,7 +243,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         globalLife.add( dependencies.satisfyDependency( topologyService ) );
 
         int maxChunkSize = globalConfig.get( CausalClusteringSettings.store_copy_chunk_size );
-        var catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, fileSystem, maxChunkSize, logProvider );
+        var catchupServerHandler =
+                new MultiDatabaseCatchupServerHandler( databaseManager, reconcilerModule.databaseStateService(), fileSystem, maxChunkSize, logProvider );
         var installedProtocolsHandler = new InstalledProtocolHandler();
 
         var catchupServer = catchupComponentsProvider.createCatchupServer( installedProtocolsHandler, catchupServerHandler );

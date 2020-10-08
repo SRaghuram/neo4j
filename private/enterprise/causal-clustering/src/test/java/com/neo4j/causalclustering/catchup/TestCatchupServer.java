@@ -34,6 +34,7 @@ import org.neo4j.logging.LogProvider;
 
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.CATCHUP;
 import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory.COMPRESSION;
+import static com.neo4j.configuration.CausalClusteringInternalSettings.experimental_catchup_protocol;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 
@@ -48,7 +49,7 @@ class TestCatchupServer extends Server
 
     private static ChildInitializer childInitializer( CatchupServerHandler catchupServerHandler, LogProvider logProvider )
     {
-        Config config = Config.defaults();
+        Config config = Config.newBuilder().set( experimental_catchup_protocol, true ).build();
         ApplicationSupportedProtocols catchupProtocols = new ApplicationSupportedProtocols( CATCHUP, emptyList() );
         ModifierSupportedProtocols modifierProtocols = new ModifierSupportedProtocols( COMPRESSION, emptyList() );
 

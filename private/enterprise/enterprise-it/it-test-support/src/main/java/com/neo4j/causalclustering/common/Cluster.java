@@ -19,6 +19,7 @@ import com.neo4j.causalclustering.read_replica.TestReadReplicaGraphDatabase;
 import com.neo4j.causalclustering.readreplica.ReadReplicaEditionModule;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 
+import java.net.URI;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -26,6 +27,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -49,6 +51,8 @@ import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
+import org.neo4j.driver.net.ServerAddress;
+import org.neo4j.driver.net.ServerAddressResolver;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.Transaction;
@@ -61,6 +65,7 @@ import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.ports.PortAuthority;
 
+import static java.util.Collections.shuffle;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toList;
@@ -73,7 +78,7 @@ import static org.neo4j.function.Predicates.notNull;
 import static org.neo4j.internal.helpers.collection.Iterables.firstOrNull;
 import static org.neo4j.util.concurrent.Futures.combine;
 
-public class Cluster
+public class Cluster implements ServerAddressResolver
 {
     private static final int DEFAULT_TIMEOUT_MS = (int) MINUTES.toMillis( 3 );
     private static final int DEFAULT_CLUSTER_SIZE = 3;
@@ -771,5 +776,17 @@ public class Cluster
         }
         int ordinal = ThreadLocalRandom.current().nextInt( list.size() );
         return Optional.of( list.get( ordinal ) );
+    }
+
+    @Override
+    public Set<ServerAddress> resolve( ServerAddress ignore )
+    {
+        var serverAddresses = coreMembers()
+                .stream()
+                .map( c -> URI.create( c.routingURI() ) )
+                .map( uri -> ServerAddress.of( uri.getHost(), uri.getPort() ) )
+                .collect( toList() );
+        shuffle( serverAddresses );
+        return new LinkedHashSet<>( serverAddresses );
     }
 }

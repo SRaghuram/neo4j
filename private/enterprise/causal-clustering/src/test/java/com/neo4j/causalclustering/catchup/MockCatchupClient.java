@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
 import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequest;
 import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponse;
+import com.neo4j.causalclustering.catchup.v4.info.InfoResponse;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.helper.OperationProgressMonitor;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
@@ -210,6 +211,12 @@ public class MockCatchupClient implements VersionedCatchupClients
         {
             return handler -> completedFuture( responses.allDatabaseIdsResponse );
         }
+
+        @Override
+        public PreparedRequest<InfoResponse> getReconciledInfo( NamedDatabaseId databaseId )
+        {
+            return handler -> completedFuture( responses.reconciledInfoResponse );
+        }
     }
 
     public static class MockClientResponses
@@ -221,6 +228,7 @@ public class MockCatchupClient implements VersionedCatchupClients
         private Function<PrepareStoreCopyRequest,PrepareStoreCopyResponse> prepareStoreCopyResponse;
         private Function<GetStoreFileRequest,StoreCopyFinishedResponse> storeFiles;
         private GetAllDatabaseIdsResponse allDatabaseIdsResponse;
+        private InfoResponse reconciledInfoResponse;
 
         public MockClientResponses withCoreSnapshot( CoreSnapshot coreSnapshot )
         {
@@ -285,6 +293,12 @@ public class MockCatchupClient implements VersionedCatchupClients
         public MockClientResponses withAllDatabaseResponse( GetAllDatabaseIdsResponse allDatabaseIdsResponse )
         {
             this.allDatabaseIdsResponse = allDatabaseIdsResponse;
+            return this;
+        }
+
+        public MockClientResponses withReconciledTxId( InfoResponse reconciledInfoResponse )
+        {
+            this.reconciledInfoResponse = reconciledInfoResponse;
             return this;
         }
     }

@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponse;
+import com.neo4j.causalclustering.catchup.v4.info.InfoResponse;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 
@@ -91,11 +92,18 @@ public interface VersionedCatchupClients extends AutoCloseable
         {
             throw new UnsupportedOperationException( "Not supported in V3" );
         }
+
+        default PreparedRequest<InfoResponse> getReconciledInfo( NamedDatabaseId databaseId )
+        {
+            throw new UnsupportedOperationException( "Not supported in V3" );
+        }
     }
 
     interface CatchupClientV4 extends CatchupClientV3
     {
         PreparedRequest<GetAllDatabaseIdsResponse> getAllDatabaseIds();
+
+        PreparedRequest<InfoResponse> getReconciledInfo( NamedDatabaseId databaseId );
     }
 
     @FunctionalInterface

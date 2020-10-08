@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
+import com.neo4j.causalclustering.catchup.v4.info.InfoProvider;
 import com.neo4j.causalclustering.common.CausalClusteringTestHelpers;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
@@ -22,6 +23,7 @@ import java.util.concurrent.Executors;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.Label;
@@ -92,6 +94,8 @@ class CatchupServerIT
     private CatchupClientFactory catchupClient;
     private DatabaseManagementService managementService;
     private DatabaseIdRepository databaseIdRepository;
+    private DatabaseManager<?> databaseManager;
+    private DatabaseStateService databaseStateService;
 
     @BeforeEach
     void startDb()
@@ -104,9 +108,12 @@ class CatchupServerIT
         createPropertyIndex();
         addData( db );
 
-        DatabaseManager<?> databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
+        databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
         databaseIdRepository = databaseManager.databaseIdRepository();
-        MultiDatabaseCatchupServerHandler catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, fs, 32768, LOG_PROVIDER );
+        databaseStateService = db.getDependencyResolver().resolveDependency(
+                DatabaseStateService.class );
+        MultiDatabaseCatchupServerHandler catchupServerHandler =
+                new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fs, 32768, LOG_PROVIDER );
 
         executor = Executors.newCachedThreadPool();
         catchupServer = new TestCatchupServer( catchupServerHandler, LOG_PROVIDER, executor );
@@ -290,10 +297,27 @@ class CatchupServerIT
         }
     }
 
+    @Test
+    void shouldProvideExpectedReconciledInfo() throws Exception
+    {
+        var databaseName = "bar";
+        managementService.createDatabase( databaseName );
+
+        NamedDatabaseId namedDatabaseId = databaseIdRepository.getByName( databaseName ).get();
+        try ( var catchupClient = newSimpleCatchupClient( namedDatabaseId ) )
+        {
+            var infoResponse = catchupClient.requestReconcilerInfo( namedDatabaseId );
+
+            var expectedInfo = new InfoProvider( databaseManager, databaseStateService ).getInfo( namedDatabaseId );
+
+            assertEquals( infoResponse, expectedInfo );
+        }
+    }
+
     private void assertTransactionIdMatches( long lastTxId )
     {
         long expectedTransactionId = getCheckPointer( db ).lastCheckPointedTransactionId();
-        assertEquals( expectedTransactionId, lastTxId);
+        assertEquals( expectedTransactionId, lastTxId );
     }
 
     private Path databaseFileToClientFile( Path path )

@@ -41,7 +41,7 @@ public class ClusterConfig
     {
     }
 
-    static Cluster createCluster( Path directory, ClusterConfig clusterConfig )
+    public static Cluster createCluster( Path directory, ClusterConfig clusterConfig )
     {
         return new Cluster( directory, clusterConfig.noCoreMembers, clusterConfig.noReadReplicas, clusterConfig.discoveryServiceType.factory(),
                 clusterConfig.coreParams, clusterConfig.instanceCoreParams, clusterConfig.readReplicaParams, clusterConfig.instanceReadReplicaParams,

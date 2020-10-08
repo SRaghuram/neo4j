@@ -27,7 +27,6 @@ import java.util.stream.Stream;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.clusterResolver;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -122,7 +121,7 @@ class PanicIT
     private void attemptToRestartDefaultDatabase() throws Exception
     {
         // use a routing driver and a single session so that system database bookmarks are passed between transactions
-        try ( var driver = driverFactory.graphDatabaseDriver( clusterResolver( cluster ) );
+        try ( var driver = driverFactory.graphDatabaseDriver( cluster );
               var session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
         {
             session.writeTransaction( tx -> tx.run( "STOP DATABASE " + DEFAULT_DATABASE_NAME ) ).consume();

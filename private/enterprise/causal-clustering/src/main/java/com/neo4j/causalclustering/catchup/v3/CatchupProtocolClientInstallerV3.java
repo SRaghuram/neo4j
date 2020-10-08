@@ -97,10 +97,12 @@ public class CatchupProtocolClientInstallerV3 implements ProtocolInstaller<Proto
         decoders( decoderDispatcher );
 
         ClientNettyPipelineBuilder builder = pipelineBuilder.client( channel, log )
-                                                            .modify( modifiers )
-                                                            .addFraming();
+                .modify( modifiers )
+                .addFraming();
+        encoders( builder ).add( "in_res_type", new ClientMessageTypeHandler( protocol, logProvider ) )
+                .add( "dec_dispatch", decoderDispatcher );
 
-        encoders( builder, decoderDispatcher, protocol ).install();
+        handlers( builder, protocol ).install();
     }
 
     protected void decoders( RequestDecoderDispatcher<CatchupClientProtocol.State> decoderDispatcher )
@@ -117,9 +119,7 @@ public class CatchupProtocolClientInstallerV3 implements ProtocolInstaller<Proto
         decoderDispatcher.register( CatchupClientProtocol.State.ERROR_RESPONSE, new CatchupErrorResponseDecoder() );
     }
 
-    protected ClientNettyPipelineBuilder encoders( ClientNettyPipelineBuilder builder,
-                                                   RequestDecoderDispatcher<CatchupClientProtocol.State> decoderDispatcher,
-                                                   CatchupClientProtocol protocol )
+    protected ClientNettyPipelineBuilder encoders( ClientNettyPipelineBuilder builder )
     {
         return builder
                 .add( "enc_req_tx", new TxPullRequestEncoder() )
@@ -129,10 +129,12 @@ public class CatchupProtocolClientInstallerV3 implements ProtocolInstaller<Proto
                 .add( "enc_req_database_id", new GetDatabaseIdRequestEncoder() )
                 .add( "enc_req_type", new ResponseMessageTypeEncoder() )
                 .add( "enc_res_type", new RequestMessageTypeEncoder() )
-                .add( "enc_req_precopy", new PrepareStoreCopyRequestEncoder() )
-                .add( "in_res_type", new ClientMessageTypeHandler( protocol, logProvider ) )
-                .add( "dec_dispatch", decoderDispatcher )
-                .add( "hnd_res_tx", new TxPullResponseHandler( protocol, handler ) )
+                .add( "enc_req_precopy", new PrepareStoreCopyRequestEncoder() );
+    }
+
+    protected ClientNettyPipelineBuilder handlers( ClientNettyPipelineBuilder builder, CatchupClientProtocol protocol )
+    {
+        return builder.add( "hnd_res_tx", new TxPullResponseHandler( protocol, handler ) )
                 .add( "hnd_res_snapshot", new CoreSnapshotResponseHandler( protocol, handler ) )
                 .add( "hnd_res_copy_fin", new StoreCopyFinishedResponseHandler( protocol, handler ) )
                 .add( "hnd_res_tx_fin", new TxStreamFinishedResponseHandler( protocol, handler ) )

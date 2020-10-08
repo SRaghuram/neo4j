@@ -19,6 +19,7 @@ public enum ResponseMessageType
     INDEX_SNAPSHOT_RESPONSE( (byte) 8 ),
     DATABASE_ID_RESPONSE( (byte) 9 ),
     ALL_DATABASE_IDS_RESPONSE( (byte) 10 ),
+    INFO_RESPONSE( (byte) 11 ),
     ERROR( (byte) 199 ),
     UNKNOWN( (byte) 200 );
 

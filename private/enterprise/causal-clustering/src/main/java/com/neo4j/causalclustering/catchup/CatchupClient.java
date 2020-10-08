@@ -15,6 +15,8 @@ import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
 import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequest;
 import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsRequest;
 import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponse;
+import com.neo4j.causalclustering.catchup.v4.info.InfoRequest;
+import com.neo4j.causalclustering.catchup.v4.info.InfoResponse;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequest;
 import com.neo4j.causalclustering.helper.OperationProgressMonitor;
@@ -265,6 +267,12 @@ class CatchupClient implements VersionedCatchupClients
         public PreparedRequest<GetAllDatabaseIdsResponse> getAllDatabaseIds()
         {
             return handler -> makeBlockingRequest( new GetAllDatabaseIdsRequest(), handler, channel );
+        }
+
+        @Override
+        public PreparedRequest<InfoResponse> getReconciledInfo( NamedDatabaseId namedDatabaseId )
+        {
+            return handler -> makeBlockingRequest( new InfoRequest( namedDatabaseId ), handler, channel );
         }
     }
 

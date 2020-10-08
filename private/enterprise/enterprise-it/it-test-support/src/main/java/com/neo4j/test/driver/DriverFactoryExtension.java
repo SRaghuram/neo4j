@@ -5,6 +5,7 @@
  */
 package com.neo4j.test.driver;
 
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
@@ -35,7 +36,17 @@ class DriverFactoryExtension extends StatefulFieldExtension<DriverFactory> imple
     @Override
     public void afterEach( ExtensionContext context ) throws IOException
     {
+        if ( context.getTestInstanceLifecycle().filter( lifecycle -> lifecycle == TestInstance.Lifecycle.PER_METHOD ).isPresent() )
+        {
+            getStoredValue( context ).close();
+        }
+    }
+
+    @Override
+    public void afterAll( ExtensionContext context ) throws Exception
+    {
         getStoredValue( context ).close();
+        super.afterAll( context );
     }
 
     @Override

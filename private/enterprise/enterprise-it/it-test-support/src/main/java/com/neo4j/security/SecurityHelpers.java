@@ -12,6 +12,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.SessionConfig;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
@@ -27,6 +30,14 @@ public class SecurityHelpers
 {
     private SecurityHelpers()
     {
+    }
+
+    public static void newUser( Driver driver, String username, String password )
+    {
+        try ( Session session = driver.session( SessionConfig.forDatabase( "system" ) ) )
+        {
+            session.writeTransaction( tx -> tx.run( format( "CREATE USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED", username, password ) ) );
+        }
     }
 
     public static void newUser( Transaction tx, String username, String password )

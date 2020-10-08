@@ -12,6 +12,9 @@ import com.neo4j.causalclustering.catchup.v3.CatchupProtocolClientInstallerV3;
 import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsRequestEncoder;
 import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponseDecoder;
 import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponseHandler;
+import com.neo4j.causalclustering.catchup.v4.info.InfoRequestEncoder;
+import com.neo4j.causalclustering.catchup.v4.info.InfoResponseDecoder;
+import com.neo4j.causalclustering.catchup.v4.info.InfoResponseHandler;
 import com.neo4j.causalclustering.protocol.ClientNettyPipelineBuilder;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
@@ -38,20 +41,27 @@ public class CatchupProtocolClientInstallerV4 extends CatchupProtocolClientInsta
     }
 
     public CatchupProtocolClientInstallerV4( NettyPipelineBuilderFactory pipelineBuilder,
-                                             List<ModifierProtocolInstaller<Orientation.Client>> modifiers,
-                                             LogProvider logProvider, CatchupResponseHandler handler,
-                                             CommandReaderFactory commandReaderFactory )
+            List<ModifierProtocolInstaller<Orientation.Client>> modifiers,
+            LogProvider logProvider, CatchupResponseHandler handler,
+            CommandReaderFactory commandReaderFactory )
     {
         super( pipelineBuilder, modifiers, logProvider, handler, commandReaderFactory );
     }
 
     @Override
-    protected ClientNettyPipelineBuilder encoders( ClientNettyPipelineBuilder builder, RequestDecoderDispatcher<CatchupClientProtocol.State> decoderDispatcher,
-                                                   CatchupClientProtocol protocol )
+    protected ClientNettyPipelineBuilder encoders( ClientNettyPipelineBuilder builder )
     {
-        return super.encoders( builder, decoderDispatcher, protocol )
-                    .add( "enc_get_all_database_ids", new GetAllDatabaseIdsRequestEncoder() )
-                    .add( "hnd_get_all_database_ids", new GetAllDatabaseIdsResponseHandler( handler(), protocol ) );
+        return super.encoders( builder )
+                .add( "enc_get_all_database_ids", new GetAllDatabaseIdsRequestEncoder() )
+                .add( "enc_req_info", new InfoRequestEncoder() );
+    }
+
+    @Override
+    protected ClientNettyPipelineBuilder handlers( ClientNettyPipelineBuilder builder, CatchupClientProtocol protocol )
+    {
+        return super.handlers( builder, protocol )
+                .add( "hnd_info", new InfoResponseHandler( handler(), protocol ) )
+                .add( "hnd_get_all_database_ids", new GetAllDatabaseIdsResponseHandler( handler(), protocol ) );
     }
 
     @Override
@@ -59,5 +69,6 @@ public class CatchupProtocolClientInstallerV4 extends CatchupProtocolClientInsta
     {
         super.decoders( decoderDispatcher );
         decoderDispatcher.register( CatchupClientProtocol.State.GET_ALL_DATABASE_IDS, new GetAllDatabaseIdsResponseDecoder() );
+        decoderDispatcher.register( CatchupClientProtocol.State.GET_INFO, new InfoResponseDecoder() );
     }
 }

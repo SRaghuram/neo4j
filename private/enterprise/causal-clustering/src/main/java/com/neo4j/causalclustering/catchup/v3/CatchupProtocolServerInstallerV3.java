@@ -89,7 +89,11 @@ public class CatchupProtocolServerInstallerV3 implements ProtocolInstaller<Orien
                 .modify( modifiers )
                 .addFraming();
 
-        encoders( builder, state ).install();
+        encoders( builder, state )
+                .add( "in_req_type", serverMessageHandler( state ) )
+                .add( "dec_req_dispatch", requestDecoders( state ) )
+                .add( "out_chunked_write", new ChunkedWriteHandler() );
+        handlers( builder, state ).install();
     }
 
     protected ServerNettyPipelineBuilder encoders( ServerNettyPipelineBuilder builder, CatchupServerProtocol state )
@@ -106,11 +110,12 @@ public class CatchupProtocolServerInstallerV3 implements ProtocolInstaller<Orien
                 .add( "enc_snapshot", new CoreSnapshotEncoder() )
                 .add( "enc_file_chunk", new FileChunkEncoder() )
                 .add( "enc_file_header", new FileHeaderEncoder() )
-                .add( "enc_catchup_error", new CatchupErrorResponseEncoder() )
-                .add( "in_req_type", serverMessageHandler( state ) )
-                .add( "dec_req_dispatch", requestDecoders( state ) )
-                .add( "out_chunked_write", new ChunkedWriteHandler() )
-                .add( "hnd_req_database_id", catchupServerHandler.getDatabaseIdRequestHandler( state ) )
+                .add( "enc_catchup_error", new CatchupErrorResponseEncoder() );
+    }
+
+    protected ServerNettyPipelineBuilder handlers( ServerNettyPipelineBuilder builder, CatchupServerProtocol state )
+    {
+        return builder.add( "hnd_req_database_id", catchupServerHandler.getDatabaseIdRequestHandler( state ) )
                 .add( "hnd_req_tx", catchupServerHandler.txPullRequestHandler( state ) )
                 .add( "hnd_req_store_id", catchupServerHandler.getStoreIdRequestHandler( state ) )
                 .add( "hnd_req_store_listing", catchupServerHandler.storeListingRequestHandler( state ) )

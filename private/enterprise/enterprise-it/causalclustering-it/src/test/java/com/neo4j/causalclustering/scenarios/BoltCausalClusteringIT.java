@@ -45,7 +45,6 @@ import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.test.extension.DisabledWithQueryRouting;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.clusterResolver;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.forceReelection;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.runWithLeaderDisabled;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -599,7 +598,7 @@ class BoltCausalClusteringIT
 
     private Driver makeDriver( Cluster cluster ) throws IOException
     {
-        return driverFactory.graphDatabaseDriver( clusterResolver( cluster ) );
+        return driverFactory.graphDatabaseDriver( cluster );
     }
 
     private Driver makeDriver( String uri ) throws IOException

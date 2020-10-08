@@ -22,6 +22,7 @@ import java.time.Duration;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
@@ -117,9 +118,10 @@ abstract class AbstractWithInfrastructureBenchmark extends EditionModuleBackedAb
         var logProvider = AbstractWithInfrastructureBenchmark.logProvider();
         var supportedProtocolCreator = new SupportedProtocolCreator( config(), logProvider );
         var dependencyResolver = db().getDependencyResolver();
+        var databaseStateService = dependencyResolver.resolveDependency( DatabaseStateService.class );
         return CatchupServerBuilder.builder()
                 .catchupServerHandler( new MultiDatabaseCatchupServerHandler( dependencyResolver.resolveDependency( DatabaseManager.class ),
-                        dependencyResolver.resolveDependency( FileSystemAbstraction.class ),
+                        databaseStateService, dependencyResolver.resolveDependency( FileSystemAbstraction.class ),
                         config().get( CausalClusteringSettings.store_copy_chunk_size ),
                         logProvider ) )
                 .catchupProtocols( supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration() )

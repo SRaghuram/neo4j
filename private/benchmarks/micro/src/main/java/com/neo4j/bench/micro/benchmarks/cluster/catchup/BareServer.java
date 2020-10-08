@@ -16,6 +16,7 @@ import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
 import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequest;
 import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsRequest;
+import com.neo4j.causalclustering.catchup.v4.info.InfoResponse;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequest;
 import io.netty.channel.ChannelHandler;
@@ -39,6 +40,7 @@ import static com.neo4j.causalclustering.catchup.CatchupServerProtocol.State.MES
 import static com.neo4j.causalclustering.catchup.ResponseMessageType.ALL_DATABASE_IDS_RESPONSE;
 import static com.neo4j.causalclustering.catchup.ResponseMessageType.CORE_SNAPSHOT;
 import static com.neo4j.causalclustering.catchup.ResponseMessageType.DATABASE_ID_RESPONSE;
+import static com.neo4j.causalclustering.catchup.ResponseMessageType.INFO_RESPONSE;
 import static com.neo4j.causalclustering.catchup.ResponseMessageType.PREPARE_STORE_COPY_RESPONSE;
 import static com.neo4j.causalclustering.catchup.ResponseMessageType.STORE_ID;
 import static com.neo4j.causalclustering.catchup.ResponseMessageType.TX;
@@ -169,6 +171,19 @@ class BareServer implements CatchupServerHandler
             protected void channelRead0( ChannelHandlerContext ctx, GetAllDatabaseIdsRequest msg )
             {
                 respond( ctx, protocol, ALL_DATABASE_IDS_RESPONSE, storeId );
+            }
+        };
+    }
+
+    @Override
+    public ChannelHandler getInfo( CatchupServerProtocol protocol )
+    {
+        return new SimpleChannelInboundHandler<InfoResponse>()
+        {
+            @Override
+            protected void channelRead0( ChannelHandlerContext ctx, InfoResponse msg )
+            {
+                respond( ctx, protocol, INFO_RESPONSE, InfoResponse.create( 1L, null ) );
             }
         };
     }

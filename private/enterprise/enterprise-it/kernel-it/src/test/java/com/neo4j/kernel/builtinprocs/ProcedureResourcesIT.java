@@ -340,6 +340,7 @@ class ProcedureResourcesIT
         case "dbms.upgradeStatusDetails":
         case "dbms.upgradeStatus":
         case "dbms.upgradeDetails":
+        case "dbms.admin.wait":
         case "dbms.upgrade":
             // Must run against system database
             proc.skip = true;

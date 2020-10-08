@@ -33,7 +33,6 @@ import org.neo4j.test.rule.TestDirectory;
 import static com.neo4j.backup.BackupTestUtil.backupArguments;
 import static com.neo4j.backup.BackupTestUtil.runBackupToolFromOtherJvmToGetExitCode;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.backupAddress;
-import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.clusterResolver;
 import static com.neo4j.test.driver.DriverTestHelper.readData;
 import static com.neo4j.test.driver.DriverTestHelper.writeData;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -70,7 +69,7 @@ class BackupCoreIT
     @Test
     void makeSureBackupCanBePerformedFromAnyInstance() throws Throwable
     {
-        var clusteredDriver = driverFactory.graphDatabaseDriver( clusterResolver( cluster ) );
+        var clusteredDriver = driverFactory.graphDatabaseDriver( cluster );
         for ( CoreClusterMember db : cluster.coreMembers() )
         {
             var dbDriver = driverFactory.graphDatabaseDriver( db.directURI() );

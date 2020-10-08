@@ -93,12 +93,14 @@ import org.neo4j.cypher.internal.logical.plans.ShowRoles
 import org.neo4j.cypher.internal.logical.plans.ShowUsers
 import org.neo4j.cypher.internal.logical.plans.StartDatabase
 import org.neo4j.cypher.internal.logical.plans.StopDatabase
+import org.neo4j.cypher.internal.logical.plans.WaitForCompletion
 import org.neo4j.cypher.internal.procs.ActionMapper
 import org.neo4j.cypher.internal.procs.LoggingSystemCommandExecutionPlan
 import org.neo4j.cypher.internal.procs.PredicateExecutionPlan
 import org.neo4j.cypher.internal.procs.QueryHandler
 import org.neo4j.cypher.internal.procs.SystemCommandExecutionPlan
 import org.neo4j.cypher.internal.procs.UpdatingSystemCommandExecutionPlan
+import org.neo4j.cypher.internal.procs.WaitReconciliationExecutionPlan
 import org.neo4j.cypher.internal.runtime.ParameterMapping
 import org.neo4j.cypher.internal.runtime.ast.ParameterFromSlot
 import org.neo4j.cypher.internal.runtime.slottedParameters
@@ -106,6 +108,7 @@ import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.dbms.api.DatabaseExistsException
 import org.neo4j.dbms.api.DatabaseLimitReachedException
 import org.neo4j.dbms.api.DatabaseNotFoundException
+import org.neo4j.dbms.database.DatabaseManager
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.DatabaseAdministrationException
 import org.neo4j.exceptions.DatabaseAdministrationOnFollowerException
@@ -121,10 +124,12 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.kernel.api.exceptions.Status
 import org.neo4j.kernel.api.exceptions.Status.HasStatus
 import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException
+import org.neo4j.kernel.database.DatabaseIdRepository
 import org.neo4j.kernel.impl.store.format.standard.Standard
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.LongValue
 import org.neo4j.values.storable.StringArray
+import org.neo4j.values.storable.StringValue
 import org.neo4j.values.storable.TextArray
 import org.neo4j.values.storable.TextValue
 import org.neo4j.values.storable.Value
@@ -279,7 +284,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             case _ => new IllegalStateException(s"Failed to create the specified role '${runtimeValue(roleName, p)}'.", error)
           }),
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
-        initFunction = (params, _) => {
+        initFunction = params => {
           val name = runtimeValue(roleName, params)
           NameValidator.assertValidRoleName(name)
           NameValidator.assertUnreservedRoleName("create", name)
@@ -336,7 +341,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             case (error, p) => new IllegalStateException(s"Failed to delete the specified role '${runtimeValue(roleName, p)}'.", error)
           },
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
-        initFunction = (params, _) => NameValidator.assertUnreservedRoleName("delete", runtimeValue(roleName, params)),
+        initFunction = params => NameValidator.assertUnreservedRoleName("delete", runtimeValue(roleName, params)),
         parameterConverter = roleNameFields.nameConverter
       )
 
@@ -361,7 +366,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             case (e, p) => new IllegalStateException(s"Failed to grant role '${runtimeValue(roleName, p)}' to user '${runtimeValue(userName, p)}'.", e)
           },
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
-        initFunction = (p, _) => {
+        initFunction = p => {
           runtimeValue(roleName, p) != "PUBLIC"
         },
         parameterConverter = (tx, p) => userNameFields.nameConverter(tx, roleNameFields.nameConverter(tx, p))
@@ -386,7 +391,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         },
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
         parameterConverter = (tx, p) => userNameFields.nameConverter(tx, roleNameFields.nameConverter(tx, p)),
-        initFunction = (params, _) => NameValidator.assertUnreservedRoleName("revoke", runtimeValue(roleName, params))
+        initFunction = params => NameValidator.assertUnreservedRoleName("revoke", runtimeValue(roleName, params))
       )
 
     // GRANT/DENY/REVOKE _ ON DBMS TO role
@@ -743,7 +748,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             case _ => new IllegalStateException(s"Failed to create the specified database '${runtimeValue(dbName, params)}'.", error)
           }),
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
-        parameterConverter = (tx, m) => virtualMapConverter(tx, nameFields.nameConverter(tx, m))
+        parameterConverter = (tx, m) => virtualMapConverter(tx, nameFields.nameConverter(tx, m)),
+        contextUpdates = params => VirtualValues.map(Array(internalKey("databaseUuid")), Array(params.get(internalKey("uuid"))))
       )
 
     // Used to ensure we don't create to many databases,
@@ -881,6 +887,33 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping),
         command,
         (message, securityContext) => authManager.log(message, securityContext)
+      )
+    case WaitForCompletion(source, dbName, waitForCompletion) => (context, parameterMapping) =>
+      import scala.compat.java8.OptionConverters.RichOptionalGeneric
+
+      val nameFields = getNameFields("databaseName", dbName, valueMapper = s => new NormalizedDatabaseName(s).name())
+      val databaseIdRepository: DatabaseIdRepository = resolver.resolveDependency(classOf[DatabaseManager[_]]).databaseIdRepository()
+
+      def resolveDatabaseUuid(dbname: String): Option[UUID] =
+        databaseIdRepository.getByName(dbname).asScala.map(_.databaseId().uuid())
+
+      WaitReconciliationExecutionPlan("WaitForCompletion", normalExecutionEngine,
+        VirtualValues.map(Array(nameFields.nameKey), Array(nameFields.nameValue)),
+        QueryHandler.handleError {
+          case (error: HasStatus, _) => error
+        },
+        nameFields.nameKey,
+        waitForCompletion.timeout,
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
+        parameterConverter = (t, p) => {
+          // For START / STOP / DROP database, lookup the database UUID from the DatabaseIdRepository
+          // For CREATE, it won't be there but we pass it through the SystemUpdateCountingQueryContext when
+          // it is created
+          val updatedParams = nameFields.nameConverter(t,p)
+          val resolvedDatabaseName = updatedParams.get(nameFields.nameKey).asInstanceOf[StringValue].stringValue()
+          resolveDatabaseUuid(resolvedDatabaseName).map(uuid =>
+            updatedParams.updatedWith(internalKey("databaseUuid"), Values.stringValue(uuid.toString))).getOrElse(updatedParams)
+        }
       )
   }
 

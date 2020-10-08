@@ -28,13 +28,11 @@ import org.assertj.core.api.HamcrestCondition;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.net.URI;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -49,8 +47,6 @@ import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
-import org.neo4j.driver.net.ServerAddress;
-import org.neo4j.driver.net.ServerAddressResolver;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
@@ -77,25 +73,24 @@ import static com.neo4j.causalclustering.core.RaftServerFactory.RAFT_SERVER_NAME
 import static com.neo4j.causalclustering.net.BootstrapConfiguration.clientConfig;
 import static com.neo4j.causalclustering.net.BootstrapConfiguration.serverConfig;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.CATCHUP;
+import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.UNKNOWN;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyList;
-import static java.util.Collections.shuffle;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.keep_logical_logs;
@@ -107,21 +102,6 @@ public final class CausalClusteringTestHelpers
 {
     private CausalClusteringTestHelpers()
     {
-    }
-
-    public static ServerAddressResolver clusterResolver( Cluster cluster )
-    {
-        return address ->
-        {
-            var serverAddresses = cluster
-                    .coreMembers()
-                    .stream()
-                    .map( c -> URI.create( c.routingURI() ) )
-                    .map( uri -> ServerAddress.of( uri.getHost(), uri.getPort() ) )
-                    .collect( toList() );
-            shuffle( serverAddresses );
-            return new LinkedHashSet<>( serverAddresses );
-        };
     }
 
     public static CatchupClientFactory getCatchupClient( LogProvider logProvider, JobScheduler scheduler )
@@ -218,7 +198,7 @@ public final class CausalClusteringTestHelpers
                 {
                     return desiredLeader;
                 }
-                assertThat( "Desired leader is not one of the followers", followers.contains( desiredLeader ), is( true ) );
+                assertTrue( followers.contains( desiredLeader ), "Desired leader is not one of the followers" );
             }
             else
             {
@@ -270,7 +250,7 @@ public final class CausalClusteringTestHelpers
 
     public static void removeCheckPointFromDefaultDatabaseTxLog( ClusterMember member ) throws IOException
     {
-        assertThat( member.isShutdown(), is( true ) );
+        assertTrue( member.isShutdown() );
 
         var fs = new DefaultFileSystemAbstraction();
         var databaseLayout = member.databaseLayout();
@@ -281,7 +261,7 @@ public final class CausalClusteringTestHelpers
                 .build();
 
         var checkPointsRemoved = removeCheckPointsFromTxLog( logFiles, fs );
-        assertThat( checkPointsRemoved, greaterThan( 0 ) );
+        assertThat( checkPointsRemoved ).isGreaterThan( 0 );
     }
 
     public static void createNode( String databaseName, Cluster cluster ) throws Exception
@@ -312,9 +292,17 @@ public final class CausalClusteringTestHelpers
 
     public static void createDatabase( String databaseName, Cluster cluster ) throws Exception
     {
+        createDatabase( databaseName, cluster, false );
+    }
+
+    public static void createDatabase( String databaseName, Cluster cluster, boolean wait ) throws Exception
+    {
+        var waitStr = wait ? "WAIT" : "NOWAIT";
         cluster.systemTx( ( sys, tx ) ->
         {
-            tx.execute( String.format( "CREATE DATABASE `%s`", databaseName ) );
+            try ( var result = tx.execute( String.format( "CREATE DATABASE `%s` %s", databaseName, waitStr ) ) )
+            {
+            }
             tx.commit();
         } );
     }
@@ -361,7 +349,7 @@ public final class CausalClusteringTestHelpers
     public static void assertDatabaseEventuallyStarted( String databaseName, Cluster cluster )
     {
         assertEventually( () -> "Database is not started on all members: " + memberDatabaseStates( databaseName, cluster ),
-                          () -> allMembersHaveDatabaseState( cluster, databaseName ), allStatesMatch( STARTED ), 10, MINUTES );
+                          () -> databaseStates( cluster, databaseName ), allStatesMatch( STARTED ), 10, MINUTES );
     }
 
     public static void assertDatabaseEventuallyStarted( String databaseName, Set<? extends ClusterMember> members )
@@ -373,7 +361,7 @@ public final class CausalClusteringTestHelpers
     public static void assertDatabaseEventuallyStopped( String databaseName, Cluster cluster )
     {
         assertEventually( () -> "Database is not stopped on all members: " + memberDatabaseStates( databaseName, cluster ),
-                          () -> allMembersHaveDatabaseState( cluster, databaseName ), allStatesMatch( STOPPED ), 1, MINUTES );
+                          () -> databaseStates( cluster, databaseName ), allStatesMatch( STOPPED ), 1, MINUTES );
     }
 
     public static void assertDatabaseEventuallyStopped( String databaseName, Set<ClusterMember> members )
@@ -385,13 +373,33 @@ public final class CausalClusteringTestHelpers
     public static void assertDatabaseEventuallyDoesNotExist( String databaseName, Cluster cluster )
     {
         assertEventually( () -> "Database is not absent on all members: " + memberDatabaseStates( databaseName, cluster ),
-                          () -> allMembersHaveDatabaseState( cluster, databaseName ), allStatesMatch( UNKNOWN ), 1, MINUTES );
+                () -> databaseStates( cluster, databaseName ), allStatesMatch( UNKNOWN ), 1, MINUTES );
     }
 
     public static void assertDatabaseEventuallyDoesNotExist( String databaseName, Set<ClusterMember> members )
     {
         assertEventually( () -> "Database is not absent on all members: " + memberDatabaseStates( databaseName, members ),
-                          () -> membersHaveDatabaseState( members, databaseName ), allStatesMatch( UNKNOWN ), 1, MINUTES );
+                () -> membersHaveDatabaseState( members, databaseName ), allStatesMatch( UNKNOWN ), 1, MINUTES );
+    }
+
+    public static void assertDatabaseHasStarted( String databaseName, Cluster cluster )
+    {
+        assertDatabaseHasOperatorState( databaseName, cluster, STARTED );
+    }
+
+    public static void assertDatabaseHasStopped( String databaseName, Cluster cluster )
+    {
+        assertDatabaseHasOperatorState( databaseName, cluster, STOPPED );
+    }
+
+    public static void assertDatabaseHasDropped( String databaseName, Cluster cluster )
+    {
+        assertDatabaseHasOperatorState( databaseName, cluster, DROPPED, UNKNOWN );
+    }
+
+    private static void assertDatabaseHasOperatorState( String databaseName, Cluster cluster, EnterpriseOperatorState... enterpriseOperatorState )
+    {
+        assertThat( databaseStates( cluster, databaseName ) ).isSubsetOf( enterpriseOperatorState );
     }
 
     private static Condition<List<EnterpriseOperatorState>> allStatesMatch( EnterpriseOperatorState state )
@@ -402,7 +410,7 @@ public final class CausalClusteringTestHelpers
     public static void assertUserDoesNotExist( String userName, Cluster cluster )
     {
         assertEventually( () -> "User is not absent on all members: " + memberUserStates( cluster ),
-                          () -> noMembersHaveUserAndNoErrors( cluster, userName ), TRUE, 1, MINUTES );
+                () -> noMembersHaveUserAndNoErrors( cluster, userName ), TRUE, 1, MINUTES );
     }
 
     public static void assertRoleDoesNotExist( String roleName, Cluster cluster )
@@ -411,7 +419,7 @@ public final class CausalClusteringTestHelpers
                           () -> noMembersHaveRoleAndNoErrors( cluster, roleName ), TRUE, 1, MINUTES );
     }
 
-    private static List<EnterpriseOperatorState> allMembersHaveDatabaseState( Cluster cluster, String databaseName )
+    public static List<EnterpriseOperatorState> databaseStates( Cluster cluster, String databaseName )
     {
         return membersHaveDatabaseState( cluster.allMembers(), databaseName );
     }
@@ -577,7 +585,7 @@ public final class CausalClusteringTestHelpers
         @Override
         public <T> T select( Class<T> type, Iterable<? extends T> candidates )
         {
-            assertThat( type, is( Server.class ) );
+            assertThat( type ).isEqualTo( Server.class );
             return Iterables.stream( candidates )
                     .map( Server.class::cast )
                     .filter( server -> RAFT_SERVER_NAME.equals( server.name() ) )

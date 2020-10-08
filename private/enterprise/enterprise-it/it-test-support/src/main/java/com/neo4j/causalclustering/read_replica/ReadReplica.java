@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.OnlineBackupSettings;
 
@@ -109,6 +110,7 @@ public class ReadReplica implements ClusterMember
         config.set( CausalClusteringSettings.transaction_listen_address, new SocketAddress( listenAddress, txPort ) );
         config.set( CausalClusteringSettings.transaction_advertised_address, new SocketAddress( txPort ) );
         config.set( CausalClusteringSettings.cluster_topology_refresh, TOPOLOGY_REFRESH_INTERVAL );
+        config.set( CausalClusteringInternalSettings.experimental_catchup_protocol, true );
         config.set( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( listenAddress, backupPort ) );
         config.set( GraphDatabaseSettings.transaction_logs_root_path, neo4jHome.resolve( "replica-tx-logs-" + index ).toAbsolutePath() );
         memberConfig = config.build();

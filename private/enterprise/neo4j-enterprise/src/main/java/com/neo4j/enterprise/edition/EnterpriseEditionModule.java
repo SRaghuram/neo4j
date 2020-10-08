@@ -6,6 +6,7 @@
 package com.neo4j.enterprise.edition;
 
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
+import com.neo4j.causalclustering.catchup.v4.info.InfoProvider;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.TransactionBackupServiceProvider;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
@@ -18,6 +19,7 @@ import com.neo4j.dbms.EnterpriseSystemGraphDbmsModel;
 import com.neo4j.dbms.StandaloneDbmsReconcilerModule;
 import com.neo4j.dbms.database.EnterpriseMultiDatabaseManager;
 import com.neo4j.dbms.database.MultiDatabaseManager;
+import com.neo4j.dbms.procedures.wait.WaitProcedure;
 import com.neo4j.fabric.auth.FabricAuthManagerWrapper;
 import com.neo4j.fabric.bootstrap.EnterpriseFabricServicesBootstrap;
 import com.neo4j.fabric.localdb.FabricSystemGraphComponent;
@@ -33,6 +35,7 @@ import com.neo4j.server.enterprise.EnterpriseNeoWebServer;
 
 import java.time.Duration;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -43,6 +46,7 @@ import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.cypher.internal.javacompat.EnterpriseCypherEngineProvider;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -51,6 +55,7 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.DefaultSystemGraphInitializer;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.dbms.database.SystemGraphInitializer;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.fabric.FabricDatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -123,6 +128,10 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         super.registerEditionSpecificProcedures( globalProcedures, databaseManager );
         globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
+        globalProcedures.register(
+                WaitProcedure.standalone( ServerId.of( new UUID( 0, 1 ) ), globalModule.getGlobalConfig().get( BoltConnector.advertised_address ),
+                        globalModule.getGlobalClock(), globalModule.getLogService().getInternalLogProvider(),
+                        new InfoProvider( databaseManager, databaseStateService ) ) );
         fabricServicesBootstrap.registerProcedures( globalProcedures );
     }
 
@@ -288,7 +297,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
                 internalLogProvider, supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration(),
                 supportedProtocolCreator.createSupportedModifierProtocols(),
                 pipelineBuilders.backupServer(),
-                new MultiDatabaseCatchupServerHandler( databaseManager, fs, maxChunkSize, internalLogProvider ),
+                new MultiDatabaseCatchupServerHandler( databaseManager, databaseStateService, fs, maxChunkSize, internalLogProvider ),
                 new InstalledProtocolHandler(),
                 jobScheduler,
                 portRegister );
