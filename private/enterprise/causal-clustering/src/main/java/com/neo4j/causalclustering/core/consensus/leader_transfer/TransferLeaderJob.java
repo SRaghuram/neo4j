@@ -5,20 +5,22 @@
  */
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
+import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.ServerGroupName;
 import com.neo4j.configuration.ServerGroupsSupplier;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.causalclustering.core.consensus.leader_transfer.LeadershipPriorityGroupSetting.READER;
-import static java.util.function.Function.identity;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toMap;
 
@@ -93,11 +95,17 @@ class TransferLeaderJob implements Runnable
         return prioritisedGroups;
     }
 
-    private static Map<NamedDatabaseId,ServerGroupName> prioritisedGroups( Config config, List<NamedDatabaseId> existingDatabases )
+    private static Map<NamedDatabaseId,ServerGroupName> prioritisedGroups( Config config, List<NamedDatabaseId> myLeaderships )
     {
         var prioritisedGroupsPerDatabase = READER.read( config );
-        return existingDatabases.stream()
-                                .filter( db -> prioritisedGroupsPerDatabase.containsKey( db.name() ) )
-                                .collect( toMap( identity(), db -> prioritisedGroupsPerDatabase.get( db.name() ) ) );
+        var defaultPriorityGroup = config.get( CausalClusteringSettings.default_leadership_priority_group );
+        if ( Objects.equals( defaultPriorityGroup, ServerGroupName.EMPTY ) && prioritisedGroupsPerDatabase.isEmpty() )
+        {
+            return Map.of();
+        }
+        return myLeaderships.stream()
+                            .map( dbId -> Pair.of( dbId, prioritisedGroupsPerDatabase.getOrDefault( dbId.name(), defaultPriorityGroup ) ) )
+                            .filter( pair -> !Objects.equals( pair.other(), ServerGroupName.EMPTY ) )
+                            .collect( toMap( Pair::first, Pair::other ) );
     }
 }

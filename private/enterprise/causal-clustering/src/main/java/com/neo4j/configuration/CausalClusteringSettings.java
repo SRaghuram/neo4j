@@ -95,6 +95,12 @@ public class CausalClusteringSettings implements SettingsDeclaration
         NO_BALANCING, EQUAL_BALANCING
     }
 
+    @Description( "The name of a server_group whose members should be prioritized as leaders for all databases for which no explicitly leadership " +
+                  "priority group has been set. This does not guarantee that members of this group will be leader at all times, but the cluster will " +
+                  "attempt to transfer leadership to such a member when possible. Using this setting will disable leadership balancing." )
+    public static final Setting<ServerGroupName> default_leadership_priority_group =
+            newBuilder("causal_clustering.leadership_priority_group", SERVER_GROUP_NAME, ServerGroupName.EMPTY ).build();
+
     @Description( "Which strategy to use when transferring database leaderships around a cluster. This can be one of `equal_balancing` or `no_balancing`. " +
                   "`equal_balancing` automatically ensures that each Core server holds the leader role for an equal number of databases." +
                   "`no_balancing` prevents any automatic balancing of the leader role." +

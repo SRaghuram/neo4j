@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.core.consensus.leader_transfer;
 import com.neo4j.configuration.ServerGroupName;
 
 import java.util.Map;
-import java.util.Objects;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
@@ -70,7 +69,6 @@ public class LeadershipPriorityGroupSetting extends GroupSetting
                     .entrySet()
                     .stream()
                     .map( entry -> Pair.of( entry.getKey(), config.get( entry.getValue().setting() ) ) )
-                    .filter( pair -> !Objects.equals( pair.other(), ServerGroupName.EMPTY ) )
                     .collect( toMap( Pair::first, Pair::other ) );
         }
     }

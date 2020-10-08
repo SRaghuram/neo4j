@@ -28,6 +28,7 @@ com.neo4j.configuration.CausalClusteringSettings::cluster_topology_refresh org.n
 com.neo4j.configuration.CausalClusteringSettings::command_applier_parallelism org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
 com.neo4j.configuration.CausalClusteringSettings::compression_implementations org.neo4j.graphdb.config.Setting<java.util.List<java.lang.String>> public static final
 com.neo4j.configuration.CausalClusteringSettings::connect_randomly_to_server_group_strategy org.neo4j.graphdb.config.Setting<java.util.List<com.neo4j.configuration.ServerGroupName>> public static final
+com.neo4j.configuration.CausalClusteringSettings::default_leadership_priority_group org.neo4j.graphdb.config.Setting<com.neo4j.configuration.ServerGroupName> public static final
 com.neo4j.configuration.CausalClusteringSettings::discovery_advertised_address org.neo4j.graphdb.config.Setting<org.neo4j.configuration.helpers.SocketAddress> public static final
 com.neo4j.configuration.CausalClusteringSettings::discovery_listen_address org.neo4j.graphdb.config.Setting<org.neo4j.configuration.helpers.SocketAddress> public static final
 com.neo4j.configuration.CausalClusteringSettings::discovery_type org.neo4j.graphdb.config.Setting<com.neo4j.configuration.DiscoveryType> public static final

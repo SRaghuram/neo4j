@@ -31,7 +31,7 @@ class LeadershipPriorityGroupSettingReaderTest
         var setting = Map.of(
                 one.setting().name(), "1",
                 two.setting().name(), "2",
-                three.setting().name(), "3",
+                three.setting().name(), ServerGroupName.EMPTY.getRaw(),
                 invalid.setting().name(), "4" );
         var config = Config.newBuilder()
                 .setRaw( setting ).build();
@@ -40,7 +40,7 @@ class LeadershipPriorityGroupSettingReaderTest
         assertThat( read ).hasSize( 3 );
         assertEquals( read.get( "one" ), new ServerGroupName( "1" ) );
         assertEquals( read.get( "two" ), new ServerGroupName( "2" ) );
-        assertEquals( read.get( "three" ), new ServerGroupName( "3" ) );
+        assertEquals( read.get( "three" ), ServerGroupName.EMPTY );
     }
 
     @Test

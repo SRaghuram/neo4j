@@ -106,6 +106,36 @@ class LeaderTransferIT
     }
 
     @Test
+    void shouldTransferLeadershipToMemberInDefaultGroupIfNoPrioritisedGroupIsSet() throws Exception
+    {
+        // given
+        var config = clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 0 )
+                .withSharedCoreParam( CausalClusteringSettings.default_leadership_priority_group, "default_prio" )
+                .withSharedCoreParam( CausalClusteringInternalSettings.leader_transfer_interval, "5s" )
+                .withSharedCoreParam( CausalClusteringSettings.leader_balancing, "equal_balancing" );
+        var cluster = clusterFactory.createCluster( config );
+
+        cluster.start();
+
+        cluster.awaitLeader();
+
+        var additionalCore = cluster.addCoreMemberWithIndex( 3 );
+        additionalCore.config().set( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "default_prio" ) );
+
+        additionalCore.start();
+
+        assertLeaderIsOnCorrectMember( cluster, GraphDatabaseSettings.DEFAULT_DATABASE_NAME, additionalCore );
+        assertLeaderIsOnCorrectMember( cluster, SYSTEM_DATABASE_NAME, additionalCore );
+
+        createDatabase( databaseFoo, cluster );
+
+        assertDatabaseEventuallyStarted( databaseFoo, cluster );
+        assertLeaderIsOnCorrectMember( cluster, databaseFoo, additionalCore );
+    }
+
+    @Test
     void shouldEventuallyBalanceLeadershipsToNewMembers() throws Exception
     {
         // given
