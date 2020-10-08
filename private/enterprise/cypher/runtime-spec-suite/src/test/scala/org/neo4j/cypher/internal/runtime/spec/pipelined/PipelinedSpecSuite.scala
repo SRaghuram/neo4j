@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.WITH_MORSEL_SIZE
 import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
+import org.neo4j.cypher.internal.runtime.spec.SaveGeneratedSource
 import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedDynamicLimitPropagationTest.CONFIGURED_MORSEL_SIZE
 import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedSpecSuite.FUSING
 import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedSpecSuite.NO_FUSING
@@ -127,8 +128,28 @@ object PipelinedSpecSuite {
   val NO_FUSING: Edition[EnterpriseRuntimeContext] = ENTERPRISE.WITH_NO_FUSING(ENTERPRISE.DEFAULT)
 }
 
-trait PipelinedSpecSuite extends AssertFusingSucceeded {
+trait PipelinedSpecSuite extends AssertFusingSucceeded with SaveGeneratedSource {
   self: RuntimeTestSuite[EnterpriseRuntimeContext] =>
+
+  /**
+   * To debug generated source code for fused pipelines in pipelined runtime:
+   * Set this flag to true, and set a breakpoint in [[org.neo4j.cypher.internal.PipelinedRuntime.PipelinedExecutionPlan.run]].
+   * When you reach the breakpoint you should be able to find the generated source in `[maven-module]/target/generated-test-sources/cypher`.
+   * (If you are using IntelliJ make sure to "Mark Directory as" "Generated Sources Root")
+   *
+   * NOTE: You need to set your run/debug configuration working directory to the directory of the Maven module containing your test.
+   *       (If you are using IntelliJ this is probably the default unless you have changed your run/debug configuration template)
+   *
+   * See [[org.neo4j.cypher.internal.runtime.spec.SaveGeneratedSource]] for more details.
+   */
+  val DEBUG_GENERATED_SOURCE_CODE: Boolean = false
+
+  val saveGeneratedSourceEnabled: Boolean = DEBUG_GENERATED_SOURCE_CODE
+
+  // Only enable this if you want to inspect the generated source files after the test run. Otherwise they will be deleted automatically.
+  override val keepSourceFilesAfterTestFinishes: Boolean = false
+
+  override val debugOptions: Set[String] = if (DEBUG_GENERATED_SOURCE_CODE) Set("generate_java_source") else Set.empty[String]
 
   abstract override def withFixture(test: NoArgTest): Outcome = {
     withClue(s"Failed with MORSEL_SIZE = $MORSEL_SIZE${lineSeparator()}")(super.withFixture(test))

@@ -23,7 +23,7 @@ class StartsWithImplementationAcceptanceTest extends ExecutionEngineFunSuite wit
   var eNode: Node = _
   var fNode: Node = _
 
-  override def initTest() {
+  override protected def initTest() {
     super.initTest()
     aNode = createLabeledNode(Map("name" -> "ABCDEF"), "LABEL")
     bNode = createLabeledNode(Map("name" -> "AB"), "LABEL")

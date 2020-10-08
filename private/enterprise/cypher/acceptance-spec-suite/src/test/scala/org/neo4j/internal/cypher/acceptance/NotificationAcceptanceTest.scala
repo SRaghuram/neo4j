@@ -56,7 +56,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     GraphDatabaseInternalSettings.query_non_indexed_label_warning_threshold -> java.lang.Long.valueOf(10)
   )
 
-  override def initTest(): Unit = {
+  override protected def initTest(): Unit = {
     super.initTest()
     val procedures = this.graph.getDependencyResolver.resolveDependency(classOf[GlobalProcedures])
     procedures.registerProcedure(classOf[NotificationAcceptanceTest.TestProcedures])
