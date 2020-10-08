@@ -617,7 +617,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           // Value isMatch = Values.NO_VALUE;
           // boolean isNull = false;
           declare[ListValue](listVar),
-          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
+          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), nullCheckIfRequired(collection))),
           declare[java.util.Iterator[AnyValue]](iterVariable),
           assign(iterVariable, invoke(load(listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
           declare[Value](isMatch),
