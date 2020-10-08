@@ -331,7 +331,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val result = executeWith(Configs.VarExpand,
       query =
         "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
-          "WHERE any(r IN relationships(p) r:T) " +
+          "WHERE any(r IN relationships(p) WHERE r:T) " +
           "RETURN " +
           " any(r IN relationships(p) WHERE r.x = 1) AS someTrue," +
           " any(r IN relationships(p) WHERE r.x = 0) AS allFalse," +

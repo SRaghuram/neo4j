@@ -1781,7 +1781,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val r = ValueUtils.fromRelationshipEntity(relate(createNode(), createNode(), "B"))
 
     val offset = 0
-    val resolvedLabelTokenId = query.getRelTypeId(typeName)
+    val resolvedLabelTokenId = query.getOrCreateRelTypeId(typeName)
     resolvedLabelTokenId should be >= 0
 
     val expression = HasTypesFromSlot(offset, Seq(resolvedLabelTokenId), Seq.empty)
