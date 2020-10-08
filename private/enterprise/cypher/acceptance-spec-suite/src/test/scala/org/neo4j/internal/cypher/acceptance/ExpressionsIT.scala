@@ -1397,8 +1397,11 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("contains, startsWith and endsWith on nullable function") {
     evaluate(compile(contains(function("toLower", parameter(0)), parameter(1))), params(NO_VALUE, stringValue("hi"))) should equal(NO_VALUE)
+    evaluate(compile(contains(parameter(0), function("toLower", parameter(1)))), params(stringValue("hi"), NO_VALUE)) should equal(NO_VALUE)
     evaluate(compile(startsWith(function("toLower", parameter(0)), parameter(1))), params(NO_VALUE, stringValue("hi"))) should equal(NO_VALUE)
+    evaluate(compile(startsWith(parameter(0), function("toLower", parameter(1)))), params(stringValue("hi"), NO_VALUE)) should equal(NO_VALUE)
     evaluate(compile(endsWith(function("toLower", parameter(0)), parameter(1))), params(NO_VALUE, stringValue("hi"))) should equal(NO_VALUE)
+    evaluate(compile(endsWith(parameter(0), function("toLower", parameter(1)))), params(stringValue("hi"), NO_VALUE)) should equal(NO_VALUE)
   }
 
   test("in") {

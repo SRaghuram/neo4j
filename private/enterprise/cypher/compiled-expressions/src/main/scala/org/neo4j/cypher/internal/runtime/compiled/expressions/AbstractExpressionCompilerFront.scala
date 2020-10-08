@@ -1016,7 +1016,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         IntermediateExpression(
           invokeStatic(method[Values, BooleanValue, Boolean]("booleanValue"),
             invoke(block(lazyLeft, cast[TextValue](load(leftVariableName))), method[TextValue, Boolean, TextValue]("startsWith"),
-              block(lazyRight, cast[TextValue](r.ir)))),
+              block(lazyRight, cast[TextValue](load(rightVariableName))))),
           l.fields ++ r.fields, l.variables ++ r.variables,
           Set(block(lazyLeft, not(instanceOf[TextValue](load(leftVariableName)))),
             block(lazyRight, not(instanceOf[TextValue](load(rightVariableName))))))
@@ -1033,7 +1033,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         IntermediateExpression(
           invokeStatic(method[Values, BooleanValue, Boolean]("booleanValue"),
             invoke(block(lazyLeft, cast[TextValue](load(leftVariableName))), method[TextValue, Boolean, TextValue]("endsWith"),
-              block(lazyRight, cast[TextValue](r.ir)))),
+              block(lazyRight, cast[TextValue](load(rightVariableName))))),
           l.fields ++ r.fields, l.variables ++ r.variables,
           Set(block(lazyLeft, not(instanceOf[TextValue](load(leftVariableName)))),
             block(lazyRight, not(instanceOf[TextValue](load(rightVariableName))))))
@@ -1050,7 +1050,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         IntermediateExpression(
           invokeStatic(method[Values, BooleanValue, Boolean]("booleanValue"),
             invoke(block(lazyLeft, cast[TextValue](load(leftVariableName))), method[TextValue, Boolean, TextValue]("contains"),
-              block(lazyRight, cast[TextValue](r.ir)))),
+              block(lazyRight, cast[TextValue](load(rightVariableName))))),
           l.fields ++ r.fields, l.variables ++ r.variables,
           Set(block(lazyLeft, not(instanceOf[TextValue](load(leftVariableName)))),
             block(lazyRight, not(instanceOf[TextValue](load(rightVariableName))))))
