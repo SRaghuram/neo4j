@@ -16,11 +16,15 @@ import akka.japi.pf.ReceiveBuilder;
 import com.neo4j.causalclustering.discovery.PublishRaftIdOutcome;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
+import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+
+import org.neo4j.kernel.database.DatabaseId;
 
 import static com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.RAFT_ID;
 
@@ -44,9 +48,22 @@ public class RaftIdActor extends BaseReplicatedDataActor<LWWMap<RaftId,RaftMembe
     }
 
     @Override
-    protected void sendInitialDataToReplicator()
+    protected void sendInitialDataToReplicator( DiscoveryMember memberSnapshot )
     {
-        // no-op
+        var localRaftIdsMap = memberSnapshot.databaseMemberships().entrySet().stream()
+                                            .reduce( LWWMap.create(), this::addRaftId, LWWMap::merge );
+
+        if ( !localRaftIdsMap.isEmpty() )
+        {
+            modifyReplicatedData( key, map -> map.merge( localRaftIdsMap ) );
+        }
+    }
+
+    private LWWMap<RaftId,RaftMemberId> addRaftId( LWWMap<RaftId,RaftMemberId> acc, Map.Entry<DatabaseId,RaftMemberId> entry )
+    {
+        var raftId = RaftId.from( entry.getKey() );
+        var memberId = entry.getValue();
+        return acc.put( cluster, raftId, memberId, clock );
     }
 
     @Override

@@ -5,14 +5,26 @@
  */
 package com.neo4j.causalclustering.discovery.member;
 
+import com.neo4j.causalclustering.core.consensus.LeaderInfo;
+import com.neo4j.causalclustering.identity.RaftMemberId;
+
+import java.util.Map;
 import java.util.Set;
 
-import org.neo4j.dbms.identity.ServerId;
-import org.neo4j.kernel.database.NamedDatabaseId;
+import org.neo4j.dbms.DatabaseState;
+import org.neo4j.dbms.OperatorState;
+import org.neo4j.kernel.database.DatabaseId;
 
+/**
+ * Immutable snapshot of information about this discovery member
+ */
 public interface DiscoveryMember
 {
-    ServerId id();
+    Map<DatabaseId,LeaderInfo> databaseLeaderships();
 
-    Set<NamedDatabaseId> startedDatabases();
+    Set<DatabaseId> databasesInState( OperatorState operatorState );
+
+    Map<DatabaseId,DatabaseState> databaseStates();
+
+    Map<DatabaseId,RaftMemberId> databaseMemberships();
 }

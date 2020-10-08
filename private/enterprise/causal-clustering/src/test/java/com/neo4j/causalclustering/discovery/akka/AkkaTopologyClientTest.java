@@ -9,11 +9,17 @@ import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
+import com.neo4j.dbms.EnterpriseDatabaseState;
+import com.neo4j.dbms.EnterpriseOperatorState;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.DatabaseState;
+import org.neo4j.dbms.StubDatabaseStateService;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.time.Clocks;
 
@@ -37,12 +43,16 @@ class AkkaTopologyClientTest
 
         var databaseId = databaseIdRepository.getRaw( "people" );
         var identityModule = new StubClusteringIdentityModule();
+        var databaseStates = Map.<NamedDatabaseId,DatabaseState>of( databaseId, new EnterpriseDatabaseState( databaseId, EnterpriseOperatorState.STARTED ) );
+        var databaseStateService = new StubDatabaseStateService( databaseStates, EnterpriseDatabaseState::unknown );
         var memberId1 = identityModule.memberId();
         var memberId2 = IdFactory.randomMemberId();
         var memberId3 = IdFactory.randomMemberId();
 
         var topologyClient = new AkkaTopologyClient( Config.defaults(), nullLogProvider(), identityModule,
-                mock( ActorSystemLifecycle.class, RETURNS_MOCKS ), TestDiscoveryMember::new, Clocks.systemClock() );
+                                                     mock( ActorSystemLifecycle.class, RETURNS_MOCKS ),
+                                                     TestDiscoveryMember::factory,
+                                                     Clocks.systemClock(), databaseStateService );
 
         topologyClient.init();
         topologyClient.start();

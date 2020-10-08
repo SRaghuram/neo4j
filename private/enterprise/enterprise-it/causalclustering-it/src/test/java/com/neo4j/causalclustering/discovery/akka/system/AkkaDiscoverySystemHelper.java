@@ -12,12 +12,19 @@ import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
 import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
-import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
 import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
+import com.neo4j.dbms.EnterpriseDatabaseState;
+import com.neo4j.dbms.EnterpriseOperatorState;
+
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.dbms.identity.ServerId;
+import org.neo4j.dbms.DatabaseState;
+import org.neo4j.dbms.StubDatabaseStateService;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.Level;
@@ -31,7 +38,9 @@ import static com.neo4j.configuration.CausalClusteringSettings.discovery_adverti
 import static com.neo4j.configuration.CausalClusteringSettings.discovery_listen_address;
 import static com.neo4j.configuration.CausalClusteringSettings.initial_discovery_members;
 import static com.neo4j.configuration.CausalClusteringSettings.middleware_logging_level;
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static java.util.Collections.singletonList;
+import static java.util.function.Function.identity;
 import static org.neo4j.configuration.GraphDatabaseSettings.SERVER_DEFAULTS;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_level;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
@@ -48,26 +57,33 @@ public class AkkaDiscoverySystemHelper
 
     static CoreTopologyService coreTopologyService( int harnessPort, DiscoveryServiceFactory discoveryServiceFactory, int discoPort )
     {
+        return coreTopologyService( harnessPort, discoveryServiceFactory, discoPort, Set.of( NAMED_DATABASE_ID ) );
+    }
+
+    static CoreTopologyService coreTopologyService( int harnessPort, DiscoveryServiceFactory discoveryServiceFactory, int discoPort,
+            Set<NamedDatabaseId> startedDatabases )
+    {
         var discoverySocket = new SocketAddress( "localhost", discoPort );
         var config = Config.newBuilder()
-                .setDefaults( SERVER_DEFAULTS )
-                .set( discovery_listen_address, discoverySocket )
-                .set( discovery_advertised_address, discoverySocket )
-                .set( initial_discovery_members, singletonList( new SocketAddress( "localhost" , harnessPort ) ) )
-                .set( store_internal_log_level, Level.DEBUG )
-                .set( middleware_logging_level, Level.DEBUG )
-                .build();
-        var indentityModule = new StubClusteringIdentityModule();
+                           .setDefaults( SERVER_DEFAULTS )
+                           .set( discovery_listen_address, discoverySocket )
+                           .set( discovery_advertised_address, discoverySocket )
+                           .set( initial_discovery_members, singletonList( new SocketAddress( "localhost" , harnessPort ) ) )
+                           .set( store_internal_log_level, Level.DEBUG )
+                           .set( middleware_logging_level, Level.DEBUG )
+                           .build();
+        var identityModule = new StubClusteringIdentityModule();
         var logProvider = NullLogProvider.getInstance();
         var membersResolver = new InitialDiscoveryMembersResolver( new NoOpHostnameResolver(), config );
         var monitors = new Monitors();
         var retryStrategy = new RetryStrategy( 100, 3 );
         var sslPolicyLoader = SslPolicyLoader.create( config, logProvider );
         var firstStartupDetector = new TestFirstStartupDetector( true );
-        DiscoveryMemberFactory discoveryMemberFactory = ( ServerId serverId ) -> new TestDiscoveryMember( serverId, asSet( NAMED_DATABASE_ID ) );
-
-        return discoveryServiceFactory.coreTopologyService( config, indentityModule, createInitialisedScheduler(), logProvider,
-                                                            logProvider, membersResolver, retryStrategy, sslPolicyLoader, discoveryMemberFactory,
-                                                            firstStartupDetector, monitors, Clocks.systemClock() );
+        Function<NamedDatabaseId,DatabaseState> asStarted = id -> new EnterpriseDatabaseState( id, STARTED );
+        var databaseStates = startedDatabases.stream().collect( Collectors.toMap( identity(), asStarted ) );
+        var databaseStateService = new StubDatabaseStateService( databaseStates, EnterpriseDatabaseState::unknown );
+        return discoveryServiceFactory.coreTopologyService( config, identityModule, createInitialisedScheduler(), logProvider,
+                                                            logProvider, membersResolver, retryStrategy, sslPolicyLoader, TestDiscoveryMember::factory,
+                                                            firstStartupDetector, monitors, Clocks.systemClock(), databaseStateService );
     }
 }

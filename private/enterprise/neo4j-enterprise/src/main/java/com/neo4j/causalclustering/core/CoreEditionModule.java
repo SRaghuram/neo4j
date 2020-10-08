@@ -18,15 +18,12 @@ import com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferS
 import com.neo4j.causalclustering.core.consensus.protocol.RaftProtocolClientInstaller;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.ClusterStateMigrator;
-import com.neo4j.causalclustering.core.state.DiscoveryModule;
+import com.neo4j.causalclustering.core.state.CoreDiscoveryModule;
 import com.neo4j.causalclustering.diagnostics.GlobalTopologyStateDiagnosticProvider;
 import com.neo4j.causalclustering.diagnostics.RaftMonitor;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DefaultDiscoveryFirstStartupDetector;
-import com.neo4j.causalclustering.discovery.DiscoveryFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
-import com.neo4j.causalclustering.discovery.member.DefaultDiscoveryMemberFactory;
-import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
 import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import com.neo4j.causalclustering.discovery.procedures.CoreRoleProcedure;
 import com.neo4j.causalclustering.discovery.procedures.InstalledProtocolsProcedure;
@@ -352,7 +349,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         dependencies.satisfyDependencies( databaseEventService );
         dependencies.satisfyDependency( reconciledTxTracker );
 
-        topologyService = createTopologyService( databaseManager, reconcilerModule.databaseStateService() );
+        topologyService = createTopologyService( reconcilerModule.databaseStateService() );
         dependencies.satisfyDependency( new GlobalTopologyStateDiagnosticProvider( topologyService ) );
         reconcilerModule.registerDatabaseStateChangedListener( topologyService );
 
@@ -490,12 +487,11 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         return new ClientChannelInitializer( handshakeInitializer, pipelineBuilders.client(), handshakeTimeout, logProvider );
     }
 
-    private CoreTopologyService createTopologyService( DatabaseManager<ClusteredDatabaseContext> databaseManager, DatabaseStateService databaseStateService )
+    private CoreTopologyService createTopologyService( DatabaseStateService databaseStateService )
     {
-        DiscoveryFirstStartupDetector firstStartupDetector = new DefaultDiscoveryFirstStartupDetector( clusterStateLayout );
-        DiscoveryMemberFactory discoveryMemberFactory = new DefaultDiscoveryMemberFactory( databaseManager, databaseStateService );
-        DiscoveryModule discoveryModule = new DiscoveryModule( identityModule, discoveryServiceFactory, discoveryMemberFactory, globalModule,
-                                                               sslPolicyLoader, firstStartupDetector );
+        var firstStartupDetector = new DefaultDiscoveryFirstStartupDetector( clusterStateLayout );
+        var discoveryModule = new CoreDiscoveryModule( identityModule, discoveryServiceFactory, globalModule, sslPolicyLoader,
+                                                       firstStartupDetector, databaseStateService );
         return discoveryModule.topologyService();
     }
 

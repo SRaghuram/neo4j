@@ -15,11 +15,16 @@ import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
+import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Map;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
+
+import org.neo4j.dbms.DatabaseState;
+import org.neo4j.dbms.identity.ServerId;
+import org.neo4j.kernel.database.DatabaseId;
 
 import static com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.DATABASE_STATE;
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
@@ -27,25 +32,27 @@ import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
 public class DatabaseStateActor extends BaseReplicatedDataActor<LWWMap<DatabaseToMember,DiscoveryDatabaseState>>
 {
     public static Props props( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<ReplicatedDatabaseState> discoveryUpdateSink,
-            ActorRef rrTopologyActor, ReplicatedDataMonitor monitor, MemberId memberId )
+            ActorRef rrTopologyActor, ReplicatedDataMonitor monitor, ServerId myself )
     {
-        return Props.create( DatabaseStateActor.class, () -> new DatabaseStateActor( cluster, replicator, discoveryUpdateSink, rrTopologyActor,
-                monitor, memberId ) );
+        return Props.create( DatabaseStateActor.class, () -> new DatabaseStateActor( cluster, replicator, discoveryUpdateSink,
+                                                                                     rrTopologyActor, monitor, myself ) );
     }
 
     public static final String NAME = "cc-database-status-actor";
 
     private final SourceQueueWithComplete<ReplicatedDatabaseState> stateUpdateSink;
     private final ActorRef rrTopologyActor;
-    private final MemberId memberId;
+    private final MemberId myself;
 
     private DatabaseStateActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<ReplicatedDatabaseState> stateUpdateSink,
-            ActorRef rrTopologyActor, ReplicatedDataMonitor monitor, MemberId memberId )
+            ActorRef rrTopologyActor, ReplicatedDataMonitor monitor,
+            ServerId myself )
     {
-       super( cluster, replicator, LWWMapKey::create, LWWMap::create, DATABASE_STATE, monitor );
-       this.stateUpdateSink = stateUpdateSink;
-       this.rrTopologyActor = rrTopologyActor;
-       this.memberId = memberId;
+        super( cluster, replicator, LWWMapKey::create, LWWMap::create, DATABASE_STATE, monitor );
+        this.stateUpdateSink = stateUpdateSink;
+        this.rrTopologyActor = rrTopologyActor;
+        //TODO: Remove deprecated MemberId.of factory when we refactor to DatabaseToServer
+        this.myself = MemberId.of( myself );
     }
 
     @Override
@@ -61,9 +68,24 @@ public class DatabaseStateActor extends BaseReplicatedDataActor<LWWMap<DatabaseT
     }
 
     @Override
-    protected void sendInitialDataToReplicator()
+    protected void sendInitialDataToReplicator( DiscoveryMember memberSnapshot )
     {
-        // no-op
+        var localStatesMap = memberSnapshot.databaseStates().entrySet().stream()
+                                                .reduce( LWWMap.create(), this::addState, LWWMap::merge );
+
+        if ( !localStatesMap.isEmpty() )
+        {
+            modifyReplicatedData( key, map -> map.merge( localStatesMap ) );
+        }
+    }
+
+    private LWWMap<DatabaseToMember,DiscoveryDatabaseState> addState( LWWMap<DatabaseToMember,DiscoveryDatabaseState> acc,
+            Map.Entry<DatabaseId,DatabaseState> entry )
+    {
+        var databaseId = entry.getKey();
+        var dbState = entry.getValue();
+        var discoveryState = new DiscoveryDatabaseState( databaseId, dbState.operatorState(), dbState.failure().orElse( null ) );
+        return acc.put( cluster, new DatabaseToMember( databaseId, myself ), discoveryState );
     }
 
     @Override
@@ -76,11 +98,11 @@ public class DatabaseStateActor extends BaseReplicatedDataActor<LWWMap<DatabaseT
     {
         if ( update.operatorState() == DROPPED )
         {
-            modifyReplicatedData( key, map -> map.remove( cluster, new DatabaseToMember( update.databaseId(), memberId ) ) );
+            modifyReplicatedData( key, map -> map.remove( cluster, new DatabaseToMember( update.databaseId(), myself ) ) );
         }
         else
         {
-            modifyReplicatedData( key, map -> map.put( cluster, new DatabaseToMember( update.databaseId(), memberId ), update ) );
+            modifyReplicatedData( key, map -> map.put( cluster, new DatabaseToMember( update.databaseId(), myself ), update ) );
         }
     }
 

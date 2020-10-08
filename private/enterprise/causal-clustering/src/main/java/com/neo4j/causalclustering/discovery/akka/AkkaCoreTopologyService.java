@@ -41,7 +41,6 @@ import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
-import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -58,10 +57,12 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.DatabaseState;
+import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
@@ -79,11 +80,12 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     private final LogProvider logProvider;
     private final RetryStrategy catchupAddressRetryStrategy;
     private final Restarter restarter;
-    private final DiscoveryMemberFactory discoveryMemberFactory;
+    private final DiscoveryMemberFactory memberSnapshotFactory;
     private final Executor executor;
     private final Clock clock;
     private final ReplicatedDataMonitor replicatedDataMonitor;
     private final ClusterSizeMonitor clusterSizeMonitor;
+    private final DatabaseStateService databaseStateService;
     private final Config config;
     private final ClusteringIdentityModule identityModule;
     private final Log log;
@@ -100,13 +102,14 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
 
     public AkkaCoreTopologyService( Config config, ClusteringIdentityModule identityModule, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
             LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, Restarter restarter,
-            DiscoveryMemberFactory discoveryMemberFactory, Executor executor, Clock clock, Monitors monitors )
+            DiscoveryMemberFactory memberSnapshotFactory, Executor executor, Clock clock, Monitors monitors,
+            DatabaseStateService databaseStateService )
     {
         this.actorSystemLifecycle = actorSystemLifecycle;
         this.logProvider = logProvider;
         this.catchupAddressRetryStrategy = catchupAddressRetryStrategy;
         this.restarter = restarter;
-        this.discoveryMemberFactory = discoveryMemberFactory;
+        this.memberSnapshotFactory = memberSnapshotFactory;
         this.executor = executor;
         this.clock = clock;
         this.config = config;
@@ -116,6 +119,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         this.replicatedDataMonitor = monitors.newMonitor( ReplicatedDataMonitor.class );
         this.globalTopologyState = newGlobalTopologyState( logProvider, listenerService );
         this.clusterSizeMonitor = monitors.newMonitor( ClusterSizeMonitor.class );
+        this.databaseStateService = databaseStateService;
         this.actorSystemRestartStrategy = new AkkaActorSystemRestartStrategy.NeverRestart();
     }
 
@@ -123,33 +127,27 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     public void start0()
     {
         actorSystemLifecycle.createClusterActorSystem();
-        SourceQueueWithComplete<CoreTopologyMessage> coreTopologySink =
-                actorSystemLifecycle.queueMostRecent( this::onCoreTopologyMessage );
-        SourceQueueWithComplete<DatabaseReadReplicaTopology> rrTopologySink =
-                actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );
-        SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> directorySink =
-                actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbLeaderUpdate );
-        SourceQueueWithComplete<BootstrapState> bootstrapStateSink =
-                actorSystemLifecycle.queueMostRecent( globalTopologyState::onBootstrapStateUpdate );
-        SourceQueueWithComplete<ReplicatedDatabaseState> databaseStateSink =
-                actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbStateUpdate );
+        var coreTopologySink = actorSystemLifecycle.queueMostRecent( this::onCoreTopologyMessage );
+        var directorySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbLeaderUpdate );
+        var bootstrapStateSink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onBootstrapStateUpdate );
+        var databaseStateSink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbStateUpdate );
+        SourceQueueWithComplete<DatabaseReadReplicaTopology> rrTopologySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );
 
-        Cluster cluster = actorSystemLifecycle.cluster();
-        ActorRef replicator = actorSystemLifecycle.replicator();
-        ActorRef rrTopologyActor = readReplicaTopologyActor( rrTopologySink, databaseStateSink );
+        var cluster = actorSystemLifecycle.cluster();
+        var replicator = actorSystemLifecycle.replicator();
+        var rrTopologyActor = readReplicaTopologyActor( rrTopologySink, databaseStateSink );
         coreTopologyActorRef = coreTopologyActor( cluster, replicator, coreTopologySink, bootstrapStateSink, rrTopologyActor );
         directoryActorRef = directoryActor( cluster, replicator, directorySink, rrTopologyActor );
         databaseStateActorRef = databaseStateActor( cluster, replicator, databaseStateSink, rrTopologyActor );
         startRestartNeededListeningActor( cluster );
+        publishInitialData( coreTopologyActorRef, directoryActorRef, databaseStateActorRef );
     }
 
     private ActorRef coreTopologyActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<CoreTopologyMessage> topologySink,
             SourceQueueWithComplete<BootstrapState> bootstrapStateSink, ActorRef rrTopologyActor )
     {
-        DiscoveryMember discoveryMember = discoveryMemberFactory.create( identityModule.myself() );
-        TopologyBuilder topologyBuilder = new TopologyBuilder();
-        Props coreTopologyProps = CoreTopologyActor.props(
-                discoveryMember,
+        var topologyBuilder = new TopologyBuilder();
+        var coreTopologyProps = CoreTopologyActor.props(
                 topologySink,
                 bootstrapStateSink,
                 rrTopologyActor,
@@ -158,21 +156,29 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
                 topologyBuilder,
                 config,
                 replicatedDataMonitor,
-                clusterSizeMonitor );
+                clusterSizeMonitor,
+                identityModule.myself() );
         return actorSystemLifecycle.applicationActorOf( coreTopologyProps, CoreTopologyActor.NAME );
     }
 
     private ActorRef directoryActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> directorySink,
             ActorRef rrTopologyActor )
     {
-        Props directoryProps = DirectoryActor.props( cluster, replicator, directorySink, rrTopologyActor, replicatedDataMonitor );
+        var directoryProps = DirectoryActor.props( cluster, replicator, directorySink, rrTopologyActor, replicatedDataMonitor );
         return actorSystemLifecycle.applicationActorOf( directoryProps, DirectoryActor.NAME );
+    }
+
+    private Map<DatabaseId,LeaderInfo> localLeadershipsSnapshot()
+    {
+        return localLeadersByDatabaseId.entrySet().stream()
+                                       .collect( Collectors.toUnmodifiableMap( entry -> entry.getKey().databaseId(), Map.Entry::getValue ) );
     }
 
     private ActorRef databaseStateActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<ReplicatedDatabaseState> stateSink,
             ActorRef rrTopologyActor )
     {
-        Props stateProps = DatabaseStateActor.props( cluster, replicator, stateSink, rrTopologyActor, replicatedDataMonitor, identityModule.memberId() );
+        Props stateProps = DatabaseStateActor.props( cluster, replicator, stateSink, rrTopologyActor, replicatedDataMonitor,
+                                                     identityModule.myself() );
         return actorSystemLifecycle.applicationActorOf( stateProps, DatabaseStateActor.NAME );
     }
 
@@ -192,6 +198,15 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         actorSystemLifecycle.applicationActorOf( props, RestartNeededListeningActor.NAME );
     }
 
+    private void publishInitialData( ActorRef... actorRefs )
+    {
+        var memberSnapshot = memberSnapshotFactory.createSnapshot( identityModule, databaseStateService, localLeadershipsSnapshot() );
+        for ( ActorRef actorRef : actorRefs )
+        {
+            actorRef.tell( new PublishInitialData( memberSnapshot ), noSender() );
+        }
+    }
+
     private void onCoreTopologyMessage( CoreTopologyMessage coreTopologyMessage )
     {
         globalTopologyState.onTopologyUpdate( coreTopologyMessage.coreTopology() );
@@ -203,6 +218,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     {
         coreTopologyActorRef = null;
         directoryActorRef = null;
+        databaseStateActorRef = null;
 
         actorSystemLifecycle.shutdown();
 

@@ -19,13 +19,17 @@ import akka.stream.javadsl.Source
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
+import com.neo4j.causalclustering.discovery.TestDiscoveryMember
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.DirectoryUpdateSink
+import com.neo4j.causalclustering.discovery.akka.PublishInitialData
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
 import com.neo4j.causalclustering.identity.IdFactory
-import com.neo4j.causalclustering.identity.MemberId
+import com.neo4j.causalclustering.identity.StubClusteringIdentityModule
+import org.neo4j.dbms.DatabaseStateService
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
+import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
 
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.util.Random
@@ -35,9 +39,9 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
   "Directory actor" should {
     behave like replicatedDataActor(new Fixture())
 
-    "update replicated data on receipt of leader info message" in new Fixture {
+    "update replicated data on receipt of leader info setting message" in new Fixture {
       Given("leader info update")
-      val event = new LeaderInfoSettingMessage(newReplicatedLeaderInfo.leaderInfo, randomNamedDatabaseId())
+      val event = new LeaderInfoSettingMessage(randomReplicatedLeaderInfo.leaderInfo, randomNamedDatabaseId())
 
       When("message received")
       replicatedDataActorRef ! event
@@ -46,9 +50,27 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
       expectReplicatorUpdates(replicator, dataKey)
     }
 
+    "send initial data to replicator when asked" in new Fixture {
+      Given("some initial leaderships and a DirectoryActor")
+      val databaseIds = List.fill(3)(randomNamedDatabaseId).toSet
+      val leadershipSnapshot = databaseIds.map(_.databaseId -> randomLeaderInfo).toMap
+      val actor = system.actorOf(DirectoryActor.props(cluster, replicator.ref, discoverySink, rrActor.ref, monitor))
+      val stateService = databaseStateService(databaseIds)
+      val identityModule = new StubClusteringIdentityModule
+
+      When("PublishInitialData request received")
+      actor ! new PublishInitialData(new TestDiscoveryMember(identityModule,stateService,leadershipSnapshot.asJava))
+
+      Then("the initial leaderships should be published")
+      val update = expectReplicatorUpdates(replicator, dataKey)
+      val ddata = update.modify(Option(ORMap.empty))
+      ddata.size shouldBe 3
+      ddata.entries.mapValues(_.leaderInfo) shouldBe leadershipSnapshot
+    }
+
     "send incoming data to read replica actor and outside world" in new Fixture {
       Given("incoming updates")
-      val update1, update2 = ORMap.empty[DatabaseId,ReplicatedLeaderInfo].put(cluster, randomNamedDatabaseId().databaseId(), newReplicatedLeaderInfo)
+      val update1, update2 = ORMap.empty[DatabaseId,ReplicatedLeaderInfo].put(cluster, randomNamedDatabaseId().databaseId(), randomReplicatedLeaderInfo)
 
       When("first update received")
       replicatedDataActorRef ! Replicator.Changed(dataKey)(update1)
@@ -72,9 +94,9 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
 
   class Fixture extends ReplicatedDataActorFixture[ORMap[DatabaseId,ReplicatedLeaderInfo]] {
     private val random = new Random()
-    def newReplicatedLeaderInfo = {
-      new ReplicatedLeaderInfo(new LeaderInfo(IdFactory.randomRaftMemberId(), random.nextLong()))
-    }
+
+    def randomLeaderInfo = new LeaderInfo(IdFactory.randomRaftMemberId, random.nextLong)
+    def randomReplicatedLeaderInfo = new ReplicatedLeaderInfo(randomLeaderInfo)
 
     var actualLeaderPerDb = Collections.emptyMap[DatabaseId, LeaderInfo]
 

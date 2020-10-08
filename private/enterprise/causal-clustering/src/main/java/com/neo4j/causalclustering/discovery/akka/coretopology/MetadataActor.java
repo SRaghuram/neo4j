@@ -21,33 +21,35 @@ import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.METADATA;
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 
 public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,CoreServerInfoForServerId>>
 {
-    static Props props( DiscoveryMember myself, Cluster cluster, ActorRef replicator, ActorRef topologyActor, Config config, ReplicatedDataMonitor monitor )
+    static Props props( Cluster cluster, ActorRef replicator, ActorRef topologyActor,
+            Config config, ReplicatedDataMonitor monitor, ServerId myself )
     {
-        return Props.create( MetadataActor.class, () -> new MetadataActor( myself, cluster, replicator, topologyActor, config, monitor ) );
+        return Props.create( MetadataActor.class, () -> new MetadataActor( cluster, replicator, topologyActor,
+                                                                           config, monitor, myself ) );
     }
 
-    private final DiscoveryMember myself;
     private final ActorRef topologyActor;
     private final Config config;
-
+    private final ServerId myself;
     private final Set<DatabaseId> startedDatabases = new HashSet<>();
 
-    private MetadataActor( DiscoveryMember myself, Cluster cluster, ActorRef replicator, ActorRef topologyActor, Config config, ReplicatedDataMonitor monitor )
+    private MetadataActor( Cluster cluster, ActorRef replicator, ActorRef topologyActor,
+            Config config, ReplicatedDataMonitor monitor, ServerId myself )
     {
         super( cluster, replicator, LWWMapKey::create, LWWMap::empty, METADATA, monitor );
-        this.myself = myself;
         this.topologyActor = topologyActor;
         this.config = config;
+        this.myself = myself;
     }
 
     @Override
@@ -75,11 +77,9 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
     }
 
     @Override
-    public void sendInitialDataToReplicator()
+    public void sendInitialDataToReplicator( DiscoveryMember memberSnapshot )
     {
-        var databaseIds = myself.startedDatabases().stream()
-                                  .map( NamedDatabaseId::databaseId )
-                                  .collect( Collectors.toSet() );
+        var databaseIds = memberSnapshot.databasesInState( STARTED );
         startedDatabases.addAll( databaseIds );
         sendCoreServerInfo();
     }
@@ -112,7 +112,7 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
     {
         var startedDatabases = Set.copyOf( this.startedDatabases );
         var info = CoreServerInfo.from( config, startedDatabases );
-        var metadata = new CoreServerInfoForServerId( myself.id(), info );
+        var metadata = new CoreServerInfoForServerId( myself, info );
         modifyReplicatedData( key, map -> map.put( cluster, cluster.selfUniqueAddress(), metadata ) );
     }
 }

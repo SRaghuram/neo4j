@@ -28,14 +28,21 @@ import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonito
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.ArteryTransport
 import com.neo4j.configuration.CausalClusteringSettings
+import com.neo4j.dbms.EnterpriseDatabaseState
+import com.neo4j.dbms.EnterpriseOperatorState
 import org.assertj.core.api.Condition
 import org.junit.runner.RunWith
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.helpers.SocketAddress
+import org.neo4j.dbms.DatabaseState
+import org.neo4j.dbms.DatabaseStateService
+import org.neo4j.dbms.StubDatabaseStateService
+import org.neo4j.kernel.database.NamedDatabaseId
 import org.neo4j.test.assertion.Assert.assertEventually
 import org.scalatest.exceptions.TestFailedException
 import org.scalatest.junit.JUnitRunner
 
+import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.FiniteDuration
@@ -104,7 +111,8 @@ abstract class BaseAkkaIT(name: String) extends TestKit(ActorSystem(name, BaseAk
 
   def expectReplicatorUpdates[A <: ReplicatedData](replicator: TestProbe, key: Key[A]): Replicator.Update[A] = {
     replicator.fishForSpecificMessage(defaultWaitTime) {
-      case update: Replicator.Update[A] if update.key == key => update
+      case update: Replicator.Update[A] if update.key == key =>
+        update
     }
   }
 
@@ -158,5 +166,16 @@ abstract class BaseAkkaIT(name: String) extends TestKit(ActorSystem(name, BaseAk
     val replicatedDataActorRef: ActorRef
     val dataKey: Key[A]
     val data: A
+
+    def databaseStates(databases: Set[NamedDatabaseId], state: EnterpriseOperatorState): Map[NamedDatabaseId,DatabaseState] =
+      databases.map(id => id -> new EnterpriseDatabaseState(id, state)).toMap
+
+    def databaseStateService(startedDatabases: Set[NamedDatabaseId]): DatabaseStateService =
+      new StubDatabaseStateService(databaseStates(startedDatabases, EnterpriseOperatorState.STARTED).asJava,
+        EnterpriseDatabaseState.unknown _)
+
+    def databaseStateService(databaseStates: Map[NamedDatabaseId,DatabaseState]) =
+      new StubDatabaseStateService(databaseStates.asJava, EnterpriseDatabaseState.unknown _)
+
   }
 }

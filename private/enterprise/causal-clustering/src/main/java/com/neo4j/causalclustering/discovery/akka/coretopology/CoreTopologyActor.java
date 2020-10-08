@@ -14,13 +14,12 @@ import akka.cluster.UniqueAddress;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.akka.AbstractActorWithTimersAndLogging;
+import com.neo4j.causalclustering.discovery.akka.PublishInitialData;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
-import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 import com.neo4j.causalclustering.identity.RaftId;
-import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.util.Collection;
@@ -28,6 +27,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 
 import static java.util.Collections.emptySet;
@@ -36,7 +36,6 @@ import static java.util.stream.Collectors.toSet;
 public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
 {
     public static Props props(
-            DiscoveryMember myself,
             SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink,
             SourceQueueWithComplete<BootstrapState> bootstrapStateSink,
             ActorRef rrTopologyActor,
@@ -45,11 +44,12 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
             TopologyBuilder topologyBuilder,
             Config config,
             ReplicatedDataMonitor replicatedDataMonitor,
-            ClusterSizeMonitor clusterSizeMonitor )
+            ClusterSizeMonitor clusterSizeMonitor,
+            ServerId myself )
     {
         return Props.create( CoreTopologyActor.class,
-                () -> new CoreTopologyActor( myself, topologyUpdateSink, bootstrapStateSink, rrTopologyActor, replicator,
-                        cluster, topologyBuilder, config, replicatedDataMonitor, clusterSizeMonitor ) );
+                () -> new CoreTopologyActor( topologyUpdateSink, bootstrapStateSink, rrTopologyActor, replicator,
+                                             cluster, topologyBuilder, config, replicatedDataMonitor, clusterSizeMonitor, myself ) );
     }
 
     public static final String NAME = "cc-core-topology-actor";
@@ -74,8 +74,7 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
     private Set<RaftId> bootstrappedRafts;
     private ClusterViewMessage clusterView;
 
-    private CoreTopologyActor( DiscoveryMember myself,
-            SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink,
+    private CoreTopologyActor( SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink,
             SourceQueueWithComplete<BootstrapState> bootstrapStateSink,
             ActorRef readReplicaTopologyActor,
             ActorRef replicator,
@@ -83,7 +82,8 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
             TopologyBuilder topologyBuilder,
             Config config,
             ReplicatedDataMonitor replicatedDataMonitor,
-            ClusterSizeMonitor clusterSizeMonitor )
+            ClusterSizeMonitor clusterSizeMonitor,
+            ServerId myself )
     {
         this.topologyUpdateSink = topologyUpdateSink;
         this.bootstrapStateSink = bootstrapStateSink;
@@ -97,7 +97,8 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
         this.config = config;
 
         // Children, who will be sending messages to us
-        metadataActor = getContext().actorOf( MetadataActor.props( myself, cluster, replicator, getSelf(), config, replicatedDataMonitor ) );
+        metadataActor = getContext().actorOf( MetadataActor.props( cluster, replicator, getSelf(),
+                                                                   config, replicatedDataMonitor, myself ) );
         ActorRef downingActor = getContext().actorOf( ClusterDowningActor.props( cluster, config ) );
         getContext().actorOf( ClusterStateActor.props( cluster, getSelf(), downingActor, metadataActor, config, clusterSizeMonitor ) );
         raftIdActor = getContext().actorOf( RaftIdActor.props( cluster, replicator, getSelf(), replicatedDataMonitor, minCoreHostsAtRuntime ) );
@@ -113,6 +114,7 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
                 .match( RaftIdSetRequest.class,          this::handleRaftIdSetRequest )
                 .match( DatabaseStartedMessage.class,    this::handleDatabaseStartedMessage )
                 .match( DatabaseStoppedMessage.class,    this::handleDatabaseStoppedMessage )
+                .match( PublishInitialData.class,        this::handlePublishInitialDataMessage )
                 .build();
     }
 
@@ -141,12 +143,18 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
 
     private void handleDatabaseStartedMessage( DatabaseStartedMessage message )
     {
-        metadataActor.forward( message, context() );
+        metadataActor.forward( message, getContext() );
     }
 
     private void handleDatabaseStoppedMessage( DatabaseStoppedMessage message )
     {
-        metadataActor.forward( message, context() );
+        metadataActor.forward( message, getContext() );
+    }
+
+    private void handlePublishInitialDataMessage( PublishInitialData message )
+    {
+        metadataActor.forward( message, getContext() );
+        raftIdActor.forward( message, getContext() );
     }
 
     private void buildTopologies()

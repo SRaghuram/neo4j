@@ -70,7 +70,7 @@ class DbmsReconcilerIT
 
         // then
         assertEventually( "Reconciler should eventually stop",
-                () -> databaseStateService.stateOfDatabase( db.databaseId() ), equalityCondition( STOPPED ), 10, SECONDS );
+                () -> databaseStateService.stateOfDatabase( db.databaseId() ).operatorState(), equalityCondition( STOPPED ), 10, SECONDS );
         assertEquals( err, databaseStateService.causeOfFailure( db.databaseId() ).orElse( null ) );
     }
 
@@ -89,7 +89,7 @@ class DbmsReconcilerIT
         // then
         var error = assertThrows( CompletionException.class, () -> reconcilerResult.await( db.databaseId() ) );
         assertThat( error.getCause().getMessage() ).contains( "unsupported state transition" );
-        assertEquals( EnterpriseOperatorState.STARTED, databaseStateService.stateOfDatabase( db.databaseId() ) );
+        assertEquals( EnterpriseOperatorState.STARTED, databaseStateService.stateOfDatabase( db.databaseId() ).operatorState() );
         assertTrue( databaseStateService.causeOfFailure( db.databaseId() ).isPresent() );
     }
 
@@ -110,7 +110,7 @@ class DbmsReconcilerIT
         localOperator.stopDatabase( db.databaseName() );
 
         assertEventually( "Database should be stopped",
-                () -> databaseStateService.stateOfDatabase( db.databaseId() ), equalityCondition( STOPPED ), 10, SECONDS );
+                () -> databaseStateService.stateOfDatabase( db.databaseId() ).operatorState(), equalityCondition( STOPPED ), 10, SECONDS );
         assertTrue( databaseStateService.causeOfFailure( db.databaseId() ).isEmpty(), "Database is *not* expected to be failed" );
     }
 }

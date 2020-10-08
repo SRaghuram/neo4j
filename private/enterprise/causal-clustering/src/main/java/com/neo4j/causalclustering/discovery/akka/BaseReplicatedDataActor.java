@@ -13,6 +13,7 @@ import akka.cluster.ddata.Replicator;
 import akka.japi.pf.ReceiveBuilder;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
+import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 import scala.concurrent.duration.FiniteDuration;
 
 import java.time.Duration;
@@ -49,12 +50,11 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
     @Override
     public final void preStart()
     {
-        sendInitialDataToReplicator();
         subscribeToReplicatorEvents( new Replicator.Subscribe<>( key, getSelf() ) );
         getTimers().startPeriodicTimer( METRIC_TIMER_KEY, MetricsRefresh.getInstance(), Duration.ofMinutes( 1 ) );
     }
 
-    protected abstract void sendInitialDataToReplicator();
+    protected abstract void sendInitialDataToReplicator( DiscoveryMember memberSnapshot );
 
     @Override
     public final void postStop()
@@ -80,7 +80,8 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
                 handleIncomingData( newData );
                 logDataMetric();
             } ).match( Replicator.UpdateResponse.class, updated -> log().debug( "Update: {}", updated ) )
-               .match( MetricsRefresh.class, ignored -> logDataMetric() );
+               .match( MetricsRefresh.class, ignored -> logDataMetric() )
+               .match( PublishInitialData.class, message -> sendInitialDataToReplicator( message.getSnapshot() ) );
     }
 
     protected abstract void handleCustomEvents( ReceiveBuilder builder );
@@ -116,7 +117,7 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
 
     static class MetricsRefresh
     {
-        private static MetricsRefresh instance = new MetricsRefresh();
+        private static final MetricsRefresh instance = new MetricsRefresh();
 
         private MetricsRefresh()
         {

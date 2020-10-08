@@ -56,6 +56,6 @@ class EnterpriseDatabaseStateServiceIT
         Optional<Throwable> throwable = stateService.causeOfFailure( testId );
         assertTrue( throwable.isPresent(), "The state service should have recorded an error when starting a db without key files" );
         assertThat( throwable.get().getMessage() ).contains( "Unable to start" );
-        assertEquals( STOPPED, stateService.stateOfDatabase( testId ), "The state service should report the db in its stopped state" );
+        assertEquals( STOPPED, stateService.stateOfDatabase( testId ).operatorState(), "The state service should report the db in its stopped state" );
     }
 }

@@ -30,6 +30,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.neo4j.dbms.DatabaseStateService;
@@ -588,9 +589,10 @@ class ClusteredShowDatabasesIT
     private static List<OperatorState> getOperatorStates( NamedDatabaseId namedDatabaseId,
             Collection<DatabaseStateService> databaseStateServices )
     {
-        return databaseStateServices.stream().map( databaseStateService ->
-                                                           databaseStateService == null ? UNKNOWN : databaseStateService
-                                                                   .stateOfDatabase( namedDatabaseId ) ).collect( toList() );
+
+        Function<DatabaseStateService,OperatorState> stateOfDb = service -> service == null ? UNKNOWN :
+                                                                            service.stateOfDatabase( namedDatabaseId ).operatorState();
+        return databaseStateServices.stream().map( stateOfDb ).collect( toList() );
     }
 
     private static Condition<Collection<OperatorState>> allStatesMatchCondition( EnterpriseOperatorState enterpriseOperatorState )

@@ -16,6 +16,7 @@ import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
+import com.neo4j.dbms.EnterpriseDatabaseState;
 import com.neo4j.dbms.EnterpriseOperatorState;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
@@ -36,6 +37,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.dbms.DatabaseStateService;
+import org.neo4j.dbms.StubDatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -117,10 +119,9 @@ class CoreDatabaseEndpointsTest
         commandIndexTracker = dependencyResolver.satisfyDependency( new CommandIndexTracker() );
         throughputMonitor = dependencyResolver.satisfyDependency( mock( ThroughputMonitor.class ) );
 
-        var databaseStateService = mock( DatabaseStateService.class );
-        when( databaseStateService.stateOfDatabase( any( NamedDatabaseId.class ) ) ).thenReturn( EnterpriseOperatorState.STARTED );
+        var stateService = new StubDatabaseStateService( id -> new EnterpriseDatabaseState( id, EnterpriseOperatorState.STARTED ) );
 
-        endpoints = ClusteringDatabaseEndpointsFactory.build( output, databaseStateService, managementService, databaseName, mock( PerDatabaseService.class ) );
+        endpoints = ClusteringDatabaseEndpointsFactory.build( output, stateService, managementService, databaseName, mock( PerDatabaseService.class ) );
     }
 
     @Test

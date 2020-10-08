@@ -30,8 +30,13 @@ import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMe
 import com.neo4j.causalclustering.identity.IdFactory
 import com.neo4j.causalclustering.identity.MemberId
 import com.neo4j.causalclustering.identity.RaftId
+import com.neo4j.causalclustering.identity.StubClusteringIdentityModule
 import com.neo4j.configuration.CausalClusteringSettings
+import com.neo4j.dbms.EnterpriseDatabaseState
+import com.neo4j.dbms.EnterpriseOperatorState
 import org.neo4j.configuration.Config
+import org.neo4j.dbms.DatabaseState
+import org.neo4j.dbms.StubDatabaseStateService
 import org.neo4j.dbms.identity.ServerId
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.NamedDatabaseId
@@ -196,7 +201,8 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       .to(Sink.foreach(updateSink.onDbStateUpdate))
       .run(materializer)
 
-    val serverId = IdFactory.randomServerId()
+    val identityModule = new StubClusteringIdentityModule
+    val serverId = identityModule.myself()
 
     val databaseIds = Set(randomNamedDatabaseId(), randomNamedDatabaseId(), randomNamedDatabaseId())
 
@@ -213,9 +219,22 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       conf
     }
 
+    val databaseStates = databaseIds.map(id => id -> new EnterpriseDatabaseState(id, EnterpriseOperatorState.STARTED)).toMap[NamedDatabaseId,DatabaseState]
+    val databaseStateService = new StubDatabaseStateService(databaseStates.asJava, EnterpriseDatabaseState.unknown _)
+    val discoveryMemberSnapshot = TestDiscoveryMember.factory(identityModule,databaseStateService,Map.empty[DatabaseId,LeaderInfo].asJava)
     val clusterClientProbe = TestProbe()
-    val props = ClientTopologyActor.props(new TestDiscoveryMember(serverId, databaseIds.asJava), coreTopologySink, readReplicaTopologySink, discoverySink,
-      databaseStateSink, clusterClientProbe.ref, config, NullLogProvider.getInstance(), Clocks.systemClock() )
+    val props = ClientTopologyActor.props(
+      discoveryMemberSnapshot,
+      coreTopologySink,
+      readReplicaTopologySink,
+      discoverySink,
+      databaseStateSink,
+      clusterClientProbe.ref,
+      config,
+      NullLogProvider.getInstance(),
+      Clocks.systemClock(),
+      identityModule.myself()
+    )
 
     val topologyActorRef = system.actorOf(props)
 

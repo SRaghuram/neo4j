@@ -42,7 +42,7 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
     private final SystemDatabaseCommitEventListener systemCommitListener;
     protected final DatabaseIdRepository databaseIdRepository;
     private final ReconciledTransactionTracker reconciledTxTracker;
-    private final LocalDatabaseStateService databaseStateService;
+    private final EnterpriseDatabaseStateService databaseStateService;
     protected final DbmsReconciler reconciler;
 
     public StandaloneDbmsReconcilerModule( GlobalModule globalModule, MultiDatabaseManager<?> databaseManager, ReconciledTransactionTracker reconciledTxTracker,
@@ -66,7 +66,7 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
         this.internalDbmsOperator = new StandaloneInternalDbmsOperator( globalModule.getLogService().getInternalLogProvider() );
         this.reconciler = reconciler;
         this.systemCommitListener = new SystemDatabaseCommitEventListener( systemOperator );
-        this.databaseStateService = new LocalDatabaseStateService( reconciler );
+        this.databaseStateService = new EnterpriseDatabaseStateService( reconciler, databaseManager );
 
         globalModule.getGlobalDependencies().satisfyDependency( reconciler );
         globalModule.getGlobalDependencies().satisfyDependency( databaseStateService );
@@ -123,7 +123,7 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
         unregisterWithListenerService( globalModule );
     }
 
-    public LocalDatabaseStateService databaseStateService()
+    public EnterpriseDatabaseStateService databaseStateService()
     {
         return databaseStateService;
     }

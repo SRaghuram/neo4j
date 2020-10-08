@@ -7,6 +7,7 @@ package com.neo4j.dbms;
 
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.dbms.database.StubMultiDatabaseManager;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,6 +49,7 @@ import static com.neo4j.dbms.StandaloneDbmsReconcilerModule.createTransitionsTab
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -293,7 +295,7 @@ class DbmsReconcilerModuleTest
         var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
 
         var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), nullLogProvider(), jobScheduler, transitionsTable );
-        var databaseStateService = new LocalDatabaseStateService( reconciler );
+        var databaseStateService = new EnterpriseDatabaseStateService( reconciler, databaseManager );
 
         // when
         var operator = new LocalDbmsOperator( idRepository );
@@ -326,7 +328,7 @@ class DbmsReconcilerModuleTest
                 .build();
 
         var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), nullLogProvider(), jobScheduler, transitionsTable );
-        var databaseStateService = new LocalDatabaseStateService( reconciler );
+        var databaseStateService = new EnterpriseDatabaseStateService( reconciler, databaseManager );
 
         // when
         var operator = new LocalDbmsOperator( idRepository );
@@ -357,7 +359,7 @@ class DbmsReconcilerModuleTest
         var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
 
         var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), nullLogProvider(), jobScheduler, transitionsTable );
-        var databaseStateService = new LocalDatabaseStateService( reconciler );
+        var databaseStateService = new EnterpriseDatabaseStateService( reconciler, databaseManager );
 
         var operator = new LocalDbmsOperator( idRepository );
         operator.startDatabase( "foo" );
@@ -404,8 +406,8 @@ class DbmsReconcilerModuleTest
         reconcilerModule.start();
 
         // then DB cannot created > its state should be DIRTY with given exception
-        assertTrue( reconcilerModule.databaseStateService().causeOfFailure( fooId ).get().getCause() == ex );
-        assertTrue( reconcilerModule.databaseStateService().stateOfDatabase( fooId ) == DIRTY );
+        assertThat( reconcilerModule.databaseStateService().causeOfFailure( fooId ).get() ).hasCause( ex );
+        assertEquals( reconcilerModule.databaseStateService().stateOfDatabase( fooId ).operatorState(), DIRTY );
 
         // when
         var startOperator = new LocalDbmsOperator( idRepository );
@@ -420,8 +422,9 @@ class DbmsReconcilerModuleTest
         dropDatabase( fooId, reconcilerModule );
 
         // then DIRTY DB should be possible to drop always - even if drop itself fails with DatabaseNotFoundException
-        assertTrue( reconcilerModule.databaseStateService().stateOfDatabase( fooId ) == DIRTY );
-        assertTrue( reconcilerModule.databaseStateService().causeOfFailure( fooId ).get() instanceof DatabaseNotFoundException );
+        assertEquals( reconcilerModule.databaseStateService().stateOfDatabase( fooId ).operatorState(), DIRTY );
+        var failure = reconcilerModule.databaseStateService().causeOfFailure( fooId );
+        assertTrue( failure.isPresent() && failure.get() instanceof DatabaseNotFoundException );
 
         reconcilerModule.stop();
     }
@@ -447,15 +450,15 @@ class DbmsReconcilerModuleTest
         dropDatabase( barId, reconcilerModule );
 
         // then DB cannot be dropped > since prepareDrop fails it should end up in DIRTY with given exception but stopDatabase must have been called
-        assertTrue( reconcilerModule.databaseStateService().causeOfFailure( barId ).get() == ex );
-        assertTrue( reconcilerModule.databaseStateService().stateOfDatabase( barId ) == DIRTY );
+        assertThat( reconcilerModule.databaseStateService().causeOfFailure( barId ) ).contains( ex );
+        assertEquals( reconcilerModule.databaseStateService().stateOfDatabase( barId ).operatorState(), DIRTY );
         verify( databaseManager.getDatabaseContext( barId ).get().database(), times( 1 ) ).stop();
 
         // when
         dropDatabase( barId, reconcilerModule );
 
         // then DIRTY DB should be possible to drop always, this time without error
-        assertTrue( reconcilerModule.databaseStateService().stateOfDatabase( barId ) == DROPPED );
+        assertEquals( reconcilerModule.databaseStateService().stateOfDatabase( barId ).operatorState(), DROPPED );
         assertTrue( reconcilerModule.databaseStateService().causeOfFailure( barId ).isEmpty() );
 
         reconcilerModule.stop();
@@ -494,12 +497,12 @@ class DbmsReconcilerModuleTest
         reconcilerModule.stop();
 
         // then DIRTY DB from create failure should be remain - DBManager does not know about it
-        assertTrue( reconcilerModule.databaseStateService().stateOfDatabase( fooId ) == DIRTY );
-        assertTrue( reconcilerModule.databaseStateService().causeOfFailure( fooId ).get().getCause() == ex );
+        assertEquals( reconcilerModule.databaseStateService().stateOfDatabase( fooId ).operatorState(), DIRTY );
+        assertThat( reconcilerModule.databaseStateService().causeOfFailure( fooId ).map( Throwable::getCause ) ).contains( ex );
         assertTrue( databaseManager.getDatabaseContext( fooId ).isEmpty() );
 
         // then DIRTY DB from prepareDrop failure should be STOPPED - but with no op (stop is not called again)
-        assertTrue( reconcilerModule.databaseStateService().stateOfDatabase( barId ) == STOPPED );
+        assertEquals( reconcilerModule.databaseStateService().stateOfDatabase( barId ).operatorState(), STOPPED );
         assertTrue( reconcilerModule.databaseStateService().causeOfFailure( barId ).isEmpty() );
         verify( databaseManager.getDatabaseContext( barId ).get().database(), times( 1 ) ).stop();
     }
@@ -527,7 +530,7 @@ class DbmsReconcilerModuleTest
 
         // then
         LogAssertions.assertThat( logProvider ).forClass( DbmsReconciler.class ).forLevel( AssertableLogProvider.Level.ERROR )
-                .containsMessageWithException( "Encountered error when attempting to reconcile database foo " +
+                  .containsMessageWithException( "Encountered error when attempting to reconcile database foo " +
                                                "to state 'online', database remains in state 'offline'", failure );
 
         // when
@@ -537,10 +540,10 @@ class DbmsReconcilerModuleTest
         // then
         // no error is logged for the failed database
         LogAssertions.assertThat( logProvider ).forClass( DbmsReconciler.class ).forLevel( AssertableLogProvider.Level.ERROR )
-                .doesNotHaveAnyLogs();
+                  .doesNotHaveAnyLogs();
         // but there is a warning that it has failed
         LogAssertions.assertThat( logProvider ).forClass( DbmsReconciler.class ).forLevel( AssertableLogProvider.Level.WARN )
-                .containsMessageWithArguments( "Reconciler triggered but the following databases are currently failed and may be ignored: %s. " +
+                  .containsMessageWithArguments( "Reconciler triggered but the following databases are currently failed and may be ignored: %s. " +
                                                "Run `SHOW DATABASES` for further information.", "[foo]" );
     }
 
@@ -571,11 +574,12 @@ class DbmsReconcilerModuleTest
 
         // then
         // no error is logged for the panicked database
+
         LogAssertions.assertThat( logProvider ).forClass( DbmsReconciler.class ).forLevel( AssertableLogProvider.Level.ERROR )
-                .doesNotHaveAnyLogs();
+                  .doesNotHaveAnyLogs();
         // but there is a warning that it has failed
         LogAssertions.assertThat( logProvider ).forClass( DbmsReconciler.class ).forLevel( AssertableLogProvider.Level.WARN )
-                .containsMessagesOnce( "Panicked database foo was reconciled to state 'offline'" );
+                  .containsMessagesOnce( "Panicked database foo was reconciled to state 'offline'" );
 
         // when
         logProvider.clear();
@@ -584,13 +588,13 @@ class DbmsReconcilerModuleTest
         // then
         // no error is logged for the panicked database
         LogAssertions.assertThat( logProvider ).forClass( DbmsReconciler.class ).forLevel( AssertableLogProvider.Level.ERROR )
-                .doesNotHaveAnyLogs();
+                  .doesNotHaveAnyLogs();
         // but there is a warning that it has failed
         LogAssertions.assertThat( logProvider ).forClass( DbmsReconciler.class ).forLevel( AssertableLogProvider.Level.WARN )
-                .containsMessageWithArguments( "Reconciler triggered but the following databases are currently failed and may be ignored: %s. " +
+                  .containsMessageWithArguments( "Reconciler triggered but the following databases are currently failed and may be ignored: %s. " +
                                                "Run `SHOW DATABASES` for further information.", "[foo]" );
         LogAssertions.assertThat( logProvider ).forClass( DbmsReconciler.class ).forLevel( AssertableLogProvider.Level.WARN )
-                .doesNotContainMessage( "Panicked database foo was reconciled to state 'offline'" );
+                  .doesNotContainMessage( "Panicked database foo was reconciled to state 'offline'" );
     }
 
     private void dropDatabase( NamedDatabaseId fooId, StandaloneDbmsReconcilerModule reconcilerModule )

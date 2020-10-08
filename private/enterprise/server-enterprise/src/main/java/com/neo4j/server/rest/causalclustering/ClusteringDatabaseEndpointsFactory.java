@@ -31,7 +31,7 @@ public class ClusteringDatabaseEndpointsFactory
         }
 
         // This cast is safe because Causal Clustering endpoints are only available in enterprise mode
-        EnterpriseOperatorState operatorState = (EnterpriseOperatorState) dbStateService.stateOfDatabase( db.databaseId() );
+        EnterpriseOperatorState operatorState = (EnterpriseOperatorState) dbStateService.stateOfDatabase( db.databaseId() ).operatorState();
         return availabilityAwareStatus( output, databaseName, clusterService, db, operatorState );
     }
 

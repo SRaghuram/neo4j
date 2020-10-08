@@ -14,10 +14,8 @@ import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
-import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.discovery.member.DefaultDiscoveryMemberFactory;
-import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
+import com.neo4j.causalclustering.discovery.member.DefaultDiscoveryMember;
 import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import com.neo4j.causalclustering.discovery.procedures.ReadReplicaRoleProcedure;
 import com.neo4j.causalclustering.discovery.procedures.ReadReplicaToggleProcedure;
@@ -238,7 +236,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager,
                 databaseEventService, storageFactory, reconciledTxTracker, dbmsModel, quarantineOperator );
 
-        topologyService = createTopologyService( databaseManager, reconcilerModule.databaseStateService(), globalLogService );
+        topologyService = createTopologyService( reconcilerModule.databaseStateService(), globalLogService );
         reconcilerModule.registerDatabaseStateChangedListener( topologyService );
         globalLife.add( dependencies.satisfyDependency( topologyService ) );
 
@@ -295,13 +293,12 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         return new EnterpriseNeoWebServer( managementService, globalDependencies, config, userLogProvider, dbmsInfo );
     }
 
-    private TopologyService createTopologyService( DatabaseManager<ClusteredDatabaseContext> databaseManager, DatabaseStateService databaseStateService,
-            LogService logService )
+    private TopologyService createTopologyService( DatabaseStateService databaseStateService, LogService logService )
     {
-        DiscoveryMemberFactory discoveryMemberFactory = new DefaultDiscoveryMemberFactory( databaseManager, databaseStateService );
-        RemoteMembersResolver hostnameResolver = ResolutionResolverFactory.chooseResolver( globalConfig, logService );
-        return discoveryServiceFactory.readReplicaTopologyService( globalConfig, logProvider, jobScheduler, identityModule, hostnameResolver,
-                sslPolicyLoader, discoveryMemberFactory, globalModule.getGlobalClock() );
+        var hostnameResolver = ResolutionResolverFactory.chooseResolver( globalConfig, logService );
+        return discoveryServiceFactory.readReplicaTopologyService( globalConfig, logProvider, jobScheduler, identityModule,
+                                                                   hostnameResolver, sslPolicyLoader, DefaultDiscoveryMember::factory,
+                                                                   globalModule.getGlobalClock(), databaseStateService );
     }
 
     ReadReplicaDatabaseFactory readReplicaDatabaseFactory()

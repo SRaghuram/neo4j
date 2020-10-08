@@ -454,7 +454,7 @@ public final class CausalClusteringTestHelpers
             return EnterpriseOperatorState.UNKNOWN;
         }
         var databaseStateService = member.resolveDependency( SYSTEM_DATABASE_NAME, DatabaseStateService.class );
-        return (EnterpriseOperatorState) databaseStateService.stateOfDatabase( database.databaseId() );
+        return (EnterpriseOperatorState) databaseStateService.stateOfDatabase( database.databaseId() ).operatorState();
     }
 
     private static Map<ClusterMember,Set<String>> memberUserStates( Cluster cluster )

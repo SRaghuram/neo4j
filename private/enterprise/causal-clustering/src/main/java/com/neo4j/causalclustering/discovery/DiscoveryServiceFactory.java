@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import java.time.Clock;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
@@ -19,12 +20,13 @@ import org.neo4j.ssl.config.SslPolicyLoader;
 public interface DiscoveryServiceFactory
 {
     CoreTopologyService coreTopologyService( Config config, ClusteringIdentityModule identityModule, JobScheduler jobScheduler, LogProvider logProvider,
-                                             LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver,
-                                             RetryStrategy topologyServiceRetryStrategy,
-                                             SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory,
-                                             DiscoveryFirstStartupDetector firstStartupDetector, Monitors monitors,
-                                             Clock clock );
+            LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver,
+            RetryStrategy topologyServiceRetryStrategy,
+            SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory,
+            DiscoveryFirstStartupDetector firstStartupDetector, Monitors monitors,
+            Clock clock, DatabaseStateService databaseStateService );
 
     TopologyService readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler, ClusteringIdentityModule identityModule,
-            RemoteMembersResolver remoteMembersResolver, SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory, Clock clock );
+            RemoteMembersResolver remoteMembersResolver, SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory, Clock clock,
+            DatabaseStateService databaseStateService );
 }

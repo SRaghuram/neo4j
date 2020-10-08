@@ -32,6 +32,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.logging.LogProvider;
@@ -137,11 +138,11 @@ public class AkkaDiscoveryRestartIT
 
         @Override
         public TestAkkaCoreTopologyService coreTopologyService( Config config, ClusteringIdentityModule identityModule, JobScheduler jobScheduler,
-                                                                LogProvider logProvider, LogProvider userLogProvider,
-                                                                RemoteMembersResolver remoteMembersResolver, RetryStrategy catchupAddressRetryStrategy,
-                                                                SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory,
-                                                                DiscoveryFirstStartupDetector firstStartupDetector,
-                                                                Monitors monitors, Clock clock )
+                LogProvider logProvider, LogProvider userLogProvider,
+                RemoteMembersResolver remoteMembersResolver, RetryStrategy catchupAddressRetryStrategy,
+                SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory,
+                DiscoveryFirstStartupDetector firstStartupDetector,
+                Monitors monitors, Clock clock, DatabaseStateService databaseStateService )
         {
             TimeoutStrategy timeoutStrategy = new ExponentialBackoffStrategy( RESTART_RETRY_DELAY_MS, RESTART_RETRY_DELAY_MAX_MS, MILLISECONDS );
             Restarter restarter = new Restarter( timeoutStrategy, RESTART_FAILURES_BEFORE_UNHEALTHY );
@@ -156,13 +157,14 @@ public class AkkaDiscoveryRestartIT
                     discoveryMemberFactory,
                     Executors.newCachedThreadPool(),
                     clock,
-                    monitors );
+                    monitors,
+                    databaseStateService );
         }
 
         @Override
         public AkkaTopologyClient readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler,
                 ClusteringIdentityModule identityModule, RemoteMembersResolver remoteMembersResolver, SslPolicyLoader sslPolicyLoader,
-                DiscoveryMemberFactory discoveryMemberFactory, Clock clock )
+                DiscoveryMemberFactory discoveryMemberFactory, Clock clock, DatabaseStateService databaseStateService )
         {
             return null;
         }
@@ -190,10 +192,10 @@ public class AkkaDiscoveryRestartIT
 
         TestAkkaCoreTopologyService( Config config, ClusteringIdentityModule identityModule, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
                 LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, Restarter restarter, DiscoveryMemberFactory discoveryMemberFactory,
-                Executor executor, Clock clock, Monitors monitors )
+                Executor executor, Clock clock, Monitors monitors, DatabaseStateService databaseStateService )
         {
             super( config, identityModule, actorSystemLifecycle, logProvider, userLogProvider, catchupAddressRetryStrategy, restarter, discoveryMemberFactory,
-                    executor, clock, monitors );
+                    executor, clock, monitors, databaseStateService );
             this.actorSystemLifecycle = actorSystemLifecycle;
         }
 

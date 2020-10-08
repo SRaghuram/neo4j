@@ -15,6 +15,7 @@ import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
+import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -28,7 +29,8 @@ public class DirectoryActor extends BaseReplicatedDataActor<ORMap<DatabaseId,Rep
     public static Props props( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> discoveryUpdateSink,
             ActorRef rrTopologyActor, ReplicatedDataMonitor monitor )
     {
-        return Props.create( DirectoryActor.class, () -> new DirectoryActor( cluster, replicator, discoveryUpdateSink, rrTopologyActor, monitor ) );
+        return Props.create( DirectoryActor.class, () ->
+                new DirectoryActor( cluster, replicator, discoveryUpdateSink, rrTopologyActor, monitor ) );
     }
 
     public static final String NAME = "cc-directory-actor";
@@ -45,16 +47,34 @@ public class DirectoryActor extends BaseReplicatedDataActor<ORMap<DatabaseId,Rep
     }
 
     @Override
-    protected void sendInitialDataToReplicator()
+    protected void sendInitialDataToReplicator( DiscoveryMember memberSnapshot )
     {
-        // no op
+        var localLeaderships = memberSnapshot.databaseLeaderships().entrySet().stream()
+               .reduce( ORMap.create(), this::addLeadership, ORMap::merge );
+
+        if ( !localLeaderships.isEmpty() )
+        {
+            modifyReplicatedData( key, map -> map.merge( localLeaderships ) );
+        }
     }
 
     @Override
     protected void handleCustomEvents( ReceiveBuilder builder )
     {
-        builder.match( LeaderInfoSettingMessage.class, message ->
-            modifyReplicatedData( key, map -> map.put( cluster, message.database(), new ReplicatedLeaderInfo( message.leaderInfo() ) ) ) );
+        builder.match( LeaderInfoSettingMessage.class, this::handleLeaderInfoSet );
+    }
+
+    private void handleLeaderInfoSet( LeaderInfoSettingMessage message )
+    {
+        modifyReplicatedData( key, map -> map.put( cluster, message.database(), new ReplicatedLeaderInfo( message.leaderInfo() ) ) );
+    }
+
+    private ORMap<DatabaseId,ReplicatedLeaderInfo> addLeadership( ORMap<DatabaseId,ReplicatedLeaderInfo> acc,
+            Map.Entry<DatabaseId,LeaderInfo> entry )
+    {
+        var databaseId = entry.getKey();
+        var replicatedInfo = new ReplicatedLeaderInfo( entry.getValue() );
+        return acc.put( cluster, databaseId, replicatedInfo );
     }
 
     @Override

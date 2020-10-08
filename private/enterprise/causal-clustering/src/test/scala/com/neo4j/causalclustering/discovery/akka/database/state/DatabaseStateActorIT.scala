@@ -13,14 +13,20 @@ import akka.stream.OverflowStrategy
 import akka.stream.javadsl.Source
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
+import com.neo4j.causalclustering.core.consensus.LeaderInfo
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState
+import com.neo4j.causalclustering.discovery.TestDiscoveryMember
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.DatabaseStateUpdateSink
+import com.neo4j.causalclustering.discovery.akka.PublishInitialData
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
-import com.neo4j.causalclustering.identity.IdFactory
-import com.neo4j.causalclustering.identity.MemberId
+import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory
+import com.neo4j.causalclustering.identity.StubClusteringIdentityModule
+import com.neo4j.dbms.EnterpriseDatabaseState
 import com.neo4j.dbms.EnterpriseOperatorState
+import org.neo4j.dbms.DatabaseState
 import org.neo4j.kernel.database.DatabaseId
+import org.neo4j.kernel.database.NamedDatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
 
@@ -43,7 +49,7 @@ class DatabaseStateActorIT extends BaseAkkaIT("DatabaseStateActorIT") {
       Then("send database state to replicator")
       val update = expectReplicatorUpdates(replicator, dataKey)
       val ddata = update.modify.apply(Option(LWWMap.create()))
-      val dbToMember = new DatabaseToMember(dbId, myself)
+      val dbToMember = new DatabaseToMember(dbId, identityModule.memberId())
       val ddataEntry = ddata.entries(dbToMember)
       ddataEntry.databaseId should equal(dbId)
       ddataEntry.operatorState should equal(EnterpriseOperatorState.STARTED)
@@ -60,7 +66,7 @@ class DatabaseStateActorIT extends BaseAkkaIT("DatabaseStateActorIT") {
       Then("remove database state from replicator")
       val update = expectReplicatorUpdates(replicator, dataKey)
       val ddata = update.modify.apply(Option(LWWMap.create()))
-      val dbToMember = new DatabaseToMember(dbId, myself)
+      val dbToMember = new DatabaseToMember(dbId, identityModule.memberId())
       val ddataEntry = ddata.entries.get(dbToMember)
       ddataEntry shouldBe empty
     }
@@ -69,31 +75,57 @@ class DatabaseStateActorIT extends BaseAkkaIT("DatabaseStateActorIT") {
       Given("new database state message")
       val dbId = randomDatabaseId
       val dbState = new DiscoveryDatabaseState(dbId, EnterpriseOperatorState.STARTED)
-      val dbToMember = new DatabaseToMember(dbId, myself)
+      val dbToMember = new DatabaseToMember(dbId, identityModule.memberId())
       val update = LWWMap.empty.put(cluster, dbToMember, dbState)
-      val replicatedDbState = ReplicatedDatabaseState.ofCores(dbId, Map(myself -> dbState).asJava)
+      // TODO: change to identitModule.myself() when ReplicatedDatabaseState is updated to use ServerId
+      val replicatedDbState = ReplicatedDatabaseState.ofCores(dbId, Map(identityModule.memberId() -> dbState).asJava)
 
       When("database state update received")
       replicatedDataActorRef ! Replicator.Changed(dataKey)(update)
 
       Then("send message to update sink")
-      awaitAssert(actualDatabaseStates should contain (dbId -> replicatedDbState))
+      awaitAssert(actualDatabaseStates should contain(dbId -> replicatedDbState))
       rrTopologyProbe.expectMsg(defaultWaitTime, new AllReplicatedDatabaseStates(List(replicatedDbState).asJava))
+    }
+
+    "should send initial data to replicator when asked" in new Fixture {
+      Given("some initial states and a DatabaseStateActor")
+      val dbId1 = randomNamedDatabaseId
+      val dbId2 = randomNamedDatabaseId
+      val states = Map[NamedDatabaseId, DatabaseState](
+        dbId1 -> new EnterpriseDatabaseState(dbId1, EnterpriseOperatorState.STARTED),
+        dbId2 -> new EnterpriseDatabaseState(dbId2, EnterpriseOperatorState.STOPPED)
+      )
+      val stateService = databaseStateService(states)
+
+      val snapshotFactory: DiscoveryMemberFactory = TestDiscoveryMember.factory _
+      val replicatorProbe = TestProbe("replicatorProbe")
+      val actor = system.actorOf(DatabaseStateActor.props(cluster, replicatorProbe.ref, discoverySink, rrTopologyProbe.ref, monitor, identityModule.myself()))
+
+      When("PublishInitialData request received")
+      actor ! new PublishInitialData(snapshotFactory.createSnapshot(identityModule, stateService, Map.empty[DatabaseId,LeaderInfo].asJava))
+
+      Then("the initial state should be published")
+      val update = expectReplicatorUpdates(replicatorProbe, dataKey)
+      val ddata = update.modify(Option(LWWMap.empty))
+      ddata.size shouldBe 2
+      ddata.entries.map({ case (k,v) => k.databaseId -> v.operatorState }) shouldBe states.map({ case (k,v) => k.databaseId -> v.operatorState })
     }
 
   }
 
-  class Fixture extends ReplicatedDataActorFixture[LWWMap[DatabaseToMember,DiscoveryDatabaseState]] {
+  class Fixture extends ReplicatedDataActorFixture[LWWMap[DatabaseToMember, DiscoveryDatabaseState]] {
     val rrTopologyProbe = TestProbe("rrTopology")
-    val myself = IdFactory.randomMemberId()
-    var actualDatabaseStates = Map.empty[DatabaseId,ReplicatedDatabaseState]
+    val identityModule = new StubClusteringIdentityModule
+    var actualDatabaseStates = Map.empty[DatabaseId, ReplicatedDatabaseState]
 
     val updateSink = new DatabaseStateUpdateSink {
       override def onDbStateUpdate(databaseState: ReplicatedDatabaseState) = {
-        if ( databaseState.isEmpty )
+        if (databaseState.isEmpty) {
           actualDatabaseStates -= databaseState.databaseId
-        else
+        } else {
           actualDatabaseStates += (databaseState.databaseId -> databaseState)
+        }
       }
     }
 
@@ -101,9 +133,10 @@ class DatabaseStateActorIT extends BaseAkkaIT("DatabaseStateActorIT") {
       .to(Sink.foreach(updateSink.onDbStateUpdate))
       .run(ActorMaterializer())
 
-    val replicatedDataActorRef = system.actorOf(DatabaseStateActor.props(
-      cluster, replicator.ref, discoverySink, rrTopologyProbe.ref, monitor, myself))
-    val dataKey = LWWMapKey.create[DatabaseToMember,DiscoveryDatabaseState](ReplicatedDataIdentifier.DATABASE_STATE.keyName())
-    val data: LWWMap[DatabaseToMember, DiscoveryDatabaseState] = LWWMap.empty[DatabaseToMember,DiscoveryDatabaseState]
+    val replicatedDataActorRef = system.actorOf(
+      DatabaseStateActor.props(cluster, replicator.ref, discoverySink, rrTopologyProbe.ref, monitor, identityModule.myself()))
+    val dataKey = LWWMapKey.create[DatabaseToMember, DiscoveryDatabaseState](ReplicatedDataIdentifier.DATABASE_STATE.keyName())
+    val data: LWWMap[DatabaseToMember, DiscoveryDatabaseState] = LWWMap.empty[DatabaseToMember, DiscoveryDatabaseState]
   }
+
 }

@@ -33,6 +33,7 @@ import java.util.Map;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.DatabaseState;
+import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
@@ -49,12 +50,13 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     private final ClusteringIdentityModule identityModule;
     private final LogProvider logProvider;
     private final Clock clock;
+    private final DatabaseStateService databaseStateService;
 
     private volatile ActorRef clientTopologyActorRef;
     private volatile GlobalTopologyState globalTopologyState;
 
     AkkaTopologyClient( Config config, LogProvider logProvider, ClusteringIdentityModule identityModule, ActorSystemLifecycle actorSystemLifecycle,
-            DiscoveryMemberFactory discoveryMemberFactory, Clock clock )
+            DiscoveryMemberFactory discoveryMemberFactory, Clock clock, DatabaseStateService databaseStateService )
     {
         this.config = config;
         this.identityModule = identityModule;
@@ -63,6 +65,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
         this.logProvider = logProvider;
         this.globalTopologyState = newGlobalTopologyState( logProvider );
         this.clock = clock;
+        this.databaseStateService = databaseStateService;
     }
 
     @Override
@@ -86,9 +89,9 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
         SourceQueueWithComplete<ReplicatedDatabaseState> databaseStateSink =
                 actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbStateUpdate );
 
-        var discoveryMember = discoveryMemberFactory.create( identityModule.myself() );
+        var discoveryMemberSnapshot = discoveryMemberFactory.createSnapshot( identityModule, databaseStateService, Map.of() );
         var clientTopologyProps = ClientTopologyActor.props(
-                discoveryMember,
+                discoveryMemberSnapshot,
                 coreTopologySink,
                 rrTopologySink,
                 directorySink,
@@ -96,7 +99,8 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
                 clusterClientManager,
                 config,
                 logProvider,
-                clock );
+                clock,
+                identityModule.myself() );
         clientTopologyActorRef = actorSystemLifecycle.applicationActorOf( clientTopologyProps, ClientTopologyActor.NAME );
     }
 

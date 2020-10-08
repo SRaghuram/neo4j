@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitorService;
+import com.neo4j.dbms.EnterpriseDatabaseState;
 import com.neo4j.dbms.EnterpriseOperatorState;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +29,7 @@ import javax.ws.rs.core.Response;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.dbms.DatabaseStateService;
+import org.neo4j.dbms.StubDatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -103,10 +105,9 @@ class ReadReplicaDatabaseEndpointsTest
         when( internalDatabase.getNamedDatabaseId() ).thenReturn( new TestDatabaseIdRepository().defaultDatabase() );
         dependencyResolver.satisfyDependency( internalDatabase );
 
-        var databaseStateService = mock( DatabaseStateService.class );
-        when( databaseStateService.stateOfDatabase( any( NamedDatabaseId.class ) ) ).thenReturn( EnterpriseOperatorState.STARTED );
+        var stateService = new StubDatabaseStateService( id -> new EnterpriseDatabaseState( id, EnterpriseOperatorState.STARTED ) );
 
-        status = ClusteringDatabaseEndpointsFactory.build( output, databaseStateService, managementService,
+        status = ClusteringDatabaseEndpointsFactory.build( output, stateService, managementService,
                                                            DEFAULT_DATABASE_NAME, mock( PerDatabaseService.class ) );
     }
 

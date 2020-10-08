@@ -5,6 +5,10 @@
  */
 package com.neo4j.causalclustering.discovery.akka;
 
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+import akka.testkit.TestProbe;
+import akka.testkit.javadsl.TestKit;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
@@ -15,6 +19,9 @@ import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
+import com.neo4j.dbms.EnterpriseDatabaseState;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
@@ -22,20 +29,27 @@ import org.mockito.Mockito;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.DatabaseState;
+import org.neo4j.dbms.DatabaseStateService;
+import org.neo4j.dbms.StubDatabaseStateService;
 import org.neo4j.function.ThrowingConsumer;
 import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 
 import static com.neo4j.causalclustering.discovery.akka.GlobalTopologyStateTestUtil.setupCoreTopologyState;
 import static com.neo4j.causalclustering.discovery.akka.GlobalTopologyStateTestUtil.setupReadReplicaTopologyState;
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
@@ -43,12 +57,12 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Answers.RETURNS_MOCKS;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -58,6 +72,7 @@ import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedData
 
 class AkkaCoreTopologyServiceTest
 {
+
     private Config config = Config.defaults();
     private ClusteringIdentityModule identityModule = new StubClusteringIdentityModule();
     private LogProvider logProvider = NullLogProvider.getInstance();
@@ -65,22 +80,73 @@ class AkkaCoreTopologyServiceTest
     private RetryStrategy catchupAddressretryStrategy = new NoRetriesStrategy();
     private Clock clock = Clock.fixed( Instant.now(), ZoneId.of( "UTC" ) );
     private ExecutorService executor = Executors.newSingleThreadExecutor();
-
-    private ActorSystemLifecycle system = mock( ActorSystemLifecycle.class, RETURNS_MOCKS );
-
     private Restarter restarter = new Restarter( new ConstantTimeTimeoutStrategy( 1, MILLISECONDS ), 0 );
 
-    private AkkaCoreTopologyService service = new AkkaCoreTopologyService(
-            config,
-            identityModule,
-            system,
-            logProvider,
-            userLogProvider,
-            catchupAddressretryStrategy, restarter,
-            TestDiscoveryMember::new,
-            executor,
-            clock,
-            new Monitors() );
+    private Map<NamedDatabaseId,DatabaseState> databaseStates;
+    private DatabaseStateService databaseStateService;
+    private ActorSystem system;
+    private ActorSystemLifecycle systemLifecycle;
+    private TestKit testKit;
+    private AkkaCoreTopologyService service;
+
+    @BeforeEach
+    void setup()
+    {
+
+        var databaseId1 = randomNamedDatabaseId();
+        var databaseId2 = randomNamedDatabaseId();
+        databaseStates = Map.of(
+                databaseId1, new EnterpriseDatabaseState( databaseId1, STARTED ),
+                databaseId2, new EnterpriseDatabaseState( databaseId2, STOPPED ) );
+        databaseStateService = new StubDatabaseStateService( databaseStates, EnterpriseDatabaseState::unknown );
+
+        system = ActorSystem.create();
+        systemLifecycle = mock( ActorSystemLifecycle.class );
+        testKit = new TestKit( system );
+
+        when( systemLifecycle.applicationActorOf( any( Props.class ), anyString() ) )
+                .then( i ->
+                {
+                    var name = i.getArgument( 1, String.class );
+                    return testKit.getRef();
+                } );
+
+        service = new AkkaCoreTopologyService(
+                config,
+                identityModule,
+                systemLifecycle,
+                logProvider,
+                userLogProvider,
+                catchupAddressretryStrategy, restarter,
+                TestDiscoveryMember::factory,
+                executor,
+                clock,
+                new Monitors(),
+                databaseStateService
+        );
+    }
+
+    @AfterEach
+    void tearDown()
+    {
+        TestKit.shutdownActorSystem( system );
+        system = null;
+    }
+
+    @Test
+    void shouldPublishInitialDataOnRestart() throws Throwable
+    {
+        service.init();
+        service.start();
+
+        var expectedSnapshot = TestDiscoveryMember.factory( identityModule, databaseStateService, Map.of() );
+        var expectedMessage = new PublishInitialData( expectedSnapshot );
+        testKit.expectMsgEquals( expectedMessage );
+
+        service.restart();
+
+        testKit.expectMsgEquals( expectedMessage );
+    }
 
     @Test
     void shouldLifecycle() throws Throwable
@@ -88,14 +154,14 @@ class AkkaCoreTopologyServiceTest
         service.init();
         service.start();
 
-        verify( system ).createClusterActorSystem();
-        verify( system, atLeastOnce() ).queueMostRecent( any() );
-        verify( system, atLeastOnce() ).applicationActorOf( any(), any() );
+        verify( systemLifecycle ).createClusterActorSystem();
+        verify( systemLifecycle, atLeastOnce() ).queueMostRecent( any() );
+        verify( systemLifecycle, atLeastOnce() ).applicationActorOf( any(), any() );
 
         service.stop();
         service.shutdown();
 
-        verify( system ).shutdown();
+        verify( systemLifecycle ).shutdown();
     }
 
     @Test
@@ -103,18 +169,18 @@ class AkkaCoreTopologyServiceTest
     {
         service.restart();
 
-        verifyNoInteractions( system );
+        verifyNoInteractions( systemLifecycle );
     }
 
     @Test
     void shouldNotRestartIfIdle() throws Throwable
     {
         service.init();
-        reset( system );
+        clearInvocations( systemLifecycle );
 
         service.restart();
 
-        verifyNoInteractions( system );
+        verifyNoInteractions( systemLifecycle );
     }
 
     @Test
@@ -124,11 +190,11 @@ class AkkaCoreTopologyServiceTest
         service.start();
         service.stop();
         service.shutdown();
-        reset( system );
+        clearInvocations( systemLifecycle );
 
         service.restart();
 
-        verifyNoInteractions( system );
+        verifyNoInteractions( systemLifecycle );
     }
 
     @Test
@@ -136,13 +202,13 @@ class AkkaCoreTopologyServiceTest
     {
         service.init();
         service.start();
-        reset( system );
+        clearInvocations( systemLifecycle );
 
         service.restart();
 
-        InOrder inOrder = inOrder( system );
-        inOrder.verify( system ).shutdown();
-        inOrder.verify( system ).createClusterActorSystem();
+        InOrder inOrder = inOrder( systemLifecycle );
+        inOrder.verify( systemLifecycle ).shutdown();
+        inOrder.verify( systemLifecycle ).createClusterActorSystem();
     }
 
     @Test
@@ -278,15 +344,15 @@ class AkkaCoreTopologyServiceTest
     {
         service.init();
         service.start();
-        reset( system );
+        clearInvocations( systemLifecycle );
 
-        Mockito.doThrow( new RuntimeException() ).when( system ).shutdown();
+        Mockito.doThrow( new RuntimeException() ).when( systemLifecycle ).shutdown();
 
         service.restart();
 
-        InOrder inOrder = inOrder( system );
-        inOrder.verify( system ).shutdown();
-        inOrder.verify( system ).createClusterActorSystem();
+        InOrder inOrder = inOrder( systemLifecycle );
+        inOrder.verify( systemLifecycle ).shutdown();
+        inOrder.verify( systemLifecycle ).createClusterActorSystem();
     }
 
     @Test
@@ -294,15 +360,15 @@ class AkkaCoreTopologyServiceTest
     {
         service.init();
         service.start();
-        reset( system );
+        clearInvocations( systemLifecycle );
 
-        Mockito.doThrow( new RuntimeException() ).doNothing().when( system ).createClusterActorSystem();
+        Mockito.doThrow( new RuntimeException() ).doNothing().when( systemLifecycle ).createClusterActorSystem();
 
         service.restart();
 
-        InOrder inOrder = inOrder( system );
-        inOrder.verify( system ).shutdown();
-        inOrder.verify( system, times( 2 ) ).createClusterActorSystem();
+        InOrder inOrder = inOrder( systemLifecycle );
+        inOrder.verify( systemLifecycle ).shutdown();
+        inOrder.verify( systemLifecycle, times( 2 ) ).createClusterActorSystem();
     }
 
     @Test
@@ -310,18 +376,18 @@ class AkkaCoreTopologyServiceTest
     {
         service.init();
         service.start();
-        reset( system );
+        clearInvocations( systemLifecycle );
 
         int numFailures = 15;
         Exception exception = new RuntimeException();
         final Exception[] exceptions = Stream.generate( () -> exception ).limit( numFailures ).toArray( Exception[]::new );
-        Mockito.doThrow( exceptions ).doNothing().when( system ).createClusterActorSystem();
+        Mockito.doThrow( exceptions ).doNothing().when( systemLifecycle ).createClusterActorSystem();
 
         service.restart();
 
-        InOrder inOrder = inOrder( system );
-        inOrder.verify( system ).shutdown();
-        inOrder.verify( system, times( numFailures + 1 ) ).createClusterActorSystem();
+        InOrder inOrder = inOrder( systemLifecycle );
+        inOrder.verify( systemLifecycle ).shutdown();
+        inOrder.verify( systemLifecycle, times( numFailures + 1 ) ).createClusterActorSystem();
     }
 
     private void testEmptyTopologiesAreReportedAfter( ThrowingConsumer<AkkaCoreTopologyService,Exception> testAction ) throws Exception

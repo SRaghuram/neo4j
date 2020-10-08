@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
+import com.neo4j.dbms.EnterpriseDatabaseState;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -22,6 +23,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.DatabaseStateService;
+import org.neo4j.dbms.StubDatabaseStateService;
 import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -29,6 +32,7 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.time.Clocks;
 
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -42,6 +46,7 @@ class CoreTopologyChangeListenerTest
     private final RetryStrategy catchupAddressRetryStrategy = new NoRetriesStrategy();
     private final Restarter restarter = new Restarter( new ConstantTimeTimeoutStrategy( 1, MILLISECONDS ), 0 );
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private DatabaseStateService databaseStateService = new StubDatabaseStateService( dbId -> new EnterpriseDatabaseState( dbId, STARTED ) );
 
     private final ActorSystemLifecycle actorSystemLifecycle = Mockito.mock( ActorSystemLifecycle.class );
 
@@ -53,10 +58,12 @@ class CoreTopologyChangeListenerTest
             NullLogProvider.getInstance(),
             catchupAddressRetryStrategy,
             restarter,
-            TestDiscoveryMember::new,
+            TestDiscoveryMember::factory,
             executor,
             Clocks.systemClock(),
-            new Monitors() );
+            new Monitors(),
+            databaseStateService
+    );
 
     @Test
     void shouldNotifyListenersOnTopologyChange()

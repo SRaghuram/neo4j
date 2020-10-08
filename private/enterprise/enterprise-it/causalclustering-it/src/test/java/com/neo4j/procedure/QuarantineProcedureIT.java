@@ -104,7 +104,7 @@ class QuarantineProcedureIT
 
         // then
         assertEquals( result, secondResult );
-        assertDatabaseState( member, originalState, databaseName, "" );
+        assertDatabaseState( member, originalState.operatorState(), databaseName, "" );
         assertTrue( databaseStateService.causeOfFailure( databaseId ).isEmpty() );
         assertFalse( testDirectory.getFileSystem().fileExists( member.clusterStateLayout().quarantineMarkerStateFile( databaseName ) ) );
     }
@@ -196,7 +196,7 @@ class QuarantineProcedureIT
     {
         var databaseStateService = member.systemDatabase().getDependencyResolver().resolveDependency( DatabaseStateService.class );
         var databaseId = member.databaseId( databaseName );
-        assertEventually( () -> databaseStateService.stateOfDatabase( databaseId ), state -> operatorState == state );
+        assertEventually( () -> databaseStateService.stateOfDatabase( databaseId ).operatorState(), state -> operatorState == state );
         assertEventually( () -> showDatabases( cluster ), list -> showDatabasesMatch( list, databaseName, member, operatorState, reason ) );
     }
 

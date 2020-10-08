@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.rest.causalclustering;
 
+import com.neo4j.dbms.EnterpriseDatabaseState;
 import com.neo4j.dbms.EnterpriseOperatorState;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -14,6 +15,7 @@ import javax.ws.rs.core.Response;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.dbms.DatabaseStateService;
+import org.neo4j.dbms.StubDatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -47,7 +49,7 @@ class ClusteringDatabaseEndpointsFactoryTest
     void shouldBuildStatusForCore()
     {
         var dbService = databaseServiceMock( CORE );
-        var databaseStateService = databaseStateServiceMock();
+        var databaseStateService = databaseStateServiceStub();
 
         var status = buildStatus( dbService, KNOWN_DB, databaseStateService );
 
@@ -58,7 +60,7 @@ class ClusteringDatabaseEndpointsFactoryTest
     void shouldBuildStatusForReadReplica()
     {
         var dbService = databaseServiceMock( READ_REPLICA );
-        var databaseStateService = databaseStateServiceMock();
+        var databaseStateService = databaseStateServiceStub();
 
         var status = buildStatus( dbService, KNOWN_DB, databaseStateService );
 
@@ -81,7 +83,7 @@ class ClusteringDatabaseEndpointsFactoryTest
     void shouldBuildStatusForUnknownDatabase()
     {
         var dbService = databaseServiceMock( UNKNOWN );
-        var databaseStateService = databaseStateServiceMock();
+        var databaseStateService = databaseStateServiceStub();
 
         var status = buildStatus( dbService, UNKNOWN_DB, databaseStateService );
 
@@ -99,10 +101,9 @@ class ClusteringDatabaseEndpointsFactoryTest
     void shouldGiveCorrectResponseForState( OperatorStateResponses stateResponses )
     {
         var dbService = databaseServiceMock( CORE );
-        var databaseStateService = mock( DatabaseStateService.class );
-        when( databaseStateService.stateOfDatabase( any( NamedDatabaseId.class ) ) ).thenReturn( stateResponses.operatorState() );
+        var stateService = new StubDatabaseStateService( id -> new EnterpriseDatabaseState( id, stateResponses.operatorState() ) );
 
-        var status = buildStatus( dbService, KNOWN_DB, databaseStateService );
+        var status = buildStatus( dbService, KNOWN_DB, stateService );
 
         stateResponses.assertMatches( status );
     }
@@ -204,7 +205,7 @@ class ClusteringDatabaseEndpointsFactoryTest
     private static void testBuildStatusForStandalone( DbmsInfo standaloneInfo )
     {
         var dbService = databaseServiceMock( standaloneInfo );
-        var databaseStateService = databaseStateServiceMock();
+        var databaseStateService = databaseStateServiceStub();
 
         var status = buildStatus( dbService, KNOWN_DB, databaseStateService );
 
@@ -217,11 +218,9 @@ class ClusteringDatabaseEndpointsFactoryTest
         assertEquals( FORBIDDEN.getStatusCode(), status.description().getStatus() );
     }
 
-    private static DatabaseStateService databaseStateServiceMock()
+    private static DatabaseStateService databaseStateServiceStub()
     {
-        var databaseStateService = mock( DatabaseStateService.class );
-        when( databaseStateService.stateOfDatabase( any( NamedDatabaseId.class ) ) ).thenReturn( EnterpriseOperatorState.STARTED );
-        return databaseStateService;
+        return new StubDatabaseStateService( id -> new EnterpriseDatabaseState( id, EnterpriseOperatorState.STARTED ) );
     }
 
     private static ClusteringEndpoints buildStatus( DatabaseManagementService dbService, String databaseName,

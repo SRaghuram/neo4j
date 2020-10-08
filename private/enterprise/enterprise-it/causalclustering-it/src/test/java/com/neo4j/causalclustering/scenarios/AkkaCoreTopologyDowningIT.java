@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.scenarios;
 
 import akka.actor.Address;
-import com.neo4j.causalclustering.discovery.DiscoveryFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
 import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
@@ -21,6 +20,7 @@ import com.neo4j.causalclustering.discovery.akka.system.JoinMessageFactory;
 import com.neo4j.causalclustering.helper.ErrorHandler;
 import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
 import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.dbms.EnterpriseDatabaseState;
 import org.assertj.core.api.HamcrestCondition;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
@@ -30,9 +30,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -43,7 +43,12 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.DatabaseState;
+import org.neo4j.dbms.DatabaseStateService;
+import org.neo4j.dbms.StubDatabaseStateService;
 import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
+import org.neo4j.kernel.database.NamedDatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -51,6 +56,7 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.time.Clocks;
 
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -220,13 +226,13 @@ class AkkaCoreTopologyDowningIT
 
     private TopologyServiceComponents createAndStart( Function<Config,RemoteMembersResolver> resolverFactory, int myPort, int... otherPorts ) throws Throwable
     {
-        List<SocketAddress> initialDiscoMembers = IntStream.concat( IntStream.of( myPort ), IntStream.of( otherPorts ) )
+        var initialDiscoMembers = IntStream.concat( IntStream.of( myPort ), IntStream.of( otherPorts ) )
                 .mapToObj( port -> new SocketAddress( "localhost", port ) )
                 .collect( Collectors.toList() );
 
-        SocketAddress boltAddress = new SocketAddress( "localhost", PortAuthority.allocatePort() );
+        var boltAddress = new SocketAddress( "localhost", PortAuthority.allocatePort() );
 
-        Config config = Config.newBuilder()
+        var config = Config.newBuilder()
                 .set( CausalClusteringSettings.discovery_listen_address, new SocketAddress( "localhost", myPort ) )
                 .set( CausalClusteringSettings.discovery_advertised_address, new SocketAddress( myPort ) )
                 .set( CausalClusteringSettings.initial_discovery_members, initialDiscoMembers )
@@ -237,26 +243,33 @@ class AkkaCoreTopologyDowningIT
                 .set( GraphDatabaseSettings.store_internal_log_level, Level.DEBUG )
                 .build();
 
-        LogProvider logProvider = NullLogProvider.getInstance();
+        var logProvider = NullLogProvider.getInstance();
 
-        Executor executor = Executors.newCachedThreadPool();
+        var executor = Executors.newCachedThreadPool();
 
-        DiscoveryFirstStartupDetector firstStartupDetector = new TestFirstStartupDetector( true );
-        ActorSystemFactory actorSystemFactory = new ActorSystemFactory( Optional.empty(), firstStartupDetector, config, logProvider  );
-        TestActorSystemLifecycle actorSystemLifecycle = new TestActorSystemLifecycle( actorSystemFactory, resolverFactory, config, logProvider );
+        var firstStartupDetector = new TestFirstStartupDetector( true );
+        var actorSystemFactory = new ActorSystemFactory( Optional.empty(), firstStartupDetector, config, logProvider  );
+        var actorSystemLifecycle = new TestActorSystemLifecycle( actorSystemFactory, resolverFactory, config, logProvider );
+        var databaseIdRepository = new TestDatabaseIdRepository();
+        Map<NamedDatabaseId,DatabaseState> states = Map.of( databaseIdRepository.defaultDatabase(),
+                                                            new EnterpriseDatabaseState( databaseIdRepository.defaultDatabase(), STARTED ) );
+        DatabaseStateService databaseStateService = new StubDatabaseStateService( states, EnterpriseDatabaseState::unknown );
+        var identityModule = new StubClusteringIdentityModule();
 
         AkkaCoreTopologyService service = new AkkaCoreTopologyService(
                 config,
-                new StubClusteringIdentityModule(),
+                identityModule,
                 actorSystemLifecycle,
                 logProvider,
                 logProvider,
                 new NoRetriesStrategy(),
                 new Restarter( new ConstantTimeTimeoutStrategy( 1, MILLISECONDS ), 2 ),
-                TestDiscoveryMember::new,
+                TestDiscoveryMember::factory,
                 executor,
                 Clocks.systemClock(),
-                new Monitors() );
+                new Monitors(),
+                databaseStateService
+        );
 
         service.init();
         service.start();

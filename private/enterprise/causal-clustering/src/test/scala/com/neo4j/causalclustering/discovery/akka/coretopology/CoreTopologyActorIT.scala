@@ -27,9 +27,11 @@ import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor
+import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory
 import com.neo4j.causalclustering.identity.IdFactory
 import com.neo4j.causalclustering.identity.MemberId
 import com.neo4j.causalclustering.identity.RaftId
+import com.neo4j.causalclustering.identity.StubClusteringIdentityModule
 import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
@@ -37,6 +39,7 @@ import org.mockito.Mockito.verify
 import org.neo4j.configuration.Config
 import org.neo4j.dbms.identity.ServerId
 import org.neo4j.kernel.database.DatabaseId
+import org.neo4j.kernel.database.NamedDatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
 
 import scala.collection.JavaConverters.mapAsJavaMapConverter
@@ -81,7 +84,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
           makeTopologyActorKnowAboutCoreMember()
           val members = new util.TreeSet[Member](Member.ordering)
           members.add(ClusterViewMessageTest.createMember(1, MemberStatus.Up))
-          val clusterView = new ClusterViewMessage(false, members, Collections.emptySet() )
+          val clusterView = new ClusterViewMessage(false, members, Collections.emptySet())
 
           When("raft view received")
           topologyActorRef ! clusterView
@@ -97,10 +100,10 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
           Given("cluster view in known state")
           val members = new util.TreeSet[Member](Member.ordering)
           members.add(ClusterViewMessageTest.createMember(1, MemberStatus.Up))
-          val clusterView = new ClusterViewMessage(false, members, Collections.emptySet() )
+          val clusterView = new ClusterViewMessage(false, members, Collections.emptySet())
           val nullRaftIdTopology = new DatabaseCoreTopology(databaseId, null, expectedCoreTopology.servers())
           Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(databaseId), any(), any(), any()))
-              .thenReturn(nullRaftIdTopology)
+            .thenReturn(nullRaftIdTopology)
           topologyActorRef ! clusterView
           makeTopologyActorKnowAboutCoreMember(nullRaftIdTopology)
 
@@ -216,9 +219,9 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
 
     val topologyBuilder = mock[TopologyBuilder]
     val expectedCoreTopology = new DatabaseCoreTopology(databaseId, raftId, Map(
-                        IdFactory.randomMemberId() -> coreServerInfo(0),
-                        IdFactory.randomMemberId() -> coreServerInfo(1)
-                      ).asJava)
+      IdFactory.randomMemberId() -> coreServerInfo(0),
+      IdFactory.randomMemberId() -> coreServerInfo(1)
+    ).asJava)
     Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(databaseId), any(), any(), any()))
       .thenReturn(expectedCoreTopology)
 
@@ -226,12 +229,11 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
     val cluster = mock[Cluster]
     val myAddress = Address("akka", system.name, "myHost", 12)
     val myUniqueAddress = UniqueAddress(myAddress, 42L)
+    val identityModule = new StubClusteringIdentityModule
     Mockito.when(cluster.selfAddress).thenReturn(myAddress)
     Mockito.when(cluster.selfUniqueAddress).thenReturn(myUniqueAddress)
 
-    val props = CoreTopologyActor.props(
-      new TestDiscoveryMember(),
-      topologySink,
+    val props = CoreTopologyActor.props(topologySink,
       bootstrapStateSink,
       readReplicaProbe.ref,
       replicatorProbe.ref,
@@ -239,7 +241,8 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
       topologyBuilder,
       config,
       mock[ReplicatedDataMonitor],
-      mock[ClusterSizeMonitor])
+      mock[ClusterSizeMonitor],
+      identityModule.myself())
 
     val topologyActorRef = system.actorOf(props)
 
@@ -263,4 +266,5 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
     def coreServerInfo(serverId: Int, databaseId: DatabaseId = databaseId): CoreServerInfo =
       TestTopology.addressesForCore(serverId, false, Set[DatabaseId](databaseId).asJava)
   }
+
 }

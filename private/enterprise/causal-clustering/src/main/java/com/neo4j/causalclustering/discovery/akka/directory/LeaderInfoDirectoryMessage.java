@@ -10,8 +10,10 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 /**
  * Sent from discovery service to this Neo4J instance
