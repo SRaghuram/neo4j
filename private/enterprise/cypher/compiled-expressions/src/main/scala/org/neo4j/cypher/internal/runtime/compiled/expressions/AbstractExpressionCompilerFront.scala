@@ -976,25 +976,32 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       case expressions.StringLiteral(name) =>
         for (e <- compileExpression(lhs)) yield {
           val f = field[regex.Pattern](namer.nextVariableName())
+          val regexVar = namer.nextVariableName("regex")
+          val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], regexVar, nullCheckIfRequired(e)))
           val ops = block(
+            lazySet,
             //if (f == null) { f = Pattern.compile(...) }
             condition(isNull(loadField(f)))(
               setField(f, invokeStatic(method[regex.Pattern, regex.Pattern, String]("compile"), constant(name)))),
-            invokeStatic(method[CypherBoolean, BooleanValue, TextValue, regex.Pattern]("regex"), cast[TextValue](e.ir),
+            invokeStatic(method[CypherBoolean, BooleanValue, TextValue, regex.Pattern]("regex"), cast[TextValue](load(regexVar)),
                          loadField(f)))
 
-          IntermediateExpression(ops, e.fields :+ f, e.variables, Set(not(instanceOf[TextValue](e.ir))))
+          IntermediateExpression(ops, e.fields :+ f, e.variables, Set(block(lazySet, not(instanceOf[TextValue](load(regexVar))))))
         }
 
       case _ =>
         for {l <- compileExpression(lhs)
              r <- compileExpression(rhs)
         } yield {
+          val regexVar = namer.nextVariableName("regex")
+          val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], regexVar, nullCheckIfRequired(l)))
           IntermediateExpression(
-            invokeStatic(method[CypherBoolean, BooleanValue, TextValue, TextValue]("regex"),
-                         cast[TextValue](l.ir),
-                         invokeStatic(method[CypherFunctions, TextValue, AnyValue]("asTextValue"), r.ir)),
-            l.fields ++ r.fields, l.variables ++ r.variables, l.nullChecks ++ r.nullChecks + not(instanceOf[TextValue](l.ir)))
+            block(
+              lazySet,
+              invokeStatic(method[CypherBoolean, BooleanValue, TextValue, TextValue]("regex"),
+                         cast[TextValue](load(regexVar)),
+                         invokeStatic(method[CypherFunctions, TextValue, AnyValue]("asTextValue"), r.ir))),
+            l.fields ++ r.fields, l.variables ++ r.variables, l.nullChecks ++ r.nullChecks + block(lazySet, not(instanceOf[TextValue](load(regexVar)))))
         }
     }
 

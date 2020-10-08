@@ -1364,6 +1364,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compile(regex(nullLiteral, literalString("p")), slots), context) should equal(Values.NO_VALUE)
     evaluate(compile(regex(prop("nullNode", "prop"), literalString("p")), slots), context) should equal(Values.NO_VALUE)
     evaluate(compile(regex(literalString("p"), prop("nullNode", "prop")), slots), context) should equal(Values.NO_VALUE)
+    evaluate(compile(regex(function("toString", function("sin", nullLiteral)), literalString("p")), slots), context) should equal(Values.NO_VALUE)
+    evaluate(compile(regex(function("toString", function("sin", nullLiteral)), function("toString", function("sin", nullLiteral))), slots), context) should equal(Values.NO_VALUE)
   }
 
   test("startsWith") {
