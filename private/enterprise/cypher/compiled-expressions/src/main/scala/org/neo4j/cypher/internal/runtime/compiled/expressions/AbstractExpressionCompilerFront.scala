@@ -770,7 +770,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           // ListValue list = [evaluate collection expression];
           // Value isMatch = Values.TRUE;
           declare[ListValue](listVar),
-          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
+          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), nullCheckIfRequired(collection))),
           declare[Value](isMatch),
           assign(isMatch, trueValue),
           // Iterator<AnyValue> listIterator = list.iterator();
