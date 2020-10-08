@@ -529,6 +529,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           // int matches = 0;
           // boolean isNull = false;
           declare[ListValue](listVar),
+          //NOTE: asList can handle NO_VALUE as input
           assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), nullCheckIfRequired(collection))),
           declare[Int](matches),
           assign(matches, constant(0)),

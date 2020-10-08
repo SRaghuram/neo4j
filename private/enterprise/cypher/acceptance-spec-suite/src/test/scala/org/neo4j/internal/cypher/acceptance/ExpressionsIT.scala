@@ -2383,7 +2383,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   test("any that requires nullcheck") {
-    //When, none(bar IN nodes($p) WHERE bar IS NOT NULL)
+    //When, any(bar IN nodes($p) WHERE bar IS NOT NULL)
     val bar = ExpressionVariable(0, "bar")
     val compiled = compile(anyInList(bar, function("nodes", parameter(0)), isNotNull(bar)))
 
@@ -2497,7 +2497,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   test("all that requires nullcheck") {
-    //When, none(bar IN nodes($p) WHERE bar IS NOT NULL)
+    //When, all(bar IN nodes($p) WHERE bar IS NOT NULL)
     val bar = ExpressionVariable(0, "bar")
     val compiled = compile(allInList(bar, function("nodes", parameter(0)), isNotNull(bar)))
 
