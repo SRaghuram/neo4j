@@ -36,7 +36,12 @@ class AntiOperator(val workIdentity: WorkIdentity,
                            stateFactory: StateFactory,
                            state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = {
-    argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AntiArgumentState.Factory(id), ordered = true)
+    argumentStateCreator.createArgumentStateMap(
+      argumentStateMapId,
+      new AntiArgumentState.Factory(id),
+      stateFactory.newMemoryTracker(id.x),
+      ordered = true
+    )
     new AntiOperatorState
   }
 

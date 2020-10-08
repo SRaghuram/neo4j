@@ -38,6 +38,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.MemoryTracker
 
 object SkipOperator {
 
@@ -57,15 +58,16 @@ object SkipOperator {
 
 class SkipOperator(argumentStateMapId: ArgumentStateMapId,
                    val workIdentity: WorkIdentity,
-                   countExpression: Expression) extends MiddleOperator {
+                   countExpression: Expression)(id: Id = Id.INVALID_ID) extends MemoryTrackingMiddleOperator(id.x) {
 
   override def createTask(argumentStateCreator: ArgumentStateMapCreator,
                           stateFactory: StateFactory,
                           state: PipelinedQueryState,
-                          resources: QueryResources): OperatorTask = {
+                          resources: QueryResources,
+                          memoryTracker: MemoryTracker): OperatorTask = {
     val skip = evaluateCountValue(state, resources, countExpression)
     new SkipOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId,
-                                                                     new SkipStateFactory(skip)))
+                                                                     new SkipStateFactory(skip), memoryTracker))
   }
 
   class SkipOperatorTask(asm: ArgumentStateMap[CountingState]) extends OperatorTask {

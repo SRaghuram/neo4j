@@ -11,6 +11,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
+import org.neo4j.memory.HeapEstimator
+import org.neo4j.memory.Measurable
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.util.Preconditions
 
 import scala.collection.JavaConverters.asScalaIteratorConverter
@@ -19,13 +22,52 @@ import scala.collection.mutable.ArrayBuffer
 /**
  * All functionality of either standard or concurrent ASM that can be written without knowing the concrete Map type.
  */
-abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: AbstractArgumentStateMap.StateController[STATE]]
+abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: AbstractArgumentStateMap.StateController[STATE]](memoryTracker: MemoryTracker)
   extends ArgumentStateMap[STATE] {
+
+  trait Controllers[V] {
+    /**
+     * Calls the given function on all entries in the map.
+     * @param fun
+     */
+    def forEach(fun: (Long, V) => Unit)
+
+    /**
+     * Adds an entry to the map.
+     * @param key
+     * @param value
+     * @return
+     */
+    def put(key: Long, value: V): V
+
+    /**
+     * @param key
+     * @return the value to which the given key is mapped
+     */
+    def get(key: Long): V
+
+    /**
+     * Removes the entry with given key and asserts that it is the first entry.
+     * @param key
+     * @return the value of the removed entry
+     */
+    def remove(key: Long): V
+
+    /**
+     * @return the first value or null if no value exists
+     */
+    def getFirstValue(): V
+
+    /**
+     * @return an iterator over all entries
+     */
+    def entries(): java.util.Iterator[java.util.Map.Entry[Long, V]]
+  }
 
   /**
    * A Map of the controllers.
    */
-  protected val controllers: java.util.Map[Long, CONTROLLER]
+    protected val controllers: Controllers[CONTROLLER]
 
   /**
    * Create a new state controller
@@ -91,11 +133,11 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   }
 
   override def takeCompleted(n: Int): IndexedSeq[STATE] = {
-    val iterator = controllers.values().iterator()
+    val iterator = controllers.entries()
     val builder = new ArrayBuffer[STATE]
 
     while(iterator.hasNext && builder.size < n) {
-      val controller = iterator.next()
+      val controller = iterator.next().getValue
       val completedState = controller.takeCompleted()
       if (completedState != null) {
         DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, completedState.argumentRowId)
@@ -105,14 +147,17 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
 
     var i = 0
     while (i < builder.length) {
-      controllers.remove(builder(i).argumentRowId)
+      val controller = controllers.remove(builder(i).argumentRowId)
+      memoryTracker.releaseHeap(controller.estimatedHeapUsage() + HeapEstimator.LONG_SIZE)
+
       i += 1
     }
 
-    if (builder.isEmpty)
+    if (builder.isEmpty) {
       null.asInstanceOf[IndexedSeq[STATE]]
-    else
+    } else {
       builder
+    }
   }
 
   override def takeIfCompletedOrElsePeek(argumentId: Long): ArgumentStateWithCompleted[STATE] = {
@@ -137,13 +182,13 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   }
 
   override def takeOneIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {
-    val iterator = controllers.values().iterator()
+    val controller = controllers.getFirstValue()
 
-    if (iterator.hasNext) {
-      val controller = iterator.next()
+    if (controller != null) {
       val completedState = controller.takeCompleted()
       if (completedState != null) {
         controllers.remove(completedState.argumentRowId)
+        memoryTracker.releaseHeap(controller.estimatedHeapUsage() + HeapEstimator.LONG_SIZE)
         DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, completedState.argumentRowId)
         ArgumentStateWithCompleted(completedState, isCompleted = true)
       } else {
@@ -160,7 +205,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   }
 
   override def peekCompleted(): Iterator[STATE] = {
-    controllers.values().stream().map[STATE](_.peekCompleted).filter(_ != null).iterator().asScala
+    controllers.entries().asScala.map(_.getValue).map[STATE](_.peekCompleted).filter(_ != null)
   }
 
   override def peek(argumentId: Long): STATE = {
@@ -173,10 +218,10 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   }
 
   override def hasCompleted: Boolean = {
-    val iterator = controllers.values().iterator()
+    val iterator = controllers.entries()
 
     while(iterator.hasNext) {
-      val controller = iterator.next()
+      val controller = iterator.next().getValue
       if (controller.hasCompleted) {
         return true
       }
@@ -185,10 +230,10 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   }
 
   override def someArgumentStateIsCompletedOr(statePredicate: STATE => Boolean): Boolean = {
-    val iterator = controllers.values().iterator()
+    val iterator = controllers.entries()
 
     while(iterator.hasNext) {
-      val controller = iterator.next()
+      val controller = iterator.next().getValue
       if (controller.hasCompleted || statePredicate(controller.peek)) {
         return true
       }
@@ -202,10 +247,10 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   }
 
   override def exists(statePredicate: STATE => Boolean): Boolean = {
-    val iterator = controllers.values().iterator()
+    val iterator = controllers.entries()
 
     while(iterator.hasNext) {
-      val controller = iterator.next()
+      val controller = iterator.next().getValue
       val state = controller.peek
       if (state != null && statePredicate(state)) {
         return true
@@ -217,16 +262,19 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   override def remove(argument: Long): STATE = {
     DebugSupport.ASM.log("ASM %s rem %03d", argumentStateMapId, argument)
     val controller = controllers.remove(argument)
-    if (controller != null)
+    if (controller != null) {
+      memoryTracker.releaseHeap(controller.estimatedHeapUsage() + HeapEstimator.LONG_SIZE)
       controller.take()
-    else
+    } else {
       null.asInstanceOf[STATE]
+    }
   }
 
   override def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int): Unit = {
     DebugSupport.ASM.log("ASM %s init %03d", argumentStateMapId, argument)
     val newController = newStateController(argument, argumentMorsel, argumentRowIdsForReducers, initialCount)
     val previousValue = controllers.put(argument, newController)
+    memoryTracker.allocateHeap(newController.estimatedHeapUsage() + HeapEstimator.LONG_SIZE)
     Preconditions.checkState(previousValue == null, "ArgumentStateMap cannot re-initiate the same argument (argument: %d)", Long.box(argument))
   }
 
@@ -260,7 +308,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
 }
 
 object AbstractArgumentStateMap {
-  trait StateController[STATE <: ArgumentState] {
+  trait StateController[STATE <: ArgumentState] extends Measurable {
 
     /**
      * Increment the count.

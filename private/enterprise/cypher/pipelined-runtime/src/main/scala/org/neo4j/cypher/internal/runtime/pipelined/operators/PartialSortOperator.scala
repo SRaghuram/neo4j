@@ -36,7 +36,13 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
                            stateFactory: StateFactory,
                            state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = {
-    argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id), ordered = true)
+    val memoryTracker = stateFactory.newMemoryTracker(id.x)
+    argumentStateCreator.createArgumentStateMap(
+      argumentStateMapId,
+      new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id),
+      memoryTracker,
+      ordered = true
+    )
     new PartialSortState(stateFactory.newMemoryTracker(id.x), prefixComparator, suffixComparator, workIdentity)
   }
 

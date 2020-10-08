@@ -38,7 +38,7 @@ class OrderedDistinctOperator(argumentStateMapId: ArgumentStateMapId,
                           resources: QueryResources): OperatorTask = {
     val memoryTracker = stateFactory.newMemoryTracker(id.x)
     new OrderedDistinctOperatorTask(
-      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new OrderedDistinctStateFactory(memoryTracker)),
+      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new OrderedDistinctStateFactory(memoryTracker), memoryTracker),
       workIdentity)
   }
 

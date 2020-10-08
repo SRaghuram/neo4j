@@ -101,6 +101,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.belowLimitVarName
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.closeEvent
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.getArgumentSlotOffset
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.getMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.setMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
@@ -117,6 +118,7 @@ import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.Read
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 
 import scala.collection.mutable
@@ -213,7 +215,8 @@ trait CompiledStreamingOperatorTemplate[T <: Operator] {
                           className: String,
                           taskClassHandle: ClassHandle,
                           workIdentityField: StaticField,
-                          argumentStates:  Seq[ArgumentStateDescriptor]): ClassDeclaration[T] = {
+                          argumentStates:  Seq[ArgumentStateDescriptor],
+                          pipelineId: PipelineId): ClassDeclaration[T] = {
 
 
     val argumentStateFields = argumentStates.map {
@@ -235,9 +238,11 @@ trait CompiledStreamingOperatorTemplate[T <: Operator] {
             ArgumentStateMap[ArgumentState],
             Int,
             ArgumentStateFactory[ArgumentState],
-            Boolean]("createArgumentStateMap"),
+            MemoryTracker,
+              Boolean]("createArgumentStateMap"),
           constant(argumentStateVariant.argumentStateMapId.x),
           genArgumentStateFactory(argumentStateVariant),
+            getMemoryTracker(pipelineId.x),
           constant(argumentStateVariant.ordered))
       }: _*)
 
@@ -307,8 +312,8 @@ object ContinuableOperatorTaskWithMorselGenerator {
       className("Operator"),
       taskClassHandle,
       staticWorkIdentity,
-      argumentStates
-    )
+      argumentStates,
+      pipelineId)
     val operatorClassHandle = compileClass(operatorDeclaration, generator)
 
     CodeGeneration.loadAndSetConstants(taskClassHandle, taskDeclaration)

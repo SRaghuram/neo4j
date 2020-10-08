@@ -118,7 +118,11 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
                           state: PipelinedQueryState,
                           resources: QueryResources,
                           memoryTracker: MemoryTracker): OperatorTask = {
-    new DistinctOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId, new DistinctStateFactory(memoryTracker)), workIdentity, groupings)
+    new DistinctOperatorTask(
+      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new DistinctStateFactory(memoryTracker), memoryTracker),
+      workIdentity,
+      groupings
+    )
   }
 }
 

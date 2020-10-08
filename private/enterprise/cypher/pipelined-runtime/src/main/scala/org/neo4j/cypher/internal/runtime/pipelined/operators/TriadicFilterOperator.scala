@@ -35,13 +35,12 @@ class TriadicFilterOperator(val workIdentity: WorkIdentity,
                            stateFactory: StateFactory,
                            state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = {
-    argumentStateCreator.createArgumentStateMap(bufferAsmId, new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id), ordered = true)
-
     val memoryTracker = stateFactory.newMemoryTracker(id.x)
+    argumentStateCreator.createArgumentStateMap(bufferAsmId, new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id), memoryTracker, ordered = true)
 
     // `triadicStateAsmId` is an ID of a map that should be shared between triadic build and filter operators.
     // We want to make sure that we don't accidentally create a second map, hence `createOrGetArgumentStateMap`.
-    val triadicStateAsm = argumentStateCreator.createOrGetArgumentStateMap(triadicStateAsmId, new TriadicState.Factory(memoryTracker), ordered = true)
+    val triadicStateAsm = argumentStateCreator.createOrGetArgumentStateMap(triadicStateAsmId, new TriadicState.Factory(memoryTracker), memoryTracker, ordered = true)
 
     new TriadicFilterOperatorState(positivePredicate, sourceOffset, targetOffset, triadicStateAsm, argumentOffset, workIdentity)
   }

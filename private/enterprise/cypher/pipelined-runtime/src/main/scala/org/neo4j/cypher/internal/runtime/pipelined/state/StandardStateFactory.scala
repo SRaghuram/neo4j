@@ -47,13 +47,13 @@ class StandardStateFactory extends StateFactory {
   override def newArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                                        argumentSlotOffset: Int,
                                                        factory: ArgumentStateFactory[S],
-                                                       orderPreservingInParallel: Boolean): ArgumentStateMap[S] = {
+                                                       orderPreservingInParallel: Boolean,
+                                                       memoryTracker: MemoryTracker): ArgumentStateMap[S] =
     if (argumentSlotOffset == TopLevelArgument.SLOT_OFFSET) {
       new StandardSingletonArgumentStateMap[S](argumentStateMapId, factory)
     } else {
-      new StandardArgumentStateMap[S](argumentStateMapId, argumentSlotOffset, factory)
+      new StandardArgumentStateMap[S](argumentStateMapId, argumentSlotOffset, factory, memoryTracker)
     }
-  }
 
   override def newMemoryTracker(operatorId: Int): MemoryTracker = EmptyMemoryTracker.INSTANCE
 

@@ -5,12 +5,19 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
+import java.util
+import java.util.Map
+
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.StandardArgumentStateMap.StandardCompletedStateController
 import org.neo4j.cypher.internal.runtime.pipelined.state.StandardArgumentStateMap.StandardStateController
+import org.neo4j.cypher.internal.runtime.pipelined.state.StandardArgumentStateMap.StandardStateController
+import org.neo4j.kernel.impl.util.collection.HeapTrackingOrderedAppendMap
+import org.neo4j.memory.HeapEstimator
+import org.neo4j.memory.MemoryTracker
 
 /**
  * Not thread-safe and quite naive implementation of ArgumentStateMap. JustGetItWorking(tm)
@@ -23,11 +30,35 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.StandardArgumentStateMa
  */
 class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: ArgumentStateMapId,
                                                        val argumentSlotOffset: Int,
-                                                       factory: ArgumentStateFactory[STATE])
-  extends AbstractArgumentStateMap[STATE, AbstractArgumentStateMap.StateController[STATE]] {
+                                                       factory: ArgumentStateFactory[STATE],
+                                                       memoryTracker: MemoryTracker)
+  extends AbstractArgumentStateMap[STATE, AbstractArgumentStateMap.StateController[STATE]](memoryTracker) {
 
-  // Using a LinkedHashMap to get insertion iteration order, which will be argument-row-id order.
-  override protected val controllers = new java.util.LinkedHashMap[Long, AbstractArgumentStateMap.StateController[STATE]]()
+  class OrderedControllers(memoryTracker: MemoryTracker) extends Controllers[AbstractArgumentStateMap.StateController[STATE]] {
+    // Using a LinkedHashMap to get insertion iteration order, which will be argument-row-id order.
+    val inner = new java.util.LinkedHashMap[Long, AbstractArgumentStateMap.StateController[STATE]]()
+
+    override def forEach(fun: (Long, AbstractArgumentStateMap.StateController[STATE]) => Unit): Unit =
+      inner.forEach((k,v) => fun(k,v))
+
+    override def entries(): util.Iterator[Map.Entry[Long, AbstractArgumentStateMap.StateController[STATE]]] =
+      inner.entrySet().iterator()
+
+    override def remove(key: Long): AbstractArgumentStateMap.StateController[STATE] =
+      inner.remove(key)
+
+    override def put(key: Long,
+                     value: AbstractArgumentStateMap.StateController[STATE]): AbstractArgumentStateMap.StateController[STATE] =
+      inner.put(key, value)
+
+    override def get(key: Long): AbstractArgumentStateMap.StateController[STATE] =
+      inner.get(key)
+
+    override def getFirstValue(): AbstractArgumentStateMap.StateController[STATE] =
+      inner.entrySet().iterator().next().getValue
+  }
+
+  override protected val controllers = new OrderedControllers(memoryTracker)
 
   override protected def newStateController(argument: Long,
                                             argumentMorsel: MorselReadCursor,
@@ -95,6 +126,11 @@ object StandardArgumentStateMap {
       s"[count: ${_count}, state: $state]"
     }
 
+    override def estimatedHeapUsage(): Long = StandardStateController.SHALLOW_SIZE + HeapEstimator.sizeOf(state)
+  }
+
+  object StandardStateController {
+    private final val SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[StandardStateController[ArgumentState]])
   }
 
   /**
@@ -131,5 +167,11 @@ object StandardArgumentStateMap {
     override def toString: String = {
       s"[completed, state: $state]"
     }
+
+    override def estimatedHeapUsage(): Long = StandardCompletedStateController.SHALLOW_SIZE + HeapEstimator.sizeOf(state)
+  }
+
+  object StandardCompletedStateController {
+    private final val SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[StandardStateController[ArgumentState]])
   }
 }

@@ -45,7 +45,8 @@ class ConcurrentStateFactory extends StateFactory {
   override def newArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                                        argumentSlotOffset: Int,
                                                        factory: ArgumentStateFactory[S],
-                                                       orderPreservingInParallel: Boolean): ArgumentStateMap[S] = {
+                                                       orderPreservingInParallel: Boolean,
+                                                       memoryTracker: MemoryTracker): ArgumentStateMap[S] = {
     if (argumentSlotOffset == TopLevelArgument.SLOT_OFFSET) {
       new ConcurrentSingletonArgumentStateMap[S](argumentStateMapId, factory)
     } else if (orderPreservingInParallel) {

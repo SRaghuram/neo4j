@@ -44,7 +44,8 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
                            stateFactory: StateFactory,
                            state: PipelinedQueryState,
                            resources: QueryResources): AccumulatorsInputOperatorState[Morsel, ArgumentStateBuffer] = {
-    argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStateBuffer.Factory(stateFactory, id))
+    val memoryTracker = stateFactory.newMemoryTracker(id.x)
+    argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStateBuffer.Factory(stateFactory, id), memoryTracker)
     new MemoryTrackingAccumulatorsInputOperatorState(this, id.x, stateFactory)
   }
 

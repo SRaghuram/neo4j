@@ -58,10 +58,10 @@ class NodeHashJoinSingleNodeOperator(val workIdentity: WorkIdentity,
     val memoryTracker = stateFactory.newMemoryTracker(id.x)
     argumentStateCreator.createArgumentStateMap(
       lhsArgumentStateMapId,
-      new HashTableFactory(lhsKeyOffset, memoryTracker, id))
+      new HashTableFactory(lhsKeyOffset, memoryTracker, id), memoryTracker)
     argumentStateCreator.createArgumentStateMap(
       rhsArgumentStateMapId,
-      new ArgumentStateBuffer.Factory(stateFactory, id))
+      new ArgumentStateBuffer.Factory(stateFactory, id), memoryTracker)
     this
   }
 

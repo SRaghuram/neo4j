@@ -71,9 +71,14 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
                            stateFactory: StateFactory,
                            state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = {
-    argumentStateCreator.createArgumentStateMap(bufferAsmId, new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id), ordered = true)
+    val memoryTracker = stateFactory.newMemoryTracker(id.x)
+    argumentStateCreator.createArgumentStateMap(bufferAsmId, new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id), memoryTracker, ordered = true)
     val limit = Math.min(CountingState.evaluateCountValue(state, resources, limitExpression), ArrayUtil.MAX_ARRAY_SIZE).toInt
-    val workCancellerAsm = argumentStateCreator.createArgumentStateMap(workCancellerAsmId, new PartialTopWorkCanceller.Factory(stateFactory, id, limit))
+    val workCancellerAsm = argumentStateCreator.createArgumentStateMap(
+      workCancellerAsmId,
+      new PartialTopWorkCanceller.Factory(stateFactory, id, limit),
+      memoryTracker
+    )
     new PartialTopState(stateFactory.newMemoryTracker(id.x), limit, workCancellerAsm)
   }
 

@@ -41,7 +41,8 @@ trait StateFactory {
   def newArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                               argumentSlotOffset: Int,
                                               factory: ArgumentStateFactory[S],
-                                              orderPreservingInParallel: Boolean): ArgumentStateMap[S]
+                                              orderPreservingInParallel: Boolean,
+                                              memoryTracker: MemoryTracker): ArgumentStateMap[S]
 
   /**
    * Obtain the query memory tracker (this call does not create a new object).

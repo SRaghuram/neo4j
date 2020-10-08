@@ -114,8 +114,12 @@ class DistinctSinglePrimitiveOperator(argumentStateMapId: ArgumentStateMapId,
                           state: PipelinedQueryState,
                           resources: QueryResources,
                           memoryTracker: MemoryTracker): OperatorTask = {
-    new DistinctSinglePrimitiveOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId,
-      new DistinctSinglePrimitiveStateFactory(memoryTracker)), workIdentity, setInSlot, offset, expression)
+    new DistinctSinglePrimitiveOperatorTask(
+      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new DistinctSinglePrimitiveStateFactory(memoryTracker), memoryTracker),
+      workIdentity,
+      setInSlot,
+      offset,
+      expression)
   }
 }
 

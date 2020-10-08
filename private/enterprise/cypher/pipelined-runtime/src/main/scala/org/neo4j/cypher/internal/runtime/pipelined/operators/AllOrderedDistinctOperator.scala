@@ -18,18 +18,25 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.MemoryTracker
 
 class AllOrderedDistinctOperator(argumentStateMapId: ArgumentStateMapId,
                                  val workIdentity: WorkIdentity,
                                  groupings: GroupingExpression)
-                                (val id: Id = Id.INVALID_ID) extends MiddleOperator {
+                                (val id: Id = Id.INVALID_ID) extends MemoryTrackingMiddleOperator(id.x) {
 
   override def createTask(argumentStateCreator: ArgumentStateMapCreator,
                           stateFactory: StateFactory,
                           state: PipelinedQueryState,
-                          resources: QueryResources): OperatorTask =
+                          resources: QueryResources,
+                          memoryTracker: MemoryTracker): OperatorTask =
     new OrderedDistinctOperatorTask(
-      argumentStateCreator.createArgumentStateMap(argumentStateMapId, AllOrderedDistinctStateFactory, ordered = false),
+      argumentStateCreator.createArgumentStateMap(
+        argumentStateMapId,
+        AllOrderedDistinctStateFactory,
+        memoryTracker,
+        ordered = false
+      ),
       workIdentity)
 
   object AllOrderedDistinctStateFactory extends ArgumentStateFactory[AllOrderedDistinctState] {

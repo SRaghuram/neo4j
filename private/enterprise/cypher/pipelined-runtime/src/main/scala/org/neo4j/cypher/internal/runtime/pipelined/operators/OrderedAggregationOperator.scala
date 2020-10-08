@@ -52,7 +52,12 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
                            resources: QueryResources): OperatorState = {
 
     val memoryTracker = stateFactory.newMemoryTracker(id.x)
-    argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id), ordered = true)
+    argumentStateCreator.createArgumentStateMap(
+      argumentStateMapId,
+      new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id),
+      memoryTracker,
+      ordered = true
+    )
     new OrderedAggregationState(memoryTracker)
   }
 

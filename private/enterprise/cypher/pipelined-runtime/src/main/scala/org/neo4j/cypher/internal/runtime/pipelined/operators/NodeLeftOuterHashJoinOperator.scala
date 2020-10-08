@@ -71,10 +71,10 @@ class NodeLeftOuterHashJoinOperator(val workIdentity: WorkIdentity,
     val memoryTracker = stateFactory.newMemoryTracker(id.x)
     argumentStateCreator.createArgumentStateMap(
       lhsArgumentStateMapId,
-      new LeftOuterJoinFactory(lhsKeyOffsets, memoryTracker))
+      new LeftOuterJoinFactory(lhsKeyOffsets, memoryTracker), memoryTracker)
     argumentStateCreator.createArgumentStateMap(
       rhsArgumentStateMapId,
-      new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id))
+      new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id), memoryTracker)
     new State
   }
 

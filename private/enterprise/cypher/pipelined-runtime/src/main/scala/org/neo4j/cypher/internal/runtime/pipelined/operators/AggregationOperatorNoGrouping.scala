@@ -240,7 +240,11 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
                              state: PipelinedQueryState,
                              resources: QueryResources): AccumulatorsInputOperatorState[AnyRef, AggregatedRowAccumulator] = {
       val memoryTracker = stateFactory.newMemoryTracker(id.x)
-      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AggregatedRowAccumulator.Factory(aggregations, memoryTracker, state.numberOfWorkers))
+      argumentStateCreator.createArgumentStateMap(
+        argumentStateMapId,
+        new AggregatedRowAccumulator.Factory(aggregations, memoryTracker, state.numberOfWorkers),
+        memoryTracker
+      )
       this
     }
 

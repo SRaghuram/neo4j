@@ -784,11 +784,11 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
       case plans.Limit(_, count, DoNotIncludeTies) =>
         val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
-        Some(new LimitOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, count)))
+        Some(new LimitOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, count))(id))
 
       case plans.Skip(_, count) =>
         val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
-        Some(new SkipOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, count)))
+        Some(new SkipOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, count))(id))
 
       case plans.Distinct(_, groupingExpressions) =>
         val physicalDistinctOp = findDistinctPhysicalOp(groupingExpressions, Seq.empty)

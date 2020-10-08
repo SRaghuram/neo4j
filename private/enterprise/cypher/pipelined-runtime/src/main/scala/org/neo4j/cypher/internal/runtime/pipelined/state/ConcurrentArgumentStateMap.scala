@@ -5,6 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
+import java.util
+import java.util.Map
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 
@@ -15,6 +18,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentStateMap.ConcurrentCompletedStateController
 import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentStateMap.ConcurrentStateController
+import org.neo4j.memory.EmptyMemoryTracker
+import org.neo4j.memory.HeapEstimator
 
 /**
  * Concurrent and quite naive implementation of ArgumentStateMap. Also JustGetItWorking(tm)
@@ -24,9 +29,37 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentState
 class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: ArgumentStateMapId,
                                                          val argumentSlotOffset: Int,
                                                          factory: ArgumentStateFactory[STATE])
-  extends AbstractArgumentStateMap[STATE, AbstractArgumentStateMap.StateController[STATE]] {
+  extends AbstractArgumentStateMap[STATE, AbstractArgumentStateMap.StateController[STATE]](EmptyMemoryTracker.INSTANCE) {
 
-  override protected val controllers = new java.util.concurrent.ConcurrentHashMap[Long, AbstractArgumentStateMap.StateController[STATE]]()
+  override protected val controllers = new ConcurrentControllers
+
+  class ConcurrentControllers extends ConcurrentHashMap[Long, AbstractArgumentStateMap.StateController[STATE]]
+                              with Controllers[AbstractArgumentStateMap.StateController[STATE]] {
+
+    override def forEach(fun: (Long, AbstractArgumentStateMap.StateController[STATE]) => Unit): Unit = {
+      super[ConcurrentHashMap].forEach((arg, state) => fun(arg, state))
+    }
+
+    override def get(key: Long): AbstractArgumentStateMap.StateController[STATE] =
+      super[ConcurrentHashMap].get(key)
+
+    override def remove(key: Long): AbstractArgumentStateMap.StateController[STATE] =
+      super[ConcurrentHashMap].remove(key)
+
+    override def entries(): util.Iterator[Map.Entry[Long, AbstractArgumentStateMap.StateController[STATE]]] = {
+      entrySet().iterator()
+    }
+
+    override def getFirstValue(): AbstractArgumentStateMap.StateController[STATE] = {
+      val iter = values.iterator()
+
+      if(iter.hasNext) {
+        iter.next()
+      } else {
+        null
+      }
+    }
+  }
 
   override protected def newStateController(argument: Long,
                                             argumentMorsel: MorselReadCursor,
@@ -113,6 +146,12 @@ object ConcurrentArgumentStateMap {
     override def toString: String = {
       s"[count: ${count.get()}, state: $state]"
     }
+
+    override def estimatedHeapUsage(): Long = ConcurrentStateController.SHALLOW_SIZE + HeapEstimator.sizeOf(state)
+  }
+
+  object ConcurrentStateController {
+    private final val SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[ConcurrentStateController[ArgumentState]])
   }
 
   /**
@@ -145,9 +184,13 @@ object ConcurrentArgumentStateMap {
     override def toString: String = {
       s"[completed, state: ${atomicState.get()}]"
     }
+
+    override def estimatedHeapUsage(): Long = ConcurrentCompletedStateController.SHALLOW_SIZE + HeapEstimator.sizeOf(atomicState)
   }
 
   object ConcurrentCompletedStateController {
     def apply[STATE <: ArgumentState](state: STATE): ConcurrentCompletedStateController[STATE] = new ConcurrentCompletedStateController(new AtomicReference(state))
+
+    private final val SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[ConcurrentStateController[ArgumentState]])
   }
 }

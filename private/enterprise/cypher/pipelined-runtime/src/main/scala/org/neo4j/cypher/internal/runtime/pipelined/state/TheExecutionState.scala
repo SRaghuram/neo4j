@@ -30,6 +30,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndPayload
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.JoinBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.util.Preconditions
 
 /**
@@ -243,19 +244,21 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
 
   override final def createArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                                                 factory: ArgumentStateFactory[S],
+                                                                memoryTracker: MemoryTracker,
                                                                 ordered: Boolean): ArgumentStateMap[S] = {
     val argumentSlotOffset = executionGraphDefinition.argumentStateMaps(argumentStateMapId.x).argumentSlotOffset
-    val asm = stateFactory.newArgumentStateMap(argumentStateMapId, argumentSlotOffset, factory, ordered)
+    val asm = stateFactory.newArgumentStateMap(argumentStateMapId, argumentSlotOffset, factory, ordered, memoryTracker)
     argumentStateMapHolder(argumentStateMapId.x) = asm
     asm
   }
 
   override def createOrGetArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                                                factory: ArgumentStateFactory[S],
+                                                               memoryTracker: MemoryTracker,
                                                                ordered: Boolean): ArgumentStateMap[S] = {
     val asm = argumentStateMaps(argumentStateMapId)
     if (asm == null)
-      createArgumentStateMap(argumentStateMapId, factory, ordered)
+      createArgumentStateMap(argumentStateMapId, factory, memoryTracker.getScopedMemoryTracker, ordered)
     else
       asm.asInstanceOf[ArgumentStateMap[S]]
   }

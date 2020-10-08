@@ -46,6 +46,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.FilterStateWithIsLast
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.MemoryTracker
 
 object LimitOperator {
 
@@ -71,12 +72,16 @@ object LimitOperator {
  */
 class LimitOperator(argumentStateMapId: ArgumentStateMapId,
                     val workIdentity: WorkIdentity,
-                    countExpression: Expression) extends MiddleOperator {
+                    countExpression: Expression)(val id: Id = Id.INVALID_ID) extends MemoryTrackingMiddleOperator(id.x) {
 
-  override def createTask(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory, state: PipelinedQueryState, resources: QueryResources): OperatorTask = {
+  override def createTask(argumentStateCreator: ArgumentStateMapCreator,
+                          stateFactory: StateFactory,
+                          state: PipelinedQueryState,
+                          resources: QueryResources,
+                          memoryTracker: MemoryTracker): OperatorTask = {
     val limit = evaluateCountValue(state, resources, countExpression)
     new LimitOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId,
-      new LimitOperator.LimitStateFactory(limit)))
+      new LimitOperator.LimitStateFactory(limit), memoryTracker))
   }
 
   class LimitOperatorTask(argumentStateMap: ArgumentStateMap[LimitState]) extends OperatorTask {

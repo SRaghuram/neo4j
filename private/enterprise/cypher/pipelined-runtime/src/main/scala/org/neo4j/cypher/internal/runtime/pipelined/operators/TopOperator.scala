@@ -118,7 +118,11 @@ case class TopOperator(workIdentity: WorkIdentity,
                              resources: QueryResources): AccumulatorsInputOperatorState[Morsel, TopTable] = {
       val limit = CountingState.evaluateCountValue(state, resources, countExpression)
       val memoryTracker = stateFactory.newMemoryTracker(id.x)
-      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new TopOperator.Factory(memoryTracker, comparator, limit))
+      argumentStateCreator.createArgumentStateMap(
+        argumentStateMapId,
+        new TopOperator.Factory(memoryTracker, comparator, limit),
+        memoryTracker
+      )
       this
     }
 

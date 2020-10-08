@@ -55,10 +55,11 @@ class ValueHashJoinOperator(val workIdentity: WorkIdentity,
                            resources: QueryResources): OperatorState = {
     val memoryTracker = stateFactory.newMemoryTracker(id.x)
     argumentStateCreator.createArgumentStateMap(
-      lhsArgumentStateMapId, new HashTableFactory(memoryTracker, lhsExpression, state))
+      lhsArgumentStateMapId, new HashTableFactory(memoryTracker, lhsExpression, state), memoryTracker)
     argumentStateCreator.createArgumentStateMap(
       rhsArgumentStateMapId,
-      new ArgumentStateBuffer.Factory(stateFactory, id))
+      new ArgumentStateBuffer.Factory(stateFactory, id),
+      memoryTracker)
     this
   }
 

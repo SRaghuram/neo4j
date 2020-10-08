@@ -20,6 +20,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.AntiMorselBuffe
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStreamMorselBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndPayload
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.util.CalledFromGeneratedCode
 
 /**
@@ -36,6 +37,7 @@ trait ArgumentStateMapCreator {
    */
   def createArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                                  factory: ArgumentStateFactory[S],
+                                                 memoryTracker: MemoryTracker,
                                                  ordered: Boolean = false): ArgumentStateMap[S]
 
   /**
@@ -47,6 +49,7 @@ trait ArgumentStateMapCreator {
    */
   def createOrGetArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                                       factory: ArgumentStateFactory[S],
+                                                      memoryTracker: MemoryTracker,
                                                       ordered: Boolean = false): ArgumentStateMap[S]
 }
 
