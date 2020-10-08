@@ -699,7 +699,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           // Value isMatch = Values.FALSE;
           // boolean isNull = false;
           declare[ListValue](listVar),
-          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
+          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), nullCheckIfRequired(collection))),
           declare[Value](isMatch),
           assign(isMatch, falseValue),
           declare[Boolean](isNull),
