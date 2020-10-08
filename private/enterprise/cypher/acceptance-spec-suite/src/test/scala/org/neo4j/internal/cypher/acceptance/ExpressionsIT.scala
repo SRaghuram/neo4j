@@ -2898,6 +2898,16 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiled, 2, params(NO_VALUE)) should equal(NO_VALUE)
   }
 
+  test("reduce that requires nullcheck") {
+    //When, reduce(count=0, bar IN nodes($p) count + 1)
+    val count = ExpressionVariable(0, "count")
+    val bar = ExpressionVariable(1, "bar")
+    val compiled = compile(reduce(count, literalInt(0), bar, function("nodes", parameter(0)), add(literalInt(1), count)))
+
+    //Then
+    evaluate(compiled, 1, Array(NO_VALUE)) should equal(NO_VALUE)
+  }
+
   test("reduce accessing variable") {
     //Given
     val context = new MapCypherRow(mutable.Map("foo" -> intValue(10)), mutable.Map.empty)

@@ -839,7 +839,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         val ops = Seq(
           // ListValue list = [evaluate collection expression];
           declare[ListValue](listVar),
-          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
+          assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), nullCheckIfRequired(collection))),
           // expressionVariables[accOffset] = init;
           setExpressionVariable(accVar, nullCheckIfRequired(init)),
           // Iterator<AnyValue> iter = list.iterator();
