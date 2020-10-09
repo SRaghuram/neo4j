@@ -14,7 +14,6 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.configuration.ServerGroupName;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Set;
@@ -124,7 +123,6 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
     {
         return row.addresses.publicUriList()
                 .stream()
-                .map( URI::toString )
                 .map( Values::utf8Value )
                 .collect( ListValueBuilder.collector() );
     }

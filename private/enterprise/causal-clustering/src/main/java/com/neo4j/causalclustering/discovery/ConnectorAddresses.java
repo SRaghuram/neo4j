@@ -8,8 +8,6 @@ package com.neo4j.causalclustering.discovery;
 import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -23,7 +21,6 @@ import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.connectors.HttpsConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.configuration.helpers.SocketAddressParser;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.marshal.SafeChannelMarshal;
@@ -117,14 +114,6 @@ public class ConnectorAddresses
         return new ConnectorAddresses( clientBoltAddress, intraClusterBoltAddress, httpAddress, httpsAddress, List.of() );
     }
 
-    static ConnectorAddresses fromString( String value )
-    {
-        var uriList = Stream.of( value.split( "," ) )
-                            .map( ConnectorUri::fromString )
-                            .collect( Collectors.toList() );
-        return ConnectorAddresses.fromList( uriList );
-    }
-
     public SocketAddress clientBoltAddress()
     {
         if ( defaultClientBoltAddress == null )
@@ -140,11 +129,11 @@ public class ConnectorAddresses
                        .map( ConnectorUri::socketAddress );
     }
 
-    public List<URI> publicUriList()
+    public List<String> publicUriList()
     {
         return orderedConnectors()
                      .filter( uri -> !Objects.equals( uri, defaultIntraClusterBoltAddress ) )
-                     .map( ConnectorUri::toUri )
+                     .map( ConnectorUri::toString )
                      .collect( Collectors.toList() );
     }
 
@@ -214,30 +203,10 @@ public class ConnectorAddresses
             return socketAddress;
         }
 
-        private URI toUri()
-        {
-            try
-            {
-                return new URI( scheme.name().toLowerCase(), null, socketAddress.getHostname(), socketAddress.getPort(),
-                        null, null, null );
-            }
-            catch ( URISyntaxException e )
-            {
-                throw new IllegalArgumentException( e );
-            }
-        }
-
         @Override
         public String toString()
         {
-            return toUri().toString();
-        }
-
-        private static ConnectorUri fromString( String string )
-        {
-            URI uri = URI.create( string );
-            SocketAddress advertisedSocketAddress = SocketAddressParser.socketAddress( uri.getAuthority(), SocketAddress::new );
-            return new ConnectorUri( Scheme.valueOf( uri.getScheme() ), advertisedSocketAddress );
+            return String.format( "%s://%s:%d", scheme.name().toLowerCase(), socketAddress.getHostname(), socketAddress.getPort() );
         }
 
         @Override

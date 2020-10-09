@@ -99,7 +99,8 @@ public final class ClusterOverviewHelper
                     @Override
                     protected boolean matchesSafely( MemberInfo item )
                     {
-                        var expectedAddresses = Set.copyOf( coreClusterMember.clientConnectorAddresses().publicUriList() );
+                        var expectedAddresses = coreClusterMember.clientConnectorAddresses()
+                                .publicUriList().stream().map( URI::create ).collect( Collectors.toSet() );
                         return expectedAddresses.equals( item.addresses );
                     }
 

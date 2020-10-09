@@ -8,10 +8,8 @@ package com.neo4j.causalclustering.discovery;
 import com.neo4j.causalclustering.discovery.ConnectorAddresses.ConnectorUri;
 import org.junit.jupiter.api.Test;
 
-import java.net.URI;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 
@@ -43,54 +41,7 @@ class ConnectorAddressesTest
 
         // when / then
         var intraClusterUri = new ConnectorUri( bolt, new SocketAddress( "::1", 4 ) );
-        var publicUris = connectorAddresses.publicUriList().stream()
-                                           .map( URI::toString )
-                                           .collect( Collectors.toList() );
-        assertThat( publicUris ).doesNotContain( intraClusterUri.toString() );
-    }
-
-    @Test
-    void shouldSerializeToString()
-    {
-        // given
-        ConnectorAddresses connectorAddresses = ConnectorAddresses.fromList( asList(
-                new ConnectorUri( bolt, new SocketAddress( "host", 1 ) ),
-                new ConnectorUri( http, new SocketAddress( "host", 2 ) ),
-                new ConnectorUri( https, new SocketAddress( "host", 3 ) ),
-                new ConnectorUri( bolt, new SocketAddress( "::1", 4 ) ),
-                new ConnectorUri( http, new SocketAddress( "::", 5 ) ),
-                new ConnectorUri( https, new SocketAddress( "fe80:1:2::3", 6 ) ) )
-        );
-
-        String expectedString = "bolt://host:1,bolt://[::1]:4,http://host:2,https://host:3,http://[::]:5,https://[fe80:1:2::3]:6";
-
-        // when
-        String connectorAddressesString = connectorAddresses.toString();
-
-        // then
-        assertEquals( expectedString, connectorAddressesString );
-
-        // when
-        ConnectorAddresses out = ConnectorAddresses.fromString( connectorAddressesString );
-
-        // then
-        assertEquals( connectorAddresses, out );
-    }
-
-    @Test
-    void shouldSerializeWithNoHttpsAddress()
-    {
-        // given
-        ConnectorAddresses connectorAddresses = ConnectorAddresses.fromList( asList(
-                new ConnectorUri( bolt, new SocketAddress( "host", 1 ) ),
-                new ConnectorUri( http, new SocketAddress( "host", 2 ) )
-        ) );
-
-        // when
-        ConnectorAddresses out = ConnectorAddresses.fromString( connectorAddresses.toString() );
-
-        // then
-        assertEquals( connectorAddresses, out );
+        assertThat( connectorAddresses.publicUriList() ).doesNotContain( intraClusterUri.toString() );
     }
 
     @Test

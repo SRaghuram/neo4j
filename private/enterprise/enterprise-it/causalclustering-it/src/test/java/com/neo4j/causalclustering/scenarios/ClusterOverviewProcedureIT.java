@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
@@ -19,7 +20,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -246,16 +246,8 @@ class ClusterOverviewProcedureIT
         List<List<String>> expectedAddresses()
         {
             return sortedClusterMembers()
-                    .map( ClusterOverviewMatcher::expectedAddressesForMember )
-                    .collect( toList() );
-        }
-
-        static List<String> expectedAddressesForMember( ClusterMember member )
-        {
-            return member.clientConnectorAddresses()
-                    .publicUriList()
-                    .stream()
-                    .map( URI::toString )
+                    .map( ClusterMember::clientConnectorAddresses )
+                    .map( ConnectorAddresses::publicUriList )
                     .collect( toList() );
         }
 
