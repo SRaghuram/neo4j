@@ -113,6 +113,30 @@ public class SetDefaultDatabaseIT
     }
 
     @Test
+    void shouldChangeDatabaseWhenNewDefaultStopped() throws Exception
+    {
+        // GIVEN
+        CausalClusteringTestHelpers.createDatabase( "foo", cluster, true );
+        CausalClusteringTestHelpers.stopDatabase( "foo", cluster );
+        CausalClusteringTestHelpers.stopDatabase( "neo4j", cluster );
+        CausalClusteringTestHelpers.assertDatabaseEventuallyStopped( "foo", cluster );
+        CausalClusteringTestHelpers.assertDatabaseEventuallyStopped( "neo4j", cluster );
+
+        cluster.systemTx( ( db, tx ) ->
+        {
+            // WHEN
+            Result result = tx.execute( "CALL dbms.cluster.setDefaultDatabase('foo')" );
+            Map<String,Object> row = result.next();
+            // THEN
+            assertThat( row.get( "result" ) ).isEqualTo( "Default database set to foo" );
+            tx.commit();
+        } );
+
+        // THEN
+        assertDefaultDatabase( "foo", cluster );
+    }
+
+    @Test
     void shouldNotChangeDatabaseWhenOldDefaultOnline() throws Exception
     {
         // GIVEN
@@ -179,7 +203,38 @@ public class SetDefaultDatabaseIT
         {
             // WHEN
             assertThatThrownBy( () -> tx.execute( "CALL dbms.cluster.setDefaultDatabase('foo')" ) ).hasMessageContaining(
-                    "This is an administration command and it should be executed against the system database: dbms.cluster.setDefaultDatabase" );
+                    "This is a system-only procedure and it should be executed against the system database: dbms.cluster.setDefaultDatabase" );
+        } );
+
+        // THEN
+        assertDefaultDatabase( "neo4j", cluster );
+    }
+
+    @Test
+    void shouldFailWithWrongParameters() throws Exception
+    {
+        // GIVEN
+        assertDefaultDatabase( "neo4j", cluster );
+
+        cluster.coreTx( "neo4j", ( db, tx ) ->
+        {
+            // WHEN .. THEN
+            assertThatThrownBy( () -> tx.execute( "CALL dbms.cluster.setDefaultDatabase()" ) ).hasMessageContaining(
+                    "Procedure call does not provide the required number of arguments: got 0 expected at least 1 (total: 1, 0 of which have default values)" );
+        } );
+
+        cluster.coreTx( "neo4j", ( db, tx ) ->
+        {
+            // WHEN .. THEN
+            assertThatThrownBy( () -> tx.execute( "CALL dbms.cluster.setDefaultDatabase('foo', 'bar')" ) ).hasMessageContaining(
+                    "Procedure call provides too many arguments: got 2 expected no more than 1" );
+        } );
+
+        cluster.coreTx( "neo4j", ( db, tx ) ->
+        {
+            // WHEN .. THEN
+            assertThatThrownBy( () -> tx.execute( "CALL dbms.cluster.setDefaultDatabase(true)" ) ).hasMessageContaining(
+                    "Type mismatch: expected String but was Boolean" );
         } );
 
         // THEN

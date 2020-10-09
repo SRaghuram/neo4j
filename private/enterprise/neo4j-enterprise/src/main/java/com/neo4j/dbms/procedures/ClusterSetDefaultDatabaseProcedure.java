@@ -63,7 +63,7 @@ public class ClusterSetDefaultDatabaseProcedure extends CallableProcedure.BasicP
         if ( !ctx.procedureCallContext().isSystemDatabase() )
         {
             throw new ProcedureException( ProcedureCallFailed,
-                    "This is an administration command and it should be executed against the system database: dbms.cluster.setDefaultDatabase" );
+                    "This is a system-only procedure and it should be executed against the system database: dbms.cluster.setDefaultDatabase" );
         }
 
         var newDefaultDbName = extractDatabaseName( input );
