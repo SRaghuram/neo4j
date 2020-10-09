@@ -319,7 +319,7 @@ class SlottedRewriter(tokenContext: TokenContext) {
         slotConfiguration(n) match {
           case LongSlot(offset, false, CTNode) => HasDegreeLessThanPrimitive(offset, maybeToken, direction, degree)
           case LongSlot(offset, true, CTNode) => NullCheck(offset, HasDegreeLessThanPrimitive(offset, maybeToken, direction, degree))
-          // For ref-slots, we just use the non-specialized HasDegreeGreaterThanOrEqual
+          // For ref-slots, we just use the non-specialized HasDegreeLessThan
           case _ => original
         }
 
@@ -328,7 +328,7 @@ class SlottedRewriter(tokenContext: TokenContext) {
         slotConfiguration(n) match {
           case LongSlot(offset, false, CTNode) => HasDegreeLessThanOrEqualPrimitive(offset, maybeToken, direction, degree)
           case LongSlot(offset, true, CTNode) => NullCheck(offset, HasDegreeLessThanOrEqualPrimitive(offset, maybeToken, direction, degree))
-          // For ref-slots, we just use the non-specialized HasDegreeGreaterThanOrEqual
+          // For ref-slots, we just use the non-specialized HasDegreeLessThanOrEqual
           case _ => original
         }
 
