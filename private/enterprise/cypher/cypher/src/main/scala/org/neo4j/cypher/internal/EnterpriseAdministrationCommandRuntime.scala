@@ -7,14 +7,12 @@ package org.neo4j.cypher.internal
 
 import java.util.UUID
 import java.util.concurrent.ThreadLocalRandom
-import java.util.stream.Collectors
 
 import com.neo4j.causalclustering.core.consensus.RaftMachine
 import com.neo4j.configuration.EnterpriseEditionSettings
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager
 import com.neo4j.server.security.enterprise.auth.PrivilegeResolver
 import com.neo4j.server.security.enterprise.auth.Resource
-import com.neo4j.server.security.enterprise.auth.ResourcePrivilege
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.DENY
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT
@@ -147,12 +145,10 @@ import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.MapValue
 import org.neo4j.values.virtual.VirtualValues
 
-import scala.collection.JavaConverters.asScalaIterator
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.collection.JavaConverters.asScalaIteratorConverter
 import scala.collection.JavaConverters.asScalaSetConverter
 import scala.collection.JavaConverters.mapAsScalaMapConverter
-import scala.collection.mutable
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -485,21 +481,47 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     case ShowPrivilegeCommands(source, scope, asRevoke, symbols, yields, returns) => (context, parameterMapping) =>
       val commandListKey = internalKey("commandList")
+      val currentUserRolesKey = internalKey("currentUserRoles")
+
+      def updateParamsWithCommands(tx: Transaction, params: MapValue, roleStrings: Seq[String]): MapValue = {
+        val commands: Seq[String] = roleStrings.foldLeft(Seq.empty[String])((acc, r) => {
+          val privileges = enterpriseSecurityGraphComponent.getPrivilegesForRole(tx, r).asScala
+          acc ++ privileges.flatMap(p => p.asCommandFor(r).asScala)
+        })
+        params.updatedWith(commandListKey, Values.stringArray(commands: _*))
+      }
+
+      def getUserRoles(tx: Transaction, usernameString: String): Seq[String] = {
+        val userNode = tx.findNode(Label.label("User"), "name", usernameString)
+        if (userNode == null) {
+          Seq()
+        } else {
+          val roles = Iterables.stream(userNode.getRelationships(Direction.OUTGOING, RelationshipType.withName("HAS_ROLE")))
+            .map[AnyRef](r => r.getEndNode.getProperty("name")).toArray.toSeq
+          roles.map(_.asInstanceOf[String]) :+ "PUBLIC"
+        }
+      }
 
       val paramConverter: (Transaction, MapValue) => MapValue = scope match {
-        case ShowRolesPrivileges(roles) => (tx: Transaction, params: MapValue) => MapValue.EMPTY // "role", $role
-        case ShowUserPrivileges(user)   => (tx: Transaction, params: MapValue) => MapValue.EMPTY
-        case ShowUsersPrivileges(users) => (tx: Transaction, params: MapValue) => MapValue.EMPTY
+        case ShowRolesPrivileges(roles) => (tx: Transaction, params: MapValue) => { // "role", $role
+          val roleStrings = roles.map{ role => runtimeValue(role , params) }
+          updateParamsWithCommands(tx, params, roleStrings)
+        }
+        case ShowUserPrivileges(user) => (tx: Transaction, params: MapValue) => {
+          val roleStrings = user.map{username =>
+            getUserRoles(tx, runtimeValue(username, params))
+          }.getOrElse(params.get(currentUserRolesKey).asInstanceOf[StringArray].asObjectCopy().toList)
+          updateParamsWithCommands(tx, params, roleStrings)
+        }
+        case ShowUsersPrivileges(users) => (tx: Transaction, params: MapValue) => {
+          val roleSet = users.map(user => runtimeValue(user, params)).flatMap(username => getUserRoles(tx, username)).toSet
+          updateParamsWithCommands(tx, params, roleSet.toList)
+        }
         case ShowAllPrivileges()        => // fetch all roles in database and get privileges for them
           (tx: Transaction, params: MapValue) => {
             val roleNodes: ResourceIterator[Node] = tx.findNodes(Label.label("Role"))
-            val roles: Seq[String] = roleNodes.asScala.toStream.map(node => node.getProperty("name").toString)
-            val commandList: Seq[String] = roles.foldLeft(Seq.empty[String])((acc, r) => {
-              val privileges = enterpriseSecurityGraphComponent.getPrivilegesForRole(tx, r).asScala
-              acc ++ privileges.flatMap(p => p.asCommandFor(r).asScala)
-            } )
-            val commands = Values.stringArray(commandList: _*)
-            params.updatedWith(commandListKey, commands)
+            val roleStrings: Seq[String] = roleNodes.asScala.toStream.map(node => node.getProperty("name").toString)
+            updateParamsWithCommands(tx, params, roleStrings)
           }
       }
 
@@ -512,6 +534,9 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |""".stripMargin
       SystemCommandExecutionPlan("ShowPrivilegeCommands", normalExecutionEngine, query, MapValue.EMPTY,
         source = source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping)),
+        parameterGenerator = (_, securityContext) => VirtualValues.map(
+          Array(currentUserRolesKey),
+          Array(Values.stringArray(securityContext.roles().asScala.toArray: _*))),
         parameterConverter = paramConverter
       )
 

@@ -661,6 +661,49 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     ))
   }
 
+  test("should show role privileges as commands") {
+    execute("SHOW ROLE admin PRIVILEGES AS COMMAND").columnAs[String]("command").toSet should be(Set(
+      "GRANT ACCESS ON DEFAULT DATABASE TO `PUBLIC`",
+    ))
+  }
+
+  test("should show paramterized role privileges as commands") {
+    execute("SHOW ROLE $role PRIVILEGES AS COMMAND", Map("role" -> "admin")).columnAs[String]("command").toSet should be(Set(
+      "GRANT ACCESS ON DEFAULT DATABASE TO `PUBLIC`",
+    ))
+  }
+
+  test("should show user privileges as commands") {
+    setupUserWithCustomRole("user")
+    execute("SHOW USER user PRIVILEGES AS COMMAND").columnAs[String]("command").toSet should be(Set(
+      "GRANT ACCESS ON DEFAULT DATABASE TO `PUBLIC`",
+    ))
+  }
+
+  test("should show parameterized user privileges as commands") {
+    setupUserWithCustomRole("user", "secret")
+    execute("SHOW USER $user PRIVILEGES AS COMMAND", Map("user" -> "user")).columnAs[String]("command").toSet should be(Set(
+      "GRANT ACCESS ON DEFAULT DATABASE TO `PUBLIC`",
+    ))
+  }
+
+  test("should show current user privileges as commands") {
+    setupUserWithCustomRole()
+    executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES AS COMMAND", resultHandler = (row, idx) => {
+      // THEN
+      //asPrivilegesResult(row) should be(expected(idx))
+    }) should be(2)
+  }
+
+  test("should show multiple parameterized user privileges as commands") {
+    setupUserWithCustomRole("foo", "")
+    setupUserWithCustomRole("bar")
+    setupUserWithCustomRole("baz")
+    execute("SHOW USER foo, $bar, $baz PRIVILEGES AS COMMAND", Map("bar" -> "bar", "baz" -> "baz")).columnAs[String]("command").toSet should be(Set(
+      "GRANT ACCESS ON DEFAULT DATABASE TO `PUBLIC`",
+    ))
+  }
+
   // Tests for granting and denying privileges
 
   Seq(
