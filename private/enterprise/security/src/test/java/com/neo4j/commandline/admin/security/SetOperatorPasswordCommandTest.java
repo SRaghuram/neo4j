@@ -60,7 +60,7 @@ class SetOperatorPasswordCommandTest
         final var baos = new ByteArrayOutputStream();
         try ( var out = new PrintStream( baos ) )
         {
-            CommandLine.usage( command, new PrintStream( out ) );
+            CommandLine.usage( command, new PrintStream( out ), CommandLine.Help.Ansi.OFF );
         }
         assertThat( baos.toString().trim() ).isEqualTo( String.format(
                 "USAGE%n" + "%n" +

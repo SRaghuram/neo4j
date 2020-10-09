@@ -90,7 +90,7 @@ class UnbindFromClusterCommandTest
         var command = new UnbindFromClusterCommand( new ExecutionContext( Path.of( "." ), Path.of( "." ) ) );
         try ( var out = new PrintStream( baos ) )
         {
-            CommandLine.usage( command, new PrintStream( out ) );
+            CommandLine.usage( command, new PrintStream( out ), CommandLine.Help.Ansi.OFF );
         }
         assertThat( baos.toString().trim(), equalTo( String.format(
                 "Removes all cluster state.%n" +

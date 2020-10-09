@@ -27,7 +27,7 @@ class StoreCopyCommandTest
         final var command = new StoreCopyCommand( new ExecutionContext( Path.of( "." ), Path.of( "." ) ) );
         try ( var out = new PrintStream( baos ) )
         {
-            CommandLine.usage( command, new PrintStream( out ) );
+            CommandLine.usage( command, new PrintStream( out ), CommandLine.Help.Ansi.OFF );
         }
         assertThat( baos.toString().trim()).isEqualTo( String.format(
                 "Copy a database and optionally apply filters.%n" +

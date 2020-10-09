@@ -26,7 +26,7 @@ class RestoreDatabaseCliTest
         final var command = new RestoreDatabaseCli( new ExecutionContext( Path.of( "." ), Path.of( "." ) ) );
         try ( var out = new PrintStream( baos ) )
         {
-            CommandLine.usage( command, new PrintStream( out ) );
+            CommandLine.usage( command, new PrintStream( out ), CommandLine.Help.Ansi.OFF );
         }
 
         assertThat( baos.toString().trim(), equalTo( String.format(

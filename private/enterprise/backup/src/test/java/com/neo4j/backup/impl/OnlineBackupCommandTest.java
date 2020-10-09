@@ -46,7 +46,7 @@ class OnlineBackupCommandTest
         final var command = new OnlineBackupCommand( new ExecutionContext( Path.of( "." ), Path.of( "." ) ) );
         try ( var out = new PrintStream( baos ) )
         {
-            CommandLine.usage( command, new PrintStream( out ) );
+            CommandLine.usage( command, new PrintStream( out ), CommandLine.Help.Ansi.OFF );
         }
         assertThat( baos.toString().trim() ).isEqualTo( format(
                 "Perform an online backup from a running Neo4j enterprise server.%n" +
