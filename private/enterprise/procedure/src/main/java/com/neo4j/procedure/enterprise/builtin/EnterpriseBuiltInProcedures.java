@@ -23,7 +23,6 @@ import org.neo4j.procedure.builtin.IndexProcedures;
 
 import static org.neo4j.procedure.Mode.SCHEMA;
 
-@SuppressWarnings( "unused" )
 public class EnterpriseBuiltInProcedures
 {
     @Context
@@ -32,9 +31,10 @@ public class EnterpriseBuiltInProcedures
     @Context
     public DependencyResolver resolver;
 
+    @Deprecated
     @Description( "Create a named node key constraint. Backing index will use specified index provider and configuration (optional). " +
             "Yield: name, labels, properties, providerName, status" )
-    @Procedure( name = "db.createNodeKey", mode = SCHEMA )
+    @Procedure( name = "db.createNodeKey", mode = SCHEMA, deprecatedBy = "CREATE CONSTRAINT ... IS NODE KEY command" )
     public Stream<BuiltInProcedures.SchemaIndexInfo> createNodeKey(
             @Name( "constraintName" ) String constraintName,
             @Name( "labels" ) List<String> labels,
