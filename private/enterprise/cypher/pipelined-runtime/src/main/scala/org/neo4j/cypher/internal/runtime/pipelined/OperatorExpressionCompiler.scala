@@ -597,7 +597,6 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     )
   }
 
-  //TODO
   override protected def fallBack(expression: Expression, id: Id): Option[IntermediateExpression] =
     super[AbstractExpressionCompilerFront].compileExpression(expression, id)
 
