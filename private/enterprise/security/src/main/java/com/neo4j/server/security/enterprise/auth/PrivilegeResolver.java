@@ -30,6 +30,7 @@ import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantO
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ACCESS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DATABASE_MANAGEMENT;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE_BOOSTED;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.START_DATABASE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.STOP_DATABASE;
@@ -43,6 +44,7 @@ public class PrivilegeResolver
     private final Boolean restrictUpgrade;
     private final ResourcePrivilege accessOnSystem;
     private final ResourcePrivilege executeBoostedUpgrade;
+    private final ResourcePrivilege executeRoutingTable;
     private final ResourcePrivilege createDropDatabase;
     private final ResourcePrivilege startDatabase;
     private final ResourcePrivilege stopDatabase;
@@ -71,6 +73,9 @@ public class PrivilegeResolver
             // EXECUTE BOOSTED dbms.upgrade* ON DBMS
             ProcedureSegment segment = new ProcedureSegment( "dbms.upgrade*" );
             executeBoostedUpgrade = new ResourcePrivilege( GRANT, EXECUTE_BOOSTED, new DatabaseResource(), segment, SYSTEM_DATABASE_NAME );
+            // EXECUTE dbms.*.getRoutingTable ON DBMS
+            ProcedureSegment routingProc = new ProcedureSegment( "dbms.*.getRoutingTable" );
+            executeRoutingTable = new ResourcePrivilege( GRANT, EXECUTE, new DatabaseResource(), routingProc, SYSTEM_DATABASE_NAME );
             // CRETE & DROP DATABASE ON DBMS
             createDropDatabase = new ResourcePrivilege( GRANT, DATABASE_MANAGEMENT, new DatabaseResource(), Segment.ALL,
                     ResourcePrivilege.SpecialDatabase.ALL );
@@ -110,6 +115,7 @@ public class PrivilegeResolver
             HashSet<ResourcePrivilege> privileges = new HashSet<>();
             privileges.add( accessOnSystem );
             privileges.add( executeBoostedUpgrade );
+            privileges.add( executeRoutingTable );
             privileges.add( createDropDatabase );
             privileges.add( startDatabase );
             privileges.add( stopDatabase );

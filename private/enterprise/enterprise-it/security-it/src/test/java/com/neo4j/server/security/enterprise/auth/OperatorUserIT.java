@@ -16,12 +16,14 @@ import org.junit.jupiter.params.provider.ValueSource;
 import picocli.CommandLine;
 
 import java.io.PrintStream;
+import java.net.InetAddress;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.neo4j.cli.ExecutionContext;
@@ -29,11 +31,21 @@ import org.neo4j.commandline.admin.security.SetInitialPasswordCommand;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Logging;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.SessionConfig;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
+import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
@@ -54,6 +66,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
 
 @ExtendWith( EphemeralFileSystemExtension.class )
@@ -61,7 +74,12 @@ class OperatorUserIT
 {
     private static final String UPGRADE_USERNAME = Config.defaults().get( GraphDatabaseInternalSettings.upgrade_username );
 
-    @SuppressWarnings( "unused" )
+    private static final org.neo4j.driver.Config config = org.neo4j.driver.Config.builder()
+                                                                                 .withLogging( Logging.none() )
+                                                                                 .withoutEncryption()
+                                                                                 .withConnectionTimeout( 10, TimeUnit.SECONDS )
+                                                                                 .build();
+
     @Inject
     private EphemeralFileSystemAbstraction fileSystem;
     private Path confDir;
@@ -178,6 +196,23 @@ class OperatorUserIT
 
         assertThatThrownBy( () -> database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
                 .isInstanceOf( AuthorizationViolationException.class );
+    }
+
+    @Test
+    void shouldBeAbleToGetRoutingTableAsOperator()
+    {
+        setOperatorPassword( "bar" );
+        enterpriseDbms = getEnterpriseManagementService( Map.of( GraphDatabaseInternalSettings.restrict_upgrade, true ) );
+        ConnectorPortRegister portRegister =
+                ((GraphDatabaseAPI) enterpriseDbms.database( DEFAULT_DATABASE_NAME )).getDependencyResolver().resolveDependency( ConnectorPortRegister.class );
+        HostnamePort bolt = portRegister.getLocalAddress( "bolt" );
+        var uri = "neo4j://" + bolt.toString();
+
+        try ( Driver driver = GraphDatabase.driver( uri, AuthTokens.basic( UPGRADE_USERNAME, "bar" ), config );
+              Session session = driver.session( SessionConfig.builder().withDatabase( SYSTEM_DATABASE_NAME ).build() ) )
+        {
+            session.run( "CALL dbms.upgrade()" ).consume();
+        }
     }
 
     @ParameterizedTest
@@ -658,6 +693,9 @@ class OperatorUserIT
     private DatabaseManagementService getEnterpriseManagementService( Map<Setting<?>,Object> config )
     {
         return new TestEnterpriseDatabaseManagementServiceBuilder( homeDir )
+                .setConfig( BoltConnector.enabled, true )
+                .setConfig( BoltConnector.encryption_level, DISABLED )
+                .setConfig( BoltConnector.listen_address, new SocketAddress(  InetAddress.getLoopbackAddress().getHostAddress(), 0 ) )
                 .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fileSystem ) )
                 .setConfig( GraphDatabaseSettings.auth_enabled, true )
                 .setConfig( config )
