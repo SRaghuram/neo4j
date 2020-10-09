@@ -16,9 +16,9 @@ import org.neo4j.cypher.internal.compiler.test_helpers.ContextHelper
 import org.neo4j.cypher.internal.frontend.phases.AstRewriting
 import org.neo4j.cypher.internal.frontend.phases.BaseContains
 import org.neo4j.cypher.internal.frontend.phases.InitialState
+import org.neo4j.cypher.internal.frontend.phases.LiteralExtraction
 import org.neo4j.cypher.internal.frontend.phases.SemanticAnalysis
 import org.neo4j.cypher.internal.planner.spi.PlannerNameFor
-import org.neo4j.cypher.internal.rewriting.RewriterStepSequencer
 import org.neo4j.cypher.internal.rewriting.rewriters.GeneratingNamer
 import org.neo4j.cypher.internal.rewriting.rewriters.IfNoParameter
 
@@ -27,7 +27,6 @@ trait FullyParsedQueryTestSupport {
   def noParams: Map[String, Any] = Map.empty
 
   private val parsing = CompilationPhases.parsing(ParsingConfig(
-    RewriterStepSequencer.newPlain,
     new GeneratingNamer()
   ))
 
@@ -42,7 +41,8 @@ trait FullyParsedQueryTestSupport {
 
   private val semanticAnalysis =
     SemanticAnalysis(warn = true, MultipleDatabases).adds(BaseContains[SemanticState]) andThen
-      AstRewriting(RewriterStepSequencer.newPlain, IfNoParameter, innerVariableNamer = new GeneratingNamer())
+      AstRewriting(innerVariableNamer = new GeneratingNamer()) andThen
+      LiteralExtraction(IfNoParameter)
 
   def prepare(query: Statement, options: QueryOptions = QueryOptions.default) =
     FullyParsedQuery(
