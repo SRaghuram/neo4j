@@ -449,6 +449,10 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
   }
 
   test("should solve nested index join with apply and index range seek") {
+    graph.createIndex("L1", "prop1")
+    graph.createIndex("L2", "prop2")
+    graph.createIndex("L1", "prop3")
+
     val node1 = createLabeledNode(Map("prop1" -> 13, "prop3" -> 1), "L1")
     val node2 = createLabeledNode(Map("prop1" -> 23, "prop3" -> 1), "L1")
     createLabeledNode(Map("prop1" -> 24, "prop3" -> 2), "L1")
@@ -457,13 +461,10 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     createLabeledNode(Map("prop2" -> 13, "prop4" -> 2), "L2")
     createLabeledNode(Map("prop2" -> 42, "prop4" -> 4), "L2")
     createLabeledNode(Map("prop2" -> 1337, "prop4" -> 5), "L2")
-    (3 until 100).foreach(i => createLabeledNode(Map("prop2" -> (1337+i), "prop4" -> i), "L2"))
 
     val query = "MATCH(n:L1), (m:L2) WHERE n.prop1 < 42 AND m.prop2 < 42 AND n.prop3 < m.prop4 RETURN n"
 
-    graph.createIndex("L1", "prop1")
-    graph.createIndex("L2", "prop2")
-    graph.createIndex("L1", "prop3")
+    resampleIndexes()
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
