@@ -176,12 +176,23 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
     val userRepository = new InMemoryUserRepository
     val roleRepository = new InMemoryRoleRepository
     val enterpriseComponent = new EnterpriseSecurityGraphComponent(mock[Log], roleRepository, userRepository, config)
+    initializeSystemGraphConstraints(enterpriseComponent)
     val builder = enterpriseComponent.findSecurityGraphComponentVersion(version)
     val tx = graphOps.beginTx
     try {
       val users = new util.HashSet[String]()
       users.add("neo4j")
       builder.initializePrivileges(tx, PredefinedRoles.roles, util.Map.of(PredefinedRoles.ADMIN, users))
+      tx.commit()
+    } finally {
+      if (tx != null) tx.close()
+    }
+  }
+
+  def initializeSystemGraphConstraints(enterpriseSecurityGraphComponent: EnterpriseSecurityGraphComponent): Unit = {
+    val tx = graphOps.beginTx()
+    try {
+      enterpriseSecurityGraphComponent.initializeSystemGraphConstraints(tx)
       tx.commit()
     } finally {
       if (tx != null) tx.close()
