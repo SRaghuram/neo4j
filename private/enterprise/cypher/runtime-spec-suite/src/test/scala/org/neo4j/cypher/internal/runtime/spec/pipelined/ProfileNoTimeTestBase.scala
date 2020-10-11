@@ -20,7 +20,7 @@ abstract class ProfileNoTimeTestBase[CONTEXT <: RuntimeContext](edition: Edition
                                                                ) extends RuntimeTestSuite[CONTEXT](edition, runtime) {
 
   // We always get OperatorProfile.NO_DATA for page cache hits and misses in Pipelined
-  protected val NO_PROFILE = new OperatorProfile.ConstOperatorProfile(0, 0, 0, OperatorProfile.NO_DATA, OperatorProfile.NO_DATA, OperatorProfile.NO_DATA)
+  protected val NO_PROFILE = new OperatorProfile.ConstOperatorProfile(0, 0, 0, 0, 0, OperatorProfile.NO_DATA)
 
   test("should not profile time if completely fused") {
     given { nodeGraph(sizeHint) }

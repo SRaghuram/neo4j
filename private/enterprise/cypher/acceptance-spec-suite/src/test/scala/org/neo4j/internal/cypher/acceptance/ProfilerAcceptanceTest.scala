@@ -50,12 +50,9 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     planString should include("Estimated Rows")
     planString should include("Rows")
     planString should include("DB Hits")
-    planString should not include "Page Cache Hits"
-    planString should not include "Page Cache Misses"
+    planString should include("Page Cache Hits/Misses")
     planString should not include "Page Cache Hit Ratio"
     planString should include("Time (ms)")
-
-    planString.toLowerCase should not include "page cache"
   }
 
   test("pipelined profile should include expected profiling data with non-fused operators") {
@@ -67,12 +64,9 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     planString should include("Estimated Rows")
     planString should include("Rows")
     planString should include("DB Hits")
-    planString should not include "Page Cache Hits"
-    planString should not include "Page Cache Misses"
+    planString should include("Page Cache Hits/Misses")
     planString should not include "Page Cache Hit Ratio"
     planString should include("Time (ms)")
-
-    planString.toLowerCase should not include "page cache"
   }
 
   test("profile simple query") {
