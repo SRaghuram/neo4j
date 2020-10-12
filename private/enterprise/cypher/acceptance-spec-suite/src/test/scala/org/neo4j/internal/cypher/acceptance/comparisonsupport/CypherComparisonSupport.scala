@@ -16,6 +16,8 @@ import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.ExecutionEngineHelper.asJavaMapDeep
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.runtime.ResourceManager
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
+import org.neo4j.cypher.internal.runtime.debug.SaveGeneratedSource
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
@@ -51,7 +53,7 @@ import scala.util.Try
  * This is expected and useful - it let's us know how a change impacts how many acceptance tests now start
  * succeeding where they weren't earlier.
  */
-trait CypherComparisonSupport extends AbstractCypherComparisonSupport {
+trait CypherComparisonSupport extends AbstractCypherComparisonSupport with PipelinedDebugGeneratedSource {
   self: ExecutionEngineFunSuite =>
 
   override def eengineExecute(tx: InternalTransaction, query: String,
@@ -80,6 +82,28 @@ trait CypherComparisonSupport extends AbstractCypherComparisonSupport {
       GraphDatabaseInternalSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(4),
       GraphDatabaseInternalSettings.cypher_worker_count -> Integer.valueOf(if (Configs.runOnlySafeScenarios) -1 else 0)
     )
+}
+
+trait PipelinedDebugGeneratedSource extends SaveGeneratedSource {
+  self: AbstractCypherComparisonSupport =>
+
+  /**
+   * To debug generated source code for fused pipelines in pipelined runtime:
+   * Set this flag to true, and set a breakpoint in [[org.neo4j.cypher.internal.PipelinedRuntime.PipelinedExecutionPlan.run]]
+   * When you reach the breakpoint you should be able to find the generated source in `[maven-module]/target/generated-test-sources/cypher`.
+   *
+   * (If you are using IntelliJ make sure to "Mark Directory as" "Generated Sources Root".
+   *  You may also need to remove the `target` folder from excluded directories in the module settings for it to show up in the Project view.)
+   *
+   * NOTE: You need to set your run/debug configuration working directory to the directory of the Maven module containing your test.
+   *       (If you are using IntelliJ this is probably the default unless you have changed your run/debug configuration template)
+   *
+   * See [[org.neo4j.cypher.internal.runtime.debug.SaveGeneratedSource]] for more details.
+   */
+  val saveGeneratedSourceEnabled: Boolean = DebugSupport.DEBUG_GENERATED_SOURCE_CODE
+
+  // Only enable this if you want to inspect the generated source files after the test run. Otherwise they will be deleted automatically.
+  override val keepSourceFilesAfterTestFinishes: Boolean = false
 }
 
 trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupport with EnterpriseGraphDatabaseTestSupport {

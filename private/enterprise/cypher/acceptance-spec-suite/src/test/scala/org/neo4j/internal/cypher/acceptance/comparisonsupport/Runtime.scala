@@ -5,6 +5,9 @@
  */
 package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
+import org.neo4j.codegen.api.CodeGeneration.GENERATE_JAVA_SOURCE_DEBUG_OPTION
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
+
 case class Runtimes(runtimes: Runtime*)
 
 object Runtimes {
@@ -25,7 +28,8 @@ object Runtimes {
 
   object Parallel extends Runtime(Set("PARALLEL"), "runtime=parallel")
 
-  object PipelinedFused extends Runtime(Set("PIPELINED", "SCHEMA"), "runtime=pipelined operatorEngine=compiled")
+  object PipelinedFused extends Runtime(Set("PIPELINED", "SCHEMA"), "runtime=pipelined operatorEngine=compiled" +
+    (if (DebugSupport.DEBUG_GENERATED_SOURCE_CODE) s" debug=$GENERATE_JAVA_SOURCE_DEBUG_OPTION" else ""))
 
   object PipelinedNonFused extends Runtime(Set("PIPELINED", "SCHEMA"), "runtime=pipelined operatorEngine=interpreted")
 
