@@ -21,6 +21,7 @@ trait PipelinedDebugGeneratedSourceEnabled extends PipelinedDebugGeneratedSource
 
   override val saveGeneratedSourceEnabled: Boolean = true
   override val keepSourceFilesAfterTestFinishes: Boolean = false
+  override val logSaveLocation: Boolean = false // Do not spam test output
 
   override val debugOptions: Set[String] = Set(GENERATE_JAVA_SOURCE_DEBUG_OPTION)
 }
