@@ -451,12 +451,12 @@ class SlottedRewriter(tokenContext: TokenContext) {
       case e@HasTypes(Variable(k), types) =>
         slotConfiguration(k) match {
           case LongSlot(offset, false, CTRelationship) =>
-            val (resolvedLabelTokens, lateLabels) = resolveTypeTokens(types)
-            HasTypesFromSlot(offset, resolvedLabelTokens, lateLabels)
+            val (resolvedTypeTokens, lateTypes) = resolveTypeTokens(types)
+            HasTypesFromSlot(offset, resolvedTypeTokens, lateTypes)
 
           case LongSlot(offset, true, CTRelationship) =>
-            val (resolvedLabelTokens, lateLabels) = resolveTypeTokens(types)
-            NullCheck(offset, HasTypesFromSlot(offset, resolvedLabelTokens, lateLabels))
+            val (resolvedTypeTokens, lateTypes) = resolveTypeTokens(types)
+            NullCheck(offset, HasTypesFromSlot(offset, resolvedTypeTokens, lateTypes))
 
           case _ => e // Don't know how to specialize this
         }
@@ -472,13 +472,12 @@ class SlottedRewriter(tokenContext: TokenContext) {
             NullCheck(offset, HasLabelsFromSlot(offset, resolvedLabelTokens, lateLabels))
 
           case LongSlot(offset, false, CTRelationship) =>
-            val (resolvedLabelTokens, lateLabels) = resolveTypeTokens(labels.map(l => RelTypeName(l.name)(l.position)))
-            HasTypesFromSlot(offset, resolvedLabelTokens, lateLabels)
+            val (resolvedTypeTokens, lateTypes) = resolveTypeTokens(labels.map(t => RelTypeName(t.name)(t.position)))
+            HasTypesFromSlot(offset, resolvedTypeTokens, lateTypes)
 
           case LongSlot(offset, true, CTRelationship) =>
-            val (resolvedLabelTokens, lateLabels) = resolveTypeTokens(labels.map(l => RelTypeName(l.name)(l.position)))
-            NullCheck(offset, HasTypesFromSlot(offset, resolvedLabelTokens, lateLabels))
-
+            val (resolvedTypeTokens, lateTypes) = resolveTypeTokens(labels.map(t => RelTypeName(t.name)(t.position)))
+            NullCheck(offset, HasTypesFromSlot(offset, resolvedTypeTokens, lateTypes))
 
           case _ => e // Don't know how to specialize this
         }

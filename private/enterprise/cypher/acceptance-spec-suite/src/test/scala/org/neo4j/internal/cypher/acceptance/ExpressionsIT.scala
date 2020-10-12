@@ -1816,7 +1816,6 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("HasTypesFromSlot - late - negative") {
     // Given
-    // Given
     val typeName = "A"
     val r = ValueUtils.fromRelationshipEntity(relate(createNode(), createNode(), typeName))
 
