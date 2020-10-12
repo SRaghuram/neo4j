@@ -96,7 +96,7 @@ case class MaterializedEntitiesExpressionConverter(tokenContext: TokenContext) e
     )
 
   private def hasLabelsOrTypes(id: Id, e: expressions.HasLabelsOrTypes, self: ExpressionConverters): Option[Predicate] =
-    Some(e.labels
+    Some(e.labelsOrTypes
       .map { l =>
         MaterializedEntityHasLabelOrType(self.toCommandExpression(id, e.expression),
           l.name: String): Predicate
