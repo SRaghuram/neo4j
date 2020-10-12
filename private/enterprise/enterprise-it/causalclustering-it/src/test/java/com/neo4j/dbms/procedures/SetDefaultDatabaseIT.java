@@ -93,6 +93,7 @@ public class SetDefaultDatabaseIT
     void shouldChangeDatabaseWhenOldDefaultDropped() throws Exception
     {
         // GIVEN
+        assertDefaultDatabase( "neo4j", cluster );
         CausalClusteringTestHelpers.createDatabase( "foo", cluster );
         CausalClusteringTestHelpers.dropDatabase( "neo4j", cluster );
         CausalClusteringTestHelpers.assertDatabaseEventuallyStarted( "foo", cluster );
@@ -116,11 +117,12 @@ public class SetDefaultDatabaseIT
     void shouldChangeDatabaseWhenNewDefaultStopped() throws Exception
     {
         // GIVEN
+        assertDefaultDatabase( "neo4j", cluster );
+        CausalClusteringTestHelpers.stopDatabase( "neo4j", cluster );
+        CausalClusteringTestHelpers.assertDatabaseEventuallyStopped( "neo4j", cluster );
         CausalClusteringTestHelpers.createDatabase( "foo", cluster, true );
         CausalClusteringTestHelpers.stopDatabase( "foo", cluster );
-        CausalClusteringTestHelpers.stopDatabase( "neo4j", cluster );
         CausalClusteringTestHelpers.assertDatabaseEventuallyStopped( "foo", cluster );
-        CausalClusteringTestHelpers.assertDatabaseEventuallyStopped( "neo4j", cluster );
 
         cluster.systemTx( ( db, tx ) ->
         {
@@ -140,8 +142,8 @@ public class SetDefaultDatabaseIT
     void shouldNotChangeDatabaseWhenOldDefaultOnline() throws Exception
     {
         // GIVEN
-        CausalClusteringTestHelpers.createDatabase( "foo", cluster );
         assertDefaultDatabase( "neo4j", cluster );
+        CausalClusteringTestHelpers.createDatabase( "foo", cluster );
         CausalClusteringTestHelpers.assertDatabaseEventuallyStarted( "foo", cluster );
 
         cluster.systemTx( ( db, tx ) ->
@@ -176,11 +178,11 @@ public class SetDefaultDatabaseIT
     void shouldFailWhenNewDefaultDropped() throws Exception
     {
         // GIVEN
+        assertDefaultDatabase( "neo4j", cluster );
         CausalClusteringTestHelpers.createDatabase( "foo", cluster );
         CausalClusteringTestHelpers.assertDatabaseEventuallyStarted( "foo", cluster );
         CausalClusteringTestHelpers.dropDatabase( "foo", cluster );
         CausalClusteringTestHelpers.assertDatabaseEventuallyDoesNotExist( "foo", cluster );
-        assertDefaultDatabase( "neo4j", cluster );
 
         cluster.systemTx( ( db, tx ) ->
         {
