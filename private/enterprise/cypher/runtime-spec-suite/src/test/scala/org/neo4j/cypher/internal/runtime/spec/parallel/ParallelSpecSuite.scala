@@ -21,6 +21,7 @@ import org.neo4j.cypher.internal.runtime.spec.parallel.ParallelRuntimeSpecSuite.
 import org.neo4j.cypher.internal.runtime.spec.parallel.ParallelRuntimeSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.pipelined.AssertFusingSucceeded
 import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedDbHitsTestBase
+import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedDebugGeneratedSource
 import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedFusingNotificationTestBase
 import org.neo4j.cypher.internal.runtime.spec.pipelined.ProfileNoTimeTestBase
 import org.neo4j.cypher.internal.runtime.spec.pipelined.SchedulerTracerTestBase
@@ -112,7 +113,7 @@ object ParallelRuntimeSpecSuite {
   val NO_FUSING: Edition[EnterpriseRuntimeContext] = ENTERPRISE.WITH_NO_FUSING(ENTERPRISE.WITH_WORKERS(ENTERPRISE.DEFAULT))
 }
 
-trait ParallelRuntimeSpecSuite extends TimeLimitedCypherTest with AssertFusingSucceeded {
+trait ParallelRuntimeSpecSuite extends TimeLimitedCypherTest with AssertFusingSucceeded with PipelinedDebugGeneratedSource {
   self: RuntimeTestSuite[EnterpriseRuntimeContext] =>
   abstract override def withFixture(test: NoArgTest): Outcome = {
     withClue(s"Failed with MORSEL_SIZE = $MORSEL_SIZE${lineSeparator()}")(super.withFixture(test))

@@ -7,10 +7,13 @@ package org.neo4j.cypher.internal.runtime.spec.pipelined
 
 import java.lang.System.lineSeparator
 
+import org.neo4j.codegen.api.CodeGeneration.GENERATE_JAVA_SOURCE_DEBUG_OPTION
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.PipelinedRuntime.PIPELINED
 import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
+import org.neo4j.cypher.internal.runtime.debug.SaveGeneratedSource
 import org.neo4j.cypher.internal.runtime.spec.CompiledExpressionsTestBase
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.MORSEL_SIZE
@@ -18,7 +21,6 @@ import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.WITH_MORSEL_SIZE
 import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
-import org.neo4j.cypher.internal.runtime.spec.SaveGeneratedSource
 import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedDynamicLimitPropagationTest.CONFIGURED_MORSEL_SIZE
 import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedSpecSuite.FUSING
 import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedSpecSuite.NO_FUSING
@@ -128,28 +130,32 @@ object PipelinedSpecSuite {
   val NO_FUSING: Edition[EnterpriseRuntimeContext] = ENTERPRISE.WITH_NO_FUSING(ENTERPRISE.DEFAULT)
 }
 
-trait PipelinedSpecSuite extends AssertFusingSucceeded with SaveGeneratedSource {
+trait PipelinedDebugGeneratedSource extends SaveGeneratedSource {
   self: RuntimeTestSuite[EnterpriseRuntimeContext] =>
 
   /**
    * To debug generated source code for fused pipelines in pipelined runtime:
    * Set this flag to true, and set a breakpoint in [[org.neo4j.cypher.internal.PipelinedRuntime.PipelinedExecutionPlan.run]].
    * When you reach the breakpoint you should be able to find the generated source in `[maven-module]/target/generated-test-sources/cypher`.
-   * (If you are using IntelliJ make sure to "Mark Directory as" "Generated Sources Root")
+   *
+   * (If you are using IntelliJ make sure to "Mark Directory as" "Generated Sources Root".
+   *  You may also need to remove the `target` folder from excluded directories in the module settings for it to show up in the Project view.)
    *
    * NOTE: You need to set your run/debug configuration working directory to the directory of the Maven module containing your test.
    *       (If you are using IntelliJ this is probably the default unless you have changed your run/debug configuration template)
    *
-   * See [[org.neo4j.cypher.internal.runtime.spec.SaveGeneratedSource]] for more details.
+   * See [[SaveGeneratedSource]] for more details.
    */
-  val DEBUG_GENERATED_SOURCE_CODE: Boolean = false
-
-  val saveGeneratedSourceEnabled: Boolean = DEBUG_GENERATED_SOURCE_CODE
+  val saveGeneratedSourceEnabled: Boolean = DebugSupport.DEBUG_GENERATED_SOURCE_CODE
 
   // Only enable this if you want to inspect the generated source files after the test run. Otherwise they will be deleted automatically.
-  override val keepSourceFilesAfterTestFinishes: Boolean = false
+  override val keepSourceFilesAfterTestFinishes: Boolean = true
 
-  override val debugOptions: Set[String] = if (DEBUG_GENERATED_SOURCE_CODE) Set("generate_java_source") else Set.empty[String]
+  override val debugOptions: Set[String] = if (saveGeneratedSourceEnabled) Set(GENERATE_JAVA_SOURCE_DEBUG_OPTION) else Set.empty[String]
+}
+
+trait PipelinedSpecSuite extends AssertFusingSucceeded with PipelinedDebugGeneratedSource {
+  self: RuntimeTestSuite[EnterpriseRuntimeContext] =>
 
   abstract override def withFixture(test: NoArgTest): Outcome = {
     withClue(s"Failed with MORSEL_SIZE = $MORSEL_SIZE${lineSeparator()}")(super.withFixture(test))
@@ -531,6 +537,8 @@ class PipelinedNestedPlanExpressionNoFusingTest extends NestedPlanExpressionTest
 
 class PipelinedCompiledExpressionsTest extends CompiledExpressionsTestBase(FUSING, PIPELINED)
 class PipelinedCompiledExpressionsNoFusingTest extends CompiledExpressionsTestBase(NO_FUSING, PIPELINED)
+
+class PipelinedDebugTest extends PipelinedDebugTestBase(FUSING, PIPELINED) with AssertFusingSucceeded
 
 /**
  * This test is pipelined only, there is no reason to run in other runtimes
