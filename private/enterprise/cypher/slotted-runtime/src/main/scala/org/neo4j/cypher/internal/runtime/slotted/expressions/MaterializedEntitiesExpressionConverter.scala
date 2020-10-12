@@ -42,6 +42,8 @@ case class MaterializedEntitiesExpressionConverter(tokenContext: TokenContext) e
     expression match {
       case e: expressions.Property           => toCommandProperty(id, e, self)
       case e: expressions.HasLabels          => hasLabels(id, e, self)
+      case e: expressions.HasTypes           => hasTypes(id, e, self)
+      case e: expressions.HasLabelsOrTypes   => hasLabelsOrTypes(id, e, self)
       case e: expressions.FunctionInvocation => toCommandExpression(id, e.function, e, self)
       case _                         => None
     }
@@ -80,6 +82,24 @@ case class MaterializedEntitiesExpressionConverter(tokenContext: TokenContext) e
       .map { l =>
         MaterializedEntityHasLabel(self.toCommandExpression(id, e.expression),
           commands.values.KeyToken.Unresolved(l.name, commands.values.TokenType.Label)): Predicate
+      }
+      .reduceLeft(predicates.And.apply)
+    )
+
+  private def hasTypes(id: Id, e: expressions.HasTypes, self: ExpressionConverters): Option[Predicate] =
+    Some(e.types
+      .map { l =>
+        MaterializedEntityHasType(self.toCommandExpression(id, e.expression),
+          commands.values.KeyToken.Unresolved(l.name, commands.values.TokenType.RelType)): Predicate
+      }
+      .reduceLeft(predicates.And.apply)
+    )
+
+  private def hasLabelsOrTypes(id: Id, e: expressions.HasLabelsOrTypes, self: ExpressionConverters): Option[Predicate] =
+    Some(e.labels
+      .map { l =>
+        MaterializedEntityHasLabelOrType(self.toCommandExpression(id, e.expression),
+          l.name: String): Predicate
       }
       .reduceLeft(predicates.And.apply)
     )
@@ -156,6 +176,65 @@ case class MaterializedEntityHasLabel(entity: commands.expressions.Expression, l
     f(MaterializedEntityHasLabel(entity.rewrite(f), label.typedRewrite[KeyToken](f)))
 
   override def children: Seq[commands.expressions.Expression] = Seq(label, entity)
+
+  override def arguments: Seq[commands.expressions.Expression] = Seq(entity)
+
+  override def containsIsNull = false
+}
+
+case class MaterializedEntityHasType(entity: commands.expressions.Expression, typeToken: KeyToken) extends Predicate {
+
+  override def isMatch(ctx: ReadableRow, state: QueryState): Option[Boolean] = entity(ctx, state) match {
+
+    case IsNoValue() =>
+      None
+
+    case value =>
+      val relationship = CastSupport.castOrFail[RelationshipValue](value)
+      Some(relationship.`type`().equals(typeToken.name))
+  }
+
+  override def toString = s"$entity:${typeToken.name}"
+
+  override def rewrite(f: commands.expressions.Expression => commands.expressions.Expression): commands.expressions.Expression =
+    f(MaterializedEntityHasType(entity.rewrite(f), typeToken.typedRewrite[KeyToken](f)))
+
+  override def children: Seq[commands.expressions.Expression] = Seq(typeToken, entity)
+
+  override def arguments: Seq[commands.expressions.Expression] = Seq(entity)
+
+  override def containsIsNull = false
+}
+
+case class MaterializedEntityHasLabelOrType(entity: commands.expressions.Expression, labelOrType: String) extends Predicate {
+
+  override def isMatch(ctx: ReadableRow, state: QueryState): Option[Boolean] = entity(ctx, state) match {
+
+    case IsNoValue() =>
+      None
+
+    case node: NodeValue =>
+      var i = 0
+      while (i < node.labels().length()) {
+        if (node.labels().stringValue(i).equals(labelOrType)) {
+          return Some(true)
+        }
+
+        i += 1
+      }
+
+      Some(false)
+
+    case relationship: RelationshipValue =>
+      Some(relationship.`type`().equals(labelOrType))
+  }
+
+  override def toString = s"$entity:$labelOrType"
+
+  override def rewrite(f: commands.expressions.Expression => commands.expressions.Expression): commands.expressions.Expression =
+    f(MaterializedEntityHasLabelOrType(entity.rewrite(f), labelOrType))
+
+  override def children: Seq[commands.expressions.Expression] = Seq(entity)
 
   override def arguments: Seq[commands.expressions.Expression] = Seq(entity)
 
