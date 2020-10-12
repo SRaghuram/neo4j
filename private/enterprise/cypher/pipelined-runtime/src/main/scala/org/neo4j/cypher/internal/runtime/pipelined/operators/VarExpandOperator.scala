@@ -274,7 +274,6 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
   private var nodePredicate: Option[IntermediateExpression] = _
   private var relPredicate: Option[IntermediateExpression] = _
 
-
   override final def scopeId: String = "varExpand" + id.x
 
   override def genMoreFields: Seq[Field] = {
