@@ -46,7 +46,7 @@ public class SecurityLogDiagnosticsOfflineReportProvider extends DiagnosticsOffl
             Path securityLog = config.get( SecuritySettings.security_log_filename );
             if ( fs.fileExists( securityLog ) )
             {
-                return newDiagnosticsRotatingFile( "logs/security.log", fs, securityLog );
+                return newDiagnosticsRotatingFile( "logs/", fs, securityLog );
             }
         }
         return Collections.emptyList();

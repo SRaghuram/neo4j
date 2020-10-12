@@ -45,7 +45,7 @@ public class QueryLoggerDiagnosticsOfflineReportProvider extends DiagnosticsOffl
             Path queryLog = config.get( GraphDatabaseSettings.log_queries_filename );
             if ( fs.fileExists( queryLog ) )
             {
-                return newDiagnosticsRotatingFile( "logs/query.log", fs, queryLog );
+                return newDiagnosticsRotatingFile( "logs/", fs, queryLog );
             }
         }
         return Collections.emptyList();
