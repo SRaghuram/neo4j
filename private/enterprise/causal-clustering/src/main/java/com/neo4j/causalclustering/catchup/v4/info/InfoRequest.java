@@ -55,4 +55,10 @@ public class InfoRequest extends CatchupProtocolMessage
                "databaseId=" + namedDatabaseId +
                '}';
     }
+
+    @Override
+    public String describe()
+    {
+        return getClass().getSimpleName();
+    }
 }

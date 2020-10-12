@@ -19,4 +19,10 @@ public class GetMetadataRequest extends CatchupProtocolMessage
         this.databaseName = databaseName;
         this.includeMetadata = IncludeMetadata.valueOf( includeMetadata );
     }
+
+    @Override
+    public String describe()
+    {
+        return getClass().getSimpleName();
+    }
 }
