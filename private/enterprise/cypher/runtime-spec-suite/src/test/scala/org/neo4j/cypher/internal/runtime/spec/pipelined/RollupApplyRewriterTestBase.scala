@@ -39,6 +39,26 @@ abstract class RollupApplyRewriterTestBase[CONTEXT <: RuntimeContext](
     logicalQuery.logicalPlan shouldEqual (rewrittenPlan)
   }
 
+  test("should rewrite roll up apply if child-plan contains a nested plan expression") {
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("list2")
+      .rollUpApply("list2", "y")
+      .|.unwind("list1 as y")
+      .|.nestedPlanCollectExpressionProjection("list1", "b.prop")
+      .|.|.expand("(a)-->(b)")
+      .|.|.argument("a")
+      .|.argument("a")
+      .input(variables = Seq("a"))
+      .build()
+
+    //when
+    val rewrittenPlan = pipelinedPrePhysicalPlanRewriter(logicalQuery)
+
+    //then
+    logicalQuery.logicalPlan shouldNot equal (rewrittenPlan)
+  }
+
   test("should rewrite roll up apply") {
     //given
     val logicalQuery = new LogicalQueryBuilder(this)
