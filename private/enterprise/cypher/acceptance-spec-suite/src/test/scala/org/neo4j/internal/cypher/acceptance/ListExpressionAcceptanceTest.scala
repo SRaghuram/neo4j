@@ -278,6 +278,21 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       "someFalseWithNull" -> false))
   }
 
+  test("should all predicate on relationships when not all types match") {
+    val n1 = createLabeledNode(Map("x" -> 1), "Label")
+    val n2 = createLabeledNode(Map("x" -> 2), "Label")
+    val n3 = createLabeledNode(Map("x" -> 3), "Label")
+    relate(n1, n2, "S", Map("x" -> 1))
+    relate(n2, n3, "T", Map("x" -> 2))
+    val result = executeWith(Configs.VarExpand,
+      query =
+        "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
+          "WHERE all(r IN relationships(p) WHERE r:T)" +
+          "RETURN p")
+
+    result.toList shouldBe empty
+  }
+
   test("should any predicate on values") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       query = "RETURN " +
