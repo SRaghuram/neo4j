@@ -252,7 +252,7 @@ class ExecutionGraphDefinitionTest extends CypherFunSuite {
       .produceResults("n")
       .apply().withBreak()
       .|.anti().withBreak()
-      .|.limit(1).withBreak()
+      .|.limit(1)
       .|.filter("false")
       .|.argument("n").withBreak()
       .allNodeScan("n").withBreak()
