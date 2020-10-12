@@ -25,6 +25,7 @@ import com.neo4j.bench.model.model.BenchmarkPlan;
 import com.neo4j.bench.model.model.BenchmarkTool;
 import com.neo4j.bench.model.model.Benchmarks;
 import com.neo4j.bench.model.model.Environment;
+import com.neo4j.bench.model.model.Instance;
 import com.neo4j.bench.model.model.Java;
 import com.neo4j.bench.model.model.Metrics;
 import com.neo4j.bench.model.model.Neo4jConfig;
