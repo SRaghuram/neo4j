@@ -28,6 +28,7 @@ import com.neo4j.bench.model.model.Environment;
 import com.neo4j.bench.model.model.Java;
 import com.neo4j.bench.model.model.Metrics;
 import com.neo4j.bench.model.model.Neo4jConfig;
+import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.model.Plan;
 import com.neo4j.bench.model.model.PlanOperator;
 import com.neo4j.bench.model.model.PlanTree;
@@ -37,6 +38,8 @@ import com.neo4j.bench.model.model.Repository;
 import com.neo4j.bench.model.model.TestRun;
 import com.neo4j.bench.model.model.TestRunError;
 import com.neo4j.bench.model.model.TestRunReport;
+import com.neo4j.bench.model.profiling.ProfilerRecordings;
+import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.harness.junit.extension.EnterpriseNeo4jExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -318,6 +321,7 @@ public class SubmitTestRunsAndPlansIT
                     errors,
                     group,
                     benchmark1, benchmark2, benchmark3 );
+            addProfilerRecordings( testRunReport1, group, benchmark1, benchmark2 );
             resultsReporter.report( testRunReport1, errors.isEmpty() ? FAIL : IGNORE );
 
             Annotation annotation1 = new Annotation( "comment1", 1, "author1" );
@@ -459,8 +463,8 @@ public class SubmitTestRunsAndPlansIT
                     new BenchmarkPlan( group, benchmark2, plan( "b" ) ) );
             ArrayList<TestRunError> errors = newArrayList( new TestRunError( "group1", "benchmark1", "description 1" ),
                                                            new TestRunError( "group2", "benchmark2", "description 2" ) );
-            TestRunReport testRunReport1 =
-                    createTestRunReport( testRun1, benchmarkPlans, errors, group, benchmark1, benchmark2 );
+            TestRunReport testRunReport1 = createTestRunReport( testRun1, benchmarkPlans, errors, group, benchmark1, benchmark2 );
+            addProfilerRecordings( testRunReport1, group, benchmark1, benchmark2 );
             resultsReporter.report( testRunReport1, errors.isEmpty() ? FAIL : IGNORE );
 
             Annotation annotation1 = new Annotation( "comment1", 1, "author1" );
@@ -544,8 +548,8 @@ public class SubmitTestRunsAndPlansIT
                     new BenchmarkPlan( group, benchmark2, plan( "a" ) ) );
             ArrayList<TestRunError> errors = newArrayList( new TestRunError( "group1", "benchmark1", "description 1" ),
                                                            new TestRunError( "group2", "benchmark2", "description 2" ) );
-            TestRunReport testRunReport1 =
-                    createTestRunReport( testRun1, benchmarkPlans, errors, group, benchmark1, benchmark2 );
+            TestRunReport testRunReport1 = createTestRunReport( testRun1, benchmarkPlans, errors, group, benchmark1, benchmark2 );
+            addProfilerRecordings( testRunReport1, group, benchmark1, benchmark2 );
             resultsReporter.report( testRunReport1, errors.isEmpty() ? FAIL : IGNORE );
 
             Annotation annotation1 = new Annotation( "comment1", 1, "author1" );
@@ -701,6 +705,21 @@ public class SubmitTestRunsAndPlansIT
                 Java.current( "args" ),
                 benchmarkPlans,
                 errors );
+    }
+
+    private TestRunReport addProfilerRecordings( TestRunReport testRunReport, BenchmarkGroup benchmarkGroup, Benchmark... benchmarks )
+    {
+        Stream.of( benchmarks ).forEach( benchmark ->
+                                         {
+                                             ProfilerRecordings profilerRecordings = new ProfilerRecordings()
+                                                     .with( RecordingType.JFR, Parameters.NONE, "some/path" )
+                                                     .with( RecordingType.JFR_FLAMEGRAPH, Parameters.NONE, "some/path" )
+                                                     .with( RecordingType.ASYNC, Parameters.NONE, "some/path" )
+                                                     .with( RecordingType.ASYNC_FLAMEGRAPH, Parameters.NONE, "some/path" );
+                                             testRunReport.benchmarkGroupBenchmarkMetrics()
+                                                          .attachProfilerRecording( benchmarkGroup, benchmark, profilerRecordings );
+                                         } );
+        return testRunReport;
     }
 
     public static Plan plan( String description )
