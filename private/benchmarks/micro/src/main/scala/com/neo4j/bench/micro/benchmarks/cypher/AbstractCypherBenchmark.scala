@@ -261,9 +261,9 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       lifeSupport = lifeSupport,
       workerManager = workerManager,
       materializedEntitiesMode = materializedEntitiesMode,
-      runtimeConfig = getRuntimeConfig)
+      runtimeConfig = getRuntimeConfig(ContextHelper.runtimeConfig))
 
-  protected def getRuntimeConfig: CypherRuntimeConfiguration = ContextHelper.runtimeConfig
+  protected def getRuntimeConfig(defaultRuntimeConfig: CypherRuntimeConfiguration): CypherRuntimeConfiguration = defaultRuntimeConfig
 
   private def getPlanContext(tx: TransactionalContext): PlanContext =
     new TransactionBoundPlanContext(

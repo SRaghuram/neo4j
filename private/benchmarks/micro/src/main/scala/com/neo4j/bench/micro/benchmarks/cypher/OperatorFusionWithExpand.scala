@@ -53,7 +53,7 @@ class OperatorFusionWithExpand extends AbstractCypherBenchmark {
 
   @ParamValues(
     allowed = Array("1", "2", "3", "4", "5", "6", "8", "10", "12", "16", "20", "24", "28", "32", "64", "128"),
-    base = Array("1", "2", "4", "8", "12", "16", "32"))
+    base = Array("1", "2", "8", "16"))
   @Param(Array[String]())
   var limit: Int = _
 
@@ -72,16 +72,8 @@ class OperatorFusionWithExpand extends AbstractCypherBenchmark {
 
   private val memoryTrackingController = new ConfigMemoryTrackingController(Config.defaults())
 
-  override protected def getRuntimeConfig: CypherRuntimeConfiguration = {
-    CypherRuntimeConfiguration(
-      operatorFusionOverPipelineLimit = limit, // <-- From parameter
-      pipelinedBatchSizeSmall = ContextHelper.morselSize,
-      pipelinedBatchSizeBig = ContextHelper.morselSize,
-      schedulerTracing = NoSchedulerTracing,
-      lenientCreateRelationship = false,
-      memoryTrackingController = memoryTrackingController,
-      enableMonitors = false
-    )
+  override protected def getRuntimeConfig(defaultRuntimeConfig: CypherRuntimeConfiguration): CypherRuntimeConfiguration = {
+    defaultRuntimeConfig.copy(operatorFusionOverPipelineLimit = limit)
   }
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {

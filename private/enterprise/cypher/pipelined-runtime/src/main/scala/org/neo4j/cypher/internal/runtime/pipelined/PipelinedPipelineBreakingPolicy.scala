@@ -167,7 +167,7 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
       case ProcedureCall(_, call) if !parallelExecution && call.containsNoUpdates && call.signature.isVoid =>
         (false, fuseIndex)
 
-      case ProcedureCall(_, call) if !parallelExecution && call.containsNoUpdates => // TODO: Why do updates matter for breaking-policy?
+      case ProcedureCall(_, call) if !parallelExecution && call.containsNoUpdates =>
         breakOnFuseableOperator(lp, outerApplyPlanId, fuseIndex)
 
       // Undirected is cardinality increasing if nothing is in scope, otherwise not
