@@ -1,17 +1,19 @@
 /*
- * Copyright (c) 2002-2019 "Neo4j,"
+ * Copyright (c) 2002-2020 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
 package com.neo4j.bench.infra;
 
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.nio.file.Paths;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -103,7 +105,7 @@ public class PasswordManagerTest
         assertEquals( "password2", resultStoreCredentials.password() );
     }
 
-    @Test( expected = IllegalArgumentException.class )
+    @Test
     public void failOnMissingCredentials()
     {
         // given
@@ -126,6 +128,8 @@ public class PasswordManagerTest
                                                    ErrorReportingPolicy.FAIL,
                                                    Workspace.create( Paths.get( "." ) ).build() );
         // when
-        PasswordManager.getResultStoreCredentials( infraParams, passwordManager );
+        assertThrows( IllegalArgumentException.class,
+                      () -> PasswordManager.getResultStoreCredentials( infraParams, passwordManager ),
+                      "" );
     }
 }
