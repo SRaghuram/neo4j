@@ -8,8 +8,6 @@ package org.neo4j.cypher.internal.runtime.compiled.expressions
 import java.util
 
 import org.neo4j.codegen.TypeReference
-import org.neo4j.codegen.api.Block
-import org.neo4j.codegen.api.Condition
 import org.neo4j.codegen.api.Constant
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
@@ -92,6 +90,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilat
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.vCURSORS
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.vNODE_CURSOR
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.vPROPERTY_CURSOR
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.operations.CypherBoolean
 import org.neo4j.cypher.operations.CypherFunctions
 import org.neo4j.cypher.operations.CypherMath
@@ -119,7 +118,7 @@ class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
    (irInfo.code, irInfo.fields, irInfo.localVariables)
   }
 
-  override def compileExpression(expression: Expression): Option[IntermediateExpression] = {
+  override def compileExpression(expression: Expression, id: Id): Option[IntermediateExpression] = {
     val (ir, fields, localVars) = exprToIntermediateRepresentation(expression)
     Some(IntermediateExpression(ir, fields.toSeq, localVars.toSeq, Set.empty, requireNullCheck = false))
   }

@@ -83,12 +83,12 @@ object StandaloneExpressionCompiler {
                 fallback: AbstractExpressionCompilerFront): StandaloneExpressionCompiler = {
     val front = new CodeChainExpressionCompiler(
       slots, new VariableNamer) {
-      override def compileExpression(expression: Expression): Option[IntermediateExpression] = {
+      override def compileExpression(expression: Expression, id: Id): Option[IntermediateExpression] = {
         try {
-          super.compileExpression(expression)
+          super.compileExpression(expression, id)
         } catch {
-          case _: MatchError => fallback.compileExpression(expression)
-          case _: NotImplementedError => fallback.compileExpression(expression)
+          case _: MatchError => fallback.compileExpression(expression, id)
+          case _: NotImplementedError => fallback.compileExpression(expression, id)
         }
       }
     }
