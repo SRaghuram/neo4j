@@ -283,7 +283,7 @@ class SlottedRewriter(tokenContext: TokenContext) {
         }
 
       case original@GetDegree(Variable(n), typ, direction) =>
-        val maybeToken: Option[String] = typ.map(r => r.name)
+        val maybeToken: Option[Either[Int, String]] = typ.map(r => tokenContext.getOptRelTypeId(r.name).toLeft(r.name))
         slotConfiguration(n) match {
           case LongSlot(offset, false, CTNode) => GetDegreePrimitive(offset, maybeToken, direction)
           case LongSlot(offset, true, CTNode) => NullCheck(offset, GetDegreePrimitive(offset, maybeToken, direction))

@@ -1581,19 +1581,25 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           Some(
             IntermediateExpression(
               invokeStatic(method[Values, IntValue, Int]("intValue"),
-                           invoke(DB_ACCESS, method[DbAccess, Int, Long, NodeCursor](methodName), getLongAt(offset), NODE_CURSOR)),
+                invoke(DB_ACCESS, method[DbAccess, Int, Long, NodeCursor](methodName), getLongAt(offset), NODE_CURSOR)),
+              Seq.empty, Seq(vNODE_CURSOR), Set.empty))
+        case Some(Left(typeId)) =>
+          Some(
+            IntermediateExpression(
+              invokeStatic(method[Values, IntValue, Int]("intValue"),
+                invoke(DB_ACCESS, method[DbAccess, Int, Long, Int, NodeCursor](methodName), getLongAt(offset), constant(typeId), NODE_CURSOR)),
               Seq.empty, Seq(vNODE_CURSOR), Set.empty))
 
-        case Some(t) =>
+        case Some(Right(typeName)) =>
           val f = field[Int](namer.nextVariableName(), constant(-1))
           Some(
             IntermediateExpression(
               block(
                 condition(equal(loadField(f), constant(-1)))(
-                  setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("relationshipType"), constant(t)))),
+                  setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("relationshipType"), constant(typeName)))),
                 invokeStatic(method[Values, IntValue, Int]("intValue"),
-                           invoke(DB_ACCESS, method[DbAccess, Int, Long, Int, NodeCursor](methodName),
-                                  getLongAt(offset), loadField(f), NODE_CURSOR))
+                  invoke(DB_ACCESS, method[DbAccess, Int, Long, Int, NodeCursor](methodName),
+                    getLongAt(offset), loadField(f), NODE_CURSOR))
               ), Seq(f), Seq(vNODE_CURSOR), Set.empty))
       }
 

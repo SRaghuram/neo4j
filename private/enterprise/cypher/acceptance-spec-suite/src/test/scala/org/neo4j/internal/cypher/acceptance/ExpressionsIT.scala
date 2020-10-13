@@ -4346,10 +4346,28 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
     val context = SlottedRow(slots)
     context.setLongAt(0, n.getId)
+    val relToken = tokenReader(tx, _.relationshipType("R"))
+    evaluate(compile(GetDegreePrimitive(0, Some(Left(relToken)), OUTGOING), slots), context) should equal(Values.longValue(2))
+    evaluate(compile(GetDegreePrimitive(0, Some(Left(relToken)), INCOMING), slots), context) should equal(Values.longValue(1))
+    evaluate(compile(GetDegreePrimitive(0, Some(Left(relToken)), BOTH), slots), context) should equal(Values.longValue(3))
+  }
 
-    evaluate(compile(GetDegreePrimitive(0, Some(relType), OUTGOING), slots), context) should equal(Values.longValue(2))
-    evaluate(compile(GetDegreePrimitive(0, Some(relType), INCOMING), slots), context) should equal(Values.longValue(1))
-    evaluate(compile(GetDegreePrimitive(0, Some(relType), BOTH), slots), context) should equal(Values.longValue(3))
+  test("getDegree with type late") {
+    //given node with three outgoing and two incoming relationships
+    val n = createNode("prop" -> "hello")
+    val relType = "R"
+    relate(createNode(), n, relType)
+    relate(createNode(), n, "OTHER")
+    relate(n, createNode(), relType)
+    relate(n, createNode(), relType)
+    relate(n, createNode(), "OTHER")
+    val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
+    val context = SlottedRow(slots)
+    context.setLongAt(0, n.getId)
+
+    evaluate(compile(GetDegreePrimitive(0, Some(Right(relType)), OUTGOING), slots), context) should equal(Values.longValue(2))
+    evaluate(compile(GetDegreePrimitive(0, Some(Right(relType)), INCOMING), slots), context) should equal(Values.longValue(1))
+    evaluate(compile(GetDegreePrimitive(0, Some(Right(relType)), BOTH), slots), context) should equal(Values.longValue(3))
   }
 
   test("check Degree without type") {

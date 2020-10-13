@@ -25,6 +25,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyType
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeCollectExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExistsExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
@@ -128,7 +129,11 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan, maybeOwningPi
         val rhs = self.toCommandExpression(id, b)
         Some(slotted.expressions.PrimitiveEquals(lhs, rhs))
       case physicalplanning.ast.GetDegreePrimitive(offset, typ, direction) =>
-        Some(slotted.expressions.GetDegreePrimitive(offset, typ, direction))
+        typ match {
+          case None => Some(slotted.expressions.GetDegreePrimitive(offset, direction))
+          case Some(Left(typeId)) => Some(slotted.expressions.GetDegreeWithTypePrimitive(offset, typeId, direction))
+          case Some(Right(typeName)) =>Some(slotted.expressions.GetDegreeWithTypePrimitiveLate(offset, LazyType(typeName), direction))
+        }
       case physicalplanning.ast.HasDegreeGreaterThanPrimitive(offset, typ, direction, degree) =>
         Some(slotted.expressions.HasDegreeGreaterThanPrimitive(offset, typ, direction, self.toCommandExpression(id, degree)))
       case physicalplanning.ast.HasDegreeGreaterThanOrEqualPrimitive(offset, typ, direction, degree) =>
