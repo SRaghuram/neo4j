@@ -53,7 +53,7 @@ abstract class EntityCreateSlottedPipe(source: Pipe) extends BaseCreatePipe(sour
 
     val startNodeId = command.startNodeIdGetter.applyAsLong(context)
     val endNodeId = command.endNodeIdGetter.applyAsLong(context)
-    val typeId = command.relType.typ(state.query)
+    val typeId = command.relType.getOrCreateType(state.query)
 
     if (startNodeId == NO_SUCH_NODE) handleMissingNode(command.startName)
     else if (endNodeId == NO_SUCH_NODE) handleMissingNode(command.endName)
