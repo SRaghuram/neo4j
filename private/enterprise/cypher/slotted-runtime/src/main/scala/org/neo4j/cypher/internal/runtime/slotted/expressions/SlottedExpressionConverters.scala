@@ -135,15 +135,36 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan, maybeOwningPi
           case Some(Right(typeName)) =>Some(slotted.expressions.GetDegreeWithTypePrimitiveLate(offset, LazyType(typeName), direction))
         }
       case physicalplanning.ast.HasDegreeGreaterThanPrimitive(offset, typ, direction, degree) =>
-        Some(slotted.expressions.HasDegreeGreaterThanPrimitive(offset, typ, direction, self.toCommandExpression(id, degree)))
+        typ match {
+          case None => Some(slotted.expressions.HasDegreeGreaterThanPrimitive(offset, direction, self.toCommandExpression(id, degree)))
+          case Some(Left(typeId)) => Some(slotted.expressions.HasDegreeGreaterThanWithTypePrimitive(offset, typeId, direction, self.toCommandExpression(id, degree)))
+          case Some(Right(typeName)) =>Some(slotted.expressions.HasDegreeGreaterThanWithTypePrimitiveLate(offset, LazyType(typeName), direction, self.toCommandExpression(id, degree)))
+        }
       case physicalplanning.ast.HasDegreeGreaterThanOrEqualPrimitive(offset, typ, direction, degree) =>
-        Some(slotted.expressions.HasDegreeGreaterThanOrEqualPrimitive(offset, typ, direction, self.toCommandExpression(id, degree)))
+        typ match {
+          case None => Some(slotted.expressions.HasDegreeGreaterThanOrEqualPrimitive(offset, direction, self.toCommandExpression(id, degree)))
+          case Some(Left(typeId)) => Some(slotted.expressions.HasDegreeGreaterThanOrEqualWithTypePrimitive(offset, typeId, direction, self.toCommandExpression(id, degree)))
+          case Some(Right(typeName)) =>Some(slotted.expressions.HasDegreeGreaterThanOrEqualWithTypePrimitiveLate(offset, LazyType(typeName), direction, self.toCommandExpression(id, degree)))
+        }
       case physicalplanning.ast.HasDegreePrimitive(offset, typ, direction, degree) =>
-        Some(slotted.expressions.HasDegreePrimitive(offset, typ, direction, self.toCommandExpression(id, degree)))
+        typ match {
+          case None => Some(slotted.expressions.HasDegreePrimitive(offset, direction, self.toCommandExpression(id, degree)))
+          case Some(Left(typeId)) => Some(slotted.expressions.HasDegreeWithTypePrimitive(offset, typeId, direction, self.toCommandExpression(id, degree)))
+          case Some(Right(typeName)) =>Some(slotted.expressions.HasDegreeWithTypePrimitiveLate(offset, LazyType(typeName), direction, self.toCommandExpression(id, degree)))
+        }
       case physicalplanning.ast.HasDegreeLessThanPrimitive(offset, typ, direction, degree) =>
-        Some(slotted.expressions.HasDegreeLessThanPrimitive(offset, typ, direction, self.toCommandExpression(id, degree)))
+        typ match {
+          case None => Some(slotted.expressions.HasDegreeLessThanPrimitive(offset, direction, self.toCommandExpression(id, degree)))
+          case Some(Left(typeId)) => Some(slotted.expressions.HasDegreeLessThanWithTypePrimitive(offset, typeId, direction, self.toCommandExpression(id, degree)))
+          case Some(Right(typeName)) =>Some(slotted.expressions.HasDegreeLessThanWithTypePrimitiveLate(offset, LazyType(typeName), direction, self.toCommandExpression(id, degree)))
+        }
+
       case physicalplanning.ast.HasDegreeLessThanOrEqualPrimitive(offset, typ, direction, degree) =>
-        Some(slotted.expressions.HasDegreeLessThanOrEqualPrimitive(offset, typ, direction, self.toCommandExpression(id, degree)))
+        typ match {
+          case None => Some(slotted.expressions.HasDegreeLessThanOrEqualPrimitive(offset, direction, self.toCommandExpression(id, degree)))
+          case Some(Left(typeId)) => Some(slotted.expressions.HasDegreeLessThanOrEqualWithTypePrimitive(offset, typeId, direction, self.toCommandExpression(id, degree)))
+          case Some(Right(typeName)) =>Some(slotted.expressions.HasDegreeLessThanOrEqualWithTypePrimitiveLate(offset, LazyType(typeName), direction, self.toCommandExpression(id, degree)))
+        }
       case physicalplanning.ast.NodePropertyExists(offset, token, _) =>
         Some(slotted.expressions.NodePropertyExists(offset, token))
       case physicalplanning.ast.NodePropertyExistsLate(offset, token, _) =>

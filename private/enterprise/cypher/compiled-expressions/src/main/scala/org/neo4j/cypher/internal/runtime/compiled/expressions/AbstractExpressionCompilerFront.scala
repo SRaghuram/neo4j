@@ -1745,7 +1745,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
   }
 
   private def checkDegree(offset: Int,
-                          typ: Option[String],
+                          typ: Option[Either[Int, String]],
                           dir: SemanticDirection,
                           maxDegreeExpression: Expression,
                           comparison: (IntermediateRepresentation, IntermediateRepresentation) => IntermediateRepresentation,
@@ -1773,8 +1773,24 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                 ), trueValue, falseValue)
             ), maxDegree.fields, maxDegree.variables :+ vNODE_CURSOR, nullCheck)
         }
-
-      case Some(t) =>
+      case Some(Left(typeId)) =>
+        for (maxDegree <- compileExpression(maxDegreeExpression)) yield {
+          val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], localDegree, nullCheckIfRequired(maxDegree)))
+          val nullCheck = Set(block(lazySet, equal(load(localDegree), noValue)))
+          IntermediateExpression(
+            block(
+              lazySet,
+              declareAndAssign(typeRefOf[Int], localDegreeInt,
+                ternary(equal(load(localDegree), noValue),
+                  constant(-1),
+                  invokeStatic(method[CypherFunctions, Int, AnyValue]("asInt"), load(localDegree)))),
+              ternary(
+                comparison(
+                  invoke(DB_ACCESS, method[DbAccess, Int, Int, Long, Int, NodeCursor](methodName), computeMax(load(localDegreeInt)), getLongAt(offset), constant(typeId), NODE_CURSOR), load(localDegreeInt)
+                ), trueValue, falseValue)
+            ), maxDegree.fields, maxDegree.variables :+ vNODE_CURSOR, nullCheck)
+        }
+      case Some(Right(typeName)) =>
         val f = field[Int](namer.nextVariableName(), constant(-1))
         for (maxDegree <- compileExpression(maxDegreeExpression, id)) yield {
           val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], localDegree, nullCheckIfRequired(maxDegree)))
@@ -1787,7 +1803,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
                   constant(-1),
                   invokeStatic(method[CypherFunctions, Int, AnyValue]("asInt"), load(localDegree)))),
               condition(equal(loadField(f), constant(-1)))(
-                setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("relationshipType"), constant(t)))),
+                setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("relationshipType"), constant(typeName)))),
               ternary(
                 comparison(
                   invoke(DB_ACCESS, method[DbAccess, Int, Int, Long, Int, NodeCursor](methodName), computeMax(load(localDegreeInt)), getLongAt(offset), loadField(f), NODE_CURSOR), load(localDegreeInt)
