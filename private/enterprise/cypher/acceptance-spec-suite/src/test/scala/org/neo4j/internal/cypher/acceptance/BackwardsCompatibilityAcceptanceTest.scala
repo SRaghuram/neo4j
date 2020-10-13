@@ -394,7 +394,7 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
   }
 
   test("DEFAULT GRAPH should not work with CYPHER 4.1") {
-    // GIVE
+    // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("GRANT TRAVERSE ON DEFAULT GRAPH TO custom")
@@ -501,6 +501,23 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
       exception.getMessage should include("Creating uniqueness constraint with options is not supported in this Cypher version.")
       graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
     })
+  }
+
+  test("SHOW INDEXES should not work with Cypher 3.5 - 4.1") {
+    // GIVEN
+    val errorMessage = "SHOW INDEXES is not supported in this Cypher version."
+
+    // WHEN
+    val exception35 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 SHOW INDEXES")
+    }
+    exception35.getMessage should include(errorMessage)
+
+    // WHEN
+    val exception41 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.1 SHOW INDEXES")
+    }
+    exception41.getMessage should include(errorMessage)
   }
 
   test("SHOW CURRENT USER should not work with Cypher 3.5") {
