@@ -696,8 +696,8 @@ public class SubmitTestRunsAndPlansIT
         return new TestRunReport(
                 testRun,
                 new BenchmarkConfig( emptyMap() ),
-                Sets.newHashSet( new Project( Repository.NEO4J, "commit", "3.2.1", COMMUNITY, "branch", "owner" ),
-                                 new Project( Repository.CAPS, "commit", "3.2.1", COMMUNITY, "branch", "owner" ) ),
+                Sets.newHashSet( new Project( Repository.NEO4J, "commit", "3.2-drop2.1", COMMUNITY, "branch", "owner" ),
+                                 new Project( Repository.CAPS, "commit", "3.2-drop2.1", COMMUNITY, "branch", "owner" ) ),
                 neo4jConfig,
                 Environment.local(),
                 benchmarkGroupBenchmarkMetrics,

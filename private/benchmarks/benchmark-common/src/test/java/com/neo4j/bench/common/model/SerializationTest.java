@@ -79,7 +79,7 @@ public class SerializationTest
         TestRun testRun = new TestRun( "id", 1, 2, 3, 1, "user" );
         BenchmarkConfig benchmarkConfig = new BenchmarkConfig( params );
         HashSet<Project> projects =
-                Sets.newHashSet( new Project( Repository.NEO4J, "commit", "3.3.3", COMMUNITY, "branch", "owner" ) );
+                Sets.newHashSet( new Project( Repository.NEO4J, "commit", "3.3-drop21.99", COMMUNITY, "branch", "owner" ) );
 
         Neo4jConfig neo4jConfig = new Neo4jConfig( params );
         Metrics metrics = getMetrics();

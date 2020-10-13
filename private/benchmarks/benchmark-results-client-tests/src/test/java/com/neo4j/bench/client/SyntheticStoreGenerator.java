@@ -88,7 +88,7 @@ public class SyntheticStoreGenerator
                                                                                                        .map( name -> ToolBenchGroup.from( tool, name, 10 ) )
                                                                             )
                                                                             .toArray( ToolBenchGroup[]::new );
-    private static final String[] DEFAULT_NEO4J_VERSIONS = {"3.0.2", "3.0.1", "3.0.0"};
+    private static final String[] DEFAULT_NEO4J_VERSIONS = {"3.0.2", "3.0.1", "3.0.0", "3.0-drop3.1"};
     private static final Edition[] DEFAULT_NEO4J_EDITIONS = Edition.values();
     private static final int DEFAULT_SETTINGS_IN_CONFIG = 50;
     private static final Repository[] PROJECTS = {NEO4J};
