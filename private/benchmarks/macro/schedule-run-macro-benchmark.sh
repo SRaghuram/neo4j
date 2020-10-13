@@ -114,7 +114,7 @@ $java_cmd -jar $benchmark_infra_scheduler_jar \
   --db-edition \
   ENTERPRISE \
   --jvm \
-  /usr/lib/jvm/oracle-jdk-8/bin/java \
+  /usr/lib/jvm/oracle-jdk-11/bin/java \
   --profilers \
   "$profilers" \
   --warmup-count \
