@@ -87,22 +87,26 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
             name = {InfraParams.CMD_RESULTS_STORE_USER},
             description = "Username for Neo4j database server that stores benchmarking results",
             title = "Results Store Username" )
-    @Required
     private String resultsStoreUsername;
 
     @Option( type = OptionType.COMMAND,
             name = {InfraParams.CMD_RESULTS_STORE_PASSWORD_SECRET_NAME},
             description = "Secret name in AWS Secrets Manager with password for Neo4j database server that stores benchmarking results",
             title = "Results Store Password Secret Name" )
-    @Required
     private String resultsStorePasswordSecretName;
+
+    @Option( type = OptionType.COMMAND,
+            name = {InfraParams.CMD_RESULTS_STORE_PASSWORD},
+            description = "Password for Neo4j database server that stores benchmarking results",
+            title = "Password Store Password Secret Name" )
+    private String resultsStorePassword;
 
     @Option( type = OptionType.COMMAND,
             name = {InfraParams.CMD_RESULTS_STORE_URI},
             description = "URI to Neo4j database server for storing benchmarking results",
-            title = "Results Store" )
-    @Required
+            title = "Results Store URI" )
     private URI resultsStoreUri;
+
     @Option( type = OptionType.COMMAND,
             name = InfraParams.CMD_AWS_SECRET,
             title = "AWS Secret" )
@@ -176,6 +180,7 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
             InfraParams infraParams = new InfraParams( awsCredentials,
                                                        resultsStoreUsername,
                                                        resultsStorePasswordSecretName,
+                                                       resultsStorePassword,
                                                        resultsStoreUri,
                                                        null,
                                                        errorReportingPolicy,

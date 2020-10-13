@@ -47,6 +47,7 @@ public class InfraParams
 
     private final AWSCredentials awsCredentials;
 
+    public static final String CMD_RESULTS_STORE_PASSWORD = "--results-store-pass";
     private final String resultsStorePassword;
 
     @Deprecated
