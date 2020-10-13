@@ -480,13 +480,15 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke $actionName privilege from role '${runtimeValue(roleName, params)}'")
 
     case ShowPrivilegeCommands(source, scope, asRevoke, symbols, yields, returns) => (context, parameterMapping) =>
+      val roleParam = "role"
       val commandListKey = internalKey("commandList")
       val currentUserRolesKey = internalKey("currentUserRoles")
 
-      def updateParamsWithCommands(tx: Transaction, params: MapValue, roleStrings: Seq[String]): MapValue = {
+      def updateParamsWithCommands(tx: Transaction, params: MapValue, roleStrings: Seq[String], withRoleParam: Boolean = false): MapValue = {
         val commands: Seq[String] = roleStrings.foldLeft(Seq.empty[String])((acc, r) => {
           val privileges = enterpriseSecurityGraphComponent.getPrivilegesForRole(tx, r).asScala
-          acc ++ privileges.flatMap(p => p.asCommandFor(r).asScala)
+          val roleKeyword = if (withRoleParam) roleParam else r
+          acc ++ privileges.flatMap(p => p.asCommandFor(false, roleKeyword, withRoleParam).asScala)
         })
         params.updatedWith(commandListKey, Values.stringArray(commands: _*))
       }
@@ -511,11 +513,11 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           val roleStrings = user.map{username =>
             getUserRoles(tx, runtimeValue(username, params))
           }.getOrElse(params.get(currentUserRolesKey).asInstanceOf[StringArray].asObjectCopy().toList)
-          updateParamsWithCommands(tx, params, roleStrings)
+          updateParamsWithCommands(tx, params, roleStrings, withRoleParam = true)
         }
         case ShowUsersPrivileges(users) => (tx: Transaction, params: MapValue) => {
           val roleSet = users.map(user => runtimeValue(user, params)).flatMap(username => getUserRoles(tx, username)).toSet
-          updateParamsWithCommands(tx, params, roleSet.toList)
+          updateParamsWithCommands(tx, params, roleSet.toList, withRoleParam = true)
         }
         case ShowAllPrivileges()        => // fetch all roles in database and get privileges for them
           (tx: Transaction, params: MapValue) => {

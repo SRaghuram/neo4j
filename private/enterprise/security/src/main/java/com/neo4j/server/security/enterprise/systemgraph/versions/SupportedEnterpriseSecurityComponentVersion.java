@@ -409,7 +409,7 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
                 {
                     try
                     {
-                        rolePrivileges.addAll( privilege.asCommandFor( role, DB_PARAM ) );
+                        rolePrivileges.addAll( privilege.asCommandFor( false, role, DB_PARAM ) );
                     }
                     catch ( RuntimeException e )
                     {
