@@ -164,41 +164,41 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
       tolerance = tolerance,
     )
 
-  test("measure aggregation: count(...)") {
+  ignore("measure aggregation: count(...)") {
     measureAggregation(grouped = false, "count(x)", tolerance = AbsoluteErrorTolerance(100, ByteUnit.KibiByte))
   }
 
-  test("measure aggregation: collect(...)") {
+  ignore("measure aggregation: collect(...)") {
     measureAggregation(grouped = false, "collect(x)", tolerance = ErrorFractionTolerance(0.5))
   }
 
-  test("measure grouping aggregation: count(...)") {
+  ignore("measure grouping aggregation: count(...)") {
     measureAggregation(grouped = true, "count(x)", tolerance = DEFAULT_TOLERANCE)
   }
 
-  test("measure grouping aggregation: collect(...)") {
+  ignore("measure grouping aggregation: collect(...)") {
     measureAggregation(grouped = true, "collect(x)", tolerance = ErrorFractionTolerance(0.5))
   }
 
-  test("measure aggregation: count(DISTINCT ...)") {
+  ignore("measure aggregation: count(DISTINCT ...)") {
     measureAggregation(grouped = false, "count(DISTINCT x)", tolerance = ErrorFractionTolerance(0.5))
   }
 
-  test("measure aggregation: collect(DISTINCT ...)") {
+  ignore("measure aggregation: collect(DISTINCT ...)") {
     measureAggregation(grouped = false, "collect(DISTINCT x)", tolerance = ErrorFractionTolerance(1.0))
   }
 
-  test("measure grouping aggregation: count(DISTINCT ...)") {
+  ignore("measure grouping aggregation: count(DISTINCT ...)") {
     measureAggregation(grouped = true, "count(DISTINCT x)", tolerance = DEFAULT_TOLERANCE)
   }
 
-  test("measure grouping aggregation: collect(DISTINCT ...)") {
+  ignore("measure grouping aggregation: collect(DISTINCT ...)") {
     measureAggregation(grouped = true, "collect(DISTINCT x)", tolerance = ErrorFractionTolerance(0.5))
   }
 
   // ===== ORDERED AGGREGATION ========
 
-  test("measure ordered aggregation: count(...) - ordered key has 10 distinct values") {
+  ignore("measure ordered aggregation: count(...) - ordered key has 10 distinct values") {
     validateMaxAllocatedMemoryEstimate(
       baselineQuery = passThoughQuery(variables = Seq("x")),
       measuredQuery = new LogicalQueryBuilder(this)
@@ -217,7 +217,7 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
     )
   }
 
-  test("measure ordered aggregation: count(...) - ordered key is fixed") {
+  ignore("measure ordered aggregation: count(...) - ordered key is fixed") {
     validateMaxAllocatedMemoryEstimate(
       baselineQuery = passThoughQuery(variables = Seq("x")),
       measuredQuery = new LogicalQueryBuilder(this)
@@ -233,7 +233,7 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
     )
   }
 
-  test("measure sort 1 column") {
+  ignore("measure sort 1 column") {
     validateMaxAllocatedMemoryEstimate(
       baselineQuery = passThoughQuery(variables = Seq("x")),
       measuredQuery = new LogicalQueryBuilder(this)
@@ -248,7 +248,7 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
     )
   }
 
-  test("measure sort 1 column with payload") {
+  ignore("measure sort 1 column with payload") {
     validateMaxAllocatedMemoryEstimate(
       baselineQuery = passThoughQuery(variables = Seq("x")),
       measuredQuery = new LogicalQueryBuilder(this)
@@ -267,7 +267,7 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
     )
   }
 
-  test("measure distinct 1 pct") {
+  ignore("measure distinct 1 pct") {
     validateMaxAllocatedMemoryEstimate(
       baselineQuery = passThoughQuery(variables = Seq("x")),
       measuredQuery = new LogicalQueryBuilder(this)
@@ -284,7 +284,7 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
     )
   }
 
-  test("measure distinct 100 pct") {
+  ignore("measure distinct 100 pct") {
     validateMaxAllocatedMemoryEstimate(
       baselineQuery = passThoughQuery(variables = Seq("x")),
       measuredQuery = new LogicalQueryBuilder(this)
@@ -303,7 +303,7 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
 
   // ============ JOIN ============
 
-  test("measure hash join 1-1 - single node") {
+  ignore("measure hash join 1-1 - single node") {
 
     // given
     val nodes = given {
@@ -329,7 +329,7 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
     )
   }
 
-  test("measure hash join 1-1 - multiple nodes") {
+  ignore("measure hash join 1-1 - multiple nodes") {
     val n = DEFAULT_INPUT_SIZE.toInt
     val paths = given { chainGraphs(n, "R") }
 
@@ -353,7 +353,7 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
     )
   }
 
-  test("measure hash join 1-1 - single node with payload") {
+  ignore("measure hash join 1-1 - single node with payload") {
     val n = DEFAULT_INPUT_SIZE.toInt
     val nodes = given { nodeGraph(n) }.toArray[Any]
     validateMaxAllocatedMemoryEstimate(
@@ -377,7 +377,7 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
     )
   }
 
-  test("measure hash join 1-1 - single node with payload under limit") { // Force use of FilteringMorsel by adding a (otherwise useless) limit
+  ignore("measure hash join 1-1 - single node with payload under limit") { // Force use of FilteringMorsel by adding a (otherwise useless) limit
     val n = DEFAULT_INPUT_SIZE.toInt
     val nodes = given { nodeGraph(n) }.toArray[Any]
 
@@ -403,7 +403,7 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
     )
   }
 
-  test("measure value hash join") {
+  ignore("measure value hash join") {
     val nodes = given { nodePropertyGraph(DEFAULT_INPUT_SIZE.toInt, { case i: Int => Map("prop" -> i)}) }
 
     validateMaxAllocatedMemoryEstimate(
@@ -557,7 +557,7 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
     measureShortestPath(start, end, all = true, tolerance = DEFAULT_TOLERANCE)
   }
 
-  test("measure single shortest paths peak - many shared relationships") {
+  ignore("measure single shortest paths peak - many shared relationships") {
     val chainCount = 6
     val chainDepth = 6
     val (start, end) = given {
@@ -580,7 +580,7 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
 
   // ============ PARTIAL TOP ============
 
-  test("measure partial top - ordered column has one value") {
+  ignore("measure partial top - ordered column has one value") {
     validateMaxAllocatedMemoryEstimate(
       baselineQuery = passThoughQuery(variables = Seq("x", "y")),
       measuredQuery = new LogicalQueryBuilder(this)
@@ -611,7 +611,7 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
     )
   }
 
-  test("measure partial top - worst case") {
+  ignore("measure partial top - worst case") {
     val n = DEFAULT_INPUT_SIZE / 10
     validateMaxAllocatedMemoryEstimate(
       baselineQuery = passThoughQuery(variables = Seq("x", "y")),
@@ -634,7 +634,7 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
 
   // ============ PARTIAL SORT ============
 
-  test("measure partial sort - ordered column has one value") {
+  ignore("measure partial sort - ordered column has one value") {
     validateMaxAllocatedMemoryEstimate(
       baselineQuery = passThoughQuery(variables = Seq("x", "y")),
       measuredQuery = new LogicalQueryBuilder(this)
@@ -668,7 +668,7 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
 
   // ============ TOP ============
 
-  test("measure top - all distinct") {
+  ignore("measure top - all distinct") {
     validateMaxAllocatedMemoryEstimate(
       baselineQuery = passThoughQuery(variables = Seq("x")),
       measuredQuery = new LogicalQueryBuilder(this)
@@ -683,7 +683,7 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
     )
   }
 
-  test("measure top - worst case") {
+  ignore("measure top - worst case") {
     val n = DEFAULT_INPUT_SIZE / 10L
 
     validateMaxAllocatedMemoryEstimate(
@@ -707,7 +707,7 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
 
   // ============ ORDERED DISTINCT ============
 
-  test("measure ordered distinct - ordered column has one value") {
+  ignore("measure ordered distinct - ordered column has one value") {
     validateMaxAllocatedMemoryEstimate(
       baselineQuery = passThoughQuery(variables = Seq("x", "y")),
       measuredQuery = new LogicalQueryBuilder(this)
@@ -722,7 +722,7 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
     )
   }
 
-  test("measure ordered distinct - ordered column has distinct values") {
+  ignore("measure ordered distinct - ordered column has distinct values") {
     validateMaxAllocatedMemoryEstimate(
       baselineQuery = passThoughQuery(variables = Seq("x", "y")),
       measuredQuery = new LogicalQueryBuilder(this)
@@ -737,7 +737,7 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
     )
   }
 
-  test("measure apply with RHS limit") {
+  ignore("measure apply with RHS limit") {
     val nodes = given {
       nodeGraph(DEFAULT_INPUT_SIZE.toInt)
     }
@@ -771,7 +771,7 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
 trait FullSupportMemoryMeasurementTestBase [CONTEXT <: RuntimeContext] {
   self: MemoryMeasurementTestBase[CONTEXT] =>
 
-  test("measure eager - single node with payload") {
+  ignore("measure eager - single node with payload") {
     // given
     val n = DEFAULT_INPUT_SIZE.toInt
     val payload = (1L to n).map(_ => VirtualValues.list((1 to 8).map(Values.longValue(_)).toArray: _*)).toArray
@@ -794,7 +794,7 @@ trait FullSupportMemoryMeasurementTestBase [CONTEXT <: RuntimeContext] {
     )
   }
 
-  test("measure peak of two sequential eagers - single node with payload") {
+  ignore("measure peak of two sequential eagers - single node with payload") {
     // given
     val n = DEFAULT_INPUT_SIZE.toInt
     val payload = (1L to n).map(_ => VirtualValues.list((1 to 8).map(Values.longValue(_)).toArray: _*)).toArray
@@ -818,7 +818,7 @@ trait FullSupportMemoryMeasurementTestBase [CONTEXT <: RuntimeContext] {
     )
   }
 
-  test("measure aggregation percentileCont without grouping") {
+  ignore("measure aggregation percentileCont without grouping") {
     validateMaxAllocatedMemoryEstimate(
       baselineQuery = passThoughQuery(variables = Seq("x")),
       measuredQuery = new LogicalQueryBuilder(this)
@@ -833,7 +833,7 @@ trait FullSupportMemoryMeasurementTestBase [CONTEXT <: RuntimeContext] {
     )
   }
 
-  test("measure aggregation percentileCont with grouping") {
+  ignore("measure aggregation percentileCont with grouping") {
     validateMaxAllocatedMemoryEstimate(
       baselineQuery = passThoughQuery(variables = Seq("x", "y")),
       measuredQuery = new LogicalQueryBuilder(this)
@@ -848,7 +848,7 @@ trait FullSupportMemoryMeasurementTestBase [CONTEXT <: RuntimeContext] {
     )
   }
 
-  test("measure aggregation percentileDisc without grouping") {
+  ignore("measure aggregation percentileDisc without grouping") {
     validateMaxAllocatedMemoryEstimate(
       baselineQuery = passThoughQuery(variables = Seq("x")),
       measuredQuery = new LogicalQueryBuilder(this)
@@ -863,7 +863,7 @@ trait FullSupportMemoryMeasurementTestBase [CONTEXT <: RuntimeContext] {
     )
   }
 
-  test("measure aggregation percentileDisc with grouping") {
+  ignore("measure aggregation percentileDisc with grouping") {
     validateMaxAllocatedMemoryEstimate(
       baselineQuery = passThoughQuery(variables = Seq("x", "y")),
       measuredQuery = new LogicalQueryBuilder(this)
@@ -878,7 +878,7 @@ trait FullSupportMemoryMeasurementTestBase [CONTEXT <: RuntimeContext] {
     )
   }
 
-  test("measure left outer hash join") {
+  ignore("measure left outer hash join") {
     val nodes = given { nodeGraph(DEFAULT_INPUT_SIZE.toInt) }
 
     validateMaxAllocatedMemoryEstimate(
@@ -900,7 +900,7 @@ trait FullSupportMemoryMeasurementTestBase [CONTEXT <: RuntimeContext] {
     )
   }
 
-  test("measure right outer hash join") {
+  ignore("measure right outer hash join") {
     val nodes = given { nodeGraph(DEFAULT_INPUT_SIZE.toInt) }
 
     validateMaxAllocatedMemoryEstimate(
