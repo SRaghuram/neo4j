@@ -28,6 +28,10 @@ while (("$#")); do
     neo4j_branch=$2
     shift 2
     ;;
+  --results-store-pass-secret-name)
+    results_store_pass_secret_name=$2
+    shift 2
+    ;;
   --) # end of argument parsing
     shift
     break
@@ -109,7 +113,8 @@ P
       --db-name "$db_name" \
       --branch-owner "$branch_owner" \
       --neo4j-version "$neo4j_version" \
-      --neo4j-branch "$neo4j_branch" &
+      --neo4j-branch "$neo4j_branch" \
+      --results-store-pass-secret-name "$results_store_pass_secret_name" &
     sleep 30 #we need this sleep to not saturate your local network when uploading workspaces
   )
 

@@ -99,17 +99,6 @@ if [[ ! -f "$benchmark_infra_scheduler_jar" ]]; then
   exit 1
 fi
 
-# setting proper result store instance
-if [[ $batch_stack == "benchmarking-production" ]]; then
-    results_store_uri="neo4j://e605d648.databases.neo4j.io:7687"
-    results_store_user="client"
-    results_store_pass_secret_name="ResultStoreSecret-production"
-else
-    results_store_uri=neo4j://1a20c636.databases.neo4j.io
-    results_store_user=neo4j
-    results_store_pass_secret_name="ResultStoreSecret-test"
-fi
-
 neo4j_commit=$(git rev-parse HEAD)
 triggered_by=$(whoami)
 parent_teamcity_build="-1"
@@ -172,12 +161,8 @@ $java_cmd -jar $benchmark_infra_scheduler_jar \
   "$workspace_dir" \
   --db-name \
   "$db_name" \
-  --results-store-user \
-  "$results_store_user" \
   --results-store-pass-secret-name \
   "$results_store_pass_secret_name" \
-  --results-store-uri \
-  "$results_store_uri" \
   --job-queue \
   "$job_queue" \
   --job-definition \
