@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
+import com.neo4j.causalclustering.catchup.v4.metadata.DatabaseSecurityCommands;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import com.neo4j.server.security.enterprise.auth.Resource;
@@ -35,7 +36,6 @@ import org.neo4j.internal.kernel.api.security.RelTypeSegment;
 import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.internal.kernel.api.security.UserSegment;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
-import com.neo4j.causalclustering.catchup.v4.metadata.DatabaseSecurityCommands;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.server.security.auth.SecurityTestUtils;
@@ -200,44 +200,44 @@ class PrivilegesAsCommandsIT
                      TERMINATE_CONNECTION == action ||
                      TRANSACTION_MANAGEMENT == action )
                 {
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.DatabaseResource(), UserSegment.ALL ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.DatabaseResource(), new UserSegment( "A" ) ) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.DatabaseResource(), UserSegment.ALL ) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.DatabaseResource(), new UserSegment( "A" ) ) );
                 }
                 else if ( EXECUTE == action ||
                           EXECUTE_BOOSTED == action ||
                           EXECUTE_ADMIN == action )
                 {
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.DatabaseResource(), ProcedureSegment.ALL ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.DatabaseResource(), new ProcedureSegment( "A" ) ) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.DatabaseResource(), ProcedureSegment.ALL ) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.DatabaseResource(), new ProcedureSegment( "A" ) ) );
                 }
                 else if ( usesDatabaseResourceAndGeneralSegment.test( action ) )
                 {
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.DatabaseResource(), Segment.ALL ) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.DatabaseResource(), Segment.ALL ) );
                 }
                 else if ( usesGraphResource.test( action ) )
                 {
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.GraphResource(), LabelSegment.ALL) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.GraphResource(), new LabelSegment( "A" ) ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.GraphResource(), RelTypeSegment.ALL) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.GraphResource(), new RelTypeSegment( "A" ) ) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.GraphResource(), LabelSegment.ALL) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.GraphResource(), new LabelSegment( "A" ) ) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.GraphResource(), RelTypeSegment.ALL) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.GraphResource(), new RelTypeSegment( "A" ) ) );
                 }
                 else if ( usesPropertyResource.test( action ) )
                 {
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.AllPropertiesResource(), LabelSegment.ALL ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.AllPropertiesResource(), new LabelSegment( "A" ) ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.AllPropertiesResource(), RelTypeSegment.ALL ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.AllPropertiesResource(), new RelTypeSegment( "A" ) ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.PropertyResource( "A" ), LabelSegment.ALL ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.PropertyResource( "A" ), new LabelSegment( "A" ) ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.PropertyResource( "A" ), RelTypeSegment.ALL ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.PropertyResource( "A" ), new RelTypeSegment( "A" ) ) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.AllPropertiesResource(), LabelSegment.ALL ) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.AllPropertiesResource(), new LabelSegment( "A" ) ) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.AllPropertiesResource(), RelTypeSegment.ALL ) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.AllPropertiesResource(), new RelTypeSegment( "A" ) ) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.PropertyResource( "A" ), LabelSegment.ALL ) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.PropertyResource( "A" ), new LabelSegment( "A" ) ) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.PropertyResource( "A" ), RelTypeSegment.ALL ) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.PropertyResource( "A" ), new RelTypeSegment( "A" ) ) );
                 }
                 else if ( usesLabelResource.test( action ) )
                 {
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.AllLabelsResource(), LabelSegment.ALL ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.AllLabelsResource(), new LabelSegment( "A" ) ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.LabelResource( "A" ), LabelSegment.ALL ) );
-                    commands.addAll( getGrantFor( role, privilegeType, action, new Resource.LabelResource( "A" ), new LabelSegment( "A" ) ) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.AllLabelsResource(), LabelSegment.ALL ) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.AllLabelsResource(), new LabelSegment( "A" ) ) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.LabelResource( "A" ), LabelSegment.ALL ) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.LabelResource( "A" ), new LabelSegment( "A" ) ) );
                 }
                 else
                 {
@@ -254,24 +254,33 @@ class PrivilegesAsCommandsIT
             tx.commit();
         }
 
-        for ( String command : commands )
+        for ( int i = 0; i < commands.size(); i++ )
         {
-            try ( Transaction tx = system.beginTx() )
-            {
-                // all commands should be valid Cypher syntax
-                tx.execute( command, Map.of( DB_PARAM, DEFAULT_DATABASE_NAME ) );
-                tx.commit();
-            }
+            if (i % 2 == 0) { // grant or deny command
+                try ( Transaction tx = system.beginTx() )
+                {
+                    // all grant or deny commands should be valid Cypher syntax
+                    tx.execute( commands.get(i), Map.of( DB_PARAM, DEFAULT_DATABASE_NAME ) );
+                    tx.commit();
 
-            DatabaseSecurityCommands databaseSecurityCommands = getBackupCommands( system, DEFAULT_DATABASE_NAME, false, true );
-            assertThat( databaseSecurityCommands.roleSetup ).filteredOn( c -> !c.startsWith( "CREATE" ) )
-                                                            .containsExactlyElementsOf( List.of( command ) );
-            try ( Transaction tx = system.beginTx() )
-            {
-                tx.execute( "REVOKE " + command.replace( " TO ", " FROM " ), Map.of( DB_PARAM, DEFAULT_DATABASE_NAME ) );
-                tx.commit();
+                    DatabaseSecurityCommands databaseSecurityCommands = getBackupCommands( system, DEFAULT_DATABASE_NAME, false, true );
+                    assertThat( databaseSecurityCommands.roleSetup ).filteredOn( c -> !c.startsWith( "CREATE" ) )
+                                                                    .containsExactlyElementsOf( List.of( commands.get(i) ) );
+                }
+
+            } else { // revoke command
+                try ( Transaction tx = system.beginTx() )
+                {
+                    // all revoke commands should be valid Cypher syntax
+                    tx.execute( commands.get(i), Map.of( DB_PARAM, DEFAULT_DATABASE_NAME ) );
+                    tx.commit();
+                }
+
             }
         }
+        DatabaseSecurityCommands databaseSecurityCommands = getBackupCommands( system, DEFAULT_DATABASE_NAME, false, true );
+        assertThat( databaseSecurityCommands.roleSetup ).filteredOn( c -> !c.startsWith( "CREATE" ) )
+                                                        .containsExactlyElementsOf( Collections.emptyList() );
     }
 
     @Test
@@ -794,11 +803,16 @@ class PrivilegesAsCommandsIT
         }
     }
 
-    private List<String> getGrantFor( String role, ResourcePrivilege.GrantOrDeny privilegeType, PrivilegeAction action, Resource resource, Segment segment )
-            throws InvalidArgumentsException
+    private List<String> getCommandsFor( String role, ResourcePrivilege.GrantOrDeny privilegeType, PrivilegeAction action, Resource resource,
+                                        Segment segment ) throws InvalidArgumentsException
     {
         ResourcePrivilege privilege = new ResourcePrivilege( privilegeType, action, resource, segment, ResourcePrivilege.SpecialDatabase.ALL );
-        return privilege.isDbmsPrivilege() ? Collections.emptyList() : privilege.asCommandFor( role, DB_PARAM );
+        List<String> commands = privilege.isDbmsPrivilege() ? Collections.emptyList() : privilege.asCommandFor( false, role, DB_PARAM );
+        List<String> revokeCommands = privilege.isDbmsPrivilege() ? Collections.emptyList() : privilege.asCommandFor( true, role, DB_PARAM );
+
+        List<String> res = new ArrayList<String>(commands);
+        res.addAll(revokeCommands);
+        return res;
     }
 
     private DatabaseSecurityCommands getBackupCommands( GraphDatabaseAPI system, String databaseName, boolean saveUsers, boolean saveRoles )
