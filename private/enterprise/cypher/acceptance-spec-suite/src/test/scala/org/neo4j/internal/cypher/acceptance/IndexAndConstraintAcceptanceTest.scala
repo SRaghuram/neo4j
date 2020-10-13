@@ -274,7 +274,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     executeSingle(
       """CREATE INDEX myIndex FOR (n:Person) ON (n.name) OPTIONS {
         | indexProvider : 'lucene+native-3.0',
-        | indexConfig: {`spatial.cartesian.min`: [-60.0, -40.0], `spatial.cartesian.max`: [60.0, 40.0]}
+        | indexConfig: {`spatial.cartesian.min`: [-60.0, -40.0]}
         |}""".stripMargin)
     graph.awaitIndexesOnline()
 
@@ -284,7 +284,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     provider should be(NativeLuceneFusionIndexProviderFactory30.DESCRIPTOR)
     configuration(SPATIAL_CARTESIAN_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-60.0, -40.0)
-    configuration(SPATIAL_CARTESIAN_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(60.0, 40.0)
+    configuration(SPATIAL_CARTESIAN_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(1000000.0, 1000000.0)
   }
 
   test("should get default values when creating index with empty OPTIONS map when creating index") {
@@ -820,7 +820,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     executeSingle(
       """CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {
         | indexProvider : 'lucene+native-3.0',
-        | indexConfig: {`spatial.cartesian.min`: [-60.0, -40.0], `spatial.cartesian.max`: [60.0, 40.0]}
+        | indexConfig: {`spatial.cartesian.max`: [60.0, 40.0]}
         |}""".stripMargin)
     graph.awaitIndexesOnline()
 
@@ -829,7 +829,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     val configuration = graph.getIndexConfig("myConstraint")
 
     provider should be(NativeLuceneFusionIndexProviderFactory30.DESCRIPTOR)
-    configuration(SPATIAL_CARTESIAN_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-60.0, -40.0)
+    configuration(SPATIAL_CARTESIAN_MIN).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(-1000000.0, -1000000.0)
     configuration(SPATIAL_CARTESIAN_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(60.0, 40.0)
   }
 
