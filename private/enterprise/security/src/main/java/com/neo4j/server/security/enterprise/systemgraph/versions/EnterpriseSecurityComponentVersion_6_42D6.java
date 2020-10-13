@@ -17,8 +17,11 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.systemgraph.ComponentVersion;
+import org.neo4j.util.Preconditions;
 
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
+import static java.lang.String.format;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION;
 
 /**
  * This is the EnterpriseSecurityComponent version for Neo4j 4.2-drop6.
@@ -75,6 +78,14 @@ public class EnterpriseSecurityComponentVersion_6_42D6 extends SupportedEnterpri
             role.createRelationshipTo( functionPriv, GRANTED );
             role.createRelationshipTo( procedurePriv, GRANTED );
         }
+    }
+
+    @Override
+    public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest )
+    {
+        Preconditions.checkState( latest.version == LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION,
+                format("Latest version should be %s but was %s", LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION, latest.version ));
+        setVersionProperty( tx, latest.version );
     }
 
     @Override

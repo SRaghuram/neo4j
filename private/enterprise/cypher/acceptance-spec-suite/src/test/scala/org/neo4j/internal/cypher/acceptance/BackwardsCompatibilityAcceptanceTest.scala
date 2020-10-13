@@ -542,4 +542,28 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     }
     exception.getMessage should include("SHOW CURRENT USER is not supported in this Cypher version.")
   }
+
+  test("SHOW INDEX privilege should not work with CYPHER 4.1") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.1 DENY SHOW INDEX ON DATABASE * TO custom")
+    }
+    exception.getMessage should include("SHOW INDEX privilege is not supported in this Cypher version.")
+  }
+
+  test("SHOW CONSTRAINT privilege should not work with CYPHER 4.1") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.1 GRANT SHOW CONSTRAINT ON DATABASE * TO custom")
+    }
+    exception.getMessage should include("SHOW CONSTRAINT privilege is not supported in this Cypher version.")
+  }
 }

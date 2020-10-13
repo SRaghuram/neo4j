@@ -19,7 +19,7 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
 class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase with EnterpriseComponentVersionTestSupport {
 
-  withAllSystemGraphVersions(allSupported) {
+  withVersion(CURRENT_VERSION) {
 
     test("should return empty counts to the outside for commands that update the system graph internally") {
       //TODO: ADD ANY NEW UPDATING COMMANDS HERE
@@ -39,6 +39,10 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
         "DENY DROP INDEX ON DATABASE * TO custom" -> 1,
         "REVOKE DROP INDEX ON DATABASE * FROM custom" -> 2,
 
+        "GRANT SHOW INDEX ON DATABASE * TO custom" -> 1,
+        "DENY SHOW INDEX ON DATABASE * TO custom" -> 1,
+        "REVOKE SHOW INDEX ON DATABASE * FROM custom" -> 2,
+
         "GRANT INDEX MANAGEMENT ON DATABASES * TO custom" -> 1,
         "REVOKE GRANT INDEX MANAGEMENT ON DATABASES * FROM custom" -> 1,
         "DENY INDEX MANAGEMENT ON DATABASES * TO custom" -> 1,
@@ -55,6 +59,11 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
         "REVOKE GRANT DROP CONSTRAINT ON DATABASE * FROM custom" -> 1,
         "DENY DROP CONSTRAINT ON DATABASE * TO custom" -> 1,
         "REVOKE DENY DROP CONSTRAINT ON DATABASE * FROM custom" -> 1,
+
+        "GRANT SHOW CONSTRAINT ON DATABASE * TO custom" -> 1,
+        "REVOKE GRANT SHOW CONSTRAINT ON DATABASE * FROM custom" -> 1,
+        "DENY SHOW CONSTRAINT ON DATABASE * TO custom" -> 1,
+        "REVOKE DENY SHOW CONSTRAINT ON DATABASE * FROM custom" -> 1,
 
         "GRANT CONSTRAINT MANAGEMENT ON DATABASES * TO custom" -> 1,
         "REVOKE CONSTRAINT MANAGEMENT ON DATABASES * FROM custom" -> 1,
@@ -488,6 +497,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   // Tests for actual behaviour of authorization rules for restricted users based on privileges
 
   // Index Management
+
   test("Should not allow index creation on non-existing tokens for normal user without token create privilege") {
     setupUserWithCustomRole()
     execute("GRANT CREATE INDEX ON DATABASE * TO custom")

@@ -6,6 +6,8 @@
 package com.neo4j.server.security.enterprise.systemgraph;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.neo4j.causalclustering.catchup.v4.metadata.DatabaseSecurityCommands;
+import com.neo4j.causalclustering.catchup.v4.metadata.DatabaseSecurityCommandsProvider;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
@@ -17,6 +19,7 @@ import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecur
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_4_41;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_5_42D4;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_6_42D6;
+import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_7_42D7;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_Future;
 import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion;
 import com.neo4j.server.security.enterprise.systemgraph.versions.NoEnterpriseSecurityComponentVersion;
@@ -36,8 +39,6 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.Segment;
-import com.neo4j.causalclustering.catchup.v4.metadata.DatabaseSecurityCommandsProvider;
-import com.neo4j.causalclustering.catchup.v4.metadata.DatabaseSecurityCommands;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.systemgraph.KnownSystemComponentVersions;
@@ -76,6 +77,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         EnterpriseSecurityComponentVersion_4_41 version4 = new EnterpriseSecurityComponentVersion_4_41( log, version3 );
         EnterpriseSecurityComponentVersion_5_42D4 version5 = new EnterpriseSecurityComponentVersion_5_42D4( log, version4 );
         EnterpriseSecurityComponentVersion_6_42D6 version6 = new EnterpriseSecurityComponentVersion_6_42D6( log, version5 );
+        EnterpriseSecurityComponentVersion_7_42D7 version7 = new EnterpriseSecurityComponentVersion_7_42D7( log, version6 );
 
         knownSecurityComponentVersions.add( new EnterpriseSecurityComponentVersion_0_35( log, migrationRoleRepository, customSecurityInitializer ) );
         knownSecurityComponentVersions.add( new EnterpriseSecurityComponentVersion_1_36( log, config ) );
@@ -84,6 +86,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         knownSecurityComponentVersions.add( version4 );
         knownSecurityComponentVersions.add( version5 );
         knownSecurityComponentVersions.add( version6 );
+        knownSecurityComponentVersions.add( version7 );
         knownSecurityComponentVersions.add( new EnterpriseSecurityComponentVersion_Future( log, knownSecurityComponentVersions.latestSecurityGraphVersion() ) );
     }
 

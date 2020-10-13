@@ -196,6 +196,9 @@ public class ResourcePrivilege
         case DROP_INDEX:
             return List.of( String.format( "%s%s DROP INDEX ON %s %s %s", optionalRevoke, privilegeType.prefix,
                     forScope("DATABASE", databaseKeyword, withDatabaseParam), preposition, role ) );
+        case SHOW_INDEX:
+            return List.of( String.format( "%s%s SHOW INDEX ON %s %s %s", optionalRevoke, privilegeType.prefix,
+                    forScope("DATABASE", databaseKeyword, withDatabaseParam), preposition, role ) );
         case INDEX:
             return List.of( String.format( "%s%s INDEX MANAGEMENT ON %s %s %s", optionalRevoke, privilegeType.prefix,
                     forScope("DATABASE", databaseKeyword, withDatabaseParam), preposition, role ) );
@@ -204,6 +207,9 @@ public class ResourcePrivilege
                     forScope("DATABASE", databaseKeyword, withDatabaseParam), preposition, role ) );
         case DROP_CONSTRAINT:
             return List.of( String.format( "%s%s DROP CONSTRAINT ON %s %s %s", optionalRevoke, privilegeType.prefix,
+                    forScope("DATABASE", databaseKeyword, withDatabaseParam), preposition, role ) );
+        case SHOW_CONSTRAINT:
+            return List.of( String.format( "%s%s SHOW CONSTRAINT ON %s %s %s", optionalRevoke, privilegeType.prefix,
                     forScope("DATABASE", databaseKeyword, withDatabaseParam), preposition, role ) );
         case CONSTRAINT:
             return List.of( String.format( "%s%s CONSTRAINT MANAGEMENT ON %s %s %s", optionalRevoke, privilegeType.prefix,

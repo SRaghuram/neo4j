@@ -323,10 +323,12 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
 
   val createIndex: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "create_index")
   val dropIndex: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "drop_index")
+  val showIndex: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "show_index")
   val indexManagement: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "index")
 
   val createConstraint: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "create_constraint")
   val dropConstraint: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "drop_constraint")
+  val showConstraint: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "show_constraint")
   val constraintManagement: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "constraint")
 
   val createNodeLabel: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "create_label")
@@ -408,9 +410,11 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val schemaPrivileges: Map[String, Map[String, String]] = Map(
     "CREATE INDEX" -> createIndex,
     "DROP INDEX" -> dropIndex,
+    "SHOW INDEX" -> showIndex,
     "INDEX MANAGEMENT" -> indexManagement,
     "CREATE CONSTRAINT" -> createConstraint,
     "DROP CONSTRAINT" -> dropConstraint,
+    "SHOW CONSTRAINT" -> showConstraint,
     "CONSTRAINT MANAGEMENT" -> constraintManagement,
     "CREATE NEW NODE LABEL" -> createNodeLabel,
     "CREATE NEW RELATIONSHIP TYPE" -> createRelationshipType,

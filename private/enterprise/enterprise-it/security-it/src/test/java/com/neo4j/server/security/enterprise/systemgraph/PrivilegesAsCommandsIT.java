@@ -29,6 +29,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
+import org.neo4j.internal.kernel.api.security.FunctionSegment;
 import org.neo4j.internal.kernel.api.security.LabelSegment;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.ProcedureSegment;
@@ -87,6 +88,8 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_PASSWOR
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_PROPERTY;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_USER_STATUS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SHOW_CONNECTION;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SHOW_CONSTRAINT;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SHOW_INDEX;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SHOW_PRIVILEGE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SHOW_ROLE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SHOW_TRANSACTION;
@@ -136,8 +139,10 @@ class PrivilegesAsCommandsIT
                 CREATE_PROPERTYKEY == action ||
                 CREATE_INDEX == action ||
                 DROP_INDEX == action ||
+                SHOW_INDEX == action ||
                 CREATE_CONSTRAINT == action ||
                 DROP_CONSTRAINT == action ||
+                SHOW_CONSTRAINT == action ||
                 START_DATABASE == action ||
                 STOP_DATABASE == action ||
                 CREATE_DATABASE == action ||
@@ -209,6 +214,8 @@ class PrivilegesAsCommandsIT
                 {
                     commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.DatabaseResource(), ProcedureSegment.ALL ) );
                     commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.DatabaseResource(), new ProcedureSegment( "A" ) ) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.DatabaseResource(), FunctionSegment.ALL ) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.DatabaseResource(), new FunctionSegment( "A" ) ) );
                 }
                 else if ( usesDatabaseResourceAndGeneralSegment.test( action ) )
                 {
