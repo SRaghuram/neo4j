@@ -56,6 +56,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilat
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.setExpressionVariable
 import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.util.Rewriter
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.bottomUp
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
@@ -75,6 +76,7 @@ class CodeChainExpressionCompilerTest extends CypherFunSuite with AstConstructio
   private val context = Load("row")
   private val declareReturnValue = declareAndAssign(typeRefOf[AnyValue], "retVal", noValue)
   private val loadReturnValue = load("retVal")
+  private val id = Id.INVALID_ID
 
   private def assignReturnValue(value: IntermediateRepresentation) = assign("retVal", value)
 
@@ -1225,7 +1227,7 @@ retVal1
 
     val (got, _, _) = compiler.exprToIntermediateRepresentation(ast)
     val oldExpressionCompiler = new DefaultExpressionCompilerFront(slots, false, new VariableNamer)
-    val defaultExpressionCompilerIR = ExpressionCompilation.nullCheckIfRequired(oldExpressionCompiler.compileExpression(ast).get)
+    val defaultExpressionCompilerIR = ExpressionCompilation.nullCheckIfRequired(oldExpressionCompiler.compileExpression(ast, id).get)
     val clues = Seq(
       "------------ DefaultExpressionCompilerFront --------------\n",
       PrettyIR.pretty(defaultExpressionCompilerIR),

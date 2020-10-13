@@ -95,7 +95,9 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledExpression
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledExpressionContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledGroupingExpression
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledProjection
+import org.neo4j.cypher.internal.runtime.compiled.expressions.DefaultExpressionCompilerFront
 import org.neo4j.cypher.internal.runtime.compiled.expressions.StandaloneExpressionCompiler
+import org.neo4j.cypher.internal.runtime.compiled.expressions.VariableNamer
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
@@ -4733,21 +4735,19 @@ class CodeChainExpressionsIT extends ExpressionsIT {
     CachingExpressionCompilerTracer.NONE)
 
   private def fallback(slots: SlotConfiguration) =
-    new DefaultExpressionCompilerFront(slots, readOnly = false, new VariableNamer) with OverrideDefaultCompiler {
-      override protected def fallBack(expression: Expression): Option[IntermediateExpression] = super[DefaultExpressionCompilerFront].compileExpression(expression)
-    }
+    new DefaultExpressionCompilerFront(slots, readOnly = false, new VariableNamer)
 
   override def compile(e: Expression, slots: SlotConfiguration = SlotConfiguration.empty): CompiledExpression =
     StandaloneExpressionCompiler.codeChain(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext, fallback(slots))
-      .compileExpression(e).getOrElse(fail(s"Failed to compile expression $e"))
+      .compileExpression(e, Id.INVALID_ID).getOrElse(fail(s"Failed to compile expression $e"))
 
   override def compileProjection(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledProjection =
     StandaloneExpressionCompiler.codeChain(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext, fallback(slots))
-      .compileProjection(projections).getOrElse(fail(s"Failed to compile projection $projections"))
+      .compileProjection(projections, Id.INVALID_ID).getOrElse(fail(s"Failed to compile projection $projections"))
 
   override def compileGroupingExpression(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledGroupingExpression =
     StandaloneExpressionCompiler.codeChain(slots, readOnly = false, codeGenerationMode, compiledExpressionsContext, fallback(slots))
-      .compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage = Seq.empty))
+      .compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage = Seq.empty), Id.INVALID_ID)
       .getOrElse(fail(s"Failed to compile grouping $projections"))
 }
 
