@@ -21,7 +21,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import org.neo4j.common.DependencyResolver;
@@ -346,32 +345,33 @@ class CatchupServerIT
     private void listOfDownloadedFilesMatchesServer( Database database, Path[] files )
             throws IOException
     {
-        List<String> expectedStoreFiles = getExpectedStoreFiles( database );
+        List<String> expectedStoreFiles = getExpectedReplayableStorageFiles( database );
         List<String> givenFile = Arrays.stream( files ).map( Path::getFileName ).map( Path::toString ).collect( toList() );
         assertThat( givenFile, containsInAnyOrder( expectedStoreFiles.toArray( new String[givenFile.size()] ) ) );
     }
 
     private static List<Path> listServerExpectedNonReplayableFiles( Database database ) throws IOException
     {
-        try ( Stream<StoreFileMetadata> countStoreStream = database.getDatabaseFileListing().builder().excludeAll()
-                .includeNeoStoreFiles().build().stream();
+        try ( Stream<StoreFileMetadata> atomicStorageStream = database.getDatabaseFileListing().builder().excludeAll()
+                .includeAtomicStorageFiles().build().stream();
                 Stream<StoreFileMetadata> explicitIndexStream = database.getDatabaseFileListing().builder().excludeAll()
                          .build().stream() )
         {
-            return Stream.concat( countStoreStream.filter( isCountFile( database.getDatabaseLayout() ) ), explicitIndexStream ).map(
-                    StoreFileMetadata::path ).collect( toList() );
+            return Stream.concat( atomicStorageStream, explicitIndexStream ).map( StoreFileMetadata::path ).collect( toList() );
         }
     }
 
-    private List<String> getExpectedStoreFiles( Database database ) throws IOException
+    private List<String> getExpectedReplayableStorageFiles( Database database ) throws IOException
     {
-        DatabaseFileListing.StoreFileListingBuilder builder = database.getDatabaseFileListing().builder();
-        builder.excludeLogFiles().excludeSchemaIndexStoreFiles().excludeLabelScanStoreFiles().excludeRelationshipTypeScanStoreFiles()
-                .excludeAdditionalProviders().excludeIdFiles();
-        try ( Stream<StoreFileMetadata> stream = builder.build().stream() )
-        {
-            return stream.filter( isCountFile( database.getDatabaseLayout() ).negate() ).map( sfm -> sfm.path().getFileName().toString() ).collect( toList() );
-        }
+        DatabaseFileListing.StoreFileListingBuilder builder = database.getDatabaseFileListing().builder()
+                .excludeAtomicStorageFiles()
+                .excludeLogFiles()
+                .excludeSchemaIndexStoreFiles()
+                .excludeLabelScanStoreFiles()
+                .excludeRelationshipTypeScanStoreFiles()
+                .excludeAdditionalProviders()
+                .excludeIdFiles();
+        return builder.build().stream().map( sfm -> sfm.path().getFileName().toString() ).collect( toList() );
     }
 
     private SimpleCatchupClient newSimpleCatchupClient()
@@ -382,11 +382,6 @@ class CatchupServerIT
     private SimpleCatchupClient newSimpleCatchupClient( NamedDatabaseId namedDatabaseId )
     {
         return new SimpleCatchupClient( db, namedDatabaseId, fs, catchupClient, catchupServer, temporaryDirectory, LOG_PROVIDER );
-    }
-
-    private static Predicate<StoreFileMetadata> isCountFile( DatabaseLayout databaseLayout )
-    {
-        return storeFileMetadata -> databaseLayout.countStore().equals( storeFileMetadata.path() );
     }
 
     private static void addData( GraphDatabaseAPI graphDb )

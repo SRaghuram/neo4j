@@ -7,12 +7,9 @@ package com.neo4j.causalclustering.catchup.storecopy;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.function.Predicate;
-import java.util.stream.Stream;
 
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.storageengine.api.StoreFileMetadata;
 
@@ -30,37 +27,22 @@ public class PrepareStoreCopyFiles implements AutoCloseable
 
     StoreResource[] getAtomicFilesSnapshot() throws IOException
     {
-        ResourceIterator<StoreFileMetadata> neoStoreFilesIterator =
-                closeablesListener.add( database.getDatabaseFileListing().builder().excludeAll().includeNeoStoreFiles().build() );
-        ResourceIterator<StoreFileMetadata> indexIterator = closeablesListener.add( database
-                .getDatabaseFileListing()
-                .builder()
-                .excludeAll()
+        ResourceIterator<StoreFileMetadata> resources = closeablesListener.add( database.getDatabaseFileListing().builder().excludeAll()
+                .includeAtomicStorageFiles()
                 .includeAdditionalProviders()
                 .includeLabelScanStoreFiles()
                 .includeRelationshipTypeScanStoreFiles()
                 .includeSchemaIndexStoreFiles()
                 .includeIdFiles()
                 .build() );
-
-        return Stream.concat( neoStoreFilesIterator.stream().filter( isCountFile( database.getDatabaseLayout() ) ), indexIterator.stream() ).map(
-                this::toStoreResource ).toArray( StoreResource[]::new );
+        return resources.stream().map( this::toStoreResource ).toArray( StoreResource[]::new );
     }
 
     Path[] listReplayableFiles() throws IOException
     {
-        try ( Stream<StoreFileMetadata> stream = database.getDatabaseFileListing().builder()
-                .excludeAll()
-                .includeNeoStoreFiles()
-                .build().stream() )
-        {
-            return stream.filter( isCountFile( database.getDatabaseLayout() ).negate() ).map( StoreFileMetadata::path ).toArray( Path[]::new );
-        }
-    }
-
-    private static Predicate<StoreFileMetadata> isCountFile( DatabaseLayout databaseLayout )
-    {
-        return storeFileMetadata -> databaseLayout.countStore().equals( storeFileMetadata.path() );
+        return database.getDatabaseFileListing().builder().excludeAll()
+                .includeReplayableStorageFiles()
+                .build().stream().map( StoreFileMetadata::path ).toArray( Path[]::new );
     }
 
     private StoreResource toStoreResource( StoreFileMetadata storeFileMetadata )
