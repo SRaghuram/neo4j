@@ -92,4 +92,26 @@ class ConnectorAddressesTest
         // then
         assertEquals( connectorAddresses.intraClusterBoltAddress(), Optional.of( intraClusterBoltAddress ) );
     }
+
+    @Test
+    void shouldSerializeToString()
+    {
+        // given
+        ConnectorAddresses connectorAddresses = ConnectorAddresses.fromList( asList(
+                new ConnectorUri( bolt, new SocketAddress( "host", 1 ) ),
+                new ConnectorUri( http, new SocketAddress( "host", 2 ) ),
+                new ConnectorUri( https, new SocketAddress( "host", 3 ) ),
+                new ConnectorUri( bolt, new SocketAddress( "::1", 4 ) ),
+                new ConnectorUri( http, new SocketAddress( "::", 5 ) ),
+                new ConnectorUri( https, new SocketAddress( "fe80:1:2::3", 6 ) ) )
+        );
+
+        String expectedString = "bolt://host:1,bolt://[::1]:4,http://host:2,https://host:3,http://[::]:5,https://[fe80:1:2::3]:6";
+
+        // when
+        String connectorAddressesString = connectorAddresses.toString();
+
+        // then
+        assertEquals( expectedString, connectorAddressesString );
+    }
 }

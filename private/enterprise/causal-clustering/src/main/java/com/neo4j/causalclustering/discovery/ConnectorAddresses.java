@@ -206,7 +206,7 @@ public class ConnectorAddresses
         @Override
         public String toString()
         {
-            return String.format( "%s://%s:%d", scheme.name().toLowerCase(), socketAddress.getHostname(), socketAddress.getPort() );
+            return String.format( "%s://%s", scheme.name().toLowerCase(), SocketAddress.format(  socketAddress.getHostname(), socketAddress.getPort() ) );
         }
 
         @Override
