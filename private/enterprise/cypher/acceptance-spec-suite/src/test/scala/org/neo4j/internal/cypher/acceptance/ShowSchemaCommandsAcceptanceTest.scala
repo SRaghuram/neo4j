@@ -70,7 +70,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   private val random: ThreadLocalRandom = ThreadLocalRandom.current()
   private val randomValues: RandomValues = RandomValues.create(random)
 
-  // SHOW INDEXES test
+  // SHOW INDEXES tests
 
   test("show index should return empty result when there are no indexes") {
     // WHEN
