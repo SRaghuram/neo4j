@@ -706,6 +706,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     graph.getMaybeIndex("Label", Seq("prop")).isEmpty should be(true)
   }
 
+  // Constraint Management
+
   test("Should not allow constraint creation on non-existing tokens for normal user without token create privilege") {
     setupUserWithCustomRole()
     execute("GRANT CREATE CONSTRAINT ON DATABASE * TO custom")
@@ -728,8 +730,6 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT exists(n.name)")
     } should have message "Schema operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
-
-  // Constraint Management
 
   test("Should not allow constraint create for normal user with only constraint drop privilege") {
     // Given
