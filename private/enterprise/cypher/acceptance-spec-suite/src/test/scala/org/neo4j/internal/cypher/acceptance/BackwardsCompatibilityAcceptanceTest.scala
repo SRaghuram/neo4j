@@ -494,4 +494,20 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
       graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
     })
   }
+
+  test("SHOW CURRENT USER should not work with Cypher 3.5") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 SHOW CURRENT USER")
+    }
+    exception.getMessage should include("SHOW CURRENT USER is not supported in this Cypher version.")
+  }
+
+  test("SHOW CURRENT USER should not work with Cypher 4.1") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.1 SHOW CURRENT USER")
+    }
+    exception.getMessage should include("SHOW CURRENT USER is not supported in this Cypher version.")
+  }
 }

@@ -90,6 +90,7 @@ import org.neo4j.cypher.internal.logical.plans.RevokeDatabaseAction
 import org.neo4j.cypher.internal.logical.plans.RevokeDbmsAction
 import org.neo4j.cypher.internal.logical.plans.RevokeGraphAction
 import org.neo4j.cypher.internal.logical.plans.RevokeRoleFromUser
+import org.neo4j.cypher.internal.logical.plans.ShowCurrentUser
 import org.neo4j.cypher.internal.logical.plans.ShowPrivileges
 import org.neo4j.cypher.internal.logical.plans.ShowRoles
 import org.neo4j.cypher.internal.logical.plans.ShowUsers
@@ -122,6 +123,7 @@ import org.neo4j.graphdb.Label
 import org.neo4j.graphdb.RelationshipType
 import org.neo4j.graphdb.Transaction
 import org.neo4j.internal.helpers.collection.Iterables
+import org.neo4j.internal.kernel.api.security.AuthenticationResult
 import org.neo4j.internal.kernel.api.security.PrivilegeAction
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.kernel.api.exceptions.Status
@@ -222,6 +224,31 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           ${AdministrationShowCommandUtils.generateReturnClause(symbols, yields, returns, Seq("user"))}
           |""".stripMargin,
         VirtualValues.EMPTY_MAP, source = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
+      )
+
+    // SHOW CURRENT USER
+    case ShowCurrentUser(symbols, yields, returns) => (_, _) =>
+      val currentUserKey = internalKey("currentUser")
+      val currentUserRolesKey = internalKey("currentUserRoles")
+      val currentUserPwChangeKey = internalKey("currentUserPwChange")
+
+      // securityContext.subject.username() is "" if the securityContext is AUTH_DISABLED (both for community and enterprise)
+      // so test for this and return 0 rows in this case
+      SystemCommandExecutionPlan("ShowCurrentUser", normalExecutionEngine,
+        s"""WITH $$`$currentUserKey` as user, $$`$currentUserRolesKey` as roles, $$`$currentUserPwChangeKey` AS passwordChangeRequired
+           |WHERE user <> ""
+           |OPTIONAL MATCH (u:User)
+           |WHERE u.name = $$`$currentUserKey`
+           |WITH user, roles, passwordChangeRequired, coalesce(u.suspended, false) AS suspended
+           |${AdministrationShowCommandUtils.generateReturnClause(symbols, yields, returns, Seq("user"))}
+           |""".stripMargin,
+        VirtualValues.EMPTY_MAP,
+        parameterGenerator = (_, securityContext) => VirtualValues.map(
+          Array(currentUserKey, currentUserRolesKey, currentUserPwChangeKey),
+          Array(Values.utf8Value(securityContext.subject().username()),
+            Values.stringArray(securityContext.roles().asScala.toArray: _*),
+            Values.booleanValue(securityContext.subject.getAuthenticationResult == AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+          )),
       )
 
     // CREATE [OR REPLACE] USER foo [IF NOT EXISTS] SET [PLAINTEXT | ENCRYPTED] PASSWORD password

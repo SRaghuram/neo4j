@@ -6,6 +6,7 @@
 package com.neo4j.internal.cypher.acceptance
 
 import java.util
+import java.util.Collections
 
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
@@ -35,6 +36,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE (n) RETURN n").queryStatistics().containsSystemUpdates() should be(false)
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("SHOW USERS").queryStatistics().containsSystemUpdates() should be(false)
+    execute("SHOW CURRENT USER").queryStatistics().containsSystemUpdates() should be(false)
     execute("CREATE USER foo SET PASSWORD 'bar'").queryStatistics().containsSystemUpdates() should be(true)
   }
 
@@ -355,6 +357,72 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     exception.getMessage shouldBe("This is an administration command and it should be executed against the system database: SHOW USERS")
+  }
+
+  // Tests for show current user
+
+  test("should show current user") {
+    // GIVEN
+    setup()
+    setupUserWithCustomRole()
+
+    // WHEN
+    executeOnSystem("joe", "soap", "SHOW CURRENT USER", resultHandler = (row, _) => {
+      // THEN
+      row.get("user") should be("joe")
+      row.get("roles") should be(Array("custom", "PUBLIC"))
+      row.get("passwordChangeRequired") shouldBe false
+      row.get("suspended") shouldBe false
+    }) should be(1)
+  }
+
+  test("should show current user with yield, where and return") {
+    // GIVEN
+    setup()
+    setupUserWithCustomRole()
+
+    // WHEN
+    executeOnSystem("joe", "soap", "SHOW CURRENT USER YIELD * WHERE user = $name RETURN user, suspended",  Collections.singletonMap("name","joe"),
+      resultHandler = (row, _) => {
+      // THEN
+      row.get("user") should be("joe")
+      row.get("suspended") shouldBe false
+    }) should be(1)
+  }
+
+  test("should only show current user") {
+    // GIVEN
+    setup()
+    setupUserWithCustomRole()
+    setupUserWithCustomRole("foo", "bar", "baz")
+
+    // WHEN
+    executeOnSystem("joe", "soap", "SHOW CURRENT USER",
+      resultHandler = (row, _) => {
+        // THEN
+        row.get("user") should be("joe")
+        row.get("roles") should be(Array("custom", "PUBLIC"))
+        row.get("passwordChangeRequired") shouldBe false
+        row.get("suspended") shouldBe false
+      }) should be(1)
+  }
+
+  test("should not return a user that is not the current user") {
+    // GIVEN
+    setup()
+    setupUserWithCustomRole()
+    setupUserWithCustomRole("foo", "bar", "baz")
+
+    // WHEN
+    executeOnSystem("joe", "soap", "SHOW CURRENT USER WHERE user='foo'") should be(0)
+  }
+
+  test("should not return a user when not logged in") {
+    // GIVEN
+    setup()
+
+    // THEN
+    execute("SHOW CURRENT USER") should have size(0)
   }
 
   // Tests for creating users

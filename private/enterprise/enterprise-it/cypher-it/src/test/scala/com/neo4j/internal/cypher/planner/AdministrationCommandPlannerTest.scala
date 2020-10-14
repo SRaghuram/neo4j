@@ -36,6 +36,7 @@ class AdministrationCommandPlannerTest extends AdministrationCommandAcceptanceTe
 
     // User commands
     "SHOW USERS WHERE user ='bob'",
+    "SHOW CURRENT USER",
     "CREATE USER foo SET PASSWORD 'secret'",
     "CREATE USER foo SET ENCRYPTED PASSWORD 'password'",
     "CREATE OR REPLACE USER foo SET PASSWORD 'secret' CHANGE NOT REQUIRED",

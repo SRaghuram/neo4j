@@ -169,7 +169,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    public void shouldShowCurrentUser()
+    public void shouldShowCurrentUserWithProcedure()
     {
         startDatabase();
         createRole( "agent" );
@@ -181,9 +181,29 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
 
             // then
             // Assuming showCurrentUser has fields username, roles, flags
-            assertThat( record.get( 0 ).asString(), equalTo( "smith" ) );
-            assertThat( record.get( 1 ).asList(), equalTo( List.of( "agent", PredefinedRoles.PUBLIC ) ) );
-            assertThat( record.get( 2 ).asList(), equalTo( Collections.emptyList() ) );
+            assertThat( record.get( "username" ).asString(), equalTo( "smith" ) );
+            assertThat( record.get( "roles" ).asList(), equalTo( List.of( "agent", PredefinedRoles.PUBLIC ) ) );
+            assertThat( record.get( "flags" ).asList(), equalTo( Collections.emptyList() ) );
+        }
+    }
+
+    @Test
+    public void shouldShowCurrentUser()
+    {
+        startDatabase();
+        createRole( "agent" );
+        try ( Driver driver = connectDriver( boltUri, "smith", "abc123" );
+              Session session = driver.session() )
+        {
+            // when
+            Record record = session.run( "SHOW CURRENT USER" ).single();
+
+            // then
+            // Show Current User has fields user, roles, passwordChangeRequired, suspended
+            assertThat( record.get( "user" ).asString(), equalTo( "smith" ) );
+            assertThat( record.get( "roles" ).asList(), equalTo( List.of( "agent", PredefinedRoles.PUBLIC ) ) );
+            assertThat( record.get( "passwordChangeRequired" ).asBoolean(), equalTo( false ) );
+            assertThat( record.get( "suspended" ).asBoolean(), equalTo( false ) );
         }
     }
 
