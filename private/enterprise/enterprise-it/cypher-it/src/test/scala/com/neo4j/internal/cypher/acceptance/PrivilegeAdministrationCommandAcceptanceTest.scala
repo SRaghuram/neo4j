@@ -626,6 +626,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     val optionalRevoke = if (asRevoke) "REVOKE " else "";
 
     test(s"should show privileges as ${optionalRevoke.toLowerCase}commands") {
+      // WHEN
       execute(s"SHOW PRIVILEGES AS ${optionalRevoke}COMMANDS").columnAs[String]("command").toSet should be(Set(
         s"${optionalRevoke}GRANT ACCESS ON DEFAULT DATABASE $preposition `PUBLIC`",
         s"${optionalRevoke}GRANT EXECUTE PROCEDURE * ON DBMS $preposition `PUBLIC`",
@@ -659,11 +660,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         s"${optionalRevoke}GRANT WRITE ON GRAPH * $preposition `admin`",
         s"${optionalRevoke}GRANT CONSTRAINT MANAGEMENT ON DATABASE * $preposition `admin`",
         s"${optionalRevoke}GRANT INDEX MANAGEMENT ON DATABASE * $preposition `admin`",
-
-        //"GRANTED"	"token"	"database"	"*"	"database"	"admin"
         s"${optionalRevoke}GRANT NAME MANAGEMENT ON DATABASE * $preposition `admin`",
-
-        //"GRANTED"	"admin"	"database"	"*"	"database"	"admin"
         s"${optionalRevoke}GRANT TRANSACTION MANAGEMENT (*) ON DATABASE * $preposition `admin`",
         s"${optionalRevoke}GRANT START ON DATABASE * $preposition `admin`",
         s"${optionalRevoke}GRANT STOP ON DATABASE * $preposition `admin`",
@@ -672,6 +669,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     }
 
     test(s"should show role privileges as ${optionalRevoke.toLowerCase}commands") {
+      // WHEN
       execute(s"SHOW ROLE admin PRIVILEGES AS ${optionalRevoke}COMMANDS").columnAs[String]("command").toSet should be(Set(
         s"${optionalRevoke}GRANT MATCH {*} ON GRAPH * NODE * ${preposition} `admin`",
         s"${optionalRevoke}GRANT MATCH {*} ON GRAPH * RELATIONSHIP * ${preposition} `admin`",
@@ -679,11 +677,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         s"${optionalRevoke}GRANT ACCESS ON DATABASE * ${preposition} `admin`",
         s"${optionalRevoke}GRANT CONSTRAINT MANAGEMENT ON DATABASE * ${preposition} `admin`",
         s"${optionalRevoke}GRANT INDEX MANAGEMENT ON DATABASE * ${preposition} `admin`",
-
-        //"GRANTED"	"token"	"database"	"*"	"database"	"admin"
         s"${optionalRevoke}GRANT NAME MANAGEMENT ON DATABASE * ${preposition} `admin`",
-
-        //"GRANTED"	"admin"	"database"	"*"	"database"	"admin"
         s"${optionalRevoke}GRANT TRANSACTION MANAGEMENT (*) ON DATABASE * ${preposition} `admin`",
         s"${optionalRevoke}GRANT ALL DBMS PRIVILEGES ON DBMS ${preposition} `admin`",
         s"${optionalRevoke}GRANT STOP ON DATABASE * ${preposition} `admin`",
@@ -692,6 +686,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     }
 
     test(s"should show parameterized role privileges as ${optionalRevoke.toLowerCase}commands") {
+      // WHEN
       execute(s"SHOW ROLE $$role PRIVILEGES AS ${optionalRevoke}COMMAND", Map("role" -> "admin")).columnAs[String]("command").toSet should be(Set(
         s"${optionalRevoke}GRANT MATCH {*} ON GRAPH * NODE * ${preposition} `admin`",
         s"${optionalRevoke}GRANT MATCH {*} ON GRAPH * RELATIONSHIP * ${preposition} `admin`",
@@ -699,11 +694,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         s"${optionalRevoke}GRANT ACCESS ON DATABASE * ${preposition} `admin`",
         s"${optionalRevoke}GRANT CONSTRAINT MANAGEMENT ON DATABASE * ${preposition} `admin`",
         s"${optionalRevoke}GRANT INDEX MANAGEMENT ON DATABASE * ${preposition} `admin`",
-
-        //"GRANTED"	"token"	"database"	"*"	"database"	"admin"
         s"${optionalRevoke}GRANT NAME MANAGEMENT ON DATABASE * ${preposition} `admin`",
-
-        //"GRANTED"	"admin"	"database"	"*"	"database"	"admin"
         s"${optionalRevoke}GRANT TRANSACTION MANAGEMENT (*) ON DATABASE * ${preposition} `admin`",
         s"${optionalRevoke}GRANT ALL DBMS PRIVILEGES ON DBMS ${preposition} `admin`",
         s"${optionalRevoke}GRANT STOP ON DATABASE * ${preposition} `admin`",
@@ -712,6 +703,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     }
 
     test(s"should show multiple parameterized role privileges as parameterized ${optionalRevoke.toLowerCase}commands") {
+      // GIVEN
       execute("CREATE ROLE foo")
       execute("CREATE ROLE bar")
       execute("CREATE ROLE baz")
@@ -719,6 +711,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       execute("GRANT MATCH {*} ON GRAPH * NODE * TO bar")
       execute("DENY WRITE ON GRAPH * TO baz")
 
+      // WHEN
       execute(s"SHOW ROLE foo, $$bar, $$baz PRIVILEGES AS ${optionalRevoke}COMMAND", Map("bar" -> "bar", "baz" -> "baz")).columnAs[String]("command").toSet should be(Set(
         s"${optionalRevoke}GRANT STOP ON DATABASE * ${preposition} `foo`",
         s"${optionalRevoke}GRANT MATCH {*} ON GRAPH * NODE * ${preposition} `bar`",
@@ -727,10 +720,12 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     }
 
     test(s"should show user privileges as parameterized ${optionalRevoke.toLowerCase}commands") {
+      // GIVEN
       setupUserWithCustomRole("user")
       execute("DENY MATCH {*} ON GRAPH * NODE * TO custom")
       execute("DENY EXECUTE PROCEDURE * ON DBMS TO custom")
 
+      // WHEN
       execute(s"SHOW USER user PRIVILEGES AS ${optionalRevoke}COMMANDS").columnAs[String]("command").toSet should be(Set(
         s"${optionalRevoke}GRANT ACCESS ON DATABASE * ${preposition} $$role",
         s"${optionalRevoke}GRANT ACCESS ON DEFAULT DATABASE ${preposition} $$role",
@@ -741,8 +736,10 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     }
 
     test(s"should show parameterized user privileges as parameterized ${optionalRevoke.toLowerCase}commands") {
+      // GIVEN
       setupUserWithCustomRole("user", "secret")
 
+      // WHEN
       execute(s"SHOW USER $$user PRIVILEGES AS ${optionalRevoke}COMMANDS", Map("user" -> "user")).columnAs[String]("command").toSet should be(Set(
         s"${optionalRevoke}GRANT ACCESS ON DATABASE * ${preposition} $$role",
         s"${optionalRevoke}GRANT ACCESS ON DEFAULT DATABASE ${preposition} $$role",
@@ -751,8 +748,10 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     }
 
     test(s"should show current user privileges as parameterized ${optionalRevoke.toLowerCase}commands") {
+      // GIVEN
       setupUserWithCustomRole()
 
+      // WHEN
       executeOnSystem("joe", "soap", s"SHOW USER PRIVILEGES AS ${optionalRevoke}COMMANDS", resultHandler = (row, idx) => {
         idx match {
           case 0 => row.get("command") should be(s"${optionalRevoke}GRANT ACCESS ON DATABASE * ${preposition} $$role")
@@ -764,10 +763,12 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     }
 
     test(s"should show multiple parameterized user privileges as parameterized ${optionalRevoke.toLowerCase}commands") {
+      // GIVEN
       setupUserWithCustomRole("foo")
       setupUserWithCustomRole("bar")
       setupUserWithCustomRole("baz")
 
+      // WHEN
       execute(s"SHOW USER foo, $$bar, $$baz PRIVILEGES AS ${optionalRevoke}COMMANDS", Map("bar" -> "bar", "baz" -> "baz")).columnAs[String]("command").toSet should be(Set(
         s"${optionalRevoke}GRANT ACCESS ON DATABASE * ${preposition} $$role",
         s"${optionalRevoke}GRANT ACCESS ON DEFAULT DATABASE ${preposition} $$role",
@@ -776,17 +777,76 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     }
 
     test(s"should filter on show privileges as ${optionalRevoke.toLowerCase}commands with WHERE") {
+      // WHEN
       execute(s"SHOW PRIVILEGES AS ${optionalRevoke}COMMAND WHERE command CONTAINS 'START'").columnAs[String]("command").toSet should be(Set(
         s"${optionalRevoke}GRANT START ON DATABASE * ${preposition} `admin`",
       ))
     }
 
     test(s"should show privileges as ${optionalRevoke.toLowerCase}commands with yield") {
+      // GIVEN
       execute("CREATE ROLE role")
       execute("GRANT ACCESS ON DATABASE * to role")
+
+      //WHEN
       execute(s"SHOW ROLE role PRIVILEGES AS ${optionalRevoke}COMMANDS YIELD command RETURN command AS cypherCommands").columnAs[String]("cypherCommands").toSet should be(Set(
         s"${optionalRevoke}GRANT ACCESS ON DATABASE * ${preposition} `role`"
       ))
+    }
+
+    test(s"should give nothing when showing privileges as ${optionalRevoke.toLowerCase}commands for non-existing user") {
+      // WHEN
+      val resultFoo = execute(s"SHOW USER foo PRIVILEGES AS ${optionalRevoke}COMMANDS")
+
+      // THEN
+      resultFoo.toSet should be(Set.empty)
+
+      // and an invalid (non-existing) one
+      // WHEN
+      val resultEmpty = execute(s"SHOW USER `` PRIVILEGES AS ${optionalRevoke}COMMANDS")
+
+      // THEN
+      resultEmpty.toSet should be(Set.empty)
+    }
+
+    test(s"should give nothing when showing privileges as ${optionalRevoke.toLowerCase}commands for a dropped user") {
+      // GIVEN
+      setupUserWithCustomRole("bar", "secret")
+      execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
+
+      // WHEN
+      execute("DROP USER bar")
+
+      // THEN
+      execute(s"SHOW USER bar PRIVILEGES AS ${optionalRevoke}COMMANDS").toSet should be(Set.empty)
+    }
+
+    test(s"should not show user privileges as ${optionalRevoke.toLowerCase}commands on a dropped role") {
+      // GIVEN
+      setupUserWithCustomRole("bar", "secret")
+      execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
+
+      // WHEN
+      execute("DROP ROLE custom")
+
+      // THEN
+      execute(s"SHOW USER bar PRIVILEGES AS ${optionalRevoke}COMMANDS").columnAs[String]("command").toSet should be(Set(
+        s"${optionalRevoke}GRANT ACCESS ON DEFAULT DATABASE ${preposition} $$role",
+        s"${optionalRevoke}GRANT EXECUTE PROCEDURE * ON DBMS ${preposition} $$role"
+      ))
+    }
+
+    test(s"should not show show user privileges as ${optionalRevoke.toLowerCase}commands when not using the system database") {
+      //GIVEN
+      selectDatabase(DEFAULT_DATABASE_NAME)
+
+      // WHEN
+      val exception = the[DatabaseAdministrationException] thrownBy {
+        execute(s"SHOW USER neo4j PRIVILEGES AS ${optionalRevoke}COMMANDS")
+      }
+
+      // THEN
+      exception.getMessage shouldBe("This is an administration command and it should be executed against the system database: SHOW PRIVILEGE COMMANDS")
     }
   }
 

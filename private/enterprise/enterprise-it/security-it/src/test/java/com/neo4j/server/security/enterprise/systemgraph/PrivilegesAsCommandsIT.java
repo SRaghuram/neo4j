@@ -216,9 +216,9 @@ class PrivilegesAsCommandsIT
                 }
                 else if ( usesGraphResource.test( action ) )
                 {
-                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.GraphResource(), LabelSegment.ALL) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.GraphResource(), LabelSegment.ALL ) );
                     commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.GraphResource(), new LabelSegment( "A" ) ) );
-                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.GraphResource(), RelTypeSegment.ALL) );
+                    commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.GraphResource(), RelTypeSegment.ALL ) );
                     commands.addAll( getCommandsFor( role, privilegeType, action, new Resource.GraphResource(), new RelTypeSegment( "A" ) ) );
                 }
                 else if ( usesPropertyResource.test( action ) )
@@ -256,26 +256,27 @@ class PrivilegesAsCommandsIT
 
         for ( int i = 0; i < commands.size(); i++ )
         {
-            if (i % 2 == 0) { // grant or deny command
+            if ( i % 2 == 0 )
+            { // grant or deny command
                 try ( Transaction tx = system.beginTx() )
                 {
                     // all grant or deny commands should be valid Cypher syntax
-                    tx.execute( commands.get(i), Map.of( DB_PARAM, DEFAULT_DATABASE_NAME ) );
+                    tx.execute( commands.get( i ), Map.of( DB_PARAM, DEFAULT_DATABASE_NAME ) );
                     tx.commit();
 
                     DatabaseSecurityCommands databaseSecurityCommands = getBackupCommands( system, DEFAULT_DATABASE_NAME, false, true );
                     assertThat( databaseSecurityCommands.roleSetup ).filteredOn( c -> !c.startsWith( "CREATE" ) )
-                                                                    .containsExactlyElementsOf( List.of( commands.get(i) ) );
+                                                                    .containsExactlyElementsOf( List.of( commands.get( i ) ) );
                 }
-
-            } else { // revoke command
+            }
+            else
+            { // revoke command
                 try ( Transaction tx = system.beginTx() )
                 {
                     // all revoke commands should be valid Cypher syntax
-                    tx.execute( commands.get(i), Map.of( DB_PARAM, DEFAULT_DATABASE_NAME ) );
+                    tx.execute( commands.get( i ), Map.of( DB_PARAM, DEFAULT_DATABASE_NAME ) );
                     tx.commit();
                 }
-
             }
         }
         DatabaseSecurityCommands databaseSecurityCommands = getBackupCommands( system, DEFAULT_DATABASE_NAME, false, true );
@@ -804,14 +805,14 @@ class PrivilegesAsCommandsIT
     }
 
     private List<String> getCommandsFor( String role, ResourcePrivilege.GrantOrDeny privilegeType, PrivilegeAction action, Resource resource,
-                                        Segment segment ) throws InvalidArgumentsException
+                                         Segment segment ) throws InvalidArgumentsException
     {
         ResourcePrivilege privilege = new ResourcePrivilege( privilegeType, action, resource, segment, ResourcePrivilege.SpecialDatabase.ALL );
         List<String> commands = privilege.isDbmsPrivilege() ? Collections.emptyList() : privilege.asCommandFor( false, role, DB_PARAM );
         List<String> revokeCommands = privilege.isDbmsPrivilege() ? Collections.emptyList() : privilege.asCommandFor( true, role, DB_PARAM );
 
-        List<String> res = new ArrayList<String>(commands);
-        res.addAll(revokeCommands);
+        List<String> res = new ArrayList<String>( commands );
+        res.addAll( revokeCommands );
         return res;
     }
 
