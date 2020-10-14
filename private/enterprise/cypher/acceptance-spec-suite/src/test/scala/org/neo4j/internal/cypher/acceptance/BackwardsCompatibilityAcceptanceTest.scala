@@ -350,7 +350,7 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
   test("Showing privileges as commands should not work with Cypher 4.1") {
     // WHEN
     val exception = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 SHOW PRIVILEGES AS COMMAND")
+      executeSingle("CYPHER 4.1 SHOW PRIVILEGES AS COMMANDS")
     }
     exception.getMessage should include("SHOW PRIVILEGES AS COMMANDS command is not supported in this Cypher version.")
   }
