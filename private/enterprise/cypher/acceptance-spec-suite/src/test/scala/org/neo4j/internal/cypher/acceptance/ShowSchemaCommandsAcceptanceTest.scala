@@ -292,14 +292,13 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     executeSingle(s"CREATE INDEX $escapedName FOR (n:$escapedLabel) ON ($escapedProperties) OPTIONS ${randomBtreeOptions()}")
   }
 
-  private def createDefaultBtreeIndex(): Unit = graph.createIndexWithName("my_index", "Person", "name", "age")
+  private def createDefaultBtreeIndex(): Unit = graph.createIndexWithName("my_index", label, prop2, prop)
 
   private def defaultBtreeBriefOutput(id: Long): Map[String, Any] =
-    indexOutputBrief(id, "my_index", "NONUNIQUE", "BTREE", "NODE", List("Person"), List("age", "name"), "native-btree-1.0")
-
+    indexOutputBrief(id, "my_index", "NONUNIQUE", "BTREE", "NODE", List(label), List(prop2, prop), "native-btree-1.0")
 
   private def defaultBtreeVerboseOutput(id: Long): Map[String, Any] = defaultBtreeBriefOutput(id) ++
-    indexOutputVerbose(s"CREATE INDEX `my_index` FOR (n:`Person`) ON (n.`age`, n.`name`) OPTIONS $defaultBtreeOptionsString")
+    indexOutputVerbose(s"CREATE INDEX `my_index` FOR (n:`$label`) ON (n.`$prop2`, n.`$prop`) OPTIONS $defaultBtreeOptionsString")
 
   // Btree index backing constraint help methods
 
