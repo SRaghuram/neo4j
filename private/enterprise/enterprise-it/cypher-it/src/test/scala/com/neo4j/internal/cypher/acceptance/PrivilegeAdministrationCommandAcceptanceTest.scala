@@ -619,89 +619,175 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     exception.getMessage shouldBe("This is an administration command and it should be executed against the system database: SHOW PRIVILEGE")
   }
 
-  test("should show privileges as commands") {
-    execute("SHOW PRIVILEGES AS COMMAND").columnAs[String]("command").toSet should be(Set(
-      "GRANT ACCESS ON DEFAULT DATABASE TO `PUBLIC`",
-      "GRANT EXECUTE PROCEDURE * ON DBMS TO `PUBLIC`",
+  // Tests for show grant/deny privileges as (revoke) commands
 
-      "GRANT ACCESS ON DATABASE * TO `reader`",
-      "GRANT MATCH {*} ON GRAPH * NODE * TO `reader`",
-      "GRANT MATCH {*} ON GRAPH * RELATIONSHIP * TO `reader`",
+  for(asRevoke <- Seq(true, false)) {
+    val preposition = if (asRevoke) "FROM" else "TO";
+    val optionalRevoke = if (asRevoke) "REVOKE " else "";
 
-      "GRANT ACCESS ON DATABASE * TO `editor`",
-      "GRANT MATCH {*} ON GRAPH * NODE * TO `editor`",
-      "GRANT MATCH {*} ON GRAPH * RELATIONSHIP * TO `editor`",
-      "GRANT WRITE ON GRAPH * TO `editor`",
+    test(s"should show privileges as ${optionalRevoke.toLowerCase}commands") {
+      execute(s"SHOW PRIVILEGES AS ${optionalRevoke}command").columnAs[String]("command").toSet should be(Set(
+        s"${optionalRevoke}GRANT ACCESS ON DEFAULT DATABASE $preposition `PUBLIC`",
+        s"${optionalRevoke}GRANT EXECUTE PROCEDURE * ON DBMS $preposition `PUBLIC`",
 
-      "GRANT ACCESS ON DATABASE * TO `publisher`",
-      "GRANT MATCH {*} ON GRAPH * NODE * TO `publisher`",
-      "GRANT MATCH {*} ON GRAPH * RELATIONSHIP * TO `publisher`",
-      "GRANT WRITE ON GRAPH * TO `publisher`",
-      "GRANT NAME MANAGEMENT ON DATABASE * TO `publisher`",
+        s"${optionalRevoke}GRANT ACCESS ON DATABASE * $preposition `reader`",
+        s"${optionalRevoke}GRANT MATCH {*} ON GRAPH * NODE * $preposition `reader`",
+        s"${optionalRevoke}GRANT MATCH {*} ON GRAPH * RELATIONSHIP * $preposition `reader`",
 
-      "GRANT ACCESS ON DATABASE * TO `architect`",
-      "GRANT MATCH {*} ON GRAPH * NODE * TO `architect`",
-      "GRANT MATCH {*} ON GRAPH * RELATIONSHIP * TO `architect`",
-      "GRANT WRITE ON GRAPH * TO `architect`",
-      "GRANT CONSTRAINT MANAGEMENT ON DATABASE * TO `architect`",
-      "GRANT INDEX MANAGEMENT ON DATABASE * TO `architect`",
-      "GRANT NAME MANAGEMENT ON DATABASE * TO `architect`",
+        s"${optionalRevoke}GRANT ACCESS ON DATABASE * $preposition `editor`",
+        s"${optionalRevoke}GRANT MATCH {*} ON GRAPH * NODE * $preposition `editor`",
+        s"${optionalRevoke}GRANT MATCH {*} ON GRAPH * RELATIONSHIP * $preposition `editor`",
+        s"${optionalRevoke}GRANT WRITE ON GRAPH * $preposition `editor`",
 
-      "GRANT ACCESS ON DATABASE * TO `admin`",
-      "GRANT MATCH {*} ON GRAPH * NODE * TO `admin`",
-      "GRANT MATCH {*} ON GRAPH * RELATIONSHIP * TO `admin`",
-      "GRANT WRITE ON GRAPH * TO `admin`",
-      "GRANT CONSTRAINT MANAGEMENT ON DATABASE * TO `admin`",
-      "GRANT INDEX MANAGEMENT ON DATABASE * TO `admin`",
-      "GRANT NAME MANAGEMENT ON DATABASE * TO `admin`",
-      "GRANT TRANSACTION MANAGEMENT (*) ON DATABASE $database TO `admin`",
-      "GRANT START ON DATABASE $database TO `admin`",
-      "GRANT STOP ON DATABASE $database TO `admin`",
-      "GRANT ALL DBMS PRIVILEGES ON DBMS TO `admin`"
-    ))
-  }
+        s"${optionalRevoke}GRANT ACCESS ON DATABASE * $preposition `publisher`",
+        s"${optionalRevoke}GRANT MATCH {*} ON GRAPH * NODE * $preposition `publisher`",
+        s"${optionalRevoke}GRANT MATCH {*} ON GRAPH * RELATIONSHIP * $preposition `publisher`",
+        s"${optionalRevoke}GRANT WRITE ON GRAPH * $preposition `publisher`",
+        s"${optionalRevoke}GRANT NAME MANAGEMENT ON DATABASE * $preposition `publisher`",
 
-  test("should show role privileges as commands") {
-    execute("SHOW ROLE admin PRIVILEGES AS COMMAND").columnAs[String]("command").toSet should be(Set(
-      "GRANT ACCESS ON DEFAULT DATABASE TO `PUBLIC`",
-    ))
-  }
+        s"${optionalRevoke}GRANT ACCESS ON DATABASE * $preposition `architect`",
+        s"${optionalRevoke}GRANT MATCH {*} ON GRAPH * NODE * $preposition `architect`",
+        s"${optionalRevoke}GRANT MATCH {*} ON GRAPH * RELATIONSHIP * $preposition `architect`",
+        s"${optionalRevoke}GRANT WRITE ON GRAPH * $preposition `architect`",
+        s"${optionalRevoke}GRANT CONSTRAINT MANAGEMENT ON DATABASE * $preposition `architect`",
+        s"${optionalRevoke}GRANT INDEX MANAGEMENT ON DATABASE * $preposition `architect`",
+        s"${optionalRevoke}GRANT NAME MANAGEMENT ON DATABASE * $preposition `architect`",
 
-  test("should show paramterized role privileges as commands") {
-    execute("SHOW ROLE $role PRIVILEGES AS COMMAND", Map("role" -> "admin")).columnAs[String]("command").toSet should be(Set(
-      "GRANT ACCESS ON DEFAULT DATABASE TO `PUBLIC`",
-    ))
-  }
+        s"${optionalRevoke}GRANT ACCESS ON DATABASE * $preposition `admin`",
+        s"${optionalRevoke}GRANT MATCH {*} ON GRAPH * NODE * $preposition `admin`",
+        s"${optionalRevoke}GRANT MATCH {*} ON GRAPH * RELATIONSHIP * $preposition `admin`",
+        s"${optionalRevoke}GRANT WRITE ON GRAPH * $preposition `admin`",
+        s"${optionalRevoke}GRANT CONSTRAINT MANAGEMENT ON DATABASE * $preposition `admin`",
+        s"${optionalRevoke}GRANT INDEX MANAGEMENT ON DATABASE * $preposition `admin`",
 
-  test("should show user privileges as commands") {
-    setupUserWithCustomRole("user")
-    execute("SHOW USER user PRIVILEGES AS COMMAND").columnAs[String]("command").toSet should be(Set(
-      "GRANT ACCESS ON DEFAULT DATABASE TO `PUBLIC`",
-    ))
-  }
+        //"GRANTED"	"token"	"database"	"*"	"database"	"admin"
+        s"${optionalRevoke}GRANT NAME MANAGEMENT ON DATABASE * $preposition `admin`",
 
-  test("should show parameterized user privileges as commands") {
-    setupUserWithCustomRole("user", "secret")
-    execute("SHOW USER $user PRIVILEGES AS COMMAND", Map("user" -> "user")).columnAs[String]("command").toSet should be(Set(
-      "GRANT ACCESS ON DEFAULT DATABASE TO `PUBLIC`",
-    ))
-  }
+        //"GRANTED"	"admin"	"database"	"*"	"database"	"admin"
+        s"${optionalRevoke}GRANT TRANSACTION MANAGEMENT (*) ON DATABASE * $preposition `admin`",
+        s"${optionalRevoke}GRANT START ON DATABASE * $preposition `admin`",
+        s"${optionalRevoke}GRANT STOP ON DATABASE * $preposition `admin`",
+        s"${optionalRevoke}GRANT ALL DBMS PRIVILEGES ON DBMS $preposition `admin`"
+      ))
+    }
 
-  test("should show current user privileges as commands") {
-    setupUserWithCustomRole()
-    executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES AS COMMAND", resultHandler = (row, idx) => {
-      // THEN
-      //asPrivilegesResult(row) should be(expected(idx))
-    }) should be(2)
-  }
+    test(s"should show role privileges as ${optionalRevoke.toLowerCase}commands") {
+      execute(s"SHOW ROLE admin PRIVILEGES AS ${optionalRevoke}COMMAND").columnAs[String]("command").toSet should be(Set(
+        s"${optionalRevoke}GRANT MATCH {*} ON GRAPH * NODE * ${preposition} `admin`",
+        s"${optionalRevoke}GRANT MATCH {*} ON GRAPH * RELATIONSHIP * ${preposition} `admin`",
+        s"${optionalRevoke}GRANT WRITE ON GRAPH * ${preposition} `admin`",
+        s"${optionalRevoke}GRANT ACCESS ON DATABASE * ${preposition} `admin`",
+        s"${optionalRevoke}GRANT CONSTRAINT MANAGEMENT ON DATABASE * ${preposition} `admin`",
+        s"${optionalRevoke}GRANT INDEX MANAGEMENT ON DATABASE * ${preposition} `admin`",
 
-  test("should show multiple parameterized user privileges as commands") {
-    setupUserWithCustomRole("foo", "")
-    setupUserWithCustomRole("bar")
-    setupUserWithCustomRole("baz")
-    execute("SHOW USER foo, $bar, $baz PRIVILEGES AS COMMAND", Map("bar" -> "bar", "baz" -> "baz")).columnAs[String]("command").toSet should be(Set(
-      "GRANT ACCESS ON DEFAULT DATABASE TO `PUBLIC`",
-    ))
+        //"GRANTED"	"token"	"database"	"*"	"database"	"admin"
+        s"${optionalRevoke}GRANT NAME MANAGEMENT ON DATABASE * ${preposition} `admin`",
+
+        //"GRANTED"	"admin"	"database"	"*"	"database"	"admin"
+        s"${optionalRevoke}GRANT TRANSACTION MANAGEMENT (*) ON DATABASE * ${preposition} `admin`",
+        s"${optionalRevoke}GRANT ALL DBMS PRIVILEGES ON DBMS ${preposition} `admin`",
+        s"${optionalRevoke}GRANT STOP ON DATABASE * ${preposition} `admin`",
+        s"${optionalRevoke}GRANT START ON DATABASE * ${preposition} `admin`",
+      ))
+    }
+
+    test(s"should show parameterized role privileges as ${optionalRevoke.toLowerCase}commands") {
+      execute(s"SHOW ROLE $$role PRIVILEGES AS ${optionalRevoke}COMMAND", Map("role" -> "admin")).columnAs[String]("command").toSet should be(Set(
+        s"${optionalRevoke}GRANT MATCH {*} ON GRAPH * NODE * ${preposition} `admin`",
+        s"${optionalRevoke}GRANT MATCH {*} ON GRAPH * RELATIONSHIP * ${preposition} `admin`",
+        s"${optionalRevoke}GRANT WRITE ON GRAPH * ${preposition} `admin`",
+        s"${optionalRevoke}GRANT ACCESS ON DATABASE * ${preposition} `admin`",
+        s"${optionalRevoke}GRANT CONSTRAINT MANAGEMENT ON DATABASE * ${preposition} `admin`",
+        s"${optionalRevoke}GRANT INDEX MANAGEMENT ON DATABASE * ${preposition} `admin`",
+
+        //"GRANTED"	"token"	"database"	"*"	"database"	"admin"
+        s"${optionalRevoke}GRANT NAME MANAGEMENT ON DATABASE * ${preposition} `admin`",
+
+        //"GRANTED"	"admin"	"database"	"*"	"database"	"admin"
+        s"${optionalRevoke}GRANT TRANSACTION MANAGEMENT (*) ON DATABASE * ${preposition} `admin`",
+        s"${optionalRevoke}GRANT ALL DBMS PRIVILEGES ON DBMS ${preposition} `admin`",
+        s"${optionalRevoke}GRANT STOP ON DATABASE * ${preposition} `admin`",
+        s"${optionalRevoke}GRANT START ON DATABASE * ${preposition} `admin`",
+      ))
+    }
+
+    test(s"should show multiple parameterized role privileges as parameterized ${optionalRevoke.toLowerCase}commands") {
+      execute("CREATE ROLE foo")
+      execute("CREATE ROLE bar")
+      execute("CREATE ROLE baz")
+      execute("GRANT STOP ON DATABASE * TO foo")
+      execute("GRANT MATCH {*} ON GRAPH * NODE * TO bar")
+      execute("DENY WRITE ON GRAPH * TO baz")
+
+      execute(s"SHOW ROLE foo, $$bar, $$baz PRIVILEGES AS ${optionalRevoke}COMMAND", Map("bar" -> "bar", "baz" -> "baz")).columnAs[String]("command").toSet should be(Set(
+        s"${optionalRevoke}GRANT STOP ON DATABASE * ${preposition} `foo`",
+        s"${optionalRevoke}GRANT MATCH {*} ON GRAPH * NODE * ${preposition} `bar`",
+        s"${optionalRevoke}DENY WRITE ON GRAPH * ${preposition} `baz`"
+      ))
+    }
+
+    test(s"should show user privileges as parameterized ${optionalRevoke.toLowerCase}commands") {
+      setupUserWithCustomRole("user")
+      execute("DENY MATCH {*} ON GRAPH * NODE * TO custom")
+      execute("DENY EXECUTE PROCEDURE * ON DBMS TO custom")
+
+      execute(s"SHOW USER user PRIVILEGES AS ${optionalRevoke}COMMAND").columnAs[String]("command").toSet should be(Set(
+        s"${optionalRevoke}GRANT ACCESS ON DATABASE * ${preposition} $$role",
+        s"${optionalRevoke}GRANT ACCESS ON DEFAULT DATABASE ${preposition} $$role",
+        s"${optionalRevoke}GRANT EXECUTE PROCEDURE * ON DBMS ${preposition} $$role",
+        s"${optionalRevoke}DENY EXECUTE PROCEDURE * ON DBMS ${preposition} $$role",
+        s"${optionalRevoke}DENY MATCH {*} ON GRAPH * NODE * ${preposition} $$role"
+      ))
+    }
+
+    test(s"should show parameterized user privileges as parameterized ${optionalRevoke.toLowerCase}commands") {
+      setupUserWithCustomRole("user", "secret")
+
+      execute(s"SHOW USER $$user PRIVILEGES AS ${optionalRevoke}COMMAND", Map("user" -> "user")).columnAs[String]("command").toSet should be(Set(
+        s"${optionalRevoke}GRANT ACCESS ON DATABASE * ${preposition} $$role",
+        s"${optionalRevoke}GRANT ACCESS ON DEFAULT DATABASE ${preposition} $$role",
+        s"${optionalRevoke}GRANT EXECUTE PROCEDURE * ON DBMS ${preposition} $$role"
+      ))
+    }
+
+    test(s"should show current user privileges as parameterized ${optionalRevoke.toLowerCase}commands") {
+      setupUserWithCustomRole()
+
+      executeOnSystem("joe", "soap", s"SHOW USER PRIVILEGES AS ${optionalRevoke}COMMAND", resultHandler = (row, idx) => {
+        idx match {
+          case 0 => row.get("command") should be(s"${optionalRevoke}GRANT ACCESS ON DATABASE * ${preposition} $$role")
+          case 1 => row.get("command") should be(s"${optionalRevoke}GRANT ACCESS ON DEFAULT DATABASE ${preposition} $$role")
+          case 2 => row.get("command") should be(s"${optionalRevoke}GRANT EXECUTE PROCEDURE * ON DBMS ${preposition} $$role")
+          case _ => fail()
+        }
+      }) should be(3)
+    }
+
+    test(s"should show multiple parameterized user privileges as parameterized ${optionalRevoke.toLowerCase}commands") {
+      setupUserWithCustomRole("foo")
+      setupUserWithCustomRole("bar")
+      setupUserWithCustomRole("baz")
+
+      execute(s"SHOW USER foo, $$bar, $$baz PRIVILEGES AS ${optionalRevoke}COMMAND", Map("bar" -> "bar", "baz" -> "baz")).columnAs[String]("command").toSet should be(Set(
+        s"${optionalRevoke}GRANT ACCESS ON DATABASE * ${preposition} $$role",
+        s"${optionalRevoke}GRANT ACCESS ON DEFAULT DATABASE ${preposition} $$role",
+        s"${optionalRevoke}GRANT EXECUTE PROCEDURE * ON DBMS ${preposition} $$role"
+      ))
+    }
+
+    test(s"should filter on show privileges as ${optionalRevoke.toLowerCase}commands with WHERE") {
+      execute(s"SHOW PRIVILEGES AS ${optionalRevoke}COMMAND WHERE command CONTAINS 'START'").columnAs[String]("command").toSet should be(Set(
+        s"${optionalRevoke}GRANT START ON DATABASE * ${preposition} `admin`",
+      ))
+    }
+
+    test(s"should show privileges as ${optionalRevoke.toLowerCase}commands with yield") {
+      execute("CREATE ROLE role")
+      execute("GRANT ACCESS ON DATABASE * to role")
+      execute(s"SHOW ROLE role PRIVILEGES AS ${optionalRevoke}COMMAND YIELD command RETURN command AS cypherCommands").columnAs[String]("cypherCommands").toSet should be(Set(
+        s"${optionalRevoke}GRANT ACCESS ON DATABASE * ${preposition} `role`"
+      ))
+    }
   }
 
   // Tests for granting and denying privileges

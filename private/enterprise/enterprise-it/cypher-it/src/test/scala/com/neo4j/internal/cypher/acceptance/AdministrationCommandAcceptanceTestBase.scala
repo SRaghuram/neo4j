@@ -217,7 +217,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   def setupUserWithCustomRole(username: String = "joe", password: String = "soap", rolename: String = "custom", access: Boolean = true): Unit = {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute(s"CREATE USER $username SET PASSWORD '$password' CHANGE NOT REQUIRED")
-    execute(s"CREATE ROLE $rolename")
+    execute(s"CREATE ROLE $rolename IF NOT EXISTS")
     execute(s"GRANT ROLE $rolename TO $username")
     if (access) execute(s"GRANT ACCESS ON DATABASE * TO $rolename")
   }

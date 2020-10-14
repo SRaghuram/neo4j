@@ -488,8 +488,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         val commands: Seq[String] = roleStrings.foldLeft(Seq.empty[String])((acc, r) => {
           val privileges = enterpriseSecurityGraphComponent.getPrivilegesForRole(tx, r).asScala
           val roleKeyword = if (withRoleParam) roleParam else r
-          acc ++ privileges.flatMap(p => p.asCommandFor(false, roleKeyword, withRoleParam).asScala)
-        })
+          acc ++ privileges.flatMap(p => p.asCommandFor(asRevoke, roleKeyword, withRoleParam).asScala)
+        }).distinct
         params.updatedWith(commandListKey, Values.stringArray(commands: _*))
       }
 
