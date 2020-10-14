@@ -105,7 +105,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     val result = executeSingle("SHOW INDEXES")
 
     // THEN
-    result.columnAs("name").toList should equal(List("`albert`", "`benny`", "`charlie`", "`poppy`", "`xavier`"))
+    result.columnAs("name").toList should equal(List("albert", "benny", "charlie", "poppy", "xavier"))
   }
 
   test("should show indexes backing constraints") {
@@ -303,7 +303,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   }
 
   private def btreeBriefOutput(id: Long): Map[String, Any] =
-    indexOutputBrief(id, "`my_index`", "NONUNIQUE", "BTREE", "NODE", List("Person"), List("age", "name"), "native-btree-1.0")
+    indexOutputBrief(id, "my_index", "NONUNIQUE", "BTREE", "NODE", List("Person"), List("age", "name"), "native-btree-1.0")
 
   private def btreeVerboseOutput(id: Long): Map[String, Any] = btreeBriefOutput(id) ++
     indexOutputVerbose(s"CREATE INDEX `my_index` FOR (n:`Person`) ON (n.`age`, n.`name`) OPTIONS $defaultBtreeOptionsString")
@@ -318,13 +318,13 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   }
 
   private def uniquenessBriefOutput(id: Long): Map[String, Any] =
-    indexOutputBrief(id, "`constraint1`", "UNIQUE", "BTREE", "NODE", List("Label"), List("property"), "native-btree-1.0")
+    indexOutputBrief(id, "constraint1", "UNIQUE", "BTREE", "NODE", List("Label"), List("property"), "native-btree-1.0")
 
   private def uniquenessVerboseOutput(id: Long): Map[String, Any] = uniquenessBriefOutput(id) ++
     indexOutputVerbose(s"CREATE CONSTRAINT `constraint1` ON (n:`Label`) ASSERT (n.`property`) IS UNIQUE OPTIONS $defaultBtreeOptionsString")
 
   private def nodeKeyBriefOutput(id: Long): Map[String, Any] =
-    indexOutputBrief(id, "`constraint2`", "UNIQUE", "BTREE", "NODE", List("Label2"), List("property2"), "native-btree-1.0")
+    indexOutputBrief(id, "constraint2", "UNIQUE", "BTREE", "NODE", List("Label2"), List("property2"), "native-btree-1.0")
 
   private def nodeKeyVerboseOutput(id: Long): Map[String, Any] = nodeKeyBriefOutput(id) ++
     indexOutputVerbose(s"CREATE CONSTRAINT `constraint2` ON (n:`Label2`) ASSERT (n.`property2`) IS NODE KEY OPTIONS $defaultBtreeOptionsString")
@@ -338,7 +338,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   }
 
   private def fulltextNodeBriefOutput(id: Long): Map[String, Any] =
-    indexOutputBrief(id, "`fulltext_node`", "NONUNIQUE", "FULLTEXT", "NODE", List("Label"), List("prop"), "fulltext-1.0")
+    indexOutputBrief(id, "fulltext_node", "NONUNIQUE", "FULLTEXT", "NODE", List("Label"), List("prop"), "fulltext-1.0")
 
   private def fulltextNodeVerboseOutput(id: Long): Map[String, Any] = fulltextNodeBriefOutput(id) ++
     indexOutputVerbose(s"CALL db.index.fulltext.createNodeIndex('fulltext_node', ['Label'], ['prop'], $defaultFulltextConfigString)")
@@ -350,7 +350,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   }
 
   private def fulltextRelBriefOutput(id: Long): Map[String, Any] =
-    indexOutputBrief(id, "`fulltext_rel`", "NONUNIQUE", "FULLTEXT", "RELATIONSHIP", List("Type"), List("prop"), "fulltext-1.0")
+    indexOutputBrief(id, "fulltext_rel", "NONUNIQUE", "FULLTEXT", "RELATIONSHIP", List("Type"), List("prop"), "fulltext-1.0")
 
   private def fulltextRelVerboseOutput(id: Long): Map[String, Any] = fulltextRelBriefOutput(id) ++
     indexOutputVerbose(s"CALL db.index.fulltext.createRelationshipIndex('fulltext_rel', ['Type'], ['prop'], $defaultFulltextConfigString)")
@@ -385,7 +385,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   }
 
   private def dropAllFromNames(names: List[String], schemaType: String): Unit = {
-    names.foreach(name => executeSingle(s"DROP $schemaType $name"))
+    names.foreach(name => executeSingle(s"DROP $schemaType `$name`"))
   }
 
   private def recreateAllFromCreateStatements(createStatements: List[String]): Unit = {
