@@ -128,32 +128,75 @@ class LiveCounts(var nodeCursorPool: Long = 0,
   }
 }
 
-class TrackingCursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends CursorPool[CURSOR](cursorFactory) {
+class TrackingBoundedArrayCursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR, size: Int) extends BoundedArrayCursorPool[CURSOR](cursorFactory, size) {
   @volatile private var liveCount: Long = 0L
 
   override def allocateAndTrace(): CURSOR = {
     liveCount += 1L
+    if (DebugSupport.CURSORS.enabled) {
+      DebugSupport.CURSORS.log(stackTraceSlice(2, 5).mkString("+ allocate\n        ", "\n        ", ""))
+    }
     super.allocateAndTrace()
   }
 
   override def allocate(): CURSOR = {
     liveCount += 1L
+    if (DebugSupport.CURSORS.enabled) {
+      DebugSupport.CURSORS.log(stackTraceSlice(2, 5).mkString("+ allocate\n        ", "\n        ", ""))
+    }
     super.allocate()
   }
 
   override def free(cursor: CURSOR): Unit = {
     if (cursor != null) {
       liveCount -= 1L
+      if (DebugSupport.CURSORS.enabled) {
+        DebugSupport.CURSORS.log(stackTraceSlice(4, 5).mkString( s"""+ free $cursor
+        """, "\n        ", ""))
+      }
     }
     super.free(cursor)
   }
 
   override def getLiveCount: Long = liveCount
+
+  /**
+   * Collect a slice of the current stack trace.
+   *
+   * @param from first included stack trace frame, counting from the inner most nesting
+   * @param to first excluded stack trace frame, counting from the inner most nesting
+   */
+  private def stackTraceSlice(from: Int, to: Int): Seq[String] = {
+    Exceptions.getPartialStackTrace(from, to).map(traceElement => "\tat " + traceElement)
+  }
 }
 
-class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoCloseable {
-  private var cached: CURSOR = _
-  private var tracer: KernelReadTracer = _
+abstract class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoCloseable {
+
+  def setKernelTracer(tracer: KernelReadTracer): Unit
+
+  /**
+   * Allocate and trace a cursor of type `CURSOR`.
+   */
+  def allocateAndTrace(): CURSOR
+
+  /**
+   * Allocate a cursor of type `CURSOR`.
+   */
+  def allocate(): CURSOR
+
+  /**
+   * Free the given cursor. NOOP if `null`.
+   */
+  def free(cursor: CURSOR): Unit
+
+  def getLiveCount: Long
+}
+
+class BoundedArrayCursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR, private[this] val size: Int) extends CursorPool[CURSOR](cursorFactory) {
+  private[this] var cached: Array[Cursor] = new Array[Cursor](size)
+  private[this] var index: Int = 0
+  private[this] var tracer: KernelReadTracer = _
 
   def setKernelTracer(tracer: KernelReadTracer): Unit = {
     this.tracer = tracer
@@ -178,60 +221,48 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
    */
   def free(cursor: CURSOR): Unit = {
     if (cursor != null) {
-      if (DebugSupport.CURSORS.enabled) {
-        DebugSupport.CURSORS.log(stackTraceSlice(4, 5).mkString( s"""+ free $cursor
-        """, "\n        ", ""))
-      }
       cursor.removeTracer()
-      //use local variable in order to avoid `cached()` multiple times
-      val c = cached
-      if (c != null)
-        c.close()
-      cached = cursor
+      if (index < size) {
+        cached(index) = cursor
+        index += 1
+      } else {
+        // The pool is full and we have to discard one cursor.
+        // We are expecting pools to be sized big enough so that this would be very rare.
+        // Discarding the oldest cursor would probably be best, but to keep it simple, and avoid having to do
+        // extra ring-buffer arithmetics in the common case, we just throw away the cursor being freed here instead.
+        cursor.close()
+      }
     }
   }
 
   private final def allocateCursor(): CURSOR = {
-    if (DebugSupport.CURSORS.enabled) {
-      DebugSupport.CURSORS.log(stackTraceSlice(2, 5).mkString("+ allocate\n        ", "\n        ", ""))
-    }
-    var cursor = cached
-    if (cursor != null) {
-      cached = null.asInstanceOf[CURSOR]
+    if (index > 0) {
+      index -= 1
+      val cursor = cached(index)
+      cached(index) = null.asInstanceOf[CURSOR]
+      cursor.asInstanceOf[CURSOR]
     } else {
-      cursor = cursorFactory()
+      cursorFactory()
     }
-    cursor
   }
 
   override def close(): Unit = {
-    //use local variable in order to avoid `cached()` multiple times
-    val c = cached
-    if (c != null) {
-      c.close()
-      cached = null.asInstanceOf[CURSOR]
+    if (index > 0 ) {
+      IOUtils.closeAll(cached: _*) // IOUtils.closeAll can handle nulls. We avoid creating another copy since this could be called when we are running low on memory.
+      index = 0
     }
+    cached = null.asInstanceOf[Array[Cursor]]
   }
 
   def getLiveCount: Long = throw new UnsupportedOperationException("use TrackingCursorPool")
-
-  /**
-   * Collect a slice of the current stack trace.
-   *
-   * @param from first included stack trace frame, counting from the inner most nesting
-   * @param to first excluded stack trace frame, counting from the inner most nesting
-   */
-  private def stackTraceSlice(from: Int, to: Int): Seq[String] = {
-    Exceptions.getPartialStackTrace(from, to).map(traceElement => "\tat " + traceElement)
-  }
 }
 
 object CursorPool {
 
   def apply[CURSOR <: Cursor](cursorFactory: () => CURSOR): CursorPool[CURSOR] =
     if (AssertionRunner.ASSERTIONS_ENABLED) {
-      new TrackingCursorPool(cursorFactory)
+      new TrackingBoundedArrayCursorPool[CURSOR](cursorFactory)
     } else {
-      new CursorPool(cursorFactory)
+      new BoundedArrayCursorPool(cursorFactory)
     }
 }
