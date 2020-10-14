@@ -396,7 +396,7 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "AuxiliaryMetrics", 6, client );
             assertLabelCount( "Profiles", 2, client );
             assertLabelCount( "BenchmarkParams", 4, client );
-            assertLabelCount( "Project", 2, client );
+            assertLabelCount( "Project", 3, client );
             assertLabelCount( "Neo4jConfig", 8, client );
             assertLabelCount( "Java", 1, client );
             assertLabelCount( "Environment", 2, client );
@@ -421,7 +421,7 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "AuxiliaryMetrics", 6, client );
             assertLabelCount( "Profiles", 2, client );
             assertLabelCount( "BenchmarkParams", 4, client );
-            assertLabelCount( "Project", 2, client );
+            assertLabelCount( "Project", 3, client );
             assertLabelCount( "Neo4jConfig", 8, client );
             assertLabelCount( "Java", 1, client );
             assertLabelCount( "Environment", 2, client );
@@ -697,7 +697,7 @@ public class SubmitTestRunsAndPlansIT
                 testRun,
                 new BenchmarkConfig( emptyMap() ),
                 Sets.newHashSet( new Project( Repository.NEO4J, "commit", "3.2-drop2.1", COMMUNITY, "branch", "owner" ),
-                                 new Project( Repository.CAPS, "commit", "3.2-drop2.1", COMMUNITY, "branch", "owner" ) ),
+                                 new Project( Repository.CAPS, "commit", "3.2.1", COMMUNITY, "branch", "owner" ) ),
                 neo4jConfig,
                 Environment.local(),
                 benchmarkGroupBenchmarkMetrics,

@@ -381,9 +381,11 @@ public class SerializationTest
     void shouldSerializeNeo4j()
     {
         // given
-        Project before = new Project( Repository.NEO4J, "commit", "3.3.3", COMMUNITY, "branch", "owner" );
+        Project beforeNormalBranch = new Project( Repository.NEO4J, "commit", "3.3.3", COMMUNITY, "branch", "owner" );
+        Project beforeDropBranch = new Project( Repository.NEO4J, "commit", "3.3-drop2.0", COMMUNITY, "branch", "owner" );
         // then
-        shouldSerializeAndDeserialize( before );
+        shouldSerializeAndDeserialize( beforeNormalBranch );
+        shouldSerializeAndDeserialize( beforeDropBranch );
     }
 
     @Test
