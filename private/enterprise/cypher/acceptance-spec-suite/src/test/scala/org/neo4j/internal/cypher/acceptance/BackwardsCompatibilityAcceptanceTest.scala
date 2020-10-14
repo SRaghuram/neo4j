@@ -504,20 +504,15 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
   }
 
   test("SHOW INDEXES should not work with Cypher 3.5 - 4.1") {
-    // GIVEN
-    val errorMessage = "SHOW INDEXES is not supported in this Cypher version."
+    Seq("CYPHER 3.5", "CYPHER 4.1").foreach(version => withClue(version) {
+      // WHEN
+      val exception = the[SyntaxException] thrownBy {
+        executeSingle(s"$version SHOW INDEXES")
+      }
 
-    // WHEN
-    val exception35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 SHOW INDEXES")
-    }
-    exception35.getMessage should include(errorMessage)
-
-    // WHEN
-    val exception41 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 SHOW INDEXES")
-    }
-    exception41.getMessage should include(errorMessage)
+      // THEN
+      exception.getMessage should include("SHOW INDEXES is not supported in this Cypher version.")
+    })
   }
 
   test("SHOW CURRENT USER should not work with Cypher 3.5") {

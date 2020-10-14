@@ -27,7 +27,8 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
       "`spatial.wgs-84-3d.max`: [180.0, 90.0, 1000000.0]," +
       "`spatial.wgs-84-3d.min`: [-180.0, -90.0, -1000000.0]," +
       "`spatial.wgs-84.max`: [180.0, 90.0]," +
-      "`spatial.wgs-84.min`: [-180.0, -90.0]}, indexProvider: 'native-btree-1.0'}"
+      "`spatial.wgs-84.min`: [-180.0, -90.0]}, " +
+      "indexProvider: 'native-btree-1.0'}"
 
   private val defaultBtreeOptionsMap: Map[String, Object] = Map(
     "indexConfig" -> Map(
@@ -82,23 +83,23 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   test("should show index") {
     // GIVEN
-    createBtreeIndex()
+    createDefaultBtreeIndex()
     graph.awaitIndexesOnline()
 
     // WHEN
     val result = executeSingle("SHOW INDEXES")
 
     // THEN
-    result.toList should be(List(btreeBriefOutput(1L)))
+    result.toList should be(List(defaultBtreeBriefOutput(1L)))
   }
 
   test("should show indexes in alphabetic order") {
     // GIVEN
-    graph.createIndexWithName("poppy", "A", "prop")
-    graph.createIndexWithName("benny", "C", "foo")
-    graph.createIndexWithName("albert", "B", "foo")
-    graph.createIndexWithName("charlie", "A", "foo")
-    graph.createIndexWithName("xavier", "A", "bar")
+    graph.createIndexWithName("poppy", label, propWhitespace)
+    graph.createIndexWithName("benny", label2, prop, prop2)
+    graph.createIndexWithName("albert", label2, prop2)
+    graph.createIndexWithName("charlie", label, prop2)
+    graph.createIndexWithName("xavier", label, prop)
     graph.awaitIndexesOnline()
 
     // WHEN
@@ -110,10 +111,10 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   test("should show indexes backing constraints") {
     // GIVEN
-    createUniquenessConstraint()
-    graph.createNodeExistenceConstraintWithName("constraint3", "Label2", "prop")
-    graph.createRelationshipExistenceConstraintWithName("constraint4", "Type", "prop")
-    createNodeKeyConstraint()
+    createDefaultUniquenessConstraint()
+    graph.createNodeExistenceConstraintWithName("constraint3", label2, prop)
+    graph.createRelationshipExistenceConstraintWithName("constraint4", relType, prop)
+    createDefaultNodeKeyConstraint()
     graph.awaitIndexesOnline()
 
     // WHEN
@@ -121,54 +122,48 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // THEN
     // Existence constraints are not backed by indexes so they should not be listed
-    result.toList should be(List(uniquenessBriefOutput(1L), nodeKeyBriefOutput(5L)))
+    result.toList should be(List(defaultUniquenessBriefOutput(1L), defaultNodeKeyBriefOutput(5L)))
   }
 
   test("show indexes should show both btree and fulltext indexes") {
     // GIVEN
-    createBtreeIndex()
-    createFullTextNodeIndex()
-    createFullTextRelIndex()
+    createDefaultIndexes()
     graph.awaitIndexesOnline()
 
     // WHEN
     val result = executeSingle("SHOW INDEXES")
 
     // THEN
-    result.toList should be(List(fulltextNodeBriefOutput(2L), fulltextRelBriefOutput(3L), btreeBriefOutput(1L)))
+    result.toList should be(List(defaultFulltextNodeBriefOutput(2L), defaultFulltextRelBriefOutput(3L), defaultBtreeBriefOutput(1L)))
   }
 
   test("show all indexes should show both btree and fulltext indexes") {
     // GIVEN
-    createBtreeIndex()
-    createFullTextNodeIndex()
-    createFullTextRelIndex()
+    createDefaultIndexes()
     graph.awaitIndexesOnline()
 
     // WHEN
     val result = executeSingle("SHOW ALL INDEXES")
 
     // THEN
-    result.toList should be(List(fulltextNodeBriefOutput(2L), fulltextRelBriefOutput(3L), btreeBriefOutput(1L)))
+    result.toList should be(List(defaultFulltextNodeBriefOutput(2L), defaultFulltextRelBriefOutput(3L), defaultBtreeBriefOutput(1L)))
   }
 
   test("show btree indexes should show only btree indexes") {
     // GIVEN
-    createBtreeIndex()
-    createFullTextNodeIndex()
-    createFullTextRelIndex()
+    createDefaultIndexes()
     graph.awaitIndexesOnline()
 
     // WHEN
     val result = executeSingle("SHOW BTREE INDEXES")
 
     // THEN
-    result.toList should be(List(btreeBriefOutput(1L)))
+    result.toList should be(List(defaultBtreeBriefOutput(1L)))
   }
 
   test("should show btree index with verbose output") {
     // GIVEN
-    createBtreeIndex()
+    createDefaultBtreeIndex()
     graph.awaitIndexesOnline()
 
     // WHEN
@@ -176,13 +171,13 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     val options: List[Object] = result.columnAs("options").toList
     options.foreach(option => assertCorrectOptionsMap(option, defaultBtreeOptionsMap))
-    withoutColumns(result.toList, List("options")) should equal(List(btreeVerboseOutput(1L)))
+    withoutColumns(result.toList, List("options")) should equal(List(defaultBtreeVerboseOutput(1L)))
   }
 
   test("should show fulltext indexes with verbose output") {
     // GIVEN
-    createFullTextNodeIndex()
-    createFullTextRelIndex()
+    createDefaultFullTextNodeIndex()
+    createDefaultFullTextRelIndex()
     graph.awaitIndexesOnline()
 
     // WHEN
@@ -191,13 +186,13 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // THEN
     val options: List[Object] = result.columnAs("options").toList
     options.foreach(option => assertCorrectOptionsMap(option, defaultFulltextOptionsMap))
-    withoutColumns(result.toList, List("options")) should equal(List(fulltextNodeVerboseOutput(1L), fulltextRelVerboseOutput(2L)))
+    withoutColumns(result.toList, List("options")) should equal(List(defaultFulltextNodeVerboseOutput(1L), defaultFulltextRelVerboseOutput(2L)))
   }
 
   test("should show indexes backing constraints with verbose output") {
     // GIVEN
-    createUniquenessConstraint()
-    createNodeKeyConstraint()
+    createDefaultUniquenessConstraint()
+    createDefaultNodeKeyConstraint()
     graph.awaitIndexesOnline()
 
     // WHEN
@@ -206,7 +201,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // THEN
     val options: List[Object] = result.columnAs("options").toList
     options.foreach(option => assertCorrectOptionsMap(option, defaultBtreeOptionsMap))
-    withoutColumns(result.toList, List("options")) should equal(List(uniquenessVerboseOutput(1L), nodeKeyVerboseOutput(3L)))
+    withoutColumns(result.toList, List("options")) should equal(List(defaultUniquenessVerboseOutput(1L), defaultNodeKeyVerboseOutput(3L)))
   }
 
   test("show indexes should show valid create index statements") {
@@ -257,19 +252,13 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     verifyCanDropAndRecreateIndexesUsingCreateStatement("CONSTRAINT")
   }
 
-  // Setup methods for indexes and constraints used in multiple tests
+  // general index help methods
 
-  private def createBtreeIndex(): Unit = graph.createIndexWithName("my_index", "Person", "name", "age")
-
-  private def createFullTextNodeIndex(): Unit = executeSingle("CALL db.index.fulltext.createNodeIndex('fulltext_node', ['Label'], ['prop'])")
-
-  private def createFullTextRelIndex(): Unit = executeSingle("CALL db.index.fulltext.createRelationshipIndex('fulltext_rel', ['Type'], ['prop'])")
-
-  private def createUniquenessConstraint(): Unit = graph.createUniqueConstraintWithName("constraint1", "Label", "property")
-
-  private def createNodeKeyConstraint(): Unit = graph.createNodeKeyConstraintWithName("constraint2", "Label2", "property2")
-
-  // General methods
+  private def createDefaultIndexes(): Unit = {
+    createDefaultBtreeIndex()
+    createDefaultFullTextNodeIndex()
+    createDefaultFullTextRelIndex()
+  }
 
   private def indexOutputBrief(id: Long, name: String, uniqueness: String, indexType: String, entityType: String,
                                labelsOrTypes: List[String], properties: List[String], indexProvider: String): Map[String, Any] =
@@ -285,6 +274,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
       "indexProvider" -> indexProvider)
 
   // options cannot be handled by the normal CypherComparisonSupport assertions due to returning maps and arrays, so it is not included here
+
   private def indexOutputVerbose(createStatement: String): Map[String, Any] = Map("failureMessage" -> "", "createStatement" -> createStatement)
 
   private def withoutColumns(result: List[Map[String, Any]], columns: List[String]): List[Map[String, Any]] = {
@@ -302,10 +292,13 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     executeSingle(s"CREATE INDEX $escapedName FOR (n:$escapedLabel) ON ($escapedProperties) OPTIONS ${randomBtreeOptions()}")
   }
 
-  private def btreeBriefOutput(id: Long): Map[String, Any] =
+  private def createDefaultBtreeIndex(): Unit = graph.createIndexWithName("my_index", "Person", "name", "age")
+
+  private def defaultBtreeBriefOutput(id: Long): Map[String, Any] =
     indexOutputBrief(id, "my_index", "NONUNIQUE", "BTREE", "NODE", List("Person"), List("age", "name"), "native-btree-1.0")
 
-  private def btreeVerboseOutput(id: Long): Map[String, Any] = btreeBriefOutput(id) ++
+
+  private def defaultBtreeVerboseOutput(id: Long): Map[String, Any] = defaultBtreeBriefOutput(id) ++
     indexOutputVerbose(s"CREATE INDEX `my_index` FOR (n:`Person`) ON (n.`age`, n.`name`) OPTIONS $defaultBtreeOptionsString")
 
   // Btree index backing constraint help methods
@@ -317,17 +310,21 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     executeSingle(s"CREATE CONSTRAINT $escapedName ON (n:$escapedLabel) ASSERT (n.$escapedProperty) IS $constraintType OPTIONS ${randomBtreeOptions()}")
   }
 
-  private def uniquenessBriefOutput(id: Long): Map[String, Any] =
-    indexOutputBrief(id, "constraint1", "UNIQUE", "BTREE", "NODE", List("Label"), List("property"), "native-btree-1.0")
+  private def createDefaultUniquenessConstraint(): Unit = graph.createUniqueConstraintWithName("constraint1", label, prop)
 
-  private def uniquenessVerboseOutput(id: Long): Map[String, Any] = uniquenessBriefOutput(id) ++
-    indexOutputVerbose(s"CREATE CONSTRAINT `constraint1` ON (n:`Label`) ASSERT (n.`property`) IS UNIQUE OPTIONS $defaultBtreeOptionsString")
+  private def defaultUniquenessBriefOutput(id: Long): Map[String, Any] =
+    indexOutputBrief(id, "constraint1", "UNIQUE", "BTREE", "NODE", List(label), List(prop), "native-btree-1.0")
 
-  private def nodeKeyBriefOutput(id: Long): Map[String, Any] =
-    indexOutputBrief(id, "constraint2", "UNIQUE", "BTREE", "NODE", List("Label2"), List("property2"), "native-btree-1.0")
+  private def defaultUniquenessVerboseOutput(id: Long): Map[String, Any] = defaultUniquenessBriefOutput(id) ++
+    indexOutputVerbose(s"CREATE CONSTRAINT `constraint1` ON (n:`$label`) ASSERT (n.`$prop`) IS UNIQUE OPTIONS $defaultBtreeOptionsString")
 
-  private def nodeKeyVerboseOutput(id: Long): Map[String, Any] = nodeKeyBriefOutput(id) ++
-    indexOutputVerbose(s"CREATE CONSTRAINT `constraint2` ON (n:`Label2`) ASSERT (n.`property2`) IS NODE KEY OPTIONS $defaultBtreeOptionsString")
+  private def createDefaultNodeKeyConstraint(): Unit = graph.createNodeKeyConstraintWithName("constraint2", label2, prop2)
+
+  private def defaultNodeKeyBriefOutput(id: Long): Map[String, Any] =
+    indexOutputBrief(id, "constraint2", "UNIQUE", "BTREE", "NODE", List(label2), List(prop2), "native-btree-1.0")
+
+  private def defaultNodeKeyVerboseOutput(id: Long): Map[String, Any] = defaultNodeKeyBriefOutput(id) ++
+    indexOutputVerbose(s"CREATE CONSTRAINT `constraint2` ON (n:`$label2`) ASSERT (n.`$prop2`) IS NODE KEY OPTIONS $defaultBtreeOptionsString")
 
   // Fulltext index help methods
 
@@ -337,11 +334,13 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     executeSingle(s"CALL db.index.fulltext.createNodeIndex('$name', [$labels], [$properties], ${randomFulltextSetting()})")
   }
 
-  private def fulltextNodeBriefOutput(id: Long): Map[String, Any] =
-    indexOutputBrief(id, "fulltext_node", "NONUNIQUE", "FULLTEXT", "NODE", List("Label"), List("prop"), "fulltext-1.0")
+  private def createDefaultFullTextNodeIndex(): Unit = executeSingle(s"CALL db.index.fulltext.createNodeIndex('fulltext_node', ['$label'], ['$prop'])")
 
-  private def fulltextNodeVerboseOutput(id: Long): Map[String, Any] = fulltextNodeBriefOutput(id) ++
-    indexOutputVerbose(s"CALL db.index.fulltext.createNodeIndex('fulltext_node', ['Label'], ['prop'], $defaultFulltextConfigString)")
+  private def defaultFulltextNodeBriefOutput(id: Long): Map[String, Any] =
+    indexOutputBrief(id, "fulltext_node", "NONUNIQUE", "FULLTEXT", "NODE", List(label), List(prop), "fulltext-1.0")
+
+  private def defaultFulltextNodeVerboseOutput(id: Long): Map[String, Any] = defaultFulltextNodeBriefOutput(id) ++
+    indexOutputVerbose(s"CALL db.index.fulltext.createNodeIndex('fulltext_node', ['$label'], ['$prop'], $defaultFulltextConfigString)")
 
   private def createFulltextRelIndexWithRandomOptions(name: String, labelList: List[String], propertyList: List[String]): Unit = {
     val labels: String = labelList.map(l => s"'$l'").mkString(",")
@@ -349,11 +348,13 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     executeSingle(s"CALL db.index.fulltext.createRelationshipIndex('$name', [$labels], [$properties], ${randomFulltextSetting()})")
   }
 
-  private def fulltextRelBriefOutput(id: Long): Map[String, Any] =
-    indexOutputBrief(id, "fulltext_rel", "NONUNIQUE", "FULLTEXT", "RELATIONSHIP", List("Type"), List("prop"), "fulltext-1.0")
+  private def createDefaultFullTextRelIndex(): Unit = executeSingle(s"CALL db.index.fulltext.createRelationshipIndex('fulltext_rel', ['$relType'], ['$prop'])")
 
-  private def fulltextRelVerboseOutput(id: Long): Map[String, Any] = fulltextRelBriefOutput(id) ++
-    indexOutputVerbose(s"CALL db.index.fulltext.createRelationshipIndex('fulltext_rel', ['Type'], ['prop'], $defaultFulltextConfigString)")
+  private def defaultFulltextRelBriefOutput(id: Long): Map[String, Any] =
+    indexOutputBrief(id, "fulltext_rel", "NONUNIQUE", "FULLTEXT", "RELATIONSHIP", List(relType), List(prop), "fulltext-1.0")
+
+  private def defaultFulltextRelVerboseOutput(id: Long): Map[String, Any] = defaultFulltextRelBriefOutput(id) ++
+    indexOutputVerbose(s"CALL db.index.fulltext.createRelationshipIndex('fulltext_rel', ['$relType'], ['$prop'], $defaultFulltextConfigString)")
 
   // Create statements help methods
 
@@ -411,7 +412,11 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   }
 
   private def randomBtreeOptions(): String = {
-    s"{indexConfig: {${randomBtreeSetting()}}, indexProvider: 'native-btree-1.0'}"
+    s"{indexConfig: {${randomBtreeSetting()}}, indexProvider: '${randomBtreeProvider()}'}"
+  }
+
+  private def randomBtreeProvider(): String = {
+    randomValues.among(Array("native-btree-1.0", "lucene+native-3.0"))
   }
 
   private def randomBtreeSetting(): String = {
