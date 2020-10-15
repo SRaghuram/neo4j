@@ -7,9 +7,12 @@ package com.neo4j.dbms.database;
 
 import java.util.Optional;
 
+import org.neo4j.dbms.database.DbmsRuntimeRepository;
+import org.neo4j.dbms.database.TransactionLogVersionProviderImpl;
 import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.io.fs.WritableChecksumChannel;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DbmsLogEntryWriterFactory;
 import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
@@ -46,7 +49,10 @@ public class DbmsLogEntryWriterProvider
         try
         {
             return Optional.ofNullable( database )
-                           .map( db -> db.getDependencyResolver().resolveDependency( LogEntryWriterFactory.class ) );
+                           .map( db -> {
+                               DbmsRuntimeRepository dbmsRuntimeRepository = db.getDependencyResolver().resolveDependency( DbmsRuntimeRepository.class );
+                               return new DbmsLogEntryWriterFactory( new TransactionLogVersionProviderImpl( dbmsRuntimeRepository ) );
+                           } );
         }
         catch ( UnsatisfiedDependencyException e )
         {

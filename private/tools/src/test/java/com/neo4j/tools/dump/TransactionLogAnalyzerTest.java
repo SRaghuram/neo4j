@@ -35,6 +35,7 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryInlinedCheckPoint;
+import org.neo4j.kernel.impl.transaction.log.entry.LogEntryParserSetVersion;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
 import org.neo4j.kernel.impl.transaction.log.files.LogFile;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
@@ -91,6 +92,7 @@ class TransactionLogAnalyzerTest
                 .withRotationThreshold( ByteUnit.mebiBytes( 1 ) )
                 .withStoreId( StoreId.UNKNOWN )
                 .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
+                .withTransactionLogVersionProvider( () -> LogEntryParserSetVersion.LogEntryV4_0 )
                 .build();
         life.add( logFiles );
         logFile = logFiles.getLogFile();
