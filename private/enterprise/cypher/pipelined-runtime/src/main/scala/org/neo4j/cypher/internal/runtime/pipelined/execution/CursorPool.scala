@@ -22,59 +22,77 @@ import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.RelationshipTypeIndexCursor
 import org.neo4j.io.IOUtils
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
+import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 
 class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTracer, memoryTracker: MemoryTracker) extends CursorFactory with AutoCloseable {
 
-  val nodeCursorPool: CursorPool[NodeCursor] = CursorPool[NodeCursor](
-    () => cursorFactory.allocateNodeCursor(pageCursorTracer))
-  val relationshipTraversalCursorPool: CursorPool[RelationshipTraversalCursor] = CursorPool[RelationshipTraversalCursor](
-    () => cursorFactory.allocateRelationshipTraversalCursor(pageCursorTracer))
-  val relationshipScanCursorPool: CursorPool[RelationshipScanCursor] = CursorPool[RelationshipScanCursor](
-    () => cursorFactory.allocateRelationshipScanCursor(pageCursorTracer))
-  val nodeValueIndexCursorPool: CursorPool[NodeValueIndexCursor] = CursorPool[NodeValueIndexCursor](
-    () => cursorFactory.allocateNodeValueIndexCursor(pageCursorTracer, memoryTracker))
-  val nodeLabelIndexCursorPool: CursorPool[NodeLabelIndexCursor] = CursorPool[NodeLabelIndexCursor](
-    () => cursorFactory.allocateNodeLabelIndexCursor(pageCursorTracer))
-  val propertyCursorPool: CursorPool[PropertyCursor] = CursorPool[PropertyCursor](
-    () => cursorFactory.allocatePropertyCursor(pageCursorTracer, memoryTracker))
+  private[this] val scopedMemoryTracker = memoryTracker.getScopedMemoryTracker
+
+  // Allocate all known cursor pools up-front to avoid having to null-check on each allocate call.
+  // The sizes are fairly small, so this is not expected to be a problem.
+  // But if this is demonstrated to affect query setup time too much, we could switch to lazy initialization,
+  // or even better, let the compiler tell us which pools will be needed and how big they need to be.
+  private[this] val _nodeCursorPool: CursorPool[NodeCursor] = CursorPool[NodeCursor](
+    () => cursorFactory.allocateNodeCursor(pageCursorTracer), scopedMemoryTracker)
+  private[this] val _relationshipTraversalCursorPool: CursorPool[RelationshipTraversalCursor] = CursorPool[RelationshipTraversalCursor](
+    () => cursorFactory.allocateRelationshipTraversalCursor(pageCursorTracer), scopedMemoryTracker)
+  private[this] val _relationshipScanCursorPool: CursorPool[RelationshipScanCursor] = CursorPool[RelationshipScanCursor](
+    () => cursorFactory.allocateRelationshipScanCursor(pageCursorTracer), scopedMemoryTracker)
+  private[this] val _nodeValueIndexCursorPool: CursorPool[NodeValueIndexCursor] = CursorPool[NodeValueIndexCursor](
+    () => cursorFactory.allocateNodeValueIndexCursor(pageCursorTracer, memoryTracker), scopedMemoryTracker)
+  private[this] val _nodeLabelIndexCursorPool: CursorPool[NodeLabelIndexCursor] = CursorPool[NodeLabelIndexCursor](
+    () => cursorFactory.allocateNodeLabelIndexCursor(pageCursorTracer), scopedMemoryTracker)
+  private[this] val _propertyCursorPool: CursorPool[PropertyCursor] = CursorPool[PropertyCursor](
+    () => cursorFactory.allocatePropertyCursor(pageCursorTracer, memoryTracker), scopedMemoryTracker)
+
+  //---------------------
+  // Accessors
+  def nodeCursorPool: CursorPool[NodeCursor] = _nodeCursorPool
+  def relationshipTraversalCursorPool: CursorPool[RelationshipTraversalCursor] = _relationshipTraversalCursorPool
+  def relationshipScanCursorPool: CursorPool[RelationshipScanCursor] = _relationshipScanCursorPool
+  def nodeValueIndexCursorPool: CursorPool[NodeValueIndexCursor] = _nodeValueIndexCursorPool
+  def nodeLabelIndexCursorPool: CursorPool[NodeLabelIndexCursor] = _nodeLabelIndexCursorPool
+  def propertyCursorPool: CursorPool[PropertyCursor] = _propertyCursorPool
+  //---------------------
 
   def setKernelTracer(tracer: KernelReadTracer): Unit = {
-    nodeCursorPool.setKernelTracer(tracer)
-    relationshipTraversalCursorPool.setKernelTracer(tracer)
-    relationshipScanCursorPool.setKernelTracer(tracer)
-    nodeValueIndexCursorPool.setKernelTracer(tracer)
-    nodeLabelIndexCursorPool.setKernelTracer(tracer)
-    propertyCursorPool.setKernelTracer(tracer)
+    _nodeCursorPool.setKernelTracer(tracer)
+    _relationshipTraversalCursorPool.setKernelTracer(tracer)
+    _relationshipScanCursorPool.setKernelTracer(tracer)
+    _nodeValueIndexCursorPool.setKernelTracer(tracer)
+    _nodeLabelIndexCursorPool.setKernelTracer(tracer)
+    _propertyCursorPool.setKernelTracer(tracer)
   }
 
   override def close(): Unit = {
-    IOUtils.closeAll(nodeCursorPool,
-      relationshipTraversalCursorPool,
-      relationshipScanCursorPool,
-      nodeValueIndexCursorPool,
-      nodeLabelIndexCursorPool,
-      propertyCursorPool)
+    IOUtils.closeAll(_nodeCursorPool,
+      _relationshipTraversalCursorPool,
+      _relationshipScanCursorPool,
+      _nodeValueIndexCursorPool,
+      _nodeLabelIndexCursorPool,
+      _propertyCursorPool)
+    scopedMemoryTracker.close()
   }
 
   def collectLiveCounts(liveCounts: LiveCounts): Unit = {
-    liveCounts.nodeCursorPool += nodeCursorPool.getLiveCount
-    liveCounts.relationshipTraversalCursorPool += relationshipTraversalCursorPool.getLiveCount
-    liveCounts.relationshipScanCursorPool += relationshipScanCursorPool.getLiveCount
-    liveCounts.nodeValueIndexCursorPool += nodeValueIndexCursorPool.getLiveCount
-    liveCounts.nodeLabelIndexCursorPool += nodeLabelIndexCursorPool.getLiveCount
-    liveCounts.propertyCursorPool += propertyCursorPool.getLiveCount
+    liveCounts.nodeCursorPool += _nodeCursorPool.getLiveCount
+    liveCounts.relationshipTraversalCursorPool += _relationshipTraversalCursorPool.getLiveCount
+    liveCounts.relationshipScanCursorPool += _relationshipScanCursorPool.getLiveCount
+    liveCounts.nodeValueIndexCursorPool += _nodeValueIndexCursorPool.getLiveCount
+    liveCounts.nodeLabelIndexCursorPool += _nodeLabelIndexCursorPool.getLiveCount
+    liveCounts.propertyCursorPool += _propertyCursorPool.getLiveCount
   }
 
-  override def allocateNodeCursor(cursorTracer: PageCursorTracer): NodeCursor = nodeCursorPool.allocate()
+  override def allocateNodeCursor(cursorTracer: PageCursorTracer): NodeCursor = _nodeCursorPool.allocate()
 
   override def allocateFullAccessNodeCursor(cursorTracer: PageCursorTracer): NodeCursor = fail("FullAccessNodeCursor")
 
-  override def allocateRelationshipScanCursor(cursorTracer: PageCursorTracer): RelationshipScanCursor = relationshipScanCursorPool.allocate()
+  override def allocateRelationshipScanCursor(cursorTracer: PageCursorTracer): RelationshipScanCursor = _relationshipScanCursorPool.allocate()
 
   override def allocateFullAccessRelationshipScanCursor(cursorTracer: PageCursorTracer): RelationshipScanCursor = fail("FullAccessRelationshipScanCursor")
 
-  override def allocateRelationshipTraversalCursor(cursorTracer: PageCursorTracer): RelationshipTraversalCursor = relationshipTraversalCursorPool.allocate()
+  override def allocateRelationshipTraversalCursor(cursorTracer: PageCursorTracer): RelationshipTraversalCursor = _relationshipTraversalCursorPool.allocate()
 
   override def allocateFullAccessRelationshipTraversalCursor(cursorTracer: PageCursorTracer): RelationshipTraversalCursor = fail("FullAccessRelationshipTraversalCursor")
 
@@ -82,11 +100,11 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
 
   override def allocateFullAccessPropertyCursor(cursorTracer: PageCursorTracer, memoryTracker: MemoryTracker): PropertyCursor = fail("FullAccessPropertyCursor")
 
-  override def allocateNodeValueIndexCursor(cursorTracer: PageCursorTracer, memoryTracker: MemoryTracker): NodeValueIndexCursor = nodeValueIndexCursorPool.allocate()
+  override def allocateNodeValueIndexCursor(cursorTracer: PageCursorTracer, memoryTracker: MemoryTracker): NodeValueIndexCursor = _nodeValueIndexCursorPool.allocate()
 
   override def allocateFullAccessNodeValueIndexCursor(cursorTracer: PageCursorTracer, memoryTracker: MemoryTracker): NodeValueIndexCursor = fail("FullAccessNodeValueIndexCursor")
 
-  override def allocateNodeLabelIndexCursor(cursorTracer: PageCursorTracer): NodeLabelIndexCursor = nodeLabelIndexCursorPool.allocate()
+  override def allocateNodeLabelIndexCursor(cursorTracer: PageCursorTracer): NodeLabelIndexCursor = _nodeLabelIndexCursorPool.allocate()
 
   override def allocateFullAccessNodeLabelIndexCursor(cursorTracer: PageCursorTracer): NodeLabelIndexCursor = fail("FullAccessNodeLabelIndexCursor")
 
@@ -259,10 +277,16 @@ class BoundedArrayCursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR, priv
 
 object CursorPool {
 
-  def apply[CURSOR <: Cursor](cursorFactory: () => CURSOR): CursorPool[CURSOR] =
+  private final val DEFAULT_POOL_SIZE = 128
+  private final val TRACKING_POOL_SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[TrackingBoundedArrayCursorPool[_]])
+  private final val POOL_SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[BoundedArrayCursorPool[_]])
+
+  def apply[CURSOR <: Cursor](cursorFactory: () => CURSOR, memoryTracker: MemoryTracker): CursorPool[CURSOR] =
     if (AssertionRunner.ASSERTIONS_ENABLED) {
-      new TrackingBoundedArrayCursorPool[CURSOR](cursorFactory)
+      memoryTracker.allocateHeap(TRACKING_POOL_SHALLOW_SIZE + HeapEstimator.shallowSizeOfObjectArray(DEFAULT_POOL_SIZE))
+      new TrackingBoundedArrayCursorPool[CURSOR](cursorFactory, DEFAULT_POOL_SIZE)
     } else {
-      new BoundedArrayCursorPool(cursorFactory)
+      memoryTracker.allocateHeap(POOL_SHALLOW_SIZE + HeapEstimator.shallowSizeOfObjectArray(DEFAULT_POOL_SIZE))
+      new BoundedArrayCursorPool(cursorFactory, DEFAULT_POOL_SIZE)
     }
 }
