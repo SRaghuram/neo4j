@@ -237,7 +237,7 @@ class VoidProcedureOperatorTemplate(val inner: OperatorTaskTemplate,
 
   override def genExpressions: Seq[IntermediateExpression] = argExpression
 
-  override def genOperate: IntermediateRepresentation = {
+  override def genOperate(profile: Boolean): IntermediateRepresentation = {
     if (argExpression == null) {
       argExpression = callArgumentsGenerator.map(_ ()).toArray
     }
@@ -249,8 +249,8 @@ class VoidProcedureOperatorTemplate(val inner: OperatorTaskTemplate,
      */
     block(
       callProcedureWithSideEffect(callModeField, signature, originalVariablesField, argExpression),
-      profileRow(id),
-      inner.genOperateWithExpressions
+      profileRow(id, profile),
+      inner.genOperateWithExpressions(profile)
     )
   }
 
@@ -306,7 +306,7 @@ class ProcedureOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genExpressions: Seq[IntermediateExpression] = argExpression
 
-  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+  override protected def genInitializeInnerLoop(profile: Boolean): IntermediateRepresentation = {
     if (argExpression == null) {
       argExpression = callArgumentsGenerator.map(_ ()).toArray
     }
@@ -327,7 +327,7 @@ class ProcedureOperatorTaskTemplate(inner: OperatorTaskTemplate,
       setField(canContinue, invoke(loadField(iteratorField), method[Iterator[_], Boolean]("hasNext"))),
       condition(loadField(canContinue)) {
         block(
-          profileRow(id),
+          profileRow(id, profile),
           setField(nextVar, cast[Array[AnyValue]](invoke(loadField(iteratorField), method[Iterator[_], Object]("next"))))
         )
       },
@@ -335,7 +335,7 @@ class ProcedureOperatorTaskTemplate(inner: OperatorTaskTemplate,
     )
   }
 
-  override protected def genInnerLoop: IntermediateRepresentation = {
+  override protected def genInnerLoop(profile: Boolean): IntermediateRepresentation = {
     /**
      * {{{
      *   while (hasDemand && this.canContinue) {
@@ -359,13 +359,13 @@ class ProcedureOperatorTaskTemplate(inner: OperatorTaskTemplate,
           block(indexToOffset.map {
             case (index, offset) => codeGen.setRefAt(offset, arrayLoad(loadField(nextVar), index))
           }: _*),
-          inner.genOperateWithExpressions,
+          inner.genOperateWithExpressions(profile),
           doIfInnerCantContinue(
             block(
               innermost.setUnlessPastLimit(canContinue, invoke(loadField(iteratorField), method[Iterator[_], Boolean]("hasNext"))),
               condition(loadField(canContinue)) {
                 block(
-                  profileRow(id),
+                  profileRow(id, profile),
                   setField(nextVar, cast[Array[AnyValue]](invoke(loadField(iteratorField), method[Iterator[_], Object]("next"))))
                 )
               }),

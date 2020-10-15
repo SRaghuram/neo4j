@@ -302,7 +302,8 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       testSetup.leveragedOrders,
       hasLoadCSV = false,
       Option.empty,
-      Plans.IdGen)
+      Plans.IdGen,
+      doProfile = false)
   }
 
   private def txContext(tx: InternalTransaction): TransactionalContext = {

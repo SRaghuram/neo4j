@@ -234,14 +234,14 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
    *    true
    * }}}
    */
-  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+  override protected def genInitializeInnerLoop(profile: Boolean): IntermediateRepresentation = {
     val fromNode = codeGen.namer.nextVariableName("fromNode")
     block(
       declareAndAssign(typeRefOf[Long], fromNode, getNodeIdFromSlot(fromSlot, codeGen)),
       setField(hasWritten, constant(false)),
       ifElse(notEqual(load(fromNode), constant(-1L))) {
         block(
-          setUpCursors(fromNode, canBeNull = true),
+          setUpCursors(fromNode, canBeNull = true, profile),
           setField(canContinue, cursorNext[RelationshipTraversalCursor](loadField(relationshipsField)))
         )
       }{//else
@@ -273,14 +273,14 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
    *   }
    *}}}
    */
-  override protected def genInnerLoop: IntermediateRepresentation = {
+  override protected def genInnerLoop(profile: Boolean): IntermediateRepresentation = {
     def doIfPredicateOrElse(onPredicate: => IntermediateRepresentation)(orElse: => IntermediateRepresentation): IntermediateRepresentation =
       if (generatePredicate.isEmpty) orElse else onPredicate
     def doIfPredicate(ir: => IntermediateRepresentation): IntermediateRepresentation = doIfPredicateOrElse(ir)(noop())
     def innerBlock: IntermediateRepresentation = block(
       setField(hasWritten, constant(true)),
-      inner.genOperateWithExpressions,
-      conditionallyProfileRow(innerCannotContinue, id)
+      inner.genOperateWithExpressions(profile),
+      conditionallyProfileRow(innerCannotContinue, id, profile)
     )
 
     val shouldWriteRow = codeGen.namer.nextVariableName()

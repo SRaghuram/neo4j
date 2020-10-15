@@ -515,11 +515,11 @@ object OperatorCodeGenHelperTemplates {
   def singleRelationship(relationship: IntermediateRepresentation, cursor: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(loadField(DATA_READ), method[Read, Unit, Long, RelationshipScanCursor]("singleRelationship"), relationship, cursor)
 
-  def allocateAndTraceCursor(cursorField: InstanceField, executionEventField: InstanceField, allocate: IntermediateRepresentation): IntermediateRepresentation =
+  def allocateAndTraceCursor(cursorField: InstanceField, executionEventField: InstanceField, allocate: IntermediateRepresentation, profile: Boolean): IntermediateRepresentation =
     condition(isNull(loadField(cursorField)))(
       block(
         setField(cursorField, allocate),
-        invokeSideEffect(loadField(cursorField), SET_TRACER, loadField(executionEventField))
+        if (profile) invokeSideEffect(loadField(cursorField), SET_TRACER, loadField(executionEventField)) else noop()
       ))
 
   def freeCursor[CURSOR](cursor: IntermediateRepresentation, cursorPools: CursorPoolsType)(implicit out: Manifest[CURSOR]): IntermediateRepresentation =
@@ -537,7 +537,7 @@ object OperatorCodeGenHelperTemplates {
   // Profiling
 
   private def event(id: Id) = loadField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x))
-  def profilingCursorNext[CURSOR](cursor: IntermediateRepresentation, id: Id)(implicit out: Manifest[CURSOR]): IntermediateRepresentation = {
+  def profilingCursorNext[CURSOR](cursor: IntermediateRepresentation, id: Id, profile: Boolean)(implicit out: Manifest[CURSOR]): IntermediateRepresentation = {
     /**
      * {{{
      *   val tmp = cursor.next()
@@ -545,29 +545,37 @@ object OperatorCodeGenHelperTemplates {
      *   tmp
      * }}}
      */
-    val hasNext = "tmp_" + id.x
-    block(
-      declareAndAssign(typeRefOf[Boolean], hasNext, invoke(cursor, method[CURSOR, Boolean]("next"))),
-      condition(isNotNull(event(id))) {
-        invokeSideEffect(event(id),
-          method[OperatorProfileEvent, Unit, Boolean]("row"), load(hasNext))
-      },
-      load(hasNext)
-    )
-  }
-  def profileRow(id: Id): IntermediateRepresentation = {
-    condition(isNotNull(event(id)))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit]("row")))
-  }
-
-  def conditionallyProfileRow(predicate: IntermediateRepresentation, id: Id): IntermediateRepresentation = {
-    condition(and(isNotNull(event(id)), predicate))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit]("row")))
+      if (profile) {
+        val hasNext = "tmp_" + id.x
+        block(
+          declareAndAssign(typeRefOf[Boolean], hasNext, invoke(cursor, method[CURSOR, Boolean]("next"))),
+          condition(isNotNull(event(id))) {
+            invokeSideEffect(event(id),
+              method[OperatorProfileEvent, Unit, Boolean]("row"), load(hasNext))
+          },
+          load(hasNext)
+        )
+      } else {
+        invoke(cursor, method[CURSOR, Boolean]("next"))
+      }
   }
 
-  def profileRow(id: Id, hasRow: IntermediateRepresentation): IntermediateRepresentation = {
-    condition(isNotNull(event(id)))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit, Boolean]("row"), hasRow))
+  def profileRow(id: Id, profile: Boolean): IntermediateRepresentation = {
+    if (profile) condition(isNotNull(event(id)))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit]("row")))
+    else noop()
   }
 
-  def profileRows(id: Id, nRows: IntermediateRepresentation): IntermediateRepresentation = {
+  def conditionallyProfileRow(predicate: IntermediateRepresentation, id: Id, profile: Boolean): IntermediateRepresentation = {
+    if (profile) condition(and(isNotNull(event(id)), predicate))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit]("row")))
+    else noop()
+  }
+
+  def profileRow(id: Id, hasRow: IntermediateRepresentation, profile: Boolean): IntermediateRepresentation = {
+    if (profile) condition(isNotNull(event(id)))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit, Boolean]("row"), hasRow))
+    else noop()
+  }
+
+  def profileRows(id: Id, nRows: IntermediateRepresentation, profile: Boolean): IntermediateRepresentation = {
     condition(isNotNull(event(id)))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit, Long]("rows"),
       nRows))
   }

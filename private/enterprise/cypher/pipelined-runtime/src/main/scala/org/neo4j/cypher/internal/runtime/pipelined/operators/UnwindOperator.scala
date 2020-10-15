@@ -114,7 +114,7 @@ class UnwindOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genExpressions: Seq[IntermediateExpression] = Seq(listExpression)
 
-  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+  override protected def genInitializeInnerLoop(profile: Boolean): IntermediateRepresentation = {
     if (listExpression == null) {
       listExpression = codeGen.compileExpression(rawListExpression, id).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $rawListExpression"))
     }
@@ -133,12 +133,12 @@ class UnwindOperatorTaskTemplate(inner: OperatorTaskTemplate,
             invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"),
               nullCheckIfRequired(listExpression)),
             method[ListValue, java.util.Iterator[AnyValue]]("iterator")))),
-      setField(canContinue, profilingCursorNext[IteratorCursor](loadField(cursorField), id)),
+      setField(canContinue, profilingCursorNext[IteratorCursor](loadField(cursorField), id, profile)),
       constant(true)
     )
   }
 
-  override protected def genInnerLoop: IntermediateRepresentation = {
+  override protected def genInnerLoop(profile: Boolean): IntermediateRepresentation = {
     /**
      * {{{
      *   while (hasDemand && this.canContinue) {
@@ -155,8 +155,8 @@ class UnwindOperatorTaskTemplate(inner: OperatorTaskTemplate,
             codeGen.inputSlotConfiguration.numberOfReferences),
           codeGen.setRefAt(offset,
             invoke(loadField(cursorField), method[IteratorCursor, AnyValue]("value"))),
-          inner.genOperateWithExpressions,
-          doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, profilingCursorNext[IteratorCursor](loadField(cursorField), id))),
+          inner.genOperateWithExpressions(profile),
+          doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, profilingCursorNext[IteratorCursor](loadField(cursorField), id, profile))),
           endInnerLoop
         )
       )

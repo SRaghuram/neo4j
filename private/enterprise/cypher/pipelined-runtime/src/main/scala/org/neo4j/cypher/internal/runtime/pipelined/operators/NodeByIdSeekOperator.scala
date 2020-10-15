@@ -152,7 +152,7 @@ class SingleNodeByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genExpressions: Seq[IntermediateExpression] = Seq(nodeId)
 
-  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+  override protected def genInitializeInnerLoop(profile: Boolean): IntermediateRepresentation = {
     if (nodeId == null) {
       nodeId = codeGen.compileExpression(nodeIdExpr, id).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $nodeIdExpr"))
     }
@@ -172,7 +172,7 @@ class SingleNodeByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
       constant(true))
   }
 
-  override protected def genInnerLoop: IntermediateRepresentation = {
+  override protected def genInnerLoop(profile: Boolean): IntermediateRepresentation = {
     /**
      * {{{
      *   while (hasDemand && this.canContinue) {
@@ -187,8 +187,8 @@ class SingleNodeByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
       block(
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, load(idVariable)),
-        inner.genOperateWithExpressions,
-        conditionallyProfileRow(innerCannotContinue, id),
+        inner.genOperateWithExpressions(profile),
+        conditionallyProfileRow(innerCannotContinue, id, profile),
         innermost.setUnlessPastLimit(canContinue, constant(false)),
         endInnerLoop),
     )
@@ -219,7 +219,7 @@ class ManyNodeByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = noop()
 
-  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+  override protected def genInitializeInnerLoop(profile: Boolean): IntermediateRepresentation = {
     if (nodeIds == null) {
       nodeIds = codeGen.compileExpression(nodeIdsExpr, id).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $nodeIdsExpr"))
     }
@@ -239,7 +239,7 @@ class ManyNodeByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
       constant(true))
   }
 
-  override protected def genInnerLoop: IntermediateRepresentation = {
+  override protected def genInnerLoop(profile: Boolean): IntermediateRepresentation = {
     val idVariable = codeGen.namer.nextVariableName()
     /**
      * {{{
@@ -265,8 +265,8 @@ class ManyNodeByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
           block(
             codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
             codeGen.setLongAt(offset, load(idVariable)),
-            inner.genOperateWithExpressions,
-            conditionallyProfileRow(innerCannotContinue, id)
+            inner.genOperateWithExpressions(profile),
+            conditionallyProfileRow(innerCannotContinue, id, profile)
           )),
         doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, cursorNext[IteratorCursor](loadField(idCursor)))),
         endInnerLoop)

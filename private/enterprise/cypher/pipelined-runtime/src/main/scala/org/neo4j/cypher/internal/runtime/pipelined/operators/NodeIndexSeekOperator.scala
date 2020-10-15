@@ -267,7 +267,7 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(override val inner: Operator
 
   override def genMoreFields: Seq[Field] = Seq(nodeIndexCursorField)
 
-  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+  override protected def genInitializeInnerLoop(profile: Boolean): IntermediateRepresentation = {
     val hasInnerLoopVar = codeGen.namer.nextVariableName()
     /**
      * {{{
@@ -289,15 +289,15 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(override val inner: Operator
       setField(canContinue, constant(false)),
       condition(load(hasInnerLoopVar))(
         block(
-          allocateAndTraceCursor(nodeIndexCursorField, executionEventField, ALLOCATE_NODE_INDEX_CURSOR),
+          allocateAndTraceCursor(nodeIndexCursorField, executionEventField, ALLOCATE_NODE_INDEX_CURSOR, profile),
           nodeIndexSeek(indexReadSession(queryIndexId), loadField(nodeIndexCursorField), predicate, order, needsValues),
-          setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id))
+          setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id, profile))
         )),
       load(hasInnerLoopVar)
     )
   }
 
-  override protected def genInnerLoop: IntermediateRepresentation = {
+  override protected def genInnerLoop(profile: Boolean): IntermediateRepresentation = {
     /**
      * {{{
      *   while (hasDemand && this.canContinue) {
@@ -314,8 +314,8 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(override val inner: Operator
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
         property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_, getPropertyValue)).getOrElse(noop()),
-        inner.genOperateWithExpressions,
-        doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id))),
+        inner.genOperateWithExpressions(profile),
+        doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id, profile))),
         endInnerLoop
       )
     )
@@ -448,7 +448,7 @@ abstract class BaseManyQueriesNodeIndexSeekTaskTemplate(override val inner: Oper
     method[CompositeValueIndexCursor, NodeValueIndexCursor, Array[NodeValueIndexCursor]](methodName)
   }
 
-  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+  override protected def genInitializeInnerLoop(profile: Boolean): IntermediateRepresentation = {
     /**
      * {{{
      *   this.cursorsToClose = createCursor(...)
@@ -460,11 +460,11 @@ abstract class BaseManyQueriesNodeIndexSeekTaskTemplate(override val inner: Oper
     block(
       setField(nodeCursorsToCloseField, createCursorArray),
       setField(nodeIndexCursorField, invokeStatic(getCursor, loadField(nodeCursorsToCloseField))),
-      setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id)),
+      setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id, profile)),
       constant(true))
   }
 
-  override protected def genInnerLoop: IntermediateRepresentation = {
+  override protected def genInnerLoop(profile: Boolean): IntermediateRepresentation = {
     /**
      * {{{
      *   while (hasDemand && this.canContinue) {
@@ -481,10 +481,10 @@ abstract class BaseManyQueriesNodeIndexSeekTaskTemplate(override val inner: Oper
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
         cacheProperties,
-        inner.genOperateWithExpressions,
+        inner.genOperateWithExpressions(profile),
         doIfInnerCantContinue(
           innermost.setUnlessPastLimit(canContinue,
-            profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id))
+            profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id, profile))
         ),
         endInnerLoop
       )

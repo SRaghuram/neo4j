@@ -219,7 +219,7 @@ class NodeIndexStringSearchScanTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genExpressions: Seq[IntermediateExpression] = Seq(seekExpression)
 
-  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+  override protected def genInitializeInnerLoop(profile: Boolean): IntermediateRepresentation = {
     if (seekExpression == null) {
       seekExpression = generateExpression()
     }
@@ -238,20 +238,20 @@ class NodeIndexStringSearchScanTaskTemplate(inner: OperatorTaskTemplate,
       setField(canContinue, constant(false)),
       condition(invokeStatic(isValidOrThrowMethod, load(seekVariable)))(
         block(
-          allocateAndTraceCursor(nodeIndexCursorField, executionEventField, ALLOCATE_NODE_INDEX_CURSOR),
+          allocateAndTraceCursor(nodeIndexCursorField, executionEventField, ALLOCATE_NODE_INDEX_CURSOR, profile),
           nodeIndexSeek(
             indexReadSession(queryIndexId),
             loadField(nodeIndexCursorField),
             searchPredicate(property.propertyKeyId,
               cast[TextValue](load(seekVariable))), indexOrder, needsValues),
-          setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id)),
+          setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id, profile)),
           assign(hasInnerLoop, loadField(canContinue))
         )
       ),
       load(hasInnerLoop))
   }
 
-  override protected def genInnerLoop: IntermediateRepresentation = {
+  override protected def genInnerLoop(profile: Boolean): IntermediateRepresentation = {
     /**
      * {{{
      *   while (hasDemand && this.canContinue) {
@@ -273,8 +273,8 @@ class NodeIndexStringSearchScanTaskTemplate(inner: OperatorTaskTemplate,
               method[NodeValueIndexCursor, Value, Int]("propertyValue"),
               constant(0) ))
         ).getOrElse(noop()),
-        inner.genOperateWithExpressions,
-        doIfInnerCantContinue(setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id)))
+        inner.genOperateWithExpressions(profile),
+        doIfInnerCantContinue(setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id, profile)))
       )
     )
   }

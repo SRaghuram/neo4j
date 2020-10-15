@@ -323,7 +323,7 @@ abstract class SingleRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTemplat
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V, idVariable)
 
-  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+  override protected def genInitializeInnerLoop(profile: Boolean): IntermediateRepresentation = {
     if (relationshipExpression == null) {
       relationshipExpression = codeGen.compileExpression(relIdExpr, id)
         .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $relIdExpr"))
@@ -339,7 +339,7 @@ abstract class SingleRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTemplat
      * }}}
      */
     block(
-      allocateAndTraceCursor(cursor, executionEventField, ALLOCATE_REL_SCAN_CURSOR),
+      allocateAndTraceCursor(cursor, executionEventField, ALLOCATE_REL_SCAN_CURSOR, profile),
       assign(idVariable, invokeStatic(asIdMethod, nullCheckIfRequired(relationshipExpression))),
       condition(greaterThanOrEqual(load(idVariable), constant(0L))) {
         singleRelationship(load(idVariable), loadField(cursor))
@@ -370,7 +370,7 @@ class SingleDirectedRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTemplate
 
   override def genMoreFields: Seq[Field] = Seq(cursor)
 
-  override protected def genInnerLoop: IntermediateRepresentation = {
+  override protected def genInnerLoop(profile: Boolean): IntermediateRepresentation = {
     /**
      * {{{
      *   while (hasDemand && this.canContinue) {
@@ -389,8 +389,8 @@ class SingleDirectedRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTemplate
         codeGen.setLongAt(relationshipOffset, load(idVariable)),
         codeGen.setLongAt(fromOffset, invoke(loadField(cursor), method[RelationshipScanCursor, Long]("sourceNodeReference"))),
         codeGen.setLongAt(toOffset, invoke(loadField(cursor), method[RelationshipScanCursor, Long]("targetNodeReference"))),
-        inner.genOperateWithExpressions,
-        conditionallyProfileRow(innerCannotContinue, id),
+        inner.genOperateWithExpressions(profile),
+        conditionallyProfileRow(innerCannotContinue, id, profile),
         innermost.setUnlessPastLimit(canContinue, constant(false)))
     )
   }
@@ -421,7 +421,7 @@ class SingleUndirectedRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTempla
 
   override def genMoreFields: Seq[Field] = Seq(cursor, forwardDirection)
 
-  override protected def genInnerLoop: IntermediateRepresentation = {
+  override protected def genInnerLoop(profile: Boolean): IntermediateRepresentation = {
     /**
      * {{{
      *   while (hasDemand && this.canContinue) {
@@ -462,10 +462,10 @@ class SingleUndirectedRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTempla
               invoke(loadField(cursor), method[RelationshipScanCursor, Long]("sourceNodeReference")))
           )
         },
-        inner.genOperateWithExpressions,
+        inner.genOperateWithExpressions(profile),
         doIfInnerCantContinue(
           block(
-            profileRow(id),
+            profileRow(id, profile),
             setField(forwardDirection, not(loadField(forwardDirection)))
           )
         ),
@@ -488,7 +488,7 @@ abstract class ManyRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
 
-  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+  override protected def genInitializeInnerLoop(profile: Boolean): IntermediateRepresentation = {
     if (relationshipExpression == null) {
       relationshipExpression = codeGen.compileExpression(relIdsExpr, id).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $relIdsExpr"))
     }
@@ -529,7 +529,7 @@ class ManyDirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genMoreFields: Seq[Field] = Seq(cursor, idCursor)
 
-  override protected def genInnerLoop: IntermediateRepresentation = {
+  override protected def genInnerLoop(profile: Boolean): IntermediateRepresentation = {
     val idVariable = codeGen.namer.nextVariableName()
 
     /**
@@ -563,8 +563,8 @@ class ManyDirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
             codeGen.setLongAt(relationshipOffset, load(idVariable)),
             codeGen.setLongAt(fromOffset, invoke(loadField(cursor), method[RelationshipScanCursor, Long]("sourceNodeReference"))),
             codeGen.setLongAt(toOffset, invoke(loadField(cursor), method[RelationshipScanCursor, Long]("targetNodeReference"))),
-            inner.genOperateWithExpressions,
-            conditionallyProfileRow(innerCannotContinue, id)
+            inner.genOperateWithExpressions(profile),
+            conditionallyProfileRow(innerCannotContinue, id, profile)
           )),
         doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, cursorNext[IteratorCursor](loadField(idCursor)))))
     )
@@ -595,7 +595,7 @@ class ManyUndirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplat
   private val forwardDirection: Field = field[Boolean](codeGen.namer.nextVariableName(), constant(true))
   override def genMoreFields: Seq[Field] = Seq(idCursor, cursor, forwardDirection)
 
-  override protected def genInnerLoop: IntermediateRepresentation = {
+  override protected def genInnerLoop(profile: Boolean): IntermediateRepresentation = {
     val idVariable = codeGen.namer.nextVariableName()
 
     /**
@@ -646,10 +646,10 @@ class ManyUndirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplat
               codeGen.setLongAt(toOffset,
                 invoke(loadField(cursor), method[RelationshipScanCursor, Long]("sourceNodeReference"))),
             )),
-            inner.genOperateWithExpressions,
+            inner.genOperateWithExpressions(profile),
             doIfInnerCantContinue(
               block(
-                profileRow(id),
+                profileRow(id, profile),
                 setField(forwardDirection, not(loadField(forwardDirection))),
               )
             )

@@ -50,17 +50,19 @@ import scala.collection.mutable.ArrayBuffer
 class TemplateOperatorFuserFactory(physicalPlan: PhysicalPlan,
                                    tokenContext: TokenContext,
                                    readOnly: Boolean,
+                                   doProfile: Boolean,
                                    indexRegistrator: QueryIndexRegistrator,
                                    parallelExecution: Boolean,
                                    fusionOverPipelineEnabled: Boolean,
                                    codeGenerationMode: CodeGeneration.CodeGenerationMode) extends OperatorFuserFactory {
   override def newOperatorFuser(headPlanId: Id, inputSlotConfiguration: SlotConfiguration): OperatorFuser =
-    new TemplateOperatorFuser(physicalPlan, tokenContext, readOnly, indexRegistrator, parallelExecution, fusionOverPipelineEnabled, codeGenerationMode, headPlanId, inputSlotConfiguration)
+    new TemplateOperatorFuser(physicalPlan, tokenContext, readOnly, doProfile, indexRegistrator, parallelExecution, fusionOverPipelineEnabled, codeGenerationMode, headPlanId, inputSlotConfiguration)
 }
 
 class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
                             val tokenContext: TokenContext,
                             val readOnly: Boolean,
+                            doProfile: Boolean,
                             indexRegistrator: QueryIndexRegistrator,
                             parallelExecution: Boolean,
                             fusionOverPipelineEnabled: Boolean,
@@ -111,7 +113,7 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
     }
     val workIdentity = WorkIdentity.fromFusedPlans(fusedPlans)
     try {
-      compileOperator(currentTemplate, workIdentity, argumentStates, codeGenerationMode, pipelineId)
+      compileOperator(currentTemplate, workIdentity, argumentStates, codeGenerationMode, pipelineId, doProfile)
     } catch {
       // In the case of a StackOverflowError we cannot recover correctly and abort fusing altogether.
       case e: StackOverflowError =>

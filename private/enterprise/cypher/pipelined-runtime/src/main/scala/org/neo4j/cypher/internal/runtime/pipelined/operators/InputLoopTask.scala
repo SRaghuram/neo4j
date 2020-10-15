@@ -165,7 +165,7 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
     inner.genInit
   }
 
-  final override protected def genOperateHead: IntermediateRepresentation = {
+  final override protected def genOperateHead(profile: Boolean): IntermediateRepresentation = {
     //// Based on this code from InputLoopTask
     //val outputCursor = outputRow.fullCursor(onFirstRow = true)
     //if (!this.inputCursor.onValidRow) {
@@ -203,12 +203,12 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
         block(
           innermost.resetBelowLimitAndAdvanceToNextArgument,
           // Initialize the inner loop
-          doInitializeInnerLoopOrRestoreContinuationState,
+          doInitializeInnerLoopOrRestoreContinuationState(profile),
 
           // Enter the inner loop if we have one for this input row
           ifElse(loadField(innerLoop))(
             block(
-              genScopeWithLocalDeclarations(scopeId + "innerLoop", genInnerLoop),
+              genScopeWithLocalDeclarations(scopeId + "innerLoop", genInnerLoop(profile)),
               condition(not(loadField(canContinue)))(
                 block(
                   genCloseInnerLoop,
@@ -227,7 +227,7 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
     )
   }
 
-  final override protected def genOperateMiddle: IntermediateRepresentation = {
+  final override protected def genOperateMiddle(profile: Boolean): IntermediateRepresentation = {
     /**
      * This is called when the loop is used as a middle operator,
      * Here we should act as an inner loop and not advance the input
@@ -253,12 +253,12 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
       loop(and(or(loadField(canContinue), loadField(innerLoop)), innermost.predicate))(
         block(
           // Initialize the inner loop
-          doInitializeInnerLoopOrRestoreContinuationState,
+          doInitializeInnerLoopOrRestoreContinuationState(profile),
 
           // Enter the inner loop if we have one for this input row
           condition(loadField(innerLoop))(
             block(
-              genScopeWithLocalDeclarations(scopeId + "innerLoop", genInnerLoop),
+              genScopeWithLocalDeclarations(scopeId + "innerLoop", genInnerLoop(profile)),
               condition(not(loadField(canContinue)))(
                 block(
                   genCloseInnerLoop,
@@ -283,7 +283,7 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
     )
 
   //noinspection MutatorLikeMethodIsParameterless
-  private def doInitializeInnerLoopOrRestoreContinuationState: IntermediateRepresentation = {
+  private def doInitializeInnerLoopOrRestoreContinuationState(profile: Boolean): IntermediateRepresentation = {
     // TODO: In this initialization scope we can record all the operator state variables (cursors etc.) that are now generated as explicit fields
     //       and instead use local variables together with a ScopeContinuationState containing the fields that needs to be
     //       saved in genOperateExit() and restored here in an `else` branch when the operator is called with a continuation.
@@ -292,7 +292,7 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
       condition(not(loadField(innerLoop)))(
         // Start a new inner loop
         block(
-          setField(innerLoop, genInitializeInnerLoop),
+          setField(innerLoop, genInitializeInnerLoop(profile)),
         )
       )
     // Declarations need to be handled in the parent scope, since the same slot variables may be used in other sibling scopes (i.e. innerLoop)
@@ -311,7 +311,7 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
    *                           resources: QueryResources): Boolean
    * }}}
    */
-  protected def genInitializeInnerLoop: IntermediateRepresentation
+  protected def genInitializeInnerLoop(profile: Boolean): IntermediateRepresentation
 
   /**
    * Execute the inner loop for the current input row, and write results to the output.
@@ -323,7 +323,7 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
    *                 state: QueryState): Unit
    * }}}
    */
-  protected def genInnerLoop: IntermediateRepresentation
+  protected def genInnerLoop(profile: Boolean): IntermediateRepresentation
 
   /**
    * Close any resources used by the inner loop.

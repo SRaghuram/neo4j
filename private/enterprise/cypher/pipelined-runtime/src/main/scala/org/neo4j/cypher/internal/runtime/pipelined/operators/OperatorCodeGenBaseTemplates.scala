@@ -295,12 +295,13 @@ object ContinuableOperatorTaskWithMorselGenerator {
                       workIdentity: WorkIdentity,
                       argumentStates: Seq[ArgumentStateDescriptor],
                       codeGenerationMode: CodeGenerationMode,
-                      pipelineId: PipelineId): Operator = {
+                      pipelineId: PipelineId,
+                      doProfile: Boolean): Operator = {
     val staticWorkIdentity = staticConstant[WorkIdentity](WORK_IDENTITY_STATIC_FIELD_NAME, workIdentity)
     val operatorId = COUNTER.getAndIncrement()
     def className(name: String) = s"${name}Pipeline${pipelineId.x}_$operatorId"
     val generator = CodeGeneration.createGenerator(codeGenerationMode)
-    val taskDeclaration = template.genClassDeclaration(PACKAGE_NAME, className("OperatorTask"), Seq(staticWorkIdentity))
+    val taskDeclaration = template.genClassDeclaration(PACKAGE_NAME, className("OperatorTask"), Seq(staticWorkIdentity), doProfile)
     val taskClassHandle = compileClass(taskDeclaration, generator)
     val operatorDeclaration = operatorTemplateFromTaskTemplate(template).genClassDeclaration(
       PACKAGE_NAME,
@@ -495,7 +496,10 @@ trait OperatorTaskTemplate {
     }
   }
 
-  def genClassDeclaration(packageName: String, className: String, staticFields: Seq[StaticField]): ClassDeclaration[CompiledTask] = {
+  def genClassDeclaration(packageName: String,
+                          className: String,
+                          staticFields: Seq[StaticField],
+                          doProfile: Boolean): ClassDeclaration[CompiledTask] = {
     throw new InternalException("Illegal start operator template")
   }
 
@@ -537,9 +541,9 @@ trait OperatorTaskTemplate {
    *                 queryProfiler: QueryProfiler): Unit
    * }}}
    */
-  final def genOperateWithExpressions: IntermediateRepresentation = {
+  final def genOperateWithExpressions(profile: Boolean): IntermediateRepresentation = {
     codeGen.beginScope(scopeId)
-    val body = genOperate
+    val body = genOperate(profile)
     val localState = codeGen.endScope()
 
     val declarations = localState.declarations
@@ -548,7 +552,7 @@ trait OperatorTaskTemplate {
     val expressionCursors = genExpressions.flatMap(_.variables)
       .intersect(ExpressionCompilation.vCURSORS)
     val setTracerCalls =
-      if (expressionCursors.nonEmpty) {
+      if (expressionCursors.nonEmpty && profile) {
         expressionCursors.map(cursor => invokeSideEffect(load(cursor), SET_TRACER, loadField(executionEventField)))
       } else {
         Seq.empty
@@ -566,17 +570,17 @@ trait OperatorTaskTemplate {
   protected def innerCannotContinue: IntermediateRepresentation =
     inner.genCanContinue.map(not).getOrElse(constant(true))
 
-  protected def genOperate: IntermediateRepresentation
+  protected def genOperate(profile: Boolean): IntermediateRepresentation
 
   /**
    * Responsible for generating code that comes before entering the loop of operate()
    */
-  def genOperateEnter: IntermediateRepresentation = inner.genOperateEnter
+  def genOperateEnter(profile: Boolean): IntermediateRepresentation = inner.genOperateEnter(profile)
 
   /**
    * Responsible for generating code that comes after exiting the loop of operate()
    */
-  def genOperateExit: IntermediateRepresentation = inner.genOperateExit
+  def genOperateExit(profile: Boolean): IntermediateRepresentation = inner.genOperateExit(profile)
 
   /**
    * Responsible for generating [[PreparedOutput]] method:
@@ -661,7 +665,7 @@ object OperatorTaskTemplate {
     override def inner: OperatorTaskTemplate = null
     override protected def codeGen: OperatorExpressionCompiler = null
     override def id: Id = withId
-    override def genOperate: IntermediateRepresentation = noop()
+    override def genOperate(profile: Boolean): IntermediateRepresentation = noop()
     override def genProduce: IntermediateRepresentation = noop()
     override def genCloseOutput: IntermediateRepresentation = noop()
     override def genCreateState: IntermediateRepresentation = noop()
@@ -751,11 +755,11 @@ trait ContinuableOperatorTaskWithMorselDataTemplate extends ContinuableOperatorT
 trait ContinuableOperatorTaskTemplate extends OperatorTaskTemplate {
 
   protected def isHead: Boolean
-  protected def genOperateHead: IntermediateRepresentation
-  protected def genOperateMiddle: IntermediateRepresentation
+  protected def genOperateHead(profile: Boolean): IntermediateRepresentation
+  protected def genOperateMiddle(profile: Boolean): IntermediateRepresentation
 
-  final override def genOperate: IntermediateRepresentation =
-    if (isHead) genOperateHead else genOperateMiddle
+  final override def genOperate(profile: Boolean): IntermediateRepresentation =
+    if (isHead) genOperateHead(profile) else genOperateMiddle(profile)
 
   protected def genScopeWithLocalDeclarations(scopeId: String, genBody: => IntermediateRepresentation): IntermediateRepresentation = {
     codeGen.beginScope(scopeId)
@@ -791,7 +795,10 @@ trait ContinuableOperatorTaskTemplate extends OperatorTaskTemplate {
   // which implements the close() and produceWorkUnit() methods from the ContinuableOperatorTask
 
   // TODO: Use methods of actual interface to generate declaration?
-  override def genClassDeclaration(packageName: String, className: String, staticFields: Seq[StaticField]): ClassDeclaration[CompiledTask] = {
+  override def genClassDeclaration(packageName: String,
+                                   className: String,
+                                   staticFields: Seq[StaticField],
+                                   doProfile: Boolean): ClassDeclaration[CompiledTask] = {
     ClassDeclaration[CompiledTask](
       packageName,
       className,
@@ -803,7 +810,7 @@ trait ContinuableOperatorTaskTemplate extends OperatorTaskTemplate {
         MethodDeclaration("initializeProfileEvents",
           returnType = typeRefOf[Unit],
           parameters = Seq(param[QueryProfiler]("queryProfiler")),
-          body = genInitializeProfileEvents
+          body = if (doProfile) genInitializeProfileEvents else noop()
         ),
         MethodDeclaration("compiledOperate",
           returnType = typeRefOf[Unit],
@@ -814,9 +821,9 @@ trait ContinuableOperatorTaskTemplate extends OperatorTaskTemplate {
             param[QueryProfiler]("queryProfiler")
           ),
           body = block(
-            genOperateEnter,
-            genOperateWithExpressions,
-            genOperateExit
+            genOperateEnter(profile = doProfile),
+            genOperateWithExpressions(profile = doProfile),
+            genOperateExit(profile = doProfile)
           ),
           genLocalVariables = () => {
             Seq(
@@ -869,7 +876,7 @@ trait ContinuableOperatorTaskTemplate extends OperatorTaskTemplate {
         MethodDeclaration("closeProfileEvents",
           returnType = typeRefOf[Unit],
           parameters = Seq(QUERY_RESOURCE_PARAMETER),
-          body = genCloseProfileEvents
+          body = if (doProfile) genCloseProfileEvents else noop()
         ),
         MethodDeclaration("canContinue",
           returnType = typeRefOf[Boolean],
@@ -967,7 +974,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
 
   override def genCloseProfileEvents: IntermediateRepresentation = noop()
 
-  override protected def genOperate: IntermediateRepresentation = {
+  override protected def genOperate(profile: Boolean): IntermediateRepresentation = {
     val ops = new ArrayBuffer[IntermediateRepresentation]
 
     if (shouldWriteToContext) {
@@ -1014,7 +1021,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
     and(conditions)
   }
 
-  override def genOperateEnter: IntermediateRepresentation = block(
+  override def genOperateEnter(profile: Boolean): IntermediateRepresentation = block(
     limits.map(argumentStateMapId => declareAndAssign(typeRefOf[Long], argumentVarName(argumentStateMapId), constant(-1L))): _*
   )
 
@@ -1022,7 +1029,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
    * If we need to care about demand (produceResult part of the fused operator)
    * we need to update the demand after having produced data.
    */
-  override def genOperateExit: IntermediateRepresentation = {
+  override def genOperateExit(profile: Boolean): IntermediateRepresentation = {
     val updates = new ArrayBuffer[IntermediateRepresentation]
 
     if (shouldWriteToContext) {

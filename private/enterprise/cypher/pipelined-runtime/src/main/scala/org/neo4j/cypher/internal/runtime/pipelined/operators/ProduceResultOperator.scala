@@ -10,19 +10,14 @@ import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.add
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
-import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.equal
-import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
-import org.neo4j.codegen.api.IntermediateRepresentation.isNotNull
 import org.neo4j.codegen.api.IntermediateRepresentation.load
-import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.noValue
-import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.IntermediateRepresentation.ternary
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.BufferId
@@ -35,7 +30,14 @@ import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.ValuePopulation
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.NODE_CURSOR
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.PROPERTY_CURSOR
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.RELATIONSHIP_CURSOR
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.vNODE_CURSOR
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.vPROPERTY_CURSOR
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.vRELATIONSHIP_CURSOR
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression.EMPTY
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
@@ -43,21 +45,13 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_NODE_CURSOR
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_PROPERTY_CURSOR
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_REL_SCAN_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DEMAND
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NodeCursorPool
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.PRE_POPULATE_RESULTS
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.PRE_POPULATE_RESULTS_V
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.PropertyCursorPool
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.RelScanCursorPool
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.SERVED
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.SUBSCRIBER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.SUBSCRIPTION
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.allocateAndTraceCursor
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.freeCursor
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
@@ -68,7 +62,6 @@ import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.exceptions.InternalException
-import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.PropertyCursor
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
@@ -221,9 +214,9 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate,
                                         slots: SlotConfiguration)
                                        (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
 
-  private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName("nodeCursor"))
-  private val propertyCursorField = field[PropertyCursor](codeGen.namer.nextVariableName("propertyCursor"))
-  private val relationshipScanCursorField = field[RelationshipScanCursor](codeGen.namer.nextVariableName("relCursor"))
+//  private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName("nodeCursor"))
+//  private val propertyCursorField = field[PropertyCursor](codeGen.namer.nextVariableName("propertyCursor"))
+//  private val relationshipScanCursorField = field[RelationshipScanCursor](codeGen.namer.nextVariableName("relCursor"))
 
   override def toString: String = "ProduceResultTaskTemplate"
 
@@ -232,25 +225,25 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate,
   }
 
   // This operates on a single row only
-  override def genOperate: IntermediateRepresentation = {
+  override def genOperate(profile: Boolean): IntermediateRepresentation = {
     def getLongAt(offset: Int) = codeGen.getLongAt(offset)
     def getRefAt(offset: Int) = {
       val notPopulated = codeGen.getRefAt(offset)
       ternary(PRE_POPULATE_RESULTS,
         invokeStatic(method[ValuePopulation, AnyValue, AnyValue, NodeCursor, RelationshipScanCursor, PropertyCursor]("populate"),
-          notPopulated, loadField(nodeCursorField), loadField(relationshipScanCursorField), loadField(propertyCursorField)), notPopulated)
+          notPopulated, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR), notPopulated)
     }
     def nodeFromSlot(offset: Int) = {
       val notPopulated = invoke(DB_ACCESS, method[DbAccess, NodeValue, Long]("nodeById"), getLongAt(offset))
       ternary(PRE_POPULATE_RESULTS,
         invokeStatic(method[ValuePopulation, NodeValue, NodeValue,  NodeCursor, PropertyCursor]("populate"),
-          notPopulated, loadField(nodeCursorField), loadField(propertyCursorField)), notPopulated)
+          notPopulated, NODE_CURSOR, PROPERTY_CURSOR), notPopulated)
     }
     def relFromSlot(offset: Int) = {
       val notPopulated = invoke(DB_ACCESS, method[DbAccess, RelationshipValue, Long]("relationshipById"), getLongAt(offset))
       ternary(PRE_POPULATE_RESULTS,
         invokeStatic(method[ValuePopulation, RelationshipValue, RelationshipValue, RelationshipScanCursor, PropertyCursor]("populate"),
-          notPopulated, loadField(relationshipScanCursorField), loadField(propertyCursorField)), notPopulated)
+          notPopulated, RELATIONSHIP_CURSOR, PROPERTY_CURSOR), notPopulated)
     }
 
     //figures out how to get a reference to project from a slot, e.g if we have a longSlot that is a node,
@@ -299,50 +292,50 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate,
      * }}}
      */
     block(
-      allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR),
-      allocateAndTraceCursor(propertyCursorField, executionEventField, ALLOCATE_PROPERTY_CURSOR),
-      allocateAndTraceCursor(relationshipScanCursorField, executionEventField, ALLOCATE_REL_SCAN_CURSOR),
+//      allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR),
+//      allocateAndTraceCursor(propertyCursorField, executionEventField, ALLOCATE_PROPERTY_CURSOR),
+//      allocateAndTraceCursor(relationshipScanCursorField, executionEventField, ALLOCATE_REL_SCAN_CURSOR),
       invokeSideEffect(load(SUBSCRIBER), method[QuerySubscriber, Unit]("onRecord")),
       project,
       invokeSideEffect(load(SUBSCRIBER), method[QuerySubscriber, Unit]("onRecordCompleted")),
       assign(SERVED, add(load(SERVED), constant(1L))),
-      profileRow(id),
-      inner.genOperateWithExpressions
+      profileRow(id, profile),
+      inner.genOperateWithExpressions(profile)
     )
   }
 
-  override def genFields: Seq[Field] = Seq(nodeCursorField, relationshipScanCursorField, propertyCursorField)
+  override def genFields: Seq[Field] = Seq.empty//Seq(nodeCursorField, relationshipScanCursorField, propertyCursorField)
 
   override def genLocalVariables: Seq[LocalVariable] =
     Seq(PRE_POPULATE_RESULTS_V, SUBSCRIBER, SUBSCRIPTION, DEMAND, SERVED, CURSOR_POOL_V)
 
-  override def genExpressions: Seq[IntermediateExpression] = Seq.empty
+  override def genExpressions: Seq[IntermediateExpression] = Seq(EMPTY.withVariable(vNODE_CURSOR).withVariable(vRELATIONSHIP_CURSOR).withVariable(vPROPERTY_CURSOR))
 
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
 
   override def genCloseCursors: IntermediateRepresentation = {
     block(
-      freeCursor[NodeCursor](loadField(nodeCursorField), NodeCursorPool),
-      setField(nodeCursorField, constant(null)),
-      freeCursor[PropertyCursor](loadField(propertyCursorField), PropertyCursorPool),
-      setField(nodeCursorField, constant(null)),
-      freeCursor[RelationshipScanCursor](loadField(relationshipScanCursorField), RelScanCursorPool),
-      setField(relationshipScanCursorField, constant(null)),
+//      freeCursor[NodeCursor](loadField(nodeCursorField), NodeCursorPool),
+//      setField(nodeCursorField, constant(null)),
+//      freeCursor[PropertyCursor](loadField(propertyCursorField), PropertyCursorPool),
+//      setField(nodeCursorField, constant(null)),
+//      freeCursor[RelationshipScanCursor](loadField(relationshipScanCursorField), RelScanCursorPool),
+//      setField(relationshipScanCursorField, constant(null)),
       inner.genCloseCursors
     )
   }
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = {
     block(
-      condition(isNotNull(loadField(nodeCursorField)))(
-        invokeSideEffect(loadField(nodeCursorField), method[NodeCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField))
-      ),
-      condition(isNotNull(loadField(propertyCursorField)))(
-        invokeSideEffect(loadField(propertyCursorField), method[PropertyCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField))
-      ),
-      condition(isNotNull(loadField(relationshipScanCursorField)))(
-        invokeSideEffect(loadField(relationshipScanCursorField), method[RelationshipScanCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField))
-      ),
+//      condition(isNotNull(loadField(nodeCursorField)))(
+//        invokeSideEffect(loadField(nodeCursorField), method[NodeCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField))
+//      ),
+//      condition(isNotNull(loadField(propertyCursorField)))(
+//        invokeSideEffect(loadField(propertyCursorField), method[PropertyCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField))
+//      ),
+//      condition(isNotNull(loadField(relationshipScanCursorField)))(
+//        invokeSideEffect(loadField(relationshipScanCursorField), method[RelationshipScanCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField))
+//      ),
       inner.genSetExecutionEvent(event)
     )
   }

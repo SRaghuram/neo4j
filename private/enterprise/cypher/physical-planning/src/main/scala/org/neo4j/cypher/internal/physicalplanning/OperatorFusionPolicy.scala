@@ -48,6 +48,7 @@ trait OperatorFusionPolicy {
   def operatorFuserFactory(physicalPlan: PhysicalPlan,
                            tokenContext: TokenContext,
                            readOnly: Boolean,
+                           doProfile: Boolean,
                            indexRegistrator: QueryIndexRegistrator,
                            parallelExecution: Boolean,
                            codeGenerationMode: CodeGeneration.CodeGenerationMode): OperatorFuserFactory
@@ -63,6 +64,7 @@ object OperatorFusionPolicy {
     override def operatorFuserFactory(physicalPlan: PhysicalPlan,
                                       tokenContext: TokenContext,
                                       readOnly: Boolean,
+                                      doProfile: Boolean,
                                       indexRegistrator: QueryIndexRegistrator,
                                       parallelExecution: Boolean,
                                       codeGenerationMode: CodeGeneration.CodeGenerationMode): OperatorFuserFactory = OperatorFuserFactory.NO_FUSION

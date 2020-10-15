@@ -133,7 +133,7 @@ class NodeIndexScanTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
-  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+  override protected def genInitializeInnerLoop(profile: Boolean): IntermediateRepresentation = {
     /**
      * {{{
      *   this.nodeIndexCursor = resources.cursorPools.nodeValuIndexCursorPool.allocate()
@@ -145,14 +145,14 @@ class NodeIndexScanTaskTemplate(inner: OperatorTaskTemplate,
      * }}}
      */
     block(
-      allocateAndTraceCursor(nodeIndexCursorField, executionEventField, ALLOCATE_NODE_INDEX_CURSOR),
+      allocateAndTraceCursor(nodeIndexCursorField, executionEventField, ALLOCATE_NODE_INDEX_CURSOR, profile),
       nodeIndexScan(indexReadSession(queryIndexId), loadField(nodeIndexCursorField), indexOrder, needsValues),
-      setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id)),
+      setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id, profile)),
       constant(true)
     )
   }
 
-  override protected def genInnerLoop: IntermediateRepresentation = {
+  override protected def genInnerLoop(profile: Boolean): IntermediateRepresentation = {
     val indexPropertyIndices: Array[Int] = properties.zipWithIndex.filter(_._1.getValueFromIndex).map(_._2)
     val indexPropertySlotOffsets: Array[Int] = properties.flatMap(_.maybeCachedNodePropertySlot)
 
@@ -179,8 +179,8 @@ class NodeIndexScanTaskTemplate(inner: OperatorTaskTemplate,
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
         block(cacheProperties:_*),
-        inner.genOperateWithExpressions,
-        doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id))),
+        inner.genOperateWithExpressions(profile),
+        doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id, profile))),
         endInnerLoop
       )
     )

@@ -92,11 +92,11 @@ class SerialTopLevelSkipOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                             (codeGen: OperatorExpressionCompiler)
   extends SerialTopLevelCountingOperatorTaskTemplate(inner, id, innermost, argumentStateMapId, generateCountExpression, codeGen) {
 
-  override def genOperate: IntermediateRepresentation = {
+  override def genOperate(profile: Boolean): IntermediateRepresentation = {
     block(
       ifElse(equal(load(countLeftVar), constant(0)))(block(
-        inner.genOperateWithExpressions,
-        conditionallyProfileRow(innerCannotContinue, id)
+        inner.genOperateWithExpressions(profile),
+        conditionallyProfileRow(innerCannotContinue, id, profile)
       ))(
         doIfInnerCantContinue(assign(countLeftVar, subtract(load(countLeftVar), constant(1))))
       )
@@ -152,13 +152,13 @@ class SerialSkipOnRhsOfApplyOperatorTaskTemplate(inner: OperatorTaskTemplate,
   override protected def beginOperate: IntermediateRepresentation =
     declareAndAssign(typeRefOf[Long], argumentVarName(argumentStateMapId), getArgument(argumentStateMapId))
 
-  override protected def innerOperate: IntermediateRepresentation = {
+  override protected def innerOperate(profile: Boolean): IntermediateRepresentation = {
     ifElse(equal(load(countLeftVar), constant(0)))(
       block(
-        inner.genOperateWithExpressions,
+        inner.genOperateWithExpressions(profile),
         doIfInnerCantContinue(
           block(
-            profileRow(id)
+            profileRow(id, profile)
           )
         )))(
       doIfInnerCantContinue(assign(countLeftVar, subtract(load(countLeftVar), constant(1))))

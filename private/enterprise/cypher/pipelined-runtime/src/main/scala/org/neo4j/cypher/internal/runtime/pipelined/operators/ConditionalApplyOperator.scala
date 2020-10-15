@@ -191,7 +191,7 @@ class ConditionalOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
    *     }
    * }}}
    */
-  override protected def genOperateHead: IntermediateRepresentation = {
+  override protected def genOperateHead(profile: Boolean): IntermediateRepresentation = {
     val inputSlotConfig = invoke(INPUT_MORSEL, method[Morsel, SlotConfiguration]("slots"))
     val (refsToCopy, cachedPropertiesToCopy) = computeWhatToCopy()
     val (refsToCopyLhs, refsToCopyRhs) = refsToCopy.partition(_ < lhsSlots.size().nReferences)
@@ -226,16 +226,16 @@ class ConditionalOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
               block(refsToCopyRhs.map(offset => codeGen.setRefAt(offset, noValue)): _*)
             )
           },
-          inner.genOperateWithExpressions,
+          inner.genOperateWithExpressions(profile),
           // Else if no inner operator can proceed we move to the next input row
-          doIfInnerCantContinue(block(invokeSideEffect(INPUT_CURSOR, NEXT),  profileRow(id))),
+          doIfInnerCantContinue(block(invokeSideEffect(INPUT_CURSOR, NEXT),  profileRow(id, profile))),
           innermost.resetCachedPropertyVariables
         )
       )
     )
   }
 
-  override protected def genOperateMiddle: IntermediateRepresentation = {
+  override protected def genOperateMiddle(profile: Boolean): IntermediateRepresentation = {
     throw new CantCompileQueryException("Cannot compile ConditionalApply as middle operator")
   }
 

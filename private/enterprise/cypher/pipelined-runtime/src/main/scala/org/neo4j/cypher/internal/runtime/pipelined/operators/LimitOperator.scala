@@ -128,11 +128,11 @@ class SerialTopLevelLimitOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genLocalVariables: Seq[LocalVariable] = super.genLocalVariables :+ SHOULD_BREAK
 
-  override def genOperate: IntermediateRepresentation = {
+  override def genOperate(profile: Boolean): IntermediateRepresentation = {
     block(
       condition(greaterThan(load(countLeftVar), constant(0))) (
         block(
-          inner.genOperateWithExpressions,
+          inner.genOperateWithExpressions(profile),
           doIfInnerCantContinue(
               assign(countLeftVar, subtract(load(countLeftVar), constant(1)))))
         ) ,
@@ -157,10 +157,10 @@ class SerialTopLevelLimitOperatorTaskTemplate(inner: OperatorTaskTemplate,
     }
   }
 
-  override def genOperateExit: IntermediateRepresentation = {
+  override def genOperateExit(profile: Boolean): IntermediateRepresentation = {
     block(
-      profileRows(id, cast[Long](subtract(load(reservedVar), load(countLeftVar)))),
-      super.genOperateExit
+      profileRows(id, cast[Long](subtract(load(reservedVar), load(countLeftVar))), profile),
+      super.genOperateExit(profile)
     )
   }
 }
@@ -179,14 +179,14 @@ class SerialLimitOnRhsOfApplyOperatorTaskTemplate(inner: OperatorTaskTemplate,
   extends SerialCountingOperatorOnRhsOfApplyOperatorTaskTemplate(inner, id, argumentStateMapId, generateCountExpression, codeGen) {
 
   override protected def beginOperate: IntermediateRepresentation = noop()
-  override protected def innerOperate: IntermediateRepresentation = {
+  override protected def innerOperate(profile:Boolean): IntermediateRepresentation = {
     block(
       condition(greaterThan(load(countLeftVar), constant(0)))(
         block(
-          inner.genOperateWithExpressions,
+          inner.genOperateWithExpressions(profile),
           doIfInnerCantContinue(
             block(
-              profileRow(id),
+              profileRow(id, profile),
               assign(countLeftVar, subtract(load(countLeftVar), constant(1)))
             )
           ))
