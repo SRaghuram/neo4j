@@ -13,10 +13,13 @@ import java.util.regex.Pattern;
 import org.neo4j.annotations.api.PublicApi;
 import org.neo4j.configuration.GroupSetting;
 import org.neo4j.configuration.Internal;
+import org.neo4j.configuration.SettingImpl;
 import org.neo4j.configuration.SettingsDeclaration;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.service.Services;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -29,6 +32,12 @@ class SettingClassesValidationIT
     {
         Services.loadAll( SettingsDeclaration.class ).stream().map( Object::getClass ).forEach( SettingClassesValidationIT::validateField );
         Services.loadAll( GroupSetting.class ).stream().map( Object::getClass ).forEach( SettingClassesValidationIT::validateField );
+    }
+
+    @Test
+    void validateDefaultValuesOfSettingsAreParsable()
+    {
+        Services.loadAll( SettingsDeclaration.class ).stream().map( Object::getClass ).forEach( SettingClassesValidationIT::validateParsingOfField );
     }
 
     private static void validateField( Class<?> settingsDeclarationClass )
@@ -66,5 +75,31 @@ class SettingClassesValidationIT
             clazz = clazz.getSuperclass();
         }
         return false;
+    }
+
+    private static void validateParsingOfField( Class<?> settingsDeclarationClass )
+    {
+        for ( Field declaredField : settingsDeclarationClass.getDeclaredFields() )
+        {
+            if ( declaredField.getType().isAssignableFrom( Setting.class ) )
+            {
+                try
+                {
+                    // Check that the SettingValueParser can parse the default value.
+                    SettingImpl setting = (SettingImpl) declaredField.get( null );
+                    String value = setting.valueToString( setting.defaultValue() );
+                    // ...but skip checking the settings that doesn't have a default value (valueToString converts that to 'No Value').
+                    if ( !value.equals( "No Value" ) )
+                    {
+                        assertDoesNotThrow( () -> setting.parse( value ) );
+                        assertEquals( setting.parse( value ), setting.defaultValue() );
+                    }
+                }
+                catch ( IllegalAccessException e )
+                {
+                    throw new RuntimeException( e );
+                }
+            }
+        }
     }
 }
