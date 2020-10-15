@@ -53,7 +53,9 @@ class StandardAccessModeBuilder
     private final Map<ResourcePrivilege.GrantOrDeny,Boolean> anyAccess = new HashMap<>();  // track any access rights
     private final Map<ResourcePrivilege.GrantOrDeny,Boolean> anyWrite = new HashMap<>(); // track any writes
     private boolean token;  // TODO - still to support GRANT/DENY
-    private boolean schema; // TODO - still to support GRANT/DENY
+    private boolean schemaWrite; // TODO - still to support GRANT/DENY
+    private final Map<ResourcePrivilege.GrantOrDeny,Boolean> anyShowIndex = new HashMap<>(); // track any SHOW INDEX rights
+    private final Map<ResourcePrivilege.GrantOrDeny,Boolean> anyShowConstraint = new HashMap<>(); // track any SHOW CONSTRAINT rights
 
     private final Map<ResourcePrivilege.GrantOrDeny,Boolean> traverseAllLabels = new HashMap<>();
     private final Map<ResourcePrivilege.GrantOrDeny,Boolean> traverseAllRelTypes = new HashMap<>();
@@ -154,7 +156,9 @@ class StandardAccessModeBuilder
                 isAuthenticated && anyWrite.getOrDefault( GRANT, false ),
                 anyWrite.getOrDefault( DENY, false ),
                 isAuthenticated && token,
-                isAuthenticated && schema,
+                isAuthenticated && schemaWrite,
+                isAuthenticated && anyShowIndex.getOrDefault( GRANT, false ) && !anyShowIndex.getOrDefault( DENY, false ),
+                isAuthenticated && anyShowConstraint.getOrDefault( GRANT, false ) && !anyShowConstraint.getOrDefault( DENY, false ),
                 passwordChangeRequired,
                 roles,
 
@@ -334,6 +338,14 @@ class StandardAccessModeBuilder
             handleExecuteBoosted( segment, privilegeType );
             break;
 
+        case SHOW_INDEX:
+            anyShowIndex.put( privilegeType, true );
+            break;
+
+        case SHOW_CONSTRAINT:
+            anyShowConstraint.put( privilegeType, true );
+            break;
+
         default:
             if ( TOKEN.satisfies( action ) )
             {
@@ -342,7 +354,15 @@ class StandardAccessModeBuilder
             }
             else if ( INDEX.satisfies( action ) || CONSTRAINT.satisfies( action ) )
             {
-                schema = true;
+                if ( action == INDEX )
+                {
+                    anyShowIndex.put( privilegeType, true );
+                }
+                else if ( action == CONSTRAINT )
+                {
+                    anyShowConstraint.put( privilegeType, true );
+                }
+                schemaWrite = true;
                 addPrivilegeAction( privilege );
             }
             else if ( ADMIN.satisfies( action ) )
@@ -353,7 +373,9 @@ class StandardAccessModeBuilder
             {
                 anyAccess.put( privilegeType, true );
                 token = true;
-                schema = true;
+                schemaWrite = true;
+                anyShowIndex.put(privilegeType, true);
+                anyShowConstraint.put(privilegeType, true);
                 addPrivilegeAction( privilege );
             }
 

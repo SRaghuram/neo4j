@@ -13,11 +13,22 @@ import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.default_database
 import org.neo4j.graphdb.QueryExecutionException
+import org.neo4j.graphdb.Result.ResultRow
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.internal.kernel.api.security.PrivilegeAction
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
 class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase with EnterpriseComponentVersionTestSupport {
+  private val indexName = "my_index"
+  private val constraintName = "my_constraint"
+  private val labelString = "Label"
+  private val propString = "prop"
+
+  private def ShowSchemaNotAllowed(schemaType: String, additionalRole: String = "custom"): String =
+    s"Show $schemaType are not allowed for user 'joe' with roles [PUBLIC, $additionalRole]."
+
+  private def checkName(name: String): (ResultRow, Int) => Unit =
+    (row, _) => row.get("name") should be(name)
 
   withVersion(CURRENT_VERSION) {
 
@@ -538,11 +549,11 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     setupUserWithCustomRole()
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
     execute("GRANT CREATE INDEX ON DATABASE * TO custom")
-    executeOnDefault("joe", "soap", "CREATE INDEX my_index FOR (u:User) ON (u.name)") should be(0)
+    executeOnDefault("joe", "soap", s"CREATE INDEX $indexName FOR (u:User) ON (u.name)") should be(0)
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "DROP INDEX my_index")
+      executeOnDefault("joe", "soap", s"DROP INDEX $indexName")
     } should have message "Schema operation 'drop_index' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
@@ -579,7 +590,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     test("Should allow index dropping for normal user with index drop privilege") {
       selectDatabase(DEFAULT_DATABASE_NAME)
-      graph.createIndexWithName("my_index", "Label", "prop")
+      graph.createIndexWithName(indexName, labelString, propString)
       setupUserWithCustomRole()
       execute("GRANT DROP INDEX ON DATABASE * TO custom")
 
@@ -590,10 +601,10 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       ))
 
       // WHEN
-      executeOnDefault("joe", "soap", "DROP INDEX my_index") should be(0)
+      executeOnDefault("joe", "soap", s"DROP INDEX $indexName") should be(0)
 
       // THEN
-      graph.getMaybeIndex("Label", Seq("prop")) should be(None)
+      graph.getMaybeIndex(labelString, Seq(propString)) should be(None)
     }
 
     test("Should allow index creation and dropping for normal user with index management privilege") {
@@ -609,13 +620,13 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       ))
 
       // WHEN
-      executeOnDefault("joe", "soap", "CREATE INDEX my_index FOR (u:User) ON (u.name)") should be(0)
+      executeOnDefault("joe", "soap", s"CREATE INDEX $indexName FOR (u:User) ON (u.name)") should be(0)
 
       // THEN
       graph.getMaybeIndex("User", Seq("name")).isDefined should be(true)
 
       // WHEN
-      executeOnDefault("joe", "soap", "DROP INDEX my_index") should be(0)
+      executeOnDefault("joe", "soap", s"DROP INDEX $indexName") should be(0)
 
       // THEN
       graph.getMaybeIndex("User", Seq("name")).isDefined should be(false)
@@ -643,6 +654,243 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     }
   }
 
+  test("Should not allow showing indexes without show privilege") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createIndexWithName(indexName, labelString, propString)
+    setupUserWithCustomRole()
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "SHOW INDEXES")
+    } should have message ShowSchemaNotAllowed("indexes")
+  }
+
+  test("Should allow showing indexes using procedure without show privilege") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createIndexWithName(indexName, labelString, propString)
+    setupUserWithCustomRole()
+    execute("GRANT EXECUTE PROCEDURES * ON DBMS TO custom")
+
+    // WHEN & THEN
+    withClue("db.indexes") {
+      executeOnDefault("joe", "soap", "CALL db.indexes()", resultHandler = checkName(indexName)) should be(1)
+    }
+
+    // WHEN & THEN
+    withClue("db.indexDetails") {
+      executeOnDefault("joe", "soap", s"CALL db.indexDetails('$indexName')", resultHandler = checkName(indexName)) should be(1)
+    }
+  }
+
+  test("Should allow showing indexes with show privilege") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createIndexWithName(indexName, labelString, propString)
+    graph.createUniqueConstraintWithName(constraintName, labelString, "prop2")
+    setupUserWithCustomRole()
+    execute(s"GRANT SHOW INDEX ON DATABASE $DEFAULT_DATABASE_NAME TO custom")
+
+    // WHEN & THEN
+    val expected = Seq(constraintName, indexName)
+    executeOnDefault("joe", "soap", "SHOW INDEXES", resultHandler = (row, index) => {
+      row.get("name") should be(expected(index))
+    }) should be(2)
+  }
+
+  test("Should allow showing indexes with index management privilege") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createIndexWithName(indexName, labelString, propString)
+    setupUserWithCustomRole()
+    execute("GRANT INDEX ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    executeOnDefault("joe", "soap", "SHOW INDEXES", resultHandler = checkName(indexName)) should be(1)
+  }
+
+  test("Should allow showing indexes with all database privilege") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createIndexWithName(indexName, labelString, propString)
+    setupUserWithCustomRole()
+    execute("GRANT ALL ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    executeOnDefault("joe", "soap", "SHOW INDEXES", resultHandler = checkName(indexName)) should be(1)
+  }
+
+  test("Should allow showing indexes with built in roles architect and admin") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createIndexWithName(indexName, labelString, propString)
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+
+    // WHEN
+    execute("GRANT ROLE architect TO joe")
+
+    // THEN
+    withClue("Role: architect") {
+      executeOnDefault("joe", "soap", "SHOW INDEXES", resultHandler = checkName(indexName)) should be(1)
+    }
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("REVOKE ROLE architect FROM joe")
+    execute("GRANT ROLE admin TO joe")
+
+    // THEN
+    withClue("Role: admin") {
+      executeOnDefault("joe", "soap", "SHOW INDEXES", resultHandler = checkName(indexName)) should be(1)
+    }
+  }
+
+  test("Should not allow showing indexes with built in roles reader, editor, and publisher") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createIndexWithName(indexName, labelString, propString)
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+
+    // WHEN
+    execute("GRANT ROLE reader TO joe")
+
+    // THEN
+    withClue("Role: reader") {
+      the[AuthorizationViolationException] thrownBy {
+        executeOnDefault("joe", "soap", "SHOW INDEXES")
+      } should have message ShowSchemaNotAllowed("indexes", "reader")
+    }
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("REVOKE ROLE reader FROM joe")
+    execute("GRANT ROLE editor TO joe")
+
+    // THEN
+    withClue("Role: editor") {
+      the[AuthorizationViolationException] thrownBy {
+        executeOnDefault("joe", "soap", "SHOW INDEXES")
+      } should have message ShowSchemaNotAllowed("indexes", "editor")
+    }
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("REVOKE ROLE editor FROM joe")
+    execute("GRANT ROLE publisher TO joe")
+
+    // THEN
+    withClue("Role: editor") {
+      the[AuthorizationViolationException] thrownBy {
+        executeOnDefault("joe", "soap", "SHOW INDEXES")
+      } should have message ShowSchemaNotAllowed("indexes", "publisher")
+    }
+  }
+
+  test("Should not allow showing indexes when privileges on other database") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createIndexWithName(indexName, labelString, propString)
+    setupUserWithCustomRole()
+    execute("CREATE DATABASE foo")
+    execute("GRANT SHOW INDEX ON DEFAULT DATABASE TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOn("foo", "joe", "soap", "SHOW INDEXES")
+    } should have message ShowSchemaNotAllowed("indexes")
+  }
+
+  test("Should not allow showing indexes with deny show privilege") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createIndexWithName(indexName, labelString, propString)
+    setupUserWithCustomRole()
+    execute("GRANT SHOW INDEX ON DATABASE * TO custom")
+    execute(s"DENY SHOW INDEX ON DATABASE $DEFAULT_DATABASE_NAME TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "SHOW INDEXES")
+    } should have message ShowSchemaNotAllowed("indexes")
+  }
+
+  test("Should not allow showing indexes with index management privilege and explicit deny") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createIndexWithName(indexName, labelString, propString)
+    setupUserWithCustomRole()
+    execute("GRANT INDEX ON DATABASE * TO custom")
+    execute("DENY SHOW INDEX ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "SHOW INDEXES")
+    } should have message ShowSchemaNotAllowed("indexes")
+  }
+
+  test("Should not allow showing indexes with all database privileges and explicit deny") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createIndexWithName(indexName, labelString, propString)
+    setupUserWithCustomRole()
+    execute("GRANT ALL ON DATABASE * TO custom")
+    execute("DENY SHOW INDEX ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "SHOW INDEXES")
+    } should have message ShowSchemaNotAllowed("indexes")
+  }
+
+  test("Should not allow showing indexes with only create and drop privilege") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createIndexWithName(indexName, labelString, propString)
+    setupUserWithCustomRole()
+    execute("GRANT CREATE INDEX ON DATABASE * TO custom")
+    execute("GRANT DROP INDEX ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "SHOW INDEXES")
+    } should have message ShowSchemaNotAllowed("indexes")
+  }
+
+  test("Should not allow showing indexes with only show constraint privilege") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createIndexWithName(indexName, labelString, propString)
+    graph.createUniqueConstraintWithName(constraintName, labelString, "prop2")
+    setupUserWithCustomRole()
+    execute("GRANT SHOW CONSTRAINT ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "SHOW INDEXES")
+    } should have message ShowSchemaNotAllowed("indexes")
+  }
+
+  test("Should not allow create or drop indexes with only show privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
+    execute("GRANT SHOW INDEX ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", s"CREATE INDEX FOR (n:$labelString) ON (n.$propString)")
+    } should have message "Schema operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // WHEN & THEN
+    graph.createIndexWithName(indexName, labelString, propString)
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", s"DROP INDEX $indexName")
+    } should have message "Schema operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
+  }
+
   test("should have index management privilege on new default after switch of default database") {
     // GIVEN
     val newDefaultDatabase = "foo"
@@ -662,23 +910,23 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     ))
 
     // WHEN: creating index on default
-    executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", "CREATE INDEX neo_index FOR (n:Label) ON (n.prop)") should be(0)
+    executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", s"CREATE INDEX neo_index FOR (n:$labelString) ON (n.$propString)") should be(0)
 
     // THEN
-    graph.getMaybeIndex("Label", Seq("prop")).isDefined should be(true)
+    graph.getMaybeIndex(labelString, Seq(propString)).isDefined should be(true)
 
     // WHEN: creating index on foo
     the[AuthorizationViolationException] thrownBy {
-      executeOn(newDefaultDatabase, "alice", "abc", "CREATE INDEX foo_index FOR (n:Label) ON (n.prop)")
+      executeOn(newDefaultDatabase, "alice", "abc", s"CREATE INDEX foo_index FOR (n:$labelString) ON (n.$propString)")
     } should have message "Schema operations are not allowed for user 'alice' with roles [PUBLIC, role]."
 
     // THEN
-    graph.getMaybeIndex("Label", Seq("prop")).isDefined should be(false)
+    graph.getMaybeIndex(labelString, Seq(propString)).isDefined should be(false)
 
     // WHEN: switch default database and create index on foo
     restartWithDefault(newDefaultDatabase)
     selectDatabase(newDefaultDatabase)
-    graph.createIndexWithName("foo_index", "Label", "prop")
+    graph.createIndexWithName("foo_index", labelString, propString)
 
     // Confirm default database
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -697,13 +945,13 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     } should have message "Schema operations are not allowed for user 'alice' with roles [PUBLIC, role]."
 
     // THEN
-    graph.getMaybeIndex("Label", Seq("prop")).isEmpty should be(false)
+    graph.getMaybeIndex(labelString, Seq(propString)).isEmpty should be(false)
 
     // WHEN: dropping index on foo
     executeOn(newDefaultDatabase, "alice", "abc", "DROP INDEX foo_index") should be(0)
 
     // THEN
-    graph.getMaybeIndex("Label", Seq("prop")).isEmpty should be(true)
+    graph.getMaybeIndex(labelString, Seq(propString)).isEmpty should be(true)
   }
 
   // Constraint Management
@@ -748,11 +996,11 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     setupUserWithCustomRole()
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
     execute("GRANT CREATE CONSTRAINT ON DATABASE * TO custom")
-    executeOnDefault("joe", "soap", "CREATE CONSTRAINT my_constraint ON (n:User) ASSERT exists(n.name)") should be(0)
+    executeOnDefault("joe", "soap", s"CREATE CONSTRAINT $constraintName ON (n:User) ASSERT exists(n.name)") should be(0)
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "DROP CONSTRAINT my_constraint")
+      executeOnDefault("joe", "soap", s"DROP CONSTRAINT $constraintName")
     } should have message "Schema operation 'drop_constraint' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
@@ -801,7 +1049,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     test("Should allow constraint dropping for normal user with constraint drop privilege") {
       selectDatabase(DEFAULT_DATABASE_NAME)
-      graph.createNodeExistenceConstraintWithName("my_constraint", "Label", "prop")
+      graph.createNodeExistenceConstraintWithName(constraintName, labelString, propString)
       setupUserWithCustomRole()
       execute("GRANT DROP CONSTRAINT ON DATABASE * TO custom")
 
@@ -812,10 +1060,10 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       ))
 
       // WHEN
-      executeOnDefault("joe", "soap", "DROP CONSTRAINT my_constraint") should be(0)
+      executeOnDefault("joe", "soap", s"DROP CONSTRAINT $constraintName") should be(0)
 
       // THEN
-      graph.getMaybeNodeConstraint("Label", Seq("prop")) should be(None)
+      graph.getMaybeNodeConstraint(labelString, Seq(propString)) should be(None)
     }
 
     test("Should allow constraint creation and dropping for normal user with constraint management privilege") {
@@ -831,13 +1079,13 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       ))
 
       // WHEN
-      executeOnDefault("joe", "soap", "CREATE CONSTRAINT my_constraint ON (u:User) ASSERT exists(u.name)") should be(0)
+      executeOnDefault("joe", "soap", s"CREATE CONSTRAINT $constraintName ON (u:User) ASSERT exists(u.name)") should be(0)
 
       // THEN
       graph.getMaybeNodeConstraint("User", Seq("name")).isDefined should be(true)
 
       // WHEN
-      executeOnDefault("joe", "soap", "DROP CONSTRAINT my_constraint") should be(0)
+      executeOnDefault("joe", "soap", s"DROP CONSTRAINT $constraintName") should be(0)
 
       // THEN
       graph.getMaybeNodeConstraint("User", Seq("name")).isDefined should be(false)
@@ -851,6 +1099,244 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       // WHEN & THEN
       executeOn("foo", "joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT exists(n.name)") should be(0)
     }
+  }
+
+  test("Should not allow showing constraints without show privilege") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createUniqueConstraintWithName(constraintName, labelString, propString)
+    setupUserWithCustomRole()
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "SHOW CONSTRAINTS")
+    } should have message ShowSchemaNotAllowed("constraints")
+  }
+
+  test("Should allow showing constraints using procedure without show privilege") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createUniqueConstraintWithName(constraintName, labelString, propString)
+    setupUserWithCustomRole()
+    execute("GRANT EXECUTE PROCEDURES * ON DBMS TO custom")
+
+    // WHEN & THEN
+    withClue("db.constraints") {
+      executeOnDefault("joe", "soap", "CALL db.constraints()", resultHandler = checkName(constraintName)) should be(1)
+    }
+
+    // WHEN & THEN (shows both index and constraint)
+    withClue("db.schemaStatements") {
+      executeOnDefault("joe", "soap", "CALL db.schemaStatements()", resultHandler = checkName(constraintName)) should be(1)
+    }
+  }
+
+  test("Should allow showing constraints with show privilege") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createUniqueConstraintWithName(constraintName, labelString, propString)
+    setupUserWithCustomRole()
+    execute(s"GRANT SHOW CONSTRAINT ON DATABASE $DEFAULT_DATABASE_NAME TO custom")
+
+    // WHEN & THEN
+    executeOnDefault("joe", "soap", "SHOW CONSTRAINTS", resultHandler = checkName(constraintName)) should be(1)
+  }
+
+  test("Should allow showing constraints with constraint management privilege") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createNodeKeyConstraintWithName("constraint2", labelString, "prop2")
+    graph.createUniqueConstraintWithName("constraint1", labelString, propString)
+    graph.createRelationshipExistenceConstraintWithName("constraint4", labelString, "prop4")
+    graph.createNodeExistenceConstraintWithName("constraint3", labelString, "prop3")
+    setupUserWithCustomRole()
+    execute("GRANT CONSTRAINT ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    val expected = Seq("constraint1", "constraint2", "constraint3", "constraint4")
+    executeOnDefault("joe", "soap", "SHOW CONSTRAINTS", resultHandler = (row, index) => {
+      row.get("name") should be(expected(index))
+    }) should be(4)
+  }
+
+  test("Should allow showing constraints with all database privilege") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createUniqueConstraintWithName(constraintName, labelString, propString)
+    setupUserWithCustomRole()
+    execute("GRANT ALL ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    executeOnDefault("joe", "soap", "SHOW CONSTRAINTS", resultHandler = checkName(constraintName)) should be(1)
+  }
+
+  test("Should allow showing constraints with built in roles architect and admin") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createUniqueConstraintWithName(constraintName, labelString, propString)
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+
+    // WHEN
+    execute("GRANT ROLE architect TO joe")
+
+    // THEN
+    withClue("Role: architect") {
+      executeOnDefault("joe", "soap", "SHOW CONSTRAINTS", resultHandler = checkName(constraintName)) should be(1)
+    }
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("REVOKE ROLE architect FROM joe")
+    execute("GRANT ROLE admin TO joe")
+
+    // THEN
+    withClue("Role: admin") {
+      executeOnDefault("joe", "soap", "SHOW CONSTRAINTS", resultHandler = checkName(constraintName)) should be(1)
+    }
+  }
+
+  test("Should not allow showing constraints with built in roles reader, editor, and publisher") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createUniqueConstraintWithName(constraintName, labelString, propString)
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+
+    // WHEN
+    execute("GRANT ROLE reader TO joe")
+
+    // THEN
+    withClue("Role: reader") {
+      the[AuthorizationViolationException] thrownBy {
+        executeOnDefault("joe", "soap", "SHOW CONSTRAINTS")
+      } should have message ShowSchemaNotAllowed("constraints", "reader")
+    }
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("REVOKE ROLE reader FROM joe")
+    execute("GRANT ROLE editor TO joe")
+
+    // THEN
+    withClue("Role: editor") {
+      the[AuthorizationViolationException] thrownBy {
+        executeOnDefault("joe", "soap", "SHOW CONSTRAINTS")
+      } should have message ShowSchemaNotAllowed("constraints", "editor")
+    }
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("REVOKE ROLE editor FROM joe")
+    execute("GRANT ROLE publisher TO joe")
+
+    // THEN
+    withClue("Role: editor") {
+      the[AuthorizationViolationException] thrownBy {
+        executeOnDefault("joe", "soap", "SHOW CONSTRAINTS")
+      } should have message ShowSchemaNotAllowed("constraints", "publisher")
+    }
+  }
+
+  test("Should not allow showing constraints when privileges on other database") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createUniqueConstraintWithName(constraintName, labelString, propString)
+    setupUserWithCustomRole()
+    execute("CREATE DATABASE foo")
+    execute("GRANT SHOW CONSTRAINT ON DEFAULT DATABASE TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOn("foo", "joe", "soap", "SHOW CONSTRAINTS")
+    } should have message ShowSchemaNotAllowed("constraints")
+  }
+
+  test("Should not allow showing constraints with deny show privilege") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createUniqueConstraintWithName(constraintName, labelString, propString)
+    setupUserWithCustomRole()
+    execute("GRANT SHOW CONSTRAINT ON DATABASE * TO custom")
+    execute(s"DENY SHOW CONSTRAINT ON DATABASE $DEFAULT_DATABASE_NAME TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "SHOW CONSTRAINTS")
+    } should have message ShowSchemaNotAllowed("constraints")
+  }
+
+  test("Should not allow showing constraints with constraint management privilege and explicit deny") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createUniqueConstraintWithName(constraintName, labelString, propString)
+    setupUserWithCustomRole()
+    execute("GRANT CONSTRAINT ON DATABASE * TO custom")
+    execute("DENY SHOW CONSTRAINT ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "SHOW CONSTRAINTS")
+    } should have message ShowSchemaNotAllowed("constraints")
+  }
+
+  test("Should not allow showing constraints with all database privileges and explicit deny") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createUniqueConstraintWithName(constraintName, labelString, propString)
+    setupUserWithCustomRole()
+    execute("GRANT ALL ON DATABASE * TO custom")
+    execute("DENY SHOW CONSTRAINT ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "SHOW CONSTRAINTS")
+    } should have message ShowSchemaNotAllowed("constraints")
+  }
+
+  test("Should not allow showing constraints with only create and drop privilege") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createUniqueConstraintWithName(constraintName, labelString, propString)
+    setupUserWithCustomRole()
+    execute("GRANT CREATE CONSTRAINT ON DATABASE * TO custom")
+    execute("GRANT DROP CONSTRAINT ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "SHOW CONSTRAINTS")
+    } should have message ShowSchemaNotAllowed("constraints")
+  }
+
+  test("Should not allow showing constraints with only show index privilege") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createUniqueConstraintWithName(constraintName, labelString, propString)
+    setupUserWithCustomRole()
+    execute("GRANT SHOW INDEX ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "SHOW CONSTRAINTS")
+    } should have message ShowSchemaNotAllowed("constraints")
+  }
+
+  test("Should not allow create or drop constraints with only show privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
+    execute("GRANT SHOW CONSTRAINT ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (u:User) ASSERT (u.name) IS UNIQUE")
+    } should have message "Schema operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // WHEN & THEN
+    graph.createUniqueConstraintWithName(constraintName, labelString, propString)
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", s"DROP CONSTRAINT $constraintName")
+    } should have message "Schema operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
   test("should have constraint management privilege on new default after switch of default database") {
@@ -875,23 +1361,23 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     ))
 
     // WHEN: creating constraint on default
-    executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", "CREATE CONSTRAINT neo_constraint ON (n:Label) ASSERT exists(n.prop)") should be(0)
+    executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", s"CREATE CONSTRAINT neo_constraint ON (n:$labelString) ASSERT exists(n.$propString)") should be(0)
 
     // THEN
-    graph.getMaybeNodeConstraint("Label", Seq("prop")).isDefined should be(true)
+    graph.getMaybeNodeConstraint(labelString, Seq(propString)).isDefined should be(true)
 
     // WHEN: creating constraint on foo
     the[AuthorizationViolationException] thrownBy {
-      executeOn(newDefaultDatabase, "alice", "abc", "CREATE CONSTRAINT foo_constraint ON (n:Label) ASSERT exists(n.prop)")
+      executeOn(newDefaultDatabase, "alice", "abc", s"CREATE CONSTRAINT foo_constraint ON (n:$labelString) ASSERT exists(n.$propString)")
     } should have message "Schema operations are not allowed for user 'alice' with roles [PUBLIC, role]."
 
     // THEN
-    graph.getMaybeNodeConstraint("Label", Seq("prop")).isDefined should be(false)
+    graph.getMaybeNodeConstraint(labelString, Seq(propString)).isDefined should be(false)
 
     // WHEN: switch default database and create constraint on foo
     restartWithDefault(newDefaultDatabase)
     selectDatabase(newDefaultDatabase)
-    graph.createNodeExistenceConstraintWithName("foo_constraint", "Label", "prop")
+    graph.createNodeExistenceConstraintWithName("foo_constraint", labelString, propString)
 
     // Confirm default database
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -910,13 +1396,13 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     } should have message "Schema operations are not allowed for user 'alice' with roles [PUBLIC, role]."
 
     // THEN
-    graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(false)
+    graph.getMaybeNodeConstraint(labelString, Seq(propString)).isEmpty should be(false)
 
     // WHEN: dropping constraint on foo
     executeOn(newDefaultDatabase, "alice", "abc", "DROP CONSTRAINT foo_constraint") should be(0)
 
     // THEN
-    graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
+    graph.getMaybeNodeConstraint(labelString, Seq(propString)).isEmpty should be(true)
   }
 
   // Name Management

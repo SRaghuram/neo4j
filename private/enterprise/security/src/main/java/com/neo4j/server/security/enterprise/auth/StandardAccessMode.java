@@ -30,6 +30,8 @@ class StandardAccessMode implements AccessMode
     private final boolean disallowWrites;
     private final boolean allowsTokenCreates;
     private final boolean allowsSchemaWrites;
+    private final boolean allowsShowIndex;
+    private final boolean allowsShowConstraint;
     private final boolean passwordChangeRequired;
     private final Set<String> roles;
 
@@ -90,6 +92,8 @@ class StandardAccessMode implements AccessMode
             boolean disallowWrites,
             boolean allowsTokenCreates,
             boolean allowsSchemaWrites,
+            boolean allowsShowIndex,
+            boolean allowsShowConstraint,
             boolean passwordChangeRequired,
             Set<String> roles,
 
@@ -148,6 +152,8 @@ class StandardAccessMode implements AccessMode
         this.disallowWrites = disallowWrites;
         this.allowsTokenCreates = allowsTokenCreates;
         this.allowsSchemaWrites = allowsSchemaWrites;
+        this.allowsShowIndex = allowsShowIndex;
+        this.allowsShowConstraint = allowsShowConstraint;
         this.passwordChangeRequired = passwordChangeRequired;
         this.roles = roles;
 
@@ -279,6 +285,18 @@ class StandardAccessMode implements AccessMode
     public boolean allowsSchemaWrites( PrivilegeAction action )
     {
         return allowsSchemaWrites && adminAccessMode.allows( new AdminActionOnResource( action, database, Segment.ALL ) );
+    }
+
+    @Override
+    public boolean allowsShowIndex()
+    {
+        return allowsShowIndex;
+    }
+
+    @Override
+    public boolean allowsShowConstraint()
+    {
+        return allowsShowConstraint;
     }
 
     @Override
