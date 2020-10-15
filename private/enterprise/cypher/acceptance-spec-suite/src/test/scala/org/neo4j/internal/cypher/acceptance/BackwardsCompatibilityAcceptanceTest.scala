@@ -515,6 +515,18 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     })
   }
 
+  test("SHOW CONSTRAINTS should not work with Cypher 3.5 - 4.1") {
+    Seq("CYPHER 3.5", "CYPHER 4.1").foreach(version => withClue(version) {
+      // WHEN
+      val exception = the[SyntaxException] thrownBy {
+        executeSingle(s"$version SHOW CONSTRAINTS")
+      }
+
+      // THEN
+      exception.getMessage should include("SHOW CONSTRAINTS is not supported in this Cypher version.")
+    })
+  }
+
   test("SHOW CURRENT USER should not work with Cypher 3.5") {
     // WHEN
     val exception = the[SyntaxException] thrownBy {
