@@ -277,7 +277,7 @@ class BoundedArrayCursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR, priv
 
 object CursorPool {
 
-  private final val DEFAULT_POOL_SIZE = 128
+  final val DEFAULT_POOL_SIZE = 128
   private final val TRACKING_POOL_SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[TrackingBoundedArrayCursorPool[_]])
   private final val POOL_SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[BoundedArrayCursorPool[_]])
 
