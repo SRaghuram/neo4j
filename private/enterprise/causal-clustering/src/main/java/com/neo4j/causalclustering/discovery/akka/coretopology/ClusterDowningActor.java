@@ -93,7 +93,7 @@ public class ClusterDowningActor extends AbstractLoggingActor
 
     private void handle( ClusterViewMessage clusterView )
     {
-        if ( clusterView.mostAreReachable() )
+        if ( clusterView.mostAreReachable() && clusterView.unreachable().size() > 0 )
         {
             log().info( "Downing members: {}", clusterView.unreachable() );
 
@@ -103,7 +103,7 @@ public class ClusterDowningActor extends AbstractLoggingActor
                     .map( Member::address )
                     .forEach( cluster::down );
         }
-        else
+        else if ( !clusterView.mostAreReachable() )
         {
             log().info( "In minority side of network partition? {}", clusterView );
         }
