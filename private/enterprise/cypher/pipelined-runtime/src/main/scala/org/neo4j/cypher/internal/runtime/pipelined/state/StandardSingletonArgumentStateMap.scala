@@ -7,9 +7,9 @@ package org.neo4j.cypher.internal.runtime.pipelined.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
-import org.neo4j.cypher.internal.runtime.pipelined.state.AbstractArgumentStateMap.ImmutableStateController
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.StandardArgumentStateMap.StandardCompletedStateController
 import org.neo4j.cypher.internal.runtime.pipelined.state.StandardArgumentStateMap.StandardStateController
 
 /**
@@ -28,7 +28,7 @@ class StandardSingletonArgumentStateMap[STATE <: ArgumentState](val argumentStat
                                             argumentRowIdsForReducers: Array[Long],
                                             initialCount: Int): AbstractArgumentStateMap.StateController[STATE] = {
     if (factory.completeOnConstruction) {
-      new ImmutableStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
+      new StandardCompletedStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
     } else {
       new StandardStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers), initialCount)
     }

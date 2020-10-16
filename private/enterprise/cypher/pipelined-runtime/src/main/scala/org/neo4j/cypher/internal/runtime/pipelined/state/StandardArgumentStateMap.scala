@@ -7,9 +7,9 @@ package org.neo4j.cypher.internal.runtime.pipelined.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
-import org.neo4j.cypher.internal.runtime.pipelined.state.AbstractArgumentStateMap.ImmutableStateController
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.StandardArgumentStateMap.StandardCompletedStateController
 import org.neo4j.cypher.internal.runtime.pipelined.state.StandardArgumentStateMap.StandardStateController
 
 /**
@@ -34,7 +34,7 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: A
                                             argumentRowIdsForReducers: Array[Long],
                                             initialCount: Int): AbstractArgumentStateMap.StateController[STATE] = {
     if (factory.completeOnConstruction) {
-      new ImmutableStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
+      new StandardCompletedStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
     } else {
       new StandardStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers), initialCount)
     }
@@ -46,12 +46,10 @@ object StandardArgumentStateMap {
   /**
    * Controller which knows when an [[ArgumentState]] is complete.
    */
-  private[state] class StandardStateController[STATE <: ArgumentState](override val state: STATE, initialCount: Int)
+  private[state] class StandardStateController[STATE <: ArgumentState](private var state: STATE, initialCount: Int)
     extends AbstractArgumentStateMap.StateController[STATE] {
 
     private var _count: Long = initialCount
-
-    override def isZero: Boolean = _count == 0
 
     override def increment(): Long = {
       _count += 1
@@ -63,14 +61,75 @@ object StandardArgumentStateMap {
       _count
     }
 
-    // No actual "taking" in single threaded
-    override def tryTake(): Boolean = isZero
+    override def takeCompleted(): STATE = {
+      if (_count == 0) {
+        take()
+      } else {
+        null.asInstanceOf[STATE]
+      }
+    }
 
-    // No actual "taking" in single threaded
-    override def take(): Boolean = true
+    override def take(): STATE = {
+      if (state != null) {
+        val returnState = state
+        state = null.asInstanceOf[STATE]
+        returnState
+      } else {
+        null.asInstanceOf[STATE]
+      }
+    }
+
+    override def hasCompleted: Boolean = _count == 0 && state != null
+
+    override def peek: STATE = state
+
+    override def peekCompleted: STATE = {
+      if (_count == 0) {
+        state
+      } else {
+        null.asInstanceOf[STATE]
+      }
+    }
 
     override def toString: String = {
       s"[count: ${_count}, state: $state]"
+    }
+
+  }
+
+  /**
+   * A state controller that is immediately completed and does not allow any reference increments/decrements.
+   *
+   * This controller serves the use case when an argument state is constructed and immediately ready for consumption.
+   * This is the case for, e.g. cartesian product, distinct, and limit. This `increment` and `decrement` will throw exceptions.
+   */
+  private[state] class StandardCompletedStateController[STATE <: ArgumentState](private var state: STATE)
+    extends AbstractArgumentStateMap.StateController[STATE] {
+
+    override def increment(): Long = throw new IllegalStateException(s"Cannot increment ${this.getClass.getSimpleName}")
+
+    override def decrement(): Long = throw new IllegalStateException(s"Cannot decrement ${this.getClass.getSimpleName}")
+
+    override def takeCompleted(): STATE = {
+      val completedState = state
+      state = null.asInstanceOf[STATE]
+      completedState
+    }
+
+    override def take(): STATE = {
+      val completedState = state
+      state = null.asInstanceOf[STATE]
+      completedState
+    }
+
+    override def hasCompleted: Boolean = state != null
+
+    override def peek: STATE = state
+
+    override def peekCompleted: STATE = state
+
+    override def toString: String = {
+      s"[completed, state: $state]"
     }
   }
 }

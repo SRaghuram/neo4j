@@ -57,6 +57,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.removeState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.FilterStateWithIsLast
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.pipes.DistinctSlottedPrimitivePipe.buildGroupingValue
@@ -79,7 +80,7 @@ class DistinctPrimitiveOperatorTask[S <: DistinctState](argumentStateMap: Argume
     val queryState = state.queryStateForExpressionEvaluation(resources)
 
     argumentStateMap.filterWithSideEffect[S](outputMorsel,
-      (distinctState, _) => distinctState,
+      (distinctState, _) => FilterStateWithIsLast(distinctState, isLast = false),
       (distinctState, row) => {
         val groupingValue = buildGroupingValue(row, primitiveSlots)
         if (distinctState.seen(groupingValue)) {

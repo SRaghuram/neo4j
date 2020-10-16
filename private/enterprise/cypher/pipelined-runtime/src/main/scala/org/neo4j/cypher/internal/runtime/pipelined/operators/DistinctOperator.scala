@@ -60,6 +60,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.FilterStateWithIsLast
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -92,7 +93,7 @@ class DistinctOperatorTask[S <: DistinctState](argumentStateMap: ArgumentStateMa
     val queryState = state.queryStateForExpressionEvaluation(resources)
 
     argumentStateMap.filterWithSideEffect[S](outputMorsel,
-      (distinctState, _) => distinctState,
+      (distinctState, _) => FilterStateWithIsLast(distinctState, isLast = false),
       (distinctState, row) => {
         val groupingKey = groupings.computeGroupingKey(row, queryState)
         if (distinctState.seen(groupingKey)) {

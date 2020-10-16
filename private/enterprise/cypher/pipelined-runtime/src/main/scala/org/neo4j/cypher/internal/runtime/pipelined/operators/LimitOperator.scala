@@ -42,6 +42,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
+import org.neo4j.cypher.internal.runtime.pipelined.state.FilterStateWithIsLast
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -87,7 +88,10 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
                          resources: QueryResources): Unit = {
 
       argumentStateMap.filterWithSideEffect[FilterState](outputMorsel,
-        (rowCount, nRows) => new FilterState(rowCount.reserve(nRows)),
+        (rowCount, nRows) => {
+          val reserved = rowCount.reserve(nRows)
+          FilterStateWithIsLast(new FilterState(reserved), rowCount.isCancelled)
+        },
         (x, _) => x.next())
     }
 

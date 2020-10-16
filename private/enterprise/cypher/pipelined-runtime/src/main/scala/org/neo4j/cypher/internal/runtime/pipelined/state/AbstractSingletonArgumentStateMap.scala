@@ -44,39 +44,52 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
 
   override def update(argumentRowId: Long, onState: STATE => Unit): Unit = {
     TopLevelArgument.assertTopLevelArgument(argumentRowId)
-    onState(controller.state)
+    onState(controller.peek)
   }
 
   override def clearAll(f: STATE => Unit): Unit = {
-    if (hasController && controller.take()) {
-      // We do not remove the controller from controllers here in case there
-      // is some outstanding work unit that wants to update count of accumulator
-      f(controller.state)
+    if (hasController) {
+      val completedState = controller.take()
+      if (completedState != null) {
+        // We do not remove the controller from controllers here in case there
+        // is some outstanding work unit that wants to update count of accumulator
+        f(completedState)
+      }
     }
   }
 
 
   override def skip(morsel: Morsel,
                     reserve: (STATE, Int) => Int): Unit = {
-    val end = reserve(controller.state, morsel.numberOfRows)
+    val end = reserve(controller.peek, morsel.numberOfRows)
 
     ArgumentStateMap.skip(morsel, end)
   }
 
-  override def filterWithSideEffect[U](morsel: Morsel,
-                                       createState: (STATE, Int) => U,
-                                       predicate: (U, ReadWriteRow) => Boolean): Unit = {
-    val filterState = createState(controller.state, morsel.numberOfRows)
+  override def filterWithSideEffect[FILTER_STATE](morsel: Morsel,
+                                                  createState: (STATE, Int) => FilterStateWithIsLast[FILTER_STATE],
+                                                  predicate: (FILTER_STATE, ReadWriteRow) => Boolean): Unit = {
+    val controllerState = controller.peek
+    val filterState =
+      if (controllerState != null) {
+        val FilterStateWithIsLast(state, _) = createState(controllerState, morsel.numberOfRows)
+        state
+      }
+      else
+        null.asInstanceOf[FILTER_STATE]
+
     ArgumentStateMap.filter(morsel,
       row => predicate(filterState, row))
   }
 
   override def takeCompleted(n: Int): IndexedSeq[STATE] = {
-    if (hasController && controller.tryTake()) {
-      val completedState = controller.state
-      hasController = false
-      DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, completedState.argumentRowId)
-      return Collections.singletonIndexedSeq(completedState)
+    if (hasController) {
+      val completedState = controller.takeCompleted()
+      if (completedState != null) {
+        hasController = false
+        DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, completedState.argumentRowId)
+        return Collections.singletonIndexedSeq(completedState)
+      }
     }
     null
   }
@@ -87,54 +100,69 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
 
   override def takeOneIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {
     if (hasController) {
-      if (controller.tryTake()) {
-        val completedState = controller.state
+      val completedState = controller.takeCompleted()
+      if (completedState != null) {
         hasController = false
         DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, completedState.argumentRowId)
-        return ArgumentStateWithCompleted(completedState, isCompleted = true)
+        ArgumentStateWithCompleted(completedState, isCompleted = true)
       } else {
-        return ArgumentStateWithCompleted(controller.state, isCompleted = false)
+        val peekedState = controller.peek
+        if (peekedState != null) {
+          ArgumentStateWithCompleted(peekedState, isCompleted = false)
+        } else {
+          null.asInstanceOf[ArgumentStateWithCompleted[STATE]]
+        }
       }
+    } else {
+      null.asInstanceOf[ArgumentStateWithCompleted[STATE]]
     }
-    null.asInstanceOf[ArgumentStateWithCompleted[STATE]]
   }
 
   override def someArgumentStateIsCompletedOr(statePredicate: STATE => Boolean): Boolean = {
-    hasController && (controller.isZero || statePredicate(controller.state))
+    hasController && (controller.hasCompleted || statePredicate(controller.peek))
   }
 
   override def exists(statePredicate: STATE => Boolean): Boolean = {
-    hasController && statePredicate(controller.state)
+    hasController && {
+      val state = controller.peek
+      state != null && statePredicate(state)
+    }
   }
 
   override def peekCompleted(): Iterator[STATE] = {
-    if (hasController && controller.isZero) Iterator.single(controller.state)
+    if (hasController) {
+      val completedState = controller.peekCompleted
+      if (completedState != null) {
+        Iterator.single(completedState)
+      }
+      else Iterator.empty
+    }
     else Iterator.empty
   }
 
   override def peek(argumentId: Long): STATE = {
     TopLevelArgument.assertTopLevelArgument(argumentId)
     if (hasController) {
-      controller.state
+      controller.peek
     } else {
       null.asInstanceOf[STATE]
     }
   }
 
   override def hasCompleted: Boolean = {
-    hasController && controller.isZero
+    hasController && controller.hasCompleted
   }
 
   override def hasCompleted(argument: Long): Boolean = {
     TopLevelArgument.assertTopLevelArgument(argument)
-    hasController && controller.isZero
+    controller != null && controller.hasCompleted
   }
 
   override def remove(argument: Long): STATE = {
     TopLevelArgument.assertTopLevelArgument(argument)
     DebugSupport.ASM.log("ASM %s rem %03d", argumentStateMapId, argument)
     hasController = false
-    controller.state
+    controller.take()
   }
 
   override def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int): Unit = {
@@ -151,10 +179,11 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
 
   override def decrement(argument: Long): STATE = {
     TopLevelArgument.assertTopLevelArgument(argument)
+    val statePeek = controller.peek // We peek before decrement to be sure to not loose the state if someone else takes it after decrement
     val newCount = controller.decrement()
     DebugSupport.ASM.log("ASM %s decr %03d to %d", argumentStateMapId, argument, newCount)
     if (newCount == 0) {
-      controller.state
+      statePeek
     } else {
       null.asInstanceOf[STATE]
     }

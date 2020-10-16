@@ -29,11 +29,11 @@ class OrderedConcurrentArgumentStateMap[STATE <: ArgumentState](argumentStateMap
     val builder = new ArrayBuffer[STATE]
 
     while(nextIsComplete && builder.size < n) {
-      val state = nextIfCompletedOrNull((state, isCompleted) => if (isCompleted) state else null.asInstanceOf[STATE])
-      if (state == null) {
-        nextIsComplete = false
+      val state = takeOneIfCompletedOrElsePeek()
+      if (state != null && state.isCompleted) {
+        builder += state.argumentState
       } else {
-        builder += state
+        nextIsComplete = false
       }
     }
     if (builder.isEmpty)
@@ -43,27 +43,29 @@ class OrderedConcurrentArgumentStateMap[STATE <: ArgumentState](argumentStateMap
   }
 
   override def takeOneIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {
-    nextIfCompletedOrNull((state, isCompleted) => ArgumentStateWithCompleted(state, isCompleted))
-  }
-
-  private def nextIfCompletedOrNull[T](stateMapper: (STATE, Boolean) => T): T = {
     val controller = controllers.get(lastCompletedArgumentId + 1)
     if (controller != null) {
-      if (controller.tryTake()) {
+      val state = controller.takeCompleted()
+      if (state != null) {
         lastCompletedArgumentId += 1
-        controllers.remove(controller.state.argumentRowId)
-        DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, controller.state.argumentRowId)
-        stateMapper(controller.state, true)
+        controllers.remove(state.argumentRowId)
+        DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, state.argumentRowId)
+        ArgumentStateWithCompleted(state, isCompleted = true)
       } else {
-        stateMapper(controller.state, false)
+        val peekedState = controller.peek
+        if (peekedState != null) {
+          ArgumentStateWithCompleted(peekedState, isCompleted = false)
+        } else {
+          null.asInstanceOf[ArgumentStateWithCompleted[STATE]]
+        }
       }
     } else {
-      null.asInstanceOf[T]
+      null.asInstanceOf[ArgumentStateWithCompleted[STATE]]
     }
   }
 
   override def someArgumentStateIsCompletedOr(statePredicate: STATE => Boolean): Boolean = {
     val controller = controllers.get(lastCompletedArgumentId + 1)
-    controller != null && (controller.isZero || statePredicate(controller.state))
+    controller != null && (controller.hasCompleted || statePredicate(controller.peek))
   }
 }

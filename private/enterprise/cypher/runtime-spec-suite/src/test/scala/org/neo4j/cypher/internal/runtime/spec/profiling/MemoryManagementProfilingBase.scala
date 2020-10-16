@@ -922,6 +922,41 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
     runPeakMemoryUsageProfiling(logicalQuery, inputRows.toArray, heapDumpFileNamePrefix)
   }
 
+  test("measure apply with RHS limit") {
+    val testName = "applyWithRhsLimit"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
+
+    // given
+    var nodes = given { nodeGraph(DEFAULT_INPUT_LIMIT.toInt) }
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("l")
+      .apply()
+      .|.limit(1)
+      .|.nonFuseable()
+      .|.unwind("[1,2] as i")
+      .|.argument("l")
+      .input(Seq("l"))
+      .build()
+
+    // when
+    val random = new Random(seed = 1337)
+    var data = nodes.map(Array[Any](_))
+    val shuffledData = random.shuffle(data).toArray
+
+    // Make sure to clear out all unnecessary references to get a clean dominator tree in the heap dump
+    // (The elements of shuffledData will be cleared as they are streamed by finiteCyclicInputWithPeriodicHeapDump)
+    nodes = null
+    data = null
+
+    val input = finiteCyclicInputWithPeriodicHeapDump(shuffledData, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
+
+    val result = profileNonRecording(logicalQuery, runtime, input)
+    consumeNonRecording(result)
+
+    val queryProfile = result.runtimeResult.queryProfile()
+    printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
+  }
+
   /**
    * Convenience method when you have an Array of input data
    */

@@ -100,7 +100,7 @@ class ArgumentStreamMorselBuffer(id: BufferId,
   }
 
   override def hasData: Boolean = {
-    argumentStateMap.someArgumentStateIsCompletedOr(state => state.hasData)
+    argumentStateMap.someArgumentStateIsCompletedOr(state => state != null && state.hasData)
   }
 
   override def clearArgumentState(buffer: ArgumentStreamArgumentStateBuffer): Unit = {

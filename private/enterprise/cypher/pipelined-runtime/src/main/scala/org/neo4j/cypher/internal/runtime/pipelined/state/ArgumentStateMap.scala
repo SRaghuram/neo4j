@@ -62,11 +62,12 @@ trait ArgumentStateMap[S <: ArgumentState] {
   /**
    * Filter the input morsel using the [[ArgumentState]] related to `argument`.
    *
-   * @param createState is called once per argumentRowId, to generate a filter state.
+   * @param createState is called once per argumentRowId, returns filter state and a flag that indicates if this argument row id is completed and this was
+   *                    the last time we needed to create FILTER_STATE for this argument row id.
    * @param predicate   is called once per row, and given the filter state of the current argumentRowId
    */
   def filterWithSideEffect[FILTER_STATE](morsel: Morsel,
-                                         createState: (S, Int) => FILTER_STATE,
+                                         createState: (S, Int) => FilterStateWithIsLast[FILTER_STATE],
                                          predicate: (FILTER_STATE, ReadWriteRow) => Boolean): Unit
 
   /**
@@ -405,9 +406,11 @@ object ArgumentStateMap {
   }
 
   /**
-   * For each argument row id at `argumentSlotOffset`, create a filter state (`FILTER_STATE`). This
-   * filter state is then used to call `predicate` on each row with the argument row id. If `predicate`
-   * returns true, the row is retained, otherwise it's discarded.
+   * For each argument row id at `argumentSlotOffset`, create a filter state (`FILTER_STATE`).
+   *
+   * - If filter state is not null, it is used to call `predicate` on each row with the argument row id. If `predicate`
+   *   returns true, the row is retained, otherwise it's discarded.
+   * - If filter state is null, all rows with the the argument row id are discarded.
    *
    * @param morsel the morsel to filter
    * @param createState createState(argumentRowId, nRows): FilterState
@@ -431,7 +434,7 @@ object ArgumentStateMap {
 
       val filterState = createState(arg, end - start)
       while (cursor.row < end) {
-        if (!predicate(filterState, cursor)) {
+        if (filterState == null || !predicate(filterState, cursor)) { // Null check needs to be first
           filteringMorsel.cancelRow(cursor.row)
         }
         cursor.next()
@@ -479,3 +482,13 @@ object ArgumentStateMap {
     }
   }
 }
+
+/**
+ * Holds generic filter state for a specific argument row (that is not specified in this context) and a flag that indicates if this was the last time we needed
+ * to create such filter state.
+ *
+ * @param filterState generic filter state for an argument row
+ * @param isLast true if this filter state is the last needed for the argument row
+ * @tparam FILTER_STATE filter state type
+ */
+case class FilterStateWithIsLast[FILTER_STATE](filterState: FILTER_STATE, isLast: Boolean)

@@ -6,14 +6,15 @@
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
-import org.neo4j.cypher.internal.runtime.pipelined.state.AbstractArgumentStateMap.ImmutableStateController
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
+import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentStateMap.ConcurrentCompletedStateController
 import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentStateMap.ConcurrentStateController
 
 /**
@@ -33,7 +34,7 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
                                             argumentRowIdsForReducers: Array[Long],
                                             initialCount: Int): AbstractArgumentStateMap.StateController[STATE] = {
     if (factory.completeOnConstruction) {
-      new ImmutableStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
+      ConcurrentCompletedStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
     } else {
       new ConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers), initialCount)
     }
@@ -50,7 +51,7 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
         // If, on the other hand, the other Thread took before our increment, we will not enter this if block, and the update, including any side effects like incrementing counts,
         // won't be performed.
         DebugSupport.ASM.log("ASM %s update %03d", argumentStateMapId, argumentRowId)
-        onState(controller.state)
+        onState(controller.peek)
       }
       controller.decrement()
     }
@@ -67,7 +68,7 @@ object ConcurrentArgumentStateMap {
    * Controller which knows when an [[ArgumentState]] is complete,
    * and protects it from concurrent access.
    */
-  private[state] class ConcurrentStateController[STATE <: ArgumentState](override val state: STATE, initialCount: Int)
+  private[state] class ConcurrentStateController[STATE <: ArgumentState](private var state: STATE, initialCount: Int)
     extends AbstractArgumentStateMap.StateController[STATE] {
 
     private val count = new AtomicLong(initialCount)
@@ -76,14 +77,78 @@ object ConcurrentArgumentStateMap {
 
     override def decrement(): Long = count.decrementAndGet()
 
-    override def tryTake(): Boolean = count.compareAndSet(0, TAKEN)
+    override def takeCompleted(): STATE = {
+      if (count.compareAndSet(0, TAKEN)) {
+        val returnState = state
+        state = null.asInstanceOf[STATE]
+        returnState
+      } else {
+        null.asInstanceOf[STATE]
+      }
+    }
 
-    override def take(): Boolean = count.getAndSet(TAKEN) >= 0
+    override def take(): STATE = {
+      if (count.getAndSet(TAKEN) >= 0) {
+        val returnState = state
+        state = null.asInstanceOf[STATE]
+        returnState
+      } else {
+        null.asInstanceOf[STATE]
+      }
+    }
 
-    override def isZero: Boolean = count.get() == 0
+    override def hasCompleted: Boolean = count.get() == 0
+
+    override def peek: STATE = state
+
+    override def peekCompleted: STATE = {
+      if (count.get() == 0) {
+        // TODO: There is a potential race condition here where it's possible to return the (non null) state
+        //       even if it's taken (taker hasn't completed setting it to null). Is it ok to give no guarantees here?
+        state
+      } else {
+        null.asInstanceOf[STATE]
+      }
+    }
 
     override def toString: String = {
       s"[count: ${count.get()}, state: $state]"
     }
+  }
+
+  /**
+   * A state controller that is immediately completed and does not allow any reference increments/decrements.
+   *
+   * This controller serves the use case when an argument state is constructed and immediately ready for consumption.
+   * This is the case for, e.g. cartesian product, distinct, and limit. This `increment` and `decrement` will throw exceptions.
+   */
+  private[state] class ConcurrentCompletedStateController[STATE <: ArgumentState] private (private val atomicState: AtomicReference[STATE])
+    extends AbstractArgumentStateMap.StateController[STATE] {
+
+    override def increment(): Long = throw new IllegalStateException(s"Cannot increment ${this.getClass.getSimpleName}")
+
+    override def decrement(): Long = throw new IllegalStateException(s"Cannot decrement ${this.getClass.getSimpleName}")
+
+    override def takeCompleted(): STATE = {
+      atomicState.getAndSet(null.asInstanceOf[STATE])
+    }
+
+    override def take(): STATE = {
+      atomicState.getAndSet(null.asInstanceOf[STATE])
+    }
+
+    override def hasCompleted: Boolean = atomicState.get() != null
+
+    override def peek: STATE = atomicState.get()
+
+    override def peekCompleted: STATE = atomicState.get()
+
+    override def toString: String = {
+      s"[completed, state: ${atomicState.get()}]"
+    }
+  }
+
+  object ConcurrentCompletedStateController {
+    def apply[STATE <: ArgumentState](state: STATE): ConcurrentCompletedStateController[STATE] = new ConcurrentCompletedStateController(new AtomicReference(state))
   }
 }

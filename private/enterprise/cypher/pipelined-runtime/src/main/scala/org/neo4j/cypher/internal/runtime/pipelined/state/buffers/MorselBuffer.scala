@@ -198,7 +198,8 @@ class MorselBuffer(id: BufferId,
       while (i < workCancellers.length && !isCancelled) {
         val cancellerASM = cancellerASMs(i)
         cancellerArgumentRowId = ArgumentSlots.getArgumentAt(cursor, cancellerASM.argumentSlotOffset)
-        if (cancellerASM.peek(cancellerArgumentRowId).isCancelled) {
+        val state = cancellerASM.peek(cancellerArgumentRowId)
+        if (state == null || state.isCancelled) {
           cancellerArgumentSlotOffset = cancellerASM.argumentSlotOffset
           isCancelled = true // break
         }

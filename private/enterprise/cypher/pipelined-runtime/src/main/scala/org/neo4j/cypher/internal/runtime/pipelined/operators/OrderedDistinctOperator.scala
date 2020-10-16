@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OrderedDistinctOper
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.FilterStateWithIsLast
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -102,7 +103,7 @@ class OrderedDistinctOperatorTask[S <: AbstractOrderedDistinctState](argumentSta
     val queryState = state.queryStateForExpressionEvaluation(resources)
 
     argumentStateMap.filterWithSideEffect[S](outputMorsel,
-      (distinctState, _) => distinctState,
+      (distinctState, _) => FilterStateWithIsLast(distinctState, isLast = false),
       (distinctState, row) => distinctState.filterOrProject(row, queryState))
   }
 
