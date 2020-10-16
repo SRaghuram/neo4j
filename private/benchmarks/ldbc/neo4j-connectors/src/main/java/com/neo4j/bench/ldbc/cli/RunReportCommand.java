@@ -369,13 +369,6 @@ public class RunReportCommand implements Runnable
              title = "Profilers" )
     private String profilerNames = "";
 
-    private static final String CMD_TRACE = "--trace";
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_TRACE},
-             description = "Run with various monitoring tools: vmstat, iostat, mpstat, etc.",
-             title = "Run with various monitoring tools" )
-    private boolean doTrace;
-
     @Option(
             type = OptionType.COMMAND,
             name = {"--aws-endpoint-url"},
@@ -443,12 +436,11 @@ public class RunReportCommand implements Runnable
 
             // base profilers are run on every fork
             List<ParameterizedProfiler> baseProfilers = ParameterizedProfiler.defaultProfilers( ProfilerType.OOM );
-            if ( doTrace )
-            {
-                baseProfilers.addAll( ParameterizedProfiler.defaultProfilers( ProfilerType.JVM_LOGGING ) );
-            }
-            // additional profilers are run on one, profiling fork
-            List<ParameterizedProfiler> additionalProfilers = ParameterizedProfiler.parse( profilerNames );
+            // additional profilers are run on one profiling fork
+            List<ParameterizedProfiler> additionalProfilers = ParameterizedProfiler.parse( profilerNames )
+                                                                                   .stream()
+                                                                                   .filter( profiler -> !baseProfilers.contains( profiler ) )
+                                                                                   .collect( toList() );
             for ( ParameterizedProfiler profiler : additionalProfilers )
             {
                 boolean errorOnMissingSecondaryEnvironmentVariables = true;
@@ -489,7 +481,6 @@ public class RunReportCommand implements Runnable
                     CMD_REUSE_DB + " : " + reuseDb + "\n" +
                     CMD_WORKING_DIR + " : " + ((null == workingDir) ? null : workingDir.getAbsolutePath()) + "\n" +
                     CMD_PROFILERS + " : " + additionalProfilers + "\n" +
-                    CMD_TRACE + " : " + doTrace + "\n" +
                     "==============================================================\n"
             );
 
@@ -577,10 +568,6 @@ public class RunReportCommand implements Runnable
             String triggeredBy,
             DriverConfiguration ldbcDriverConfig )
     {
-//        if ( true )
-//        {
-//            throw new RuntimeException( "BOOM" );
-//        }
         LOG.debug( "============================================" );
         LOG.debug( "==== Aggregating & Reporting Statistics ====" );
         LOG.debug( "============================================" );

@@ -35,6 +35,7 @@ import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -257,7 +258,8 @@ public abstract class BaseEndToEndIT
             // start watching outputlog
             tailerExecutor.submit( tailer );
             int processExitCode = process.waitFor();
-            assertEquals( 0, processExitCode, scriptName + " finished with non-zero code\n" + FileUtils.readFileToString( outputLog ) );
+            assertEquals( 0, processExitCode,
+                          scriptName + " finished with non-zero code\n" + FileUtils.readFileToString( outputLog, Charset.defaultCharset() ) );
             assertStoreSchema( boltUri );
             assertRecordingFilesExist( s3Path, profilers, resources, recordingsAssertion, recordingDirsCount );
             assertProfilingNodesAreSameAsS3( boltUri, s3Path );

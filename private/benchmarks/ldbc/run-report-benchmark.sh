@@ -155,7 +155,6 @@ ${jvm_path} -XX:OnOutOfMemoryError="$out_of_memory_script --jvm-pid %p --output-
   --working-dir "${ldbc_working_dir}" \
   --reuse-db "${ldbc_db_reuse_policy}" \
   --triggered-by "${triggered_by}" \
-  --trace \
   --profilers "${profilers}" \
   --results-store-uri "${results_store_uri}" \
   --results-store-user "${results_store_user}" \
