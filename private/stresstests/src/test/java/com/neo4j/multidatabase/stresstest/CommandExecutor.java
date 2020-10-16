@@ -16,6 +16,7 @@ import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -23,6 +24,8 @@ import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.graphdb.TransientTransactionFailureException;
+import org.neo4j.graphdb.WriteOperationsNotAllowedException;
+import org.neo4j.kernel.impl.api.LeaseException;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getStackTrace;
@@ -34,7 +37,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 class CommandExecutor implements Runnable
 {
     private static final AtomicInteger dbCounter = new AtomicInteger();
-    private final DatabaseManagementService dbms;
+    private final Function<String,DatabaseManagementService> dbToLeaderDbms;
     private final CountDownLatch executionLatch;
     private final long finishTimeMillis;
     private final ThreadLocalRandom random;
@@ -45,9 +48,9 @@ class CommandExecutor implements Runnable
     private int stopStartCommands;
     private int dropCommands;
 
-    CommandExecutor( DatabaseManagementService dbms, CountDownLatch executionLatch, long finishTimeMillis )
+    CommandExecutor( Function<String,DatabaseManagementService> dbToLeaderDbms, CountDownLatch executionLatch, long finishTimeMillis )
     {
-        this.dbms = dbms;
+        this.dbToLeaderDbms = dbToLeaderDbms;
         this.executionLatch = executionLatch;
         this.finishTimeMillis = finishTimeMillis;
         this.random = ThreadLocalRandom.current();
@@ -60,15 +63,16 @@ class CommandExecutor implements Runnable
         {
             try
             {
-                var databases = dbms.listDatabases().stream()
-                        .filter( dbName -> !Objects.equals( dbName, SYSTEM_DATABASE_NAME ) )
-                        .collect( Collectors.toList() );
+                var systemDbms = dbToLeaderDbms.apply( SYSTEM_DATABASE_NAME );
+                var databases = systemDbms.listDatabases().stream()
+                                          .filter( dbName -> !Objects.equals( dbName, SYSTEM_DATABASE_NAME ) )
+                                          .collect( Collectors.toList() );
 
                 DatabaseManagerCommand command;
 
                 if ( databases.isEmpty() )
                 {
-                    command = new CreateManagerCommand( dbms, createDatabaseName() );
+                    command = new CreateManagerCommand( systemDbms, createDatabaseName() );
                     createCommands++;
                 }
                 else
@@ -77,31 +81,36 @@ class CommandExecutor implements Runnable
                     int operation = random.nextInt( 100 );
                     if ( operation < 80 )
                     {
-                        command = new ExecuteTransactionCommand( dbms, databaseName );
+                        var dbDbms = dbToLeaderDbms.apply( databaseName );
+                        command = new ExecuteTransactionCommand( dbDbms, databaseName );
                         executionCommands++;
                     }
                     else if ( operation < 90 )
                     {
-                        command = new StopStartManagerCommand( dbms, databaseName );
+                        command = new StopStartManagerCommand( systemDbms, databaseName );
                         stopStartCommands++;
                     }
                     else if ( operation < 95 )
                     {
-                        command = new CreateManagerCommand( dbms, createDatabaseName() );
+                        command = new CreateManagerCommand( systemDbms, createDatabaseName() );
                         createCommands++;
                     }
                     else
                     {
-                        command = new DropManagerCommand( dbms, databaseName );
+                        command = new DropManagerCommand( systemDbms, databaseName );
                         dropCommands++;
                     }
                 }
+
                 command.execute();
                 commandCounter.incrementAndGet();
             }
             catch ( TransientTransactionFailureException |
                     TransactionFailureException |
                     DatabaseShutdownException |
+                    LeaseException |
+                    WriteOperationsNotAllowedException |
+                    RetrieveDbmsException |
                     DatabaseNotFoundException e )
             {
                 // ignore
@@ -130,12 +139,12 @@ class CommandExecutor implements Runnable
 
     void checkExecutionResults()
     {
-        assertThat( commandCounter.get(), greaterThan( 0 ) );
-        System.out.println("======================================================");
+        System.out.println( "======================================================" );
         System.out.println( format( "Commands distribution: created databases: %d,%n " +
-                        "stop-start database: %d,%n dropped databases: %d,%n execute transactions: %d.",
-                        createCommands, stopStartCommands, dropCommands, executionCommands ) );
-        System.out.println("======================================================");
+                                    "stop-start database: %d,%n dropped databases: %d,%n execute transactions: %d.",
+                                    createCommands, stopStartCommands, dropCommands, executionCommands ) );
+        System.out.println( "======================================================" );
         assertNull( executionException, () -> getStackTrace( executionException ) );
+        assertThat( commandCounter.get(), greaterThan( 0 ) );
     }
 }

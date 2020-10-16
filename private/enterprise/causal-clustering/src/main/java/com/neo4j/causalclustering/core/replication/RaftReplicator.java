@@ -20,6 +20,7 @@ import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
 import java.time.Duration;
 
+import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.internal.helpers.TimeoutStrategy;
@@ -49,8 +50,9 @@ public class RaftReplicator implements Replicator, LeaderListener
 
     // TODO: Get rid of dependency on database manager!
     public RaftReplicator( NamedDatabaseId namedDatabaseId, LeaderLocator leaderLocator, RaftMemberId me, Outbound<RaftMemberId,RaftMessage> outbound,
-            LocalSessionPool sessionPool, ProgressTracker progressTracker, TimeoutStrategy progressTimeoutStrategy, long availabilityTimeoutMillis,
-            LogProvider logProvider, DatabaseManager<ClusteredDatabaseContext> databaseManager, Monitors monitors, Duration leaderAwaitDuration )
+                           LocalSessionPool sessionPool, ProgressTracker progressTracker, TimeoutStrategy progressTimeoutStrategy,
+                           long availabilityTimeoutMillis,
+                           LogProvider logProvider, DatabaseManager<ClusteredDatabaseContext> databaseManager, Monitors monitors, Duration leaderAwaitDuration )
     {
         this.namedDatabaseId = namedDatabaseId;
         this.me = me;
@@ -74,7 +76,7 @@ public class RaftReplicator implements Replicator, LeaderListener
         {
             assertDatabaseAvailable();
         }
-        catch ( UnavailableException e )
+        catch ( UnavailableException  | DatabaseNotFoundException e )
         {
             replicationMonitor.notReplicated();
             return ReplicationResult.notReplicated( e );
@@ -96,7 +98,7 @@ public class RaftReplicator implements Replicator, LeaderListener
         if ( leader == null )
         {
             replicationMonitor.notReplicated();
-            return ReplicationResult.notReplicated( new IllegalStateException( "No leader found" ));
+            return ReplicationResult.notReplicated( new IllegalStateException( "No leader found" ) );
         }
 
         OperationContext session = sessionPool.acquireSession();
@@ -132,7 +134,6 @@ public class RaftReplicator implements Replicator, LeaderListener
                     {
                         throw new IllegalStateException( "No Leader Found" );
                     }
-
                 }
             }
             while ( stateMachineResult == null );
@@ -187,8 +188,8 @@ public class RaftReplicator implements Replicator, LeaderListener
     private void assertDatabaseAvailable() throws UnavailableException
     {
         var database = databaseManager.getDatabaseContext( namedDatabaseId )
-                .map( DatabaseContext::database )
-                .orElseThrow( IllegalStateException::new );
+                                      .map( DatabaseContext::database )
+                                      .orElseThrow( () -> new DatabaseNotFoundException( "Cannot find database: " + namedDatabaseId.name() ) );
 
         database.getDatabaseAvailabilityGuard().await( availabilityTimeoutMillis );
         if ( !database.getDatabaseHealth().isHealthy() )

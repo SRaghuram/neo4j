@@ -69,7 +69,7 @@ class MultiDatabaseCreationStressTesting
         List<CommandExecutor> commandExecutors = new ArrayList<>( threads );
         for ( int i = 0; i < threads; i++ )
         {
-            CommandExecutor commandExecutor = new CommandExecutor( dbms, executorLatch, finishTimeMillis );
+            CommandExecutor commandExecutor = new CommandExecutor( ignored ->  dbms, executorLatch, finishTimeMillis );
             commandExecutors.add( commandExecutor );
             executorPool.submit( commandExecutor );
         }

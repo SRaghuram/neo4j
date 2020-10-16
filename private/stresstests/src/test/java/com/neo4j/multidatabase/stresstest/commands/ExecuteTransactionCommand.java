@@ -44,6 +44,10 @@ public class ExecuteTransactionCommand extends DatabaseManagerCommand
         }
         catch ( IllegalStateException e )
         {
+            if ( e.getMessage() == null )
+            {
+                throw e;
+            }
             if ( !e.getMessage().contains( "Kernel is not running" ) )
             {
                 throw e;
