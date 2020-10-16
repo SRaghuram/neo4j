@@ -48,11 +48,23 @@
             <groupId>org.neo4j.app</groupId>
             <artifactId>neo4j-server</artifactId>
             <version>${project.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-nop</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-enterprise</artifactId>
             <version>${project.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-nop</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
@@ -68,6 +80,12 @@
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-enterprise-record-storage-engine</artifactId>
             <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <scope>compile</scope>
         </dependency>
 
         <dependency>
@@ -151,6 +169,12 @@
             <artifactId>neo4j-harness-enterprise</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-nop</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.findify</groupId>
@@ -198,6 +222,11 @@
                                     </excludes>
                                 </filter>
                             </filters>
+                            <artifactSet>
+                                <excludes>
+                                    <exclude>org.slf4j:slf4j-nop</exclude>
+                                </excludes>
+                            </artifactSet>
                         </configuration>
                         <dependencies>
                             <dependency>
