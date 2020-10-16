@@ -18,7 +18,6 @@ import org.neo4j.cypher.internal.runtime.spec.tests.AntiConditionalApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AntiSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArgumentTestBase
-import org.neo4j.cypher.internal.runtime.spec.tests.CacheFromCursorTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CachePropertiesTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
@@ -207,7 +206,6 @@ class SlottedLetAntiSemiApplyTest extends LetAntiSemiApplyTestBase(ENTERPRISE.DE
 
 class SlottedNestedPlanExpressionTest extends NestedPlanExpressionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedRollupApplyTest extends RollupApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
-class SlottedCacheFromCursorTest extends CacheFromCursorTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedDropResultTest extends DropResultTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedTriadicSelectionTest extends TriadicSelectionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 

@@ -34,7 +34,6 @@ import org.neo4j.cypher.internal.logical.plans.EmptyResult
 import org.neo4j.cypher.internal.logical.plans.ErrorPlan
 import org.neo4j.cypher.internal.logical.plans.Expand
 import org.neo4j.cypher.internal.logical.plans.ExpandAll
-import org.neo4j.cypher.internal.logical.plans.ExpandCursorProperties
 import org.neo4j.cypher.internal.logical.plans.ExpandInto
 import org.neo4j.cypher.internal.logical.plans.ForeachApply
 import org.neo4j.cypher.internal.logical.plans.IncludeTies
@@ -133,7 +132,6 @@ import org.neo4j.cypher.internal.runtime.slotted.aggregation.SlottedNonGroupingA
 import org.neo4j.cypher.internal.runtime.slotted.aggregation.SlottedOrderedGroupingAggTable
 import org.neo4j.cypher.internal.runtime.slotted.aggregation.SlottedOrderedNonGroupingAggTable
 import org.neo4j.cypher.internal.runtime.slotted.aggregation.SlottedPrimitiveGroupingAggTable
-import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPropertyKeys
 import org.neo4j.cypher.internal.runtime.slotted.pipes.AllNodesScanSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.AllOrderedDistinctSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.AllOrderedDistinctSlottedPrimitivePipe
@@ -248,28 +246,26 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val runtimeColumns = createProjectionsForResult(columns, slots)
         ProduceResultSlottedPipe(source, runtimeColumns)(id)
 
-      case Expand(_, from, dir, types, to, relName, ExpandAll, expandProperties) =>
+      case Expand(_, from, dir, types, to, relName, ExpandAll) =>
         val fromSlot = slots(from)
         val relOffset = slots.getLongOffsetFor(relName)
         val toOffset = slots.getLongOffsetFor(to)
-        val (nodePropsToCache, relPropsToCache) = getExpandProperties(slots, expandProperties)
-        ExpandAllSlottedPipe(source, fromSlot, relOffset, toOffset, dir, RelationshipTypes(types.toArray), slots, nodePropsToCache, relPropsToCache)(id)
+        ExpandAllSlottedPipe(source, fromSlot, relOffset, toOffset, dir, RelationshipTypes(types.toArray), slots)(id)
 
-      case Expand(_, from, dir, types, to, relName, ExpandInto, _) =>
+      case Expand(_, from, dir, types, to, relName, ExpandInto) =>
         val fromSlot = slots(from)
         val relOffset = slots.getLongOffsetFor(relName)
         val toSlot = slots(to)
         ExpandIntoSlottedPipe(source, fromSlot, relOffset, toSlot, dir, RelationshipTypes(types.toArray), slots)(id)
 
-      case OptionalExpand(_, fromName, dir, types, toName, relName, ExpandAll, predicate, expandProperties) =>
+      case OptionalExpand(_, fromName, dir, types, toName, relName, ExpandAll, predicate) =>
         val fromSlot = slots(fromName)
         val relOffset = slots.getLongOffsetFor(relName)
         val toOffset = slots.getLongOffsetFor(toName)
-        val (nodePropsToCache, relPropsToCache) = getExpandProperties(slots, expandProperties)
         OptionalExpandAllSlottedPipe(source, fromSlot, relOffset, toOffset, dir, RelationshipTypes(types.toArray), slots,
-          predicate.map(convertExpressions), nodePropsToCache, relPropsToCache)(id)
+          predicate.map(convertExpressions))(id)
 
-      case OptionalExpand(_, fromName, dir, types, toName, relName, ExpandInto, predicate, _) =>
+      case OptionalExpand(_, fromName, dir, types, toName, relName, ExpandInto, predicate) =>
         val fromSlot = slots(fromName)
         val relOffset = slots.getLongOffsetFor(relName)
         val toSlot = slots(toName)
@@ -598,17 +594,6 @@ class SlottedPipeMapper(fallback: PipeMapper,
     }
     pipe.rowFactory = SlottedCypherRowFactory(slots, argumentSize)
     pipe
-  }
-
-  private def getExpandProperties(slots: SlotConfiguration,
-                                  expandProperties: Option[ExpandCursorProperties]) = {
-    val (nodePropsToCache, relPropsToCache) = expandProperties match {
-      case Some(rp) => (
-        if (rp.nodeProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.nodeProperties, slots, tokenContext)),
-        if (rp.relProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.relProperties, slots, tokenContext)))
-      case None => (None, None)
-    }
-    (nodePropsToCache, relPropsToCache)
   }
 
   private def chooseDistinctPipe(groupingExpressions: Map[String, internal.expressions.Expression],

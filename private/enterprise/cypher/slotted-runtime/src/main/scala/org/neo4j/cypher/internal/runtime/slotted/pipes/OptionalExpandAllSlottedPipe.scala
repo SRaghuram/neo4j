@@ -21,9 +21,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
-import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPropertyKeys
-import org.neo4j.cypher.internal.runtime.slotted.pipes.ExpandAllSlottedPipe.cacheNodeProperties
-import org.neo4j.cypher.internal.runtime.slotted.pipes.ExpandAllSlottedPipe.cacheRelationshipProperties
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections
 import org.neo4j.values.storable.Values
@@ -34,9 +31,7 @@ abstract class OptionalExpandAllSlottedPipe(source: Pipe,
                                             toOffset: Int,
                                             dir: SemanticDirection,
                                             types: RelationshipTypes,
-                                            slots: SlotConfiguration,
-                                            nodePropsToRead: Option[SlottedPropertyKeys],
-                                            relsPropsToRead: Option[SlottedPropertyKeys])
+                                            slots: SlotConfiguration)
   extends PipeWithSource(source) with Pipe {
 
   //===========================================================================
@@ -63,7 +58,6 @@ abstract class OptionalExpandAllSlottedPipe(source: Pipe,
             if (!nodeCursor.next()) {
               ClosingIterator.empty
             } else {
-              val nodePropsToCache = ExpandAllSlottedPipe.getNodePropertiesToCache(nodePropsToRead, nodeCursor, state.cursors.propertyCursor, state.query)
               val selectionCursor = dir match {
                 case OUTGOING => RelationshipSelections.outgoingCursor(relCursor, nodeCursor, types.types(state.query))
                 case INCOMING => RelationshipSelections.incomingCursor(relCursor, nodeCursor, types.types(state.query))
@@ -75,8 +69,6 @@ abstract class OptionalExpandAllSlottedPipe(source: Pipe,
                   outputRow.copyAllFrom(inputRow)
                   outputRow.setLongAt(relOffset, relationship)
                   outputRow.setLongAt(toOffset, otherNode)
-                  cacheNodeProperties(nodePropsToCache, outputRow)
-                  cacheRelationshipProperties(relsPropsToRead, relCursor, state.cursors.propertyCursor, outputRow, state.query)
                   outputRow
                 }
               }, state)
@@ -101,7 +93,6 @@ abstract class OptionalExpandAllSlottedPipe(source: Pipe,
     outputRow.setLongAt(toOffset, -1)
     outputRow
   }
-
 }
 
 object OptionalExpandAllSlottedPipe {
@@ -112,13 +103,11 @@ object OptionalExpandAllSlottedPipe {
             toOffset: Int,
             dir: SemanticDirection, types: RelationshipTypes,
             slots: SlotConfiguration,
-            maybePredicate: Option[Expression],
-            nodePropsToRead: Option[SlottedPropertyKeys] = None,
-            relPropsToRead: Option[SlottedPropertyKeys] = None)
+            maybePredicate: Option[Expression])
            (id: Id = Id.INVALID_ID): OptionalExpandAllSlottedPipe = maybePredicate match {
     case Some(predicate) => FilteringOptionalExpandAllSlottedPipe(source, fromSlot, relOffset, toOffset, dir, types,
-      slots, predicate, nodePropsToRead, relPropsToRead)(id)
-    case None => NonFilteringOptionalExpandAllSlottedPipe(source, fromSlot, relOffset, toOffset, dir, types, slots, nodePropsToRead, relPropsToRead)(id)
+      slots, predicate)(id)
+    case None => NonFilteringOptionalExpandAllSlottedPipe(source, fromSlot, relOffset, toOffset, dir, types, slots)(id)
   }
 }
 
@@ -128,10 +117,8 @@ case class NonFilteringOptionalExpandAllSlottedPipe(source: Pipe,
                                                     toOffset: Int,
                                                     dir: SemanticDirection,
                                                     types: RelationshipTypes,
-                                                    slots: SlotConfiguration,
-                                                    nodePropsToRead: Option[SlottedPropertyKeys] = None,
-                                                    relsPropsToRead: Option[SlottedPropertyKeys] = None)(val id: Id)
-  extends OptionalExpandAllSlottedPipe(source: Pipe, fromSlot, relOffset, toOffset, dir, types, slots, nodePropsToRead, relsPropsToRead) {
+                                                    slots: SlotConfiguration)(val id: Id)
+  extends OptionalExpandAllSlottedPipe(source: Pipe, fromSlot, relOffset, toOffset, dir, types, slots) {
 
   override def filter(iterator: ClosingIterator[SlottedRow], state: QueryState): ClosingIterator[SlottedRow] = iterator
 }
@@ -143,10 +130,8 @@ case class FilteringOptionalExpandAllSlottedPipe(source: Pipe,
                                                  dir: SemanticDirection,
                                                  types: RelationshipTypes,
                                                  slots: SlotConfiguration,
-                                                 predicate: Expression,
-                                                 nodePropsToRead: Option[SlottedPropertyKeys] = None,
-                                                 relsPropsToRead: Option[SlottedPropertyKeys] = None)(val id: Id)
-  extends OptionalExpandAllSlottedPipe(source: Pipe, fromSlot, relOffset, toOffset, dir, types, slots, nodePropsToRead, relsPropsToRead) {
+                                                 predicate: Expression)(val id: Id)
+  extends OptionalExpandAllSlottedPipe(source: Pipe, fromSlot, relOffset, toOffset, dir, types, slots) {
 
   override def filter(iterator: ClosingIterator[SlottedRow], state: QueryState): ClosingIterator[SlottedRow] =
     iterator.filter(ctx => predicate(ctx, state) eq Values.TRUE)

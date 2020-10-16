@@ -35,7 +35,6 @@ import org.neo4j.cypher.internal.runtime.spec.tests.AntiSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArgumentTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArrayIndexSupport
-import org.neo4j.cypher.internal.runtime.spec.tests.CacheFromCursorTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CachePropertiesTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
@@ -279,10 +278,6 @@ class PipelinedProjectionTest extends ProjectionTestBase(FUSING, PIPELINED, SIZE
 class PipelinedProjectionNoFusingTest extends ProjectionTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedCachePropertiesTest extends CachePropertiesTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedCachePropertiesNoFusingTest extends CachePropertiesTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
-
-// Cache properties from cursors
-class PipelinedCacheFromCursorTest extends CacheFromCursorTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
-class PipelinedCacheFromCursorNoFusingTest extends CacheFromCursorTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // FILTER
 class PipelinedFilterTest extends FilterTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite

@@ -21,18 +21,9 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
-import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPropertyKeys
-import org.neo4j.cypher.internal.runtime.slotted.pipes.ExpandAllSlottedPipe.cacheNodeProperties
-import org.neo4j.cypher.internal.runtime.slotted.pipes.ExpandAllSlottedPipe.cacheRelationshipProperties
-import org.neo4j.cypher.internal.runtime.slotted.pipes.ExpandAllSlottedPipe.getNodePropertiesToCache
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.internal.kernel.api.NodeCursor
-import org.neo4j.internal.kernel.api.PropertyCursor
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections
-import org.neo4j.values.storable.Value
-
-import scala.collection.mutable
 
 case class ExpandAllSlottedPipe(source: Pipe,
                                 fromSlot: Slot,
@@ -40,9 +31,7 @@ case class ExpandAllSlottedPipe(source: Pipe,
                                 toOffset: Int,
                                 dir: SemanticDirection,
                                 types: RelationshipTypes,
-                                slots: SlotConfiguration,
-                                nodePropsToRead: Option[SlottedPropertyKeys] = None,
-                                relsPropsToRead: Option[SlottedPropertyKeys] = None)
+                                slots: SlotConfiguration)
                                (val id: Id = Id.INVALID_ID) extends PipeWithSource(source) with Pipe {
 
   //===========================================================================
@@ -69,7 +58,6 @@ case class ExpandAllSlottedPipe(source: Pipe,
             if (!nodeCursor.next()) {
               ClosingIterator.empty
             } else {
-              val nodePropsToCache = getNodePropertiesToCache(nodePropsToRead, nodeCursor, state.cursors.propertyCursor, state.query)
               val selectionCursor = dir match {
                 case OUTGOING => RelationshipSelections.outgoingCursor(relCursor, nodeCursor, types.types(state.query))
                 case INCOMING => RelationshipSelections.incomingCursor(relCursor, nodeCursor, types.types(state.query))
@@ -81,8 +69,6 @@ case class ExpandAllSlottedPipe(source: Pipe,
                   outputRow.copyAllFrom(inputRow)
                   outputRow.setLongAt(relOffset, relationship)
                   outputRow.setLongAt(toOffset, otherNode)
-                  cacheNodeProperties(nodePropsToCache, outputRow)
-                  cacheRelationshipProperties(relsPropsToRead, relCursor, state.cursors.propertyCursor, outputRow, state.query)
                   outputRow
 
                 }
@@ -93,39 +79,6 @@ case class ExpandAllSlottedPipe(source: Pipe,
           }
         }
     }
-  }
-}
-
-object ExpandAllSlottedPipe {
-  def getNodePropertiesToCache(nodePropsToRead: Option[SlottedPropertyKeys],
-                               nodeCursor: NodeCursor,
-                               propertyCursor: PropertyCursor,
-                               queryContext: QueryContext): Seq[(Int, Value)] = {
-    nodePropsToRead.map(p => {
-      nodeCursor.properties(propertyCursor)
-      val props = mutable.ArrayBuffer.empty[(Int, Value)]
-      while (propertyCursor.next() && p.accept(queryContext, propertyCursor.propertyKey())) {
-        props += (p.offset -> propertyCursor.propertyValue())
-      }
-      props
-    }).getOrElse(Seq.empty)
-  }
-
-  def cacheNodeProperties(nodePropsToCache: Seq[(Int, Value)], outputRow: SlottedRow): Unit = {
-    nodePropsToCache.foreach {
-      case (offset, value) => outputRow.setCachedPropertyAt(offset, value)
-    }
-  }
-  def cacheRelationshipProperties(relsPropsToRead: Option[SlottedPropertyKeys],
-                                  relationships: RelationshipTraversalCursor,
-                                  propertyCursor: PropertyCursor,
-                                  outputRow: CypherRow, queryContext: QueryContext): Unit = {
-    relsPropsToRead.foreach(p => {
-      relationships.properties(propertyCursor)
-      while (propertyCursor.next() && p.accept(queryContext, propertyCursor.propertyKey())) {
-        outputRow.setCachedPropertyAt(p.offset, propertyCursor.propertyValue())
-      }
-    })
   }
 }
 

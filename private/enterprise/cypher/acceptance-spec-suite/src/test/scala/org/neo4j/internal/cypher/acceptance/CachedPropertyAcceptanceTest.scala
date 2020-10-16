@@ -5,11 +5,9 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.graphdb.Node
 import org.neo4j.graphdb.Relationship
-import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
@@ -294,42 +292,4 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     result.executionPlanDescription() should includeSomewhere.aPlan("CacheProperties")
     result.toSet should equal(expectedResult)
   }
-
-  test("should cache properties read in expand") {
-    relate(createNode(), createNode(), ("prop" -> 17))
-
-    val res =
-      executeWith(Configs.CachedProperty,
-      "PROFILE MATCH (n)-[r]->(m) WHERE r.prop > 10 RETURN r.prop",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
-        aPlan("Projection")
-        .containingArgumentForProjection(Map("`r.prop`" -> "cache[r.prop]"))
-        .withDBHits(0)
-        .onTopOf(
-          aPlan("Filter").containingArgumentRegex("cache\\[r.prop\\] > .*".r)
-          .withDBHits(0)
-        ), expectPlansToFail = Configs.InterpretedRuntime
-      ),
-    )
-
-    res.toList should equal(List(Map("r.prop" -> 17)))
-  }
-
-  override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++
-    Map(GraphDatabaseInternalSettings.cypher_read_properties_from_cursor -> java.lang.Boolean.TRUE
-    )
 }
-
-//+-----------------+------------------------------+----------------+------+---------+----------------+---------------------+
-//| Operator        | Details                      | Estimated Rows | Rows | DB Hits | Memory (Bytes) | Other               |
-//+-----------------+------------------------------+----------------+------+---------+----------------+---------------------+
-//| +ProduceResults | r.foo                        |              1 |    2 |       0 |                | Fused in Pipeline 0 |
-//| |               +------------------------------+----------------+------+---------+----------------+---------------------+
-//| +Projection     | cache[r.foo] AS r.foo        |              1 |    2 |       1 |                | Fused in Pipeline 0 |
-//| |               +------------------------------+----------------+------+---------+----------------+---------------------+
-//| +Filter         | cache[r.foo] > $`  AUTOINT0` |              1 |    2 |       1 |                | Fused in Pipeline 0 |
-//| |               +------------------------------+----------------+------+---------+----------------+---------------------+
-//| +Expand(All)    | ()<-[r]-()                   |              3 |    3 |       6 |                | Fused in Pipeline 0 |
-//| |               +------------------------------+----------------+------+---------+----------------+---------------------+
-//| +AllNodesScan   |   UNNAMED15                  |             10 |    6 |       7 |             56 | Fused in Pipeline 0 |
-//+-----------------+------------------------------+----------------+------+---------+----------------+---------------------+

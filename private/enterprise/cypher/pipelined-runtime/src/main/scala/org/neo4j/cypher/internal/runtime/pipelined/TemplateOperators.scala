@@ -49,7 +49,6 @@ import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.ProcedureCallMode
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
-import org.neo4j.cypher.internal.runtime.pipelined.OperatorFactory.getExpandProperties
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ArgumentOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.BinaryOperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ByNameLookup
@@ -333,7 +332,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               ctx.argumentSizes(plan.id),
               ctx.expressionCompiler)
 
-        case plan@plans.Expand(_, fromName, dir, types, to, relName, mode, expandProperties) if isHeadOperator || fuseOverPipelines =>
+        case plan@plans.Expand(_, fromName, dir, types, to, relName, mode) if isHeadOperator || fuseOverPipelines =>
           ctx: TemplateContext =>
             val fromSlot = ctx.slots(fromName)
             val relOffset = ctx.slots.getLongOffsetFor(relName)
@@ -348,8 +347,6 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
             val missingTypes = tokensOrNames.collect {
               case Right(name: String) => name
             }
-            val (nodePropsToCache, relPropsToCache) = getExpandProperties(ctx.slots, ctx.tokenContext, expandProperties)
-
             mode match {
               case ExpandAll =>
                 new ExpandAllOperatorTaskTemplate(ctx.inner,
@@ -363,9 +360,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   toSlot.offset,
                   dir,
                   typeTokens.toArray,
-                  missingTypes.toArray,
-                  nodePropsToCache,
-                  relPropsToCache)(ctx.expressionCompiler)
+                  missingTypes.toArray)(ctx.expressionCompiler)
               case ExpandInto =>
                 new ExpandIntoOperatorTaskTemplate(ctx.inner,
                   plan.id,
@@ -380,7 +375,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   missingTypes.toArray)(ctx.expressionCompiler)
             }
 
-        case plan@plans.OptionalExpand(_, fromName, dir, types, to, relName, mode, maybePredicate, expandProperties) if isHeadOperator || fuseOverPipelines =>
+        case plan@plans.OptionalExpand(_, fromName, dir, types, to, relName, mode, maybePredicate) if isHeadOperator || fuseOverPipelines =>
           ctx: TemplateContext =>
             val fromSlot = ctx.slots(fromName)
             val relOffset = ctx.slots.getLongOffsetFor(relName)
@@ -399,7 +394,6 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
 
             mode match {
               case ExpandAll =>
-                val (nodePropsToCache, relPropsToCache) = getExpandProperties(ctx.slots, ctx.tokenContext, expandProperties)
                 new OptionalExpandAllOperatorTaskTemplate(ctx.inner,
                   plan.id,
                   ctx.innermost,
@@ -412,9 +406,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   dir,
                   typeTokens.toArray,
                   missingTypes.toArray,
-                  maybePredicate.map(ctx.compileExpression(_, plan.id)),
-                  nodePropsToCache,
-                  relPropsToCache)(ctx.expressionCompiler)
+                  maybePredicate.map(ctx.compileExpression(_, plan.id)))(ctx.expressionCompiler)
               case ExpandInto =>
                 new OptionalExpandIntoOperatorTaskTemplate(ctx.inner,
                   plan.id,

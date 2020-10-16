@@ -10,7 +10,6 @@ import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.AntiConditionalApply
 import org.neo4j.cypher.internal.logical.plans.ConditionalApply
 import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
-import org.neo4j.cypher.internal.logical.plans.ExpandCursorProperties
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NodeUniqueIndexSeek
 import org.neo4j.cypher.internal.logical.plans.ProcedureSignature
@@ -32,7 +31,6 @@ import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
 import org.neo4j.cypher.internal.physicalplanning.ReduceOutput
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.isRefSlotAndNotAlias
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
@@ -56,7 +54,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
-import org.neo4j.cypher.internal.runtime.pipelined.OperatorFactory.getExpandProperties
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AggregatorFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationOperator
@@ -140,7 +137,6 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProject
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.findDistinctPhysicalOp
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.partitionGroupingExpressions
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColumnOrder
-import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPropertyKeys
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.KeyOffsets
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
@@ -310,22 +306,19 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           maybeEndLabel,
           physicalPlan.argumentSizes(id))
 
-      case plans.Expand(_, fromName, dir, types, to, relName, plans.ExpandAll, expandProperties) =>
+      case plans.Expand(_, fromName, dir, types, to, relName, plans.ExpandAll) =>
         val fromSlot = slots(fromName)
         val relOffset = slots.getLongOffsetFor(relName)
         val toOffset = slots.getLongOffsetFor(to)
         val lazyTypes = RelationshipTypes(types.toArray)(semanticTable)
-        val (nodePropsToCache, relPropsToCache) = getExpandProperties(slots, tokenContext, expandProperties)
         new ExpandAllOperator(WorkIdentity.fromPlan(plan),
           fromSlot,
           relOffset,
           toOffset,
           dir,
-          lazyTypes,
-          nodePropsToCache,
-          relPropsToCache)
+          lazyTypes)
 
-      case plans.Expand(_, fromName, dir, types, to, relName, plans.ExpandInto, _) =>
+      case plans.Expand(_, fromName, dir, types, to, relName, plans.ExpandInto) =>
         val fromSlot = slots(fromName)
         val relOffset = slots.getLongOffsetFor(relName)
         val toSlot = slots(to)
@@ -373,19 +366,16 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           relationshipPredicate.map(x => converters.toCommandExpression(id, x.predicate)).getOrElse(True()),
           id)
 
-      case plans.OptionalExpand(_, fromName, dir, types, to, relName, plans.ExpandAll, maybePredicate, expandProperties) =>
-        val (nodePropsToCache, relPropsToCache) = getExpandProperties(slots, tokenContext, expandProperties)
+      case plans.OptionalExpand(_, fromName, dir, types, to, relName, plans.ExpandAll, maybePredicate) =>
         new OptionalExpandAllOperator(WorkIdentity.fromPlan(plan),
           slots(fromName),
           slots.getLongOffsetFor(relName),
           slots.getLongOffsetFor(to),
           dir,
           RelationshipTypes(types.toArray)(semanticTable),
-          maybePredicate.map(converters.toCommandExpression(id, _)),
-          nodePropsToCache,
-          relPropsToCache)
+          maybePredicate.map(converters.toCommandExpression(id, _)))
 
-      case plans.OptionalExpand(_, fromName, dir, types, to, relName, plans.ExpandInto, maybePredicate, _) =>
+      case plans.OptionalExpand(_, fromName, dir, types, to, relName, plans.ExpandInto, maybePredicate) =>
         new OptionalExpandIntoOperator(WorkIdentity.fromPlan(plan),
           slots(fromName),
           slots.getLongOffsetFor(relName),
@@ -1017,20 +1007,6 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
     callArguments.map(Some(_)).zipAll(signature.inputSignature.map(_.default), None, None).map {
       case (given, default) => given.map(converters.toCommandExpression(id, _)).getOrElse(Literal(default.get))
     }
-  }
-}
-
-object OperatorFactory {
-  def getExpandProperties(slots: SlotConfiguration,
-                          tokenContext: TokenContext,
-                          expandProperties: Option[ExpandCursorProperties]): (Option[SlottedPropertyKeys], Option[SlottedPropertyKeys]) = {
-    val (nodePropsToCache, relPropsToCache) = expandProperties match {
-      case Some(rp) => (
-        if (rp.nodeProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.nodeProperties, slots, tokenContext)),
-        if (rp.relProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.relProperties, slots, tokenContext)))
-      case None => (None, None)
-    }
-    (nodePropsToCache, relPropsToCache)
   }
 }
 
