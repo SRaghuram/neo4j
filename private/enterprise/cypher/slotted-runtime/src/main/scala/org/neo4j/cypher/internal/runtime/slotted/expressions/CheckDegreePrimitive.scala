@@ -54,14 +54,9 @@ abstract class CheckDegreeWithTypePrimitiveLate(offset: Int, typeName: LazyType,
   protected def computePredicate(state: QueryState, node: Long, relType: Int, direction:SemanticDirection, max: Int): Boolean
 
   override def apply(row: ReadableRow, state: QueryState): AnyValue = {
-    val relTypeId = typeName.getId(state.query)
-    if (relTypeId == LazyType.UNKNOWN) Values.FALSE
-    else {
-      maxDegree.apply(row, state) match {
-        case x if x eq Values.NO_VALUE => Values.NO_VALUE
-        case e => booleanValue(computePredicate(state, row.getLongAt(offset), relTypeId, direction, NumericHelper.asPrimitiveInt(e)))
-      }
-
+    maxDegree.apply(row, state) match {
+      case x if x eq Values.NO_VALUE => Values.NO_VALUE
+      case e => booleanValue(computePredicate(state, row.getLongAt(offset), typeName.getId(state.query), direction, NumericHelper.asPrimitiveInt(e)))
     }
   }
   override def children: Seq[AstNode[_]] = Seq.empty

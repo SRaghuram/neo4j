@@ -4347,27 +4347,11 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = SlottedRow(slots)
     context.setLongAt(0, n.getId)
     val relToken = tokenReader(tx, _.relationshipType("R"))
-    evaluate(compile(GetDegreePrimitive(0, Some(Left(relToken)), OUTGOING), slots), context) should equal(Values.longValue(2))
-    evaluate(compile(GetDegreePrimitive(0, Some(Left(relToken)), INCOMING), slots), context) should equal(Values.longValue(1))
-    evaluate(compile(GetDegreePrimitive(0, Some(Left(relToken)), BOTH), slots), context) should equal(Values.longValue(3))
-  }
-
-  test("getDegree with type late") {
-    //given node with three outgoing and two incoming relationships
-    val n = createNode("prop" -> "hello")
-    val relType = "R"
-    relate(createNode(), n, relType)
-    relate(createNode(), n, "OTHER")
-    relate(n, createNode(), relType)
-    relate(n, createNode(), relType)
-    relate(n, createNode(), "OTHER")
-    val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
-    val context = SlottedRow(slots)
-    context.setLongAt(0, n.getId)
-
-    evaluate(compile(GetDegreePrimitive(0, Some(Right(relType)), OUTGOING), slots), context) should equal(Values.longValue(2))
-    evaluate(compile(GetDegreePrimitive(0, Some(Right(relType)), INCOMING), slots), context) should equal(Values.longValue(1))
-    evaluate(compile(GetDegreePrimitive(0, Some(Right(relType)), BOTH), slots), context) should equal(Values.longValue(3))
+    for (typ <- List(Left(relToken), Right(relType))) {
+      evaluate(compile(GetDegreePrimitive(0, Some(typ), OUTGOING), slots), context) should equal(Values.longValue(2))
+      evaluate(compile(GetDegreePrimitive(0, Some(typ), INCOMING), slots), context) should equal(Values.longValue(1))
+      evaluate(compile(GetDegreePrimitive(0, Some(typ), BOTH), slots), context) should equal(Values.longValue(3))
+    }
   }
 
   test("check Degree without type") {
@@ -4502,6 +4486,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compile(HasDegreeGreaterThanPrimitive(0, Some(Right("R")), OUTGOING, parameter(0)), slots), 0, Array(NO_VALUE), context) should equal(NO_VALUE)
 
     //greater than
+    evaluate(compile(HasDegreeGreaterThanPrimitive(0, Some(Right("UNKNOWN")), OUTGOING, literalInt(1)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreeGreaterThanPrimitive(0, Some(Right("UNKNOWN")), OUTGOING, literalInt(0)), slots), context) should equal(Values.FALSE)
     evaluate(compile(HasDegreeGreaterThanPrimitive(0, Some(Right("R")), OUTGOING, literalInt(3)), slots), context) should equal(Values.FALSE)
     evaluate(compile(HasDegreeGreaterThanPrimitive(0, Some(Right("R")), OUTGOING, literalInt(2)), slots), context) should equal(Values.FALSE)
     evaluate(compile(HasDegreeGreaterThanPrimitive(0, Some(Right("R")), OUTGOING, literalInt(1)), slots), context) should equal(Values.TRUE)
@@ -4510,6 +4496,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compile(HasDegreeGreaterThanPrimitive(0, Some(Right("R")), INCOMING, literalInt(0)), slots), context) should equal(Values.TRUE)
 
     //greater than or equal
+    evaluate(compile(HasDegreeGreaterThanOrEqualPrimitive(0, Some(Right("UNKNOWN")), OUTGOING, literalInt(1)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreeGreaterThanOrEqualPrimitive(0, Some(Right("UNKNOWN")), OUTGOING, literalInt(0)), slots), context) should equal(Values.TRUE)
     evaluate(compile(HasDegreeGreaterThanOrEqualPrimitive(0, Some(Right("R")), OUTGOING, literalInt(3)), slots), context) should equal(Values.FALSE)
     evaluate(compile(HasDegreeGreaterThanOrEqualPrimitive(0, Some(Right("R")), OUTGOING, literalInt(2)), slots), context) should equal(Values.TRUE)
     evaluate(compile(HasDegreeGreaterThanOrEqualPrimitive(0, Some(Right("R")), OUTGOING, literalInt(1)), slots), context) should equal(Values.TRUE)
@@ -4518,6 +4506,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compile(HasDegreeGreaterThanOrEqualPrimitive(0, Some(Right("R")), INCOMING, literalInt(0)), slots), context) should equal(Values.TRUE)
 
     // equal
+    evaluate(compile(HasDegreePrimitive(0, Some(Right("UNKNOWN")), OUTGOING, literalInt(1)), slots), context) should equal(Values.FALSE)
+    evaluate(compile(HasDegreePrimitive(0, Some(Right("UNKNOWN")), OUTGOING, literalInt(0)), slots), context) should equal(Values.TRUE)
     evaluate(compile(HasDegreePrimitive(0, Some(Right("R")), OUTGOING, literalInt(3)), slots), context) should equal(Values.FALSE)
     evaluate(compile(HasDegreePrimitive(0, Some(Right("R")), OUTGOING, literalInt(2)), slots), context) should equal(Values.TRUE)
     evaluate(compile(HasDegreePrimitive(0, Some(Right("R")), OUTGOING, literalInt(1)), slots), context) should equal(Values.FALSE)
@@ -4526,6 +4516,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compile(HasDegreePrimitive(0, Some(Right("R")), INCOMING, literalInt(0)), slots), context) should equal(Values.FALSE)
 
     // less than
+    evaluate(compile(HasDegreeLessThanPrimitive(0, Some(Right("UNKNOWN")), OUTGOING, literalInt(1)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreeLessThanPrimitive(0, Some(Right("UNKNOWN")), OUTGOING, literalInt(0)), slots), context) should equal(Values.FALSE)
     evaluate(compile(HasDegreeLessThanPrimitive(0, Some(Right("R")), OUTGOING, literalInt(3)), slots), context) should equal(Values.TRUE)
     evaluate(compile(HasDegreeLessThanPrimitive(0, Some(Right("R")), OUTGOING, literalInt(2)), slots), context) should equal(Values.FALSE)
     evaluate(compile(HasDegreeLessThanPrimitive(0, Some(Right("R")), OUTGOING, literalInt(1)), slots), context) should equal(Values.FALSE)
@@ -4534,6 +4526,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compile(HasDegreeLessThanPrimitive(0, Some(Right("R")), INCOMING, literalInt(0)), slots), context) should equal(Values.FALSE)
 
     // less than or equal
+    evaluate(compile(HasDegreeLessThanOrEqualPrimitive(0, Some(Right("UNKNOWN")), OUTGOING, literalInt(1)), slots), context) should equal(Values.TRUE)
+    evaluate(compile(HasDegreeLessThanOrEqualPrimitive(0, Some(Right("UNKNOWN")), OUTGOING, literalInt(0)), slots), context) should equal(Values.TRUE)
     evaluate(compile(HasDegreeLessThanOrEqualPrimitive(0, Some(Right("R")), OUTGOING, literalInt(3)), slots), context) should equal(Values.TRUE)
     evaluate(compile(HasDegreeLessThanOrEqualPrimitive(0, Some(Right("R")), OUTGOING, literalInt(2)), slots), context) should equal(Values.TRUE)
     evaluate(compile(HasDegreeLessThanOrEqualPrimitive(0, Some(Right("R")), OUTGOING, literalInt(1)), slots), context) should equal(Values.FALSE)
