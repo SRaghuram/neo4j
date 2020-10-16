@@ -25,7 +25,6 @@ import com.ldbc.driver.runtime.metrics.SimpleResultsLogReader;
 import com.ldbc.driver.runtime.metrics.ThreadedQueuedMetricsService;
 import com.ldbc.driver.runtime.metrics.WorkloadResultsSnapshot;
 import com.ldbc.driver.temporal.SystemTimeSource;
-import com.ldbc.driver.util.FileUtils;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration;
 import com.neo4j.bench.client.env.InstanceDiscovery;
 import com.neo4j.bench.client.reporter.ResultsReporter;
@@ -33,6 +32,7 @@ import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.options.Version;
+import com.neo4j.bench.common.process.ProcessFailureException;
 import com.neo4j.bench.common.profiling.ExternalProfiler;
 import com.neo4j.bench.common.profiling.InternalProfiler;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
@@ -51,6 +51,7 @@ import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.ldbc.cli.RunCommand.LdbcRunConfig;
 import com.neo4j.bench.ldbc.connection.Neo4jApi;
 import com.neo4j.bench.ldbc.profiling.ProfilerRunner;
+import com.neo4j.bench.ldbc.profiling.ProfilerRunnerException;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkConfig;
 import com.neo4j.bench.model.model.BenchmarkGroup;
@@ -68,12 +69,15 @@ import com.neo4j.bench.model.model.Repository;
 import com.neo4j.bench.model.model.TestRun;
 import com.neo4j.bench.model.model.TestRunReport;
 import com.neo4j.bench.model.process.JvmArgs;
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
@@ -86,7 +90,6 @@ import java.util.concurrent.TimeUnit;
 import static com.ldbc.driver.control.ConsoleAndFileDriverConfiguration.fromParamsMap;
 import static com.ldbc.driver.runtime.metrics.WorkloadResultsSnapshot.fromJson;
 import static com.ldbc.driver.util.ClassLoaderHelper.loadWorkload;
-import static com.ldbc.driver.util.FileUtils.copyDir;
 import static com.ldbc.driver.util.MapUtils.loadPropertiesToMap;
 import static com.neo4j.bench.common.results.ErrorReportingPolicy.REPORT_THEN_FAIL;
 import static com.neo4j.bench.common.util.BenchmarkUtil.assertFileNotEmpty;
@@ -421,10 +424,6 @@ public class RunReportCommand implements Runnable
 
     private static final String LDBC_FORK_NAME = "ldbc-fork";
 
-    public RunReportCommand()
-    {
-    }
-
     @Override
     public void run()
     {
@@ -503,7 +502,7 @@ public class RunReportCommand implements Runnable
             assertDisallowFormatMigration( neo4jConfig );
             assertStoreFormatIsSet( neo4jConfig );
 
-            FileUtils.tryCreateDirs( resultsDir, false );
+            Files.createDirectories( resultsDir.toPath() );
 
             jvmArgs = buildJvmArgsString( jvmArgs, neo4jConfig );
 
@@ -560,7 +559,7 @@ public class RunReportCommand implements Runnable
                     triggeredBy,
                     ldbcConfig );
         }
-        catch ( Exception e )
+        catch ( Throwable e )
         {
             LOG.error( "fata error", e );
             System.exit( 1 );
@@ -578,6 +577,10 @@ public class RunReportCommand implements Runnable
             String triggeredBy,
             DriverConfiguration ldbcDriverConfig )
     {
+//        if ( true )
+//        {
+//            throw new RuntimeException( "BOOM" );
+//        }
         LOG.debug( "============================================" );
         LOG.debug( "==== Aggregating & Reporting Statistics ====" );
         LOG.debug( "============================================" );
@@ -603,7 +606,7 @@ public class RunReportCommand implements Runnable
                                                                    resultsStoreUri );
             resultsReporter.reportAndUpload( testRunReport, s3Bucket, resultsDir, awsEndpointURL, REPORT_THEN_FAIL );
         }
-        catch ( Exception e )
+        catch ( Throwable e )
         {
             throw new RuntimeException( "Error aggregating & reporting results", e );
         }
@@ -660,7 +663,7 @@ public class RunReportCommand implements Runnable
                 resultsDirectories.add( ResultsDirectory.fromDirectory( Paths.get( forkDir.toAbsolutePath() ).toFile() ) );
             }
         }
-        catch ( Exception e )
+        catch ( Throwable e )
         {
             throw new RuntimeException( "Error executing LDBC benchmark in new process", e );
         }
@@ -669,7 +672,7 @@ public class RunReportCommand implements Runnable
             if ( ldbcRunConfig.storeDir.exists() )
             {
                 LOG.debug( format( "Deleting database: %s", ldbcRunConfig.storeDir.getAbsolutePath() ) );
-                org.apache.commons.io.FileUtils.deleteQuietly( ldbcRunConfig.storeDir );
+                FileUtils.deleteQuietly( ldbcRunConfig.storeDir );
             }
         }
         return resultsDirectories;
@@ -677,8 +680,15 @@ public class RunReportCommand implements Runnable
 
     private void copyStore( LdbcRunConfig ldbcRunConfig )
     {
-        //We need to resolve the subfolder of the store.
-        copyDir( sourceDbDir, ldbcRunConfig.storeDir );
+        try
+        {
+            //We need to resolve the subfolder of the store.
+            FileUtils.copyDirectory( sourceDbDir, ldbcRunConfig.storeDir );
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
     }
 
     private void runBenchmarkRepetition(
@@ -699,7 +709,7 @@ public class RunReportCommand implements Runnable
                 if ( ldbcRunConfig.storeDir.exists() )
                 {
                     LOG.debug( format( "Deleting database: %s", ldbcRunConfig.storeDir.getAbsolutePath() ) );
-                    org.apache.commons.io.FileUtils.deleteDirectory( ldbcRunConfig.storeDir );
+                    FileUtils.deleteDirectory( ldbcRunConfig.storeDir );
                 }
                 copyStore( ldbcRunConfig );
             }
@@ -737,6 +747,8 @@ public class RunReportCommand implements Runnable
 
             Instant start = Instant.now();
 
+            File outputLog = forkDirectory.create( "ldbc-output.txt" ).toFile();
+
             Process ldbcFork = startLdbcFork(
                     forkLdbcRunConfig,
                     forkDirectory,
@@ -747,7 +759,10 @@ public class RunReportCommand implements Runnable
                     externalProfilers,
                     benchmarkGroup,
                     summaryBenchmark,
-                    LDBC_FORK_NAME );
+                    LDBC_FORK_NAME ).inheritIO()
+                                    .redirectOutput( outputLog )
+                                    .redirectErrorStream( true )
+                                    .start();
 
             ProfilerRunner.beforeProcess(
                     forkDirectory,
@@ -767,15 +782,20 @@ public class RunReportCommand implements Runnable
                         summaryBenchmark,
                         internalProfilers );
             }
+            catch ( ProfilerRunnerException e )
+            {
+                throw new ProcessFailureException( "Benchmark execution failure detected during profiling", outputLog.toPath(), e );
+            }
             finally
             {
-                FileUtils.createOrFail( waitForFile );
+                Files.createFile( waitForFile.toPath() );
+                BenchmarkUtil.assertFileExists( waitForFile.toPath() );
             }
 
             int ldbcForkResultCode = ldbcFork.waitFor();
             if ( ldbcForkResultCode != 0 )
             {
-                throw new RuntimeException( "Benchmark execution failed with code: " + ldbcForkResultCode );
+                throw new ProcessFailureException( format( "Benchmark execution failed with code: %s", ldbcForkResultCode ), outputLog.toPath() );
             }
 
             ProfilerRunner.afterProcess(
@@ -784,13 +804,13 @@ public class RunReportCommand implements Runnable
                     summaryBenchmark,
                     externalProfilers );
         }
-        catch ( Exception e )
+        catch ( Throwable e )
         {
             throw new RuntimeException( "Error running LDBC fork", e );
         }
     }
 
-    private static Process startLdbcFork(
+    private static ProcessBuilder startLdbcFork(
             LdbcRunConfig ldbcRunConfig,
             ForkDirectory forkDirectory,
             Jvm jvm,
@@ -800,7 +820,7 @@ public class RunReportCommand implements Runnable
             List<ExternalProfiler> profilers,
             BenchmarkGroup benchmarkGroup,
             Benchmark summaryBenchmark,
-            String processName ) throws IOException
+            String processName )
     {
         String[] ldbcRunArgs = RunCommand.buildArgs( ldbcRunConfig, Paths.get( forkDirectory.toAbsolutePath() ).toFile() );
         JvmArgs jvmArgs = JvmArgs.parse( jvmArgsString );
@@ -817,13 +837,11 @@ public class RunReportCommand implements Runnable
                                                             resources );
                 jvmArgs = jvmArgs.merge( profilerJvmArgs );
             }
-            File outputLog = forkDirectory.create( "ldbc-output.txt" ).toFile();
-            FileUtils.forceRecreateFile( outputLog );
             List<String> jvmInvokeArgs = new ArrayList<>();
             for ( ExternalProfiler profiler : profilers )
             {
                 List<String> profilerJvmInvokeArgs = profiler.invokeArgs( forkDirectory,
-                                                                          getProfilerRecordingDescriptor( benchmarkGroup, summaryBenchmark, profiler ));
+                                                                          getProfilerRecordingDescriptor( benchmarkGroup, summaryBenchmark, profiler ) );
                 jvmInvokeArgs.addAll( profilerJvmInvokeArgs );
             }
 
@@ -837,10 +855,7 @@ public class RunReportCommand implements Runnable
                     processName );
 
             LOG.debug( "LDBC Command Args: " + String.join( " ", processArgs ) );
-            return new ProcessBuilder( processArgs )
-                    .inheritIO()
-                    .redirectOutput( outputLog )
-                    .start();
+            return new ProcessBuilder( processArgs );
         }
     }
 

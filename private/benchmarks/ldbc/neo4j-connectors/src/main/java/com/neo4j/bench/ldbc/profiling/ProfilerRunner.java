@@ -62,7 +62,7 @@ public class ProfilerRunner
             ForkDirectory forkDirectory,
             BenchmarkGroup benchmarkGroup,
             Benchmark benchmark,
-            List<InternalProfiler> internalProfilers )
+            List<InternalProfiler> internalProfilers ) throws ProfilerRunnerException
     {
         try
         {
@@ -71,7 +71,7 @@ public class ProfilerRunner
             jpsPid.tryFindFor( jvm, now(), Duration.of( 1, MINUTES ), processName );
             if ( !jpsPid.pid().isPresent() )
             {
-                throw new RuntimeException( "Process '" + processName + "' not found!!" );
+                throw new ProfilerRunnerException( "Process '" + processName + "' not found!!" );
             }
             Pid pid = new Pid( jpsPid.pid().get() );
 
@@ -137,7 +137,7 @@ public class ProfilerRunner
         }
         catch ( Exception e )
         {
-            throw new RuntimeException( "Error profiling LDBC fork", e );
+            throw new ProfilerRunnerException( "Error profiling LDBC fork", e );
         }
     }
 
@@ -181,7 +181,7 @@ public class ProfilerRunner
             Jvm jvm,
             Instant start,
             ForkDirectory forkDirectory,
-            String processName ) throws ClientException, IOException, DriverConfigurationException, InterruptedException
+            String processName ) throws ClientException, IOException, DriverConfigurationException, InterruptedException, ProfilerRunnerException
     {
         waitFor(
                 jvm,
@@ -196,7 +196,7 @@ public class ProfilerRunner
             Jvm jvm,
             Instant start,
             ForkDirectory forkDirectory,
-            String processName ) throws ClientException, IOException, DriverConfigurationException, InterruptedException
+            String processName ) throws ClientException, IOException, DriverConfigurationException, InterruptedException, ProfilerRunnerException
     {
         waitFor(
                 jvm,
@@ -211,7 +211,7 @@ public class ProfilerRunner
             Jvm jvm,
             Instant start,
             ForkDirectory forkDirectory,
-            String processName ) throws ClientException, IOException, DriverConfigurationException, InterruptedException
+            String processName ) throws ClientException, IOException, DriverConfigurationException, InterruptedException, ProfilerRunnerException
     {
         waitFor(
                 jvm,
@@ -226,7 +226,7 @@ public class ProfilerRunner
             Jvm jvm,
             Instant start,
             ForkDirectory forkDirectory,
-            String processName ) throws ClientException, IOException, DriverConfigurationException, InterruptedException
+            String processName ) throws ClientException, IOException, DriverConfigurationException, InterruptedException, ProfilerRunnerException
     {
         waitFor(
                 jvm,
@@ -244,7 +244,7 @@ public class ProfilerRunner
             String processName,
             Set<BenchmarkPhase> validStartPhases,
             Set<BenchmarkPhase> validEndPhases )
-            throws InterruptedException, ClientException, DriverConfigurationException, IOException
+            throws InterruptedException, ClientException, DriverConfigurationException, IOException, ProfilerRunnerException
     {
         File resultsDir = Paths.get( forkDirectory.toAbsolutePath() ).toFile();
         BenchmarkPhase phase = ResultsDirectory.phase( resultsDir );
@@ -258,33 +258,33 @@ public class ProfilerRunner
         LOG.debug( soFar( start ) + " - Fork status: " + phase );
     }
 
-    private static void assertProcessAlive( Process process )
+    private static void assertProcessAlive( Process process ) throws ProfilerRunnerException
     {
         if ( !process.isAlive() )
         {
-            throw new RuntimeException( "LDBC fork process completed too fast" );
+            throw new ProfilerRunnerException( "LDBC fork process completed too fast" );
         }
     }
 
-    private static void assertPhase( BenchmarkPhase actualPhase, BenchmarkPhase... expectedPhases )
+    private static void assertPhase( BenchmarkPhase actualPhase, BenchmarkPhase... expectedPhases ) throws ProfilerRunnerException
     {
         Set<BenchmarkPhase> expectedPhaseSet = Arrays.stream( expectedPhases ).collect( toSet() );
         if ( !expectedPhaseSet.contains( actualPhase ) )
         {
-            throw new RuntimeException( format( "Expected phases %s but was %s", expectedPhaseSet, actualPhase ) );
+            throw new ProfilerRunnerException( format( "Expected phases %s but was %s", expectedPhaseSet, actualPhase ) );
         }
     }
 
-    public static void checkTimeout( Instant start, Duration warmupTimeout )
+    public static void checkTimeout( Instant start, Duration warmupTimeout ) throws ProfilerRunnerException
     {
         Duration durationWaited = between( start, now() );
         if ( durationWaited.compareTo( warmupTimeout ) >= 0 )
         {
-            throw new RuntimeException( "Grew tired of waiting after " + durationString( durationWaited ) );
+            throw new ProfilerRunnerException( "Grew tired of waiting after " + durationString( durationWaited ) );
         }
     }
 
-    private static Instant checkTimeoutAndMaybeReset( Jvm jvm, Instant start, String processName )
+    private static Instant checkTimeoutAndMaybeReset( Jvm jvm, Instant start, String processName ) throws ProfilerRunnerException
     {
         Duration durationWaited = between( start, now() );
         if ( durationWaited.compareTo( CHECK_ALIVE_TIMEOUT ) >= 0 )
@@ -300,7 +300,7 @@ public class ProfilerRunner
             }
             else
             {
-                throw new RuntimeException(
+                throw new ProfilerRunnerException(
                         "Was waiting on process '" + processName + "', but it seems to have died. RIP.\n" +
                         "Have been waiting for: " + durationString( durationWaited ) );
             }
