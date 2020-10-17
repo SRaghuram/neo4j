@@ -6,13 +6,13 @@
 package com.neo4j.clusterdockertests;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -32,17 +32,17 @@ import java.util.stream.Collectors;
 final class UberJar implements AutoCloseable
 {
     private final Map<String,Set<String>> serviceDeclarations = new HashMap<>();
-    private final File destination;
+    private final Path destination;
     private final boolean skipTestClasses;
     private FileOutputStream out;
     private JarOutputStream target;
 
-    UberJar( File destination )
+    UberJar( Path destination )
     {
         this( destination, true );
     }
 
-    UberJar( File destination, boolean skipTestClasses )
+    UberJar( Path destination, boolean skipTestClasses )
     {
         this.destination = destination;
         this.skipTestClasses = skipTestClasses;
@@ -53,19 +53,18 @@ final class UberJar implements AutoCloseable
         Manifest manifest = new Manifest();
         manifest.getMainAttributes().put( Attributes.Name.MANIFEST_VERSION, "1.0" );
 
-        this.out = new FileOutputStream( destination );
+        this.out = new FileOutputStream( destination.toFile() );
         this.target = new JarOutputStream( out, manifest );
     }
 
-    public void addClass( File source )
+    public void addClass( Path source )
     {
         throwIfNotAClass( source );
 
-        String path = source.getPath();
         try
         {
             Pattern pattern = Pattern.compile( ".*[/\\\\]target[/\\\\](test-)?classes[/\\\\]" );
-            MatchResult result = pattern.matcher( path ).results().collect( Collectors.toList() ).get( 0 );
+            MatchResult result = pattern.matcher( source.toString() ).results().collect( Collectors.toList() ).get( 0 );
             if ( skipTestClasses && result.group().replaceAll("\\\\", "/").endsWith( "/test-classes/" ) )
             {
                 return;
@@ -73,19 +72,21 @@ final class UberJar implements AutoCloseable
 
             Path root = Path.of( result.group() );
 
-            File services = Path.of( root.toString(), "META-INF", "services" ).toFile();
-            if ( services.exists() )
+            Path services = Path.of( root.toString(), "META-INF", "services" );
+            if ( Files.exists( services ) )
             {
-                for ( File f : services.listFiles() )
+                for ( Path f : Files.list( services ).collect( Collectors.toList() ) )
                 {
-                    serviceDeclarations.putIfAbsent( f.getName(), new HashSet<>() );
-                    serviceDeclarations.get( f.getName() ).addAll( Files.readAllLines( f.toPath() ) );
+                    String filename = f.getFileName().toString();
+                    serviceDeclarations.putIfAbsent( filename, new HashSet<>() );
+                    serviceDeclarations.get( filename ).addAll( Files.readAllLines( f ) );
                 }
             }
-            String location = path.split( "[/\\\\]target[/\\\\](test-)?classes[/\\\\]" )[1];
-            FileInputStream inputStream = new FileInputStream( source );
-
-            writeJarEntry( source.lastModified(), target, location, inputStream );
+            String location = source.toString().split( "[/\\\\]target[/\\\\](test-)?classes[/\\\\]" )[1];
+            try ( FileInputStream inputStream = new FileInputStream( source.toFile() ) )
+            {
+                writeJarEntry( Files.getLastModifiedTime( source ), target, location, inputStream );
+            }
         }
         catch ( IOException e )
         {
@@ -93,13 +94,13 @@ final class UberJar implements AutoCloseable
         }
     }
 
-    private void throwIfNotAClass( File source )
+    private void throwIfNotAClass( Path source )
     {
-        if ( !source.getName().endsWith( ".class" ) )
+        if ( !source.getFileName().toString().endsWith( ".class" ) )
         {
             throw new IllegalArgumentException( "only class files are supported" );
         }
-        if ( source.isDirectory() )
+        if ( Files.isDirectory( source ) )
         {
             throw new IllegalArgumentException( "A directory is not a class" );
         }
@@ -112,7 +113,8 @@ final class UberJar implements AutoCloseable
      */
     public void writeServiceDeclarations() throws IOException
     {
-        final long time = Instant.now().toEpochMilli();
+        final FileTime time = FileTime.from( Instant.now() );
+
         for ( var serviceDeclaration : serviceDeclarations.entrySet() )
         {
             String serviceName = serviceDeclaration.getKey();
@@ -157,10 +159,10 @@ final class UberJar implements AutoCloseable
         }
     }
 
-    private static void writeJarEntry( long time, JarOutputStream target, String location, InputStream inputStream ) throws IOException
+    private static void writeJarEntry( FileTime time, JarOutputStream target, String location, InputStream inputStream ) throws IOException
     {
         JarEntry entry = new JarEntry( location.replace( "\\", "/" ) );
-        entry.setTime( time );
+        entry.setTime( time.toMillis() );
 
         target.putNextEntry( entry );
         inputStream.transferTo( target );

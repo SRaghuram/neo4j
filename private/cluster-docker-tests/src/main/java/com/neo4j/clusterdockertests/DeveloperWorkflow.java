@@ -12,6 +12,7 @@ import org.testcontainers.utility.MountableFile;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.LinkedList;
@@ -90,17 +91,17 @@ public final class DeveloperWorkflow
      * Extra bash to run in the docker container just before the neo4j process is started. If the container is stopped/killed and then started again these will
      * re-run but file system changes are preserved - so the commands must be safe to re-run multiple times.
      */
-    private static final String[] EXTENSION_SCRIPT_BASH = new String[]{
+    private static final String EXTENSION_SCRIPT_BASH =
             // if there is a neo4j-browser jar in the docker image already copy it to the devlib directory.
             // browser is an optional runtime dependency that isn't part of the monorepo but it's helpful for debugging to keep it around.
-            "( ! compgen -G '/var/lib/neo4j/lib/neo4j-browser*.jar' >/dev/null ) || mv /var/lib/neo4j/lib/neo4j-browser*.jar /var/lib/neo4j/devlib/",
+            "( ! compgen -G '/var/lib/neo4j/lib/neo4j-browser*.jar' >/dev/null ) || mv /var/lib/neo4j/lib/neo4j-browser*.jar /var/lib/neo4j/devlib/\n" +
 
             // delete all the jars that came with the docker image (if there are still any present)
-            "( ! compgen -G '/var/lib/neo4j/lib/*' >/dev/null ) || rm /var/lib/neo4j/lib/*",
+            "( ! compgen -G '/var/lib/neo4j/lib/*' >/dev/null ) || rm /var/lib/neo4j/lib/*\n" +
 
             // print something to stdout - we use this check the logs to be sure that the dev workflow was run.
-            "echo 'dev extension script completed.'"
-    };
+            "echo 'dev extension script completed.'\n";
+
     private static final String EXTENTION_SCRIPT_LOCATION = "/developerworkflow.sh";
 
     /**
@@ -117,7 +118,7 @@ public final class DeveloperWorkflow
 
     private static synchronized MountableFile getScriptToMount() throws IOException
     {
-        lazyScriptToMount = lazyScriptToMount == null ? MountableFile.forHostPath( createExtensionScript().toPath() ) : lazyScriptToMount;
+        lazyScriptToMount = lazyScriptToMount == null ? MountableFile.forHostPath( createExtensionScript() ) : lazyScriptToMount;
         return lazyScriptToMount;
     }
 
@@ -127,19 +128,10 @@ public final class DeveloperWorkflow
         return lazyJarsToMount;
     }
 
-    private static File createExtensionScript() throws IOException
+    private static Path createExtensionScript() throws IOException
     {
-        File f = File.createTempFile( "extension", ".sh" );
-
-        try ( FileOutputStream out = new FileOutputStream( f ) )
-        {
-            for ( String line : EXTENSION_SCRIPT_BASH )
-            {
-                out.write( line.getBytes() );
-                out.write( "\n".getBytes() );
-            }
-        }
-
+        Path f = Files.createTempFile( "extension", ".sh" );
+        Files.write( f, EXTENSION_SCRIPT_BASH.getBytes() );
         return f;
     }
 
@@ -170,18 +162,19 @@ public final class DeveloperWorkflow
         List<MountableFile> jarsToLoad = new LinkedList<>();
         try
         {
-            File f = File.createTempFile( "uber", ".jar" );
+            Path f = Files.createTempFile( "uber", ".jar" );
 
             try ( UberJar uberJar = new UberJar( f ) )
             {
                 uberJar.start();
                 findClasses( c ->
                              {
-                                 if ( c.getName().endsWith( ".jar" ) )
+                                 String filename = c.getFileName().toString();
+                                 if ( filename.endsWith( ".jar" ) )
                                  {
-                                     jarsToLoad.add( MountableFile.forHostPath( c.toPath() ) );
+                                     jarsToLoad.add( MountableFile.forHostPath( c ) );
                                  }
-                                 else if ( c.getName().endsWith( ".class" ) )
+                                 else if ( filename.endsWith( ".class" ) )
                                  {
                                      uberJar.addClass( c );
                                  }
@@ -189,7 +182,7 @@ public final class DeveloperWorkflow
 
                 uberJar.writeServiceDeclarations();
             }
-            jarsToLoad.add( MountableFile.forHostPath( f.toPath() ) );
+            jarsToLoad.add( MountableFile.forHostPath( f ) );
         }
         catch ( IOException e )
         {
@@ -199,35 +192,38 @@ public final class DeveloperWorkflow
         return jarsToLoad;
     }
 
-    private static void findClasses( Consumer<File> visitor )
+    private static void findClasses( Consumer<Path> visitor )
     {
         String classpath = System.getProperty( "java.class.path" );
         String[] paths = classpath.split( System.getProperty( "path.separator" ) );
 
         for ( String path : paths )
         {
-            File file = new File( path );
-            findClasses( file, visitor );
+            findClasses( Path.of( path ), visitor );
         }
     }
 
-    private static void findClasses( File file, Consumer<File> visitor )
+    private static void findClasses( final Path file, Consumer<Path> visitor )
     {
-        if ( !file.exists() )
+        if ( file == null || !Files.exists( file ) )
         {
             return;
         }
 
-        if ( file.isDirectory() && !file.toString().endsWith( "test-classes" ) )
+        if ( Files.isDirectory( file ) && !file.toString().endsWith( "test-classes" ) )
         {
-            for ( File child : file.listFiles() )
+            try
             {
-                findClasses( child, visitor );
+                Files.list( file ).forEach( child -> findClasses( child, visitor ) );
+            }
+            catch ( IOException e )
+            {
+                throw new RuntimeException( e );
             }
         }
         else
         {
-            String filename = file.getName().toLowerCase();
+            String filename = file.getFileName().toString().toLowerCase();
 
             // TODO: This could be improved by inspecting jars and filtering on package names.
             if ( filename.endsWith( ".jar" ) && !EXCLUDED_JAR_PREFIXES.contains( filename.split( "[-_]" )[0] ) )
