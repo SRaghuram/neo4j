@@ -34,4 +34,13 @@ class RemoveAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
     executeWith(Configs.InterpretedAndSlotted, "REMOVE null.p") should have size 0
   }
 
+  test("remove works on chained properties") {
+    val n = createNode("a" -> 123, "b" -> "hello")
+
+    executeWith(Configs.InterpretedAndSlotted,
+      "MATCH (n) WITH {node: n} AS map REMOVE map.node.a")
+
+    n shouldNot haveProperty("a")
+    n should haveProperty("b").withValue("hello")
+  }
 }

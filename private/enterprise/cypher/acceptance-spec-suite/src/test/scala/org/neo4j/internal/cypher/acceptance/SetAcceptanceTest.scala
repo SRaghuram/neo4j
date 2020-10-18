@@ -241,6 +241,16 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     c should haveProperty("x").withValue("X")
   }
 
+  test("set works on chained properties") {
+    val n = createNode("a" -> 123)
+
+    executeWith(Configs.InterpretedAndSlotted,
+      "MATCH (n) WITH {node: n} AS map SET map.node.b = 'hello'")
+
+    n should haveProperty("a").withValue(123)
+    n should haveProperty("b").withValue("hello")
+  }
+
   //Not suitable for the TCK
   test("Lost updates should not happen on set node property") {
     val init: () => Unit = () => createNode("prop" -> 0)
