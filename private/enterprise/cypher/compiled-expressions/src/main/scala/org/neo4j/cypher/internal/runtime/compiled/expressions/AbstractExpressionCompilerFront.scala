@@ -1774,7 +1774,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
             ), maxDegree.fields, maxDegree.variables :+ vNODE_CURSOR, nullCheck)
         }
       case Some(Left(typeId)) =>
-        for (maxDegree <- compileExpression(maxDegreeExpression)) yield {
+        for (maxDegree <- compileExpression(maxDegreeExpression, id)) yield {
           val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], localDegree, nullCheckIfRequired(maxDegree)))
           val nullCheck = Set(block(lazySet, equal(load(localDegree), noValue)))
           IntermediateExpression(
