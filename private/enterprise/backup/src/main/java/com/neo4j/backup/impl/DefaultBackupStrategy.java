@@ -27,26 +27,30 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StoreId;
 
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
-class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
+public class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
 {
     private static final String BACKUP_LOCAL_STORE_READER_TAG = "backupLocalStoreReader";
     private final BackupDelegator backupDelegator;
     private final DatabaseIdStore databaseIdStore;
-    private final Log log;
+    private final Log userLog;
+    private final Log internalLog;
     private final StoreFiles storeFiles;
     private final PageCacheTracer pageCacheTracer;
     private final MetadataStore metadataStore;
 
     DefaultBackupStrategy( MetadataStore metadataStore,
                            BackupDelegator backupDelegator,
-                           LogProvider logProvider,
+                           LogProvider userLogProvider,
+                           LogProvider internalLogProvider,
                            StoreFiles storeFiles,
                            PageCacheTracer pageCacheTracer,
                            DatabaseIdStore databaseIdStore )
     {
         this.backupDelegator = backupDelegator;
-        this.log = logProvider.getLog( DefaultBackupStrategy.class );
+        this.userLog = userLogProvider.getLog( DefaultBackupStrategy.class );
+        this.internalLog = internalLogProvider.getLog( DefaultBackupStrategy.class );
         this.storeFiles = storeFiles;
         this.pageCacheTracer = pageCacheTracer;
         this.databaseIdStore = databaseIdStore;
@@ -70,7 +74,17 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
         {
             backupDelegator.copy( backupInfo.remoteAddress, backupInfo.remoteStoreId, backupInfo.namedDatabaseId, targetDbLayout );
             writeDatabaseId( targetDbLayout.databaseDirectory(), backupInfo.namedDatabaseId.databaseId() );
-            includeMetadata.ifPresent( value -> createMetadataFile( address, targetDbLayout.databaseDirectory(), databaseName, value ) );
+            includeMetadata.ifPresent( value ->
+                                       {
+                                           if ( databaseName.equals( SYSTEM_DATABASE_NAME ) )
+                                           {
+                                               userLog.warn( "Include metadata parameter is invalid for backing up system database" );
+                                           }
+                                           else
+                                           {
+                                               createMetadataFile( address, targetDbLayout.databaseDirectory(), databaseName, value );
+                                           }
+                                       } );
         }
         catch ( StoreCopyFailedException e )
         {
@@ -113,16 +127,16 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
     {
         try
         {
-            log.info( "Remote backup address is " + address );
+            internalLog.info( "Remote backup address is " + address );
 
             NamedDatabaseId namedDatabaseId = backupDelegator.fetchDatabaseId( address, databaseName );
-            log.info( "Database id is " + namedDatabaseId );
+            internalLog.info( "Database id is " + namedDatabaseId );
 
             StoreId remoteStoreId = backupDelegator.fetchStoreId( address, namedDatabaseId );
-            log.info( "Remote store id is " + remoteStoreId );
+            internalLog.info( "Remote store id is " + remoteStoreId );
 
             StoreId localStoreId = readLocalStoreId( databaseLayout, pageCacheTracer );
-            log.info( "Local store id is " + remoteStoreId );
+            internalLog.info( "Local store id is " + remoteStoreId );
 
             return new BackupInfo( address, remoteStoreId, localStoreId, namedDatabaseId );
         }
@@ -144,7 +158,7 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
         }
         catch ( IOException e )
         {
-            log.warn( "Unable to read store ID from metadata store in " + databaseLayout, e );
+            internalLog.warn( "Unable to read store ID from metadata store in " + databaseLayout, e );
             return null;
         }
     }
@@ -165,10 +179,6 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
     private void createMetadataFile( SocketAddress fromAddress, Path folder, String databaseName, IncludeMetadata includeMetadata )
     {
         final var commands = backupDelegator.getMetadata( fromAddress, databaseName, includeMetadata.name() );
-        if ( commands.isEmpty() )
-        {
-            return;
-        }
 
         try
         {
@@ -176,8 +186,8 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
         }
         catch ( IOException e )
         {
-            log.error( "Can't create metadata script", e );
-            throw new IllegalStateException( e );
+            internalLog.error( "Can't create metadata script", e );
+            throw new IllegalStateException( "Can't create metadata script for database " + databaseName );
         }
     }
 

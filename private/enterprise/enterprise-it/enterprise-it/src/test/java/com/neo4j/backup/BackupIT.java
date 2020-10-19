@@ -8,8 +8,8 @@ package com.neo4j.backup;
 import com.neo4j.backup.impl.BackupExecutionException;
 import com.neo4j.backup.impl.ConsistencyCheckExecutionException;
 import com.neo4j.backup.impl.DatabaseIdStore;
+import com.neo4j.backup.impl.DefaultBackupStrategy;
 import com.neo4j.backup.impl.MetadataStore;
-import com.neo4j.backup.impl.OnlineBackupCommand;
 import com.neo4j.backup.impl.OnlineBackupContext;
 import com.neo4j.backup.impl.OnlineBackupExecutor;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
@@ -155,6 +155,7 @@ import static org.neo4j.kernel.impl.store.record.Record.NO_NEXT_PROPERTY;
 import static org.neo4j.kernel.impl.store.record.Record.NO_NEXT_RELATIONSHIP;
 import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
 import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
+import static org.neo4j.logging.AssertableLogProvider.Level.WARN;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 
@@ -947,42 +948,42 @@ class BackupIT
         //given
         var defaultDBRepresentation = createInitialDataSet( serverHomeDir, recordFormatName );
         var defaultDB = startDb( serverHomeDir );
+
         var natureDB = "nature";
-        var natureDBExpectedRepresentation = createDatabase( natureDB );
+        createDatabase( natureDB );
+        createInitialDataSet( managementService.database( natureDB ) );
 
         //given log providers
         final var userLogProvider = new AssertableLogProvider();
-        final var errorLogProvider = new AssertableLogProvider();
+        final var internalLogProvider = new AssertableLogProvider();
 
         //when
         var contextBuilder = defaultBackupContextBuilder( backupAddress( defaultDB ) )
-                .withDatabaseNamePattern( new DatabaseNamePattern( "n*" ) );
+                .withDatabaseNamePattern( new DatabaseNamePattern( "*" ) );
 
         executeBackup( contextBuilder,
                        new Monitors(),
                        userLogProvider,
-                       errorLogProvider,
-                       new Log4jLogProvider( System.out )
+                       internalLogProvider
         );
 
         //then
         assertEquals( defaultDBRepresentation, getBackupDbRepresentation() );
-
-        var natureDBRepresentation = DbRepresentation.of( DatabaseLayout.ofFlat( backupsDir.resolve( natureDB ) ), getConfig() );
-        assertEquals( natureDBExpectedRepresentation, natureDBRepresentation );
+        validateDatabaseRepresentation( natureDB );
 
         //then verify user and error logs
-        LogAssertions.assertThat( userLogProvider ).forClass( OnlineBackupExecutor.class )
-                     .forLevel( INFO )
-                     .containsMessageWithArguments( "databaseName=%s, backupStatus=%s, reason=%s",
-                                                    defaultDB.databaseName(), "successful", "" );
-
-        LogAssertions.assertThat( userLogProvider ).forClass( OnlineBackupExecutor.class )
-                     .forLevel( INFO )
-                     .containsMessageWithArguments( "databaseName=%s, backupStatus=%s, reason=%s", natureDB, "successful", "" );
-        LogAssertions.assertThat( errorLogProvider ).forClass( OnlineBackupExecutor.class ).doesNotHaveAnyLogs();
+        validateSuccessfulResult( userLogProvider, defaultDB.databaseName() );
+        validateSuccessfulResult( userLogProvider, natureDB );
+        LogAssertions.assertThat( internalLogProvider ).forClass( OnlineBackupExecutor.class ).doesNotHaveAnyLogs();
 
         managementService.shutdown();
+    }
+
+    private void validateDatabaseRepresentation( String databaseName )
+    {
+        var representationInBackupDir = DbRepresentation.of( DatabaseLayout.ofFlat( backupsDir.resolve( databaseName ) ), getConfig() );
+        var expectedRepresentation = DbRepresentation.of( managementService.database( databaseName ) );
+        assertEquals( expectedRepresentation, representationInBackupDir );
     }
 
     @TestWithRecordFormats
@@ -997,7 +998,7 @@ class BackupIT
 
         //given log providers
         final var userLogProvider = new AssertableLogProvider();
-        final var errorLogProvider = new AssertableLogProvider();
+        final var internalLogProvider = new AssertableLogProvider();
 
         //when
         var contextBuilder = defaultBackupContextBuilder( backupAddress( defaultDB ) )
@@ -1007,8 +1008,7 @@ class BackupIT
                                             () -> executeBackup( contextBuilder,
                                                                  new Monitors(),
                                                                  userLogProvider,
-                                                                 errorLogProvider,
-                                                                 new Log4jLogProvider( System.out )
+                                                                 internalLogProvider
                                             ) );
 
         //then exception is thrown
@@ -1021,18 +1021,10 @@ class BackupIT
         assertFalse( Files.exists( backupsDir.resolve( natureDB ) ) );
 
         //then verify user and error logs
-        LogAssertions.assertThat( userLogProvider ).forClass( OnlineBackupExecutor.class )
-                     .forLevel( INFO )
-                     .containsMessageWithArguments( "databaseName=%s, backupStatus=%s, reason=%s",
-                                                    defaultDB.databaseName(), "successful", "" );
-
-        LogAssertions.assertThat( userLogProvider ).forClass( OnlineBackupExecutor.class )
-                     .forLevel( INFO )
-                     .containsMessageWithArguments( "databaseName=%s, backupStatus=%s, reason=%s",
-                                                    natureDB, "failed", "Request returned an error [Status: 'E_STORE_UNAVAILABLE' " +
-                                                                        "Message: 'Database 'nature' is stopped. Start the database before backup']" );
-
-        LogAssertions.assertThat( errorLogProvider ).forClass( OnlineBackupExecutor.class )
+        validateSuccessfulResult( userLogProvider, defaultDB.databaseName() );
+        validateFailedResult( userLogProvider, natureDB, "Request returned an error [Status: 'E_STORE_UNAVAILABLE' " +
+                                                         "Message: 'Database 'nature' is stopped. Start the database before backup']" );
+        LogAssertions.assertThat( internalLogProvider ).forClass( OnlineBackupExecutor.class )
                      .forLevel( ERROR )
                      .containsMessages( "Error in database " + natureDB );
 
@@ -1040,15 +1032,18 @@ class BackupIT
     }
 
     @TestWithRecordFormats
-    void shouldntBackupAnyDatabaseIfPatternNotMatch( String recordFormatName ) throws Exception
+    void shouldnThrowExceptionIfDatabaseNameWithRegexDoesntMatch( String recordFormatName ) throws Exception
     {
         DbRepresentation initialDataSetRepresentation = createInitialDataSet( serverHomeDir, recordFormatName );
         GraphDatabaseService db = startDb( serverHomeDir );
 
+        final var pattern = "t*";
         var contextBuilder = defaultBackupContextBuilder( backupAddress( db ) )
-                .withDatabaseNamePattern( new DatabaseNamePattern( "t*" ) );
+                .withDatabaseNamePattern( new DatabaseNamePattern( pattern ) );
 
-        executeBackup( contextBuilder );
+        final var exception = assertThrows( BackupExecutionException.class, () -> executeBackup( contextBuilder ) );
+        assertThat( getRootCause( exception ).getMessage() )
+                .contains( String.format( "Database name pattern=%s doesn't match any database on the remote server", pattern ) );
 
         assertNotEquals( initialDataSetRepresentation, getBackupDbRepresentation() );
         managementService.shutdown();
@@ -1096,17 +1091,34 @@ class BackupIT
     }
 
     @Test
-    void shouldThrowExceptionIfBackupSystemDatabaseWithIncludeMetadata()
+    void shouldBackupSystemDatabaseWithIncludeMetadataAndPrintWarning() throws Exception
     {
         //given
         var defaultDB = startDb( serverHomeDir );
+        final var stocksDB = "stocks";
+        createDatabase( stocksDB );
+
+        //given log providers
+        final var userLogProvider = new AssertableLogProvider();
+        final var internalLogProvider = new AssertableLogProvider();
 
         //when
         var contextBuilder = defaultBackupContextBuilder( backupAddress( defaultDB ) )
                 .withIncludeMetadata( Optional.of( IncludeMetadata.all ) )
-                .withDatabaseNamePattern( new DatabaseNamePattern( SYSTEM_DATABASE_NAME ) );
-        var exception = assertThrows( BackupExecutionException.class, () -> executeBackup( contextBuilder ) );
-        assertThat( getRootCause( exception ).getMessage() ).contains( "Include metadata parameter is invalid for backing up system database" );
+                .withDatabaseNamePattern( new DatabaseNamePattern( "s*" ) );
+
+        executeBackup( contextBuilder, new Monitors(), userLogProvider, internalLogProvider ) ;
+
+        //then validate backup
+        validateDatabaseRepresentation( stocksDB );
+        assertTrue( backupsDir.resolve( SYSTEM_DATABASE_NAME ).toFile().exists() ); // there is no way to create DbRepresentation from systemDB
+
+        //then validate logs
+        validateSuccessfulResult( userLogProvider, stocksDB );
+        validateSuccessfulResult( userLogProvider, SYSTEM_DATABASE_NAME );
+        LogAssertions.assertThat( userLogProvider ).forClass( DefaultBackupStrategy.class )
+                     .forLevel( WARN )
+                     .containsMessages( "Include metadata parameter is invalid for backing up system database" );
     }
 
     @TestWithRecordFormats
@@ -1126,13 +1138,26 @@ class BackupIT
         executeBackup( contextBuilder );
 
         //then backup is successful
-        final var databaseLayout = DatabaseLayout.ofFlat( backupsDir.resolve( natureDB ) );
-        var natureDBRepresentation = DbRepresentation.of( databaseLayout, getConfig() );
-        assertEquals( natureDBExpectedRepresentation, natureDBRepresentation );
+        validateDatabaseRepresentation( natureDB );
 
         //and metadata file exists
+        final var databaseLayout = DatabaseLayout.ofFlat( backupsDir.resolve( natureDB ) );
         assertThat( MetadataStore.getFilePath( databaseLayout.databaseDirectory() ) ).exists();
         assertThat( fs.getFileSize( MetadataStore.getFilePath( databaseLayout.databaseDirectory() ) ) ).isGreaterThan( 0 );
+    }
+
+    private void validateSuccessfulResult( AssertableLogProvider userLogProvider, String databaseName )
+    {
+        LogAssertions.assertThat( userLogProvider ).forClass( OnlineBackupExecutor.class )
+                     .forLevel( INFO )
+                     .containsMessageWithArguments( "databaseName=%s, backupStatus=%s, reason=%s", databaseName, "successful", "" );
+    }
+
+    private void validateFailedResult( AssertableLogProvider userLogProvider, String databaseName, String message )
+    {
+        LogAssertions.assertThat( userLogProvider ).forClass( OnlineBackupExecutor.class )
+                     .forLevel( INFO )
+                     .containsMessageWithArguments( "databaseName=%s, backupStatus=%s, reason=%s", databaseName, "failed", message );
     }
 
     private void createTransactionWithWeirdRelationshipGroupRecord( GraphDatabaseService db )
@@ -1416,24 +1441,23 @@ class BackupIT
                 .withFallbackToFullBackup( fallbackToFull );
         LogProvider logProvider = new Log4jLogProvider( System.out );
 
-        executeBackup( contextBuilder, monitors, logProvider, logProvider, logProvider );
+        executeBackup( contextBuilder, monitors, logProvider, logProvider );
     }
 
     private static void executeBackup( OnlineBackupContext.Builder contextBuilder ) throws Exception
     {
         LogProvider logProvider = new Log4jLogProvider( System.out );
-        executeBackup( contextBuilder, new Monitors(), logProvider, logProvider, logProvider );
+        executeBackup( contextBuilder, new Monitors(), logProvider, logProvider );
     }
 
     private static void executeBackup( OnlineBackupContext.Builder contextBuilder,
                                        Monitors monitors,
                                        LogProvider userLog,
-                                       LogProvider errorLog, LogProvider internalLog ) throws Exception
+                                       LogProvider internalLog ) throws Exception
     {
         OnlineBackupExecutor executor = OnlineBackupExecutor.builder()
                                                             .withUserLogProvider( userLog )
                                                             .withInternalLogProvider( internalLog )
-                                                            .withErrorLogProvider( errorLog )
                                                             .withMonitors( monitors )
                                                             .withClock( Clocks.nanoClock() )
                                                             .build();

@@ -32,14 +32,12 @@ import org.neo4j.time.SystemNanoClock;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
-import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 public final class OnlineBackupExecutor
 {
     private final FileSystemAbstraction fs;
     private final LogProvider userLogProvider;
     private final LogProvider internalLogProvider;
-    private final LogProvider errorLogProvider;
     private final ProgressMonitorFactory progressMonitorFactory;
     private final Monitors monitors;
     private final BackupSupportingClassesFactory backupSupportingClassesFactory;
@@ -51,7 +49,6 @@ public final class OnlineBackupExecutor
         this.fs = builder.fs;
         this.userLogProvider = builder.userLogProvider;
         this.internalLogProvider = builder.internalLogProvider;
-        this.errorLogProvider = builder.errorLogProvider;
         this.progressMonitorFactory = builder.progressMonitorFactory;
         this.monitors = builder.monitors;
         this.backupSupportingClassesFactory = builder.supportingClassesFactory;
@@ -72,23 +69,27 @@ public final class OnlineBackupExecutor
     {
         final var allDatabaseNames =
                 getAllDatabaseNames( contextBuilder.getConfig(), contextBuilder.getDatabaseNamePattern(), contextBuilder.getAddress() );
-        final var userLog = userLogProvider.getLog( getClass() );
-        final var errorLog = errorLogProvider.getLog( getClass() );
-        final var backupResults = contextBuilder.build( allDatabaseNames )
-                                                .stream()
-                                                .map( context ->
-                                                      {
-                                                          try
-                                                          {
-                                                              executeBackup( context );
-                                                              return new BackupResult( context );
-                                                          }
-                                                          catch ( Exception ex )
-                                                          {
-                                                              errorLog.error( "Error in database " + context.getDatabaseName(), ex );
-                                                              return new BackupResult( context, ex );
-                                                          }
-                                                      } ).collect( Collectors.toList() );
+        final var filteredDatabases = contextBuilder.build( allDatabaseNames );
+        if ( filteredDatabases.isEmpty() )
+        {
+            throw new BackupExecutionException(
+                    String.format( "%s doesn't match any database on the remote server", contextBuilder.getDatabaseNamePattern() ) );
+        }
+        final var internalLog = internalLogProvider.getLog( getClass() );
+        final var backupResults = filteredDatabases.stream()
+                                                   .map( context ->
+                                                         {
+                                                             try
+                                                             {
+                                                                 executeBackup( context );
+                                                                 return new BackupResult( context );
+                                                             }
+                                                             catch ( Exception ex )
+                                                             {
+                                                                 internalLog.error( "Error in database " + context.getDatabaseName(), ex );
+                                                                 return new BackupResult( context, ex );
+                                                             }
+                                                         } ).collect( Collectors.toList() );
 
         final var inputContainsPattern = contextBuilder.getDatabaseNamePattern().containsPattern();
         if ( !inputContainsPattern )
@@ -102,6 +103,7 @@ public final class OnlineBackupExecutor
         }
         else
         {
+            final var userLog = userLogProvider.getLog( getClass() );
             backupResults.forEach( r -> printBackupResult( userLog, r ) );
             final var oneFailedBackup = backupResults.stream()
                                                      .anyMatch( r -> r.exception.isPresent() );
@@ -129,8 +131,8 @@ public final class OnlineBackupExecutor
 
             final var databaseIdStore = new DatabaseIdStore( fs, internalLogProvider );
             final var metadataStore = new MetadataStore( fs );
-            final var strategy = new DefaultBackupStrategy( metadataStore, supportingClasses.getBackupDelegator(), internalLogProvider, storeFiles,
-                                                            pageCacheTracer, databaseIdStore );
+            final var strategy = new DefaultBackupStrategy( metadataStore, supportingClasses.getBackupDelegator(), userLogProvider, internalLogProvider,
+                                                            storeFiles, pageCacheTracer, databaseIdStore );
             final var wrapper = new BackupStrategyWrapper( strategy, copyService, fs, pageCache, userLogProvider, internalLogProvider );
 
             final var coordinator = new BackupStrategyCoordinator( fs, consistencyCheckService, internalLogProvider,
@@ -139,7 +141,7 @@ public final class OnlineBackupExecutor
         }
     }
 
-    private Set<String> getAllDatabaseNames( Config config, DatabaseNamePattern databaseName, SocketAddress address )
+    private Set<String> getAllDatabaseNames( Config config, DatabaseNamePattern databaseName, SocketAddress address ) throws BackupExecutionException
     {
         if ( !databaseName.containsPattern() )
         {
@@ -169,11 +171,6 @@ public final class OnlineBackupExecutor
 
         // consistency check report is placed directly into the specified directory, verify its existence
         checkDestination( context.getReportDir() );
-
-        if ( context.getIncludeMetadata().isPresent() && context.getDatabaseName().equals( SYSTEM_DATABASE_NAME ) )
-        {
-            throw new BackupExecutionException( "Include metadata parameter is invalid for backing up system database" );
-        }
     }
 
     private void checkDestination( Path path ) throws BackupExecutionException
@@ -207,7 +204,6 @@ public final class OnlineBackupExecutor
         private FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
         private LogProvider userLogProvider = NullLogProvider.getInstance();
         private LogProvider internalLogProvider = NullLogProvider.getInstance();
-        private LogProvider errorLogProvider = NullLogProvider.getInstance();
         private ProgressMonitorFactory progressMonitorFactory = ProgressMonitorFactory.NONE;
         private Monitors monitors = new Monitors();
         private BackupSupportingClassesFactory supportingClassesFactory;
@@ -233,12 +229,6 @@ public final class OnlineBackupExecutor
         public Builder withInternalLogProvider( LogProvider internalLogProvider )
         {
             this.internalLogProvider = internalLogProvider;
-            return this;
-        }
-
-        public Builder withErrorLogProvider( LogProvider errorLogProvider )
-        {
-            this.errorLogProvider = errorLogProvider;
             return this;
         }
 

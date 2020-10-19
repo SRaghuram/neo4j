@@ -177,7 +177,7 @@ public class RestoreDatabaseCommand
                         fs.copyToDirectory( file, scriptDirectory );
                     }
                     fs.renameFile( scriptDirectory.resolve( file.getFileName() ), getMetadataScript() );
-                    consoleOutput.println( String.format( "You need to execute %s. To execute the file use cypher-shell command with parameter %s",
+                    consoleOutput.println( String.format( "You need to execute %s. To execute the file use cypher-shell command with parameter `%s`",
                                                           getMetadataScript(  ).toAbsolutePath().toString(),
                                                           targetDatabaseLayout.getDatabaseName() ) );
                 }

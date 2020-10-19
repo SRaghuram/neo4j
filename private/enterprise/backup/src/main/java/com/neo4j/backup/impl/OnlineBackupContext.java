@@ -26,7 +26,7 @@ import org.neo4j.memory.MemoryTracker;
 public class OnlineBackupContext
 {
     private final SocketAddress address;
-    private final DatabaseNamePattern databaseNamePattern;
+    private final String databaseName;
     private final Path backupDirectoryWithDBName;
     private final Path reportDir;
     private final boolean fallbackToFullBackup;
@@ -36,12 +36,12 @@ public class OnlineBackupContext
     private final MemoryTracker memoryTracker;
     private final Optional<IncludeMetadata> includeMetadata;
 
-    private OnlineBackupContext( SocketAddress address, DatabaseNamePattern databaseNamePattern, Path backupDirectoryWithDBName,
+    private OnlineBackupContext( SocketAddress address, String databaseNamePattern, Path backupDirectoryWithDBName,
                                  Path reportDir, boolean fallbackToFullBackup, boolean consistencyCheck, ConsistencyFlags consistencyFlags, Config config,
                                  MemoryTracker memoryTracker, Optional<IncludeMetadata> includeMetadata )
     {
         this.address = address;
-        this.databaseNamePattern = databaseNamePattern;
+        this.databaseName = databaseNamePattern;
         this.backupDirectoryWithDBName = backupDirectoryWithDBName;
         this.reportDir = reportDir;
         this.fallbackToFullBackup = fallbackToFullBackup;
@@ -64,7 +64,7 @@ public class OnlineBackupContext
 
     public String getDatabaseName()
     {
-        return databaseNamePattern.getDatabaseName();
+        return databaseName;
     }
 
     public Path getDatabaseBackupDir()
@@ -225,13 +225,12 @@ public class OnlineBackupContext
 
         public Config getConfig()
         {
-            return Optional.ofNullable( config ).orElse( Config.defaults() );
+            return config == null ? Config.defaults() : Config.newBuilder().fromConfig( config ).build();
         }
 
         public DatabaseNamePattern getDatabaseNamePattern()
         {
-            return Optional.ofNullable( databaseNamePattern )
-                           .orElse( new DatabaseNamePattern( getConfig().get( GraphDatabaseSettings.default_database ) ) );
+            return databaseNamePattern != null ? databaseNamePattern : new DatabaseNamePattern( getConfig().get( GraphDatabaseSettings.default_database ) );
         }
 
         public SocketAddress getAddress()
@@ -291,7 +290,7 @@ public class OnlineBackupContext
             ConsistencyFlags consistencyFlags = buildConsistencyFlags();
             var memoryTracker = EmptyMemoryTracker.INSTANCE;
 
-            return new OnlineBackupContext( socketAddress, databaseNamePattern, databaseBackupDirectory, reportsDirectory,
+            return new OnlineBackupContext( socketAddress, databaseNamePattern.getDatabaseName(), databaseBackupDirectory, reportsDirectory,
                                             fallbackToFullBackup, consistencyCheck, consistencyFlags, config, memoryTracker, includeMetadata );
         }
 

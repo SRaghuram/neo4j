@@ -181,7 +181,6 @@ public class BackupRestoreIT
         OnlineBackupExecutor executor = OnlineBackupExecutor.builder()
                                                             .withUserLogProvider( log4jLogProvider )
                                                             .withInternalLogProvider( log4jLogProvider )
-                                                            .withErrorLogProvider( log4jLogProvider )
                                                             .withMonitors( new Monitors() )
                                                             .withClock( Clocks.nanoClock() )
                                                             .build();

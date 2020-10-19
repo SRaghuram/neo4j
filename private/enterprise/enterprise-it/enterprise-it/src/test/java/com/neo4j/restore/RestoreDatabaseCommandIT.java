@@ -430,7 +430,7 @@ class RestoreDatabaseCommandIT
         assertThat( expectedPath ).exists();
 
         //and console contain message about cypher-shell
-        verify( consoleOutput ).println( String.format( "You need to execute %s. To execute the file use cypher-shell command with parameter %s",
+        verify( consoleOutput ).println( String.format( "You need to execute %s. To execute the file use cypher-shell command with parameter `%s`",
                                                         expectedPath.toAbsolutePath().toString(),
                                                         databaseLayout.getDatabaseName() ) );
     }

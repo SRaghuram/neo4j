@@ -321,7 +321,7 @@ class BackupStrategyWrapperTest
         backupWrapper.doBackup( onlineBackupContext );
 
         // then
-        verify( backupWrapper ).performRecovery( eq( config ), any( DatabaseLayout.class ), any() );
+        verify( backupWrapper ).performRecovery( any(), any( DatabaseLayout.class ), any() );
     }
 
     @Test
@@ -352,7 +352,7 @@ class BackupStrategyWrapperTest
         backupWrapper.doBackup( onlineBackupContext );
 
         // then
-        verify( backupWrapper ).performRecovery( eq( config ), any( DatabaseLayout.class ), any() );
+        verify( backupWrapper ).performRecovery( any(), any( DatabaseLayout.class ), any() );
     }
 
     @Test
@@ -385,7 +385,7 @@ class BackupStrategyWrapperTest
         backupWrapper.doBackup( onlineBackupContext );
 
         // then
-        verify( backupWrapper ).performRecovery( eq( config ), any( DatabaseLayout.class ), any() );
+        verify( backupWrapper ).performRecovery( any(), any( DatabaseLayout.class ), any() );
     }
 
     @Test
@@ -403,7 +403,7 @@ class BackupStrategyWrapperTest
 
         InOrder inOrder = Mockito.inOrder( backupWrapper, backupCopyService );
         // 1) perform recovery
-        inOrder.verify( backupWrapper ).performRecovery( eq( config ), any( DatabaseLayout.class ), any() );
+        inOrder.verify( backupWrapper ).performRecovery( any(), any( DatabaseLayout.class ), any() );
         // 2) move pre-existing backup to a different directory
         inOrder.verify( backupCopyService ).moveBackupLocation( databaseBackupDir, availableOldBackupLocation );
         // 3) move new backup from a temporary directory to the specified directory

@@ -99,11 +99,10 @@ public class RestoreDatabaseCli extends AbstractCommand
         final var paths = fromPaths.getPaths();
         final var neo4jLayout = Neo4jLayout.of( config );
         final var clusterStateLayout = ClusterStateLayout.of( config.get( CausalClusteringSettings.cluster_state_directory ) );
-        final var exceptions = execute( paths, neo4jLayout, clusterStateLayout );
+        final var restoreResults = execute( paths, neo4jLayout, clusterStateLayout );
+        restoreResults.forEach( this::printRestoreResult );
 
-        exceptions.forEach( this::printRestoreResult );
-
-        final var hasFailedRestore = exceptions.stream().anyMatch( r -> r.exception.isPresent() );
+        final var hasFailedRestore = restoreResults.stream().anyMatch( r -> r.exception.isPresent() );
         if ( hasFailedRestore )
         {
             throw new CommandFailedException( "Restore command wasn't execute successfully" );

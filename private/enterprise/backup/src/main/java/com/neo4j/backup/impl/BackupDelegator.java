@@ -113,7 +113,7 @@ class BackupDelegator extends LifecycleAdapter
         }
     }
 
-    public Set<NamedDatabaseId> getAllDatabaseIds( SocketAddress fromAddress )
+    public Set<NamedDatabaseId> getAllDatabaseIds( SocketAddress fromAddress ) throws BackupExecutionException
     {
         final CatchupResponseAdaptor<GetAllDatabaseIdsResponse> responseHandler = new CatchupResponseAdaptor<GetAllDatabaseIdsResponse>()
         {
@@ -135,7 +135,7 @@ class BackupDelegator extends LifecycleAdapter
         catch ( Exception ex )
         {
             logProvider.getLog( getClass() ).error( "Error in execution get all database ids", ex );
-            return Set.of();
+            throw new BackupExecutionException( ex );
         }
     }
 

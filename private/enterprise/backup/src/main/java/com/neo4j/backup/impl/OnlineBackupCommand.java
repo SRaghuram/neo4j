@@ -125,13 +125,11 @@ public class OnlineBackupCommand extends AbstractCommand
                                                               consistencyCheckOptions.isCheckRelationshipTypeScanStore() );
 
         final var userLogProvider = Util.configuredLogProvider( config, ctx.out() );
-        final var errorLogProvider = Util.configuredLogProvider( config, ctx.err() );
         final var internalLogProvider = verbose ? userLogProvider : NullLogProvider.getInstance();
         final var backupExecutor = OnlineBackupExecutor.builder()
                                                        .withFileSystem( ctx.fs() )
                                                        .withInternalLogProvider( internalLogProvider )
                                                        .withUserLogProvider( userLogProvider )
-                                                       .withErrorLogProvider( errorLogProvider)
                                                        .withClock( Clocks.nanoClock() )
                                                        .withProgressMonitorFactory( ProgressMonitorFactory.textual( ctx.err() ) )
                                                        .build();
@@ -153,7 +151,7 @@ public class OnlineBackupCommand extends AbstractCommand
             userLogProvider.close();
         }
 
-        ctx.out().println( "Backup complete." );
+        ctx.out().println( "Backup complete successful." );
     }
 
     private static Path requireExisting( Path p )

@@ -47,8 +47,8 @@ class DefaultBackupStrategyTest
     private final NamedDatabaseId namedDatabaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
     private final MetadataStore metadataStore = Mockito.mock( MetadataStore.class );
     private final DatabaseIdStore databaseIdStore = mock( DatabaseIdStore.class );
-    private final DefaultBackupStrategy strategy = new DefaultBackupStrategy( metadataStore, backupDelegator, NullLogProvider.getInstance(), storeFiles, NULL,
-                                                                              databaseIdStore );
+    private final DefaultBackupStrategy strategy = new DefaultBackupStrategy( metadataStore, backupDelegator, NullLogProvider.getInstance(),
+                                                                              NullLogProvider.getInstance(), storeFiles, NULL, databaseIdStore );
     private final String databaseName = "database name";
 
     @BeforeEach
