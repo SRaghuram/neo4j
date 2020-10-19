@@ -314,7 +314,6 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
       defaultNodeExistsBriefConstraintOutput(5L), defaultRelExistsBriefConstraintOutput(6L)))
   }
 
-
   test("show unique constraints should filter constraints") {
     // GIVEN
     createDefaultConstraints()
@@ -555,7 +554,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
       case RelExistsConstraints =>
         s"CREATE CONSTRAINT $escapedName ON ()-[r:$escapedLabel]-() ASSERT exists(r.$escapedProperty)"
       case unexpectedType =>
-        throw new IllegalArgumentException(s"Unexpected constraint type for constraint create command: ${unexpectedType.name}")
+        throw new IllegalArgumentException(s"Unexpected constraint type for constraint create command: ${unexpectedType.prettyPrint}")
     }
     executeSingle(query)
   }
@@ -657,10 +656,10 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   private def verifyCanDropAndRecreateConstraintsUsingCreateStatement(): Unit = {
     // GIVEN
-    val allIndexes = executeSingle("SHOW CONSTRAINTS VERBOSE OUTPUT")
-    val createStatements = allIndexes.columnAs("createStatement").toList
-    val names = allIndexes.columnAs("name").toList
-    val options = allIndexes.columnAs("options").toList
+    val allConstraints = executeSingle("SHOW CONSTRAINTS VERBOSE OUTPUT")
+    val createStatements = allConstraints.columnAs("createStatement").toList
+    val names = allConstraints.columnAs("name").toList
+    val options = allConstraints.columnAs("options").toList
 
     // WHEN
     dropAllFromNames(names, "CONSTRAINT")
@@ -677,7 +676,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // The ids will not be the same and options is not comparable using CCS
     val skipColumns = List("id", "ownedIndexId", "options")
-    withoutColumns(result.toList, skipColumns) should be(withoutColumns(allIndexes.toList, skipColumns))
+    withoutColumns(result.toList, skipColumns) should be(withoutColumns(allConstraints.toList, skipColumns))
     val recreatedOptions = result.columnAs("options").toList
     for (i <- recreatedOptions.indices) {
       val correctOption: Option[Map[String, Any]] = Option(options(i))
