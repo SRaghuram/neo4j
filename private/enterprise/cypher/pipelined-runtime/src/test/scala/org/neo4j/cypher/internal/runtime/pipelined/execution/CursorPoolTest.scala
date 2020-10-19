@@ -16,11 +16,12 @@ import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.RelationshipTypeIndexCursor
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
-import org.neo4j.memory.EmptyMemoryTracker
+import org.neo4j.memory.LocalMemoryTracker
 import org.neo4j.memory.MemoryTracker
 
 class CursorPoolTest extends CypherFunSuite {
-  val poolSize: Int = CursorPool.DEFAULT_POOL_SIZE
+  private val poolSize: Int = CursorPool.DEFAULT_POOL_SIZE
+  private val memoryTracker = new LocalMemoryTracker
 
   //   used simultaneously, expected create count
   Seq((poolSize/2,          poolSize/2),
@@ -127,7 +128,7 @@ class CursorPoolTest extends CypherFunSuite {
 
   private def setupCursorPools: (CursorPools, TestCursorFactory) = {
     val factory = new TestCursorFactory
-    val pool = new CursorPools(factory, PageCursorTracer.NULL, EmptyMemoryTracker.INSTANCE)
+    val pool = new CursorPools(factory, PageCursorTracer.NULL, memoryTracker)
     (pool, factory)
   }
 
@@ -136,6 +137,7 @@ class CursorPoolTest extends CypherFunSuite {
     val liveCounts = new LiveCounts()
     cursorPools.collectLiveCounts(liveCounts)
     liveCounts.assertAllReleased()
+    withClue("Leaking memory")(memoryTracker.estimatedHeapMemory shouldEqual 0)
   }
 
   class TestCursorFactory extends CursorFactory {
