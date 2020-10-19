@@ -214,10 +214,6 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate,
                                         slots: SlotConfiguration)
                                        (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
 
-//  private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName("nodeCursor"))
-//  private val propertyCursorField = field[PropertyCursor](codeGen.namer.nextVariableName("propertyCursor"))
-//  private val relationshipScanCursorField = field[RelationshipScanCursor](codeGen.namer.nextVariableName("relCursor"))
-
   override def toString: String = "ProduceResultTaskTemplate"
 
   override def genInit: IntermediateRepresentation = {
@@ -292,9 +288,6 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate,
      * }}}
      */
     block(
-//      allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR),
-//      allocateAndTraceCursor(propertyCursorField, executionEventField, ALLOCATE_PROPERTY_CURSOR),
-//      allocateAndTraceCursor(relationshipScanCursorField, executionEventField, ALLOCATE_REL_SCAN_CURSOR),
       invokeSideEffect(load(SUBSCRIBER), method[QuerySubscriber, Unit]("onRecord")),
       project,
       invokeSideEffect(load(SUBSCRIBER), method[QuerySubscriber, Unit]("onRecordCompleted")),
@@ -304,7 +297,7 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate,
     )
   }
 
-  override def genFields: Seq[Field] = Seq.empty//Seq(nodeCursorField, relationshipScanCursorField, propertyCursorField)
+  override def genFields: Seq[Field] = Seq.empty
 
   override def genLocalVariables: Seq[LocalVariable] =
     Seq(PRE_POPULATE_RESULTS_V, SUBSCRIBER, SUBSCRIPTION, DEMAND, SERVED, CURSOR_POOL_V)
@@ -313,32 +306,9 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate,
 
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
 
-  override def genCloseCursors: IntermediateRepresentation = {
-    block(
-//      freeCursor[NodeCursor](loadField(nodeCursorField), NodeCursorPool),
-//      setField(nodeCursorField, constant(null)),
-//      freeCursor[PropertyCursor](loadField(propertyCursorField), PropertyCursorPool),
-//      setField(nodeCursorField, constant(null)),
-//      freeCursor[RelationshipScanCursor](loadField(relationshipScanCursorField), RelScanCursorPool),
-//      setField(relationshipScanCursorField, constant(null)),
-      inner.genCloseCursors
-    )
-  }
+  override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
 
-  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = {
-    block(
-//      condition(isNotNull(loadField(nodeCursorField)))(
-//        invokeSideEffect(loadField(nodeCursorField), method[NodeCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField))
-//      ),
-//      condition(isNotNull(loadField(propertyCursorField)))(
-//        invokeSideEffect(loadField(propertyCursorField), method[PropertyCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField))
-//      ),
-//      condition(isNotNull(loadField(relationshipScanCursorField)))(
-//        invokeSideEffect(loadField(relationshipScanCursorField), method[RelationshipScanCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField))
-//      ),
-      inner.genSetExecutionEvent(event)
-    )
-  }
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
 }
 
 class CompiledQueryResultRecord(override val fields: Array[AnyValue]) extends QueryResult.Record
