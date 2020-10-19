@@ -10,6 +10,11 @@ import java.util.concurrent.ThreadLocalRandom
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.QueryStatisticsTestSupport
+import org.neo4j.cypher.internal.ast.NodeExistsConstraints
+import org.neo4j.cypher.internal.ast.NodeKeyConstraints
+import org.neo4j.cypher.internal.ast.RelExistsConstraints
+import org.neo4j.cypher.internal.ast.ShowConstraintType
+import org.neo4j.cypher.internal.ast.UniqueConstraints
 import org.neo4j.graphdb.schema.AnalyzerProvider
 import org.neo4j.graphdb.schema.IndexSettingImpl
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
@@ -54,18 +59,20 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   private val label2 = "Label2"
   private val labelWhitespace = "Label 1"
   private val labelWhitespace2 = "Label 2"
-  private val labelBackticks = "`Label``4`"
+  private val labelBackticks = "`Label``3`"
+  private val labelBackticks2 = "Label`4``"
 
   private val relType = "relType"
   private val relType2 = "relType2"
   private val relTypeWhitespace = "reltype 3"
-  private val reltypeBackticks = "`rel`type`"
+  private val relTypeBackticks = "`rel`type`"
 
   private val prop = "prop"
   private val prop2 = "prop2"
+  private val prop3 = "prop3"
   private val propWhitespace = "prop 1"
   private val propWhitespace2 = "prop 2"
-  private val propBackticks = "`prop`4`"
+  private val propBackticks = "`prop`4"
   private val propBackticks2 = "`prop5``"
 
   private val random: ThreadLocalRandom = ThreadLocalRandom.current()
@@ -111,10 +118,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   test("should show indexes backing constraints") {
     // GIVEN
-    createDefaultUniquenessConstraint()
-    graph.createNodeExistenceConstraintWithName("constraint3", label2, prop)
-    graph.createRelationshipExistenceConstraintWithName("constraint4", relType, prop)
-    createDefaultNodeKeyConstraint()
+    createDefaultConstraints()
     graph.awaitIndexesOnline()
 
     // WHEN
@@ -122,13 +126,12 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // THEN
     // Existence constraints are not backed by indexes so they should not be listed
-    result.toList should be(List(defaultUniquenessBriefOutput(1L), defaultNodeKeyBriefOutput(5L)))
+    result.toList should be(List(defaultUniquenessBriefIndexOutput(1L), defaultNodeKeyBriefIndexOutput(3L)))
   }
 
   test("show indexes should show both btree and fulltext indexes") {
     // GIVEN
     createDefaultIndexes()
-    graph.awaitIndexesOnline()
 
     // WHEN
     val result = executeSingle("SHOW INDEXES")
@@ -140,7 +143,6 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("show all indexes should show both btree and fulltext indexes") {
     // GIVEN
     createDefaultIndexes()
-    graph.awaitIndexesOnline()
 
     // WHEN
     val result = executeSingle("SHOW ALL INDEXES")
@@ -152,7 +154,6 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("show btree indexes should show only btree indexes") {
     // GIVEN
     createDefaultIndexes()
-    graph.awaitIndexesOnline()
 
     // WHEN
     val result = executeSingle("SHOW BTREE INDEXES")
@@ -201,7 +202,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // THEN
     val options: List[Object] = result.columnAs("options").toList
     options.foreach(option => assertCorrectOptionsMap(option, defaultBtreeOptionsMap))
-    withoutColumns(result.toList, List("options")) should equal(List(defaultUniquenessVerboseOutput(1L), defaultNodeKeyVerboseOutput(3L)))
+    withoutColumns(result.toList, List("options")) should equal(List(defaultUniquenessVerboseIndexOutput(1L), defaultNodeKeyVerboseIndexOutput(3L)))
   }
 
   test("show indexes should show valid create index statements") {
@@ -227,7 +228,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     createFulltextRelIndexWithRandomOptions("relType full-text whitespace", List(relTypeWhitespace), List(propWhitespace))
     createFulltextRelIndexWithRandomOptions("relType full-text multi-type", List(relType, relType2), List(prop))
     createFulltextRelIndexWithRandomOptions("relType full-text multi-prop", List(relType), List(prop, prop2))
-    createFulltextRelIndexWithRandomOptions("relType full-text backticks", List(reltypeBackticks), List(propBackticks))
+    createFulltextRelIndexWithRandomOptions("relType full-text backticks", List(relTypeBackticks), List(propBackticks))
     createFulltextRelIndexWithRandomOptions("``horrible `index`name`3``", List(relType), List(prop2))
 
     graph.awaitIndexesOnline()
@@ -237,19 +238,224 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("show indexes should show valid create constraint statements") {
 
     // Indexes backing uniqueness constraints
-    createConstraintWithRandomOptions("UNIQUE", "unique property", label, prop)
-    createConstraintWithRandomOptions("UNIQUE", "unique property whitespace", labelWhitespace, propWhitespace)
-    createConstraintWithRandomOptions("UNIQUE", "unique backticks", labelBackticks, propBackticks)
-    createConstraintWithRandomOptions("UNIQUE", "``horrible`name`", label2, prop)
+    createConstraint(UniqueConstraints, "unique property", label, prop)
+    createConstraint(UniqueConstraints, "unique property whitespace", labelWhitespace, propWhitespace)
+    createConstraint(UniqueConstraints, "unique backticks", labelBackticks, propBackticks)
+    createConstraint(UniqueConstraints, "``horrible`name`", label2, prop)
 
     // Indexes backing node key constraints
-    createConstraintWithRandomOptions("NODE KEY", "node key", label2, prop2)
-    createConstraintWithRandomOptions("NODE KEY", "node key whitespace", labelWhitespace2, propWhitespace2)
-    createConstraintWithRandomOptions("NODE KEY", "node key backticks", labelBackticks, propBackticks2)
-    createConstraintWithRandomOptions("NODE KEY", "``horrible`name2`", label, prop2)
+    createConstraint(NodeKeyConstraints, "node key", label2, prop2)
+    createConstraint(NodeKeyConstraints, "node key whitespace", labelWhitespace2, propWhitespace2)
+    createConstraint(NodeKeyConstraints, "node key backticks", labelBackticks, propBackticks2)
+    createConstraint(NodeKeyConstraints, "``horrible`name2`", label, prop2)
 
     graph.awaitIndexesOnline()
     verifyCanDropAndRecreateIndexesUsingCreateStatement("CONSTRAINT")
+  }
+
+  // SHOW CONSTRAINTS tests
+
+  test("show constraints should return empty result when there are no constraints") {
+    // WHEN
+    val result = executeSingle("SHOW CONSTRAINTS")
+
+    // THEN
+    result.toList should be(empty)
+  }
+
+  test("should show constraint") {
+    // GIVEN
+    createDefaultUniquenessConstraint()
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("SHOW CONSTRAINTS")
+
+    // THEN
+    result.toList should be(List(defaultUniquenessBriefConstraintOutput(2L)))
+  }
+
+  test("should show constraints in alphabetic order") {
+    // GIVEN
+    graph.createNodeKeyConstraintWithName("poppy", label2, prop)
+    graph.createNodeKeyConstraintWithName("benny", label2, prop, prop2)
+    graph.createUniqueConstraintWithName("albert", label2, prop2)
+    graph.createRelationshipExistenceConstraintWithName("charlie", label, prop2)
+    graph.createNodeExistenceConstraintWithName("xavier", label, prop)
+
+    // WHEN
+    val result = executeSingle("SHOW CONSTRAINTS")
+
+    // THEN
+    result.columnAs("name").toList should equal(List("albert", "benny", "charlie", "poppy", "xavier"))
+  }
+
+  test("show constraints should show all types of constraints") {
+    // GIVEN
+    createDefaultConstraints()
+
+    // WHEN
+    val result = executeSingle("SHOW CONSTRAINTS")
+
+    // THEN
+    result.toList should be(List(defaultUniquenessBriefConstraintOutput(2L), defaultNodeKeyBriefConstraintOutput(4L),
+      defaultNodeExistsBriefConstraintOutput(5L), defaultRelExistsBriefConstraintOutput(6L)))
+  }
+
+  test("show all constraints should show all types of constraints") {
+    // GIVEN
+    createDefaultConstraints()
+
+    // WHEN
+    val result = executeSingle("SHOW ALL CONSTRAINTS")
+
+    // THEN
+    result.toList should be(List(defaultUniquenessBriefConstraintOutput(2L), defaultNodeKeyBriefConstraintOutput(4L),
+      defaultNodeExistsBriefConstraintOutput(5L), defaultRelExistsBriefConstraintOutput(6L)))
+  }
+
+
+  test("show unique constraints should filter constraints") {
+    // GIVEN
+    createDefaultConstraints()
+
+    // WHEN
+    val result = executeSingle("SHOW UNIQUE CONSTRAINTS")
+
+    // THEN
+    result.toList should be(List(defaultUniquenessBriefConstraintOutput(2L)))
+  }
+
+  test("show node key constraints should filter constraints") {
+    // GIVEN
+    createDefaultConstraints()
+
+    // WHEN
+    val result = executeSingle("SHOW NODE KEY CONSTRAINTS")
+
+    // THEN
+    result.toList should be(List(defaultNodeKeyBriefConstraintOutput(4L)))
+  }
+
+  test("show node exists constraints should filter constraints") {
+    // GIVEN
+    createDefaultConstraints()
+
+    // WHEN
+    val result = executeSingle("SHOW NODE EXISTS CONSTRAINTS")
+
+    // THEN
+    result.toList should be(List(defaultNodeExistsBriefConstraintOutput(5L)))
+  }
+
+  test("show relationship exists constraints should filter constraints") {
+    // GIVEN
+    createDefaultConstraints()
+
+    // WHEN
+    val result = executeSingle("SHOW RELATIONSHIP EXISTS CONSTRAINTS")
+
+    // THEN
+    result.toList should be(List(defaultRelExistsBriefConstraintOutput(6L)))
+  }
+
+  test("show exists constraints should filter constraints") {
+    // GIVEN
+    createDefaultConstraints()
+
+    // WHEN
+    val result = executeSingle("SHOW EXISTS CONSTRAINTS")
+
+    // THEN
+    result.toList should be(List(defaultNodeExistsBriefConstraintOutput(5L), defaultRelExistsBriefConstraintOutput(6L)))
+  }
+
+  test("should show unique constraint with verbose output") {
+    // GIVEN
+    createDefaultUniquenessConstraint()
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("SHOW UNIQUE CONSTRAINTS VERBOSE OUTPUT")
+
+    val options: List[Object] = result.columnAs("options").toList
+    options.foreach(option => assertCorrectOptionsMap(option, defaultBtreeOptionsMap))
+    withoutColumns(result.toList, List("options")) should equal(List(defaultUniquenessVerboseConstraintOutput(2L)))
+  }
+
+  test("should show node key constraint with verbose output") {
+    // GIVEN
+    createDefaultNodeKeyConstraint()
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("SHOW NODE KEY CONSTRAINTS VERBOSE OUTPUT")
+
+    val options: List[Object] = result.columnAs("options").toList
+    options.foreach(option => assertCorrectOptionsMap(option, defaultBtreeOptionsMap))
+    withoutColumns(result.toList, List("options")) should equal(List(defaultNodeKeyVerboseConstraintOutput(2L)))
+  }
+
+  test("should show node exists constraint with verbose output") {
+    // GIVEN
+    createDefaultNodeExistsConstraint()
+
+    // WHEN
+    val result = executeSingle("SHOW NODE EXISTS CONSTRAINTS VERBOSE OUTPUT")
+
+    val options: List[Object] = result.columnAs("options").toList
+    options should be(List(null))
+    withoutColumns(result.toList, List("options")) should equal(List(defaultNodeExistsVerboseConstraintOutput(1L)))
+  }
+
+  test("should show rel exists constraint with verbose output") {
+    // GIVEN
+    createDefaultRelExistsConstraint()
+
+    // WHEN
+    val result = executeSingle("SHOW RELATIONSHIP EXISTS CONSTRAINTS VERBOSE OUTPUT")
+
+    val options: List[Object] = result.columnAs("options").toList
+    options should be(List(null))
+    withoutColumns(result.toList, List("options")) should equal(List(defaultRelExistsVerboseConstraintOutput(1L)))
+  }
+
+  test("show constraints should show valid create statements for unique constraints") {
+    createConstraint(UniqueConstraints, "unique property", label, prop)
+    createConstraint(UniqueConstraints, "unique property whitespace", labelWhitespace, propWhitespace)
+    createConstraint(UniqueConstraints, "unique backticks", labelBackticks, propBackticks)
+    createConstraint(UniqueConstraints, "``horrible`name`", label, prop2)
+
+    graph.awaitIndexesOnline()
+    verifyCanDropAndRecreateConstraintsUsingCreateStatement()
+  }
+
+  test("show constraints should show valid create statements for node key constraints") {
+    createConstraint(NodeKeyConstraints, "node key", label, prop3)
+    createConstraint(NodeKeyConstraints, "node key whitespace", labelWhitespace2, propWhitespace2)
+    createConstraint(NodeKeyConstraints, "node key backticks", labelBackticks, propBackticks2)
+    createConstraint(NodeKeyConstraints, "``horrible`name2", label2, prop)
+
+    graph.awaitIndexesOnline()
+    verifyCanDropAndRecreateConstraintsUsingCreateStatement()
+  }
+
+  test("show constraints should show valid create statements for node exists constraints") {
+    createConstraint(NodeExistsConstraints, "node prop exists", label2, prop2)
+    createConstraint(NodeExistsConstraints, "node prop exists whitespace", labelWhitespace, propWhitespace2)
+    createConstraint(NodeExistsConstraints, "node prop exists backticks", labelBackticks2, propBackticks)
+    createConstraint(NodeExistsConstraints, "horrible`name3``", label2, prop3)
+
+    verifyCanDropAndRecreateConstraintsUsingCreateStatement()
+  }
+
+  test("show constraints should show valid create statements for rel exists constraints") {
+    createConstraint(RelExistsConstraints, "rel prop exists", relType, prop)
+    createConstraint(RelExistsConstraints, "rel prop exists whitespace", relTypeWhitespace, propWhitespace)
+    createConstraint(RelExistsConstraints, "rel prop exists backticks", relTypeBackticks, propBackticks)
+    createConstraint(RelExistsConstraints, "horrible name`4````", relType, prop2)
+
+    verifyCanDropAndRecreateConstraintsUsingCreateStatement()
   }
 
   // general index help methods
@@ -258,6 +464,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     createDefaultBtreeIndex()
     createDefaultFullTextNodeIndex()
     createDefaultFullTextRelIndex()
+    graph.awaitIndexesOnline()
   }
 
   private def indexOutputBrief(id: Long, name: String, uniqueness: String, indexType: String, entityType: String,
@@ -274,14 +481,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
       "indexProvider" -> indexProvider)
 
   // options cannot be handled by the normal CypherComparisonSupport assertions due to returning maps and arrays, so it is not included here
-
   private def indexOutputVerbose(createStatement: String): Map[String, Any] = Map("failureMessage" -> "", "createStatement" -> createStatement)
-
-  private def withoutColumns(result: List[Map[String, Any]], columns: List[String]): List[Map[String, Any]] = {
-    result.map(innerMap => innerMap.filterNot(entry => columns.contains(entry._1)))
-  }
-
-  private def escapeBackticks(str: String): String = str.replaceAll("`", "``")
 
   // Btree index help methods
 
@@ -299,31 +499,6 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   private def defaultBtreeVerboseOutput(id: Long): Map[String, Any] = defaultBtreeBriefOutput(id) ++
     indexOutputVerbose(s"CREATE INDEX `my_index` FOR (n:`$label`) ON (n.`$prop2`, n.`$prop`) OPTIONS $defaultBtreeOptionsString")
-
-  // Btree index backing constraint help methods
-
-  private def createConstraintWithRandomOptions(constraintType: String, name: String, label: String, property: String): Unit = {
-    val escapedName = s"`${escapeBackticks(name)}`"
-    val escapedLabel = s"`${escapeBackticks(label)}`"
-    val escapedProperty = s"`${escapeBackticks(property)}`"
-    executeSingle(s"CREATE CONSTRAINT $escapedName ON (n:$escapedLabel) ASSERT (n.$escapedProperty) IS $constraintType OPTIONS ${randomBtreeOptions()}")
-  }
-
-  private def createDefaultUniquenessConstraint(): Unit = graph.createUniqueConstraintWithName("constraint1", label, prop)
-
-  private def defaultUniquenessBriefOutput(id: Long): Map[String, Any] =
-    indexOutputBrief(id, "constraint1", "UNIQUE", "BTREE", "NODE", List(label), List(prop), "native-btree-1.0")
-
-  private def defaultUniquenessVerboseOutput(id: Long): Map[String, Any] = defaultUniquenessBriefOutput(id) ++
-    indexOutputVerbose(s"CREATE CONSTRAINT `constraint1` ON (n:`$label`) ASSERT (n.`$prop`) IS UNIQUE OPTIONS $defaultBtreeOptionsString")
-
-  private def createDefaultNodeKeyConstraint(): Unit = graph.createNodeKeyConstraintWithName("constraint2", label2, prop2)
-
-  private def defaultNodeKeyBriefOutput(id: Long): Map[String, Any] =
-    indexOutputBrief(id, "constraint2", "UNIQUE", "BTREE", "NODE", List(label2), List(prop2), "native-btree-1.0")
-
-  private def defaultNodeKeyVerboseOutput(id: Long): Map[String, Any] = defaultNodeKeyBriefOutput(id) ++
-    indexOutputVerbose(s"CREATE CONSTRAINT `constraint2` ON (n:`$label2`) ASSERT (n.`$prop2`) IS NODE KEY OPTIONS $defaultBtreeOptionsString")
 
   // Fulltext index help methods
 
@@ -355,6 +530,102 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   private def defaultFulltextRelVerboseOutput(id: Long): Map[String, Any] = defaultFulltextRelBriefOutput(id) ++
     indexOutputVerbose(s"CALL db.index.fulltext.createRelationshipIndex('fulltext_rel', ['$relType'], ['$prop'], $defaultFulltextConfigString)")
 
+  // general constraint help methods
+
+  private def createDefaultConstraints(): Unit = {
+    createDefaultUniquenessConstraint()
+    createDefaultNodeKeyConstraint()
+    createDefaultNodeExistsConstraint()
+    createDefaultRelExistsConstraint()
+    graph.awaitIndexesOnline()
+  }
+
+  private def createConstraint(constraintType: ShowConstraintType, name: String, label: String, property: String): Unit = {
+    val escapedName = s"`${escapeBackticks(name)}`"
+    val escapedLabel = s"`${escapeBackticks(label)}`"
+    val escapedProperty = s"`${escapeBackticks(property)}`"
+
+    val query = constraintType match {
+      case UniqueConstraints =>
+        s"CREATE CONSTRAINT $escapedName ON (n:$escapedLabel) ASSERT (n.$escapedProperty) IS UNIQUE OPTIONS ${randomBtreeOptions()}"
+      case NodeKeyConstraints =>
+        s"CREATE CONSTRAINT $escapedName ON (n:$escapedLabel) ASSERT (n.$escapedProperty) IS NODE KEY OPTIONS ${randomBtreeOptions()}"
+      case NodeExistsConstraints =>
+        s"CREATE CONSTRAINT $escapedName ON (n:$escapedLabel) ASSERT exists(n.$escapedProperty)"
+      case RelExistsConstraints =>
+        s"CREATE CONSTRAINT $escapedName ON ()-[r:$escapedLabel]-() ASSERT exists(r.$escapedProperty)"
+      case unexpectedType =>
+        throw new IllegalArgumentException(s"Unexpected constraint type for constraint create command: ${unexpectedType.name}")
+    }
+    executeSingle(query)
+  }
+
+  private def constraintOutputBrief(id: Long, name: String, constraintType: String, entityType: String,
+                                    labelsOrTypes: List[String], properties: List[String], ownedIndexId: Option[Long]): Map[String, Any] =
+    Map("id" -> id,
+      "name" -> name,
+      "type" -> constraintType,
+      "entityType" -> entityType,
+      "labelsOrTypes" -> labelsOrTypes,
+      "properties" -> properties,
+      "ownedIndexId" -> ownedIndexId.orNull
+    )
+
+  // options cannot be handled by the normal CypherComparisonSupport assertions due to returning maps and arrays, so it is not included here
+  private def constraintOutputVerbose(createStatement: String): Map[String, Any] = Map("createStatement" -> createStatement)
+
+  // unique constraint
+
+  private def createDefaultUniquenessConstraint(): Unit = graph.createUniqueConstraintWithName("constraint1", label, prop)
+
+  private def defaultUniquenessBriefIndexOutput(id: Long): Map[String, Any] =
+    indexOutputBrief(id, "constraint1", "UNIQUE", "BTREE", "NODE", List(label), List(prop), "native-btree-1.0")
+
+  private def defaultUniquenessVerboseIndexOutput(id: Long): Map[String, Any] = defaultUniquenessBriefIndexOutput(id) ++
+    indexOutputVerbose(s"CREATE CONSTRAINT `constraint1` ON (n:`$label`) ASSERT (n.`$prop`) IS UNIQUE OPTIONS $defaultBtreeOptionsString")
+
+  private def defaultUniquenessBriefConstraintOutput(id: Long): Map[String, Any] =
+    constraintOutputBrief(id, "constraint1", "UNIQUENESS", "NODE", List(label), List(prop), Some(id - 1))
+
+  private def defaultUniquenessVerboseConstraintOutput(id: Long): Map[String, Any] = defaultUniquenessBriefConstraintOutput(id) ++
+    constraintOutputVerbose(s"CREATE CONSTRAINT `constraint1` ON (n:`$label`) ASSERT (n.`$prop`) IS UNIQUE OPTIONS $defaultBtreeOptionsString")
+
+  // node key constraint
+
+  private def createDefaultNodeKeyConstraint(): Unit = graph.createNodeKeyConstraintWithName("constraint2", label2, prop2)
+
+  private def defaultNodeKeyBriefIndexOutput(id: Long): Map[String, Any] =
+    indexOutputBrief(id, "constraint2", "UNIQUE", "BTREE", "NODE", List(label2), List(prop2), "native-btree-1.0")
+
+  private def defaultNodeKeyVerboseIndexOutput(id: Long): Map[String, Any] = defaultNodeKeyBriefIndexOutput(id) ++
+    indexOutputVerbose(s"CREATE CONSTRAINT `constraint2` ON (n:`$label2`) ASSERT (n.`$prop2`) IS NODE KEY OPTIONS $defaultBtreeOptionsString")
+
+  private def defaultNodeKeyBriefConstraintOutput(id: Long): Map[String, Any] =
+    constraintOutputBrief(id, "constraint2", "NODE_KEY", "NODE", List(label2), List(prop2), Some(id - 1))
+
+  private def defaultNodeKeyVerboseConstraintOutput(id: Long): Map[String, Any] = defaultNodeKeyBriefConstraintOutput(id) ++
+    constraintOutputVerbose(s"CREATE CONSTRAINT `constraint2` ON (n:`$label2`) ASSERT (n.`$prop2`) IS NODE KEY OPTIONS $defaultBtreeOptionsString")
+
+  // node exists constraint
+
+  private def createDefaultNodeExistsConstraint(): Unit = graph.createNodeExistenceConstraintWithName("constraint3", label, prop2)
+
+  private def defaultNodeExistsBriefConstraintOutput(id: Long): Map[String, Any] =
+    constraintOutputBrief(id, "constraint3", "NODE_PROPERTY_EXISTENCE", "NODE", List(label), List(prop2), None)
+
+  private def defaultNodeExistsVerboseConstraintOutput(id: Long): Map[String, Any] = defaultNodeExistsBriefConstraintOutput(id) ++
+    constraintOutputVerbose(s"CREATE CONSTRAINT `constraint3` ON (n:`$label`) ASSERT exists(n.`$prop2`)")
+
+  // rel exists constraint
+
+  private def createDefaultRelExistsConstraint(): Unit = graph.createRelationshipExistenceConstraintWithName("constraint4", relType, prop)
+
+  private def defaultRelExistsBriefConstraintOutput(id: Long): Map[String, Any] =
+    constraintOutputBrief(id, "constraint4", "RELATIONSHIP_PROPERTY_EXISTENCE", "RELATIONSHIP", List(relType), List(prop), None)
+
+  private def defaultRelExistsVerboseConstraintOutput(id: Long): Map[String, Any] = defaultRelExistsBriefConstraintOutput(id) ++
+    constraintOutputVerbose(s"CREATE CONSTRAINT `constraint4` ON ()-[r:`$relType`]-() ASSERT exists(r.`$prop`)")
+
   // Create statements help methods
 
   private def verifyCanDropAndRecreateIndexesUsingCreateStatement(schemaType: String): Unit = {
@@ -382,6 +653,47 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     withoutColumns(result.toList, skipColumns) should be(withoutColumns(allIndexes.toList, skipColumns))
     val recreatedOptions = result.columnAs("options").toList
     for (i <- recreatedOptions.indices) assertCorrectOptionsMap(recreatedOptions(i), options(i).asInstanceOf[Map[String, Any]])
+  }
+
+  private def verifyCanDropAndRecreateConstraintsUsingCreateStatement(): Unit = {
+    // GIVEN
+    val allIndexes = executeSingle("SHOW CONSTRAINTS VERBOSE OUTPUT")
+    val createStatements = allIndexes.columnAs("createStatement").toList
+    val names = allIndexes.columnAs("name").toList
+    val options = allIndexes.columnAs("options").toList
+
+    // WHEN
+    dropAllFromNames(names, "CONSTRAINT")
+
+    // THEN
+    executeSingle("SHOW CONSTRAINTS VERBOSE OUTPUT").toList should be(empty)
+
+    // WHEN
+    recreateAllFromCreateStatements(createStatements)
+    graph.awaitIndexesOnline()
+
+    // THEN
+    val result = executeSingle("SHOW CONSTRAINTS VERBOSE OUTPUT")
+
+    // The ids will not be the same and options is not comparable using CCS
+    val skipColumns = List("id", "ownedIndexId", "options")
+    withoutColumns(result.toList, skipColumns) should be(withoutColumns(allIndexes.toList, skipColumns))
+    val recreatedOptions = result.columnAs("options").toList
+    for (i <- recreatedOptions.indices) {
+      val correctOption: Option[Map[String, Any]] = Option(options(i))
+      val recreatedOption: Option[Map[String, Any]] = Option(recreatedOptions(i))
+
+      (correctOption, recreatedOption) match {
+        case (Some(correct), Some(recreated)) =>
+          assertCorrectOptionsMap(recreated, correct.asInstanceOf[Map[String, Any]])
+        case (Some(correct), None) =>
+          fail(s"Expected options to $correct but was null.")
+        case (None, Some(recreated)) =>
+          fail(s"Expected options to be null but was $recreated.")
+        case (None, None) =>
+          // Options was expected to be null and was null, this is success.
+      }
+    }
   }
 
   private def dropAllFromNames(names: List[String], schemaType: String): Unit = {
@@ -471,4 +783,10 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     val analyzers = new util.ArrayList[AnalyzerProvider](Services.loadAll(classOf[AnalyzerProvider]))
     randomValues.among(analyzers).getName
   }
+
+  private def withoutColumns(result: List[Map[String, Any]], columns: List[String]): List[Map[String, Any]] = {
+    result.map(innerMap => innerMap.filterNot(entry => columns.contains(entry._1)))
+  }
+
+  private def escapeBackticks(str: String): String = str.replaceAll("`", "``")
 }
