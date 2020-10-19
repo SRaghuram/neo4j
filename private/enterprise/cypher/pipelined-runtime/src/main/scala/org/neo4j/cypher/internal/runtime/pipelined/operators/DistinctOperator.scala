@@ -221,7 +221,7 @@ abstract class BaseDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate,
 
   override def genInit: IntermediateRepresentation = inner.genInit
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
-  override protected def genOperate(profile: Boolean): IntermediateRepresentation = {
+  override protected def genOperate: IntermediateRepresentation = {
     val compiled = groupings.map {
       case (s, e) =>
         s -> codeGen.compileExpression(e, id).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $e"))
@@ -243,8 +243,8 @@ abstract class BaseDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate,
       condition(or(innerCanContinue, seen(loadField(distinctStateField), load(keyVar)))) {
         block(
           nullCheckIfRequired(groupingExpression.projectKey),
-          inner.genOperateWithExpressions(profile),
-          conditionallyProfileRow(innerCannotContinue, id, profile)
+          inner.genOperateWithExpressions,
+          conditionallyProfileRow(innerCannotContinue, id, doProfile)
         )
       })
   }
@@ -286,10 +286,10 @@ class SerialDistinctOnRhsOfApplyOperatorTaskTemplate(override val inner: Operato
     load(ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name))
   private val localArgument = codeGen.namer.nextVariableName("argument")
 
-  override def genOperateEnter(profile: Boolean): IntermediateRepresentation = {
+  override def genOperateEnter: IntermediateRepresentation = {
     block(
       declareAndAssign(typeRefOf[Long], localArgument, constant(-1L)),
-      inner.genOperateEnter(profile)
+      inner.genOperateEnter
     )
   }
   override protected def initializeState: IntermediateRepresentation = constant(null)

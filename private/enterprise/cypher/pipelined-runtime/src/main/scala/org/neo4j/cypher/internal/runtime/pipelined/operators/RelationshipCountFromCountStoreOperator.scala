@@ -182,7 +182,7 @@ class RelationshipCountFromCountStoreOperatorTemplate(override val inner: Operat
 
   override def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
-  override protected def genInitializeInnerLoop(profile: Boolean): IntermediateRepresentation = {
+  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     val startLabelOps = block(startLabelField.map {
       case (name, field) => condition(equal(loadField(field), NO_TOKEN))(setField(field, nodeLabelId(name)))
     }.toSeq: _*)
@@ -210,7 +210,7 @@ class RelationshipCountFromCountStoreOperatorTemplate(override val inner: Operat
    *  this.canContinue = false
    *}}}
    */
-  override protected def genInnerLoop(profile: Boolean): IntermediateRepresentation = {
+  override protected def genInnerLoop: IntermediateRepresentation = {
 
     //If label tokens are known statically use it otherwise look up and store in fields, or use wildcard
     val startOps = startLabel match {
@@ -261,8 +261,8 @@ class RelationshipCountFromCountStoreOperatorTemplate(override val inner: Operat
       codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
       codeGen.setRefAt(offset, invokeStatic(method[Values, LongValue, Long]("longValue"), condition(countOps))),
       dbHitsRepresentation,
-      inner.genOperateWithExpressions(profile),
-      conditionallyProfileRow(innerCannotContinue, id, profile),
+      inner.genOperateWithExpressions,
+      conditionallyProfileRow(innerCannotContinue, id, doProfile),
       setField(canContinue, constant(false))
     )
   }

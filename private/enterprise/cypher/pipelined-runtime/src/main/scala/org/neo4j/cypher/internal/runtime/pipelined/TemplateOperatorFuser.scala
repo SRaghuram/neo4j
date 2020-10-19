@@ -108,12 +108,13 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
                                 innermost,
                                 expressionCompiler)
       val x = fixTemplate(ctx)
+      x.template.setProfile(doProfile)
       argumentStates ++= x.argumentStateFactory
       currentTemplate = x.template
     }
     val workIdentity = WorkIdentity.fromFusedPlans(fusedPlans)
     try {
-      compileOperator(currentTemplate, workIdentity, argumentStates, codeGenerationMode, pipelineId, doProfile)
+      compileOperator(currentTemplate, workIdentity, argumentStates, codeGenerationMode, pipelineId)
     } catch {
       // In the case of a StackOverflowError we cannot recover correctly and abort fusing altogether.
       case e: StackOverflowError =>
@@ -137,14 +138,14 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
     val maybePlanAndTemplate: Option[(LogicalPlan, NewTemplate)] =
       output match {
         case ProduceResultOutput(p) =>
-          Some(p, (ctx: TemplateContext) => {
+          Some((p, (ctx: TemplateContext) => {
             ctx.innermost.shouldWriteToContext = false // No need to write if we have ProduceResult
             ctx.innermost.shouldCheckDemand = true // The produce pipeline should follow subscription demand for reactive result support
             new ProduceResultOperatorTaskTemplate(ctx.innermost, p.id, p.columns, slots)(ctx.expressionCompiler)
-          })
+          }))
 
         case ReduceOutput(_, argumentStateMapId, p@plans.Aggregation(_, groupingExpressions, aggregationExpressionsMap)) =>
-          Some(p, (ctx: TemplateContext) => {
+          Some((p, (ctx: TemplateContext) => {
             def compileGroupingKey(astExpressions: Map[String, Expression],
                                    slots: SlotConfiguration,
                                    orderToLeverage: Seq[Expression]): () => IntermediateExpression = {
@@ -210,7 +211,7 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
                   serialExecutionOnly)(ctx.expressionCompiler)
               }
             }
-          })
+          }))
         case _ => None
       }
 

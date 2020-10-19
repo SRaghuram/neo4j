@@ -369,15 +369,15 @@ abstract class BaseAggregationMapperOperatorTaskTemplate(val inner: OperatorTask
   // constructor
   override def genInit: IntermediateRepresentation = inner.genInit
 
-  override def genOperateEnter(profile: Boolean): IntermediateRepresentation = {
+  override def genOperateEnter: IntermediateRepresentation = {
     block(
       assign(workerIdVar, invoke(OperatorCodeGenHelperTemplates.QUERY_RESOURCES, method[QueryResources, Int]("workerId"))),
-      super.genOperateEnter(profile)
+      super.genOperateEnter
     )
   }
 
   // this operates on a single row only
-  override def genOperate(profile: Boolean): IntermediateRepresentation = {
+  override def genOperate: IntermediateRepresentation = {
     setupAggregation()
     if (null == compiledGroupingExpression) {
       compiledGroupingExpression = groupingKeyExpressionCreator()
@@ -472,14 +472,14 @@ abstract class BaseAggregationMapperOperatorTaskTemplate(val inner: OperatorTask
        * updaters.addUpdate(n-1, aggregationExpression[n-1]())
        */
       addUpdates(load(updaters)),
-      inner.genOperateWithExpressions(profile)
+      inner.genOperateWithExpressions
     )
   }
 
-  override def genOperateExit(profile: Boolean): IntermediateRepresentation = {
+  override def genOperateExit: IntermediateRepresentation = {
     block(
       genApplyUpdates,
-      super.genOperateExit(profile)
+      super.genOperateExit
     )
   }
 

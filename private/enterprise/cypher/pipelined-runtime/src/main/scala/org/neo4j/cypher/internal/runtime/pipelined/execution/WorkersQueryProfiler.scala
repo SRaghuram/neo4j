@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal.runtime.pipelined.execution
 import java.util
 
 import org.neo4j.cypher.internal.profiling.KernelStatisticProvider
-import org.neo4j.cypher.internal.profiling.NoKernelStatisticProvider
 import org.neo4j.cypher.internal.profiling.ProfilingTracer
 import org.neo4j.cypher.internal.profiling.ProfilingTracerData
 import org.neo4j.cypher.internal.profiling.QueryProfiler

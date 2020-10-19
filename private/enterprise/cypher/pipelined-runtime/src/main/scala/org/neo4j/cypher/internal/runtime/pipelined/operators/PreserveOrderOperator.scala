@@ -101,7 +101,7 @@ class PreserveOrderOperatorTaskTemplate(override val inner: OperatorTaskTemplate
           codeGen.copyFromInput(codeGen.inputSlotConfiguration.numberOfLongs, codeGen.inputSlotConfiguration.numberOfReferences),
           inner.genOperateWithExpressions,
           // Else if no inner operator can proceed we move to the next input row
-          doIfInnerCantContinue(block(invokeSideEffect(INPUT_CURSOR, NEXT),  profileRow(id))),
+          doIfInnerCantContinue(block(invokeSideEffect(INPUT_CURSOR, NEXT),  profileRow(id, doProfile))),
           innermost.resetCachedPropertyVariables
         )
       )

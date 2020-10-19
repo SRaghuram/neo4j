@@ -95,7 +95,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexEndsWithSc
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexScanOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeLeftOuterHashJoinOperator
-import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeLeftOuterHashJoinOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeRightOuterHashJoinOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NonFuseableOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.Operator
@@ -410,7 +409,6 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStreamBufferVariant].argumentStateMapId
         val argumentSize = physicalPlan.argumentSizes(id)
 
-        val argumentDepth = physicalPlan.applyPlans(id)
         new AntiOperator(WorkIdentity.fromPlan(plan), argumentStateMapId, argumentSize)(id)
 
       case joinPlan: plans.NodeHashJoin =>
@@ -479,8 +477,6 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
         val lhsKeyOffsets = KeyOffsets.create(lhsSlots, keyVariables)
         val rhsKeyOffsets = KeyOffsets.create(rhsSlots, keyVariables)
-
-        val lhsSlotMappings = computeSlotMappings(lhsSlots, argumentSize, slots)
         val rhsSlotMappings = computeSlotMappings(rhsSlots, argumentSize, slots)
 
         val buffer = inputBuffer.variant.asInstanceOf[LHSAccumulatingRHSStreamingBufferVariant]

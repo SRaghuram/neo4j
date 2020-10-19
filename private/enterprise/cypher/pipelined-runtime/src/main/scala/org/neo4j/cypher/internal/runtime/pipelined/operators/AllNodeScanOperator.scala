@@ -219,7 +219,7 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
-  override protected def genInitializeInnerLoop(profile: Boolean): IntermediateRepresentation = {
+  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     /**
      * {{{
      *   this.nodeCursor = resources.cursorPools.nodeCursorPool.allocate()
@@ -231,14 +231,14 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
      * }}}
      */
     block(
-      allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR, profile),
+      allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR, doProfile),
       allNodeScan(loadField(nodeCursorField)),
-      setField(canContinue, profilingCursorNext[NodeCursor](loadField(nodeCursorField), id, profile)),
+      setField(canContinue, profilingCursorNext[NodeCursor](loadField(nodeCursorField), id, doProfile)),
       constant(true)
     )
   }
 
-  override protected def genInnerLoop(profile: Boolean): IntermediateRepresentation = {
+  override protected def genInnerLoop: IntermediateRepresentation = {
     /**
      * {{{
      *   while (hasDemand && this.canContinue) {
@@ -256,8 +256,8 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
         // since it means nobody is interested in those arguments.
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, invoke(loadField(nodeCursorField), method[NodeCursor, Long]("nodeReference"))),
-        inner.genOperateWithExpressions(profile),
-        doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, profilingCursorNext[NodeCursor](loadField(nodeCursorField), id, profile))),
+        inner.genOperateWithExpressions,
+        doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, profilingCursorNext[NodeCursor](loadField(nodeCursorField), id, doProfile))),
         endInnerLoop
       )
     )

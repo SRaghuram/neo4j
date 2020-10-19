@@ -87,23 +87,23 @@ class ArgumentOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
 
   override def genInit: IntermediateRepresentation = inner.genInit
 
-  override protected def genOperateHead(profile: Boolean): IntermediateRepresentation = {
+  override protected def genOperateHead: IntermediateRepresentation = {
     block(
       genAdvanceOnCancelledRow,
       loop(and(invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue")), innermost.predicate))(
         block(
           innermost.resetBelowLimitAndAdvanceToNextArgument,
           codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
-          inner.genOperateWithExpressions(profile),
+          inner.genOperateWithExpressions,
           // Else if no inner operator can proceed we move to the next input row
-          doIfInnerCantContinue(block(invokeSideEffect(INPUT_CURSOR, NEXT),  profileRow(id, profile))),
+          doIfInnerCantContinue(block(invokeSideEffect(INPUT_CURSOR, NEXT),  profileRow(id, doProfile))),
           innermost.resetCachedPropertyVariables
         )
       )
       )
   }
 
-  override protected def genOperateMiddle(profile: Boolean): IntermediateRepresentation = {
+  override protected def genOperateMiddle: IntermediateRepresentation = {
     throw new CantCompileQueryException("Cannot compile Input as middle operator")
   }
 

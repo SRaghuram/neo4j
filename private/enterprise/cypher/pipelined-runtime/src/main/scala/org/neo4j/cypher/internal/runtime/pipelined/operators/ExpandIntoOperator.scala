@@ -264,7 +264,7 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
    * }}}
    *
    */
-  override protected def genInitializeInnerLoop(profile: Boolean): IntermediateRepresentation = {
+  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
 
     val resultBoolean = codeGen.namer.nextVariableName()
     val fromNode = codeGen.namer.nextVariableName("fromNode")
@@ -277,9 +277,9 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
       declareAndAssign(typeRefOf[Long], toNode, getNodeIdFromSlot(toSlot, codeGen)),
       condition(and(notEqual(load(fromNode), constant(-1L)), notEqual(load(toNode), constant(-1L)))){
         block(
-          setUpCursors(fromNode, toNode, profile),
+          setUpCursors(fromNode, toNode),
           assign(resultBoolean, constant(true)),
-          setField(canContinue, profilingCursorNext[RelationshipTraversalCursor](loadField(relationshipsField), id, profile)),
+          setField(canContinue, profilingCursorNext[RelationshipTraversalCursor](loadField(relationshipsField), id, doProfile)),
         )
       },
       load(resultBoolean)
@@ -300,13 +300,13 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
    *     }
    * }}}
    */
-  override protected def genInnerLoop(profile: Boolean): IntermediateRepresentation = {
+  override protected def genInnerLoop: IntermediateRepresentation = {
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
         writeRow(getRelationship),
-        inner.genOperateWithExpressions(profile),
+        inner.genOperateWithExpressions,
         doIfInnerCantContinue(
-          innermost.setUnlessPastLimit(canContinue, profilingCursorNext[RelationshipTraversalCursor](loadField(relationshipsField), id, profile))),
+          innermost.setUnlessPastLimit(canContinue, profilingCursorNext[RelationshipTraversalCursor](loadField(relationshipsField), id, doProfile))),
         endInnerLoop
       )
     )
@@ -371,14 +371,14 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
   protected def getRelationship: IntermediateRepresentation = invoke(loadField(relationshipsField),
     method[RelationshipTraversalCursor, Long]("relationshipReference"))
 
-  protected def setUpCursors(fromNode: String, toNode: String, profile: Boolean): IntermediateRepresentation = {
+  protected def setUpCursors(fromNode: String, toNode: String): IntermediateRepresentation = {
     block(
       loadTypes(types, missingTypes, typeField, missingTypeField),
       condition(isNull(loadField(expandIntoField)))(
         setField(expandIntoField, newInstance(constructor[CachingExpandInto, Read, Direction, MemoryTracker],
           loadField(DATA_READ), directionRepresentation(dir), memoryTracker))),
-      allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR, profile),
-      allocateAndTraceCursor(traversalCursorField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR, profile),
+      allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR, doProfile),
+      allocateAndTraceCursor(traversalCursorField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR, doProfile),
 
       setField(relationshipsField, invoke(loadField(expandIntoField),
         CONNECTING_RELATIONSHIPS,

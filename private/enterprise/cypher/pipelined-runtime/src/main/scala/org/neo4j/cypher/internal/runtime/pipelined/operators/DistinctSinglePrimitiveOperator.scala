@@ -221,7 +221,7 @@ abstract class BaseDistinctSinglePrimitiveOperatorTaskTemplate(val inner: Operat
 
   override def genInit: IntermediateRepresentation = inner.genInit
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
-  override protected def genOperate(profile: Boolean): IntermediateRepresentation = {
+  override protected def genOperate: IntermediateRepresentation = {
     if (expression == null) {
       expression = generateExpression()
     }
@@ -239,8 +239,8 @@ abstract class BaseDistinctSinglePrimitiveOperatorTaskTemplate(val inner: Operat
       condition(or(innerCanContinue, seen(loadField(distinctStateField), load(keyVar)))) {
         block(
           computeProjection,
-          inner.genOperateWithExpressions(profile),
-          conditionallyProfileRow(innerCannotContinue, id, profile)
+          inner.genOperateWithExpressions,
+          conditionallyProfileRow(innerCannotContinue, id, doProfile)
         )
       })
   }
@@ -301,10 +301,10 @@ class SerialDistinctOnRhsOfApplySinglePrimitiveOperatorTaskTemplate(inner: Opera
   private val localArgument = codeGen.namer.nextVariableName("argument")
 
   override def genMoreFields: Seq[Field] = Seq(argumentMaps, field[Int](argumentSlotOffsetFieldName(argumentStateMapId), getArgumentSlotOffset(argumentStateMapId)))
-  override def genOperateEnter(profile: Boolean): IntermediateRepresentation = {
+  override def genOperateEnter: IntermediateRepresentation = {
     block(
       declareAndAssign(typeRefOf[Long], localArgument, constant(-1L)),
-      inner.genOperateEnter(profile)
+      inner.genOperateEnter
     )
   }
   override def createState: IntermediateRepresentation = noop()

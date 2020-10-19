@@ -33,7 +33,7 @@ class PipelineCompiler(operatorFactory: OperatorFactory,
     // Compile pipelines from the end backwards/upstream, to track needsFilteringMorsel
     // (the previous pipelines will need a filtering morsel if its downstream pipeline has a work canceller
     val (executablePipelines, _, _) =
-      executionGraphDefinition.pipelines.foldRight (IndexedSeq.empty[ExecutablePipeline], false, true) {
+      executionGraphDefinition.pipelines.foldRight ((IndexedSeq.empty[ExecutablePipeline], false, true)) {
         case (p, (pipelines, needsFilteringMorsel, nextPipelineCanTrackTime)) =>
           val (executablePipeline, upstreamNeedsFilteringMorsel) =
             compilePipeline(executionGraphDefinition, p, needsFilteringMorsel, nextPipelineCanTrackTime)

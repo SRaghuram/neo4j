@@ -159,7 +159,7 @@ class NodeCountFromCountStoreOperatorTemplate(override val inner: OperatorTaskTe
 
   override def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
-  override protected def genInitializeInnerLoop(profile: Boolean): IntermediateRepresentation = {
+  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
 
     val setLabelIds = labelFields.toSeq.map{
       case (name, field) => condition(equal(loadField(field), NO_TOKEN))(setField(field, nodeLabelId(name)))
@@ -199,7 +199,7 @@ class NodeCountFromCountStoreOperatorTemplate(override val inner: OperatorTaskTe
    *  this.canContinue = false
    *}}}
    */
-  override protected def genInnerLoop(profile: Boolean): IntermediateRepresentation = {
+  override protected def genInnerLoop: IntermediateRepresentation = {
     val countVar = codeGen.namer.nextVariableName()
     //takes care of the labels we don't know at compile time
     val unknownLabelOps = block(labelFields.values.toSeq.map(field => {
@@ -235,9 +235,9 @@ class NodeCountFromCountStoreOperatorTemplate(override val inner: OperatorTaskTe
       wildCardOps,
       codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
       codeGen.setRefAt(offset, invokeStatic(method[Values, LongValue, Long]("longValue"), load(countVar))),
-      inner.genOperateWithExpressions(profile),
+      inner.genOperateWithExpressions,
       setField(canContinue, constant(false)),
-      conditionallyProfileRow(innerCannotContinue, id, profile)
+      conditionallyProfileRow(innerCannotContinue, id, doProfile)
     )
   }
 

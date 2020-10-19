@@ -197,7 +197,7 @@ object VarLengthProjectEndpointsTask {
                                typesToCheck: Array[Int]): Option[(Long, Long)] = {
    val result = varLengthFindStartAndEnd(rels, state.query, typesToCheck)
     if (result == null) None
-    else Some(result(0), result(1))
+    else Some((result(0), result(1)))
   }
 
   /**
@@ -429,13 +429,13 @@ abstract class BaseProjectEndpointsMiddleOperatorTemplate(val inner: OperatorTas
    * Depending on what nodes are in scope and whether or not it is directed or not,
    * we must add different conditions before writing to the row.
    */
-  protected def writeOps(startVar: String, endVar: String, profile: Boolean): IntermediateRepresentation = {
+  protected def writeOps(startVar: String, endVar: String): IntermediateRepresentation = {
     def write(startIR: IntermediateRepresentation, endIR: IntermediateRepresentation) =
       block(
         codeGen.setLongAt(startOffset, startIR),
         codeGen.setLongAt(endOffset, endIR),
-        profileRow(id, profile),
-        inner.genOperateWithExpressions(profile)
+        profileRow(id, doProfile),
+        inner.genOperateWithExpressions
       )
     if (directed) {
       val gen: IntermediateRepresentation => IntermediateRepresentation =
@@ -540,7 +540,7 @@ class ProjectEndpointsMiddleOperatorTemplate(inner: OperatorTaskTemplate,
                                             (val codeGen: OperatorExpressionCompiler)
      extends BaseProjectEndpointsMiddleOperatorTemplate(inner, id, startOffset, startInScope, endOffset, endInScope, types, directed, codeGen) {
 
-  override def genOperate(profile: Boolean): IntermediateRepresentation = {
+  override def genOperate: IntermediateRepresentation = {
     val relIdVar = codeGen.namer.nextVariableName()
     val startVar = codeGen.namer.nextVariableName("start")
     val endVar = codeGen.namer.nextVariableName("end")
@@ -555,7 +555,7 @@ class ProjectEndpointsMiddleOperatorTemplate(inner: OperatorTaskTemplate,
           block(
             declareAndAssign(typeRefOf[Long], startVar, cursor.sourceNode),
             declareAndAssign(typeRefOf[Long], endVar, cursor.targetNode),
-            writeOps(startVar, endVar, profile)
+            writeOps(startVar, endVar)
           )
         }
       case None =>
@@ -571,7 +571,7 @@ class ProjectEndpointsMiddleOperatorTemplate(inner: OperatorTaskTemplate,
                   block(
                     declareAndAssign(typeRefOf[Long], startVar, invoke(RELATIONSHIP_CURSOR, method[RelationshipScanCursor, Long]("sourceNodeReference"))),
                     declareAndAssign(typeRefOf[Long], endVar, invoke(RELATIONSHIP_CURSOR, method[RelationshipScanCursor, Long]("targetNodeReference"))),
-                    writeOps(startVar, endVar, profile)
+                    writeOps(startVar, endVar)
                   )
                 }
               }
@@ -638,7 +638,7 @@ class VarLengthProjectEndpointsMiddleOperatorTemplate(inner: OperatorTaskTemplat
                                                      (val codeGen: OperatorExpressionCompiler)
   extends BaseProjectEndpointsMiddleOperatorTemplate(inner, id, startOffset, startInScope, endOffset, endInScope, types, directed, codeGen) {
 
-  override def genOperate(profile: Boolean): IntermediateRepresentation = {
+  override def genOperate: IntermediateRepresentation = {
     val relIdVar = codeGen.namer.nextVariableName()
     val startVar = codeGen.namer.nextVariableName("start")
     val endVar = codeGen.namer.nextVariableName("end")
@@ -655,7 +655,7 @@ class VarLengthProjectEndpointsMiddleOperatorTemplate(inner: OperatorTaskTemplat
         block(
           declareAndAssign(typeRefOf[Long], startVar, arrayLoad(load(startEnd), 0)),
           declareAndAssign(typeRefOf[Long], endVar, arrayLoad(load(startEnd), 1)),
-          writeOps(startVar, endVar, profile)
+          writeOps(startVar, endVar)
         )
       }
     )
@@ -702,7 +702,7 @@ abstract class BaseUndirectedProjectEndpointsTaskTemplate(inner: OperatorTaskTem
 
   override def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
-  override protected def genInnerLoop(profile: Boolean): IntermediateRepresentation = {
+  override protected def genInnerLoop: IntermediateRepresentation = {
     block(
       loop(and(innermost.predicate, loadField(canContinue)))(
         block(
@@ -719,10 +719,10 @@ abstract class BaseUndirectedProjectEndpointsTaskTemplate(inner: OperatorTaskTem
               codeGen.setLongAt(endOffset, loadField(startField))
             )
           },
-          inner.genOperateWithExpressions(profile),
+          inner.genOperateWithExpressions,
           doIfInnerCantContinue(
             block(
-              profileRow(id, profile),
+              profileRow(id, doProfile),
               setField(forwardField, not(loadField(forwardField)))
             )
           ),
@@ -750,7 +750,7 @@ class UndirectedProjectEndpointsTaskTemplate(inner: OperatorTaskTemplate,
                                             (codeGen: OperatorExpressionCompiler)
   extends BaseUndirectedProjectEndpointsTaskTemplate(inner, id, innermost, isHead, startOffset, endOffset, types, codeGen) {
 
-  override protected def genInitializeInnerLoop(profile: Boolean): IntermediateRepresentation = {
+  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     val ops = codeGen.cursorFor(relName) match {
       case Some(cursor: RelationshipCursorRepresentation) =>
         block(
@@ -803,7 +803,7 @@ class VarLengthUndirectedProjectEndpointsTaskTemplate(inner: OperatorTaskTemplat
                                   (codeGen: OperatorExpressionCompiler)
   extends BaseUndirectedProjectEndpointsTaskTemplate(inner, id, innermost, isHead, startOffset, endOffset, types, codeGen) {
 
-  override protected def genInitializeInnerLoop(profile: Boolean): IntermediateRepresentation = {
+  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     val relIds = codeGen.namer.nextVariableName()
     val startEnd = codeGen.namer.nextVariableName()
     block(

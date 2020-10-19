@@ -150,7 +150,7 @@ class SingleThreadedLabelScanTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
-  override protected def genInitializeInnerLoop(profile: Boolean): IntermediateRepresentation = {
+  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     maybeLabelId match {
       case Some(labelId) =>
 
@@ -165,9 +165,9 @@ class SingleThreadedLabelScanTaskTemplate(inner: OperatorTaskTemplate,
          * }}}
          */
         block(
-          allocateAndTraceCursor(nodeLabelCursorField, executionEventField, ALLOCATE_NODE_LABEL_CURSOR, profile),
+          allocateAndTraceCursor(nodeLabelCursorField, executionEventField, ALLOCATE_NODE_LABEL_CURSOR, doProfile),
           nodeLabelScan(constant(labelId), loadField(nodeLabelCursorField), indexOrder),
-          setField(canContinue, profilingCursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField), id, profile)),
+          setField(canContinue, profilingCursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField), id, doProfile)),
           constant(true)
         )
 
@@ -197,9 +197,9 @@ class SingleThreadedLabelScanTaskTemplate(inner: OperatorTaskTemplate,
           setField(canContinue, load(hasInnerLoop)),
           condition(load(hasInnerLoop)) {
             block(
-              allocateAndTraceCursor(nodeLabelCursorField, executionEventField, ALLOCATE_NODE_LABEL_CURSOR, profile),
+              allocateAndTraceCursor(nodeLabelCursorField, executionEventField, ALLOCATE_NODE_LABEL_CURSOR, doProfile),
               nodeLabelScan(loadField(labelField), loadField(nodeLabelCursorField), indexOrder),
-              setField(canContinue, profilingCursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField), id, profile)),
+              setField(canContinue, profilingCursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField), id, doProfile)),
             )
           },
           load(hasInnerLoop)
@@ -207,7 +207,7 @@ class SingleThreadedLabelScanTaskTemplate(inner: OperatorTaskTemplate,
     }
   }
 
-  override protected def genInnerLoop(profile: Boolean): IntermediateRepresentation = {
+  override protected def genInnerLoop: IntermediateRepresentation = {
     /**
      * {{{
      *   while (hasDemand && this.canContinue) {
@@ -224,9 +224,9 @@ class SingleThreadedLabelScanTaskTemplate(inner: OperatorTaskTemplate,
       block(
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, invoke(loadField(nodeLabelCursorField), method[NodeLabelIndexCursor, Long]("nodeReference"))),
-        inner.genOperateWithExpressions(profile),
+        inner.genOperateWithExpressions,
         doIfInnerCantContinue(
-          innermost.setUnlessPastLimit(canContinue, profilingCursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField), id, profile))
+          innermost.setUnlessPastLimit(canContinue, profilingCursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField), id, doProfile))
         ),
         endInnerLoop
       )

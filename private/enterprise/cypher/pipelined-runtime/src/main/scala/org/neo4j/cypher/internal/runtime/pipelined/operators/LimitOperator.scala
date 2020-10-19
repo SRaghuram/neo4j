@@ -128,11 +128,11 @@ class SerialTopLevelLimitOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genLocalVariables: Seq[LocalVariable] = super.genLocalVariables :+ SHOULD_BREAK
 
-  override def genOperate(profile: Boolean): IntermediateRepresentation = {
+  override def genOperate: IntermediateRepresentation = {
     block(
       condition(greaterThan(load(countLeftVar), constant(0))) (
         block(
-          inner.genOperateWithExpressions(profile),
+          inner.genOperateWithExpressions,
           doIfInnerCantContinue(
               assign(countLeftVar, subtract(load(countLeftVar), constant(1)))))
         ) ,
@@ -157,10 +157,10 @@ class SerialTopLevelLimitOperatorTaskTemplate(inner: OperatorTaskTemplate,
     }
   }
 
-  override def genOperateExit(profile: Boolean): IntermediateRepresentation = {
+  override def genOperateExit: IntermediateRepresentation = {
     block(
-      profileRows(id, cast[Long](subtract(load(reservedVar), load(countLeftVar))), profile),
-      super.genOperateExit(profile)
+      profileRows(id, cast[Long](subtract(load(reservedVar), load(countLeftVar))), doProfile),
+      super.genOperateExit
     )
   }
 }
@@ -179,14 +179,14 @@ class SerialLimitOnRhsOfApplyOperatorTaskTemplate(inner: OperatorTaskTemplate,
   extends SerialCountingOperatorOnRhsOfApplyOperatorTaskTemplate(inner, id, argumentStateMapId, generateCountExpression, codeGen) {
 
   override protected def beginOperate: IntermediateRepresentation = noop()
-  override protected def innerOperate(profile:Boolean): IntermediateRepresentation = {
+  override protected def innerOperate: IntermediateRepresentation = {
     block(
       condition(greaterThan(load(countLeftVar), constant(0)))(
         block(
-          inner.genOperateWithExpressions(profile),
+          inner.genOperateWithExpressions,
           doIfInnerCantContinue(
             block(
-              profileRow(id, profile),
+              profileRow(id, doProfile),
               assign(countLeftVar, subtract(load(countLeftVar), constant(1)))
             )
           ))

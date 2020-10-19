@@ -197,7 +197,7 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
    *    outputRow.finishedWriting()
    * }}}
    */
-  final override protected def genOperateHead(profile: Boolean): IntermediateRepresentation = {
+  final override protected def genOperateHead: IntermediateRepresentation = {
 
     val setNodes = nodeOffsets.zipWithIndex.map {
       case (nodeOffset, i) =>
@@ -223,15 +223,15 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
       condition(not(loadField(canContinue)))(
         block(
           setField(canContinue, invoke(loadField(inputCursorField), method[MutatingInputCursor, Boolean]("nextInput"))),
-          profileRow(id, loadField(canContinue), profile))),
+          profileRow(id, loadField(canContinue), doProfile))),
       loop(and(innermost.predicate, loadField(canContinue)))(
         block(
           setters,
-          inner.genOperateWithExpressions(profile),
+          inner.genOperateWithExpressions,
           doIfInnerCantContinue(
             block(
               setField(canContinue, invoke(loadField(inputCursorField), method[MutatingInputCursor, Boolean]("nextInput"))),
-              profileRow(id, loadField(canContinue), profile)
+              profileRow(id, loadField(canContinue), doProfile)
             )),
           innermost.resetCachedPropertyVariables
         )
@@ -239,7 +239,7 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
     )
   }
 
-  override protected def genOperateMiddle(profile: Boolean): IntermediateRepresentation = {
+  override protected def genOperateMiddle: IntermediateRepresentation = {
     throw new CantCompileQueryException("Cannot compile Input as middle operator")
   }
 

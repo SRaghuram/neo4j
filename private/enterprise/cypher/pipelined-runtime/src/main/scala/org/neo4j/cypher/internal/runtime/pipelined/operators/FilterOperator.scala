@@ -65,15 +65,15 @@ class FilterOperatorTemplate(val inner: OperatorTaskTemplate,
 
   override def genExpressions: Seq[IntermediateExpression] = Seq(predicate)
 
-  override def genOperate(profile: Boolean): IntermediateRepresentation = {
+  override def genOperate: IntermediateRepresentation = {
     if (predicate == null) {
       predicate = generatePredicate()
     }
 
     condition(equal(nullCheckIfRequired(predicate), trueValue)) (
       block(
-        inner.genOperateWithExpressions(profile),
-        conditionallyProfileRow(innerCannotContinue, id, profile),
+        inner.genOperateWithExpressions,
+        conditionallyProfileRow(innerCannotContinue, id, doProfile),
       )
     )
   }

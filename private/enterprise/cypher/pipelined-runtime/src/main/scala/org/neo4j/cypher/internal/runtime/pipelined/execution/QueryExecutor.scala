@@ -15,7 +15,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
 import org.neo4j.cypher.result.QueryProfile
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
-import org.neo4j.kernel.impl.query.QuerySubscription
 import org.neo4j.values.AnyValue
 
 /**

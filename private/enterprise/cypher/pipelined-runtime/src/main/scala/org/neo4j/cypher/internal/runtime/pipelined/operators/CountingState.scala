@@ -202,7 +202,7 @@ abstract class SerialTopLevelCountingOperatorTaskTemplate(val inner: OperatorTas
 
   override def genExpressions: Seq[IntermediateExpression] = Seq(countExpression)
 
-  override def genOperateEnter(profile: Boolean): IntermediateRepresentation = {
+  override def genOperateEnter: IntermediateRepresentation = {
     if (countExpression == null) {
       countExpression = generateCountExpression()
     }
@@ -217,15 +217,15 @@ abstract class SerialTopLevelCountingOperatorTaskTemplate(val inner: OperatorTas
         ),
       assign(reservedVar, invoke(loadField(countingStateField), method[CountingState, Int, Int]("reserve"), howMuchToReserve)),
       assign(countLeftVar, load(reservedVar)),
-      inner.genOperateEnter(profile)
+      inner.genOperateEnter
       )
   }
 
-  override def genOperateExit(profile: Boolean): IntermediateRepresentation = {
+  override def genOperateExit: IntermediateRepresentation = {
     block(
       invoke(loadField(countingStateField), method[SerialCountingState, Unit, Int]("update"),
         subtract(load(reservedVar), load(countLeftVar))),
-      inner.genOperateExit(profile))
+      inner.genOperateExit)
   }
 
   protected def howMuchToReserve: IntermediateRepresentation = constant(Int.MaxValue)
@@ -258,7 +258,7 @@ abstract class SerialCountingOperatorOnRhsOfApplyOperatorTaskTemplate(override v
   private val expressionVariable = codeGen.namer.nextVariableName("limit")
 
   protected def beginOperate: IntermediateRepresentation
-  protected def innerOperate(profile: Boolean): IntermediateRepresentation
+  protected def innerOperate: IntermediateRepresentation
 
   override def genInit: IntermediateRepresentation = inner.genInit
 
@@ -266,7 +266,7 @@ abstract class SerialCountingOperatorOnRhsOfApplyOperatorTaskTemplate(override v
 
   override def genFields: Seq[Field] = Seq(argumentMaps, field[Int](argumentSlotOffsetFieldName(argumentStateMapId), getArgumentSlotOffset(argumentStateMapId)))
 
-  override def genOperateEnter(profile: Boolean): IntermediateRepresentation = {
+  override def genOperateEnter: IntermediateRepresentation = {
     if (countExpression == null) {
       countExpression = generateCountExpression()
     }
@@ -276,7 +276,7 @@ abstract class SerialCountingOperatorOnRhsOfApplyOperatorTaskTemplate(override v
           nullCheckIfRequired(countExpression))),
       declareAndAssign(typeRefOf[SerialCountingState], state, constant(null)),
       declareAndAssign(typeRefOf[Long], localArgument, constant(-1L)),
-      inner.genOperateEnter(profile)
+      inner.genOperateEnter
     )
   }
 
@@ -292,7 +292,7 @@ abstract class SerialCountingOperatorOnRhsOfApplyOperatorTaskTemplate(override v
    *   [inner operation]
    * }}}
    */
-  override def genOperate(profile: Boolean): IntermediateRepresentation = {
+  override def genOperate: IntermediateRepresentation = {
     block(
       beginOperate,
       condition(not(equal(load(argumentVarName(argumentStateMapId)), load(localArgument)))) {
@@ -306,17 +306,17 @@ abstract class SerialCountingOperatorOnRhsOfApplyOperatorTaskTemplate(override v
           newState,
         )
       },
-      innerOperate(profile)
+      innerOperate
     )
   }
 
-  override def genOperateExit(profile: Boolean): IntermediateRepresentation = {
+  override def genOperateExit: IntermediateRepresentation = {
     block(
       condition(isNotNull(load(state))) {
         invoke(load(state), method[SerialCountingState, Unit, Int]("update"),
           subtract(load(reservedVar), load(countLeftVar)))
       },
-      inner.genOperateExit(profile))
+      inner.genOperateExit)
   }
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(countLeftVar, reservedVar)

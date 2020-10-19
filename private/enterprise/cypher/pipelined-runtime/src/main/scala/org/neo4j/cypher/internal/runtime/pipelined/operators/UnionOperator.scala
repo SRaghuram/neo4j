@@ -158,7 +158,7 @@ class UnionOperatorTemplate(val inner: OperatorTaskTemplate,
    *    << genLoop >>
    * }}}
    */
-  override protected def genOperateHead(profile: Boolean): IntermediateRepresentation = {
+  override protected def genOperateHead: IntermediateRepresentation = {
     val inputSlotConfig = invoke(INPUT_MORSEL, method[Morsel, SlotConfiguration]("slots"))
     block(
       declare[Boolean](codeGen.fromLHSName),
@@ -173,7 +173,7 @@ class UnionOperatorTemplate(val inner: OperatorTaskTemplate,
       },
       genAdvanceOnCancelledRow,
       setField(canContinue, INPUT_ROW_IS_VALID),
-      genLoop(profile)
+      genLoop(doProfile)
     )
   }
   /**
@@ -198,7 +198,7 @@ class UnionOperatorTemplate(val inner: OperatorTaskTemplate,
         } {
           copySlots(rhsMapping)
         },
-        inner.genOperateWithExpressions(profile),
+        inner.genOperateWithExpressions,
         // Else if no inner operator can proceed we move to the next input row
         doIfInnerCantContinue(
           innermost.setUnlessPastLimit(canContinue,
@@ -245,7 +245,7 @@ class UnionOperatorTemplate(val inner: OperatorTaskTemplate,
       throw new InternalException(s"Do not know how to project $slot")
   }
 
-  override protected def genOperateMiddle(profile: Boolean): IntermediateRepresentation = throw new CantCompileQueryException("Cannot compile Union as middle operator")
+  override protected def genOperateMiddle: IntermediateRepresentation = throw new CantCompileQueryException("Cannot compile Union as middle operator")
 
   override def genCanContinue: Option[IntermediateRepresentation] = {
     inner.genCanContinue.map(or(_, loadField(canContinue))).orElse(Some(loadField(canContinue)))

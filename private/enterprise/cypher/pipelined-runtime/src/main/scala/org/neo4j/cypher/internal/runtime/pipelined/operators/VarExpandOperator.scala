@@ -307,7 +307,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
    * }}}
    *
    */
-  override protected def genInitializeInnerLoop(profile: Boolean): IntermediateRepresentation = {
+  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     val resultBoolean = codeGen.namer.nextVariableName()
     val fromNode = codeGen.namer.nextVariableName("fromNode")
     val toNode = codeGen.namer.nextVariableName("toNode")
@@ -366,7 +366,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
           invokeSideEffect(loadField(varExpandCursorField), method[VarExpandCursor, Unit, CursorPools]("enterWorkUnit"), CURSOR_POOL),
           invokeSideEffect(loadField(varExpandCursorField), method[VarExpandCursor, Unit, OperatorProfileEvent]("setTracer"), loadField(executionEventField)),
 
-          setField(canContinue, profilingCursorNext[VarExpandCursor](loadField(varExpandCursorField), id, profile)),
+          setField(canContinue, profilingCursorNext[VarExpandCursor](loadField(varExpandCursorField), id, doProfile)),
           assign(resultBoolean, constant(true)),
         )
       },
@@ -385,7 +385,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
    *          this.canContinue = relationships.next()
    * }}}
    */
-  override protected def genInnerLoop(profile: Boolean): IntermediateRepresentation = {
+  override protected def genInnerLoop: IntermediateRepresentation = {
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
         codeGen.copyFromInput(Math.min(codeGen.inputSlotConfiguration.numberOfLongs, codeGen.slots.numberOfLongs),
@@ -394,9 +394,9 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
           method[VarExpandCursor, ListValue]("relationships"))),
         if (shouldExpandAll) codeGen.setLongAt(toOffset, invoke(loadField(varExpandCursorField), method[VarExpandCursor, Long]("toNode")) )
         else noop(),
-        inner.genOperateWithExpressions(profile),
+        inner.genOperateWithExpressions,
         doIfInnerCantContinue(
-          innermost.setUnlessPastLimit(canContinue, profilingCursorNext[VarExpandCursor](loadField(varExpandCursorField), id, profile))
+          innermost.setUnlessPastLimit(canContinue, profilingCursorNext[VarExpandCursor](loadField(varExpandCursorField), id, doProfile))
         ),
         endInnerLoop
       )

@@ -221,7 +221,7 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate,
   }
 
   // This operates on a single row only
-  override def genOperate(profile: Boolean): IntermediateRepresentation = {
+  override def genOperate: IntermediateRepresentation = {
     def getLongAt(offset: Int) = codeGen.getLongAt(offset)
     def getRefAt(offset: Int) = {
       val notPopulated = codeGen.getRefAt(offset)
@@ -292,8 +292,8 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate,
       project,
       invokeSideEffect(load(SUBSCRIBER), method[QuerySubscriber, Unit]("onRecordCompleted")),
       assign(SERVED, add(load(SERVED), constant(1L))),
-      profileRow(id, profile),
-      inner.genOperateWithExpressions(profile)
+      profileRow(id, doProfile),
+      inner.genOperateWithExpressions
     )
   }
 

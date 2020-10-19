@@ -9,7 +9,6 @@ import org.neo4j.cypher.internal.expressions.ASTCachedProperty
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.EntityById
 import org.neo4j.cypher.internal.runtime.ReadableRow
-import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
 

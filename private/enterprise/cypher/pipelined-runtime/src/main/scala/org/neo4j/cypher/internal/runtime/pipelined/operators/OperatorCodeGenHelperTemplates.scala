@@ -522,7 +522,7 @@ object OperatorCodeGenHelperTemplates {
         if (profile) invokeSideEffect(loadField(cursorField), SET_TRACER, loadField(executionEventField)) else noop()
       ))
 
-  def freeCursor[CURSOR](cursor: IntermediateRepresentation, cursorPools: CursorPoolsType)(implicit out: Manifest[CURSOR]): IntermediateRepresentation =
+  def freeCursor[CURSOR](cursor: IntermediateRepresentation, cursorPools: CursorPoolsType): IntermediateRepresentation =
     invokeSideEffect(
       invoke(CURSOR_POOL, method[CursorPools, CursorPool[_]](cursorPools.name)),
       method[CursorPool[_], Unit, Cursor]("free"), cursor)
