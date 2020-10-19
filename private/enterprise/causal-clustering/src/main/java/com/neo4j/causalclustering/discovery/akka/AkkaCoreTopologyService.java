@@ -93,7 +93,6 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
 
     private final CoreTopologyListenerService listenerService = new CoreTopologyListenerService();
     private final Map<NamedDatabaseId,LeaderInfo> localLeadersByDatabaseId = new ConcurrentHashMap<>();
-    private final AkkaActorSystemRestartStrategy actorSystemRestartStrategy;
 
     private volatile ActorRef coreTopologyActorRef;
     private volatile ActorRef directoryActorRef;
@@ -120,7 +119,6 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         this.globalTopologyState = newGlobalTopologyState( logProvider, listenerService );
         this.clusterSizeMonitor = monitors.newMonitor( ClusterSizeMonitor.class );
         this.databaseStateService = databaseStateService;
-        this.actorSystemRestartStrategy = new AkkaActorSystemRestartStrategy.NeverRestart();
     }
 
     @Override
@@ -194,7 +192,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     {
         Runnable restart = () -> executor.execute( this::restart );
         EventStream eventStream = actorSystemLifecycle.eventStream();
-        Props props = RestartNeededListeningActor.props( restart, eventStream, cluster, actorSystemRestartStrategy );
+        Props props = RestartNeededListeningActor.props( restart, eventStream, cluster, actorSystemLifecycle.restartStrategy() );
         actorSystemLifecycle.applicationActorOf( props, RestartNeededListeningActor.NAME );
     }
 

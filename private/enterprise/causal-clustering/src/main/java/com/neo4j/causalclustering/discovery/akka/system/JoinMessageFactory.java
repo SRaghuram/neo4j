@@ -16,7 +16,6 @@ import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 public class JoinMessageFactory
 {
     private final RemoteMembersResolver resolver;
-    private boolean isReJoin;
     private final Set<Address> allSeenAddresses = new HashSet<>();
 
     public JoinMessageFactory( RemoteMembersResolver resolver )
@@ -26,14 +25,13 @@ public class JoinMessageFactory
 
     JoinMessage message()
     {
-        JoinMessage message = JoinMessage.initial( isReJoin, allSeenAddresses );
+        JoinMessage message = JoinMessage.initial( allSeenAddresses );
         allSeenAddresses.clear();
         return message;
     }
 
     void addSeenAddresses( Collection<Address> addresses )
     {
-        isReJoin = true;
         if ( resolver.useOverrides() )
         {
             allSeenAddresses.addAll( addresses );

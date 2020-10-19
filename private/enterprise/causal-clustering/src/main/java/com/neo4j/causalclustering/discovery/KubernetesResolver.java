@@ -54,6 +54,7 @@ public class KubernetesResolver implements RemoteMembersResolver
     private final KubernetesClient kubernetesClient;
     private final HttpClient httpClient;
     private final Log log;
+    private volatile Optional<SocketAddress> firstAddress;
 
     private KubernetesResolver( LogService logService, Config config )
     {
@@ -140,7 +141,19 @@ public class KubernetesResolver implements RemoteMembersResolver
         try
         {
             httpClient.start();
-            return kubernetesClient.resolve( null ).stream().map( transform ).collect( Collectors.toCollection( collectionFactory ) );
+            SocketAddress[] firstSocketAddressBox = new SocketAddress[1];
+            var output = kubernetesClient.resolve( null )
+                                         .stream()
+                                         .peek( address -> {
+                                             if ( firstSocketAddressBox[0] == null )
+                                             {
+                                                 firstSocketAddressBox[0] = address;
+                                             }
+                                         } )
+                                         .map( transform )
+                                         .collect( Collectors.toCollection( collectionFactory ) );
+            firstAddress = Optional.ofNullable( firstSocketAddressBox[0] );
+            return output;
         }
         catch ( Exception e )
         {
@@ -160,9 +173,21 @@ public class KubernetesResolver implements RemoteMembersResolver
     }
 
     @Override
+    public boolean resolveOnEveryJoinAttempt()
+    {
+        return true;
+    }
+
+    @Override
     public boolean useOverrides()
     {
         return false;
+    }
+
+    @Override
+    public Optional<SocketAddress> first()
+    {
+        return firstAddress;
     }
 
     /**

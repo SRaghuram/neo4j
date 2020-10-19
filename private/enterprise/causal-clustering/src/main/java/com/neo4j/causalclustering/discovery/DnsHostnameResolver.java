@@ -55,5 +55,4 @@ public class DnsHostnameResolver extends RetryingHostnameResolver
         userLog.info( "Resolved initial host '%s' to %s", initialAddress, addresses );
         return addresses;
     }
-
 }

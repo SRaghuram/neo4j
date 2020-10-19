@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.Address
 import akka.cluster.Cluster
+import akka.event.EventStream
 import com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver
 import com.neo4j.causalclustering.discovery.NoOpHostnameResolver
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
@@ -29,57 +30,43 @@ import scala.concurrent.duration.Duration
 class ClusterJoiningActorIT extends BaseAkkaIT("ClusterJoining") {
 
   "ClusterJoiningActor" when {
-    "initial message is not rejoin and has no addresses" should {
+    "initial message has no addresses" should {
       "join seed nodes from resolver" in new Fixture {
-        actorRef ! JoinMessage.initial(false, Collections.emptyList())
+        actorRef ! JoinMessage.initial(Collections.emptyList())
 
         awaitAssert(verify(cluster).joinSeedNodes(initialDiscoveryMembersAsAddresses.asJava), max = defaultWaitTime)
         awaitNotAssert(verify(cluster, atLeastOnce()).join(any()), max = defaultWaitTime, "Should not have attempted to join an existing node")
+        system.stop(actorRef)
       }
       "retry joining seed nodes" in new Fixture {
-        actorRef ! JoinMessage.initial(false, Collections.emptyList())
+        actorRef ! JoinMessage.initial(Collections.emptyList())
 
         awaitAssert(verify(cluster, Mockito.atLeast(2)).joinSeedNodes(initialDiscoveryMembersAsAddresses.asJava), max = defaultWaitTime * 2 + refresh)
+        system.stop(actorRef)
       }
     }
-    "initial message is rejoin" when {
-      "has own address" should {
-        "not connect to self" in new Fixture {
-          actorRef ! JoinMessage.initial(true, util.Arrays.asList(self))
-
-          awaitNotAssert(verify(cluster, atLeastOnce()).join(self), max = defaultWaitTime, "Should not join self")
-          assertNoJoinToSeedNodes()
-        }
-      }
-      "has addresses" should {
-        "attempt to connect in order" in new Fixture {
+    "initial message has addresses" when {
+      "addresses are not in resolver" should {
+        "attempt to join all with resolved addresses first" in new Fixture {
           val List(address1, address2, address3) = Seq.tabulate(3)(port => Address("akka", system.name, "joinHost", port))
 
-          actorRef ! JoinMessage.initial(true, util.Arrays.asList(address1, address2, address3))
+          actorRef ! JoinMessage.initial(util.Arrays.asList(address1, address2, address3))
 
-          def assert = {
-            val inOrder = Mockito.inOrder(cluster)
-            inOrder.verify(cluster).join(address1)
-            inOrder.verify(cluster).join(address2)
-            inOrder.verify(cluster).join(address3)
-          }
+          private val allAddresses: Seq[Address] = initialDiscoveryMembersAsAddresses ++ Seq(address1, address2, address3)
+          awaitAssert(verify(cluster).joinSeedNodes(allAddresses.asJava), max = defaultWaitTime)
 
-          awaitAssert(assert, (defaultWaitTime + refresh * 3) * 2)
-
-          assertNoJoinToSeedNodes()
+          system.stop(actorRef)
         }
       }
-      "has no addresses" should {
-        "attempt to join each node from resolver individually" in new Fixture {
-          actorRef ! JoinMessage.initial(true, Collections.emptyList())
+      "addresses are in resolver" should {
+        "attempt to join in correct order without duplications" in new Fixture {
+          val reversedAddresses = initialDiscoveryMembersAsAddresses.reverse
 
-          def assert = {
-            val inOrder = Mockito.inOrder(cluster)
-            initialDiscoveryMembersAsAddresses.foreach(address => inOrder.verify(cluster).join(address))
-          }
+          actorRef ! JoinMessage.initial(reversedAddresses.asJava)
 
-          awaitAssert(assert, (defaultWaitTime + refresh * 3) * 2)
-          assertNoJoinToSeedNodes()
+          awaitAssert(verify(cluster).joinSeedNodes(initialDiscoveryMembersAsAddresses.asJava), max = defaultWaitTime)
+
+          system.stop(actorRef)
         }
       }
     }
@@ -114,7 +101,7 @@ class ClusterJoiningActorIT extends BaseAkkaIT("ClusterJoining") {
     val self = Address("akka", system.name, "myHost", 1234 )
     Mockito.when(cluster.selfAddress).thenReturn(self)
 
-    val props = ClusterJoiningActor.props(cluster, resolver, config)
+    val props = ClusterJoiningActor.props(cluster, mock[EventStream], resolver, config)
 
     val actorRef = system.actorOf(props)
   }

@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.discovery;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -22,4 +23,16 @@ public interface RemoteMembersResolver
     <COLL extends Collection<REMOTE>,REMOTE> COLL resolve( Function<SocketAddress,REMOTE> transform, Supplier<COLL> collectionFactory );
 
     boolean useOverrides();
+
+    /**
+     * Because in akka the first address in the list is special and required to bootstrap an Akka cluster.
+     * n.b. subsequent calls to resolve may return the collection in a different order.
+     * @return
+     */
+    Optional<SocketAddress> first();
+
+    default boolean resolveOnEveryJoinAttempt()
+    {
+        return false;
+    }
 }

@@ -7,14 +7,13 @@ package com.neo4j.causalclustering.discovery.akka.system;
 
 import akka.actor.Address;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -25,7 +24,7 @@ class JoinMessageFactoryTest
     private final List<Address> seenAddresses = Collections.singletonList( new Address( "protocol", "system", "host", 0 ) );
 
     @Test
-    void shouldCreateMessageNotRejoin()
+    void shouldCreateMessageRequiringResolve()
     {
         // given
         JoinMessageFactory factory = new JoinMessageFactory( new NoOverrideRemoteMembersResolver() );
@@ -34,52 +33,11 @@ class JoinMessageFactoryTest
         JoinMessage message = factory.message();
 
         // then
-        Assertions.assertFalse( message.isReJoin() );
+        Assertions.assertTrue( message.isResolveRequired() );
     }
 
     @Test
-    void shouldCreateReJoinMessageAfterAddingSeenAddressWithNoOverrideResolver()
-    {
-        // given
-        JoinMessageFactory factory = new JoinMessageFactory( new NoOverrideRemoteMembersResolver() );
-        factory.addSeenAddresses( seenAddresses );
-
-        // when
-        JoinMessage message = factory.message();
-
-        // then
-        Assertions.assertTrue( message.isReJoin() );
-    }
-
-    @Test
-    void shouldCreateReJoinMessageAfterAddingSeenAddressWithOverrideResolver()
-    {
-        // given
-        JoinMessageFactory factory = new JoinMessageFactory( new OverrideRemoteMembersResolver() );
-        factory.addSeenAddresses( seenAddresses );
-
-        // when
-        JoinMessage message = factory.message();
-
-        // then
-        Assertions.assertTrue( message.isReJoin() );
-    }
-
-    @Test
-    void shouldCreateMessageWithEmptyHostsIfNotReJoin()
-    {
-        // given
-        JoinMessageFactory factory = new JoinMessageFactory( new OverrideRemoteMembersResolver() );
-
-        // when
-        JoinMessage message = factory.message();
-
-        // then
-        Assertions.assertFalse( message.hasAddress() );
-    }
-
-    @Test
-    void shouldCreateMessageWithEmptyHostsIfReJoinNoOverrideResolver()
+    void shouldIgnoreSeenAddressWithNoOverrideResolver()
     {
         // given
         JoinMessageFactory factory = new JoinMessageFactory( new NoOverrideRemoteMembersResolver() );
@@ -93,7 +51,7 @@ class JoinMessageFactoryTest
     }
 
     @Test
-    void shouldCreateMessageWithNonEmptyHostsIfReJoinOverrideResolver()
+    void shouldIncludeSeenAddressWithOverrideResolver()
     {
         // given
         JoinMessageFactory factory = new JoinMessageFactory( new OverrideRemoteMembersResolver() );
@@ -104,7 +62,19 @@ class JoinMessageFactoryTest
 
         // then
         Assertions.assertTrue( message.hasAddress() );
-        MatcherAssert.assertThat( message.head(), Matchers.notNullValue() );
+    }
+
+    @Test
+    void shouldCreateMessageWithEmptyHosts()
+    {
+        // given
+        JoinMessageFactory factory = new JoinMessageFactory( new OverrideRemoteMembersResolver() );
+
+        // when
+        JoinMessage message = factory.message();
+
+        // then
+        Assertions.assertFalse( message.hasAddress() );
     }
 
     @Test
@@ -135,6 +105,12 @@ class JoinMessageFactoryTest
         {
             return true;
         }
+
+        @Override
+        public Optional<SocketAddress> first()
+        {
+            return Optional.empty();
+        }
     }
 
     private static class NoOverrideRemoteMembersResolver implements RemoteMembersResolver
@@ -150,6 +126,12 @@ class JoinMessageFactoryTest
         public boolean useOverrides()
         {
             return false;
+        }
+
+        @Override
+        public Optional<SocketAddress> first()
+        {
+            return Optional.empty();
         }
     }
 }

@@ -96,6 +96,16 @@ public class CausalClusteringInternalSettings implements SettingsDeclaration
                     .addConstraint( validateMiddlewareConfig() ).build();
 
     @Internal
+    @Description( "Number of cores required for initial Akka cluster formation" )
+    public static final Setting<Integer> middleware_akka_min_number_of_members_at_formation =
+            newBuilder( "causal_clustering.middleware.akka.cluster.min_nr_of_members", INT, 2 ).build();
+
+    @Internal
+    @Description( "If the initial seed node cannot be found attempt to bootstrap with other cores" )
+    public static final Setting<Boolean> middleware_akka_allow_any_core_to_bootstrap =
+            newBuilder( "causal_clustering.middleware.akka.allow_any_core_to_bootstrap", BOOL, false ).build();
+
+    @Internal
     @Description( "Parallelism level of default dispatcher used by Akka based cluster topology discovery, including cluster, replicator, and discovery actors" )
     public static final Setting<Integer> middleware_akka_default_parallelism_level =
             newBuilder( "causal_clustering.middleware.akka.default-parallelism", INT, 4 ).build();

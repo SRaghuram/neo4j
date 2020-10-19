@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.discovery;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -21,6 +22,7 @@ public class InitialDiscoveryMembersResolver implements RemoteMembersResolver
 {
     private final HostnameResolver hostnameResolver;
     private final List<SocketAddress> advertisedSocketAddresses;
+    private volatile Optional<SocketAddress> firstAddress;
 
     public InitialDiscoveryMembersResolver( HostnameResolver hostnameResolver, Config config )
     {
@@ -29,15 +31,24 @@ public class InitialDiscoveryMembersResolver implements RemoteMembersResolver
     }
 
     @Override
-    public <C extends Collection<T>,T> C resolve( Function<SocketAddress,T> transform, Supplier<C> collectionFactory )
+    public <C extends Collection<T>, T> C resolve( Function<SocketAddress,T> transform, Supplier<C> collectionFactory )
     {
-        return advertisedSocketAddresses
+        SocketAddress[] firstSocketAddressBox = new SocketAddress[1];
+        var output = advertisedSocketAddresses
                 .stream()
                 .flatMap( raw -> hostnameResolver.resolve( raw ).stream() )
                 .sorted( advertisedSockedAddressComparator )
                 .distinct()
+                .peek( address -> {
+                    if ( firstSocketAddressBox[0] == null )
+                    {
+                        firstSocketAddressBox[0] = address;
+                    }
+                } )
                 .map( transform )
                 .collect( Collectors.toCollection( collectionFactory ) );
+        firstAddress = Optional.ofNullable( firstSocketAddressBox[0] );
+        return output;
     }
 
     public static final Comparator<SocketAddress> advertisedSockedAddressComparator =
@@ -52,5 +63,11 @@ public class InitialDiscoveryMembersResolver implements RemoteMembersResolver
     public boolean useOverrides()
     {
         return hostnameResolver.useOverrides();
+    }
+
+    @Override
+    public Optional<SocketAddress> first()
+    {
+        return firstAddress;
     }
 }

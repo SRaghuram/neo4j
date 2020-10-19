@@ -100,7 +100,7 @@ class AkkaBindingTimeoutIT
         // then
         // nothing happens
         assertThrows( ConditionTimeoutException.class,
-                      () -> verifyIsAkkaClusterUp( notInitialSeedNodes.get( 0 ), longSeedNodeTimeout.toSeconds() + 30, SECONDS ) );
+                      () -> verifyAkkaClusterStatus( notInitialSeedNodes.get( 0 ), MemberStatus.up(), longSeedNodeTimeout.toSeconds() + 30, SECONDS ) );
         assertThat( stopWatch.elapsed( SECONDS ) ).isGreaterThan( longSeedNodeTimeout.toSeconds() );
 
         // when
@@ -135,7 +135,8 @@ class AkkaBindingTimeoutIT
         var startedInitial = startCoreAsync( initialSeedNode );
 
         // then
-        verifyIsAkkaClusterUp( initialSeedNode, 60, SECONDS );
+        // We have only started one member so it will only get as far as JOINING status because it needs to find a friend in order to get to UP
+        verifyAkkaClusterStatus( initialSeedNode, MemberStatus.joining(), 60, SECONDS );
         assertThat( stopWatch.elapsed( SECONDS ) ).isLessThan( extraLongTimeout.toSeconds() );
 
         // when
@@ -174,7 +175,8 @@ class AkkaBindingTimeoutIT
 
         var stopWatch = Stopwatch.start();
         var initialSeedNodeStarted = startCoreAsync( initialSeedNode );
-        verifyIsAkkaClusterUp( initialSeedNode, longSeedNodeTimeout.toSeconds() + 60, SECONDS );
+        // We have only started one member so it will only get as far as JOINING status because it needs to find a friend in order to get to UP
+        verifyAkkaClusterStatus( initialSeedNode, MemberStatus.joining(),longSeedNodeTimeout.toSeconds() + 60, SECONDS );
         assertThat( stopWatch.elapsed( SECONDS ) ).isGreaterThanOrEqualTo( longSeedNodeTimeout.toSeconds() );
 
         // when
@@ -188,7 +190,7 @@ class AkkaBindingTimeoutIT
         CompletableFuture.allOf( startedTheRest ).get();
 
         // then
-        cluster.coreMembers().forEach( c -> verifyIsAkkaClusterUp( c, 5, SECONDS ) );
+        cluster.coreMembers().forEach( c -> verifyAkkaClusterStatus( c, MemberStatus.up(), 5, SECONDS ) );
         assertThat( stopWatch.elapsed( SECONDS ) ).isLessThan( longSeedNodeTimeout.toSeconds() );
         verifyNumberOfCoresReportedByTopology( cluster );
         assertThat( stopWatch.elapsed( SECONDS ) ).isLessThan( longSeedNodeTimeout.toSeconds() );
@@ -298,10 +300,10 @@ class AkkaBindingTimeoutIT
         return CompletableFuture.runAsync( runnable, executor );
     }
 
-    private static void verifyIsAkkaClusterUp( CoreClusterMember core, long timeout, TimeUnit timeUnit )
+    private static void verifyAkkaClusterStatus( CoreClusterMember core, MemberStatus status, long timeout, TimeUnit timeUnit )
     {
         assertEventually( () -> core.getAkkaCluster().map( c -> c.selfMember().status() ).orElse( MemberStatus.down() ),
-                          equalityCondition( MemberStatus.up() ),
+                          equalityCondition( status ),
                           timeout, timeUnit );
     }
 

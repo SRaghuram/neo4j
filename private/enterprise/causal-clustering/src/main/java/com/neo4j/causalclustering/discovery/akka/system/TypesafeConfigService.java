@@ -158,6 +158,9 @@ public final class TypesafeConfigService
     {
         Map<String,Object> configMap = new HashMap<>();
 
+        int minClusterSizeAtFormation = config.get( CausalClusteringInternalSettings.middleware_akka_min_number_of_members_at_formation );
+        configMap.put( "akka.cluster.min-nr-of-members", minClusterSizeAtFormation );
+
         Setting<Duration> seedNodeTimeoutConfiguration = firstStartupDetector.isFirstStartup() ?
                                                          CausalClusteringInternalSettings.middleware_akka_seed_node_timeout_on_first_start :
                                                          CausalClusteringInternalSettings.middleware_akka_seed_node_timeout;

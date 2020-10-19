@@ -15,7 +15,6 @@ import com.neo4j.test.driver.ClusterChecker;
 import com.neo4j.test.driver.DriverExtension;
 import com.neo4j.test.driver.DriverFactory;
 import org.assertj.core.api.HamcrestCondition;
-import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -28,7 +27,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import org.neo4j.logging.Level;
 import org.neo4j.test.extension.Inject;
@@ -44,15 +47,15 @@ import static java.util.Collections.emptySet;
 import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 @ClusterExtension
 @DriverExtension
 class AkkaDiscoveryUncleanShutdownIT
 {
     // May be possible to get rid of this with a broadcast + ack instead of a wait for stability
-    private static final Duration INTERVAL_BETWEEN_SHUTDOWN_CALLS = Duration.ofSeconds( 60 );
-    private static final Duration MIN_INTERVAL_BETWEEN_SHUTDOWNS = Duration.ofSeconds( 20 );
-    private static final Duration MAX_INTERVAL_BETWEEN_SHUTDOWNS = Duration.ofSeconds( 30 );
+    private static final Duration MIN_INTERVAL_BETWEEN_SHUTDOWNS = Duration.ofSeconds( 10 );
+    private static final Duration MAX_INTERVAL_BETWEEN_SHUTDOWNS = Duration.ofMinutes( 2 );
 
     private static final int CORES = 3;
 
@@ -74,7 +77,10 @@ class AkkaDiscoveryUncleanShutdownIT
         checkClusterHealthy();
 
         shutdownCoreAndWaitForRemoval( 0 );
-        CoreClusterMember toRestart = shutdownCoreAndWaitForRemoval( 1 );
+
+        // We do not wait for removal here because the core will not be removed from akka because there is no majority
+        CoreClusterMember toRestart = shutdownCore( 1 );
+        assertOverviews();
         startCore( toRestart );
 
         checkClusterHealthy();
@@ -91,7 +97,9 @@ class AkkaDiscoveryUncleanShutdownIT
 
         CoreClusterMember toRestart = shutdownCoreAndWaitForRemoval( 0 );
 
-        shutdownCoreAndWaitForRemoval( 1 );
+        // We do not wait for removal here because the core will not be removed from akka because there is no majority any more
+        shutdownCore( 1 );
+        assertOverviews();
 
         startCore( toRestart );
 
@@ -123,37 +131,48 @@ class AkkaDiscoveryUncleanShutdownIT
         assertOverviews();
     }
 
+    private Stream<CoreClusterMember> upMembers()
+    {
+        return cluster.coreMembers().stream().filter( c -> !c.isShutdown() );
+    }
+
     private CoreClusterMember shutdownCoreAndWaitForRemoval( int memberId ) throws InterruptedException
     {
-        var deadline = Instant.now().plus( INTERVAL_BETWEEN_SHUTDOWN_CALLS );
+        var deadline = Instant.now().plus( MAX_INTERVAL_BETWEEN_SHUTDOWNS );
+
+        var memberToDown = cluster.getCoreMemberByIndex( memberId );
+        var memberToDownAddress = memberToDown.getAkkaCluster().get().selfAddress();
         var member = shutdownCore( memberId );
+
         assertThat( Instant.now() ).isBefore( deadline ).as( "Core must shut down within the time provided" );
 
-        var remainingTime = Duration.between( Instant.now(), deadline );
-        if ( remainingTime.compareTo( MIN_INTERVAL_BETWEEN_SHUTDOWNS ) < 0 )
+        Supplier<Boolean> shutDownMemberRemoved = () ->
+                upMembers().flatMap( c -> c.getAkkaCluster().stream() )
+                           .flatMap( c -> StreamSupport.stream( c.state().getMembers().spliterator(), false ) )
+                           .noneMatch( m -> m.address().equals( memberToDownAddress ) );
+
+        while ( Instant.now().isBefore( deadline ) )
         {
-            Thread.sleep( MIN_INTERVAL_BETWEEN_SHUTDOWNS.toMillis() );
+            if ( shutDownMemberRemoved.get() )
+            {
+                break;
+            }
+            Thread.sleep( 500 );
         }
-        else if ( remainingTime.compareTo( MAX_INTERVAL_BETWEEN_SHUTDOWNS ) > 0 )
-        {
-            Thread.sleep( MAX_INTERVAL_BETWEEN_SHUTDOWNS.toMillis() );
-        }
-        else
-        {
-            Thread.sleep( remainingTime.toMillis() );
-        }
+
+        assertThat( shutDownMemberRemoved.get() ).isTrue();
+        assertOverviews();
 
         return member;
     }
 
-    private CoreClusterMember shutdownCore( int index )
+    private CoreClusterMember shutdownCore( int index ) throws InterruptedException
     {
         CoreClusterMember core = cluster.getCoreMemberByIndex( index );
         core.shutdown();
         runningCores.remove( core );
         removedCoreIds.add( index );
-
-        assertOverviews();
+        Thread.sleep( MIN_INTERVAL_BETWEEN_SHUTDOWNS.toMillis() );
 
         return core;
     }
@@ -173,13 +192,17 @@ class AkkaDiscoveryUncleanShutdownIT
         int leaderCount = runningCores.size() > 1 ? 1 : 0;
         int followerCount = runningCores.size() - leaderCount;
 
-        String db = DEFAULT_DATABASE_NAME;
+        Stream<String> databaseNames = Stream.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME );
 
-        Matcher<List<ClusterOverviewHelper.MemberInfo>> expected = Matchers.allOf(
+        var expected = Matchers.allOf(
                 ClusterOverviewHelper.containsMemberAddresses( runningCores ),
-                ClusterOverviewHelper.containsRole( LEADER, db, leaderCount ),
-                ClusterOverviewHelper.containsRole( FOLLOWER, db, followerCount ),
-                ClusterOverviewHelper.doesNotContainRole( READ_REPLICA, db ) );
+                Matchers.allOf( databaseNames.map( db -> Matchers.allOf(
+                        ClusterOverviewHelper.containsRole( LEADER, db, leaderCount ),
+                        ClusterOverviewHelper.containsRole( FOLLOWER, db, followerCount ),
+                        ClusterOverviewHelper.doesNotContainRole( READ_REPLICA, db )
+                                                   )
+                ).collect( Collectors.toList() ) )
+        );
 
         ClusterOverviewHelper.assertAllEventualOverviews( cluster, new HamcrestCondition<>( expected ), removedCoreIds, emptySet() );
     }

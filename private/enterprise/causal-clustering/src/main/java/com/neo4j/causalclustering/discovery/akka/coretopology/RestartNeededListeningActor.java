@@ -46,8 +46,11 @@ public class RestartNeededListeningActor extends AbstractActorWithTimersAndLoggi
     public void preStart()
     {
         eventStream.subscribe( getSelf(), ThisActorSystemQuarantinedEvent.class );
+        eventStream.subscribe( getSelf(), SingletonSeedClusterDetected.class );
         cluster.subscribe( getSelf(), ClusterEvent.ClusterShuttingDown$.class );
-        timers().startPeriodicTimer( TIMER_KEY, new Tick(), Duration.ofSeconds(5) );
+        cluster.registerOnMemberUp(
+                () -> timers().startPeriodicTimer( TIMER_KEY, new Tick(), actorSystemRestartStrategy.checkFrequency() )
+        );
     }
 
     @Override
@@ -60,7 +63,9 @@ public class RestartNeededListeningActor extends AbstractActorWithTimersAndLoggi
     private void unsubscribe()
     {
         eventStream.unsubscribe( getSelf(), ThisActorSystemQuarantinedEvent.class );
+        eventStream.unsubscribe( getSelf(), SingletonSeedClusterDetected.class );
         cluster.unsubscribe( getSelf(), ClusterEvent.ClusterShuttingDown$.class );
+        timers().cancelAll();
     }
 
     @Override
@@ -69,7 +74,8 @@ public class RestartNeededListeningActor extends AbstractActorWithTimersAndLoggi
         return ReceiveBuilder.create()
                              .match( ThisActorSystemQuarantinedEvent.class,   this::doRestart )
                              .match( ClusterEvent.ClusterShuttingDown$.class, this::doRestart )
-                             .match( Tick.class, this::considerRestart )
+                             .match( SingletonSeedClusterDetected.class,      this::doRestart )
+                             .match( Tick.class,                              this::considerRestart )
                              .match( ClusterEvent.CurrentClusterState.class,  ignore -> {} )
                              .build();
     }
@@ -78,15 +84,15 @@ public class RestartNeededListeningActor extends AbstractActorWithTimersAndLoggi
     {
         if ( actorSystemRestartStrategy.restartRequired( cluster ) )
         {
-            doRestart( event );
+            doRestart( actorSystemRestartStrategy.getReason() );
         }
     }
 
     private void doRestart( Object event )
     {
         log().info( "Restart triggered by {}", event );
-        restart.run();
         unsubscribe();
+        restart.run();
         getContext().become( createShuttingDownReceive() );
     }
 
@@ -102,6 +108,11 @@ public class RestartNeededListeningActor extends AbstractActorWithTimersAndLoggi
     private void ignore( Object event )
     {
         log().debug( "Ignoring as restart has been triggered: {}", event );
+    }
+
+    public static class SingletonSeedClusterDetected implements ClusterEvent.ClusterDomainEvent
+    {
+
     }
 
     /*

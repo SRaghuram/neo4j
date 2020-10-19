@@ -308,6 +308,7 @@ class AkkaCoreTopologyDowningIT
     private static class DynamicResolver implements RemoteMembersResolver
     {
         private final Set<Integer> dynamicPorts;
+        private Optional<SocketAddress> firstAddress;
 
         DynamicResolver( Set<Integer> dynamicPorts )
         {
@@ -317,18 +318,33 @@ class AkkaCoreTopologyDowningIT
         @Override
         public <COLL extends Collection<REMOTE>, REMOTE> COLL resolve( Function<SocketAddress,REMOTE> transform, Supplier<COLL> collectionFactory )
         {
-            return dynamicPorts
+            SocketAddress[] firstSocketAddressBox = new SocketAddress[1];
+            var output = dynamicPorts
                     .stream()
                     .map( port -> new SocketAddress( "localhost", port ) )
                     .sorted( InitialDiscoveryMembersResolver.advertisedSockedAddressComparator )
+                    .peek( address -> {
+                        if ( firstSocketAddressBox[0] == null )
+                        {
+                            firstSocketAddressBox[0] = address;
+                        }
+                    } )
                     .map( transform )
                     .collect( Collectors.toCollection( collectionFactory ) );
+            firstAddress = Optional.ofNullable( firstSocketAddressBox[0] );
+            return output;
         }
 
         @Override
         public boolean useOverrides()
         {
             return false;
+        }
+
+        @Override
+        public Optional<SocketAddress> first()
+        {
+            return firstAddress;
         }
     }
 
