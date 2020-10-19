@@ -16,9 +16,12 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.time.ZoneOffset;
+import java.util.Map;
 import java.util.TimeZone;
 
 import org.neo4j.cli.ExecutionContext;
+import org.neo4j.configuration.ssl.SslPolicyConfig;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.LogTimeZone;
 import org.neo4j.test.extension.Inject;
@@ -30,6 +33,10 @@ import static org.apache.commons.lang3.RandomStringUtils.randomAlphabetic;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.db_timezone;
+import static org.neo4j.configuration.ssl.SslPolicyScope.BOLT;
+import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
+import static org.neo4j.configuration.ssl.SslPolicyScope.FABRIC;
+import static org.neo4j.configuration.ssl.SslPolicyScope.HTTPS;
 
 @TestDirectoryExtension
 class OnlineBackupCommandTest
@@ -156,12 +163,34 @@ class OnlineBackupCommandTest
         assertThat( firstLogLine ).contains( "Invalid database name " );
     }
 
+    @Test
+    void ignoreUnrelatedSslPolicies() throws IOException
+    {
+        Map<Setting<?>,Object> additionalConfig = Map.of(
+                SslPolicyConfig.forScope( BOLT ).enabled, true,
+                SslPolicyConfig.forScope( HTTPS ).enabled, true,
+                SslPolicyConfig.forScope( CLUSTER ).enabled, true,
+                SslPolicyConfig.forScope( FABRIC ).enabled, true
+        );
+
+        String firstLogLine = executeBackup( DEFAULT_DATABASE_NAME, additionalConfig );
+        // Since there is no server configured in this test, 'Connection refused' is the success path for tests here.
+        // If the command got so far, it means that there was no error during the set up
+        assertThat( firstLogLine ).contains( "Connection refused" );
+    }
+
     private String executeBackup( String databaseName ) throws IOException
+    {
+        return executeBackup( databaseName, Map.of() );
+    }
+
+    private String executeBackup( String databaseName, Map<Setting<?>,Object> additionalConfig ) throws IOException
     {
         Path cfg = dir.file( "neo4j.conf" );
         try ( PrintStream ps = new PrintStream( fs.openAsOutputStream( cfg, false ) ) )
         {
             ps.printf( "%s=%s%n", db_timezone.name(), LogTimeZone.SYSTEM.name() );
+            additionalConfig.forEach( ( key, value ) -> ps.printf( "%s=%s%n", key.name(), value ) );
         }
 
         // when

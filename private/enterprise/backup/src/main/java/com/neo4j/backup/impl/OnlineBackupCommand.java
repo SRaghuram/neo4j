@@ -12,7 +12,10 @@ import picocli.CommandLine.Option;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.neo4j.cli.AbstractCommand;
 import org.neo4j.cli.CommandFailedException;
@@ -23,7 +26,10 @@ import org.neo4j.configuration.ConfigUtils;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.SettingValueParsers;
 import org.neo4j.configuration.helpers.DatabaseNamePattern;
+import org.neo4j.configuration.ssl.SslPolicyConfig;
+import org.neo4j.configuration.ssl.SslPolicyScope;
 import org.neo4j.consistency.ConsistencyCheckOptions;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.NullLogProvider;
@@ -38,6 +44,7 @@ import static org.neo4j.cli.Converters.DatabaseNamePatternConverter;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_enabled;
+import static org.neo4j.configuration.ssl.SslPolicyScope.BACKUP;
 import static picocli.CommandLine.Command;
 import static picocli.CommandLine.Help.Visibility.ALWAYS;
 
@@ -175,6 +182,11 @@ public class OnlineBackupCommand extends AbstractCommand
                 .set( pagecache_memory, pagecacheMemory )
                 .set( pagecache_warmup_enabled, FALSE )
                 .set( OnlineBackupSettings.online_backup_enabled, FALSE )
+                // If the provided config is linked or simply copy-pasted from the server,
+                // SSL policies unrelated to the backup can be configured there.
+                // Such policies would be loaded eagerly and the operation would fail
+                // if there are not relevant directories and certificates in the backup directory.
+                .set( getSettingDisablingUnrelatedSslPolicies() )
                 .build();
         ConfigUtils.disableAllConnectors( cfg );
 
@@ -186,4 +198,13 @@ public class OnlineBackupCommand extends AbstractCommand
         return cfg;
     }
 
+    private Map<Setting<?>,Object> getSettingDisablingUnrelatedSslPolicies()
+    {
+        return List.of( SslPolicyScope.values() )
+                   .stream()
+                   .filter( sslPolicyScope -> sslPolicyScope != BACKUP )
+                   .map( SslPolicyConfig::forScope )
+                   .map( sslConfig -> sslConfig.enabled )
+                   .collect( Collectors.toMap( setting -> setting, setting -> false ) );
+    }
 }
