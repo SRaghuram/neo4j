@@ -24,10 +24,11 @@ class CursorPoolTest extends CypherFunSuite {
   private val memoryTracker = new LocalMemoryTracker
 
   //   used simultaneously, expected create count
-  Seq((poolSize/2,          poolSize/2),
+  Seq((1,                   1),
+      (poolSize/2,          poolSize/2),
       (poolSize,            poolSize),
       (poolSize+1,          poolSize+2),
-      (poolSize*2,          poolSize*2 + poolSize)).foreach { case (n, expected) =>
+      (poolSize*2,          poolSize*3)).foreach { case (n, expected) =>
     test(s"should not allocate more than $expected node cursors when using $n cursors simultaneously repeated twice") {
       // given
       val (pools, factory) = setupCursorPools
