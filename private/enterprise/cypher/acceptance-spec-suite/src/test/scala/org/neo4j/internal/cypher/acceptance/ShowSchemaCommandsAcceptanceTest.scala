@@ -457,6 +457,16 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     verifyCanDropAndRecreateConstraintsUsingCreateStatement()
   }
 
+  test("show constraints should show valid create statements for mixed constraints") {
+    createConstraint(UniqueConstraints, "unique", label2, prop)
+    createConstraint(NodeKeyConstraints, "node key", label, prop2)
+    createConstraint(NodeExistsConstraints, "node exists", label, prop3)
+    createConstraint(RelExistsConstraints, "rel exists", relType, prop3)
+
+    graph.awaitIndexesOnline()
+    verifyCanDropAndRecreateConstraintsUsingCreateStatement()
+  }
+
   // general index help methods
 
   private def createDefaultIndexes(): Unit = {
