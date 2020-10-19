@@ -392,7 +392,7 @@ trait MemoryMeasurementTestHelpers[CONTEXT <: RuntimeContext] extends BeforeAndA
 
     protected def filePath(name: String): Path = {
       val id = name + "-" + random.alphanumeric.take(10).mkString
-      testDir.filePath(id + ".hprof")
+      testDir.file(id + ".hprof")
     }
 
     protected def takeDump(name: String): Path = {
