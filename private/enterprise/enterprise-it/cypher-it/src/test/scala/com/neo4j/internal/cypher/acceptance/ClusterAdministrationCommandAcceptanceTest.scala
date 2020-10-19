@@ -5,13 +5,21 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
+import java.util.concurrent.TimeUnit
+import java.util.function.BiConsumer
+
 import com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseHasDropped
 import com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseHasStarted
 import com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseHasStopped
 import com.neo4j.causalclustering.common.CausalClusteringTestHelpers
 import com.neo4j.causalclustering.common.Cluster
+import com.neo4j.causalclustering.core.consensus.roles.Role
 import com.neo4j.test.causalclustering.ClusterConfig
+import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
+import org.neo4j.graphdb.Transaction
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade
 import org.neo4j.test.rule.TestDirectory
 import org.neo4j.test.rule.TestDirectory.testDirectory
 import org.scalatest.concurrent.Eventually
@@ -27,7 +35,7 @@ class ClusterAdministrationCommandAcceptanceTest extends CypherFunSuite with Eve
   implicit override val patienceConfig: PatienceConfig =
     PatienceConfig(timeout = scaled(Span(60, Seconds)), interval = scaled(Span(5, Seconds)))
 
-  def randomString = Random.alphanumeric.take(8).mkString("")
+  def randomString: String = Random.alphanumeric.take(8).mkString("")
 
   val testDir: TestDirectory = prepareTestDirectory
   val cluster: Cluster = ClusterConfig.createCluster(
@@ -36,6 +44,7 @@ class ClusterAdministrationCommandAcceptanceTest extends CypherFunSuite with Eve
       .clusterConfig()
       .withNumberOfCoreMembers(3)
       .withNumberOfReadReplicas(1)
+      .withInstanceCoreParam(GraphDatabaseSettings.auth_enabled, _ => "true")
   )
 
   override def afterEach(): Unit = {
@@ -54,6 +63,29 @@ class ClusterAdministrationCommandAcceptanceTest extends CypherFunSuite with Eve
       r.getQueryStatistics.getSystemUpdates shouldBe 1
       r.columnAs[String]("state").forEachRemaining(state => state shouldBe "CaughtUp")
     })
+
+    // THEN
+    assertDatabaseHasStarted("db1", cluster)
+    CausalClusteringTestHelpers.dropDatabase("db1", cluster)
+  }
+
+  test("create database on cluster with security should wait for database to be ready") {
+    // GIVEN
+    cluster.start()
+    cluster.systemTx((_,tx) => {
+      tx.execute("CREATE USER $user SET PASSWORD $password CHANGE NOT REQUIRED", Map[String, Object]("user" -> "joe", "password" -> "soap").asJava)
+      tx.execute("GRANT ROLE admin to joe")
+      tx.commit()
+    })
+
+    // WHEN
+    val work: BiConsumer[GraphDatabaseFacade, Transaction] = (_, tx) => {
+      val r = tx.execute("CREATE DATABASE db1 WAIT")
+      // THEN
+      r.getQueryStatistics.getSystemUpdates shouldBe 1
+      r.columnAs[String]("state").forEachRemaining(state => state shouldBe "CaughtUp")
+    }
+    cluster.coreTx(SYSTEM_DATABASE_NAME, Role.LEADER, work, 3, TimeUnit.MINUTES, "joe", "soap")
 
     // THEN
     assertDatabaseHasStarted("db1", cluster)

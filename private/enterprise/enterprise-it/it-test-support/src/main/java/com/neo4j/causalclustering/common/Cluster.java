@@ -17,6 +17,7 @@ import com.neo4j.causalclustering.helper.ErrorHandler;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.causalclustering.read_replica.TestReadReplicaGraphDatabase;
 import com.neo4j.causalclustering.readreplica.ReadReplicaEditionModule;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 
 import java.net.URI;
@@ -53,12 +54,16 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.driver.net.ServerAddress;
 import org.neo4j.driver.net.ServerAddressResolver;
+import org.neo4j.function.ThrowingFunction;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.internal.helpers.Exceptions;
+import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.KernelTransaction;
+
+import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.monitoring.DatabaseHealth;
@@ -76,6 +81,7 @@ import static org.neo4j.function.Predicates.await;
 import static org.neo4j.function.Predicates.awaitEx;
 import static org.neo4j.function.Predicates.notNull;
 import static org.neo4j.internal.helpers.collection.Iterables.firstOrNull;
+import static org.neo4j.kernel.api.security.AuthToken.newBasicAuthToken;
 import static org.neo4j.util.concurrent.Futures.combine;
 
 public class Cluster implements ServerAddressResolver
@@ -567,12 +573,37 @@ public class Cluster implements ServerAddressResolver
 
     /**
      * Perform a transaction against a member with given role of the core cluster, retrying as necessary.
+     */
+    @SuppressWarnings( "SameParameterValue" )
+    public CoreClusterMember coreTx( String databaseName, Role role, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit )
+            throws Exception
+    {
+        return coreTx( databaseName, role, op, timeout, timeUnit,  x -> EnterpriseSecurityContext.AUTH_DISABLED );
+    }
+
+    /**
+     * Perform a transaction against a member with given role of the core cluster, as the specified user, retrying as necessary.
+     */
+    @SuppressWarnings( "SameParameterValue" )
+    public CoreClusterMember coreTx( String databaseName, Role role, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit,
+                                     String username, String password )
+            throws Exception
+    {
+        return coreTx( databaseName, role, op, timeout, timeUnit, db -> {
+            var authManager = db.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class);
+            return authManager.login(newBasicAuthToken(username, password));
+        });
+    }
+
+    /**
+     * Perform a transaction against a member with given role of the core cluster, retrying as necessary.
      *
      * Transactions may only successfully be committed against the leader of a cluster,
      * but it is useful to be able to attempt transactions against other members,
      * for the purposes of testing error handling.
      */
-    public CoreClusterMember coreTx( String databaseName, Role role, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit )
+    public CoreClusterMember coreTx( String databaseName, Role role, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit,
+                                     ThrowingFunction<GraphDatabaseFacade, LoginContext, InvalidAuthTokenException> securityContextProvider )
             throws Exception
     {
         ThrowingSupplier<CoreClusterMember,Exception> supplier = () ->
@@ -584,7 +615,7 @@ public class Cluster implements ServerAddressResolver
                 throw new DatabaseShutdownException();
             }
 
-            try ( Transaction tx = db.beginTransaction( KernelTransaction.Type.EXPLICIT, EnterpriseSecurityContext.AUTH_DISABLED ) )
+            try ( Transaction tx = db.beginTransaction( KernelTransaction.Type.EXPLICIT, securityContextProvider.apply( db )) )
             {
                 op.accept( db, tx );
                 return member;
