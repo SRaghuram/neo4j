@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.discovery.akka;
 
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
+import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
@@ -19,7 +20,6 @@ import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabas
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -36,6 +36,7 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.scheduler.JobScheduler;
 
 import static java.lang.String.format;
 import static java.lang.System.lineSeparator;
@@ -48,6 +49,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
 {
     private final Log log;
     private final BiConsumer<DatabaseId,Set<RaftMemberId>> callback;
+    private final TopologyLogger topologyLogger;
     private volatile Map<MemberId,CoreServerInfo> coresByMemberId;
     private volatile Map<MemberId,ReadReplicaInfo> readReplicasByMemberId;
     private volatile Map<DatabaseId,LeaderInfo> remoteDbLeaderMap;
@@ -57,13 +59,15 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     private final Map<DatabaseId, ReplicatedDatabaseState> coreStatesByDatabase = new ConcurrentHashMap<>();
     private final Map<DatabaseId, ReplicatedDatabaseState> readReplicaStatesByDatabase = new ConcurrentHashMap<>();
 
-    GlobalTopologyState( LogProvider logProvider, BiConsumer<DatabaseId,Set<RaftMemberId>> listener )
+    GlobalTopologyState( LogProvider logProvider, BiConsumer<DatabaseId,Set<RaftMemberId>> listener, JobScheduler jobScheduler )
     {
+        var timerService = new TimerService( jobScheduler, logProvider );
         this.log = logProvider.getLog( getClass() );
         this.coresByMemberId = emptyMap();
         this.readReplicasByMemberId = emptyMap();
         this.remoteDbLeaderMap = emptyMap();
         this.callback = listener;
+        this.topologyLogger = new TopologyLogger( timerService, logProvider, getClass(), this::getAllDatabases );
     }
 
     @Override
@@ -79,7 +83,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
                 currentCoreTopology = DatabaseCoreTopology.empty( databaseId );
             }
             this.coresByMemberId = extractServerInfos( coreTopologiesByDatabase );
-            logTopologyChange( "Core topology", newCoreTopology, databaseId, currentCoreTopology );
+            topologyLogger.logTopologyChange( "Core topology", newCoreTopology, currentCoreTopology );
             callback.accept( databaseId, newCoreTopology.members( this::resolveRaftMemberForServer ) );
         }
 
@@ -103,7 +107,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
                 currentReadReplicaTopology = DatabaseReadReplicaTopology.empty( databaseId );
             }
             this.readReplicasByMemberId = extractServerInfos( readReplicaTopologiesByDatabase );
-            logTopologyChange( "Read replica topology", newReadReplicaTopology, databaseId, currentReadReplicaTopology );
+            topologyLogger.logTopologyChange( "Read replica topology", newReadReplicaTopology, currentReadReplicaTopology );
         }
 
         if ( hasNoMembers( newReadReplicaTopology ) )
@@ -201,31 +205,14 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         } ).filter( Objects::nonNull ).collect( Collectors.joining( newPaddedLine() ) );
     }
 
+    private Set<DatabaseId> getAllDatabases()
+    {
+        return coreTopologiesByDatabase.keySet();
+    }
+
     private static String newPaddedLine()
     {
         return lineSeparator() + "  ";
-    }
-
-    private void logTopologyChange( String topologyDescription, Topology<?> newTopology, DatabaseId databaseId, Topology<?> oldTopology )
-    {
-        var allMembers = Collections.unmodifiableSet( newTopology.servers().keySet() );
-
-        var lostMembers = new HashSet<>( oldTopology.servers().keySet() );
-        lostMembers.removeAll( allMembers );
-
-        var newMembers = new HashMap<>( newTopology.servers() );
-        newMembers.keySet().removeAll( oldTopology.servers().keySet() );
-
-        if ( !newMembers.isEmpty() || !lostMembers.isEmpty() )
-        {
-            String logLine =
-                    format( "%s for database %s is now: %s", topologyDescription, databaseId, allMembers.isEmpty() ? "empty" : allMembers )
-                    + lineSeparator() +
-                    (lostMembers.isEmpty() ? "No members where lost" : format( "Lost members :%s", lostMembers ))
-                    + lineSeparator() +
-                    (newMembers.isEmpty() ? "No new members" : format( "New members: %s%s", newPaddedLine(), printMap( newMembers, newPaddedLine() ) ));
-            log.info( logLine );
-        }
     }
 
     public RaftMemberId resolveRaftMemberForServer( DatabaseId databaseId, ServerId serverId )
@@ -375,4 +362,5 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     {
         return topology.servers().isEmpty();
     }
+
 }

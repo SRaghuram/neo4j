@@ -33,7 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.Executors;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -59,6 +58,7 @@ import org.neo4j.time.Clocks;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
+import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 // Exercises the case of a downing message reaching a member while it is reachable, which can happen if a partition heals at the right time.
@@ -245,8 +245,6 @@ class AkkaCoreTopologyDowningIT
 
         var logProvider = NullLogProvider.getInstance();
 
-        var executor = Executors.newCachedThreadPool();
-
         var firstStartupDetector = new TestFirstStartupDetector( true );
         var actorSystemFactory = new ActorSystemFactory( Optional.empty(), firstStartupDetector, config, logProvider  );
         var actorSystemLifecycle = new TestActorSystemLifecycle( actorSystemFactory, resolverFactory, config, logProvider );
@@ -265,7 +263,7 @@ class AkkaCoreTopologyDowningIT
                 new NoRetriesStrategy(),
                 new Restarter( new ConstantTimeTimeoutStrategy( 1, MILLISECONDS ), 2 ),
                 TestDiscoveryMember::factory,
-                executor,
+                createInitialisedScheduler(),
                 Clocks.systemClock(),
                 new Monitors(),
                 databaseStateService

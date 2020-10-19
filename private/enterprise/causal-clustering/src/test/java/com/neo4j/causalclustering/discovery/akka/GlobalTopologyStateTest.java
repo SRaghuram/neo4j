@@ -31,6 +31,7 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.test.scheduler.JobSchedulerAdapter;
 
 import static com.neo4j.causalclustering.discovery.ConnectorAddresses.Scheme.bolt;
 import static com.neo4j.causalclustering.discovery.ConnectorAddresses.Scheme.http;
@@ -51,7 +52,7 @@ class GlobalTopologyStateTest
     @SuppressWarnings( "unchecked" )
     private final BiConsumer<DatabaseId,Set<RaftMemberId>> listener = mock( BiConsumer.class );
     private final AssertableLogProvider logProvider = new AssertableLogProvider();
-    private final GlobalTopologyState state = new GlobalTopologyState( logProvider, listener );
+    private final GlobalTopologyState state = new GlobalTopologyState( logProvider, listener, new JobSchedulerAdapter() );
 
     private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
     private final NamedDatabaseId namedDatabaseId1 = databaseIdRepository.getRaw( "db1" );

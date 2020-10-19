@@ -30,6 +30,8 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
@@ -45,7 +47,7 @@ class CoreTopologyChangeListenerTest
     private final ClusteringIdentityModule identityModule = new StubClusteringIdentityModule();
     private final RetryStrategy catchupAddressRetryStrategy = new NoRetriesStrategy();
     private final Restarter restarter = new Restarter( new ConstantTimeTimeoutStrategy( 1, MILLISECONDS ), 0 );
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final JobScheduler jobScheduler = new ThreadPoolJobScheduler( Executors.newSingleThreadExecutor() );
     private DatabaseStateService databaseStateService = new StubDatabaseStateService( dbId -> new EnterpriseDatabaseState( dbId, STARTED ) );
 
     private final ActorSystemLifecycle actorSystemLifecycle = Mockito.mock( ActorSystemLifecycle.class );
@@ -59,7 +61,7 @@ class CoreTopologyChangeListenerTest
             catchupAddressRetryStrategy,
             restarter,
             TestDiscoveryMember::factory,
-            executor,
+            jobScheduler,
             Clocks.systemClock(),
             new Monitors(),
             databaseStateService

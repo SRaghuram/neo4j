@@ -28,8 +28,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.DatabaseStateService;
@@ -155,7 +153,7 @@ public class AkkaDiscoveryRestartIT
                     userLogProvider, catchupAddressRetryStrategy,
                     restarter,
                     discoveryMemberFactory,
-                    Executors.newCachedThreadPool(),
+                    jobScheduler,
                     clock,
                     monitors,
                     databaseStateService );
@@ -192,10 +190,10 @@ public class AkkaDiscoveryRestartIT
 
         TestAkkaCoreTopologyService( Config config, ClusteringIdentityModule identityModule, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
                 LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, Restarter restarter, DiscoveryMemberFactory discoveryMemberFactory,
-                Executor executor, Clock clock, Monitors monitors, DatabaseStateService databaseStateService )
+                JobScheduler jobScheduler, Clock clock, Monitors monitors, DatabaseStateService databaseStateService )
         {
             super( config, identityModule, actorSystemLifecycle, logProvider, userLogProvider, catchupAddressRetryStrategy, restarter, discoveryMemberFactory,
-                    executor, clock, monitors, databaseStateService );
+                    jobScheduler, clock, monitors, databaseStateService );
             this.actorSystemLifecycle = actorSystemLifecycle;
         }
 

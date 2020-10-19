@@ -41,7 +41,7 @@ public class Timer
      * @param group The scheduler group used.
      * @param handler The timeout handler.
      */
-    Timer( TimerService.TimerName name, JobScheduler scheduler, Log log, Group group, TimeoutHandler handler )
+    protected Timer( TimerService.TimerName name, JobScheduler scheduler, Log log, Group group, TimeoutHandler handler )
     {
         this.name = name;
         this.scheduler = scheduler;

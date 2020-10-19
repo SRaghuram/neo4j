@@ -26,8 +26,6 @@ import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
-import org.neo4j.scheduler.CallableExecutor;
-import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.config.SslPolicyLoader;
@@ -49,7 +47,6 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
             DiscoveryFirstStartupDetector firstStartupDetector,
             Monitors monitors, Clock clock, DatabaseStateService databaseStateService )
     {
-        CallableExecutor executor = jobScheduler.executor( Group.AKKA_HELPER );
         TimeoutStrategy timeoutStrategy = new ExponentialBackoffStrategy( RESTART_RETRY_DELAY_MS, RESTART_RETRY_DELAY_MAX_MS, MILLISECONDS );
         Restarter restarter = new Restarter( timeoutStrategy, RESTART_FAILURES_BEFORE_UNHEALTHY );
 
@@ -62,7 +59,7 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
                 catchupAddressRetryStrategy,
                 restarter,
                 discoveryMemberFactory,
-                executor,
+                jobScheduler,
                 clock,
                 monitors,
                 databaseStateService );
@@ -79,7 +76,9 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
                 identityModule,
                 actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader, new ReadReplicaDiscoveryFirstStartupDetector() ),
                 discoveryMemberFactory,
-                clock, databaseStateService );
+                clock,
+                jobScheduler,
+                databaseStateService );
     }
 
     protected ActorSystemLifecycle actorSystemLifecycle( Config config, LogProvider logProvider, RemoteMembersResolver resolver,

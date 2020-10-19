@@ -67,6 +67,8 @@ import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.scheduler.Group;
+import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.util.VisibleForTesting;
 
 import static akka.actor.ActorRef.noSender;
@@ -78,6 +80,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     private final LogProvider logProvider;
     private final RetryStrategy catchupAddressRetryStrategy;
     private final Restarter restarter;
+    private final JobScheduler jobScheduler;
     private final DiscoveryMemberFactory memberSnapshotFactory;
     private final Executor executor;
     private final Clock clock;
@@ -100,15 +103,16 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
 
     public AkkaCoreTopologyService( Config config, ClusteringIdentityModule identityModule, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
             LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, Restarter restarter,
-            DiscoveryMemberFactory memberSnapshotFactory, Executor executor, Clock clock, Monitors monitors,
+            DiscoveryMemberFactory memberSnapshotFactory, JobScheduler jobScheduler, Clock clock, Monitors monitors,
             DatabaseStateService databaseStateService )
     {
         this.actorSystemLifecycle = actorSystemLifecycle;
         this.logProvider = logProvider;
         this.catchupAddressRetryStrategy = catchupAddressRetryStrategy;
         this.restarter = restarter;
+        this.jobScheduler = jobScheduler;
+        this.executor = jobScheduler.executor( Group.AKKA_HELPER );
         this.memberSnapshotFactory = memberSnapshotFactory;
-        this.executor = executor;
         this.clock = clock;
         this.config = config;
         this.identityModule = identityModule;
@@ -493,7 +497,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
 
     private GlobalTopologyState newGlobalTopologyState( LogProvider logProvider, CoreTopologyListenerService listenerService )
     {
-        return new GlobalTopologyState( logProvider, listenerService::notifyListeners );
+        return new GlobalTopologyState( logProvider, listenerService::notifyListeners, jobScheduler );
     }
 
     private LeaderInfo getLocalLeader( NamedDatabaseId namedDatabaseId )

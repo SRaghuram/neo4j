@@ -18,14 +18,12 @@ import com.neo4j.causalclustering.discovery.akka.system.JoinMessageFactory;
 import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.EnterpriseDatabaseState;
-import com.neo4j.dbms.EnterpriseOperatorState;
 import org.assertj.core.api.HamcrestCondition;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -33,11 +31,11 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.DatabaseState;
-import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.StubDatabaseStateService;
 import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
+import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -84,7 +82,7 @@ class AkkaCoreTopologyMisConfiguredIT
                 .build();
 
         var logProvider = NullLogProvider.getInstance();
-        var executor = Executors.newCachedThreadPool();
+        var jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
         var firstStartupDetector = new TestFirstStartupDetector( true );
         var actorSystemFactory = new ActorSystemFactory( Optional.empty(), firstStartupDetector, config, logProvider  );
         var resolver = NoOpHostnameResolver.resolver( config );
@@ -102,7 +100,7 @@ class AkkaCoreTopologyMisConfiguredIT
                 new NoRetriesStrategy(),
                 new Restarter( new ConstantTimeTimeoutStrategy( 1, MILLISECONDS ), 2 ),
                 TestDiscoveryMember::new,
-                executor,
+                jobScheduler,
                 Clocks.systemClock(),
                 new Monitors(),
                 databaseStateService );

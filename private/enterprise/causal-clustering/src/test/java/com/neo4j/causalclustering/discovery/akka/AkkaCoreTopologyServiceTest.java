@@ -30,8 +30,6 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
@@ -44,6 +42,7 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.test.scheduler.JobSchedulerAdapter;
 
 import static com.neo4j.causalclustering.discovery.akka.GlobalTopologyStateTestUtil.setupCoreTopologyState;
 import static com.neo4j.causalclustering.discovery.akka.GlobalTopologyStateTestUtil.setupReadReplicaTopologyState;
@@ -78,7 +77,6 @@ class AkkaCoreTopologyServiceTest
     private LogProvider userLogProvider = NullLogProvider.getInstance();
     private RetryStrategy catchupAddressretryStrategy = new NoRetriesStrategy();
     private Clock clock = Clock.fixed( Instant.now(), ZoneId.of( "UTC" ) );
-    private ExecutorService executor = Executors.newSingleThreadExecutor();
     private Restarter restarter = new Restarter( new ConstantTimeTimeoutStrategy( 1, MILLISECONDS ), 0 );
 
     private Map<NamedDatabaseId,DatabaseState> databaseStates;
@@ -118,7 +116,7 @@ class AkkaCoreTopologyServiceTest
                 userLogProvider,
                 catchupAddressretryStrategy, restarter,
                 TestDiscoveryMember::factory,
-                executor,
+                new JobSchedulerAdapter(),
                 clock,
                 new Monitors(),
                 databaseStateService

@@ -21,6 +21,7 @@ import org.neo4j.dbms.DatabaseState;
 import org.neo4j.dbms.StubDatabaseStateService;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
+import org.neo4j.test.scheduler.JobSchedulerAdapter;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.discovery.akka.GlobalTopologyStateTestUtil.setupCoreTopologyState;
@@ -50,9 +51,8 @@ class AkkaTopologyClientTest
         var memberId3 = IdFactory.randomMemberId();
 
         var topologyClient = new AkkaTopologyClient( Config.defaults(), nullLogProvider(), identityModule,
-                                                     mock( ActorSystemLifecycle.class, RETURNS_MOCKS ),
-                                                     TestDiscoveryMember::factory,
-                                                     Clocks.systemClock(), databaseStateService );
+                                                     mock( ActorSystemLifecycle.class, RETURNS_MOCKS ), TestDiscoveryMember::factory, Clocks.systemClock(),
+                                                     new JobSchedulerAdapter(), databaseStateService );
 
         topologyClient.init();
         topologyClient.start();

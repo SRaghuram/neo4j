@@ -38,6 +38,7 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.util.VisibleForTesting;
 
 import static akka.actor.ActorRef.noSender;
@@ -50,20 +51,22 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     private final ClusteringIdentityModule identityModule;
     private final LogProvider logProvider;
     private final Clock clock;
+    private final JobScheduler jobScheduler;
     private final DatabaseStateService databaseStateService;
 
     private volatile ActorRef clientTopologyActorRef;
     private volatile GlobalTopologyState globalTopologyState;
 
     AkkaTopologyClient( Config config, LogProvider logProvider, ClusteringIdentityModule identityModule, ActorSystemLifecycle actorSystemLifecycle,
-            DiscoveryMemberFactory discoveryMemberFactory, Clock clock, DatabaseStateService databaseStateService )
+                        DiscoveryMemberFactory discoveryMemberFactory, Clock clock, JobScheduler jobScheduler, DatabaseStateService databaseStateService )
     {
         this.config = config;
         this.identityModule = identityModule;
         this.actorSystemLifecycle = actorSystemLifecycle;
         this.discoveryMemberFactory = discoveryMemberFactory;
         this.logProvider = logProvider;
-        this.globalTopologyState = newGlobalTopologyState( logProvider );
+        this.jobScheduler = jobScheduler;
+        this.globalTopologyState = newGlobalTopologyState( logProvider, jobScheduler );
         this.clock = clock;
         this.databaseStateService = databaseStateService;
     }
@@ -109,7 +112,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     {
         clientTopologyActorRef = null;
         actorSystemLifecycle.shutdown();
-        globalTopologyState = newGlobalTopologyState( logProvider );
+        globalTopologyState = newGlobalTopologyState( logProvider, jobScheduler );
     }
 
     @Override
@@ -231,10 +234,8 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
         return globalTopologyState;
     }
 
-    private static GlobalTopologyState newGlobalTopologyState( LogProvider logProvider )
+    private static GlobalTopologyState newGlobalTopologyState( LogProvider logProvider, JobScheduler jobScheduler )
     {
-        return new GlobalTopologyState( logProvider, ( ignored1, ignored2 ) ->
-        {
-        } );
+        return new GlobalTopologyState( logProvider, ( ingnored1, ignored2 ) -> {}, jobScheduler );
     }
 }
