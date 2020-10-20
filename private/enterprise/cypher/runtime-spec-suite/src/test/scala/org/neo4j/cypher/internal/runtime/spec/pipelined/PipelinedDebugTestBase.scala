@@ -13,9 +13,10 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 
 import org.neo4j.codegen.api.CodeGeneration.GENERATED_SOURCE_LOCATION_PROPERTY
-import org.neo4j.codegen.api.CodeGeneration.GENERATE_JAVA_SOURCE_DEBUG_OPTION
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
+import org.neo4j.cypher.internal.options.CypherDebugOption
+import org.neo4j.cypher.internal.options.CypherDebugOptions
 import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
@@ -27,7 +28,8 @@ trait PipelinedDebugGeneratedSourceEnabled extends PipelinedDebugGeneratedSource
   override val keepSourceFilesAfterTestFinishes: Boolean = false
   override val logSaveLocation: Boolean = false // Do not spam test output
 
-  override val debugOptions: Set[String] = Set(GENERATE_JAVA_SOURCE_DEBUG_OPTION)
+  override val debugOptions: CypherDebugOptions =
+    CypherDebugOptions.default.withOptionEnabled(CypherDebugOption.generateJavaSource)
 }
 
 abstract class PipelinedDebugTestBase(edition: Edition[EnterpriseRuntimeContext],

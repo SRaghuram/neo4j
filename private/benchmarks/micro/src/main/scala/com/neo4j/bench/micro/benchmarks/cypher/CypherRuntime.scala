@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import org.neo4j.cypher.internal.options.CypherDebugOption
 import org.neo4j.cypher.internal.options.CypherDebugOptions
 
 object CypherRuntime {
@@ -40,7 +41,7 @@ case object Pipelined extends CypherRuntime {
 
 case object PipelinedSourceCode extends CypherRuntime {
   final val NAME = "pipelined-sourcecode"
-  override val debugOptions: Set[String] = Set("generate_java_source")
+  override val debugOptions: CypherDebugOptions = CypherDebugOptions.default.withOptionEnabled(CypherDebugOption.generateJavaSource)
 }
 
 case object Parallel extends CypherRuntime {

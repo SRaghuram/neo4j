@@ -7,11 +7,12 @@ package org.neo4j.cypher.internal.runtime.spec.pipelined
 
 import java.lang.System.lineSeparator
 
-import org.neo4j.codegen.api.CodeGeneration.GENERATE_JAVA_SOURCE_DEBUG_OPTION
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.PipelinedRuntime.PIPELINED
 import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
+import org.neo4j.cypher.internal.options.CypherDebugOption
+import org.neo4j.cypher.internal.options.CypherDebugOptions
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.debug.SaveGeneratedSource
 import org.neo4j.cypher.internal.runtime.spec.CompiledExpressionsTestBase
@@ -152,7 +153,9 @@ trait PipelinedDebugGeneratedSource extends SaveGeneratedSource {
   // Only enable this if you want to inspect the generated source files after the test run. Otherwise they will be deleted automatically.
   override val keepSourceFilesAfterTestFinishes: Boolean = true
 
-  override val debugOptions: Set[String] = if (saveGeneratedSourceEnabled) Set(GENERATE_JAVA_SOURCE_DEBUG_OPTION) else Set.empty[String]
+  override val debugOptions: CypherDebugOptions =
+    if (saveGeneratedSourceEnabled) CypherDebugOptions.default.withOptionEnabled(CypherDebugOption.generateJavaSource)
+    else CypherDebugOptions.default
 }
 
 trait PipelinedSpecSuite extends AssertFusingSucceeded with PipelinedDebugGeneratedSource {
