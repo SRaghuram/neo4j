@@ -92,7 +92,6 @@ import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionS
 import org.neo4j.cypher.internal.physicalplanning.ast.NodeFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckVariable
 import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipFromSlot
-import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
@@ -181,7 +180,6 @@ import scala.collection.mutable
 
 class SlottedPipeMapper(fallback: PipeMapper,
                         expressionConverters: ExpressionConverters,
-                        tokenContext: TokenContext,
                         physicalPlan: PhysicalPlan,
                         readOnly: Boolean,
                         indexRegistrator: QueryIndexRegistrator)

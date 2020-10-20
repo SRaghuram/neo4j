@@ -35,7 +35,6 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.isRefSlotAnd
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionSlotForPredicate
-import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.ProcedureCallMode
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
@@ -154,7 +153,6 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                       val readOnly: Boolean,
                       val indexRegistrator: QueryIndexRegistrator,
                       semanticTable: SemanticTable,
-                      tokenContext: TokenContext,
                       val interpretedPipesFallbackPolicy: InterpretedPipesFallbackPolicy,
                       val slottedPipeBuilder: Option[PipeMapper],
                       runtimeName: String,
