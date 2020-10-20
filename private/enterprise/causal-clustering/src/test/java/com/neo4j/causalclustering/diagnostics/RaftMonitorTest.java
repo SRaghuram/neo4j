@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.diagnostics;
 
-import com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader;
+import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotMonitor;
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftBinder;
@@ -33,7 +33,7 @@ class RaftMonitorTest
     private final MemberId myself = IdFactory.randomMemberId();
 
     private RaftBinder.Monitor raftBinderMonitor;
-    private PersistentSnapshotDownloader.Monitor snapshotMonitor;
+    private CoreSnapshotMonitor snapshotMonitor;
 
     @BeforeEach
     void setUp()
@@ -42,7 +42,7 @@ class RaftMonitorTest
         RaftMonitor.register( new SimpleLogService( user, debug ), monitors, Clocks.systemClock() );
 
         raftBinderMonitor = monitors.newMonitor( RaftBinder.Monitor.class );
-        snapshotMonitor = monitors.newMonitor( PersistentSnapshotDownloader.Monitor.class );
+        snapshotMonitor = monitors.newMonitor( CoreSnapshotMonitor.class );
     }
 
     @Test

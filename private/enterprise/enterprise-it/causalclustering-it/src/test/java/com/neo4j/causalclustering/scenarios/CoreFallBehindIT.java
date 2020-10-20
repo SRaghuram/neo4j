@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
-import com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader;
+import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotMonitor;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -65,7 +65,7 @@ class CoreFallBehindIT
             .withSharedCoreParam( raft_log_pruning_frequency, "100ms" )
             .withNumberOfReadReplicas( 0 );
 
-    static class DownloadMonitor implements PersistentSnapshotDownloader.Monitor
+    static class DownloadMonitor implements CoreSnapshotMonitor
     {
         private AtomicInteger systemDownloadCount = new AtomicInteger();
 

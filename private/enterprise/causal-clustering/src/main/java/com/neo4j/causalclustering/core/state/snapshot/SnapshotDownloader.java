@@ -9,13 +9,14 @@ import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients;
 
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+
+import static java.lang.String.format;
 
 public class SnapshotDownloader
 {
@@ -28,24 +29,22 @@ public class SnapshotDownloader
         this.catchupClientFactory = catchupClientFactory;
     }
 
-    Optional<CoreSnapshot> getCoreSnapshot( NamedDatabaseId namedDatabaseId, SocketAddress address )
+    CoreSnapshot getCoreSnapshot( NamedDatabaseId namedDatabaseId, SocketAddress address ) throws SnapshotFailedException
     {
         log.info( "Downloading snapshot from core server at %s", address );
+        VersionedCatchupClients client = catchupClientFactory.getClient( address, log );
+        CatchupResponseAdaptor<CoreSnapshot> responseHandler = new CatchupResponseAdaptor<>()
+        {
+            @Override
+            public void onCoreSnapshot( CompletableFuture<CoreSnapshot> signal, CoreSnapshot response )
+            {
+                signal.complete( response );
+            }
+        };
 
-        CoreSnapshot coreSnapshot;
         try
         {
-            VersionedCatchupClients client = catchupClientFactory.getClient( address, log );
-            CatchupResponseAdaptor<CoreSnapshot> responseHandler = new CatchupResponseAdaptor<>()
-            {
-                @Override
-                public void onCoreSnapshot( CompletableFuture<CoreSnapshot> signal, CoreSnapshot response )
-                {
-                    signal.complete( response );
-                }
-            };
-
-            coreSnapshot = client
+            return client
                     .v3( c -> c.getCoreSnapshot( namedDatabaseId ) )
                     .v4( c -> c.getCoreSnapshot( namedDatabaseId ) )
                     .v5( c -> c.getCoreSnapshot( namedDatabaseId ) )
@@ -54,9 +53,8 @@ public class SnapshotDownloader
         }
         catch ( Exception e )
         {
-            log.warn( "Store copy failed", e );
-            return Optional.empty();
+            throw new SnapshotFailedException( format( "Failed to download core snapshot. [Database: %s] [Address: %s]", namedDatabaseId, address ),
+                    SnapshotFailedException.Status.RETRYABLE, e );
         }
-        return Optional.of( coreSnapshot );
     }
 }

@@ -15,8 +15,6 @@ import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.Optional;
-
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.Log;
@@ -30,8 +28,7 @@ import static com.neo4j.causalclustering.protocol.application.ApplicationProtoco
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_4_0;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_5_0;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -58,11 +55,10 @@ class SnapshotDownloaderTest
 
         // when
         SnapshotDownloader snapshotDownloader = new SnapshotDownloader( logProvider, catchupClientFactory );
-        Optional<CoreSnapshot> downloadedSnapshot = snapshotDownloader.getCoreSnapshot( databaseIdRepository.getRaw( "database_name" ), remoteAddress );
+        CoreSnapshot downloadedSnapshot = snapshotDownloader.getCoreSnapshot( databaseIdRepository.getRaw( "database_name" ), remoteAddress );
 
         // then
-        assertTrue( downloadedSnapshot.isPresent() );
-        assertEquals( expectedSnapshot, downloadedSnapshot.get() );
+        assertEquals( expectedSnapshot, downloadedSnapshot );
     }
 
     @ParameterizedTest
@@ -77,10 +73,11 @@ class SnapshotDownloaderTest
 
         // when
         SnapshotDownloader downloader = new SnapshotDownloader( logProvider, catchupClientFactory );
-        Optional<CoreSnapshot> downloadedSnapshot = downloader.getCoreSnapshot( databaseIdRepository.getRaw( "database_name" ), remoteAddress );
+        var exception = assertThrows( SnapshotFailedException.class,
+                () -> downloader.getCoreSnapshot( databaseIdRepository.getRaw( "database_name" ), remoteAddress ) );
 
         // then
-        assertFalse( downloadedSnapshot.isPresent() );
+        assertEquals( exception.status(), SnapshotFailedException.Status.RETRYABLE );
     }
 
     private CatchupClientFactory mockCatchupClient( MockClientResponses clientResponses,

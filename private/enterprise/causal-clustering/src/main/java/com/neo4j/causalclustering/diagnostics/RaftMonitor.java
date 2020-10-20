@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.diagnostics;
 
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
-import com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader;
+import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotMonitor;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftBinder;
 import com.neo4j.causalclustering.identity.RaftId;
@@ -35,7 +35,7 @@ import static java.lang.String.format;
  * This pattern also de-clutters implementing classes from specifics of logging (e.g.
  * formatting, dual-logging, rate limiting, ...) and encourages a structured interface.
  */
-public class RaftMonitor implements RaftBinder.Monitor, PersistentSnapshotDownloader.Monitor
+public class RaftMonitor implements RaftBinder.Monitor, CoreSnapshotMonitor
 {
     private final Log debug;
     private final Log user;

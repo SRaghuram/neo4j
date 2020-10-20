@@ -467,7 +467,7 @@ class CoreDatabaseFactory
     {
         SnapshotDownloader snapshotDownloader = new SnapshotDownloader( debugLog, catchupComponentsProvider.catchupClientFactory() );
         StoreDownloader storeDownloader = new StoreDownloader( catchupComponentsRepository, debugLog );
-        CoreDownloader downloader = new CoreDownloader( snapshotDownloader, storeDownloader, debugLog );
+        CoreDownloader downloader = new CoreDownloader( snapshotDownloader, storeDownloader );
         ExponentialBackoffStrategy backoffStrategy = new ExponentialBackoffStrategy( 1, 30, SECONDS );
 
         return new CoreDownloaderService( jobScheduler, downloader, downloadContext, snapshotService, databaseEventService, commandApplicationProcess, debugLog,

@@ -9,17 +9,15 @@ import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
-
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -36,8 +34,8 @@ class CoreDownloaderTest
     private final SnapshotDownloader snapshotDownloader = mock( SnapshotDownloader.class );
     private final StoreDownloader storeDownloader = mock( StoreDownloader.class );
 
-    private final CoreDownloader downloader = new CoreDownloader( snapshotDownloader, storeDownloader, logProvider );
-    private StoreDownloadContext database = mock( StoreDownloadContext.class );
+    private final CoreDownloader downloader = new CoreDownloader( snapshotDownloader, storeDownloader );
+    private final StoreDownloadContext database = mock( StoreDownloadContext.class );
 
     @BeforeEach
     void setUp()
@@ -49,53 +47,42 @@ class CoreDownloaderTest
     void shouldDownloadSnapshotAndStore() throws Throwable
     {
         // given
-        CoreSnapshot expectedSnapshot = mock( CoreSnapshot.class );
+        var expectedSnapshot = mock( CoreSnapshot.class );
 
-        when( snapshotDownloader.getCoreSnapshot( DATABASE_ID, remoteAddress ) ).thenReturn( Optional.of( expectedSnapshot ) );
-        when( storeDownloader.bringUpToDate( database, remoteAddress, addressProvider ) ).thenReturn( true );
+        when( snapshotDownloader.getCoreSnapshot( DATABASE_ID, remoteAddress ) ).thenReturn( expectedSnapshot );
 
         // when
-        Optional<CoreSnapshot> snapshot = downloader.downloadSnapshotAndStore( database, addressProvider );
+        var snapshot = downloader.downloadSnapshotAndStore( database, addressProvider );
 
         verify( snapshotDownloader ).getCoreSnapshot( DATABASE_ID, remoteAddress );
         verify( storeDownloader ).bringUpToDate( database, remoteAddress, addressProvider );
 
         // then
-        assertTrue( snapshot.isPresent() );
-        assertEquals( expectedSnapshot, snapshot.get() );
+        assertEquals( expectedSnapshot, snapshot );
     }
 
     @Test
     void shouldReturnEmptyWhenSnapshotDownloadFails() throws Throwable
     {
         // given
-        when( snapshotDownloader.getCoreSnapshot( DATABASE_ID, remoteAddress ) ).thenReturn( Optional.empty() );
+        when( snapshotDownloader.getCoreSnapshot( DATABASE_ID, remoteAddress ) ).thenThrow( SnapshotFailedException.class );
 
-        // when
-        Optional<CoreSnapshot> snapshot = downloader.downloadSnapshotAndStore( database, addressProvider );
-
-        verify( snapshotDownloader ).getCoreSnapshot( DATABASE_ID, remoteAddress );
+        // when then
+        assertThrows( SnapshotFailedException.class, () -> downloader.downloadSnapshotAndStore( database, addressProvider ) );
         verify( storeDownloader, never() ).bringUpToDate( any(), any(), any() );
-
-        // then
-        assertFalse( snapshot.isPresent() );
     }
 
     @Test
     void shouldReturnEmptyWhenAnyStoreDownloadFails() throws Throwable
     {
         // given
-        CoreSnapshot expectedSnapshot = mock( CoreSnapshot.class );
+        var expectedSnapshot = mock( CoreSnapshot.class );
 
-        when( snapshotDownloader.getCoreSnapshot( DATABASE_ID, remoteAddress ) ).thenReturn( Optional.of( expectedSnapshot ) );
-        when( storeDownloader.bringUpToDate( database, remoteAddress, addressProvider ) ).thenReturn( false );
+        when( snapshotDownloader.getCoreSnapshot( DATABASE_ID, remoteAddress ) ).thenReturn( expectedSnapshot );
+        doThrow( SnapshotFailedException.class ).when( storeDownloader ).bringUpToDate( database, remoteAddress, addressProvider );
 
-        // when
-        Optional<CoreSnapshot> snapshot = downloader.downloadSnapshotAndStore( database, addressProvider );
-
+        // when then
+        assertThrows( SnapshotFailedException.class, () -> downloader.downloadSnapshotAndStore( database, addressProvider ) );
         verify( snapshotDownloader ).getCoreSnapshot( DATABASE_ID, remoteAddress );
-
-        // then
-        assertFalse( snapshot.isPresent() );
     }
 }

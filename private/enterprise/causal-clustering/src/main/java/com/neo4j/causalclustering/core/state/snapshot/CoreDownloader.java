@@ -7,15 +7,11 @@ package com.neo4j.causalclustering.core.state.snapshot;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
-import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
-
-import java.io.IOException;
-import java.util.Optional;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.NamedDatabaseId;
-import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
+
+import static java.lang.String.format;
 
 /**
  * Responsible for bringing the core up-to-date, potentially by copying entire stores etc.
@@ -28,13 +24,11 @@ public class CoreDownloader
 {
     private final SnapshotDownloader snapshotDownloader;
     private final StoreDownloader storeDownloader;
-    private final Log log;
 
-    public CoreDownloader( SnapshotDownloader snapshotDownloader, StoreDownloader storeDownloader, LogProvider logProvider )
+    public CoreDownloader( SnapshotDownloader snapshotDownloader, StoreDownloader storeDownloader )
     {
         this.snapshotDownloader = snapshotDownloader;
         this.storeDownloader = storeDownloader;
-        this.log = logProvider.getLog( getClass() );
     }
 
     /**
@@ -52,45 +46,28 @@ public class CoreDownloader
      * are ahead, and the correct decisions for their applicability have already been taken as encapsulated
      * in the copied stores.
      *
-     * @param addressProvider Provider of addresses to catchup from.
-     * @return the small snapshot if everything went fine and stores could be brought up to sync, otherwise an empty optional.
-     * @throws IOException An issue with I/O.
-     * @throws DatabaseShutdownException The database is shutting down.
+     * @return the small snapshot if everything went fine and stores could be brought up to sync.
+     * @throws SnapshotFailedException any of the underlying operations fail. The {@link SnapshotFailedException.Status} of the exception may vary.
      */
-    Optional<CoreSnapshot> downloadSnapshotAndStore( StoreDownloadContext context, CatchupAddressProvider addressProvider )
-            throws IOException, DatabaseShutdownException
+    CoreSnapshot downloadSnapshotAndStore( StoreDownloadContext context, CatchupAddressProvider addressProvider )
+            throws SnapshotFailedException
     {
-        Optional<SocketAddress> primaryOpt = lookupPrimary( context.databaseId(), addressProvider );
-        if ( primaryOpt.isEmpty() )
-        {
-            return Optional.empty();
-        }
-        SocketAddress primaryAddress = primaryOpt.get();
-
-        Optional<CoreSnapshot> coreSnapshot = snapshotDownloader.getCoreSnapshot( context.databaseId(), primaryAddress );
-        if ( coreSnapshot.isEmpty() )
-        {
-            return Optional.empty();
-        }
-
-        if ( !storeDownloader.bringUpToDate( context, primaryAddress, addressProvider ) )
-        {
-            return Optional.empty();
-        }
-
+        var primaryAddress = lookupPrimary( context.databaseId(), addressProvider );
+        var coreSnapshot = snapshotDownloader.getCoreSnapshot( context.databaseId(), primaryAddress );
+        storeDownloader.bringUpToDate( context, primaryAddress, addressProvider );
         return coreSnapshot;
     }
 
-    private Optional<SocketAddress> lookupPrimary( NamedDatabaseId namedDatabaseId, CatchupAddressProvider addressProvider )
+    private SocketAddress lookupPrimary( NamedDatabaseId namedDatabaseId, CatchupAddressProvider addressProvider ) throws SnapshotFailedException
     {
         try
         {
-            return Optional.of( addressProvider.primary( namedDatabaseId ) );
+            return addressProvider.primary( namedDatabaseId );
         }
         catch ( CatchupAddressResolutionException e )
         {
-            log.warn( "Store copy failed, as we're unable to find the target catchup address. [Message: %s]", e.getMessage() );
-            return Optional.empty();
+            throw new SnapshotFailedException( format( "Store copy failed, as we're unable to find the target catchup address. [Message: %s]", e.getMessage() ),
+                    SnapshotFailedException.Status.RETRYABLE );
         }
     }
 }

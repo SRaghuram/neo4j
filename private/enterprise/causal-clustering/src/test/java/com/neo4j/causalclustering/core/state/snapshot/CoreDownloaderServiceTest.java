@@ -17,7 +17,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -82,9 +81,9 @@ class CoreDownloaderServiceTest
     @Test
     void shouldRunPersistentDownloader() throws Exception
     {
-        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.of( mock( CoreSnapshot.class ) ) );
+        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( mock( CoreSnapshot.class ) );
 
-        CoreDownloaderService coreDownloaderService = createDownloader();
+        var coreDownloaderService = createDownloader();
         coreDownloaderService.scheduleDownload( catchupAddressProvider );
         waitForApplierToResume( applicationProcess );
 
@@ -96,12 +95,12 @@ class CoreDownloaderServiceTest
     @Test
     void shouldOnlyScheduleOnePersistentDownloaderTaskAtTheTime() throws InterruptedException
     {
-        AtomicInteger schedules = new AtomicInteger();
-        CountingJobScheduler countingJobScheduler = new CountingJobScheduler( schedules, centralJobScheduler );
-        Semaphore blockDownloader = new Semaphore( 0 );
+        var schedules = new AtomicInteger();
+        var countingJobScheduler = new CountingJobScheduler( schedules, centralJobScheduler );
+        var blockDownloader = new Semaphore( 0 );
         CoreDownloader coreDownloader = new BlockingCoreDownloader( blockDownloader );
 
-        CoreDownloaderService coreDownloaderService = new CoreDownloaderService( countingJobScheduler, coreDownloader, downloadContext, snapshotService,
+        var coreDownloaderService = new CoreDownloaderService( countingJobScheduler, coreDownloader, downloadContext, snapshotService,
                 databaseEventService, applicationProcess, logProvider, new NoPauseTimeoutStrategy(), panicker, new Monitors(), databaseStartAborter );
 
         coreDownloaderService.scheduleDownload( catchupAddressProvider );
@@ -120,15 +119,15 @@ class CoreDownloaderServiceTest
 
         BlockingCoreDownloader( Semaphore semaphore )
         {
-            super( null, null, NullLogProvider.getInstance() );
+            super( null, null );
             this.semaphore = semaphore;
         }
 
         @Override
-        Optional<CoreSnapshot> downloadSnapshotAndStore( StoreDownloadContext context, CatchupAddressProvider addressProvider )
+        CoreSnapshot downloadSnapshotAndStore( StoreDownloadContext context, CatchupAddressProvider addressProvider )
         {
             semaphore.acquireUninterruptibly();
-            return Optional.of( mock( CoreSnapshot.class ) );
+            return mock( CoreSnapshot.class );
         }
     }
 

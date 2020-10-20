@@ -5,7 +5,7 @@
  */
 package com.neo4j.dbms;
 
-import com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader;
+import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
 
 import java.util.HashMap;
 import java.util.List;
@@ -32,7 +32,7 @@ import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
  * unavailable whilst the * cluster machinery downloads a more recent copy of store files and
  * transactions from another * cluster member.
  *
- * Normally, a {@link PersistentSnapshotDownloader} uses this internal operator to transition a database
+ * Normally, a {@link CoreDownloaderService} uses this internal operator to transition a database
  * from {@link EnterpriseOperatorState#STARTED}, to {@link EnterpriseOperatorState#STORE_COPYING}. However, during the
  * transition of a database from null to {@link EnterpriseOperatorState#STARTED}, such an attempt will lead to a
  * deadlock. As a result, bootstrapping is not a concrete {@link EnterpriseOperatorState}, provided by this operator
@@ -128,7 +128,7 @@ public class ClusterInternalDbmsOperator extends DbmsOperator
 
     /**
      * Prevents state transitions to the STORE_COPYING state while startup is on-going, because the reconciler
-     * is already in the process of reconciling to the STARTED state and the {@link PersistentSnapshotDownloader}
+     * is already in the process of reconciling to the STARTED state and the {@link CoreDownloaderService}
      * which is a component used both during startup and while the database is up and running will ask for a
      * transition to STORE_COPYING. Trying to "switch" the reconciler to STORE_COPYING would currently deadlock it.
      * This is a cooperative design between the reconciler and the startup code, which might seem a bit awkward.

@@ -52,7 +52,7 @@ public class StoreDownloadContext
         return kernelDatabase.getDatabaseLayout();
     }
 
-    public StoreId storeId()
+    StoreId storeId()
     {
         if ( storeId == null )
         {
@@ -74,9 +74,9 @@ public class StoreDownloadContext
         }
     }
 
-    boolean isEmpty()
+    boolean hasStore()
     {
-        return storeFiles.isEmpty( databaseLayout() );
+        return !storeFiles.isEmpty( databaseLayout() );
     }
 
     void delete() throws IOException

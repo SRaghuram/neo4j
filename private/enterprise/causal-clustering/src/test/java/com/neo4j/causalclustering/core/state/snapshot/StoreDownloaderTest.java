@@ -30,9 +30,8 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StoreId;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doThrow;
@@ -66,13 +65,11 @@ class StoreDownloaderTest
         when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( mismatchedStoreId );
 
         // when
-        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, new SingleAddressProvider( secondaryAddress ) );
-
-        verify( remoteStore, never() ).copy( any(), any(), any() );
-        verify( remoteStore, never() ).tryCatchingUp( any(), any(), any(), anyBoolean() );
+        downloader.bringUpToDate( databaseContext, primaryAddress, new SingleAddressProvider( secondaryAddress ) );
 
         // then
-        assertTrue( downloadOk );
+        verify( remoteStore, never() ).copy( any(), any(), any() );
+        verify( remoteStore, never() ).tryCatchingUp( any(), any(), any(), anyBoolean() );
     }
 
     @Test
@@ -86,13 +83,14 @@ class StoreDownloaderTest
         when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( mismatchedStoreId );
 
         // when
-        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, new SingleAddressProvider( secondaryAddress ) );
+        var exception = assertThrows( SnapshotFailedException.class,
+                () -> downloader.bringUpToDate( databaseContext, primaryAddress, new SingleAddressProvider( secondaryAddress ) ) );
 
         verify( remoteStore, never() ).copy( any(), any(), any() );
         verify( remoteStore, never() ).tryCatchingUp( any(), any(), any(), anyBoolean() );
 
         // then
-        assertFalse( downloadOk );
+        assertEquals( exception.status(), SnapshotFailedException.Status.UNRECOVERABLE );
     }
 
     @Test
@@ -103,13 +101,11 @@ class StoreDownloaderTest
         RemoteStore remoteStore = mockRemoteSuccessfulStore( namedDatabaseId );
 
         // when
-        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, new SingleAddressProvider( secondaryAddress ) );
+        downloader.bringUpToDate( databaseContext, primaryAddress, new SingleAddressProvider( secondaryAddress ) );
 
         // then
         verify( remoteStore ).tryCatchingUp( any(), any(), any(), anyBoolean() );
         verify( remoteStore, never() ).copy( any(), any(), any() );
-
-        assertTrue( downloadOk );
     }
 
     @Test
@@ -121,13 +117,11 @@ class StoreDownloaderTest
         StoreCopyProcess storeCopyProcess = getStoreCopyProcess( namedDatabaseId );
 
         // when
-        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, new SingleAddressProvider( secondaryAddress ) );
+        downloader.bringUpToDate( databaseContext, primaryAddress, new SingleAddressProvider( secondaryAddress ) );
 
         // then
         verify( remoteStore ).tryCatchingUp( any(), any(), any(), anyBoolean() );
         verify( storeCopyProcess ).replaceWithStoreFrom( any(), any() );
-
-        assertTrue( downloadOk );
     }
 
     private StoreCopyProcess getStoreCopyProcess( NamedDatabaseId namedDatabaseId )

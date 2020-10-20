@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.core.state.snapshot;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
-import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
@@ -17,8 +16,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
-import java.io.IOException;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -30,7 +27,6 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.SimpleTransactionIdStore;
 import org.neo4j.logging.Log;
-import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 
 import static com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader.DOWNLOAD_SNAPSHOT;
@@ -47,6 +43,8 @@ import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 class PersistentSnapshotDownloaderTest
 {
+    public static final SnapshotFailedException RETRYABLE_EXCEPTION =
+            new SnapshotFailedException( "Failed to download snapshot", SnapshotFailedException.Status.RETRYABLE );
     private final SocketAddress fromAddress = new SocketAddress( "localhost", 1234 );
     private final CatchupAddressProvider catchupAddressProvider = new CatchupAddressProvider.SingleAddressProvider( fromAddress );
     private final DatabasePanicker panicker = mock( DatabasePanicker.class );
@@ -97,7 +95,7 @@ class PersistentSnapshotDownloaderTest
     void shouldHaltServicesDuringDownload() throws Throwable
     {
         // given
-        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.of( snapshot ) );
+        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( snapshot );
         PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
 
         // when
@@ -123,7 +121,7 @@ class PersistentSnapshotDownloaderTest
     void shouldDispatchDatabaseEventAfterStoreCopy() throws Throwable
     {
         // given
-        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.of( snapshot ) );
+        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( snapshot );
         when( database.isStarted() ).thenReturn( true );
 
         PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
@@ -147,7 +145,7 @@ class PersistentSnapshotDownloaderTest
     void shouldNotDispatchDatabaseEventIfKernelRefusesToStart() throws Throwable
     {
         // given
-        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.of( snapshot ) );
+        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( snapshot );
         when( database.isStarted() ).thenReturn( false );
 
         PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
@@ -170,7 +168,7 @@ class PersistentSnapshotDownloaderTest
     void shouldResumeCommandApplicationProcessIfInterrupted() throws Exception
     {
         // given
-        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.empty() );
+        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenThrow( RETRYABLE_EXCEPTION );
         PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
 
         // when
@@ -191,7 +189,7 @@ class PersistentSnapshotDownloaderTest
     void shouldLeaveCommandApplicationProcessPausedIfDownloaderIsStopped() throws Exception
     {
         // given
-        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.empty() );
+        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenThrow( RETRYABLE_EXCEPTION );
         PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
 
         // when
@@ -231,7 +229,7 @@ class PersistentSnapshotDownloaderTest
     void shouldNotStartDownloadIfAlreadyCompleted() throws Exception
     {
         // given
-        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.of( snapshot ) );
+        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( snapshot );
 
         PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
 
@@ -250,7 +248,7 @@ class PersistentSnapshotDownloaderTest
     void shouldNotStartIfCurrentlyRunning() throws Exception
     {
         // given
-        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.empty() );
+        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenThrow( RETRYABLE_EXCEPTION );
         PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
         Thread thread = new Thread( persistentSnapshotDownloader );
 
@@ -268,7 +266,7 @@ class PersistentSnapshotDownloaderTest
     }
 
     @Test
-    void shouldPanicOnUnknownException() throws IOException, DatabaseShutdownException
+    void shouldPanicOnUnknownException() throws SnapshotFailedException
     {
         // given
         RuntimeException runtimeException = new RuntimeException();
@@ -283,9 +281,25 @@ class PersistentSnapshotDownloaderTest
     }
 
     @Test
+    void shouldPanicOnUnrecoverableError() throws SnapshotFailedException
+    {
+        // given
+        var snapshotFailedException = new SnapshotFailedException( "Unrecoverable", SnapshotFailedException.Status.UNRECOVERABLE );
+        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenThrow(
+                snapshotFailedException );
+        PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
+
+        // when
+        persistentSnapshotDownloader.run();
+
+        // then
+        verify( panicker ).panic( snapshotFailedException );
+    }
+
+    @Test
     void shouldNotStartDatabaseServiceWhenStoppedDuringDownload() throws Throwable
     {
-        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.empty() );
+        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenThrow( RETRYABLE_EXCEPTION );
         PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
         Thread thread = new Thread( persistentSnapshotDownloader );
 
@@ -310,14 +324,18 @@ class PersistentSnapshotDownloaderTest
 
         private EventuallySuccessfulDownloader( int after )
         {
-            super( null, null, NullLogProvider.getInstance() );
+            super( null, null );
             this.after = after;
         }
 
         @Override
-        Optional<CoreSnapshot> downloadSnapshotAndStore( StoreDownloadContext context, CatchupAddressProvider addressProvider )
+        CoreSnapshot downloadSnapshotAndStore( StoreDownloadContext context, CatchupAddressProvider addressProvider ) throws SnapshotFailedException
         {
-            return after-- <= 0 ? Optional.of( snapshot ) : Optional.empty();
+            if ( after-- <= 0 )
+            {
+                return snapshot;
+            }
+            throw RETRYABLE_EXCEPTION;
         }
     }
 }

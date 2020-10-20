@@ -11,11 +11,9 @@ import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupCom
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
-import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
 
 import java.io.IOException;
-import java.util.Optional;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -37,58 +35,67 @@ public class StoreDownloader
     /**
      * Brings the store up-to-date either by pulling transactions or by doing a store copy.
      *
-     * @return true if successful.
+     * @throws SnapshotFailedException if unable to bring store up do date. The {@link SnapshotFailedException.Status} of the exception may vary.
      */
-    boolean bringUpToDate( StoreDownloadContext context, SocketAddress primaryAddress, CatchupAddressProvider addressProvider )
-            throws IOException, DatabaseShutdownException
+    void bringUpToDate( StoreDownloadContext context, SocketAddress primaryAddress, CatchupAddressProvider addressProvider ) throws SnapshotFailedException
     {
-        CatchupComponents components = getCatchupComponents( context.databaseId() );
-        Optional<StoreId> validStoreId = validateStoreId( context, components.remoteStore(), primaryAddress );
-
-        if ( validStoreId.isEmpty() )
+        try
         {
-            return false;
-        }
-
-        if ( !context.isEmpty() )
-        {
-            if ( tryCatchup( context, addressProvider, components.remoteStore() ) )
+            var catchupComponents = getCatchupComponents( context.databaseId() );
+            var storeId = validateStoreId( context, catchupComponents.remoteStore(), primaryAddress );
+            if ( context.hasStore() )
             {
-                return true;
-            }
-            else
-            {
+                if ( tryCatchup( context, addressProvider, catchupComponents.remoteStore() ) )
+                {
+                    return;
+                }
                 context.delete();
             }
+            replaceStore( addressProvider, catchupComponents, storeId );
         }
-
-        return replaceWithStore( validStoreId.get(), addressProvider, components.storeCopyProcess() );
+        catch ( IOException e )
+        {
+            throw new SnapshotFailedException( "Unexpected IO error when updating store", SnapshotFailedException.Status.UNRECOVERABLE, e );
+        }
+        catch ( DatabaseShutdownException e )
+        {
+            throw new SnapshotFailedException( "Failed to bring store up to date due to it being shutdown", SnapshotFailedException.Status.TERMINAL, e );
+        }
+        catch ( StoreIdDownloadFailedException | StoreCopyFailedException e )
+        {
+            throw new SnapshotFailedException( "Failed to bring store up to date", SnapshotFailedException.Status.RETRYABLE, e );
+        }
     }
 
     /**
-     * Returns a store ID which is to be considered locally valid and used in subsequent requests. A store ID
-     * is valid either because it matches between the local and the upstream or because the local database
-     * is empty anyway so it should be overridden by the remote store ID when the remote database is copied.
+     * Returns a store ID which is to be considered locally valid and used in subsequent requests. A store ID is valid either because it matches between the
+     * local and the upstream or because the local database is empty anyway so it should be overridden by the remote store ID when the remote database is
+     * copied.
+     *
+     * @return {@link StoreId} returns remote store id if it matches the local store id or if local store id is empty.
+     * @throws SnapshotFailedException        with unrecoverable error if remote store id does not match local.
+     * @throws StoreIdDownloadFailedException if unable to download remote store id.
      */
-    private Optional<StoreId> validateStoreId( StoreDownloadContext context, RemoteStore remoteStore, SocketAddress address )
+    private StoreId validateStoreId( StoreDownloadContext context, RemoteStore remoteStore, SocketAddress address )
+            throws StoreIdDownloadFailedException, SnapshotFailedException
     {
-        StoreId remoteStoreId;
-        try
-        {
-            remoteStoreId = remoteStore.getStoreId( address );
-        }
-        catch ( StoreIdDownloadFailedException e )
-        {
-            log.warn( "Store copy failed", e );
-            return Optional.empty();
-        }
+        var remoteStoreId = remoteStore.getStoreId( address );
 
-        if ( !context.isEmpty() && !remoteStoreId.equals( context.storeId() ) )
+        if ( context.hasStore() && !remoteStoreId.equals( context.storeId() ) )
         {
-            log.error( "Store copy failed due to store ID mismatch" );
-            return Optional.empty();
+            throw new SnapshotFailedException(
+                    "Store copy failed due to store ID mismatch. There are database operating with different store ids.",
+                    SnapshotFailedException.Status.RETRYABLE );
         }
-        return Optional.ofNullable( remoteStoreId );
+        return remoteStoreId;
+    }
+
+    private void replaceStore( CatchupAddressProvider addressProvider, CatchupComponents catchupComponents, StoreId storeId )
+            throws IOException, StoreCopyFailedException, DatabaseShutdownException
+    {
+        log.info( "Begin replacing store" );
+        catchupComponents.storeCopyProcess().replaceWithStoreFrom( addressProvider, storeId );
+        log.info( "Successfully replaced store" );
     }
 
     /**
@@ -98,7 +105,9 @@ public class StoreDownloader
     {
         try
         {
+            log.info( "Begin trying to catch up store" );
             remoteStore.tryCatchingUp( addressProvider, context.storeId(), context.databaseLayout(), false );
+            log.info( "Successfully caught up store" );
             return true;
         }
         catch ( StoreCopyFailedException e )
@@ -106,21 +115,6 @@ public class StoreDownloader
             log.warn( "Failed to catch up", e );
             return false;
         }
-    }
-
-    private boolean replaceWithStore( StoreId remoteStoreId, CatchupAddressProvider addressProvider, StoreCopyProcess storeCopy )
-            throws IOException, DatabaseShutdownException
-    {
-        try
-        {
-            storeCopy.replaceWithStoreFrom( addressProvider, remoteStoreId );
-        }
-        catch ( StoreCopyFailedException e )
-        {
-            log.warn( "Failed to copy and replace store", e );
-            return false;
-        }
-        return true;
     }
 
     private CatchupComponents getCatchupComponents( NamedDatabaseId namedDatabaseId )
