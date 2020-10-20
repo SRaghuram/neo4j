@@ -266,11 +266,7 @@ class BoundedArrayCursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR, priv
 
   override def close(): Unit = {
     if (index > 0) {
-      if (index == 1) { // Special case to prevent regression in extremely fast queries where the overhead of closing by the full array is noticeable
-        cached(0).close()
-      } else {
-        IOUtils.closeAll(cached: _*) // IOUtils.closeAll can handle nulls. We avoid creating another copy since this could be called when we are running low on memory.
-      }
+      IOUtils.closeFirst(cached, index)
       index = 0
     }
     cached = null.asInstanceOf[Array[Cursor]]
