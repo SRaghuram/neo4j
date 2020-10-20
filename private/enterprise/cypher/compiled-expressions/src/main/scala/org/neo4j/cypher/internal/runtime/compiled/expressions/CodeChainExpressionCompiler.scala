@@ -76,8 +76,8 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.NodeFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.NodeProperty
 import org.neo4j.cypher.internal.physicalplanning.ast.ReferenceFromSlot
-import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.DbAccess
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.ast.ParameterFromSlot
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CodeChainExpressionCompiler.row
@@ -143,7 +143,7 @@ class CodeChainExpressionCompiler(override val slots: SlotConfiguration,
      * IR: row.getRefAt(offset)
      */
     case ReferenceFromSlot(offset, _) =>
-      START.withCode(isNullable(offset, isLongSlot = false), invoke(row, method[CypherRow, AnyValue, Int]("getRefAt"), constant(offset)))
+      START.withCode(isNullable(offset, isLongSlot = false), invoke(row, method[ReadableRow, AnyValue, Int]("getRefAt"), constant(offset)))
 
     /*
      * Expression: "n"

@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStreamArgumentStateBuffer
@@ -57,7 +58,10 @@ class OptionalOperator(val workIdentity: WorkIdentity,
   }
 
   class OptionalOperatorState() extends DataInputOperatorState[MorselData] {
-    override def nextTasks(input: MorselData): IndexedSeq[ContinuableOperatorTask] = singletonIndexedSeq(new OTask(input))
+    override def nextTasks(state: PipelinedQueryState,
+                           input: MorselData,
+                           argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] =
+      singletonIndexedSeq(new OTask(input))
   }
 
   class OTask(morselData: MorselData) extends InputLoopWithMorselDataTask(morselData) {

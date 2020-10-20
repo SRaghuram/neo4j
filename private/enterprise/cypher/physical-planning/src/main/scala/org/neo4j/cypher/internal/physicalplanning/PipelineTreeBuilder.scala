@@ -26,6 +26,7 @@ import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
 import org.neo4j.cypher.internal.logical.plans.OrderedDistinct
 import org.neo4j.cypher.internal.logical.plans.PartialSort
 import org.neo4j.cypher.internal.logical.plans.PartialTop
+import org.neo4j.cypher.internal.logical.plans.PreserveOrder
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.logical.plans.RightOuterHashJoin
 import org.neo4j.cypher.internal.logical.plans.Skip
@@ -53,6 +54,7 @@ import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.UnionBuffe
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotWithKeyAndAliases
 import org.neo4j.cypher.internal.physicalplanning.ast.IsPrimitiveNull
 import org.neo4j.cypher.internal.physicalplanning.ast.ReferenceFromSlot
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.cypher.internal.runtime.interpreted.commands
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.util.InputPosition
@@ -66,6 +68,7 @@ sealed trait HeadPlan {
   def id: Id = plan.id
   def plan: LogicalPlan
 }
+
 case class InterpretedHead(plan: LogicalPlan) extends HeadPlan
 case class FusedHead(operatorFuser: OperatorFuser) extends HeadPlan { def plan: LogicalPlan = operatorFuser.fusedPlans.head }
 
@@ -96,6 +99,7 @@ object PipelineTreeBuilder {
       else
         InterpretedHead(headLogicalPlan)
     }
+
     val middlePlans = new ArrayBuffer[LogicalPlan]
     var serial: Boolean = false
     var workCanceller: Option[ArgumentStateMapId] = None
@@ -461,7 +465,8 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
                           slotConfigurations: SlotConfigurations,
                           argumentSizes: ArgumentSizes,
                           applyPlans: ApplyPlans,
-                          expressionConverters: ExpressionConverters)
+                          expressionConverters: ExpressionConverters,
+                          leveragedOrders: LeveragedOrders)
   extends TreeBuilder[PipelineDefiner, ApplyBufferDefiner] {
 
   private[physicalplanning] val pipelines = new ArrayBuffer[PipelineDefiner]
@@ -689,7 +694,8 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
 
       case _: Optional |
            _: OrderedAggregation  |
-           _: PartialSort =>
+           _: PartialSort |
+           _: PreserveOrder =>
         if (breakingPolicy.breakOn(plan, applyPlans(plan.id))) {
           val buffer = outputToArgumentStreamBuffer(source, plan, argument, argument.argumentSlotOffset)
           val pipeline = newPipeline(plan, buffer)
@@ -785,6 +791,10 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
       case p: plans.AbstractSelectOrSemiApply =>
         val argumentSlotOffset = slotConfigurations(plan.id).getArgumentLongOffsetFor(plan.id)
         outputToConditionalSink(p.expression, lhs, argumentSlotOffset, plan)
+
+      case _: plans.CartesianProduct if leveragedOrders.get(plan.id) =>
+        val argumentSlotOffset = slotConfigurations(plan.id).getArgumentLongOffsetFor(plan.id)
+        outputToApplyBuffer(lhs, argumentSlotOffset, plan)
 
       case _: plans.CartesianProduct =>
         val rhsSlots = slotConfigurations(plan.rhs.get.id)

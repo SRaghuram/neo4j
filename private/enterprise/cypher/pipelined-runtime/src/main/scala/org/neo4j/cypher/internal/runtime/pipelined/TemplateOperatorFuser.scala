@@ -14,7 +14,6 @@ import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.SelectOrAntiSemiApply
 import org.neo4j.cypher.internal.logical.plans.SelectOrSemiApply
 import org.neo4j.cypher.internal.logical.plans.Union
-import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.physicalplanning.OperatorFuser
 import org.neo4j.cypher.internal.physicalplanning.OperatorFuserFactory
@@ -35,15 +34,12 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.BinaryOperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTaskWithMorselGenerator.compileOperator
-import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTaskWithMorselTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DelegateOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.Operator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProduceResultOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleArgumentAggregationMapperOperatorNoGroupingTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleArgumentAggregationMapperOperatorTaskTemplate
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -97,7 +93,7 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
     val innermost = new DelegateOperatorTaskTemplate()(expressionCompiler)
     var currentTemplate: OperatorTaskTemplate = innermost
 
-    var argumentStates = new ArrayBuffer[(ArgumentStateMapId, ArgumentStateFactory[_ <: ArgumentState])]
+    var argumentStates = new ArrayBuffer[ArgumentStateDescriptor]
 
     for ( fixTemplate <- templates.reverse ) {
       val ctx = TemplateContext(slots,
@@ -114,9 +110,8 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
       currentTemplate = x.template
     }
     val workIdentity = WorkIdentity.fromFusedPlans(fusedPlans)
-    val operatorTaskWithMorselTemplate = currentTemplate.asInstanceOf[ContinuableOperatorTaskWithMorselTemplate]
     try {
-      compileOperator(operatorTaskWithMorselTemplate, workIdentity, argumentStates, codeGenerationMode, pipelineId)
+      compileOperator(currentTemplate, workIdentity, argumentStates, codeGenerationMode, pipelineId)
     } catch {
       // In the case of a StackOverflowError we cannot recover correctly and abort fusing altogether.
       case e: StackOverflowError =>

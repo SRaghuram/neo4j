@@ -80,6 +80,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ProfilePageCacheStatsTestBas
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileRowsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProjectEndpointsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProjectionTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NonParallelProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.PruningVarLengthExpandTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultStressTestBase
@@ -162,6 +163,7 @@ class SlottedReactiveResultsTest extends ReactiveResultTestBase(ENTERPRISE.DEFAU
 class SlottedReactiveResultsStressTest extends ReactiveResultStressTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedMiscTest extends MiscTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
 class SlottedProvidedOrderTest extends ProvidedOrderTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+                               with NonParallelProvidedOrderTestBase[EnterpriseRuntimeContext]
                                with CartesianProductProvidedOrderTestBase[EnterpriseRuntimeContext]
 class SlottedProfileRowsTest extends ProfileRowsTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT, 1)
                              with NonParallelProfileRowsTestBase[EnterpriseRuntimeContext]

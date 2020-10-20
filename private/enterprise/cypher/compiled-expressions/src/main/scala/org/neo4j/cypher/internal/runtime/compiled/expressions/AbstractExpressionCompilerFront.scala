@@ -164,9 +164,6 @@ import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipTypeFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedPropertyWithPropertyToken
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedPropertyWithoutPropertyToken
-import org.neo4j.cypher.internal.runtime.CypherRow
-import org.neo4j.cypher.internal.runtime.DbAccess
-import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.ast.ParameterFromSlot
 import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompilerFront.ASSERT_PREDICATE
@@ -193,6 +190,11 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilat
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.vRELATIONSHIP_CURSOR
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeCollectExpression
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.cypher.internal.runtime.CachedPropertiesRow
+import org.neo4j.cypher.internal.runtime.DbAccess
+import org.neo4j.cypher.internal.runtime.ExpressionCursors
+import org.neo4j.cypher.internal.runtime.ReadableRow
+import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.symbols.CTBoolean
 import org.neo4j.cypher.internal.util.symbols.CTDate
@@ -2380,27 +2382,27 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
     }
 
   final def getLongFromExecutionContext(offset: Int, context: IntermediateRepresentation = ROW): IntermediateRepresentation =
-    invoke(context, method[CypherRow, Long, Int]("getLongAt"), constant(offset))
+    invoke(context, method[ReadableRow, Long, Int]("getLongAt"), constant(offset))
 
   final def getRefFromExecutionContext(offset: Int, context: IntermediateRepresentation = ROW): IntermediateRepresentation =
-    invoke(context, method[CypherRow, AnyValue, Int]("getRefAt"), constant(offset))
+    invoke(context, method[ReadableRow, AnyValue, Int]("getRefAt"), constant(offset))
 
   final def getCachedPropertyFromExecutionContext(offset: Int, context: IntermediateRepresentation = ROW): IntermediateRepresentation =
     getCachedPropertyFromExecutionContextWithDynamicOffset(constant(offset), context)
 
   final def getCachedPropertyFromExecutionContextWithDynamicOffset(offset: IntermediateRepresentation, context: IntermediateRepresentation = ROW): IntermediateRepresentation =
-    invoke(context, method[CypherRow, Value, Int]("getCachedPropertyAt"), offset)
+    invoke(context, method[CachedPropertiesRow, Value, Int]("getCachedPropertyAt"), offset)
 
   final def setRefInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
-    invokeSideEffect(ROW, method[CypherRow, Unit, Int, AnyValue]("setRefAt"),
+    invokeSideEffect(ROW, method[WritableRow, Unit, Int, AnyValue]("setRefAt"),
                      constant(offset), value)
 
   final def setLongInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
-    invokeSideEffect(ROW, method[CypherRow, Unit, Int, Long]("setLongAt"),
+    invokeSideEffect(ROW, method[WritableRow, Unit, Int, Long]("setLongAt"),
                      constant(offset), value)
 
   protected final def setCachedPropertyInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
-    invokeSideEffect(ROW, method[CypherRow, Unit, Int, Value]("setCachedPropertyAt"),
+    invokeSideEffect(ROW, method[CachedPropertiesRow, Unit, Int, Value]("setCachedPropertyAt"),
                      constant(offset), value)
 
   //==================================================================================================
@@ -2707,7 +2709,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       case _ =>
         val varName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], varName, invoke(ROW,
-          method[CypherRow, AnyValue, String]("getByName"), constant(name))))
+          method[ReadableRow, AnyValue, String]("getByName"), constant(name))))
         computeRepresentation(ir = block(lazySet, load(varName)),
                               nullCheck = Some(block(lazySet, equal(load(varName), noValue))), nullable = true)
     }

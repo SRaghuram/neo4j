@@ -85,6 +85,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalExpandAllOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalExpandIntoOperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.PreserveOrderOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProcedureOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectEndpointsMiddleOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectOperatorTemplate
@@ -117,7 +118,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.VarLengthProjectEnd
 import org.neo4j.cypher.internal.runtime.pipelined.operators.VarLengthUndirectedProjectEndpointsTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.VoidProcedureOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateBufferFactoryFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStreamArgumentStateBuffer
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.DistinctAllPrimitive
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.DistinctWithReferences
@@ -133,9 +136,22 @@ import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.IndexQuery
 import org.neo4j.internal.schema.IndexOrder
 
+sealed trait ArgumentStateDescriptor {
+  def ordered: Boolean
+  def argumentStateMapId: ArgumentStateMapId
+}
+
+case class StaticFactoryArgumentStateDescriptor(argumentStateMapId: ArgumentStateMapId,
+                                                factory: ArgumentStateFactory[_ <: ArgumentState],
+                                                ordered: Boolean = false) extends ArgumentStateDescriptor
+case class DynamicFactoryArgumentStateDescriptor(argumentStateMapId: ArgumentStateMapId,
+                                                 factoryFactory: ArgumentStateBufferFactoryFactory,
+                                                 operatorId: Id,
+                                                 ordered: Boolean) extends ArgumentStateDescriptor
+
 abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, fuseOverPipelines: Boolean) {
 
-  case class TemplateAndArgumentStateFactory(template: OperatorTaskTemplate, argumentStateFactory: Option[(ArgumentStateMapId, ArgumentStateFactory[_ <: ArgumentState])])
+  case class TemplateAndArgumentStateFactory(template: OperatorTaskTemplate, argumentStateFactory: Option[ArgumentStateDescriptor])
   type NewTemplate = TemplateContext => TemplateAndArgumentStateFactory
 
   // NOTE: These implicits are used to reduce the boilerplate in the template match cases, which improves readability
@@ -585,7 +601,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                     toSlot,
                     offsets.head,
                     ctx.compileExpression(expression, plan.id))(ctx.expressionCompiler),
-                  Some(argumentStateMapId -> DistinctSinglePrimitiveState.DistinctStateFactory))
+                  Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, DistinctSinglePrimitiveState.DistinctStateFactory)))
                 } else {
                   TemplateAndArgumentStateFactory(
                     new SerialDistinctOnRhsOfApplySinglePrimitiveOperatorTaskTemplate(ctx.inner,
@@ -594,7 +610,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                       toSlot,
                       offsets.head,
                       ctx.compileExpression(expression, plan.id))(ctx.expressionCompiler),
-                    Some(argumentStateMapId -> DistinctSinglePrimitiveState.DistinctStateFactory))
+                    Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, DistinctSinglePrimitiveState.DistinctStateFactory)))
                 }
               case DistinctAllPrimitive(offsets, _) =>
                 if (hasNoNestedArguments) {
@@ -604,7 +620,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                       argumentStateMapId,
                       offsets.sorted.toArray,
                       groupMapping)(ctx.expressionCompiler),
-                    Some(argumentStateMapId -> DistinctOperatorState.DistinctStateFactory))
+                    Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, DistinctOperatorState.DistinctStateFactory)))
                 } else {
                   TemplateAndArgumentStateFactory(
                     new SerialDistinctOnRhsOfApplyPrimitiveOperatorTaskTemplate(ctx.inner,
@@ -612,7 +628,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                       argumentStateMapId,
                       offsets.sorted.toArray,
                       groupMapping)(ctx.expressionCompiler),
-                    Some(argumentStateMapId -> DistinctOperatorState.DistinctStateFactory))
+                    Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, DistinctOperatorState.DistinctStateFactory)))
                 }
 
               case DistinctWithReferences =>
@@ -622,14 +638,14 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                       plan.id,
                       argumentStateMapId,
                       groupMapping)(ctx.expressionCompiler),
-                    Some(argumentStateMapId -> DistinctOperatorState.DistinctStateFactory))
+                    Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, DistinctOperatorState.DistinctStateFactory)))
                 } else {
                   TemplateAndArgumentStateFactory(
                     new SerialDistinctOnRhsOfApplyOperatorTaskTemplate(ctx.inner,
                       plan.id,
                       argumentStateMapId,
                       groupMapping)(ctx.expressionCompiler),
-                    Some(argumentStateMapId -> DistinctOperatorState.DistinctStateFactory))
+                    Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, DistinctOperatorState.DistinctStateFactory)))
                 }
             }
 
@@ -645,7 +661,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   ctx.innermost,
                   argumentStateMapId,
                   ctx.compileExpression(countExpression, plan.id))(ctx.expressionCompiler),
-                Some(argumentStateMapId -> SerialLimitStateFactory)
+                Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, SerialLimitStateFactory))
               )
             } else {
               ctx.innermost.limits += argumentStateMapId
@@ -654,7 +670,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   plan.id,
                   argumentStateMapId,
                   ctx.compileExpression(countExpression, plan.id))(ctx.expressionCompiler),
-                Some(argumentStateMapId -> SerialLimitStateFactory)
+                Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, SerialLimitStateFactory))
               )
             }
 
@@ -669,7 +685,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   ctx.innermost,
                   argumentStateMapId,
                   ctx.compileExpression(countExpression, plan.id))(ctx.expressionCompiler),
-                Some(argumentStateMapId -> SerialSkipStateFactory)
+                Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, SerialSkipStateFactory))
               )
             } else {
               TemplateAndArgumentStateFactory(
@@ -677,7 +693,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   plan.id,
                   argumentStateMapId,
                   ctx.compileExpression(countExpression, plan.id))(ctx.expressionCompiler),
-                Some(argumentStateMapId -> SerialSkipStateFactory)
+                Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, SerialSkipStateFactory))
               )
             }
 
@@ -763,6 +779,19 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   directed)(ctx.expressionCompiler)
               }
             }
+
+        case plan@plans.PreserveOrder(_) if isHeadOperator =>
+          ctx: TemplateContext =>
+            val argumentStateMapId = ctx.executionGraphDefinition.findArgumentStateMapForPlan(plan.id)
+            TemplateAndArgumentStateFactory(
+              new PreserveOrderOperatorTaskTemplate(ctx.inner, plan.id, ctx.innermost)(ctx.expressionCompiler),
+              Some(DynamicFactoryArgumentStateDescriptor(
+                argumentStateMapId,
+                ArgumentStreamArgumentStateBuffer,
+                plan.id,
+                ordered = true
+              ))
+            )
 
         case _ =>
           None

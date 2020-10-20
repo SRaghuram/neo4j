@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.logical.builder.Resolver
 import org.neo4j.cypher.internal.logical.plans.ProcedureSignature
 import org.neo4j.cypher.internal.logical.plans.QualifiedName
 import org.neo4j.cypher.internal.logical.plans.UserFunctionSignature
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -47,13 +48,15 @@ class ExecutionGraphDefinitionBuilder(operatorFuserFactory: OperatorFuserFactory
   override def build(readOnly: Boolean = true): ExecutionGraphDefinition = {
     val logicalPlan = buildLogicalPlan()
     val breakingPolicy = PipelineBreakingPolicy.breakForIds(plansToBreakOn: _*)
+    val leveragedOrders = new LeveragedOrders
     val physicalPlan = PhysicalPlanner.plan(tokenContext,
       logicalPlan,
       semanticTable,
       breakingPolicy,
+      leveragedOrders,
       allocateArgumentSlots = true)
     val converters: ExpressionConverters = mock(classOf[ExpressionConverters])
-    ExecutionGraphDefiner.defineFrom(breakingPolicy, operatorFuserFactory, physicalPlan, converters)
+    ExecutionGraphDefiner.defineFrom(breakingPolicy, operatorFuserFactory, physicalPlan, converters, leveragedOrders)
   }
 }
 

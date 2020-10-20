@@ -52,6 +52,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArgumentTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArrayIndexSupport
 import org.neo4j.cypher.internal.runtime.spec.tests.CachePropertiesTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DistinctTestBase
@@ -84,6 +85,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.OptionalTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileRowsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileTimeTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProjectionTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.PruningVarLengthExpandTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultStressTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultTestBase
@@ -306,6 +308,12 @@ class ParallelRuntimeNodeLeftOuterHashJoinNoFusingTest extends LeftOuterHashJoin
 // VALUE HASH JOIN
 class ParallelRuntimeValueHashJoinTest extends ValueHashJoinTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 class ParallelRuntimeValueHashJoinNoFusingTest extends ValueHashJoinTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+
+// PROVIDED ORDER
+class ParallelRuntimeProvidedOrderTest extends ProvidedOrderTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+  with CartesianProductProvidedOrderTestBase[EnterpriseRuntimeContext]
+class ParallelRuntimeNoFusingProvidedOrderTest extends ProvidedOrderTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+  with CartesianProductProvidedOrderTestBase[EnterpriseRuntimeContext]
 
 // REACTIVE
 class ParallelRuntimeReactiveResultsTest extends ReactiveResultTestBase(FUSING, PARALLEL) with ParallelRuntimeSpecSuite

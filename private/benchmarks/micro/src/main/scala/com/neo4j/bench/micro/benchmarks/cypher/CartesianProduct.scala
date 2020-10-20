@@ -44,7 +44,7 @@ class CartesianProduct extends AbstractCypherBenchmark {
 
   @ParamValues(
     allowed = Array("false", "true"),
-    base = Array("false"))
+    base = Array("false", "true"))
   @Param(Array[String]())
   var leveragedOrder: Boolean = _
 

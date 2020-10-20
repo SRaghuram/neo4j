@@ -32,7 +32,7 @@ import scala.collection.mutable
  *
  * We expect a decrement if all rows for an argument row id at the reducers argument slot offset are cancelled.
  */
-class MorselBufferTest extends MorselUnitTest {
+class MorselBufferTest extends MorselUnitTest with MorselTestHelper {
 
   private val ID = BufferId(1)
   private val tracker = mock[QueryCompletionTracker]
@@ -420,15 +420,6 @@ class MorselBufferTest extends MorselUnitTest {
   }
 
   // HELPERS
-
-  private def longMorsel(longsPerRow: Int)(values: Long*): Morsel = {
-    val nRows = values.size / longsPerRow
-    val slots =
-      (0 until longsPerRow)
-        .foldLeft(SlotConfiguration.empty)( (slots, i) => slots.newLong(s"v$i", nullable = false, symbols.CTAny) )
-
-    new FilteringMorsel(values.toArray, Array.empty, slots, nRows, 0, nRows)
-  }
 
   private def initiate(asm: ArgumentStateMap[_], argumentRowIds: Range): Unit = {
     for (argId <- argumentRowIds) {

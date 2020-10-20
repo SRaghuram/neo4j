@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.AntiOperatorTask
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTask
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTaskWithAccumulators
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTaskWithMorsel
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTaskWithMorselData
 import org.neo4j.cypher.internal.runtime.pipelined.operators.InputLoopTask
 import org.neo4j.cypher.internal.runtime.pipelined.operators.InputLoopWithMorselDataTask
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfEmptyStream
@@ -27,6 +28,9 @@ object PipelinedDebugSupport {
     startTask match {
       case withMorsel: ContinuableOperatorTaskWithMorsel =>
         prettyMorselWithHeader("INPUT:", withMorsel.inputMorsel, currentRow(withMorsel)) :+
+        prettyWorkIdentity(workIdentity)
+      case withMorselData: ContinuableOperatorTaskWithMorselData =>
+        prettyMorselDataWithHeader("INPUT DATA:", withMorselData.morselData, -1) :+
         prettyWorkIdentity(workIdentity)
       case task: InputLoopWithMorselDataTask =>
         Array("INPUT:") ++
@@ -71,6 +75,17 @@ object PipelinedDebugSupport {
     (
       Array(header) ++
         morsel.prettyString(currentRow)
+      ).map(row => MORSEL_INDENT+row)
+  }
+
+  def prettyMorselDataWithHeader(header: String, morselData: MorselData, currentRow: Int = -1): Seq[String] = {
+    (
+      Array(header) ++
+        morselData.morsels.zipWithIndex
+          .flatMap {
+            case (morsel, index) =>
+              Seq(s"- Morsel $index") ++ morsel.prettyString(currentRow)
+          }
       ).map(row => MORSEL_INDENT+row)
   }
 

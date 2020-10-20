@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.App
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.ArgumentSizes
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.NestedPlanArgumentConfigurations
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.ParameterMapping
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
@@ -25,11 +26,17 @@ object PhysicalPlanner {
            beforeRewrite: LogicalPlan,
            semanticTable: SemanticTable,
            breakingPolicy: PipelineBreakingPolicy,
+           leveragedOrders: LeveragedOrders,
            allocateArgumentSlots: Boolean = false): PhysicalPlan = {
     DebugSupport.PHYSICAL_PLANNING.log("======== BEGIN Physical Planning with %-31s ===========================", breakingPolicy.getClass.getSimpleName)
     val Result(logicalPlan, nExpressionSlots, availableExpressionVars) = expressionVariableAllocation.allocate(beforeRewrite)
     val (withSlottedParameters, parameterMapping) = slottedParameters(logicalPlan)
-    val slotMetaData = SlotAllocation.allocateSlots(withSlottedParameters, semanticTable, breakingPolicy, availableExpressionVars, allocateArgumentSlots)
+    val slotMetaData = SlotAllocation.allocateSlots(withSlottedParameters,
+      semanticTable,
+      breakingPolicy,
+      availableExpressionVars,
+      leveragedOrders,
+      allocateArgumentSlots)
     val slottedRewriter = new SlottedRewriter(tokenContext)
     val finalLogicalPlan = slottedRewriter(withSlottedParameters, slotMetaData.slotConfigurations)
     DebugSupport.PHYSICAL_PLANNING.log("======== END Physical Planning ==================================================================")

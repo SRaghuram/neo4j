@@ -15,6 +15,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBuffer
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -264,6 +265,10 @@ object ArgumentStateMap {
      * argument state.
      */
     def completeOnConstruction: Boolean = false
+  }
+
+  trait ArgumentStateBufferFactoryFactory {
+    def createFactory(stateFactory: StateFactory, operatorId: Int): ArgumentStateFactory[ArgumentStateBuffer]
   }
 
   /**

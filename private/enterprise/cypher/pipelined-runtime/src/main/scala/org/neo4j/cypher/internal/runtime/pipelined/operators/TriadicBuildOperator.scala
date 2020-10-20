@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStreamArgumentStateBuffer
@@ -136,7 +137,7 @@ class TriadicBuildTaskState(memoryTracker: MemoryTracker,
       morselMemoryTracker.allocateHeap(currentMorselHeapUsage)
   }
 
-  override def nextTasks(input: MorselData): IndexedSeq[ContinuableOperatorTask] =
+  override def nextTasks(state: PipelinedQueryState, input: MorselData, argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] =
     singletonIndexedSeq(new TriadicBuildTask(input, workIdentity, this))
 }
 

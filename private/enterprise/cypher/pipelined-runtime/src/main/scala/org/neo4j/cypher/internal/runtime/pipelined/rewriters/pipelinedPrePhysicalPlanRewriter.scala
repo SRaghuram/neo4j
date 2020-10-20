@@ -31,6 +31,7 @@ case object pipelinedPrePhysicalPlanRewriter {
       fixedPoint(
         combineCartesianProductOfMultipleIndexSeeks(cardinalities, leveragedOrders, stopper = stopper)
       ),
+      cartesianProductLeveragedOrderToApplyPreserveOrder(cardinalities, providedOrders, leveragedOrders, idGen, stopper),
       semiApplyToLimitApply(cardinalities, providedOrders, idGen, stopper),
       antiSemiApplyToAntiLimitApply(cardinalities, providedOrders, idGen, stopper),
       rollupApplyToAggregationApply(cardinalities, providedOrders, idGen, stopper),

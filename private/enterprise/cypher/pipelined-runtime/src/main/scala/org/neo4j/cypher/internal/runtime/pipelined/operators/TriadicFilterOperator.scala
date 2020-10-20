@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStreamArgumentStateBuffer
@@ -53,7 +54,7 @@ class TriadicFilterOperatorState(positivePredicate: Boolean,
                                  argumentOffset: Int,
                                  workIdentity: WorkIdentity) extends DataInputOperatorState[MorselData] {
 
-  override def nextTasks(input: MorselData): IndexedSeq[ContinuableOperatorTask] =
+  override def nextTasks(state: PipelinedQueryState, input: MorselData, argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] =
     singletonIndexedSeq(new TriadicFilterTask(input, triadicStateAsm, positivePredicate, sourceOffset, targetOffset, argumentOffset, workIdentity))
 }
 

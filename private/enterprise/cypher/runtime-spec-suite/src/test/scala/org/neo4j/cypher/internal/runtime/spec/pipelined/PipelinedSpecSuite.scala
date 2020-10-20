@@ -37,6 +37,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ArgumentTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArrayIndexSupport
 import org.neo4j.cypher.internal.runtime.spec.tests.CacheFromCursorTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CachePropertiesTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ConditionalApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeekTestBase
@@ -95,6 +96,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ProfileRowsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileTimeTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProjectEndpointsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProjectionTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NonParallelProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.PruningVarLengthExpandTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultStressTestBase
@@ -352,7 +354,12 @@ class PipelinedValueHashJoinNoFusingTest extends ValueHashJoinTestBase(NO_FUSING
 
 // PROVIDED ORDER
 class PipelinedProvidedOrderTest extends ProvidedOrderTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+                                 with NonParallelProvidedOrderTestBase[EnterpriseRuntimeContext]
+                                 with CartesianProductProvidedOrderTestBase[EnterpriseRuntimeContext]
 class PipelinedNoFusingProvidedOrderTest extends ProvidedOrderTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+                                         with NonParallelProvidedOrderTestBase[EnterpriseRuntimeContext]
+                                         with CartesianProductProvidedOrderTestBase[EnterpriseRuntimeContext]
+
 
 // REACTIVE
 class PipelinedReactiveResultsTest extends ReactiveResultTestBase(FUSING, PIPELINED) with PipelinedSpecSuite

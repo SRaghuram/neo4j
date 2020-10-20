@@ -22,6 +22,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
@@ -90,7 +91,10 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
     private var activeMemoryTracker: MemoryTracker = _
     private var resultsMemoryTracker: MemoryTracker = _
 
-    override def nextTasks(input: MorselData): IndexedSeq[ContinuableOperatorTask] = singletonIndexedSeq(new PartialTopTask(input, this))
+    override def nextTasks(state: PipelinedQueryState,
+                           input: MorselData,
+                           argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] =
+      singletonIndexedSeq(new PartialTopTask(input, this))
 
     def addRow(row: MorselRow): Unit = {
       if (topTable == null) {

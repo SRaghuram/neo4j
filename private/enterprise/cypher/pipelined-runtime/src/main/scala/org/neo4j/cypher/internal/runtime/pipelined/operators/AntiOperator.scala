@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.AntiArgumentState
@@ -40,7 +41,10 @@ class AntiOperator(val workIdentity: WorkIdentity,
   }
 
   class AntiOperatorState() extends DataInputOperatorState[Seq[MorselData]] {
-    override def nextTasks(input: Seq[MorselData]): IndexedSeq[ContinuableOperatorTask] = singletonIndexedSeq(new OTask(input))
+    override def nextTasks(state: PipelinedQueryState,
+                           input: Seq[MorselData],
+                           argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] =
+      singletonIndexedSeq(new OTask(input))
   }
 
   class OTask(val morselDatas: Seq[MorselData]) extends AntiOperatorTask {

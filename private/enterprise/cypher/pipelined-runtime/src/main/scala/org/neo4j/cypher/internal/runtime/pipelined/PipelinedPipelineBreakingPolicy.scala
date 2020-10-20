@@ -44,6 +44,7 @@ import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
 import org.neo4j.cypher.internal.logical.plans.OrderedDistinct
 import org.neo4j.cypher.internal.logical.plans.PartialSort
 import org.neo4j.cypher.internal.logical.plans.PartialTop
+import org.neo4j.cypher.internal.logical.plans.PreserveOrder
 import org.neo4j.cypher.internal.logical.plans.ProcedureCall
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.logical.plans.ProjectEndpoints
@@ -160,7 +161,8 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
            _: Anti |
            _: VarExpand |
            _: TriadicBuild |
-           _: TriadicFilter
+           _: TriadicFilter |
+           _: PreserveOrder
       => breakOnFuseableOperator(lp, outerApplyPlanId, fuseIndex)
 
       // Void procedures preserve cardinality and are always non-breaking

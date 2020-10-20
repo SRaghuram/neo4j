@@ -70,6 +70,7 @@ import org.neo4j.cypher.internal.logical.plans.OptionalExpand
 import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
 import org.neo4j.cypher.internal.logical.plans.PartialSort
 import org.neo4j.cypher.internal.logical.plans.PartialTop
+import org.neo4j.cypher.internal.logical.plans.PreserveOrder
 import org.neo4j.cypher.internal.logical.plans.ProcedureCall
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.logical.plans.ProjectEndpoints
@@ -111,6 +112,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedProper
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotWithKeyAndAliases
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.util.Foldable.SkipChildren
 import org.neo4j.cypher.internal.util.Foldable.TraverseChildren
@@ -171,10 +173,12 @@ object SlotAllocation {
                     semanticTable: SemanticTable,
                     breakingPolicy: PipelineBreakingPolicy,
                     availableExpressionVariables: AvailableExpressionVariables,
+                    levagedOrders: LeveragedOrders,
                     allocateArgumentSlots: Boolean = false): SlotMetaData =
     new SingleQuerySlotAllocator(allocateArgumentSlots,
       breakingPolicy,
-      availableExpressionVariables).allocateSlots(lp, semanticTable, None)
+      availableExpressionVariables,
+      levagedOrders).allocateSlots(lp, semanticTable, None)
 }
 
 /**
@@ -183,7 +187,8 @@ object SlotAllocation {
 //noinspection NameBooleanParameters,RedundantDefaultArgument
 class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: Boolean,
                                                          breakingPolicy: PipelineBreakingPolicy,
-                                                         availableExpressionVariables: AvailableExpressionVariables) {
+                                                         availableExpressionVariables: AvailableExpressionVariables,
+                                                         leveragedOrders: LeveragedOrders) {
 
   private val allocations = new SlotConfigurations
   private val argumentSizes = new ArgumentSizes
@@ -557,7 +562,8 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
            _: CacheProperties |
            _: NonFuseable |
            _: TriadicBuild |
-           _: TriadicFilter
+           _: TriadicFilter |
+           _: PreserveOrder
       =>
 
       case p: ProjectingPlan =>

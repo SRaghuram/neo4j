@@ -48,7 +48,7 @@ class CartesianProductOperator(val workIdentity: WorkIdentity,
     extends InputLoopTask(accumulator.lhsMorsel)
     with ContinuableOperatorTaskWithMorselAndAccumulator[Morsel, LHSMorsel] {
 
-    private val rhsInputCursor = rhsMorsel.readCursor()
+    private val rhsInputCursor: MorselReadCursor = rhsMorsel.readCursor()
 
     override def workIdentity: WorkIdentity = CartesianProductOperator.this.workIdentity
 

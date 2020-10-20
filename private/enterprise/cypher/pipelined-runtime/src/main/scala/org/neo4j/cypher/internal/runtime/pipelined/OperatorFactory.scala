@@ -107,6 +107,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OrderedDistinctOper
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.PartialSortOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.PartialTopOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.PreserveOrderOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProcedureCallMiddleOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProcedureCallOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProduceResultOperator
@@ -555,6 +556,10 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           WorkIdentity.fromPlan(plan),
           prefixComparator,
           suffixComparator)(id)
+
+      case _: plans.PreserveOrder =>
+        val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
+        new PreserveOrderOperator(argumentStateMapId, WorkIdentity.fromPlan(plan))(id)
 
       case plans.Top(_, sortItems, limit) =>
         val ordering = sortItems.map(translateColumnOrder(slots, _))

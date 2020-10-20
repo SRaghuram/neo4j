@@ -47,6 +47,7 @@ import org.neo4j.cypher.internal.physicalplanning.ast.NodeFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.NodeProperty
 import org.neo4j.cypher.internal.physicalplanning.ast.ReferenceFromSlot
 import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompilerFront.NODE_PROPERTY
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
@@ -1171,10 +1172,10 @@ retVal1
   }
 
   private def getRefAt(offset: Int) =
-    invoke(context, method[CypherRow, AnyValue, Int]("getRefAt"), constant(offset))
+    invoke(context, method[ReadableRow, AnyValue, Int]("getRefAt"), constant(offset))
 
   private def getLongAt(offset: Int) =
-    invoke(context, method[CypherRow, Long, Int]("getLongAt"), constant(offset))
+    invoke(context, method[ReadableRow, Long, Int]("getLongAt"), constant(offset))
 
   private def getNodeProperty(nodeId: IntermediateRepresentation, offset: Int, propertyToken: Int) =
     invoke(DB_ACCESS, NODE_PROPERTY, nodeId, Constant(propertyToken), NODE_CURSOR, PROPERTY_CURSOR, constant(true))

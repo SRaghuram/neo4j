@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStreamArgumentStateBuffer
@@ -151,6 +152,8 @@ class PartialSortState(memoryTracker: MemoryTracker,
       morselMemoryTracker.allocateHeap(currentMorselHeapUsage)
   }
 
-  override def nextTasks(input: MorselData): IndexedSeq[ContinuableOperatorTask] =
+  override def nextTasks(state: PipelinedQueryState,
+                         input: MorselData,
+                         argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] =
     singletonIndexedSeq(new PartialSortTask(input, workIdentity, this))
 }

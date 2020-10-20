@@ -5,9 +5,11 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
+import org.neo4j.cypher.internal.expressions.ASTCachedProperty
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.physicalplanning.ReadOnlyArray
+import org.neo4j.cypher.internal.runtime.ResourceLinenumber
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
@@ -19,8 +21,15 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
+import org.neo4j.cypher.internal.runtime.pipelined.state.StandardAggregators.SHALLOW_SIZE
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.DataHolder
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
+import org.neo4j.memory.HeapEstimator.shallowSizeOfInstance
+import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.Value
+
+import scala.annotation.tailrec
 
 /**
  * Extension of Morsel buffer that also holds an argument state map in order to track
@@ -86,7 +95,99 @@ abstract class BaseArgExistsMorselBuffer[PRODUCES <: AnyRef, S <: ArgumentState]
 case class MorselData(morsels: IndexedSeq[Morsel],
                       argumentStream: ArgumentStream,
                       argumentRowIdsForReducers: Array[Long],
-                      viewOfArgumentRow: MorselRow)
+                      viewOfArgumentRow: MorselRow) {
+
+  /**
+   * Returns a [[MorselReadCursor]] over all containing morsels.
+   */
+  def readCursor(onFirstRow: Boolean = false): MorselReadCursor = {
+    if (morsels.nonEmpty) new Cursor(onFirstRow)
+    else Morsel.empty.readCursor(onFirstRow)
+  }
+
+  class Cursor(onFirstRow: Boolean) extends MorselReadCursor {
+    require(MorselData.this.morsels.nonEmpty)
+
+    private var morselCursor: MorselReadCursor = MorselData.this.morsels(0).readCursor(onFirstRow = false)
+    private var nextMorselDataIndex = 1
+
+    if (onFirstRow) next()
+
+    @inline
+    private[this] def setMorselCursor(index: Int) = {
+      morselCursor = MorselData.this.morsels(index).readCursor()
+      nextMorselDataIndex = index + 1
+    }
+
+    override def getLongAt(offset: Int): Long = morselCursor.getLongAt(offset)
+    override def getRefAt(offset: Int): AnyValue = morselCursor.getRefAt(offset)
+    override def getByName(name: String): AnyValue = morselCursor.getByName(name)
+    override def getLinenumber: Option[ResourceLinenumber] = morselCursor.getLinenumber
+    override def setRow(row: Int): Unit = morselCursor.setRow(row)
+
+    override def setToStart(): Unit = setMorselCursor(0)
+
+    override def setToEnd(): Unit = {
+      setMorselCursor(MorselData.this.morsels.size - 1)
+      morselCursor.setToEnd()
+    }
+
+    override def onValidRow(): Boolean = morselCursor != null && morselCursor.onValidRow()
+
+    @tailrec
+    override final def next(): Boolean = {
+      if (morselCursor.next()) {
+        true
+      } else if (nextMorselDataIndex >= MorselData.this.morsels.size) {
+        false
+      } else {
+        morselCursor = MorselData.this.morsels(nextMorselDataIndex).readCursor()
+        nextMorselDataIndex += 1
+        next()
+      }
+    }
+
+    override def hasNext: Boolean = morselCursor.hasNext || upcomingMorselsHasNext
+
+    private def upcomingMorselsHasNext(): Boolean = {
+      var i = nextMorselDataIndex
+      val size = MorselData.this.morsels.size
+      while (i < size) {
+        if (MorselData.this.morsels(i).hasData) return true
+        i += 1
+      }
+      false
+    }
+
+    override def snapshot(): MorselRow = morselCursor.snapshot()
+
+    override def row: Int = throw new UnsupportedOperationException("row not supported in MorselData.Cursor")
+
+    override def morsel: Morsel = morselCursor.morsel
+
+    override def longOffset(offsetInRow: Int): Int = morselCursor.longOffset(offsetInRow)
+
+    override def refOffset(offsetInRow: Int): Int = morselCursor.refOffset(offsetInRow)
+
+    override def shallowInstanceHeapUsage: Long = SHALLOW_SIZE
+
+    override def getCachedProperty(key: ASTCachedProperty): Value = morselCursor.getCachedProperty(key)
+
+    override def getCachedPropertyAt(offset: Int): Value = morselCursor.getCachedPropertyAt(offset)
+
+    override def setCachedProperty(key: ASTCachedProperty, value: Value): Unit = morselCursor.setCachedProperty(key, value)
+
+    override def setCachedPropertyAt(offset: Int, value: Value): Unit = morselCursor.setCachedPropertyAt(offset, value)
+
+    override def copyAllToSlottedRow(target: SlottedRow): Unit = morselCursor.copyAllToSlottedRow(target)
+
+    override def copyToSlottedRow(target: SlottedRow, nLongs: Int, nRefs: Int): Unit = morselCursor.copyToSlottedRow(target, nLongs, nRefs)
+  }
+
+  object Cursor {
+    final val SHALLOW_SIZE = shallowSizeOfInstance(classOf[Cursor])
+  }
+}
 
 trait ArgumentStream
 trait EndOfStream extends ArgumentStream

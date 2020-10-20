@@ -163,6 +163,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                                             logicalPlan,
                                             query.semanticTable,
                                             breakingPolicy,
+                                            query.leveragedOrders,
                                             allocateArgumentSlots = true)
 
     if (ENABLE_DEBUG_PRINTS && PRINT_PLAN_INFO_EARLY) {
@@ -204,8 +205,9 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                                                   queryIndexRegistrator,
                                                   parallelExecution,
                                                   codeGenerationMode),
-                                                  physicalPlan,
-                                                  converters)
+        physicalPlan,
+        converters,
+        query.leveragedOrders)
 
     if (context.debugOptions.contains("visualizepipelines")) {
       return ExecutionGraphVisualizer.getExecutionPlan(executionGraphDefinition)

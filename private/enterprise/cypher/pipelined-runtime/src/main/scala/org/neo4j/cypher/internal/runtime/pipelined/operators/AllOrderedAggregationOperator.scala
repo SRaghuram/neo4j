@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStreamArgumentStateBuffer
@@ -50,9 +51,10 @@ class AllOrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
     def this(memoryTracker: MemoryTracker) =
       this(null.asInstanceOf[orderedGroupings.KeyType], aggregations.map(_.createAggregationFunction(memoryTracker)), memoryTracker)
 
-    override def nextTasks(input: MorselData): IndexedSeq[ContinuableOperatorTaskWithMorselData] =
+    override def nextTasks(state: PipelinedQueryState,
+                           input: MorselData,
+                           argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorselData] =
       singletonIndexedSeq(new AllOrderedAggregationTask(input, this))
-
   }
 
   class AllOrderedAggregationTask(morselData: MorselData,

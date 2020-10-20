@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal.runtime.pipelined.expressions
 
 import org.neo4j.cypher.internal.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.expressions.functions
-import org.neo4j.cypher.internal.logical.plans.CartesianProduct
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NestedPlanExpression
 import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
@@ -38,9 +37,6 @@ object PipelinedBlacklist {
         // type() uses thread-unsafe RelationshipEntity.type()
         case f: FunctionInvocation if f.function == functions.Type && parallelExecution =>
           _ + (f.functionName.name+"()")
-
-        case c: CartesianProduct if leveragedOrders.get(c.id) =>
-          _ + "CartesianProduct if it needs to maintain order"
 
         case _: OrderedAggregation if parallelExecution =>
           _ + "OrderedAggregation"

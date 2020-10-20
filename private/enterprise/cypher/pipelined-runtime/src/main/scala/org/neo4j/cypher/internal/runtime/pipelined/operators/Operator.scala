@@ -290,7 +290,7 @@ trait DataInputOperatorState[DATA <: AnyRef] extends OperatorState {
     val data = operatorInput.takeData[DATA]()
     if (data != null) {
       try {
-        nextTasks(data)
+        nextTasks(state, data, argumentStateMaps)
       } catch {
         case NonFatalCypherError(t) =>
           throw SchedulingInputException(DataInput(data), t)
@@ -300,7 +300,7 @@ trait DataInputOperatorState[DATA <: AnyRef] extends OperatorState {
     }
   }
 
-  def nextTasks(input: DATA): IndexedSeq[ContinuableOperatorTask]
+  def nextTasks(state: PipelinedQueryState, input: DATA, argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask]
 }
 
 /**

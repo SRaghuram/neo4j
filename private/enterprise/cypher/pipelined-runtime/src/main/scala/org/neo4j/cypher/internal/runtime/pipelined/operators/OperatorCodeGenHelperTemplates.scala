@@ -50,8 +50,6 @@ import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.CypherRow
-import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
@@ -69,6 +67,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
+import org.neo4j.cypher.internal.runtime.DbAccess
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.cypher.operations.CursorUtils
@@ -136,6 +137,7 @@ object OperatorCodeGenHelperTemplates {
   // Constructor parameters
   val DATA_READ_CONSTRUCTOR_PARAMETER: Parameter = param[Read]("dataRead")
   val INPUT_MORSEL_CONSTRUCTOR_PARAMETER: Parameter = param[Morsel]("inputMorsel")
+  val INPUT_MORSEL_DATA_CONSTRUCTOR_PARAMETER: Parameter = param[MorselData]("morselData")
   val ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER: Parameter = param[ArgumentStateMaps]("argumentStateMaps")
 
   // Other method parameters
@@ -145,16 +147,26 @@ object OperatorCodeGenHelperTemplates {
   // Fields
   val WORK_IDENTITY_STATIC_FIELD_NAME  = "_workIdentity"
   val DATA_READ: InstanceField = field[Read]("dataRead", load(DATA_READ_CONSTRUCTOR_PARAMETER.name))
+  val INPUT_CURSOR_FIELD_NAME = "inputCursor"
   val INPUT_CURSOR_FIELD: InstanceField =
-    field[MorselReadCursor]("inputCursor",
+    field[MorselReadCursor](INPUT_CURSOR_FIELD_NAME,
       invoke(
         load(INPUT_MORSEL_CONSTRUCTOR_PARAMETER.name),
         method[Morsel, MorselReadCursor, Boolean]("readCursor"), constant(true)
       )
     )
+  val MORSEL_DATA_INPUT_CURSOR_FIELD: InstanceField =
+    field[MorselReadCursor](INPUT_CURSOR_FIELD_NAME, // Note, must be identical with INPUT_CURSOR_FIELD!
+      invoke(
+        load(INPUT_MORSEL_DATA_CONSTRUCTOR_PARAMETER.name),
+        method[MorselData, MorselReadCursor, Boolean]("readCursor"), constant(true)
+      )
+    )
   val INPUT_CURSOR: IntermediateRepresentation = loadField(INPUT_CURSOR_FIELD)
   val INPUT_MORSEL_FIELD: InstanceField =
     field[Morsel]("inputMorsel", load(INPUT_MORSEL_CONSTRUCTOR_PARAMETER.name))
+  val INPUT_MORSEL_DATA_FIELD: InstanceField =
+    field[MorselData]("morselDataField", load(INPUT_MORSEL_DATA_CONSTRUCTOR_PARAMETER.name))
 
   val SHOULD_BREAK: LocalVariable = variable[Boolean]("shouldBreak", constant(false))
   val NO_MEMORY_TRACKER: GetStatic = getStatic[EmptyMemoryTracker, MemoryTracker]("INSTANCE")
@@ -241,7 +253,7 @@ object OperatorCodeGenHelperTemplates {
     setField(memoryTrackerField, getMemoryTracker(operatorId))
 
   def getArgument(argumentStateMapId: ArgumentStateMapId): IntermediateRepresentation =
-    invoke(INPUT_CURSOR, method[CypherRow, Long, Int]("getLongAt"),
+    invoke(INPUT_CURSOR, method[ReadableRow, Long, Int]("getLongAt"),
       loadField(field[Int](argumentSlotOffsetFieldName(argumentStateMapId))))
 
   def argumentStateMap[STATE <: ArgumentState](argumentStateMapId: ArgumentStateMapId

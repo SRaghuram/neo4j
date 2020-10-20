@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateBufferFactoryFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
@@ -188,13 +189,17 @@ class ArgumentStreamArgumentStateBuffer(argumentRowId: Long,
   }
 }
 
-object ArgumentStreamArgumentStateBuffer {
+object ArgumentStreamArgumentStateBuffer extends ArgumentStateBufferFactoryFactory {
   class Factory(stateFactory: StateFactory, operatorId: Id) extends ArgumentStateFactory[ArgumentStateBuffer] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
       new ArgumentStreamArgumentStateBuffer(argumentRowId, argumentMorsel.snapshot(), new StandardArgumentStreamBuffer[Morsel](stateFactory.newBuffer[Morsel](operatorId)), argumentRowIdsForReducers)
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
       new ArgumentStreamArgumentStateBuffer(argumentRowId, argumentMorsel.snapshot(), new ConcurrentArgumentStreamBuffer[Morsel](stateFactory.newBuffer[Morsel](operatorId)), argumentRowIdsForReducers)
+  }
+
+  def createFactory(stateFactory: StateFactory, operatorId: Int): Factory = {
+    new Factory(stateFactory, Id(operatorId))
   }
 }
 
