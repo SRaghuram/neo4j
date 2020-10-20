@@ -65,8 +65,8 @@ import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.REL
 import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.RELATIONSHIP_CREATE_WITH_CONFIG;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.asConfigMap;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.asConfigString;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.asStrList;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.asProcedureConfigMap;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.asStrList;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexSettingsKeys.PROCEDURE_EVENTUALLY_CONSISTENT;
 
 @ClusterExtension
@@ -261,7 +261,7 @@ class FulltextIndexCausalClusterIT
             GraphDatabaseAPI db = member.defaultDatabase();
             try ( Transaction tx = db.beginTx() )
             {
-                tx.schema().awaitIndexesOnline( 20, TimeUnit.SECONDS );
+                tx.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
                 tx.execute( AWAIT_REFRESH ).close();
                 DependencyResolver dependencyResolver = db.getDependencyResolver();
                 TransactionIdStore transactionIdStore = dependencyResolver.resolveDependency( TransactionIdStore.class );

@@ -250,7 +250,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
             // Make sure all schema changes are stable, to avoid any synchronous schema state invalidation
-            tx.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
+            tx.schema().awaitIndexesOnline( 30, TimeUnit.SECONDS );
         }
         SchemaStateCheck schemaState = new SchemaStateCheck().setUp(); // +1
         {
@@ -290,7 +290,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
             // Make sure all schema changes are stable, to avoid any synchronous schema state invalidation
-            tx.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
+            tx.schema().awaitIndexesOnline( 30, TimeUnit.SECONDS );
         }
         SchemaStateCheck schemaState = new SchemaStateCheck().setUp(); // +1
         {

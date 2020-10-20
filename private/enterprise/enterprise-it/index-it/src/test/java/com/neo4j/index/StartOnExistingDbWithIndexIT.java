@@ -69,7 +69,7 @@ class StartOnExistingDbWithIndexIT
     {
         try ( Transaction transaction = db.beginTx() )
         {
-            transaction.schema().awaitIndexesOnline( 5, TimeUnit.SECONDS );
+            transaction.schema().awaitIndexesOnline( 30, TimeUnit.SECONDS );
             transaction.commit();
         }
     }

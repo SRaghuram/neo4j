@@ -298,7 +298,7 @@ class GraphDbStructureGuideTest
     {
         commitAndReOpen();
 
-        tx.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
+        tx.schema().awaitIndexesOnline( 30, TimeUnit.SECONDS );
         commit();
 
         GraphDbStructureGuide analyzer = new GraphDbStructureGuide( db );

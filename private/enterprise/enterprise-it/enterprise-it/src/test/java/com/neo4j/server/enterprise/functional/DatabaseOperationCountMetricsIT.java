@@ -32,7 +32,7 @@ import static org.neo4j.test.assertion.Assert.assertEventually;
 @EnterpriseDbmsExtension( configurationCallback = "configure" )
 class DatabaseOperationCountMetricsIT
 {
-    private static final int TIMEOUT = 60;
+    private static final int TIMEOUT = 180;
 
     @Inject
     private TestDirectory directory;

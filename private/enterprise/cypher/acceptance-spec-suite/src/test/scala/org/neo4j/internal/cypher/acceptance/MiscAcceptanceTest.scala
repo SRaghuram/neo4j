@@ -172,7 +172,7 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
       executeSingle("CREATE INDEX FOR (n:L2) ON (n.p2,n.p3)")
 
       graph.withTx(tx => {
-        tx.schema.awaitIndexesOnline(10, TimeUnit.SECONDS)
+        tx.schema.awaitIndexesOnline(30, TimeUnit.SECONDS)
       })
 
       // The query was run through IdAnonymizer

@@ -173,7 +173,7 @@ class BackupSchemaIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            tx.schema().awaitIndexesOnline( 1, MINUTES );
+            tx.schema().awaitIndexesOnline( 2, MINUTES );
         }
     }
 

@@ -243,7 +243,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
     {
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
-            tx.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
+            tx.schema().awaitIndexesOnline( 30, TimeUnit.SECONDS );
             tx.commit();
         }
     }
