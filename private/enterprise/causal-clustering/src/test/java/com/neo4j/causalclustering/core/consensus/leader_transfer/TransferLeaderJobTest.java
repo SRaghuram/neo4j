@@ -297,7 +297,10 @@ class TransferLeaderJobTest
     {
         // Default priority group exist and I am in it
         var config = Config.newBuilder().set( CausalClusteringSettings.default_leadership_priority_group, new ServerGroupName( "default_prio" ) )
-                           .set( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).setting(), new ServerGroupName( "explicit_prio" ) ) )
+                           .set( Map.of(
+                                   new LeadershipPriorityGroupSetting( databaseId1.name() ).leadership_priority_group,
+                                   new ServerGroupName( "explicit_prio" )
+                           ) )
                            .set( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "explicit_prio" ) ).build();
         var serverGroupsSupplier = listen( config );
 
@@ -332,7 +335,10 @@ class TransferLeaderJobTest
         // Default priority leadership group is set but no explicit leadership groups are set
         var defaultGroupName = new ServerGroupName( "default_prio" );
         var config = Config.newBuilder().set( CausalClusteringSettings.default_leadership_priority_group, defaultGroupName )
-                           .set( new LeadershipPriorityGroupSetting( randomNamedDatabaseId().name() ).setting(), new ServerGroupName( "other_group" ) ).build();
+                           .set(
+                                   new LeadershipPriorityGroupSetting( randomNamedDatabaseId().name() ).leadership_priority_group,
+                                   new ServerGroupName( "other_group" )
+                           ).build();
         var myLeaderships = new ArrayList<NamedDatabaseId>();
         var serverGroupsSupplier = listen( config );
         var stubLeadershipTransferor = new StubLeadershipTransferor();
@@ -359,7 +365,10 @@ class TransferLeaderJobTest
     {
         // No priority leadership group is set. Neither default nor explicit.
         var config = Config.newBuilder()
-                           .set( new LeadershipPriorityGroupSetting( randomNamedDatabaseId().name() ).setting(), new ServerGroupName( "other_group" ) ).build();
+                           .set(
+                                   new LeadershipPriorityGroupSetting( randomNamedDatabaseId().name() ).leadership_priority_group,
+                                   new ServerGroupName( "other_group" )
+                           ).build();
         var myLeaderships = new ArrayList<NamedDatabaseId>();
         var serverGroupsSupplier = listen( config );
         var stubLeadershipTransferor = new StubLeadershipTransferor();
@@ -380,8 +389,11 @@ class TransferLeaderJobTest
     {
         // Default priority leadership group is set. One database has priority leadership group explicit set to nothing.
         var config = Config.newBuilder().set( CausalClusteringSettings.default_leadership_priority_group, new ServerGroupName( "default_prio" ) )
-                           .set( new LeadershipPriorityGroupSetting( databaseId1.name() ).setting(), ServerGroupName.EMPTY )
-                           .set( new LeadershipPriorityGroupSetting( randomNamedDatabaseId().name() ).setting(), new ServerGroupName( "other_group" ) ).build();
+                           .set( new LeadershipPriorityGroupSetting( databaseId1.name() ).leadership_priority_group, ServerGroupName.EMPTY )
+                           .set(
+                                   new LeadershipPriorityGroupSetting( randomNamedDatabaseId().name() ).leadership_priority_group,
+                                   new ServerGroupName( "other_group" )
+                           ).build();
         var myLeaderships = new ArrayList<NamedDatabaseId>();
         var serverGroupsSupplier = listen( config );
         var stubLeadershipTransferor = new StubLeadershipTransferor();
@@ -406,9 +418,12 @@ class TransferLeaderJobTest
         var explicitGroupNames = Map.of( databaseId1, new ServerGroupName( "explicit_prio_1" ),
                                          databaseId2, new ServerGroupName( "explicit_prio_2" ));
         var config = Config.newBuilder().set( CausalClusteringSettings.default_leadership_priority_group, defaultGroupName )
-                           .set( new LeadershipPriorityGroupSetting( databaseId1.name() ).setting(), explicitGroupNames.get( databaseId1 ) )
-                           .set( new LeadershipPriorityGroupSetting( databaseId2.name() ).setting(), explicitGroupNames.get( databaseId2 ) )
-                           .set( new LeadershipPriorityGroupSetting( randomNamedDatabaseId().name() ).setting(), new ServerGroupName( "other_group" ) ).build();
+                           .set( new LeadershipPriorityGroupSetting( databaseId1.name() ).leadership_priority_group, explicitGroupNames.get( databaseId1 ) )
+                           .set( new LeadershipPriorityGroupSetting( databaseId2.name() ).leadership_priority_group, explicitGroupNames.get( databaseId2 ) )
+                           .set(
+                                   new LeadershipPriorityGroupSetting( randomNamedDatabaseId().name() ).leadership_priority_group,
+                                   new ServerGroupName( "other_group" )
+                           ).build();
         var myLeaderships = new ArrayList<NamedDatabaseId>();
         var serverGroupsSupplier = listen( config );
         var stubLeadershipTransferor = new StubLeadershipTransferor();

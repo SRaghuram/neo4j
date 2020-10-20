@@ -126,7 +126,7 @@ class LeaderTransferIT
 
         additionalCore.start();
 
-        assertLeaderIsOnCorrectMember( cluster, GraphDatabaseSettings.DEFAULT_DATABASE_NAME, additionalCore );
+        assertLeaderIsOnCorrectMember( cluster, DEFAULT_DATABASE_NAME, additionalCore );
         assertLeaderIsOnCorrectMember( cluster, SYSTEM_DATABASE_NAME, additionalCore );
 
         createDatabase( databaseFoo, cluster );
