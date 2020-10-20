@@ -9,10 +9,10 @@ import java.nio.file.Path
 
 import org.neo4j.cypher.internal.LogicalQuery
 import org.neo4j.cypher.internal.RuntimeContext
+import org.neo4j.cypher.internal.config.CUSTOM_MEMORY_TRACKING_CONTROLLER.MemoryTrackerDecorator
 import org.neo4j.cypher.internal.runtime.HighWaterScopedMemoryTracker
 import org.neo4j.cypher.internal.runtime.InputCursor
 import org.neo4j.cypher.internal.runtime.InputDataStream
-import org.neo4j.cypher.internal.runtime.MemoryTrackingController.MemoryTrackerDecorator
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.NonRecordingRuntimeResult
 import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite

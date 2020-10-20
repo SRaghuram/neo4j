@@ -16,10 +16,9 @@ import com.neo4j.bench.micro.data.Plans.cypherTypeFor
 import com.neo4j.bench.micro.data.TypeParamValues.listOf
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG
 import org.neo4j.configuration.Config
-import org.neo4j.cypher.internal.ConfigMemoryTrackingController
 import org.neo4j.cypher.internal.CypherRuntimeConfiguration
-import org.neo4j.cypher.internal.NoSchedulerTracing
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.config.ConfigMemoryTrackingController
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.planner.spi.PlanContext

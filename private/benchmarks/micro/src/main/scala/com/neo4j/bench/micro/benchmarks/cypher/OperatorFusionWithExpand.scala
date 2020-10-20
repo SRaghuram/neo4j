@@ -16,10 +16,9 @@ import com.neo4j.bench.micro.data.Plans.IdGen
 import com.neo4j.bench.micro.data.Plans.astVariable
 import com.neo4j.bench.micro.data.RelationshipDefinition
 import org.neo4j.configuration.Config
-import org.neo4j.cypher.internal.ConfigMemoryTrackingController
 import org.neo4j.cypher.internal.CypherRuntimeConfiguration
-import org.neo4j.cypher.internal.NoSchedulerTracing
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.config.ConfigMemoryTrackingController
 import org.neo4j.cypher.internal.expressions.SemanticDirection.OUTGOING
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.ExpandAll
