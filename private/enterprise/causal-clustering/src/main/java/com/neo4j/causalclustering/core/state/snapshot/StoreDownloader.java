@@ -85,7 +85,7 @@ public class StoreDownloader
         {
             throw new SnapshotFailedException(
                     "Store copy failed due to store ID mismatch. There are database operating with different store ids.",
-                    SnapshotFailedException.Status.RETRYABLE );
+                    SnapshotFailedException.Status.UNRECOVERABLE );
         }
         return remoteStoreId;
     }
