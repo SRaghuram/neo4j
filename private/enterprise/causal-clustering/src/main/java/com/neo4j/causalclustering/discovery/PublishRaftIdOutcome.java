@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.discovery;
 
 public enum PublishRaftIdOutcome
 {
-    FAILED_PUBLISH,
+    MAYBE_PUBLISHED,
     SUCCESSFUL_PUBLISH_BY_ME,
     SUCCESSFUL_PUBLISH_BY_OTHER,
 }

@@ -19,10 +19,13 @@ import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
+import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -68,7 +71,7 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
     // Topology component data
     private Set<DatabaseId> knownDatabaseIds = emptySet();
     private MetadataMessage memberData;
-    private Set<RaftId> bootstrappedRafts;
+    private Map<RaftId,RaftMemberId> bootstrappedRafts;
     private ClusterViewMessage clusterView;
     private boolean memberUp;
     private boolean haveObservedSelfInClusterViewOnce;
@@ -90,7 +93,7 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
         this.topologyBuilder = topologyBuilder;
         int minCoreHostsAtRuntime = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_runtime );
         this.memberData = MetadataMessage.EMPTY;
-        this.bootstrappedRafts = emptySet();
+        this.bootstrappedRafts = Map.of();
         this.clusterView = ClusterViewMessage.EMPTY;
         this.myClusterAddress = cluster.selfUniqueAddress();
         this.config = config;
@@ -199,6 +202,9 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
         receivedDatabaseIds.forEach( this::buildTopology );
 
         knownDatabaseIds = receivedDatabaseIds; // override the set of known IDs to no accumulate deleted ones
+
+        var bootstrapped =  new BootstrapState( clusterView, memberData, myClusterAddress, config, bootstrappedRafts );
+        bootstrapStateSink.offer( bootstrapped );
     }
 
     private boolean isReadyToBuildTopologies()
@@ -212,7 +218,7 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
                 myClusterAddress, clusterView, memberData );
 
         var raftId = RaftId.from( databaseId );
-        raftId = bootstrappedRafts.contains( raftId ) ? raftId : null;
+        raftId = bootstrappedRafts.containsKey( raftId ) ? raftId : null;
 
         DatabaseCoreTopology newCoreTopology = topologyBuilder.buildCoreTopology( databaseId, raftId, clusterView, memberData );
         log().debug( "Returned topology: {}", newCoreTopology );
@@ -225,7 +231,6 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
 
         topologyUpdateSink.offer( new CoreTopologyMessage( newCoreTopology, akkaMemberAddresses ) );
         readReplicaTopologyActor.tell( newCoreTopology, getSelf() );
-        bootstrapStateSink.offer( new BootstrapState( clusterView, memberData, myClusterAddress, config ) );
     }
 
     private static class MemberUp

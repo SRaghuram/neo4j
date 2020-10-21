@@ -6,25 +6,25 @@
 package com.neo4j.causalclustering.discovery.akka.coretopology;
 
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 
-import java.util.Collections;
+import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
 /**
  * Sent from discovery service to this Neo4J instance
  */
 public class BootstrappedRaftsMessage
 {
-    public static final BootstrappedRaftsMessage EMPTY = new BootstrappedRaftsMessage( Collections.emptySet() );
-    private final Set<RaftId> bootstrappedRafts;
+    public static final BootstrappedRaftsMessage EMPTY = new BootstrappedRaftsMessage( Map.of() );
+    private final Map<RaftId,RaftMemberId> bootstrappedRafts;
 
-    public BootstrappedRaftsMessage( Set<RaftId> bootstrappedRafts )
+    public BootstrappedRaftsMessage( Map<RaftId,RaftMemberId> bootstrappedRafts )
     {
-        this.bootstrappedRafts = Set.copyOf( bootstrappedRafts );
+        this.bootstrappedRafts = Map.copyOf( bootstrappedRafts );
     }
 
-    public Set<RaftId> bootstrappedRafts()
+    public Map<RaftId,RaftMemberId> bootstrappedRafts()
     {
         return bootstrappedRafts;
     }

@@ -21,12 +21,10 @@ import com.neo4j.causalclustering.identity.IdFactory
 import com.neo4j.causalclustering.identity.RaftId
 import com.neo4j.causalclustering.identity.RaftMemberId
 import com.neo4j.causalclustering.identity.StubClusteringIdentityModule
-import org.neo4j.dbms.StubDatabaseStateService
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
 
 import scala.collection.JavaConverters.mapAsJavaMapConverter
-import scala.collection.JavaConverters.setAsJavaSetConverter
 
 class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
 
@@ -42,20 +40,20 @@ class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
       expectReplicatorUpdates(replicator, dataKey)
     }
 
-    "send bootstrapped raft IDs to core topology actor from replicator" in new Fixture {
-      Given("raft IDs for databases")
+    "send bootstrapped RaftId->RaftMemberId mappings to core topology actor from replicator" in new Fixture {
+      Given("RaftId->RaftMemberId mappings")
       val memberId = IdFactory.randomRaftMemberId()
       val db1Id, db2Id = randomNamedDatabaseId.databaseId()
       val bootstrappedRaft1 = LWWMap.empty.put(cluster, RaftId.from(db1Id), memberId)
       val bootstrappedRaft2 = LWWMap.empty.put(cluster, RaftId.from(db2Id), memberId)
 
-      When("raft IDs updated from replicator")
+      When("mappings updated from replicator")
       replicatedDataActorRef ! Replicator.Changed(dataKey)(bootstrappedRaft1)
       replicatedDataActorRef ! Replicator.Changed(dataKey)(bootstrappedRaft2)
 
-      Then("send updates to core topology actor")
-      coreTopologyProbe.expectMsg(new BootstrappedRaftsMessage(bootstrappedRaft1.getEntries.keySet))
-      coreTopologyProbe.expectMsg(new BootstrappedRaftsMessage(bootstrappedRaft1.merge(bootstrappedRaft2).getEntries.keySet))
+      Then("send those updates to core topology actor")
+      coreTopologyProbe.expectMsg(new BootstrappedRaftsMessage(bootstrappedRaft1.getEntries))
+      coreTopologyProbe.expectMsg(new BootstrappedRaftsMessage(bootstrappedRaft1.merge(bootstrappedRaft2).getEntries))
     }
 
     "should send initial data to replicator when asked" in new Fixture {

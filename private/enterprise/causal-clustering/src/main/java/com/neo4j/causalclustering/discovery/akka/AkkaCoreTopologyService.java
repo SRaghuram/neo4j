@@ -277,7 +277,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
                 throw new RuntimeException( e.getCause() );
             }
         }
-        return PublishRaftIdOutcome.FAILED_PUBLISH;
+        return PublishRaftIdOutcome.MAYBE_PUBLISHED;
     }
 
     @Override
@@ -297,9 +297,16 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public boolean canBootstrapRaftGroup( NamedDatabaseId namedDatabaseId )
+    public boolean canBootstrapDatabase( NamedDatabaseId namedDatabaseId )
     {
         return globalTopologyState.bootstrapState().canBootstrapRaft( namedDatabaseId );
+    }
+
+    @Override
+    public boolean didBootstrapDatabase( NamedDatabaseId namedDatabaseId )
+    {
+        var thisRaftMember = resolveRaftMemberForServer( namedDatabaseId, identityModule.memberId() );
+        return globalTopologyState.bootstrapState().memberBootstrappedRaft( namedDatabaseId, thisRaftMember );
     }
 
     @VisibleForTesting

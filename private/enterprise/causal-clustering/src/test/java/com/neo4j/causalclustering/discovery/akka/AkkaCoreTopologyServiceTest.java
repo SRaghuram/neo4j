@@ -17,6 +17,7 @@ import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.identity.ClusteringIdentityModule;
 import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.identity.StubClusteringIdentityModule;
 import com.neo4j.dbms.EnterpriseDatabaseState;
 import org.junit.jupiter.api.AfterEach;
@@ -301,8 +302,8 @@ class AkkaCoreTopologyServiceTest
     @Test
     void shouldNotBootstrapWhenEmpty()
     {
-        assertFalse( service.canBootstrapRaftGroup( randomNamedDatabaseId() ) );
-        assertFalse( service.canBootstrapRaftGroup( NAMED_SYSTEM_DATABASE_ID ) );
+        assertFalse( service.canBootstrapDatabase( randomNamedDatabaseId() ) );
+        assertFalse( service.canBootstrapDatabase( NAMED_SYSTEM_DATABASE_ID ) );
     }
 
     @Test
@@ -314,10 +315,26 @@ class AkkaCoreTopologyServiceTest
         when( bootstrapState.canBootstrapRaft( databaseId ) ).thenReturn( true );
         service.topologyState().onBootstrapStateUpdate( bootstrapState );
 
-        assertTrue( service.canBootstrapRaftGroup( databaseId ) );
+        assertTrue( service.canBootstrapDatabase( databaseId ) );
 
-        assertFalse( service.canBootstrapRaftGroup( randomNamedDatabaseId() ) );
-        assertFalse( service.canBootstrapRaftGroup( NAMED_SYSTEM_DATABASE_ID ) );
+        assertFalse( service.canBootstrapDatabase( randomNamedDatabaseId() ) );
+        assertFalse( service.canBootstrapDatabase( NAMED_SYSTEM_DATABASE_ID ) );
+    }
+
+    @Test
+    void shouldCorrectlyReportIfBootstrappedDatabase()
+    {
+        var databaseId = randomNamedDatabaseId();
+
+        var bootstrapState = mock( BootstrapState.class );
+        var raftMemberId = service.resolveRaftMemberForServer( databaseId, service.memberId() );
+        when( bootstrapState.memberBootstrappedRaft( databaseId, raftMemberId ) ).thenReturn( true );
+        service.topologyState().onBootstrapStateUpdate( bootstrapState );
+
+        assertTrue( service.didBootstrapDatabase( databaseId ) );
+
+        assertFalse( service.canBootstrapDatabase( randomNamedDatabaseId() ) );
+        assertFalse( service.canBootstrapDatabase( NAMED_SYSTEM_DATABASE_ID ) );
     }
 
     @Test
@@ -409,7 +426,7 @@ class AkkaCoreTopologyServiceTest
         // verify core topology is not empty
         assertEquals( Set.of( memberId1, memberId2, memberId3 ), service.coreTopologyForDatabase( databaseId ).servers().keySet() );
         assertEquals( Set.of( memberId1, memberId2, memberId3 ), service.allCoreServers().keySet() );
-        assertTrue( service.canBootstrapRaftGroup( databaseId ) );
+        assertTrue( service.canBootstrapDatabase( databaseId ) );
 
         // verify read replica topology is not empty
         assertEquals( Set.of( memberId1, memberId2 ), service.readReplicaTopologyForDatabase( databaseId ).servers().keySet() );
@@ -420,7 +437,7 @@ class AkkaCoreTopologyServiceTest
         // verify core topology is empty
         assertThat( service.coreTopologyForDatabase( databaseId ).servers().keySet(), is( empty() ) );
         assertThat( service.allCoreServers().keySet(), is( empty() ) );
-        assertFalse( service.canBootstrapRaftGroup( databaseId ) );
+        assertFalse( service.canBootstrapDatabase( databaseId ) );
 
         // verify read replica topology is empty
         assertThat( service.readReplicaTopologyForDatabase( databaseId ).servers().keySet(), is( empty() ) );

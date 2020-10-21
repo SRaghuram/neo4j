@@ -22,6 +22,7 @@ import akka.testkit.TestActorRef
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.CoreServerInfo
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology
+import com.neo4j.causalclustering.discovery.TestDiscoveryMember
 import com.neo4j.causalclustering.discovery.TestTopology
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor
@@ -30,6 +31,7 @@ import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonito
 import com.neo4j.causalclustering.identity.IdFactory
 import com.neo4j.causalclustering.identity.MemberId
 import com.neo4j.causalclustering.identity.RaftId
+import com.neo4j.causalclustering.identity.RaftMemberId
 import com.neo4j.causalclustering.identity.StubClusteringIdentityModule
 import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.any
@@ -51,7 +53,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
           Given("updated raft ID data")
           sendInitialData()
           makeTopologyActorKnowAboutCoreMember()
-          val event = new BootstrappedRaftsMessage(Collections.singleton(raftId))
+          val event = new BootstrappedRaftsMessage(Map(raftId -> IdFactory.randomRaftMemberId).asJava)
 
           When("data received")
           topologyActorRef ! event
@@ -108,7 +110,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
           makeTopologyActorKnowAboutCoreMember(nullRaftIdTopology)
 
           When("update raft ID")
-          val event = new BootstrappedRaftsMessage(Collections.singleton(raftId))
+          val event = new BootstrappedRaftsMessage(Map(raftId -> IdFactory.randomRaftMemberId).asJava)
           Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(databaseId), any(), any(), any()))
             .thenReturn(expectedCoreTopology)
           topologyActorRef ! event
@@ -123,7 +125,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
           makeTopologyActorKnowAboutCoreMember()
 
           val otherDatabaseId = randomNamedDatabaseId().databaseId()
-          val otherTopology = new DatabaseCoreTopology(otherDatabaseId, raftId, Map(IdFactory.randomMemberId() -> coreServerInfo(42)).asJava)
+          val otherTopology = new DatabaseCoreTopology(otherDatabaseId, raftId, Map(IdFactory.randomMemberId -> coreServerInfo(42)).asJava)
           val emptyTopology = new DatabaseCoreTopology(databaseId, raftId, Map.empty[MemberId, CoreServerInfo].asJava)
 
           Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(otherDatabaseId), any(), any(), any())).thenReturn(otherTopology)
@@ -150,24 +152,34 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
           topologyActorRef ! metadataMessage
 
           Then("update bootstrap state")
-          val expectedBootstrapState = new BootstrapState(clusterView, metadataMessage, myUniqueAddress, config)
+          val expectedBootstrapState = new BootstrapState(clusterView, metadataMessage,
+            myUniqueAddress, config, Map.empty[RaftId,RaftMemberId].asJava)
           bootstrapStateReceiver.receiveOne(defaultWaitTime) should equal(expectedBootstrapState)
         }
 
-        "cluster id updated" in new Fixture {
-          Given("metadata and cluster ID messages")
+        "bootstrapped RaftId->MemberId mappings updated" in new Fixture {
+          Given("metadata and bootstrapped raft messages")
           val clusterView = sendInitialData()
           val metadataMessage = newMetadataMessage(databaseId)
-          val raftIdMessage = new BootstrappedRaftsMessage(Collections.singleton(raftId))
+          val previouslyBootstrapped = Map(raftId -> IdFactory.randomRaftMemberId).asJava
+          val bootstrappedRaftsMessage = new BootstrappedRaftsMessage(previouslyBootstrapped)
 
-          When("messages received")
+          val expectedBootstrapState1 = new BootstrapState(clusterView, metadataMessage,
+            myUniqueAddress, config, Map.empty[RaftId,RaftMemberId].asJava)
+          val expectedBootstrapState2 = new BootstrapState(clusterView, metadataMessage,
+            myUniqueAddress, config, previouslyBootstrapped)
+
+          When("metadata message received")
           topologyActorRef ! metadataMessage
-          topologyActorRef ! raftIdMessage
 
-          Then("update bootstrap state")
-          val expectedBootstrapState = new BootstrapState(clusterView, metadataMessage, myUniqueAddress, config)
-          bootstrapStateReceiver.receiveOne(defaultWaitTime) should equal(expectedBootstrapState)
-          bootstrapStateReceiver.receiveOne(defaultWaitTime) should equal(expectedBootstrapState)
+          Then("update bootstrap state with none bootstrapped")
+          bootstrapStateReceiver.receiveOne(defaultWaitTime) should equal(expectedBootstrapState1)
+
+          When("bootstrapped rafts message received")
+          topologyActorRef ! bootstrappedRaftsMessage
+
+          Then("update bootstrap state with one bootstrapped")
+          bootstrapStateReceiver.receiveOne(defaultWaitTime) should equal(expectedBootstrapState2)
         }
 
         "cluster view updated" in new Fixture {
@@ -183,10 +195,12 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
           topologyActorRef ! clusterViewMessage
 
           Then("update bootstrap state")
-          val expectedBootstrapState1 = new BootstrapState(initialClusterView, metadataMessage, myUniqueAddress, config)
+          val expectedBootstrapState1 = new BootstrapState(initialClusterView, metadataMessage,
+            myUniqueAddress, config, Map.empty[RaftId,RaftMemberId].asJava)
           bootstrapStateReceiver.receiveOne(defaultWaitTime) should equal(expectedBootstrapState1)
 
-          val expectedBootstrapState2 = new BootstrapState(clusterViewMessage, metadataMessage, myUniqueAddress, config)
+          val expectedBootstrapState2 = new BootstrapState(clusterViewMessage, metadataMessage,
+            myUniqueAddress, config, Map.empty[RaftId,RaftMemberId].asJava)
           bootstrapStateReceiver.receiveOne(defaultWaitTime) should equal(expectedBootstrapState2)
         }
       }
@@ -237,7 +251,8 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
     Mockito.when(cluster.selfAddress).thenReturn(myAddress)
     Mockito.when(cluster.selfUniqueAddress).thenReturn(myUniqueAddress)
 
-    val props = CoreTopologyActor.props(topologySink,
+    val props = CoreTopologyActor.props(
+      topologySink,
       bootstrapStateSink,
       readReplicaProbe.ref,
       replicatorProbe.ref,

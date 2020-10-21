@@ -114,7 +114,7 @@ public class RaftIdActor extends BaseReplicatedDataActor<LWWMap<RaftId,RaftMembe
                     PublishRaftIdOutcome outcome;
                     if ( successfulPublisher == null )
                     {
-                        outcome = PublishRaftIdOutcome.FAILED_PUBLISH;
+                        outcome = PublishRaftIdOutcome.MAYBE_PUBLISHED;
                     }
                     else if ( Objects.equals( successfulPublisher, request.publisher() ) )
                     {
@@ -135,9 +135,9 @@ public class RaftIdActor extends BaseReplicatedDataActor<LWWMap<RaftId,RaftMembe
                 .map( m -> (RaftIdSetRequest) m )
                 .ifPresent( request ->
                 {
-                    String message = String.format( "Failed to set RaftId with request: %s", request );
+                    String message = String.format( "Failed to conclusively set RaftId with request: %s", request );
                     log().warning( message );
-                    request.replyTo().tell( PublishRaftIdOutcome.FAILED_PUBLISH, getSelf() );
+                    request.replyTo().tell( PublishRaftIdOutcome.MAYBE_PUBLISHED, getSelf() );
                 } );
     }
 
@@ -145,7 +145,7 @@ public class RaftIdActor extends BaseReplicatedDataActor<LWWMap<RaftId,RaftMembe
     protected void handleIncomingData( LWWMap<RaftId,RaftMemberId> newData )
     {
         data = newData;
-        coreTopologyActor.tell( new BootstrappedRaftsMessage( data.getEntries().keySet() ), getSelf() );
+        coreTopologyActor.tell( new BootstrappedRaftsMessage( data.getEntries() ), getSelf() );
     }
 
     @Override

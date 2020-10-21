@@ -11,12 +11,15 @@ import akka.cluster.MemberStatus;
 import akka.cluster.UniqueAddress;
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.TreeSet;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 
@@ -128,12 +131,47 @@ class BootstrapStateTest
         assertTrue( bootstrapState.canBootstrapRaft( namedDatabaseId ) );
     }
 
+    @Test
+    void shouldCorrectlyReportIfMemberHasBootstrappedRaftGroup()
+    {
+        var otherNamedDatabased = databaseIdRepository.getRaw( "otherKnown" );
+        var me = last( allMembers );
+        var refuseToBeLeader = false;
+        var clusterViewMessage = newClusterViewMessage( true, allMembers, List.of() );
+        var metadataMessage = newMetadataMessage( namedDatabaseId, me, refuseToBeLeader );
+
+        var myRaftMemberId = IdFactory.randomRaftMemberId();
+        var otherRaftMemberId = IdFactory.randomRaftMemberId();
+
+        var previouslyBootstrapped = Map.of(
+                RaftId.from( namedDatabaseId.databaseId() ), myRaftMemberId,
+                RaftId.from( otherNamedDatabased.databaseId() ), otherRaftMemberId );
+
+        var bootstrapState = newBootstrapState( clusterViewMessage, metadataMessage, me.uniqueAddress(),
+                refuseToBeLeader, previouslyBootstrapped );
+
+        assertFalse( bootstrapState.memberBootstrappedRaft( otherNamedDatabased, myRaftMemberId ) );
+        assertFalse( bootstrapState.memberBootstrappedRaft( unknownNamedDatabaseId, myRaftMemberId ) );
+        assertTrue( bootstrapState.memberBootstrappedRaft( namedDatabaseId, myRaftMemberId ) );
+    }
+
     private static BootstrapState newBootstrapState( ClusterViewMessage clusterViewMessage, MetadataMessage metadataMessage,
             UniqueAddress uniqueAddress, boolean refuseToBeLeader )
     {
         var config = Config.defaults(refuse_to_be_leader, refuseToBeLeader );
 
-        return new BootstrapState( clusterViewMessage, metadataMessage, uniqueAddress, config );
+        return new BootstrapState( clusterViewMessage, metadataMessage, uniqueAddress, config, Map.of() );
+    }
+
+    private static BootstrapState newBootstrapState( ClusterViewMessage clusterViewMessage,
+                                                     MetadataMessage metadataMessage,
+                                                     UniqueAddress uniqueAddress,
+                                                     boolean refuseToBeLeader,
+                                                     Map<RaftId,RaftMemberId> previouslyBootstrapped )
+    {
+        var config = Config.defaults(refuse_to_be_leader, refuseToBeLeader );
+
+        return new BootstrapState( clusterViewMessage, metadataMessage, uniqueAddress, config, previouslyBootstrapped );
     }
 
     private static ClusterViewMessage newClusterViewMessage( boolean converged, List<Member> reachable, List<Member> unreachable )

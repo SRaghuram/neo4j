@@ -68,7 +68,15 @@ public interface CoreTopologyService extends TopologyService
      * @param namedDatabaseId the database to bootstrap.
      * @return {@code true} if this cluster member can bootstrap, {@code false} otherwise.
      */
-    boolean canBootstrapRaftGroup( NamedDatabaseId namedDatabaseId );
+    boolean canBootstrapDatabase( NamedDatabaseId namedDatabaseId );
+
+    /**
+     * Check if this cluster member *did* bootstrap the Raft group for the specified database.
+     *
+     * @param namedDatabaseId the database that was bootstrapped
+     * @return {@code true} if this cluster member bootstrapped the given database, {@code false} otherwise
+     */
+    boolean didBootstrapDatabase( NamedDatabaseId namedDatabaseId );
 
     interface Listener
     {

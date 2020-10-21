@@ -30,7 +30,7 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 
-import static com.neo4j.causalclustering.discovery.PublishRaftIdOutcome.FAILED_PUBLISH;
+import static com.neo4j.causalclustering.discovery.PublishRaftIdOutcome.MAYBE_PUBLISHED;
 import static com.neo4j.causalclustering.identity.RaftBinder.Publisher.ME;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toSet;
@@ -109,7 +109,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
             monitor.waitingForCoreMembers( namedDatabaseId, minCoreHosts );
             return false;
         }
-        else if ( !topologyService.canBootstrapRaftGroup( namedDatabaseId ) )
+        else if ( !topologyService.canBootstrapDatabase( namedDatabaseId ) )
         {
             monitor.waitingForBootstrap( namedDatabaseId );
             return false;
@@ -186,7 +186,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
         while ( true )
         {
             topology = topologyService.coreTopologyForDatabase( namedDatabaseId );
-            if ( isAlreadyBootstrapped( topology ) )
+            if ( bootstrappedByOther( topology ) )
             {
                 validateRaftId( topology.raftId(), namedDatabaseId );
                 // Someone else bootstrapped, we're done!
@@ -219,7 +219,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
         while ( true )
         {
             topology = topologyService.coreTopologyForDatabase( namedDatabaseId );
-            if ( isAlreadyBootstrapped( topology ) )
+            if ( bootstrappedByOther( topology ) )
             {
                 validateRaftId( topology.raftId(), namedDatabaseId );
                 // Someone else bootstrapped, we're done!
@@ -268,9 +268,9 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
         return namedDatabaseId.isSystemDatabase() || systemGraph.getInitialMembers( namedDatabaseId ).isEmpty();
     }
 
-    private boolean isAlreadyBootstrapped( DatabaseCoreTopology topology )
+    private boolean bootstrappedByOther( DatabaseCoreTopology topology )
     {
-        return topology.raftId() != null;
+        return topology.raftId() != null && !topologyService.didBootstrapDatabase( namedDatabaseId );
     }
 
     private BoundState handleBootstrapByOther( DatabaseCoreTopology topology ) throws IOException
@@ -307,7 +307,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
         while ( true )
         {
             var outcome = publishRaftId( raftId, bindingConditions );
-            if ( outcome != FAILED_PUBLISH )
+            if ( outcome != MAYBE_PUBLISHED )
             {
                 return outcome;
             }
