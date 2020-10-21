@@ -25,8 +25,8 @@ import org.neo4j.memory.MemoryTracker;
 import org.neo4j.util.VisibleForTesting;
 
 /**
- * Individual backup strategies can perform incremental backups and full backups. The logic of how and when to perform full/incremental is identical.
- * This class describes the behaviour of a single strategy and is used to wrap an interface providing incremental/full backup functionality
+ * Individual backup strategies can perform incremental backups and full backups. The logic of how and when to perform full/incremental is identical. This class
+ * describes the behaviour of a single strategy and is used to wrap an interface providing incremental/full backup functionality
  */
 class BackupStrategyWrapper
 {
@@ -38,7 +38,7 @@ class BackupStrategyWrapper
     private final PageCache pageCache;
 
     BackupStrategyWrapper( BackupStrategy backupStrategy, BackupCopyService backupCopyService, FileSystemAbstraction fs, PageCache pageCache,
-            LogProvider userLogProvider, LogProvider logProvider )
+                           LogProvider userLogProvider, LogProvider logProvider )
     {
         this.backupStrategy = backupStrategy;
         this.backupCopyService = backupCopyService;
@@ -126,9 +126,8 @@ class BackupStrategyWrapper
     /**
      * This will perform a full backup with some directory renaming if necessary.
      * <p>
-     * If there is no existing backup, then no renaming will occur.
-     * Otherwise the full backup will be done into a temporary directory and renaming
-     * will occur if everything was successful.
+     * If there is no existing backup, then no renaming will occur. Otherwise the full backup will be done into a temporary directory and renaming will occur if
+     * everything was successful.
      * </p>
      *
      * @param onlineBackupContext command line arguments, config etc.
@@ -178,17 +177,21 @@ class BackupStrategyWrapper
     {
         try
         {
-            Path newBackupLocationForPreExistingBackup = backupCopyService.findNewBackupLocationForBrokenExisting( userSpecifiedBackupLocation );
+            var deletedPreExistingBackup =
+                    backupCopyService.deletePreExistingBrokenBackupIfPossible( userSpecifiedBackupLocation, temporaryFullBackupLocation );
 
-            userLog.info( "Moving pre-existing directory '%s' that does not contain a valid backup to '%s'",
-                    userSpecifiedBackupLocation, newBackupLocationForPreExistingBackup );
-            backupCopyService.moveBackupLocation( userSpecifiedBackupLocation, newBackupLocationForPreExistingBackup );
+            if ( !deletedPreExistingBackup )
+            {
+                Path newBackupLocationForPreExistingBackup = backupCopyService.findNewBackupLocationForBrokenExisting( userSpecifiedBackupLocation );
+
+                userLog.info( "Moving pre-existing directory '%s' that does not contain a valid backup to '%s'",
+                              userSpecifiedBackupLocation, newBackupLocationForPreExistingBackup );
+                backupCopyService.moveBackupLocation( userSpecifiedBackupLocation, newBackupLocationForPreExistingBackup );
+            }
 
             userLog.info( "Moving temporary backup directory '%s' to the specified directory '%s'",
-                    temporaryFullBackupLocation, userSpecifiedBackupLocation );
+                          temporaryFullBackupLocation, userSpecifiedBackupLocation );
             backupCopyService.moveBackupLocation( temporaryFullBackupLocation, userSpecifiedBackupLocation );
-
-            backupCopyService.deletePreExistingBrokenBackupIfPossible( newBackupLocationForPreExistingBackup, userSpecifiedBackupLocation );
         }
         catch ( IOException e )
         {

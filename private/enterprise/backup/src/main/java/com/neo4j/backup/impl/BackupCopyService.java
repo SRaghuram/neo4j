@@ -38,7 +38,7 @@ class BackupCopyService
     private final PageCacheTracer pageCacheTracer;
 
     BackupCopyService( FileSystemAbstraction fs, FileMoveProvider fileMoveProvider, StoreFiles storeFiles, LogProvider logProvider,
-            PageCacheTracer pageCacheTracer )
+                       PageCacheTracer pageCacheTracer )
     {
         this.fs = fs;
         this.fileMoveProvider = fileMoveProvider;
@@ -64,7 +64,7 @@ class BackupCopyService
         }
     }
 
-    void deletePreExistingBrokenBackupIfPossible( Path preExistingBrokenBackupDir, Path newSuccessfulBackupDir ) throws IOException
+    boolean deletePreExistingBrokenBackupIfPossible( Path preExistingBrokenBackupDir, Path newSuccessfulBackupDir ) throws IOException
     {
         DatabaseLayout preExistingBrokenBackupLayout = DatabaseLayout.ofFlat( preExistingBrokenBackupDir );
         DatabaseLayout newSuccessfulBackupLayout = DatabaseLayout.ofFlat( newSuccessfulBackupDir );
@@ -79,7 +79,7 @@ class BackupCopyService
             catch ( IOException e )
             {
                 log.warn( "Unable to read store ID from the pre-existing invalid backup. It will not be deleted", e );
-                return;
+                return false;
             }
 
             StoreId newSuccessfulBackupStoreId;
@@ -91,17 +91,20 @@ class BackupCopyService
             {
                 throw new IOException( "Unable to read store ID from the new successful backup", e );
             }
+
             if ( newSuccessfulBackupStoreId.equals( preExistingBrokenBackupStoreId ) )
             {
                 log.info( "Deleting the pre-existing invalid backup because its store ID is the same as in the new successful backup %s",
-                        newSuccessfulBackupStoreId );
+                          newSuccessfulBackupStoreId );
 
                 fs.deleteRecursively( preExistingBrokenBackupDir );
+                return true;
             }
             else
             {
                 log.info( "Pre-existing invalid backup can't be deleted because its store ID %s is not the same as in the new successful backup %s",
-                        preExistingBrokenBackupStoreId, newSuccessfulBackupStoreId );
+                          preExistingBrokenBackupStoreId, newSuccessfulBackupStoreId );
+                return false;
             }
         }
     }
@@ -124,7 +127,7 @@ class BackupCopyService
     /**
      * Given a desired file name, find an available name that is similar to the given one that doesn't conflict with already existing backups
      *
-     * @param file desired ideal file name
+     * @param file    desired ideal file name
      * @param pattern pattern to follow if desired name is taken (requires %s for original name, and %d for iteration)
      * @return the resolved file name which can be the original desired, or a variation that matches the pattern
      */
@@ -151,7 +154,7 @@ class BackupCopyService
     private static Stream<Path> availableAlternativeNames( Path originalBackupDirectory, String pattern )
     {
         return IntStream.range( 0, MAX_OLD_BACKUPS )
-                .mapToObj( iteration -> alteredBackupDirectoryName( pattern, originalBackupDirectory, iteration ) );
+                        .mapToObj( iteration -> alteredBackupDirectoryName( pattern, originalBackupDirectory, iteration ) );
     }
 
     private static Path alteredBackupDirectoryName( String pattern, Path directory, int iteration )

@@ -242,7 +242,7 @@ class BackupStrategyWrapperTest
     }
 
     @Test
-    void successfulFullBackupsMoveExistingBackup() throws Exception
+    void successfulFullBackupMovesExistingBackupBecauseItFailsToRemoveIt() throws Exception
     {
         // given backup exists
         Path backupsDir = testDirectory.directory( "backups" );
@@ -271,11 +271,56 @@ class BackupStrategyWrapperTest
         // and full passes
         doNothing().when( backupStrategyImplementation ).performFullBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ), eq( Optional.empty() ) );
 
+        // and removing the original backup fails
+        when( backupCopyService.deletePreExistingBrokenBackupIfPossible( any(), any() ) ).thenReturn( false );
+
         // when
         assertDoesNotThrow( () -> backupWrapper.doBackup( onlineBackupContext ) );
 
         // then original existing backup is moved to err directory
         verify( backupCopyService ).moveBackupLocation( databaseBackupDir, newLocationForExistingBackup );
+
+        // and new successful backup is renamed to original expected name
+        verify( backupCopyService ).moveBackupLocation( temporaryFullBackupLocation, databaseBackupDir );
+    }
+
+    @Test
+    void successfulFullBackupRemovesExistingBackupWithoutMovingIt() throws Exception
+    {
+        // given backup exists
+        Path backupsDir = testDirectory.directory( "backups" );
+        Path databaseBackupDir = backupsDir.resolve( DEFAULT_DATABASE_NAME );
+
+        desiredBackupLayout = DatabaseLayout.ofFlat( backupsDir );
+        when( backupCopyService.backupExists( DatabaseLayout.ofFlat( databaseBackupDir ) ) ).thenReturn( true );
+
+        // and fallback to full flag has been set
+        onlineBackupContext = newBackupContext( true );
+
+        // and a new location for the existing backup is found
+        Path newLocationForExistingBackup = testDirectory.directory( "new-backup-location" );
+        when( backupCopyService.findNewBackupLocationForBrokenExisting( databaseBackupDir ) )
+                .thenReturn( newLocationForExistingBackup );
+
+        // and there is a generated location for where to store a new full backup so the original is not destroyed
+        Path temporaryFullBackupLocation = testDirectory.directory( "temporary-full-backup" );
+        when( backupCopyService.findAnAvailableLocationForNewFullBackup( databaseBackupDir ) )
+                .thenReturn( temporaryFullBackupLocation );
+
+        // and incremental fails
+        doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ),
+                                                                                                                 eq( Optional.empty() ) );
+        // and full passes
+        doNothing().when( backupStrategyImplementation ).performFullBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ), eq( Optional.empty() ) );
+
+        // and removing the original backup succeeds
+        when( backupCopyService.deletePreExistingBrokenBackupIfPossible( any(), any() ) ).thenReturn( true );
+
+        // when
+        assertDoesNotThrow( () -> backupWrapper.doBackup( onlineBackupContext ) );
+
+        // then we do not move the original backup (it has already been deleted)
+        verify( backupCopyService, never() ).moveBackupLocation( databaseBackupDir, newLocationForExistingBackup );
 
         // and new successful backup is renamed to original expected name
         verify( backupCopyService ).moveBackupLocation( temporaryFullBackupLocation, databaseBackupDir );
