@@ -14,13 +14,9 @@ import com.neo4j.bench.micro.data.DataGeneratorConfig
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
 import com.neo4j.bench.micro.data.TypeParamValues.DBL
 import com.neo4j.bench.micro.data.TypeParamValues.LNG
-import com.neo4j.bench.micro.data.TypeParamValues.STR_SML
-import com.neo4j.bench.micro.data.TypeParamValues.listOf
 import com.neo4j.bench.micro.data.TypeParamValues.mapValuesOfList
+import com.neo4j.bench.micro.data.TypeParamValues.shuffledListOf
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.cypher.internal.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.expressions.functions.Count
-import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.values.virtual.MapValue
@@ -34,8 +30,11 @@ import org.openjdk.jmh.annotations.State
 import org.openjdk.jmh.annotations.TearDown
 import org.openjdk.jmh.infra.Blackhole
 
+/**
+ * Micro benchmarks of aggregation functions that work on numbers and don't take any extra parameters.
+ */
 @BenchmarkEnabled(true)
-class Aggregation extends AbstractCypherBenchmark {
+class AggregationSimpleNumeric extends AbstractCypherBenchmark {
   @ParamValues(
     allowed = Array(Interpreted.NAME, Slotted.NAME, Pipelined.NAME, Parallel.NAME),
     base = Array(Interpreted.NAME, Slotted.NAME, Pipelined.NAME))
@@ -43,28 +42,35 @@ class Aggregation extends AbstractCypherBenchmark {
   var runtime: String = _
 
   @ParamValues(
-    allowed = Array(STR_SML, LNG, DBL),
-    base = Array(STR_SML))
+    allowed = Array("min", "max", "avg", "stDev", "stDevP", "sum"),
+    base = Array("min", "max", "avg", "stDev", "stDevP", "sum"))
+  @Param(Array[String]())
+  var aggregatingFunction: String = _
+
+  @ParamValues(
+    allowed = Array(LNG, DBL),
+    base = Array(DBL))
   @Param(Array[String]())
   var propertyType: String = _
 
   @ParamValues(
     allowed = Array("true", "false"),
-    base = Array("true")
+    base = Array("false")
   )
   @Param(Array[String]())
   var auth: Boolean = _
 
   @ParamValues(
     allowed = Array("full", "white", "black"),
-    base = Array("full", "white", "black")
+    base = Array("full")
   )
   @Param(Array[String]())
   var user: String = _
 
-  override def description = "Aggregation only, e.g., MATCH (n) RETURN count(n)"
+  override def description = "Numerical aggregations, e.g., MATCH (n) RETURN min(n.prop)"
 
   val VALUE_COUNT = 1000000
+  val DISTINCT_COUNT = VALUE_COUNT
   val EXPECTED_ROW_COUNT = 1
 
   var params: MapValue = _
@@ -77,12 +83,12 @@ class Aggregation extends AbstractCypherBenchmark {
       .build();
 
   override def setup(planContext: PlanContext): TestSetup = {
-    setupAggregation(propertyType, Count.name)
+    setupAggregation(propertyType, aggregatingFunction)
   }
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
-  def executePlan(threadState: AggregationThreadState, bh: Blackhole): Long = {
+  def executePlan(threadState: AggregationSimpleNumericThreadState, bh: Blackhole): Long = {
     val subscriber = new CountSubscriber(bh)
     val result = threadState.executablePlan.execute(params, threadState.tx, subscriber)
     result.consumeAll()
@@ -91,13 +97,14 @@ class Aggregation extends AbstractCypherBenchmark {
 }
 
 @State(Scope.Thread)
-class AggregationThreadState {
+class AggregationSimpleNumericThreadState {
   var tx: InternalTransaction = _
   var executablePlan: ExecutablePlan = _
 
   @Setup
-  def setUp(benchmarkState: Aggregation): Unit = {
-    benchmarkState.params = mapValuesOfList("list", listOf(benchmarkState.propertyType, benchmarkState.VALUE_COUNT))
+  def setUp(benchmarkState: AggregationSimpleNumeric): Unit = {
+    val list = shuffledListOf(benchmarkState.propertyType, benchmarkState.VALUE_COUNT, benchmarkState.DISTINCT_COUNT)
+    benchmarkState.params = mapValuesOfList("list", list)
     executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction(benchmarkState.users(benchmarkState.user))
   }
