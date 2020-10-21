@@ -38,6 +38,11 @@ public class DatabaseIdStore
 
     public void writeDatabaseId( DatabaseId databaseId, Path folderPath ) throws IOException
     {
+        if ( !fs.fileExists( folderPath ) )
+        {
+            fs.mkdirs( folderPath );
+        }
+
         final var filePath = getDatabaseFilePath( folderPath );
         try ( StoreChannel channel = fs.write( filePath ) )
         {
@@ -64,7 +69,7 @@ public class DatabaseIdStore
         return Optional.empty();
     }
 
-    private Path getDatabaseFilePath( Path folderPath )
+    public static Path getDatabaseFilePath( Path folderPath )
     {
         return folderPath.resolve( FILE_NAME );
     }

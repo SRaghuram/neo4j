@@ -1078,9 +1078,10 @@ class BackupIT
         executeBackup( db );
         managementService.shutdown();
 
+        final var backupToolDir = Neo4jLayout.ofFlat( backupsDir.toAbsolutePath() ).databaseLayout( DEFAULT_DATABASE_NAME ).backupToolsFolder();
         //than change the value in datastore file
         new DatabaseIdStore( fs, new Log4jLogProvider( System.out ) )
-                .writeDatabaseId( DatabaseIdFactory.from( UUID.randomUUID() ), Path.of( backupsDir.toAbsolutePath().toString(), DEFAULT_DATABASE_NAME ) );
+                .writeDatabaseId( DatabaseIdFactory.from( UUID.randomUUID() ), backupToolDir );
 
         // then add more data and execute incremental backup
         addMoreData( serverHomeDir, recordFormatName );
@@ -1142,8 +1143,9 @@ class BackupIT
 
         //and metadata file exists
         final var databaseLayout = DatabaseLayout.ofFlat( backupsDir.resolve( natureDB ) );
-        assertThat( MetadataStore.getFilePath( databaseLayout.databaseDirectory() ) ).exists();
-        assertThat( fs.getFileSize( MetadataStore.getFilePath( databaseLayout.databaseDirectory() ) ) ).isGreaterThan( 0 );
+        final var metadataFile = MetadataStore.getFilePath( databaseLayout.backupToolsFolder() );
+        assertThat( metadataFile ).exists();
+        assertThat( fs.getFileSize( metadataFile ) ).isGreaterThan( 0 );
     }
 
     private void validateSuccessfulResult( AssertableLogProvider userLogProvider, String databaseName )
@@ -1645,8 +1647,9 @@ class BackupIT
 
     private void checkDatabaseIdCorrectness( String databaseName )
     {
+        final var backupToolsFolder = Neo4jLayout.ofFlat( backupsDir ).databaseLayout( databaseName ).backupToolsFolder();
         var databaseId = new DatabaseIdStore( new DefaultFileSystemAbstraction(), new Log4jLogProvider( System.out ) )
-                .readDatabaseId( backupsDir.resolve( databaseName ) ).orElseThrow( () -> new IllegalStateException( "database id file should be presented" ) );
+                .readDatabaseId( backupToolsFolder ).orElseThrow( () -> new IllegalStateException( "database id file should be presented" ) );
         var expectedDatabaseId = ((GraphDatabaseFacade) managementService.database( databaseName )).databaseId().databaseId();
         assertEquals( expectedDatabaseId, databaseId );
     }

@@ -16,6 +16,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.logging.Log;
@@ -25,9 +26,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.backup.impl.DatabaseIdStore.CHARSET;
-import static com.neo4j.backup.impl.DatabaseIdStore.FILE_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 @TestDirectoryExtension
@@ -35,6 +34,9 @@ class DatabaseIdStoreTest
 {
     @Inject
     private TestDirectory testDirectory;
+
+    @Inject
+    private FileSystemAbstraction fs;
 
     private DatabaseIdStore databaseIdStore;
     private Path databaseDir;
@@ -46,7 +48,7 @@ class DatabaseIdStoreTest
         LogProvider logProvider = Mockito.mock( LogProvider.class );
         Log log = Mockito.mock( Log.class );
         when( logProvider.getLog( DatabaseIdStore.class ) ).thenReturn( log );
-        databaseIdStore = new DatabaseIdStore( new DefaultFileSystemAbstraction(), logProvider );
+        databaseIdStore = new DatabaseIdStore( fs, logProvider );
     }
 
     @Test
@@ -75,10 +77,16 @@ class DatabaseIdStoreTest
     }
 
     @Test
-    void shouldThrowExceptionIfInputFolderDoesntExist()
+    void shouldCreateInputFolderIfNotExist() throws IOException
     {
-        assertThrows( IOException.class,
-                      () -> databaseIdStore.writeDatabaseId( DatabaseIdFactory.from( UUID.randomUUID() ), Path.of( UUID.randomUUID().toString() ) ) );
+        final var expected = DatabaseIdFactory.from( UUID.randomUUID() );
+        fs.delete( databaseDir );
+
+        //when
+        databaseIdStore.writeDatabaseId( expected, databaseDir );
+
+        //then
+        assertThat( Optional.of( expected ) ).isEqualTo( databaseIdStore.readDatabaseId( databaseDir ) );
     }
 
     @Test
@@ -90,7 +98,7 @@ class DatabaseIdStoreTest
     @Test
     void shouldReadEmptyDatabaseIdIfFileIsCorrupted() throws IOException
     {
-        writeToFile( databaseDir.resolve( FILE_NAME ), "File is corrupted" );
+        writeToFile( DatabaseIdStore.getDatabaseFilePath( databaseDir ), "File is corrupted" );
 
         assertThat( databaseIdStore.readDatabaseId( databaseDir ) ).isEmpty();
     }

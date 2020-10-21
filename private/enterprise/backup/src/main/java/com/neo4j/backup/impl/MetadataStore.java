@@ -40,6 +40,11 @@ public class MetadataStore
 
     public void write( Path backupFolder, List<String> values ) throws IOException
     {
+        if ( !fs.fileExists( backupFolder ) )
+        {
+            fs.mkdirs( backupFolder );
+        }
+
         final var filePath = getFilePath( backupFolder );
 
         final var value = String.join( ";\n", values ) + ";"; // Cypher queries must end with a semicolon

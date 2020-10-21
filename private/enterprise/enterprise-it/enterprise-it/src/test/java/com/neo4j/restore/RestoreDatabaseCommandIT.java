@@ -388,8 +388,9 @@ class RestoreDatabaseCommandIT
     void shouldNotCopyDatabaseStoreIdFile() throws IOException
     {
         createDbAt( backupsDir1, 10 );
+        final var backupToolsFolder = DatabaseLayout.ofFlat( backupsDir1 ).backupToolsFolder();
         new DatabaseIdStore( fileSystem, mock( LogProvider.class ) )
-                .writeDatabaseId( DatabaseIdFactory.from( UUID.randomUUID() ), backupsDir1 );
+                .writeDatabaseId( DatabaseIdFactory.from( UUID.randomUUID() ), backupToolsFolder );
         DatabaseLayout toLayout = neo4jLayout.databaseLayout( "test" );
         Config config = configWith( neo4jLayout );
         String databaseName = "target-database";
@@ -425,7 +426,7 @@ class RestoreDatabaseCommandIT
         final var consoleOutput = mock( PrintStream.class );
         new RestoreDatabaseCommand( fileSystem, consoleOutput, fromPath, databaseLayout, raftGroupDirectory, false, false ).execute();
 
-        //then file is moved on correct place
+        //then file is copied to the correct place
         final var expectedPath = databaseLayout.getScriptDirectory().resolve( RESTORE_METADATA );
         assertThat( expectedPath ).exists();
 
@@ -502,8 +503,9 @@ class RestoreDatabaseCommandIT
 
     private Path createMetadataFile( Path backupFolder ) throws IOException
     {
-        new MetadataStore( fileSystem ).write( backupFolder, Arrays.asList( "a", "b" ) );
-        return MetadataStore.getFilePath( backupFolder );
+        final var backupToolsFolder = DatabaseLayout.ofFlat( backupFolder ).backupToolsFolder();
+        new MetadataStore( fileSystem ).write( backupToolsFolder, Arrays.asList( "a", "b" ) );
+        return MetadataStore.getFilePath( backupToolsFolder );
     }
 
     private void createRestoreFile( Path path ) throws IOException

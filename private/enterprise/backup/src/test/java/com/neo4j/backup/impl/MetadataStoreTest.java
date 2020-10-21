@@ -55,6 +55,20 @@ class MetadataStoreTest
     }
 
     @Test
+    public void metadataStoreShouldCreateInputFolderIfNotExist() throws IOException
+    {
+        final var folder = testDirectory.directory( "folder1" );
+        fs.delete( folder );
+        final var elements = List.of( "a", "b" );
+
+        //when
+        metadataStore.write( folder, elements );
+
+        //then
+        assertEquals( List.of("a;","b;"), readLines( MetadataStore.getFilePath( folder ) ) );
+    }
+
+    @Test
     public void metadataStoreShouldBeAbleToIdentifyMetadataStoreFile() throws IOException
     {
         final var folder = testDirectory.directory( "folder1" );

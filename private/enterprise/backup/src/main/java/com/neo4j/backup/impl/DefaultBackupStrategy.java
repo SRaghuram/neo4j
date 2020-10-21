@@ -73,18 +73,8 @@ public class DefaultBackupStrategy extends LifecycleAdapter implements BackupStr
         try
         {
             backupDelegator.copy( backupInfo.remoteAddress, backupInfo.remoteStoreId, backupInfo.namedDatabaseId, targetDbLayout );
-            writeDatabaseId( targetDbLayout.databaseDirectory(), backupInfo.namedDatabaseId.databaseId() );
-            includeMetadata.ifPresent( value ->
-                                       {
-                                           if ( databaseName.equals( SYSTEM_DATABASE_NAME ) )
-                                           {
-                                               userLog.warn( "Include metadata parameter is invalid for backing up system database" );
-                                           }
-                                           else
-                                           {
-                                               createMetadataFile( address, targetDbLayout.databaseDirectory(), databaseName, value );
-                                           }
-                                       } );
+            writeDatabaseId( targetDbLayout.backupToolsFolder(), backupInfo.namedDatabaseId.databaseId() );
+            includeMetadata.ifPresent( value -> createMetadataFile( address, targetDbLayout.backupToolsFolder(), databaseName, value ) );
         }
         catch ( StoreCopyFailedException e )
         {
@@ -178,6 +168,12 @@ public class DefaultBackupStrategy extends LifecycleAdapter implements BackupStr
 
     private void createMetadataFile( SocketAddress fromAddress, Path folder, String databaseName, IncludeMetadata includeMetadata )
     {
+        if ( databaseName.equals( SYSTEM_DATABASE_NAME ) )
+        {
+            userLog.warn( "Include metadata parameter is invalid for backing up system database" );
+            return;
+        }
+
         final var commands = backupDelegator.getMetadata( fromAddress, databaseName, includeMetadata.name() );
 
         try
@@ -193,7 +189,7 @@ public class DefaultBackupStrategy extends LifecycleAdapter implements BackupStr
 
     private void checkIsTheSameDatabaseId( DatabaseLayout databaseLayout, DatabaseId expectedDatabaseId ) throws BackupExecutionException
     {
-        final var databaseId = databaseIdStore.readDatabaseId( databaseLayout.databaseDirectory() );
+        final var databaseId = databaseIdStore.readDatabaseId( databaseLayout.backupToolsFolder() );
         if ( databaseId.isPresent() && !databaseId.get().equals( expectedDatabaseId ) )
         {
             final var message = format( "DatabaseId %s stored on the file system doesn't match with the server one %s", databaseId.get().uuid(),
@@ -202,16 +198,16 @@ public class DefaultBackupStrategy extends LifecycleAdapter implements BackupStr
         }
     }
 
-    private void writeDatabaseId( Path folderPath, DatabaseId databaseId ) throws BackupExecutionException
+    private void writeDatabaseId( Path folder, DatabaseId databaseId ) throws BackupExecutionException
     {
         try
         {
-            databaseIdStore.writeDatabaseId( databaseId, folderPath );
+            databaseIdStore.writeDatabaseId( databaseId, folder );
         }
         catch ( IOException e )
         {
             throw new BackupExecutionException(
-                    format( "Can't write the databaseId=%s in %s", databaseId, folderPath ) );
+                    format( "Can't write the databaseId=%s in %s", databaseId, folder ) );
         }
     }
 

@@ -12,10 +12,8 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.neo4j.cli.CommandFailedException;
 import org.neo4j.commandline.dbms.CannotWriteException;
@@ -36,6 +34,7 @@ public class RestoreDatabaseCommand
     private final FileSystemAbstraction fs;
     private final PrintStream consoleOutput;
     private final Path fromDatabasePath;
+    private final Path backupToolFolder;
     private final DatabaseLayout targetDatabaseLayout;
     private final Path raftGroupDirectory;
     private final Path scriptDirectory;
@@ -53,6 +52,7 @@ public class RestoreDatabaseCommand
         this.fs = fs;
         this.consoleOutput = consoleOutput;
         this.fromDatabasePath = fromDatabasePath;
+        this.backupToolFolder = DatabaseLayout.ofFlat( fromDatabasePath ).backupToolsFolder();
         this.forceOverwrite = forceOverwrite;
         this.moveFiles = moveFiles;
         this.targetDatabaseLayout = targetDatabaseLayout;
@@ -140,17 +140,21 @@ public class RestoreDatabaseCommand
 
     private void restoreDatabaseFiles() throws IOException
     {
-        var databaseFiles = Optional.ofNullable( fs.listFiles( fromDatabasePath, path -> !path.getFileName().toString().equals( DatabaseIdStore.FILE_NAME ) ) )
-                                    .map( files -> Arrays.stream( files )
-                                                         .collect( Collectors.toSet() ) )
-                                    .orElse( Set.of() );
+        var databaseStoreFiles = Optional.ofNullable( fs.listFiles( fromDatabasePath ) )
+                                         .map( Set::of )
+                                         .orElse( Set.of() );
+        var toolFiles = Optional.ofNullable( fs.listFiles( backupToolFolder,
+                                                           path -> !path.getFileName().toString().equals( DatabaseIdStore.FILE_NAME ) ) )
+                                .map( Set::of )
+                                .orElse( Set.of() );
 
         var transactionLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( fromDatabasePath, fs ).build();
 
         var databaseDirectory = targetDatabaseLayout.databaseDirectory();
         var transactionLogsDirectory = targetDatabaseLayout.getTransactionLogsDirectory();
         var databaseLockFile = targetDatabaseLayout.databaseLockFile();
-        for ( var file : databaseFiles )
+        var toolsFolder = targetDatabaseLayout.backupToolsFolder();
+        for ( var file : databaseStoreFiles )
         {
             if ( Files.isDirectory( file ) )
             {
@@ -164,22 +168,6 @@ public class RestoreDatabaseCommand
                         fs.mkdirs( destination );
                         fs.copyRecursively( file, destination );
                     }
-                }
-                else if ( MetadataStore.isMetadataFile( file ) )
-                {
-                    if ( moveFiles )
-                    {
-                        fs.moveToDirectory( file, scriptDirectory );
-                    }
-                    else
-                    {
-                        fs.mkdirs( scriptDirectory );
-                        fs.copyToDirectory( file, scriptDirectory );
-                    }
-                    fs.renameFile( scriptDirectory.resolve( file.getFileName() ), getMetadataScript() );
-                    consoleOutput.println( String.format( "You need to execute %s. To execute the file use cypher-shell command with parameter `%s`",
-                                                          getMetadataScript(  ).toAbsolutePath().toString(),
-                                                          targetDatabaseLayout.getDatabaseName() ) );
                 }
                 else
                 {
@@ -198,10 +186,30 @@ public class RestoreDatabaseCommand
                     }
                 }
             }
-            if ( moveFiles )
+        for ( var path : toolFiles )
+        {
+            if ( MetadataStore.isMetadataFile( path ) )
             {
-                fs.deleteRecursively( fromDatabasePath );
+                if ( moveFiles )
+                {
+                    fs.moveToDirectory( path, scriptDirectory );
+                }
+                else
+                {
+                    fs.mkdirs( scriptDirectory );
+                    fs.copyToDirectory( path, scriptDirectory );
+                }
+                fs.renameFile( scriptDirectory.resolve( path.getFileName() ), getMetadataScript() );
+                consoleOutput.println( String.format( "You need to execute %s. To execute the file use cypher-shell command with parameter `%s`",
+                                                      getMetadataScript().toAbsolutePath().toString(),
+                                                      targetDatabaseLayout.getDatabaseName() ) );
             }
+        }
+        if ( moveFiles )
+        {
+            fs.deleteRecursively( fromDatabasePath );
+            fs.deleteRecursively( toolsFolder );
+        }
     }
     Path getMetadataScript()
     {
