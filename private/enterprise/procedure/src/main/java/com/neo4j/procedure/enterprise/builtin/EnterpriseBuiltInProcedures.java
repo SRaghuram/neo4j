@@ -31,7 +31,7 @@ public class EnterpriseBuiltInProcedures
     @Context
     public DependencyResolver resolver;
 
-    @Deprecated
+    @Deprecated( since = "4.2.0", forRemoval = true )
     @Description( "Create a named node key constraint. Backing index will use specified index provider and configuration (optional). " +
             "Yield: name, labels, properties, providerName, status" )
     @Procedure( name = "db.createNodeKey", mode = SCHEMA, deprecatedBy = "CREATE CONSTRAINT ... IS NODE KEY command" )

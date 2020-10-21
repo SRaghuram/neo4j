@@ -684,6 +684,25 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     }
   }
 
+  test("Should allow showing indexes using procedure with deny show privilege") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createIndexWithName(indexName, labelString, propString)
+    setupUserWithCustomRole()
+    execute("GRANT EXECUTE PROCEDURES * ON DBMS TO custom")
+    execute("DENY SHOW INDEX ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    withClue("db.indexes") {
+      executeOnDefault("joe", "soap", "CALL db.indexes()", resultHandler = checkName(indexName)) should be(1)
+    }
+
+    // WHEN & THEN
+    withClue("db.indexDetails") {
+      executeOnDefault("joe", "soap", s"CALL db.indexDetails('$indexName')", resultHandler = checkName(indexName)) should be(1)
+    }
+  }
+
   test("Should allow showing indexes with show privilege") {
     // GIVEN
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -1119,6 +1138,25 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     graph.createUniqueConstraintWithName(constraintName, labelString, propString)
     setupUserWithCustomRole()
     execute("GRANT EXECUTE PROCEDURES * ON DBMS TO custom")
+
+    // WHEN & THEN
+    withClue("db.constraints") {
+      executeOnDefault("joe", "soap", "CALL db.constraints()", resultHandler = checkName(constraintName)) should be(1)
+    }
+
+    // WHEN & THEN (shows both index and constraint)
+    withClue("db.schemaStatements") {
+      executeOnDefault("joe", "soap", "CALL db.schemaStatements()", resultHandler = checkName(constraintName)) should be(1)
+    }
+  }
+
+  test("Should allow showing constraints using procedure with deny show privilege") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createUniqueConstraintWithName(constraintName, labelString, propString)
+    setupUserWithCustomRole()
+    execute("GRANT EXECUTE PROCEDURES * ON DBMS TO custom")
+    execute("DENY SHOW CONSTRAINT ON DATABASE * TO custom")
 
     // WHEN & THEN
     withClue("db.constraints") {
