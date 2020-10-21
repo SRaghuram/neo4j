@@ -19,6 +19,7 @@ import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_WGS84_3D_MAX
 import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_WGS84_3D_MIN
 import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_WGS84_MAX
 import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_WGS84_MIN
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.kernel.impl.index.schema.GenericNativeIndexProvider
@@ -3174,5 +3175,19 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE INDEX FOR (n:Label) ON (n.prop) OPTIONS {indexProvider: 'native-btree-1.0'}")
     } should have message "There is a uniqueness constraint on (:Label {prop}), so an index is already created that matches this."
+  }
+
+  test("should not throw error on eventually consistent indexes") {
+    //given
+    executeSingle("""CREATE (c1:Country {id:'1', name:'CHL|USA|ESP|CHI'})""")
+    executeSingle("""CREATE (c2:Country {id:'2', name:'MEX|CHI|CAN|USA'})""")
+    executeSingle("""CALL db.index.fulltext.createNodeIndex("testindex",["Country"],["name"], { analyzer: "cypher", eventually_consistent: "true" })""")
+    executeSingle("""CALL db.index.fulltext.awaitEventuallyConsistentIndexRefresh""")
+
+    //when
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, """MATCH (n:Country) WHERE n.name CONTAINS 'MEX' RETURN n.id""")
+
+    //then
+    result.toList should equal(List(Map("n.id" -> "2" )))
   }
 }
