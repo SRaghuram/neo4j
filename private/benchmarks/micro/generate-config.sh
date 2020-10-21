@@ -50,8 +50,8 @@ if [ "${partitions}" -ge 1 ]; then
     --config-path "${benchmark_conf}"
   # now we have generated the configs in $benchmark_partition
   # if we want a specific number back we have to be returned
-  if [ "${returned_partition_number}" -ge 1 ]; then
+  if [ "${returned_partition_number}" -ge 0 ]; then
     returned_partition=${benchmark_partitions}/micro_"${returned_partition_number}".conf
-    mv "${returned_partition}" "${benchmark_conf}"
+    mv -f "${returned_partition}" "${benchmark_conf}"
   fi
 fi
