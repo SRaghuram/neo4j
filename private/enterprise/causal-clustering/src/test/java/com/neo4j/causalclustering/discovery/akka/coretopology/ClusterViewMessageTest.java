@@ -247,7 +247,7 @@ public class ClusterViewMessageTest
         return createMember( new UniqueAddress( new Address( "protocol", "system", "host", port ), 0L ), status );
     }
 
-    private static Member createMember( UniqueAddress uniqueAddress, MemberStatus status )
+    static Member createMember( UniqueAddress uniqueAddress, MemberStatus status )
     {
         return new Member( uniqueAddress, 0, status, roles );
     }

@@ -9,6 +9,7 @@ import java.util
 import java.util.Collections
 import java.util.concurrent.TimeUnit
 
+import akka.actor.ActorRef
 import akka.actor.Address
 import akka.cluster.Cluster
 import akka.event.EventStream
@@ -101,7 +102,7 @@ class ClusterJoiningActorIT extends BaseAkkaIT("ClusterJoining") {
     val self = Address("akka", system.name, "myHost", 1234 )
     Mockito.when(cluster.selfAddress).thenReturn(self)
 
-    val props = ClusterJoiningActor.props(cluster, mock[EventStream], resolver, config)
+    val props = ClusterJoiningActor.props(cluster, mock[ActorRef], resolver, config)
 
     val actorRef = system.actorOf(props)
   }

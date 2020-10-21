@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.util.VisibleForTesting;
 
 import static java.util.Collections.emptySet;
 import static java.util.stream.Collectors.toSet;
@@ -57,22 +58,20 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
     private final SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink;
     private final SourceQueueWithComplete<BootstrapState> bootstrapStateSink;
     private final TopologyBuilder topologyBuilder;
-    private final int minCoreHostsAtRuntime;
-
     private final UniqueAddress myClusterAddress;
-
     private final Config config;
-
-    private Set<DatabaseId> knownDatabaseIds = emptySet();
 
     private final ActorRef metadataActor;
     private final ActorRef raftIdActor;
     private final ActorRef readReplicaTopologyActor;
 
     // Topology component data
+    private Set<DatabaseId> knownDatabaseIds = emptySet();
     private MetadataMessage memberData;
     private Set<RaftId> bootstrappedRafts;
     private ClusterViewMessage clusterView;
+    private boolean memberUp;
+    private boolean haveObservedSelfInClusterViewOnce;
 
     private CoreTopologyActor( SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink,
             SourceQueueWithComplete<BootstrapState> bootstrapStateSink,
@@ -89,7 +88,7 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
         this.bootstrapStateSink = bootstrapStateSink;
         this.readReplicaTopologyActor = readReplicaTopologyActor;
         this.topologyBuilder = topologyBuilder;
-        this.minCoreHostsAtRuntime = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_runtime );
+        int minCoreHostsAtRuntime = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_runtime );
         this.memberData = MetadataMessage.EMPTY;
         this.bootstrappedRafts = emptySet();
         this.clusterView = ClusterViewMessage.EMPTY;
@@ -102,6 +101,17 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
         ActorRef downingActor = getContext().actorOf( ClusterDowningActor.props( cluster, config ) );
         getContext().actorOf( ClusterStateActor.props( cluster, getSelf(), downingActor, metadataActor, config, clusterSizeMonitor ) );
         raftIdActor = getContext().actorOf( RaftIdActor.props( cluster, replicator, getSelf(), replicatedDataMonitor, minCoreHostsAtRuntime ) );
+
+        cluster.registerOnMemberUp( this::onMemberUp );
+    }
+
+    @VisibleForTesting
+    void onMemberUp()
+    {
+        this.memberUp = true;
+        // trigger self to build topologies. Do it by sending a message because onMemberUp might be called outside of the actor's message-handling loop
+        // and so violate our synchronization requirements
+        self().tell( new MemberUp(), ActorRef.noSender() );
     }
 
     @Override
@@ -115,12 +125,17 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
                 .match( DatabaseStartedMessage.class,    this::handleDatabaseStartedMessage )
                 .match( DatabaseStoppedMessage.class,    this::handleDatabaseStoppedMessage )
                 .match( PublishInitialData.class,        this::handlePublishInitialDataMessage )
+                .match( MemberUp.class,                  this::handleMemberUpMessage )
                 .build();
     }
 
     private void handleClusterViewMessage( ClusterViewMessage message )
     {
         clusterView = message;
+        if ( !haveObservedSelfInClusterViewOnce && clusterView.availableMembers().anyMatch( myClusterAddress::equals ) )
+        {
+            haveObservedSelfInClusterViewOnce = true;
+        }
         buildTopologies();
     }
 
@@ -133,6 +148,11 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
     private void handleBootstrappedRaftsMessage( BootstrappedRaftsMessage message )
     {
         bootstrappedRafts = message.bootstrappedRafts();
+        buildTopologies();
+    }
+
+    private void handleMemberUpMessage( MemberUp message )
+    {
         buildTopologies();
     }
 
@@ -159,6 +179,11 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
 
     private void buildTopologies()
     {
+        if ( !isReadyToBuildTopologies() )
+        {
+            return;
+        }
+
         var receivedDatabaseIds = memberData.getStream()
                 .flatMap( info -> info.coreServerInfo().startedDatabaseIds().stream() )
                 .collect( toSet() );
@@ -167,13 +192,18 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
                 .filter( id -> !receivedDatabaseIds.contains( id ) )
                 .collect( toSet() );
 
-        knownDatabaseIds = receivedDatabaseIds; // override the set of known IDs to no accumulate deleted ones
-
         // build empty topologies for database IDs cached locally but absent from the set of received database IDs
         absentDatabaseIds.forEach( this::buildTopology );
 
         // build topologies for the set of received database IDs
         receivedDatabaseIds.forEach( this::buildTopology );
+
+        knownDatabaseIds = receivedDatabaseIds; // override the set of known IDs to no accumulate deleted ones
+    }
+
+    private boolean isReadyToBuildTopologies()
+    {
+        return memberUp && haveObservedSelfInClusterViewOnce && memberData != null;
     }
 
     private void buildTopology( DatabaseId databaseId )
@@ -196,5 +226,9 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
         topologyUpdateSink.offer( new CoreTopologyMessage( newCoreTopology, akkaMemberAddresses ) );
         readReplicaTopologyActor.tell( newCoreTopology, getSelf() );
         bootstrapStateSink.offer( new BootstrapState( clusterView, memberData, myClusterAddress, config ) );
+    }
+
+    private static class MemberUp
+    {
     }
 }

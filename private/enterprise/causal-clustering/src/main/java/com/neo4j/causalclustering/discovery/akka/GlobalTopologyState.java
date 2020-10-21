@@ -285,6 +285,27 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         return remoteDbLeaderMap.get( namedDatabaseId.databaseId() );
     }
 
+    public void clearRemoteData( MemberId localMemberId )
+    {
+        var coresByMemberId = this.coresByMemberId;
+        var readReplicasByMemberId = this.readReplicasByMemberId;
+
+        this.coresByMemberId = coresByMemberId.containsKey( localMemberId ) ? Map.of( localMemberId, coresByMemberId.get( localMemberId ) ) : emptyMap();
+        this.readReplicasByMemberId = readReplicasByMemberId.containsKey( localMemberId ) ? Map.of( localMemberId, readReplicasByMemberId.get( localMemberId ) )
+                                                                                          : emptyMap();
+        this.remoteDbLeaderMap = emptyMap();
+
+        bootstrapState = BootstrapState.EMPTY;
+
+        var remoteDataCleaner = new GlobalTopologyCleaner( localMemberId );
+
+        this.coreTopologiesByDatabase.replaceAll( remoteDataCleaner::removeRemoteDatabaseCoreTopologies );
+        this.coreStatesByDatabase.replaceAll( remoteDataCleaner::removeRemoteReplicatedDatabaseState );
+
+        this.readReplicaTopologiesByDatabase.replaceAll( remoteDataCleaner::removeRemoteDatabaseReadReplicaTopologies );
+        this.readReplicaStatesByDatabase.replaceAll( remoteDataCleaner::removeRemoteReplicatedDatabaseState );
+    }
+
     SocketAddress retrieveCatchupServerAddress( MemberId memberId )
     {
         CoreServerInfo coreServerInfo = coresByMemberId.get( memberId );

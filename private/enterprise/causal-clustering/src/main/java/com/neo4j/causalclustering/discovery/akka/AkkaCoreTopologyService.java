@@ -9,7 +9,6 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.cluster.Cluster;
 import akka.cluster.client.ClusterClientReceptionist;
-import akka.event.EventStream;
 import akka.pattern.AskTimeoutException;
 import akka.pattern.Patterns;
 import akka.stream.javadsl.SourceQueueWithComplete;
@@ -31,7 +30,6 @@ import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyMessage;
 import com.neo4j.causalclustering.discovery.akka.coretopology.RaftIdSetRequest;
-import com.neo4j.causalclustering.discovery.akka.coretopology.RestartNeededListeningActor;
 import com.neo4j.causalclustering.discovery.akka.coretopology.TopologyBuilder;
 import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseStateActor;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
@@ -94,6 +92,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     private final CoreTopologyListenerService listenerService = new CoreTopologyListenerService();
     private final Map<NamedDatabaseId,LeaderInfo> localLeadersByDatabaseId = new ConcurrentHashMap<>();
 
+    private volatile boolean isRestarting;
     private volatile ActorRef coreTopologyActorRef;
     private volatile ActorRef directoryActorRef;
     private volatile ActorRef databaseStateActorRef;
@@ -124,7 +123,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     @Override
     public void start0()
     {
-        actorSystemLifecycle.createClusterActorSystem();
+        actorSystemLifecycle.createClusterActorSystem(() -> executor.execute(this::restart));
         var coreTopologySink = actorSystemLifecycle.queueMostRecent( this::onCoreTopologyMessage );
         var directorySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbLeaderUpdate );
         var bootstrapStateSink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onBootstrapStateUpdate );
@@ -137,7 +136,6 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         coreTopologyActorRef = coreTopologyActor( cluster, replicator, coreTopologySink, bootstrapStateSink, rrTopologyActor );
         directoryActorRef = directoryActor( cluster, replicator, directorySink, rrTopologyActor );
         databaseStateActorRef = databaseStateActor( cluster, replicator, databaseStateSink, rrTopologyActor );
-        startRestartNeededListeningActor( cluster );
         publishInitialData( coreTopologyActorRef, directoryActorRef, databaseStateActorRef );
     }
 
@@ -181,19 +179,11 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     private ActorRef readReplicaTopologyActor( SourceQueueWithComplete<DatabaseReadReplicaTopology> topologySink,
-            SourceQueueWithComplete<ReplicatedDatabaseState> databaseStateSink )
+                                               SourceQueueWithComplete<ReplicatedDatabaseState> databaseStateSink )
     {
         ClusterClientReceptionist receptionist = actorSystemLifecycle.clusterClientReceptionist();
         Props readReplicaTopologyProps = ReadReplicaTopologyActor.props( topologySink, databaseStateSink, receptionist, config, clock );
         return actorSystemLifecycle.applicationActorOf( readReplicaTopologyProps, ReadReplicaTopologyActor.NAME );
-    }
-
-    private void startRestartNeededListeningActor( Cluster cluster )
-    {
-        Runnable restart = () -> executor.execute( this::restart );
-        EventStream eventStream = actorSystemLifecycle.eventStream();
-        Props props = RestartNeededListeningActor.props( restart, eventStream, cluster, actorSystemLifecycle.restartStrategy() );
-        actorSystemLifecycle.applicationActorOf( props, RestartNeededListeningActor.NAME );
     }
 
     private void publishInitialData( ActorRef... actorRefs )
@@ -212,7 +202,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public void stop0() throws Exception
+    public synchronized void stop0() throws Exception
     {
         coreTopologyActorRef = null;
         directoryActorRef = null;
@@ -220,7 +210,16 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
 
         actorSystemLifecycle.shutdown();
 
-        globalTopologyState = newGlobalTopologyState( logProvider, listenerService );
+        if ( this.isRestarting )
+        {
+            globalTopologyState.clearRemoteData( memberId() );
+        }
+        else
+        {
+            // set globalTopologyState to a new empty state so that we don't report any remote member info but we avoid NPEs
+            globalTopologyState = newGlobalTopologyState( logProvider, listenerService );
+        }
+
     }
 
     @Override
@@ -317,6 +316,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     {
         try
         {
+            isRestarting = true;
             stop();
             start();
             userLog.info( "Successfully restarted discovery system" );
@@ -326,6 +326,10 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         {
             userLog.warn( "Failed to restart discovery system", t );
             return false;
+        }
+        finally
+        {
+            isRestarting = false;
         }
     }
 

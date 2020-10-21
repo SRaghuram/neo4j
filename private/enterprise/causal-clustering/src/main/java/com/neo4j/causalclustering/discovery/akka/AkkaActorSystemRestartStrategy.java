@@ -10,7 +10,6 @@ import akka.cluster.ClusterEvent;
 import akka.cluster.Member;
 import akka.cluster.MemberStatus;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
-import scala.Int;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -175,7 +174,7 @@ public abstract class AkkaActorSystemRestartStrategy
             Optional<SocketAddress> firstSeed = this.firstSeed.get();
             return firstSeed.map( socketAddress ->
                     // first check everything is not null to avoid NPEs at runtime
-                    socketAddress != null && socketAddress.getHostname() != null && socketAddress.getPort() > 0
+                    socketAddress.getHostname() != null && socketAddress.getPort() > 0
                     && selfMember != null && selfMember.address() != null
                     && selfMember.address().port().exists( Objects::nonNull ) && selfMember.address().host().exists( Objects::nonNull )
                     // Now check that the java socket address matches the akka/scala address

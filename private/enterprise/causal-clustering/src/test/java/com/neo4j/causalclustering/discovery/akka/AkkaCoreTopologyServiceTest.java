@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.discovery.akka;
 
 import akka.actor.ActorSystem;
 import akka.actor.Props;
-import akka.testkit.TestProbe;
 import akka.testkit.javadsl.TestKit;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
@@ -154,7 +153,7 @@ class AkkaCoreTopologyServiceTest
         service.init();
         service.start();
 
-        verify( systemLifecycle ).createClusterActorSystem();
+        verify( systemLifecycle ).createClusterActorSystem( any() );
         verify( systemLifecycle, atLeastOnce() ).queueMostRecent( any() );
         verify( systemLifecycle, atLeastOnce() ).applicationActorOf( any(), any() );
 
@@ -208,7 +207,7 @@ class AkkaCoreTopologyServiceTest
 
         InOrder inOrder = inOrder( systemLifecycle );
         inOrder.verify( systemLifecycle ).shutdown();
-        inOrder.verify( systemLifecycle ).createClusterActorSystem();
+        inOrder.verify( systemLifecycle ).createClusterActorSystem( any() );
     }
 
     @Test
@@ -352,7 +351,7 @@ class AkkaCoreTopologyServiceTest
 
         InOrder inOrder = inOrder( systemLifecycle );
         inOrder.verify( systemLifecycle ).shutdown();
-        inOrder.verify( systemLifecycle ).createClusterActorSystem();
+        inOrder.verify( systemLifecycle ).createClusterActorSystem( any() );
     }
 
     @Test
@@ -362,13 +361,13 @@ class AkkaCoreTopologyServiceTest
         service.start();
         clearInvocations( systemLifecycle );
 
-        Mockito.doThrow( new RuntimeException() ).doNothing().when( systemLifecycle ).createClusterActorSystem();
+        Mockito.doThrow( new RuntimeException() ).doNothing().when( systemLifecycle ).createClusterActorSystem( any() );
 
         service.restart();
 
         InOrder inOrder = inOrder( systemLifecycle );
         inOrder.verify( systemLifecycle ).shutdown();
-        inOrder.verify( systemLifecycle, times( 2 ) ).createClusterActorSystem();
+        inOrder.verify( systemLifecycle, times( 2 ) ).createClusterActorSystem( any() );
     }
 
     @Test
@@ -381,13 +380,13 @@ class AkkaCoreTopologyServiceTest
         int numFailures = 15;
         Exception exception = new RuntimeException();
         final Exception[] exceptions = Stream.generate( () -> exception ).limit( numFailures ).toArray( Exception[]::new );
-        Mockito.doThrow( exceptions ).doNothing().when( systemLifecycle ).createClusterActorSystem();
+        Mockito.doThrow( exceptions ).doNothing().when( systemLifecycle ).createClusterActorSystem( any() );
 
         service.restart();
 
         InOrder inOrder = inOrder( systemLifecycle );
         inOrder.verify( systemLifecycle ).shutdown();
-        inOrder.verify( systemLifecycle, times( numFailures + 1 ) ).createClusterActorSystem();
+        inOrder.verify( systemLifecycle, times( numFailures + 1 ) ).createClusterActorSystem( any() );
     }
 
     private void testEmptyTopologiesAreReportedAfter( ThrowingConsumer<AkkaCoreTopologyService,Exception> testAction ) throws Exception

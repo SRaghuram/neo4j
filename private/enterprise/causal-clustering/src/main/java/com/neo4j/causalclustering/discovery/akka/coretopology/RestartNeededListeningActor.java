@@ -46,7 +46,6 @@ public class RestartNeededListeningActor extends AbstractActorWithTimersAndLoggi
     public void preStart()
     {
         eventStream.subscribe( getSelf(), ThisActorSystemQuarantinedEvent.class );
-        eventStream.subscribe( getSelf(), SingletonSeedClusterDetected.class );
         cluster.subscribe( getSelf(), ClusterEvent.ClusterShuttingDown$.class );
         cluster.registerOnMemberUp(
                 () -> timers().startPeriodicTimer( TIMER_KEY, new Tick(), actorSystemRestartStrategy.checkFrequency() )
@@ -110,9 +109,8 @@ public class RestartNeededListeningActor extends AbstractActorWithTimersAndLoggi
         log().debug( "Ignoring as restart has been triggered: {}", event );
     }
 
-    public static class SingletonSeedClusterDetected implements ClusterEvent.ClusterDomainEvent
+    public static class SingletonSeedClusterDetected
     {
-
     }
 
     /*

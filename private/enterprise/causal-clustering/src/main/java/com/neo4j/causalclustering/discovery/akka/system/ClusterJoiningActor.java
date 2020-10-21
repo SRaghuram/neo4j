@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.akka.system;
 
+import akka.actor.ActorRef;
 import akka.actor.Address;
 import akka.actor.Props;
 import akka.cluster.Cluster;
@@ -32,11 +33,12 @@ public class ClusterJoiningActor extends AbstractActorWithTimersAndLogging
 {
     static final String AKKA_SCHEME = "akka";
     private final int minMembersAtFormation;
+    private final ActorRef restartNeededListeningActor;
     private final boolean allowAnyCoreToBootstrapAkkaCluster;
 
-    public static Props props( Cluster cluster, EventStream eventStream, RemoteMembersResolver resolver, Config config )
+    public static Props props( Cluster cluster, ActorRef restartNeededListeningActor, RemoteMembersResolver resolver, Config config )
     {
-        return Props.create( ClusterJoiningActor.class, () -> new ClusterJoiningActor( cluster, eventStream, resolver, config ) );
+        return Props.create( ClusterJoiningActor.class, () -> new ClusterJoiningActor( cluster, restartNeededListeningActor, resolver, config ) );
     }
 
     public static final String NAME = "joiner";
@@ -44,14 +46,13 @@ public class ClusterJoiningActor extends AbstractActorWithTimersAndLogging
     private static final String TIMER = "join timer";
 
     private final Cluster cluster;
-    private final EventStream eventStream;
     private final RemoteMembersResolver remoteMembersResolver;
     private final Duration retry;
 
-    private ClusterJoiningActor( Cluster cluster, EventStream eventStream, RemoteMembersResolver remoteMembersResolver, Config config )
+    private ClusterJoiningActor( Cluster cluster, ActorRef restartNeededListeningActor, RemoteMembersResolver remoteMembersResolver, Config config )
     {
         this.cluster = cluster;
-        this.eventStream = eventStream;
+        this.restartNeededListeningActor = restartNeededListeningActor;
         this.remoteMembersResolver = remoteMembersResolver;
         this.retry = config.get( CausalClusteringInternalSettings.cluster_binding_retry_timeout );
         this.minMembersAtFormation = config.get( CausalClusteringInternalSettings.middleware_akka_min_number_of_members_at_formation );
@@ -146,7 +147,7 @@ public class ClusterJoiningActor extends AbstractActorWithTimersAndLogging
         )
         {
             log().debug( "Detected attempt to form discovery cluster with lone seed node" );
-            eventStream.publish( new RestartNeededListeningActor.SingletonSeedClusterDetected() );
+            restartNeededListeningActor.tell( new RestartNeededListeningActor.SingletonSeedClusterDetected(), this.self() );
             return true;
         }
         return false;

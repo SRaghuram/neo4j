@@ -25,6 +25,7 @@ import akka.stream.javadsl.Source;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.akka.AkkaActorSystemRestartStrategy;
+import com.neo4j.causalclustering.discovery.akka.coretopology.RestartNeededListeningActor;
 import scala.Option;
 import scala.concurrent.duration.FiniteDuration;
 
@@ -72,10 +73,11 @@ public class ActorSystemLifecycle
         this.actorSystemRestartStrategy = new AkkaActorSystemRestartStrategy.RestartWhenMajorityUnreachableOrSingletonFirstSeed( resolver );
     }
 
-    public void createClusterActorSystem()
+    public void createClusterActorSystem( Runnable restart )
     {
         this.actorSystemComponents = new ActorSystemComponents( actorSystemFactory,  ProviderSelection.cluster() );
-        Props props = ClusterJoiningActor.props( cluster(), eventStream(), resolver, config );
+
+        Props props = ClusterJoiningActor.props( cluster(), startRestartNeededListeningActor(restart), resolver, config );
         applicationActorOf( props, ClusterJoiningActor.NAME ).tell( joinMessageFactory.message(), ActorRef.noSender() );
     }
 
@@ -87,6 +89,12 @@ public class ActorSystemLifecycle
     public void addSeenAddresses( Collection<Address> addresses )
     {
         joinMessageFactory.addSeenAddresses( addresses );
+    }
+
+    private ActorRef startRestartNeededListeningActor( Runnable restart )
+    {
+        Props props = RestartNeededListeningActor.props( restart, this.eventStream(), this.cluster(), this.restartStrategy() );
+        return this.applicationActorOf( props, RestartNeededListeningActor.NAME );
     }
 
     public void shutdown() throws Exception
