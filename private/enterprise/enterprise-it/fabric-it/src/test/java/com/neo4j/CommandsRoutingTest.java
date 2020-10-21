@@ -84,7 +84,7 @@ class CommandsRoutingTest
         {
             var query = joinAsLines(
                     "USE mega.myGraph",
-                    "CALL db.indexes() YIELD name RETURN *"
+                    "SHOW INDEXES"
             );
             return tx.run( query ).list();
         } );
@@ -114,7 +114,7 @@ class CommandsRoutingTest
         {
             var query = joinAsLines(
                     "USE mega.myGraph",
-                    "CALL db.indexes() YIELD name RETURN *"
+                    "SHOW INDEXES VERBOSE"
             );
             return tx.run( query ).list();
         } );
@@ -138,7 +138,7 @@ class CommandsRoutingTest
         {
             var query = joinAsLines(
                     "USE `my-db`",
-                    "CALL db.constraints() YIELD name RETURN *"
+                    "SHOW CONSTRAINTS VERBOSE"
             );
             return tx.run( query ).list();
         } );
@@ -159,7 +159,7 @@ class CommandsRoutingTest
         {
             var query = joinAsLines(
                     "USE `my-db`",
-                    "CALL db.constraints() YIELD name RETURN *"
+                    "SHOW CONSTRAINTS"
             );
             return tx.run( query ).list();
         } );
