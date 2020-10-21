@@ -85,9 +85,9 @@ public class CausalClusteringInternalSettings implements SettingsDeclaration
             newBuilder( "causal_clustering.discovery_resolution_timeout", DURATION, ofMinutes( 5 ) ).build();
 
     @Internal
-    @Description( "Allows a core to down all unreachable members" )
+    @Description( "Allows a core to down all unreachable members if it needs to do that to allow a new core to join" )
     public static final Setting<Boolean> middleware_akka_down_unreachable_on_new_joiner =
-            newBuilder( "causal_clustering.middleware.akka.down_unreachable_on_new_joiner", BOOL, false ).build();
+            newBuilder( "causal_clustering.middleware.akka.down_unreachable_on_new_joiner", BOOL, true ).build();
 
     @Internal
     @Description( "External config file for Akka" )
