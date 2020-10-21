@@ -20,6 +20,10 @@ import com.neo4j.bench.common.tool.micro.RunReportParams;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.ErrorReporter;
 import com.neo4j.bench.common.util.Jvm;
+import com.neo4j.bench.infra.InfraParams;
+import com.neo4j.bench.infra.PasswordManager;
+import com.neo4j.bench.infra.ResultStoreCredentials;
+import com.neo4j.bench.infra.aws.AWSPasswordManager;
 import com.neo4j.bench.jmh.api.Runner;
 import com.neo4j.bench.jmh.api.config.JmhOptionsUtil;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
@@ -73,33 +77,36 @@ public class RunReportCommand extends BaseRunReportCommand
 
     private static final String CMD_RESULTS_STORE_USER = "--results-store-user";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_RESULTS_STORE_USER},
-             description = "Username for Neo4j database server that stores benchmarking results",
-             title = "Results Store Username" )
-    @Required
+            name = {CMD_RESULTS_STORE_USER},
+            description = "Username for Neo4j database server that stores benchmarking results",
+            title = "Results Store Username" )
     private String resultsStoreUsername;
 
     private static final String CMD_RESULTS_STORE_PASSWORD = "--results-store-pass";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_RESULTS_STORE_PASSWORD},
-             description = "Password for Neo4j database server that stores benchmarking results",
-             title = "Results Store Password" )
-    @Required
+            name = {CMD_RESULTS_STORE_PASSWORD},
+            description = "Password for Neo4j database server that stores benchmarking results",
+            title = "Results Store Password" )
     private String resultsStorePassword;
 
     private static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_RESULTS_STORE_URI},
-             description = "URI to Neo4j database server for storing benchmarking results",
-             title = "Results Store" )
-    @Required
+            name = {CMD_RESULTS_STORE_URI},
+            description = "URI to Neo4j database server for storing benchmarking results",
+            title = "Results Store" )
     private URI resultsStoreUri;
+
+    @Option( type = OptionType.COMMAND,
+            name = {InfraParams.CMD_RESULTS_STORE_PASSWORD_SECRET_NAME},
+            description = "Secret name in AWS Secrets Manager with password for Neo4j database server that stores benchmarking results",
+            title = "Results Store Password Secret Name" )
+    private String resultsStorePasswordSecretName;
 
     public static final String CMD_S3_BUCKET = "--s3-bucket";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_S3_BUCKET},
-             description = "S3 bucket profiles were uploaded to",
-             title = "S3 bucket" )
+            name = {CMD_S3_BUCKET},
+            description = "S3 bucket profiles were uploaded to",
+            title = "S3 bucket" )
     @Required
     private String s3Bucket;
 
@@ -113,9 +120,18 @@ public class RunReportCommand extends BaseRunReportCommand
     public void doRun( RunReportParams runReportParams )
     {
         TestRunReport testRunReport = run( runReportParams );
-        ResultsReporter resultsReporter = new ResultsReporter( resultsStoreUsername,
-                                                               resultsStorePassword,
-                                                               resultsStoreUri );
+
+        ResultStoreCredentials resultStoreCredentials = PasswordManager.getResultStoreCredentials( new ResultStoreCredentials(
+                                                                                                           resultsStoreUsername,
+                                                                                                           resultsStorePassword,
+                                                                                                           resultsStoreUri
+                                                                                                   ),
+                                                                                                   resultsStorePasswordSecretName,
+                                                                                                   AWSPasswordManager.create( awsRegion ) );
+
+        ResultsReporter resultsReporter = new ResultsReporter( resultStoreCredentials.username(),
+                                                               resultStoreCredentials.password(),
+                                                               resultStoreCredentials.uri() );
         resultsReporter.reportAndUpload( testRunReport,
                                          s3Bucket,
                                          runReportParams.workDir(),

@@ -23,21 +23,44 @@ public interface PasswordManager
         return getResultStoreCredentials( infraParams, AWSPasswordManager.create( infraParams.awsCredentials().awsRegion() ) );
     }
 
+    static ResultStoreCredentials getResultStoreCredentials( ResultStoreCredentials resultStoreCredentials,
+                                                             String resultsStoreSecretName,
+                                                             PasswordManager passwordManager )
+    {
+        return getResultStoreCredentials( resultStoreCredentials.username(),
+                                          resultStoreCredentials.password(),
+                                          resultStoreCredentials.uri(),
+                                          resultsStoreSecretName,
+                                          passwordManager );
+    }
+
     static ResultStoreCredentials getResultStoreCredentials( InfraParams infraParams, PasswordManager passwordManager )
     {
-        if ( hasAllCredentials( infraParams.resultsStoreUsername(),
-                                infraParams.resultsStorePassword(),
-                                infraParams.resultsStoreUri() ) )
+        return getResultStoreCredentials( infraParams.resultsStoreUsername(),
+                                          infraParams.resultsStorePassword(),
+                                          infraParams.resultsStoreUri(),
+                                          infraParams.resultsStorePasswordSecretName(),
+                                          passwordManager );
+    }
+
+    static ResultStoreCredentials getResultStoreCredentials( String resultsStoreUsername,
+                                                             String resultsStorePassword,
+                                                             URI resultsStoreUri,
+                                                             String resultsStorePasswordSecretName,
+                                                             PasswordManager passwordManager )
+    {
+        if ( hasAllCredentials( resultsStoreUsername,
+                                resultsStorePassword,
+                                resultsStoreUri ) )
         {
             LOG.info( "using command line result store credentials" );
-            return new ResultStoreCredentials( infraParams.resultsStoreUsername(), infraParams.resultsStorePassword(), infraParams.resultsStoreUri() );
+            return new ResultStoreCredentials( resultsStoreUsername, resultsStorePassword, resultsStoreUri );
         }
 
-        if ( isNotEmpty( infraParams.resultsStorePasswordSecretName() ) )
+        if ( isNotEmpty( resultsStorePasswordSecretName ) )
         {
 
-            ResultStoreCredentials resultStoreCredentials = passwordManager.getCredentials(
-                    infraParams.resultsStorePasswordSecretName() );
+            ResultStoreCredentials resultStoreCredentials = passwordManager.getCredentials( resultsStorePasswordSecretName );
             // if result store credentials are all set in AWS SecretsManager use this one,
             // otherwise fallback to URI and username from command line args or fail if not set
             if ( hasAllCredentials( resultStoreCredentials.username(),
@@ -47,14 +70,14 @@ public interface PasswordManager
                 LOG.info( "using SecretsManager result store credentials" );
                 return resultStoreCredentials;
             }
-            else if ( hasAllCredentials( infraParams.resultsStoreUsername(),
+            else if ( hasAllCredentials( resultsStoreUsername,
                                          resultStoreCredentials.password(),
-                                         infraParams.resultsStoreUri() ) )
+                                         resultsStoreUri ) )
             {
                 LOG.info( "using result store password from SecretsManager" );
-                return new ResultStoreCredentials( infraParams.resultsStoreUsername(),
+                return new ResultStoreCredentials( resultsStoreUsername,
                                                    resultStoreCredentials.password(),
-                                                   infraParams.resultsStoreUri() );
+                                                   resultsStoreUri );
             }
             else
             {

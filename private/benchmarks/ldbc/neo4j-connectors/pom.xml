@@ -72,6 +72,11 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.neo4j.bench</groupId>
+            <artifactId>benchmark-infra-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-tools</artifactId>
             <version>${project.version}</version>
