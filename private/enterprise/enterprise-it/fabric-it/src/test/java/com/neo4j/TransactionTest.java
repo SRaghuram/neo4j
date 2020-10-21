@@ -57,8 +57,13 @@ import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.NamedDatabaseId;
+import org.neo4j.kernel.impl.api.transaction.monitor.TransactionMonitor;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.logging.LogAssertions;
+import org.neo4j.logging.NullLogProvider;
+import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.scheduler.CallableExecutorService;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
@@ -82,6 +87,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.logging.AssertableLogProvider.Level.WARN;
 
 @ExtendWith( SuppressOutputExtension.class )
 @ResourceLock( Resources.SYSTEM_OUT )
@@ -99,6 +105,7 @@ class TransactionTest
     private static final MonitoredJobExecutor monitoredJobExecutor = ( monitoringParams, job ) -> fabricWorkerExecutorService.submit( job );
     private static final DatabaseManagementService databaseManagementService = mock( DatabaseManagementService.class );
     private static final FabricDatabaseManager fabricDatabaseManager = mock( FabricDatabaseManager.class );
+    private static final AssertableLogProvider internalLogProvider = new AssertableLogProvider();
     private static DriverUtils driverUtils;
     private static ArgumentCaptor<Runnable> timeoutCallback = ArgumentCaptor.forClass( Runnable.class );
     private static SystemNanoClock clock = mock( SystemNanoClock.class );
@@ -132,6 +139,7 @@ class TransactionTest
                 .withFabricDatabase( "mega" )
                 .withAdditionalSettings( additionalProperties )
                 .addMocks( driverPool, jobScheduler, databaseManagementService, fabricDatabaseManager, clock )
+                .withLogService( new SimpleLogService( NullLogProvider.getInstance(), internalLogProvider ) )
                 .build();
 
         mockFabricDatabaseManager();
@@ -158,6 +166,7 @@ class TransactionTest
         mockShardDriver( shard1Driver, Mono.just( tx1 ) );
         mockShardDriver( shard2Driver, Mono.just( tx2 ) );
         mockShardDriver( shard3Driver, Mono.just( tx3 ) );
+        internalLogProvider.clear();
     }
 
     private static void mockDriverPool( Location.Remote graph, PooledDriver pooledDriver )
@@ -462,6 +471,15 @@ class TransactionTest
 
         verifyRolledBack( tx1, tx2 );
         verifyDriverReturned( shard1Driver, shard2Driver );
+
+        LogAssertions.assertThat( internalLogProvider )
+                     .forClass( TransactionMonitor.class )
+                     .forLevel( WARN )
+                     // The full message should be
+                     // 'Transaction QueryRouterTransaction[id=<ID>,clientAddress=<IP>:<port>] timeout',
+                     // but since <ID>, <IP> and <port> are variable and would be very hard to fix for the test,
+                     // we check only pieces of the log message round those variables.
+                     .containsMessages( "Transaction QueryRouterTransaction[id=", ",clientAddress=", "] timeout" );
     }
 
     @Test
