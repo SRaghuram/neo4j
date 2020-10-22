@@ -221,6 +221,50 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     withoutColumns(result.toList, List("options")) should equal(List(defaultUniquenessVerboseIndexOutput(1L), defaultNodeKeyVerboseIndexOutput(3L)))
   }
 
+  test("should show correct options for btree index with random options") {
+    // GIVEN
+    val randomOptions = createBtreeIndexWithRandomOptions("btree", label, List(prop2))
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("SHOW INDEXES VERBOSE OUTPUT")
+
+    // THEN
+    val options: List[Object] = result.columnAs("options").toList
+    options.size should be(1)
+    assertCorrectOptionsMap(options.head, randomOptions)
+  }
+
+  test("should show correct options for fulltext node index with random options") {
+    // GIVEN
+    val randomConfig = createFulltextNodeIndexWithRandomOptions("fullNode", List(label2), List(prop2))
+    val randomOptions = Map("indexConfig" -> randomConfig, "indexProvider" -> fulltextProvider)
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("SHOW INDEXES VERBOSE OUTPUT")
+
+    // THEN
+    val options: List[Object] = result.columnAs("options").toList
+    options.size should be(1)
+    assertCorrectOptionsMap(options.head, randomOptions)
+  }
+
+  test("should show correct options for fulltext rel index with random options") {
+    // GIVEN
+    val randomConfig = createFulltextRelIndexWithRandomOptions("fullNode", List(relType), List(prop))
+    val randomOptions = Map("indexConfig" -> randomConfig, "indexProvider" -> fulltextProvider)
+    graph.awaitIndexesOnline()
+
+    // WHEN
+    val result = executeSingle("SHOW INDEXES VERBOSE OUTPUT")
+
+    // THEN
+    val options: List[Object] = result.columnAs("options").toList
+    options.size should be(1)
+    assertCorrectOptionsMap(options.head, randomOptions)
+  }
+
   test("show indexes should show valid create index statements") {
 
     // Btree indexes
@@ -435,6 +479,56 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     withoutColumns(result.toList, List("options")) should equal(List(defaultRelExistsVerboseConstraintOutput(1L)))
   }
 
+  test("should show correct options for unique constraint with random options") {
+    // GIVEN
+    val randomOptions = createConstraint(UniqueConstraints, "unique", label2, prop)
+    graph.awaitIndexesOnline()
+
+    // THEN
+    randomOptions.isDefined should be(true)
+
+    // WHEN
+    val indexResult = executeSingle("SHOW INDEXES VERBOSE OUTPUT")
+
+    // THEN
+    val indexOptions: List[Object] = indexResult.columnAs("options").toList
+    indexOptions.size should be(1)
+    assertCorrectOptionsMap(indexOptions.head, randomOptions.get)
+
+    // WHEN
+    val constraintResult = executeSingle("SHOW CONSTRAINTS VERBOSE OUTPUT")
+
+    // THEN
+    val constraintOptions: List[Object] = constraintResult.columnAs("options").toList
+    constraintOptions.size should be(1)
+    assertCorrectOptionsMap(constraintOptions.head, randomOptions.get)
+  }
+
+  test("should show correct options for node key constraint with random options") {
+    // GIVEN
+    val randomOptions = createConstraint(NodeKeyConstraints, "nodeKey", label2, prop)
+    graph.awaitIndexesOnline()
+
+    // THEN
+    randomOptions.isDefined should be(true)
+
+    // WHEN
+    val indexResult = executeSingle("SHOW INDEXES VERBOSE OUTPUT")
+
+    // THEN
+    val indexOptions: List[Object] = indexResult.columnAs("options").toList
+    indexOptions.size should be(1)
+    assertCorrectOptionsMap(indexOptions.head, randomOptions.get)
+
+    // WHEN
+    val constraintResult = executeSingle("SHOW CONSTRAINTS VERBOSE OUTPUT")
+
+    // THEN
+    val constraintOptions: List[Object] = constraintResult.columnAs("options").toList
+    constraintOptions.size should be(1)
+    assertCorrectOptionsMap(constraintOptions.head, randomOptions.get)
+  }
+
   test("show constraints should show valid create statements for unique constraints") {
     createConstraint(UniqueConstraints, "unique property", label, prop)
     createConstraint(UniqueConstraints, "unique property whitespace", labelWhitespace, propWhitespace)
@@ -510,11 +604,13 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   // Btree index help methods
 
-  private def createBtreeIndexWithRandomOptions(name: String, label: String, properties: List[String]): Unit = {
+  private def createBtreeIndexWithRandomOptions(name: String, label: String, properties: List[String]): Map[String, Object] = {
     val escapedName = s"`${escapeBackticks(name)}`"
     val escapedLabel = s"`${escapeBackticks(label)}`"
     val escapedProperties = properties.map(p => s"n.`${escapeBackticks(p)}`").mkString(",")
-    executeSingle(s"CREATE INDEX $escapedName FOR (n:$escapedLabel) ON ($escapedProperties) OPTIONS ${randomBtreeOptions()}")
+    val randomOptions = randomBtreeOptions()
+    executeSingle(s"CREATE INDEX $escapedName FOR (n:$escapedLabel) ON ($escapedProperties) OPTIONS ${randomOptions._1}")
+    randomOptions._2
   }
 
   private def createDefaultBtreeIndex(): Unit = graph.createIndexWithName("my_index", label, prop2, prop)
@@ -527,10 +623,12 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   // Fulltext index help methods
 
-  private def createFulltextNodeIndexWithRandomOptions(name: String, labelList: List[String], propertyList: List[String]): Unit = {
+  private def createFulltextNodeIndexWithRandomOptions(name: String, labelList: List[String], propertyList: List[String]): Map[String, Any] = {
     val labels: String = labelList.map(l => s"'$l'").mkString(",")
     val properties: String = propertyList.map(p => s"'$p'").mkString(",")
-    executeSingle(s"CALL db.index.fulltext.createNodeIndex('$name', [$labels], [$properties], ${randomFulltextSetting()})")
+    val randomConfig = randomFulltextSetting()
+    executeSingle(s"CALL db.index.fulltext.createNodeIndex('$name', [$labels], [$properties], ${randomConfig._1})")
+    randomConfig._2
   }
 
   private def createDefaultFullTextNodeIndex(): Unit = executeSingle(s"CALL db.index.fulltext.createNodeIndex('fulltext_node', ['$label'], ['$prop'])")
@@ -541,10 +639,12 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   private def defaultFulltextNodeVerboseOutput(id: Long): Map[String, Any] = defaultFulltextNodeBriefOutput(id) ++
     indexOutputVerbose(s"CALL db.index.fulltext.createNodeIndex('fulltext_node', ['$label'], ['$prop'], $defaultFulltextConfigString)")
 
-  private def createFulltextRelIndexWithRandomOptions(name: String, labelList: List[String], propertyList: List[String]): Unit = {
+  private def createFulltextRelIndexWithRandomOptions(name: String, labelList: List[String], propertyList: List[String]): Map[String, Any] = {
     val labels: String = labelList.map(l => s"'$l'").mkString(",")
     val properties: String = propertyList.map(p => s"'$p'").mkString(",")
-    executeSingle(s"CALL db.index.fulltext.createRelationshipIndex('$name', [$labels], [$properties], ${randomFulltextSetting()})")
+    val randomConfig = randomFulltextSetting()
+    executeSingle(s"CALL db.index.fulltext.createRelationshipIndex('$name', [$labels], [$properties], ${randomConfig._1})")
+    randomConfig._2
   }
 
   private def createDefaultFullTextRelIndex(): Unit = executeSingle(s"CALL db.index.fulltext.createRelationshipIndex('fulltext_rel', ['$relType'], ['$prop'])")
@@ -565,16 +665,21 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     graph.awaitIndexesOnline()
   }
 
-  private def createConstraint(constraintType: ShowConstraintType, name: String, label: String, property: String): Unit = {
+  private def createConstraint(constraintType: ShowConstraintType, name: String, label: String, property: String): Option[Map[String, Any]] = {
     val escapedName = s"`${escapeBackticks(name)}`"
     val escapedLabel = s"`${escapeBackticks(label)}`"
     val escapedProperty = s"`${escapeBackticks(property)}`"
+    var randomOptionsMap: Option[Map[String, Any]] = None
 
     val query = constraintType match {
       case UniqueConstraints =>
-        s"CREATE CONSTRAINT $escapedName ON (n:$escapedLabel) ASSERT (n.$escapedProperty) IS UNIQUE OPTIONS ${randomBtreeOptions()}"
+        val randomOptions = randomBtreeOptions()
+        randomOptionsMap = Some(randomOptions._2)
+        s"CREATE CONSTRAINT $escapedName ON (n:$escapedLabel) ASSERT (n.$escapedProperty) IS UNIQUE OPTIONS ${randomOptions._1}"
       case NodeKeyConstraints =>
-        s"CREATE CONSTRAINT $escapedName ON (n:$escapedLabel) ASSERT (n.$escapedProperty) IS NODE KEY OPTIONS ${randomBtreeOptions()}"
+        val randomOptions = randomBtreeOptions()
+        randomOptionsMap = Some(randomOptions._2)
+        s"CREATE CONSTRAINT $escapedName ON (n:$escapedLabel) ASSERT (n.$escapedProperty) IS NODE KEY OPTIONS ${randomOptions._1}"
       case NodeExistsConstraints =>
         s"CREATE CONSTRAINT $escapedName ON (n:$escapedLabel) ASSERT exists(n.$escapedProperty)"
       case RelExistsConstraints =>
@@ -583,6 +688,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
         throw new IllegalArgumentException(s"Unexpected constraint type for constraint create command: ${unexpectedType.prettyPrint}")
     }
     executeSingle(query)
+    randomOptionsMap
   }
 
   private def constraintOutputBrief(id: Long, name: String, constraintType: String, entityType: String,
@@ -747,8 +853,12 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     }
   }
 
-  private def randomBtreeOptions(): String = {
-    s"{indexConfig: {${randomBtreeSetting()}}, indexProvider: '${randomBtreeProvider()}'}"
+  private def randomBtreeOptions(): (String, Map[String, Object]) = {
+    val provider = randomBtreeProvider()
+    val indexConfig = randomBtreeSetting()
+    val optionsString = s"{indexConfig: {${indexConfig._1}}, indexProvider: '$provider'}"
+    val optionsMap = Map("indexConfig" -> indexConfig._2, "indexProvider" -> provider)
+    (optionsString, optionsMap)
   }
 
   private def randomBtreeProvider(): String = {
@@ -756,17 +866,23 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     randomValues.among(availableProviders)
   }
 
-  private def randomBtreeSetting(): String = {
+  private def randomBtreeSetting(): (String, Map[String, Array[Double]]) = {
     val indexSettings: Array[IndexSettingImpl] = IndexSettingImpl.values
-    indexSettings.foldLeft(List.empty[String])((acc, setting) => {
+    val configMap = indexSettings.foldLeft(Map.empty[String, Array[Double]])((acc, setting) => {
       val settingName = setting.getSettingName
       if (settingName.startsWith("spatial")) {
-        val stringValue = randomSpatialValue(setting).mkString(", ")
-        s"`$settingName`: [$stringValue]" :: acc
+        val settingValue = randomSpatialValue(setting)
+        acc + (settingName -> settingValue)
       } else {
         acc
       }
-    }).mkString(", ")
+    })
+
+    val configString = configMap.map {
+      case (key, value) => s"`$key`: [${value.mkString(", ")}]"
+    }.mkString(", ")
+
+    (configString, configMap)
   }
 
   private def randomSpatialValue(indexSetting: IndexSettingImpl): Array[Double] = {
@@ -799,13 +915,17 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     values.map(i => -Math.abs(i))
   }
 
-  private def randomFulltextSetting(): String = {
-    val eventuallyConsistent = s"`$FULLTEXT_EVENTUALLY_CONSISTENT`"
-    val analyzer = s"`$FULLTEXT_ANALYZER`"
-    s"{$eventuallyConsistent: '${randomValues.nextBoolean()}', $analyzer: '${randomAnalyzer()}'}"
+  private def randomFulltextSetting(): (String, Map[String, Any]) = {
+    val eventuallyConsistent = FULLTEXT_EVENTUALLY_CONSISTENT.getSettingName
+    val analyzer = FULLTEXT_ANALYZER.getSettingName
+    val randomBoolean = randomValues.nextBoolean()
+    val randomAnalyzer = getRandomAnalyzer
+    val settingString = s"{`$eventuallyConsistent`: '$randomBoolean', `$analyzer`: '$randomAnalyzer'}"
+    val settingMap: Map[String, Any] = Map(eventuallyConsistent -> randomBoolean, analyzer -> randomAnalyzer)
+    (settingString, settingMap)
   }
 
-  private def randomAnalyzer(): String = {
+  private def getRandomAnalyzer: String = {
     val analyzers = new util.ArrayList[AnalyzerProvider](Services.loadAll(classOf[AnalyzerProvider]))
     randomValues.among(analyzers).getName
   }
