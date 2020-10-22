@@ -1104,12 +1104,12 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("nested index join with composite indexes") {
     // given
-    graph.createIndex("X", "p1", "p2")
     (1 to 1000) foreach { _ => // Get the planner to do what we expect it to!
       createLabeledNode("X")
     }
     val a = createNode("p1" -> 1, "p2" -> 1)
     val b = createLabeledNode(Map("p1" -> 1, "p2" -> 1), "X")
+    graph.createIndex("X", "p1", "p2")
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (a), (b:X) where id(a) = $id AND b.p1 = a.p1 AND b.p2 = 1 return b",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
