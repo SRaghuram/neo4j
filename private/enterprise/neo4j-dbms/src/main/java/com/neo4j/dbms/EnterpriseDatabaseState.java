@@ -9,7 +9,6 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.neo4j.dbms.DatabaseState;
-import org.neo4j.kernel.database.DatabaseLogPrefix;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
@@ -101,7 +100,7 @@ public class EnterpriseDatabaseState implements DatabaseState
     private static String toShortString( EnterpriseDatabaseState state )
     {
         return state == null ? "unknown" :
-                String.format( "%s%s{db=%s}", state.hasFailed() ? "FAILED/" : "", state.operatorState(), DatabaseLogPrefix.prefix( state.namedDatabaseId ) );
+                String.format( "%s%s{db=%s}", state.hasFailed() ? "FAILED/" : "", state.operatorState(), state.namedDatabaseId.logPrefix() );
     }
 
     @Override
