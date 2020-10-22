@@ -298,7 +298,7 @@ public class DbmsReconciler
             var previousError = currentState.failure().orElseThrow( IllegalStateException::new );
             return CompletableFuture.completedFuture( initialResult.withError( DatabaseManagementException.wrap( previousError ) ) );
         }
-        log.info( "Database %s is requested to transition from %s to %s", databaseName, currentState, desiredState );
+        log.info( "Database '%s' is requested to transition %s", databaseName, EnterpriseDatabaseState.logFromTo( currentState, desiredState ) );
 
         var backoff = backoffStrategy.newTimeout();
         var steps = getLifecycleTransitionSteps( currentState, desiredState );
@@ -429,6 +429,11 @@ public class DbmsReconciler
     private void stateChanged( EnterpriseDatabaseState previousState, EnterpriseDatabaseState newState )
     {
         var initialState = new EnterpriseDatabaseState( newState.databaseId(), EnterpriseOperatorState.INITIAL );
+        if ( !newState.equals( previousState ) )
+        {
+            log.info( "Database '%s' transition is complete %s", newState.databaseId().name(),
+                    EnterpriseDatabaseState.logFromTo( ( previousState == null ) ? initialState : previousState, newState ) );
+        }
         // If the previous state has a different id then a drop-recreate must have occurred
         // In this case we should fire the listener twice, once for each databaseId.
         if ( previousState != null && !Objects.equals( previousState.databaseId(), newState.databaseId() ) )
