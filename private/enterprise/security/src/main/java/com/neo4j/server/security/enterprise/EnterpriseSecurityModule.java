@@ -14,6 +14,7 @@ import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import com.neo4j.server.security.enterprise.auth.FileRoleRepository;
 import com.neo4j.server.security.enterprise.auth.InClusterAuthManager;
 import com.neo4j.server.security.enterprise.auth.LdapRealm;
+import com.neo4j.server.security.enterprise.auth.LoopbackAuthManager;
 import com.neo4j.server.security.enterprise.auth.MultiRealmAuthManager;
 import com.neo4j.server.security.enterprise.auth.PrivilegeResolver;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
@@ -92,6 +93,7 @@ public class EnterpriseSecurityModule extends SecurityModule
     private final LogProvider logProvider;
     private final SecurityLog securityLog;
     private AuthManager inClusterAuthManager;
+    private AuthManager loopbackAuthManager;
 
     public EnterpriseSecurityModule( LogProvider logProvider,
                                      SecurityLog securityLog,
@@ -177,6 +179,12 @@ public class EnterpriseSecurityModule extends SecurityModule
         return inClusterAuthManager;
     }
 
+    @Override
+    public AuthManager loopbackAuthManager()
+    {
+        return loopbackAuthManager;
+    }
+
     private EnterpriseSecurityContext asEnterpriseEdition( SecurityContext securityContext )
     {
         if ( securityContext instanceof EnterpriseSecurityContext )
@@ -223,6 +231,12 @@ public class EnterpriseSecurityModule extends SecurityModule
         var logAuthSuccess = config.get( SecuritySettings.security_log_successful_authentication );
 
         inClusterAuthManager = new InClusterAuthManager( privilegeResolver, defaultDatabaseResolver, securityLog, logAuthSuccess );
+
+        if ( config.get( GraphDatabaseInternalSettings.restrict_upgrade ) )
+        {
+            loopbackAuthManager =
+                    new LoopbackAuthManager( strategy, getOperatorUserRepository( config, logProvider, fileSystem ), securityLog, logAuthSuccess );
+        }
 
         if ( config.get( GraphDatabaseInternalSettings.restrict_upgrade ) )
         {

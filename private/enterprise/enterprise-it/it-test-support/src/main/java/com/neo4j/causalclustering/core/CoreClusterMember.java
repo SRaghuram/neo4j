@@ -80,6 +80,7 @@ public class CoreClusterMember implements ClusterMember
     private final int index;
     private final String boltSocketAddress;
     private final String intraClusterBoltSocketAddress;
+    private final String loopbackBoltSocketAddress;
     private final SocketAddress discoveryAddress;
     private final String raftListenAddress;
     private CoreGraphDatabase coreGraphDatabase;
@@ -99,6 +100,7 @@ public class CoreClusterMember implements ClusterMember
                               int raftPort,
                               int boltPort,
                               int intraClusterBoltPort,
+                              int loopbackBoltPort,
                               int httpPort,
                               int backupPort,
                               int clusterSize,
@@ -116,6 +118,7 @@ public class CoreClusterMember implements ClusterMember
 
         boltSocketAddress = format( advertisedHost, boltPort );
         intraClusterBoltSocketAddress = format( advertisedHost, intraClusterBoltPort );
+        loopbackBoltSocketAddress = format( "127.0.0.1", loopbackBoltPort );
         raftListenAddress = format( listenHost, raftPort );
 
         config.set( default_database, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
@@ -140,6 +143,7 @@ public class CoreClusterMember implements ClusterMember
         config.set( BoltConnector.advertised_address, new SocketAddress( advertisedHost, boltPort ) );
         config.set( GraphDatabaseSettings.routing_listen_address, new SocketAddress( listenHost, intraClusterBoltPort ) );
         config.set( GraphDatabaseSettings.routing_advertised_address, new SocketAddress( advertisedHost, intraClusterBoltPort ) );
+        config.set( GraphDatabaseInternalSettings.loopback_listen_port, loopbackBoltPort );
         config.set( BoltConnector.encryption_level, DISABLED );
         config.set( HttpConnector.enabled, TRUE );
         config.set( HttpConnector.listen_address, new SocketAddress( listenHost, httpPort ) );
@@ -187,6 +191,12 @@ public class CoreClusterMember implements ClusterMember
     public String intraClusterBoltAdvertisedAddress()
     {
         return intraClusterBoltSocketAddress;
+    }
+
+    @Override
+    public String loopbackBoltAddress()
+    {
+        return loopbackBoltSocketAddress;
     }
 
     public String routingURI()

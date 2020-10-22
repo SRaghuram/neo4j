@@ -104,6 +104,7 @@ public class TestBoltServer
                                      dependencies,
                                      authManager,
                                      authManager,
+                                     authManager,
                                      new MemoryPools(),
                                      defaultDatabaseResolver
         );

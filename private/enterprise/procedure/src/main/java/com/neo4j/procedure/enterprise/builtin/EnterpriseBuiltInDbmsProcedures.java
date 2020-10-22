@@ -22,7 +22,6 @@ import java.util.stream.Stream;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.SettingImpl;
 import org.neo4j.dbms.database.DatabaseContext;
@@ -74,7 +73,6 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.REQUIRES_UPGRADE;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.UNINITIALIZED;
-import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 import static org.neo4j.io.ByteUnit.bytesToString;
 import static org.neo4j.kernel.api.exceptions.Status.Procedure.ProcedureCallFailed;
 import static org.neo4j.procedure.Mode.DBMS;
@@ -450,7 +448,6 @@ public class EnterpriseBuiltInDbmsProcedures
     @Procedure( name = "dbms.upgradeStatusDetails", mode = READ )
     public Stream<SystemGraphComponentStatusResultDetails> upgradeStatusDetails() throws ProcedureException
     {
-        assertAllowedUpgradeProc();
         if ( !callContext.isSystemDatabase() )
         {
             throw new ProcedureException( ProcedureCallFailed,
@@ -470,7 +467,6 @@ public class EnterpriseBuiltInDbmsProcedures
     @Procedure( name = "dbms.upgradeDetails", mode = WRITE )
     public Stream<SystemGraphComponentUpgradeResultDetails> upgradeDetails() throws ProcedureException
     {
-        assertAllowedUpgradeProc();
         if ( !callContext.isSystemDatabase() )
         {
             throw new ProcedureException( ProcedureCallFailed,
@@ -523,19 +519,6 @@ public class EnterpriseBuiltInDbmsProcedures
                     .add( new SystemGraphComponentUpgradeResultDetails( version.componentName(), version.detect( transaction ).name(), "" ) ) );
             return Stream.concat( Stream.of( new SystemGraphComponentUpgradeResultDetails( versions.component(), versions.detect( transaction ).name(), "" ) ),
                     results.stream() );
-        }
-    }
-
-    private void assertAllowedUpgradeProc()
-    {
-        Config config = graph.getDependencyResolver().resolveDependency( Config.class );
-        if ( config.get( GraphDatabaseInternalSettings.restrict_upgrade ) )
-        {
-            if ( !securityContext.subject().hasUsername( config.get( GraphDatabaseInternalSettings.upgrade_username ) ) )
-            {
-                throw new AuthorizationViolationException(
-                        String.format( "%s Execution of this procedure has been restricted by the system.", PERMISSION_DENIED ) );
-            }
         }
     }
 

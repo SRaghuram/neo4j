@@ -29,6 +29,7 @@ import org.neo4j.dbms.database.SystemGraphComponents;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.database.DefaultDatabaseResolver;
 import org.neo4j.logging.LogProvider;
@@ -100,6 +101,11 @@ public interface AbstractEnterpriseEditionModule
             );
             securityModule.setup();
             globalModule.getGlobalLife().add( securityModule.authManager() );
+            AuthManager loopbackAuthManager = securityModule.loopbackAuthManager();
+            if ( loopbackAuthManager != null )
+            {
+                globalModule.getGlobalLife().add( loopbackAuthManager );
+            }
             return securityModule;
         }
         return EnterpriseNoAuthSecurityProvider.INSTANCE;

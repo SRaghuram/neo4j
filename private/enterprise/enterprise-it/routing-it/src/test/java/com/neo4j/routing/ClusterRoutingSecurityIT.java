@@ -96,7 +96,7 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
 
     private static Driver readReplicaDriver;
 
-    private static Driver readReplicaUpgradeDriver;
+    private static Driver loopbackLeaderDriver;
 
     private static Driver adminDriver;
 
@@ -173,7 +173,7 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
         var fooFollower = getFollower( cluster, fooLeader );
         fooFollowerDriver = coreDrivers.get( fooFollower.index() );
 
-        readReplicaUpgradeDriver = driver( readReplica.directURI(), GraphDatabaseInternalSettings.upgrade_username.defaultValue(), "foo" );
+        loopbackLeaderDriver = driver( "bolt://" + systemLeader.loopbackBoltAddress(), "ignore", "foo" );
 
         List<String> allUris = new ArrayList<>();
         cluster.coreMembers().forEach( member -> allUris.add( member.directURI() ) );
@@ -267,9 +267,9 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
     }
 
     @Test
-    void testAdminWriteProcedureThroughReadReplica()
+    void testLoopbackOnSystemLeader()
     {
-        runQuery( readReplicaUpgradeDriver, "CALL dbms.upgrade() YIELD status RETURN status", 1, "system" );
+        runQuery( loopbackLeaderDriver, "CALL dbms.upgrade() YIELD status RETURN status", 1, "system" );
     }
 
     void doTestPermissions( Driver driver )

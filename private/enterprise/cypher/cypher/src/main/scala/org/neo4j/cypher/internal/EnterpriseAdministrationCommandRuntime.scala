@@ -126,8 +126,11 @@ import org.neo4j.graphdb.RelationshipType
 import org.neo4j.graphdb.ResourceIterator
 import org.neo4j.graphdb.Transaction
 import org.neo4j.internal.helpers.collection.Iterables
+import org.neo4j.internal.kernel.api.security.AdminActionOnResource
+import org.neo4j.internal.kernel.api.security.AdminActionOnResource.DatabaseScope
 import org.neo4j.internal.kernel.api.security.AuthenticationResult
 import org.neo4j.internal.kernel.api.security.PrivilegeAction
+import org.neo4j.internal.kernel.api.security.Segment
 import org.neo4j.kernel.api.exceptions.Status
 import org.neo4j.kernel.api.exceptions.Status.HasStatus
 import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException
@@ -200,7 +203,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
      *  Check that the current user is not blocked from database management
      *  Should fail if the blocking setting is true and the user is not the operator
      */
-    case AssertNotBlocked(source, action: AdminAction) => context => {
+    case AssertNotBlocked(action: AdminAction) => context => {
       val (blocked, actionString) = action match {
         case CreateDatabaseAction => (create_drop_database_is_blocked, "CREATE")
         case DropDatabaseAction => (create_drop_database_is_blocked, "DROP")
@@ -211,9 +214,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
       val errorMessage = s"$actionString DATABASE is not supported, for more info see https://aura.support.neo4j.com/hc/en-us/articles/360050567093"
 
-      new PredicateExecutionPlan((_, sc) => !blocked || restrict_upgrade && sc.subject().hasUsername(operator_name),
-        onViolation = (_,_) => new UnsupportedOperationException(errorMessage),
-        source = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context))
+      new PredicateExecutionPlan((_, sc) => !blocked || restrict_upgrade && sc.allowsAdminAction(new AdminActionOnResource(ActionMapper.asKernelAction(action), DatabaseScope.ALL, Segment.ALL)),
+        onViolation = (_, _) => new UnsupportedOperationException(errorMessage)
       )
     }
 

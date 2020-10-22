@@ -30,4 +30,10 @@ public final class EnterpriseNoAuthSecurityProvider extends LifecycleAdapter imp
     {
         return EnterpriseAuthManager.NO_AUTH;
     }
+
+    @Override
+    public AuthManager loopbackAuthManager()
+    {
+        return EnterpriseAuthManager.NO_AUTH;
+    }
 }

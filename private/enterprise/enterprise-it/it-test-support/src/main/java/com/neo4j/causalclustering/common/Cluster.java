@@ -738,6 +738,7 @@ public class Cluster implements ServerAddressResolver
         var raftPort = PortAuthority.allocatePort();
         var boltPort = PortAuthority.allocatePort();
         var intraClusterBoltPort = PortAuthority.allocatePort();
+        var loopbackBoltPort = PortAuthority.allocatePort();
         var httpPort = PortAuthority.allocatePort();
         var backupPort = PortAuthority.allocatePort();
         var listenHost = getListenHost( index, extraParams, instanceExtraParams );
@@ -750,6 +751,7 @@ public class Cluster implements ServerAddressResolver
                 raftPort,
                 boltPort,
                 intraClusterBoltPort,
+                loopbackBoltPort,
                 httpPort,
                 backupPort,
                 clusterSize,
@@ -773,6 +775,7 @@ public class Cluster implements ServerAddressResolver
     {
         var boltPort = PortAuthority.allocatePort();
         var intraClusterBoltPort = PortAuthority.allocatePort();
+        var loopbackBoltPort = PortAuthority.allocatePort();
         var httpPort = PortAuthority.allocatePort();
         var txPort = PortAuthority.allocatePort();
         var backupPort = PortAuthority.allocatePort();
@@ -785,6 +788,7 @@ public class Cluster implements ServerAddressResolver
                 index,
                 boltPort,
                 intraClusterBoltPort,
+                loopbackBoltPort,
                 httpPort,
                 txPort,
                 backupPort,

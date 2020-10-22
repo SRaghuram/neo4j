@@ -80,6 +80,8 @@ public interface ClusterMember
 
     String intraClusterBoltAdvertisedAddress();
 
+    String loopbackBoltAddress();
+
     default <T> void updateConfig( Setting<T> setting, T value )
     {
         config().set( setting, value );

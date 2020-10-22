@@ -7,6 +7,7 @@ package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.server.security.enterprise.auth.Resource.DatabaseResource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
+import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import org.apache.shiro.cache.CacheManager;
 
@@ -43,12 +44,19 @@ public class PrivilegeResolver
     private final SystemGraphRealm systemGraphRealm;
     private final String upgradeUsername;
     private final Boolean restrictUpgrade;
+    private final Boolean blackCreateDrop;
+    private final Boolean blockStartStop;
     private final ResourcePrivilege accessOnSystem;
     private final ResourcePrivilege executeBoostedUpgrade;
     private final ResourcePrivilege executeRoutingTable;
     private final ResourcePrivilege createDropDatabase;
     private final ResourcePrivilege startDatabase;
     private final ResourcePrivilege stopDatabase;
+
+    private final ResourcePrivilege denyExecuteUpgrade;
+    private final ResourcePrivilege denyStartDatabase;
+    private final ResourcePrivilege denyStopDatabase;
+    private final ResourcePrivilege denyCreateDropDatabase;
 
     private final String roleToBoostAll;
     private final String roleToBoostMapping;
@@ -62,21 +70,37 @@ public class PrivilegeResolver
         this.restrictUpgrade = config.get( GraphDatabaseInternalSettings.restrict_upgrade );
         this.roleToBoostAll = config.get( GraphDatabaseSettings.default_allowed );
         this.roleToBoostMapping = config.get( GraphDatabaseSettings.procedure_roles );
+        this.blackCreateDrop = config.get( GraphDatabaseInternalSettings.block_create_drop_database );
+        this.blockStartStop = config.get( GraphDatabaseInternalSettings.block_start_stop_database );
 
         try
         {
             initProcedurePrivilegesFromConfig();
+
+            // Privileges for the PUBLIC role when using GraphDatabaseInternalSettings.restrict_upgrade
+            ProcedureSegment segment = new ProcedureSegment( "dbms.upgrade*" );
+            denyExecuteUpgrade = new ResourcePrivilege( DENY, EXECUTE, new DatabaseResource(), segment, ResourcePrivilege.SpecialDatabase.ALL );
+
+            // Privileges for the PUBLIC role when using GraphDatabaseInternalSettings.block_create_drop_database
+            // DENY CREATE & DROP DATABASE ON DBMS
+            denyCreateDropDatabase = new ResourcePrivilege( DENY, DATABASE_MANAGEMENT, new DatabaseResource(), Segment.ALL,
+                    ResourcePrivilege.SpecialDatabase.ALL );
+
+            // Privileges for the PUBLIC role when using GraphDatabaseInternalSettings.block_start_stop_database
+            // DENY START DATABASE for all databases
+            denyStartDatabase = new ResourcePrivilege( DENY, START_DATABASE, new DatabaseResource(), Segment.ALL, ResourcePrivilege.SpecialDatabase.ALL );
+            // DENY STOP DATABASE for all databases
+            denyStopDatabase = new ResourcePrivilege( DENY, STOP_DATABASE, new DatabaseResource(), Segment.ALL, ResourcePrivilege.SpecialDatabase.ALL );
 
             // Privileges for the operator user
 
             // ACCESS ON DATABASE system
             accessOnSystem = new ResourcePrivilege( GRANT, ACCESS, new DatabaseResource(), Segment.ALL, SYSTEM_DATABASE_NAME );
             // EXECUTE BOOSTED PROCEDURE dbms.upgrade* ON DBMS
-            ProcedureSegment segment = new ProcedureSegment( "dbms.upgrade*" );
-            executeBoostedUpgrade = new ResourcePrivilege( GRANT, EXECUTE_BOOSTED, new DatabaseResource(), segment, SYSTEM_DATABASE_NAME );
+            executeBoostedUpgrade = new ResourcePrivilege( GRANT, EXECUTE_BOOSTED, new DatabaseResource(), segment, ResourcePrivilege.SpecialDatabase.ALL );
             // EXECUTE dbms.*.getRoutingTable ON DBMS
             ProcedureSegment routingProc = new ProcedureSegment( "dbms.*.getRoutingTable" );
-            executeRoutingTable = new ResourcePrivilege( GRANT, EXECUTE, new DatabaseResource(), routingProc, SYSTEM_DATABASE_NAME );
+            executeRoutingTable = new ResourcePrivilege( GRANT, EXECUTE, new DatabaseResource(), routingProc, ResourcePrivilege.SpecialDatabase.ALL );
             // CRETE & DROP DATABASE ON DBMS
             createDropDatabase = new ResourcePrivilege( GRANT, DATABASE_MANAGEMENT, new DatabaseResource(), Segment.ALL,
                     ResourcePrivilege.SpecialDatabase.ALL );
@@ -105,6 +129,22 @@ public class PrivilegeResolver
         for ( String role : roles )
         {
             privileges.addAll( roleToPrivilege.getOrDefault( role, Collections.emptySet() ) );
+            if ( role.equals( PredefinedRoles.PUBLIC ) )
+            {
+                if ( restrictUpgrade )
+                {
+                    privileges.add( denyExecuteUpgrade );
+                }
+                if ( blackCreateDrop )
+                {
+                    privileges.add( denyCreateDropDatabase );
+                }
+                if ( blockStartStop )
+                {
+                    privileges.add( denyStartDatabase );
+                    privileges.add( denyStopDatabase );
+                }
+            }
         }
         return privileges;
     }
