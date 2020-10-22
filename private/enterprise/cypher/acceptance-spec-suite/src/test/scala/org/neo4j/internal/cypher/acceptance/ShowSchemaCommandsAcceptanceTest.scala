@@ -8,6 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import java.util
 import java.util.concurrent.ThreadLocalRandom
 
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.ast.NodeExistsConstraints
@@ -17,43 +18,58 @@ import org.neo4j.cypher.internal.ast.ShowConstraintType
 import org.neo4j.cypher.internal.ast.UniqueConstraints
 import org.neo4j.graphdb.schema.AnalyzerProvider
 import org.neo4j.graphdb.schema.IndexSettingImpl
+import org.neo4j.graphdb.schema.IndexSettingImpl.FULLTEXT_ANALYZER
+import org.neo4j.graphdb.schema.IndexSettingImpl.FULLTEXT_EVENTUALLY_CONSISTENT
+import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_CARTESIAN_3D_MAX
+import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_CARTESIAN_3D_MIN
+import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_CARTESIAN_MAX
+import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_CARTESIAN_MIN
+import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_WGS84_3D_MAX
+import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_WGS84_3D_MIN
+import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_WGS84_MAX
+import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_WGS84_MIN
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+import org.neo4j.kernel.api.impl.fulltext.analyzer.providers.StandardNoStopWords
 import org.neo4j.service.Services
 import org.neo4j.values.storable.RandomValues
 
 class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
+  private val btreeProvider = GraphDatabaseSettings.SchemaIndex.NATIVE_BTREE10.providerName()
+  private val fulltextProvider = "fulltext-1.0"
+
   private val defaultBtreeOptionsString: String =
     "{indexConfig: {" +
-      "`spatial.cartesian-3d.max`: [1000000.0, 1000000.0, 1000000.0]," +
-      "`spatial.cartesian-3d.min`: [-1000000.0, -1000000.0, -1000000.0]," +
-      "`spatial.cartesian.max`: [1000000.0, 1000000.0]," +
-      "`spatial.cartesian.min`: [-1000000.0, -1000000.0]," +
-      "`spatial.wgs-84-3d.max`: [180.0, 90.0, 1000000.0]," +
-      "`spatial.wgs-84-3d.min`: [-180.0, -90.0, -1000000.0]," +
-      "`spatial.wgs-84.max`: [180.0, 90.0]," +
-      "`spatial.wgs-84.min`: [-180.0, -90.0]}, " +
-      "indexProvider: 'native-btree-1.0'}"
+      s"`${SPATIAL_CARTESIAN_3D_MAX.getSettingName}`: [1000000.0, 1000000.0, 1000000.0]," +
+      s"`${SPATIAL_CARTESIAN_3D_MIN.getSettingName}`: [-1000000.0, -1000000.0, -1000000.0]," +
+      s"`${SPATIAL_CARTESIAN_MAX.getSettingName}`: [1000000.0, 1000000.0]," +
+      s"`${SPATIAL_CARTESIAN_MIN.getSettingName}`: [-1000000.0, -1000000.0]," +
+      s"`${SPATIAL_WGS84_3D_MAX.getSettingName}`: [180.0, 90.0, 1000000.0]," +
+      s"`${SPATIAL_WGS84_3D_MIN.getSettingName}`: [-180.0, -90.0, -1000000.0]," +
+      s"`${SPATIAL_WGS84_MAX.getSettingName}`: [180.0, 90.0]," +
+      s"`${SPATIAL_WGS84_MIN.getSettingName}`: [-180.0, -90.0]}, " +
+      s"indexProvider: '$btreeProvider'}"
 
   private val defaultBtreeOptionsMap: Map[String, Object] = Map(
     "indexConfig" -> Map(
-      "spatial.cartesian-3d.max" -> Array(1000000.0, 1000000.0, 1000000.0),
-      "spatial.cartesian-3d.min" -> Array(-1000000.0, -1000000.0, -1000000.0),
-      "spatial.cartesian.max" -> Array(1000000.0, 1000000.0),
-      "spatial.cartesian.min" -> Array(-1000000.0, -1000000.0),
-      "spatial.wgs-84-3d.max" -> Array(180.0, 90.0, 1000000.0),
-      "spatial.wgs-84-3d.min" -> Array(-180.0, -90.0, -1000000.0),
-      "spatial.wgs-84.max" -> Array(180.0, 90.0),
-      "spatial.wgs-84.min" -> Array(-180.0, -90.0)),
-    "indexProvider" -> "native-btree-1.0")
+      SPATIAL_CARTESIAN_3D_MAX.getSettingName -> Array(1000000.0, 1000000.0, 1000000.0),
+      SPATIAL_CARTESIAN_3D_MIN.getSettingName -> Array(-1000000.0, -1000000.0, -1000000.0),
+      SPATIAL_CARTESIAN_MAX.getSettingName -> Array(1000000.0, 1000000.0),
+      SPATIAL_CARTESIAN_MIN.getSettingName -> Array(-1000000.0, -1000000.0),
+      SPATIAL_WGS84_3D_MAX.getSettingName -> Array(180.0, 90.0, 1000000.0),
+      SPATIAL_WGS84_3D_MIN.getSettingName -> Array(-180.0, -90.0, -1000000.0),
+      SPATIAL_WGS84_MAX.getSettingName -> Array(180.0, 90.0),
+      SPATIAL_WGS84_MIN.getSettingName -> Array(-180.0, -90.0)),
+    "indexProvider" -> btreeProvider)
 
-  private val defaultFulltextConfigString = "{`fulltext.analyzer`: 'standard-no-stop-words',`fulltext.eventually_consistent`: 'false'}"
+  private val defaultFulltextConfigString =
+    s"{`${FULLTEXT_ANALYZER.getSettingName}`: '${StandardNoStopWords.ANALYZER_NAME}',`${FULLTEXT_EVENTUALLY_CONSISTENT.getSettingName}`: 'false'}"
 
   private val defaultFulltextOptionsMap: Map[String, Object] = Map(
     "indexConfig" -> Map(
-      "fulltext.analyzer" -> "standard-no-stop-words",
-      "fulltext.eventually_consistent" -> false),
-    "indexProvider" -> "fulltext-1.0")
+      FULLTEXT_ANALYZER.getSettingName -> StandardNoStopWords.ANALYZER_NAME,
+      FULLTEXT_EVENTUALLY_CONSISTENT.getSettingName -> false),
+    "indexProvider" -> fulltextProvider)
 
   private val label = "Label"
   private val label2 = "Label2"
@@ -520,7 +536,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   private def createDefaultFullTextNodeIndex(): Unit = executeSingle(s"CALL db.index.fulltext.createNodeIndex('fulltext_node', ['$label'], ['$prop'])")
 
   private def defaultFulltextNodeBriefOutput(id: Long): Map[String, Any] =
-    indexOutputBrief(id, "fulltext_node", "NONUNIQUE", "FULLTEXT", "NODE", List(label), List(prop), "fulltext-1.0")
+    indexOutputBrief(id, "fulltext_node", "NONUNIQUE", "FULLTEXT", "NODE", List(label), List(prop), fulltextProvider)
 
   private def defaultFulltextNodeVerboseOutput(id: Long): Map[String, Any] = defaultFulltextNodeBriefOutput(id) ++
     indexOutputVerbose(s"CALL db.index.fulltext.createNodeIndex('fulltext_node', ['$label'], ['$prop'], $defaultFulltextConfigString)")
@@ -534,7 +550,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   private def createDefaultFullTextRelIndex(): Unit = executeSingle(s"CALL db.index.fulltext.createRelationshipIndex('fulltext_rel', ['$relType'], ['$prop'])")
 
   private def defaultFulltextRelBriefOutput(id: Long): Map[String, Any] =
-    indexOutputBrief(id, "fulltext_rel", "NONUNIQUE", "FULLTEXT", "RELATIONSHIP", List(relType), List(prop), "fulltext-1.0")
+    indexOutputBrief(id, "fulltext_rel", "NONUNIQUE", "FULLTEXT", "RELATIONSHIP", List(relType), List(prop), fulltextProvider)
 
   private def defaultFulltextRelVerboseOutput(id: Long): Map[String, Any] = defaultFulltextRelBriefOutput(id) ++
     indexOutputVerbose(s"CALL db.index.fulltext.createRelationshipIndex('fulltext_rel', ['$relType'], ['$prop'], $defaultFulltextConfigString)")
@@ -588,7 +604,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   private def createDefaultUniquenessConstraint(): Unit = graph.createUniqueConstraintWithName("constraint1", label, prop)
 
   private def defaultUniquenessBriefIndexOutput(id: Long): Map[String, Any] =
-    indexOutputBrief(id, "constraint1", "UNIQUE", "BTREE", "NODE", List(label), List(prop), "native-btree-1.0")
+    indexOutputBrief(id, "constraint1", "UNIQUE", "BTREE", "NODE", List(label), List(prop), btreeProvider)
 
   private def defaultUniquenessVerboseIndexOutput(id: Long): Map[String, Any] = defaultUniquenessBriefIndexOutput(id) ++
     indexOutputVerbose(s"CREATE CONSTRAINT `constraint1` ON (n:`$label`) ASSERT (n.`$prop`) IS UNIQUE OPTIONS $defaultBtreeOptionsString")
@@ -604,7 +620,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   private def createDefaultNodeKeyConstraint(): Unit = graph.createNodeKeyConstraintWithName("constraint2", label2, prop2)
 
   private def defaultNodeKeyBriefIndexOutput(id: Long): Map[String, Any] =
-    indexOutputBrief(id, "constraint2", "UNIQUE", "BTREE", "NODE", List(label2), List(prop2), "native-btree-1.0")
+    indexOutputBrief(id, "constraint2", "UNIQUE", "BTREE", "NODE", List(label2), List(prop2), btreeProvider)
 
   private def defaultNodeKeyVerboseIndexOutput(id: Long): Map[String, Any] = defaultNodeKeyBriefIndexOutput(id) ++
     indexOutputVerbose(s"CREATE CONSTRAINT `constraint2` ON (n:`$label2`) ASSERT (n.`$prop2`) IS NODE KEY OPTIONS $defaultBtreeOptionsString")
@@ -700,7 +716,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
         case (None, Some(recreated)) =>
           fail(s"Expected options to be null but was $recreated.")
         case (None, None) =>
-          // Options was expected to be null and was null, this is success.
+        // Options was expected to be null and was null, this is success.
       }
     }
   }
@@ -736,7 +752,8 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   }
 
   private def randomBtreeProvider(): String = {
-    randomValues.among(Array("native-btree-1.0", "lucene+native-3.0"))
+    val availableProviders = GraphDatabaseSettings.SchemaIndex.values().map(value => value.providerName())
+    randomValues.among(availableProviders)
   }
 
   private def randomBtreeSetting(): String = {
@@ -754,21 +771,21 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   private def randomSpatialValue(indexSetting: IndexSettingImpl): Array[Double] = {
     indexSetting match {
-      case IndexSettingImpl.SPATIAL_CARTESIAN_MIN =>
+      case SPATIAL_CARTESIAN_MIN =>
         negative(randomValues.nextCartesianPoint.coordinate)
-      case IndexSettingImpl.SPATIAL_CARTESIAN_MAX =>
+      case SPATIAL_CARTESIAN_MAX =>
         positive(randomValues.nextCartesianPoint.coordinate)
-      case IndexSettingImpl.SPATIAL_CARTESIAN_3D_MIN =>
+      case SPATIAL_CARTESIAN_3D_MIN =>
         negative(randomValues.nextCartesian3DPoint.coordinate)
-      case IndexSettingImpl.SPATIAL_CARTESIAN_3D_MAX =>
+      case SPATIAL_CARTESIAN_3D_MAX =>
         positive(randomValues.nextCartesian3DPoint().coordinate())
-      case IndexSettingImpl.SPATIAL_WGS84_MIN =>
+      case SPATIAL_WGS84_MIN =>
         negative(randomValues.nextGeographicPoint().coordinate())
-      case IndexSettingImpl.SPATIAL_WGS84_MAX =>
+      case SPATIAL_WGS84_MAX =>
         positive(randomValues.nextGeographicPoint.coordinate)
-      case IndexSettingImpl.SPATIAL_WGS84_3D_MIN =>
+      case SPATIAL_WGS84_3D_MIN =>
         negative(randomValues.nextGeographic3DPoint.coordinate)
-      case IndexSettingImpl.SPATIAL_WGS84_3D_MAX =>
+      case SPATIAL_WGS84_3D_MAX =>
         positive(randomValues.nextGeographic3DPoint.coordinate)
       case setting => fail("Unexpected spatial index setting: " + setting.getSettingName)
     }
@@ -783,8 +800,8 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   }
 
   private def randomFulltextSetting(): String = {
-    val eventuallyConsistent = s"`${IndexSettingImpl.FULLTEXT_EVENTUALLY_CONSISTENT}`"
-    val analyzer = s"`${IndexSettingImpl.FULLTEXT_ANALYZER}`"
+    val eventuallyConsistent = s"`$FULLTEXT_EVENTUALLY_CONSISTENT`"
+    val analyzer = s"`$FULLTEXT_ANALYZER`"
     s"{$eventuallyConsistent: '${randomValues.nextBoolean()}', $analyzer: '${randomAnalyzer()}'}"
   }
 
