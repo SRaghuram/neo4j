@@ -240,11 +240,11 @@ class BoundedArrayCursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR, priv
   def free(cursor: CURSOR): Unit = {
     if (cursor != null) {
       cursor.removeTracer()
-      if (index < size) {
+      if (index < size && cached != null) { // NOTE: The pool could already have been closed, e.g. if this is called from a CleanUpTask
         cached(index) = cursor
         index += 1
       } else {
-        // The pool is full and we have to discard one cursor.
+        // The pool is full (or closed) and we have to discard one cursor.
         // We are expecting pools to be sized big enough so that this would be very rare.
         // Discarding the oldest cursor would probably be best, but to keep it simple, and avoid having to do
         // extra ring-buffer arithmetics in the common case, we just throw away the cursor being freed here instead.
