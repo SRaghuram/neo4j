@@ -361,13 +361,13 @@ public final class CausalClusteringTestHelpers
     public static void assertDatabaseEventuallyStopped( String databaseName, Cluster cluster )
     {
         assertEventually( () -> "Database is not stopped on all members: " + memberDatabaseStates( databaseName, cluster ),
-                          () -> databaseStates( cluster, databaseName ), allStatesMatch( STOPPED ), 1, MINUTES );
+                          () -> databaseStates( cluster, databaseName ), allStatesMatch( STOPPED ), 5, MINUTES );
     }
 
     public static void assertDatabaseEventuallyStopped( String databaseName, Set<ClusterMember> members )
     {
         assertEventually( () -> "Database is not stopped on all members: " + memberDatabaseStates( databaseName, members ),
-                          () -> membersHaveDatabaseState( members, databaseName ), allStatesMatch( STOPPED ), 1, MINUTES );
+                          () -> membersHaveDatabaseState( members, databaseName ), allStatesMatch( STOPPED ), 5, MINUTES );
     }
 
     public static void assertDatabaseEventuallyDoesNotExist( String databaseName, Cluster cluster )
