@@ -256,7 +256,7 @@ class ExecutionResultTest
     void shouldNotBePossibleToGetProfileOfCancelledResult()
     {
         // When
-        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "PIPELINED", "PARALLEL" ) )
+        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "PIPELINED" ) )
         {
             try ( Transaction transaction = db.beginTx() )
             {
