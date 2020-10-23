@@ -130,7 +130,7 @@ public class CatchupProcessManager extends SafeLifecycle
         {
             throw new IllegalStateException( "Catchup process can't be stopped" );
         }
-
+        log.info( "Pausing transaction pulling" );
         txPullingPaused = true;
         return true;
     }
@@ -142,6 +142,7 @@ public class CatchupProcessManager extends SafeLifecycle
             return false;
         }
         txPullingPaused = false;
+        log.info( "Resuming transaction pulling" );
         return true;
     }
 
