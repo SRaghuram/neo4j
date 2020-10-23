@@ -57,7 +57,17 @@ public class VersionTest
     }
 
     @Test
-    public void shouldNotAllowToVersionsThatWrongSeparators()
+    public void shouldSupportDropReleases()
+    {
+        Version version = new Version( "4.2.0-drop07.0" );
+        assertThat( "4", equalTo( version.mainVersion() ) );
+        assertThat( "4.2", equalTo( version.minorVersion() ) );
+        assertThat( "4.2.0", equalTo( version.patchVersion() ) );
+        assertThat( "4.2.0-drop07.0", equalTo( version.fullVersion() ) );
+    }
+
+    @Test
+    public void shouldNotAllowToVersionsThatWrongSeparators() throws Exception
     {
         BenchmarkUtil.assertException( IllegalArgumentException.class,
                                        () -> new Version( "0-0.0" ) );

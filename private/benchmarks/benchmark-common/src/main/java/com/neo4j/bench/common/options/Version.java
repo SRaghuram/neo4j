@@ -22,9 +22,10 @@ public class Version
     {
         String[] split = versionString.split( "\\." );
 
-        if ( split.length != 3 )
+        if ( split.length != 4 && split.length != 3 )
         {
-            throw new IllegalArgumentException( String.format( "Neo4j version have always been on the form x.y.z , but this version is %s", versionString ) );
+            throw new IllegalArgumentException(
+                    String.format( "Neo4j version have always been on the form x.y.z(-dropxy.z) , but this version is %s", versionString ) );
         }
 
         String[] patchAndPreReleaseBranch = split[2].split( "-" );
@@ -35,10 +36,15 @@ public class Version
 
         mainVersion = ensureValidVersionNumber( split[0] );
         minorVersion = ensureValidVersionNumber( split[1] );
+
         patchVersion = ensureValidVersionNumber( patchAndPreReleaseBranch[0] );
         if ( patchAndPreReleaseBranch.length > 1 )
         {
             preReleaseBranch = patchAndPreReleaseBranch[1];
+            if ( split.length == 4 )
+            {
+                preReleaseBranch += "." + ensureValidVersionNumber( split[3] );
+            }
         }
     }
 
@@ -76,9 +82,9 @@ public class Version
         return String.format( "%s.%s.%s-%s", mainVersion, minorVersion, patchVersion, preReleaseBranch );
     }
 
-    public static String toSanitizeVersion( String version )
+    public static String toSanitizeVersion( String version, boolean isDropBranch )
     {
-        return new Version( version ).patchVersion();
+        return isDropBranch ? version : new Version( version ).patchVersion();
     }
 
     @Override

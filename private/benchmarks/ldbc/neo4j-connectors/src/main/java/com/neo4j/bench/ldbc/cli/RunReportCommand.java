@@ -870,7 +870,8 @@ public class RunReportCommand implements Runnable
     {
         TestRun testRun = new TestRun( finishTime - startTime, startTime, build, parentBuild, triggeredBy );
         BenchmarkConfig benchmarkConfig = new BenchmarkConfig( ldbcConfig.asMap() );
-        neo4jVersion = Version.toSanitizeVersion( neo4jVersion );
+        boolean isDropBranch = neo4jBranch.contains( "drop" );
+        neo4jVersion = Version.toSanitizeVersion( neo4jVersion, isDropBranch );
         if ( !BranchAndVersion.isPersonalBranch( Repository.NEO4J, neo4jBranchOwner ) )
         {
             BranchAndVersion.assertBranchEqualsSeries( neo4jVersion, neo4jBranch );
