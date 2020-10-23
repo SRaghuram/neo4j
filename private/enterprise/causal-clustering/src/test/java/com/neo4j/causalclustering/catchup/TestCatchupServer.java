@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstallerV3;
 import com.neo4j.causalclustering.catchup.v4.CatchupProtocolServerInstallerV4;
+import com.neo4j.causalclustering.catchup.v5.CatchupProtocolServerInstallerV5;
 import com.neo4j.causalclustering.core.ServerNameService;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.ChildInitializer;
@@ -61,7 +62,8 @@ class TestCatchupServer extends Server
 
         List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> protocolInstallers = List.of(
                 new CatchupProtocolServerInstallerV3.Factory( pipelineBuilder, logProvider, catchupServerHandler ),
-                new CatchupProtocolServerInstallerV4.Factory( pipelineBuilder, logProvider, catchupServerHandler  )
+                new CatchupProtocolServerInstallerV4.Factory( pipelineBuilder, logProvider, catchupServerHandler ),
+                new CatchupProtocolServerInstallerV5.Factory( pipelineBuilder, logProvider, catchupServerHandler )
         );
 
         ProtocolInstallerRepository<ProtocolInstaller.Orientation.Server> protocolInstallerRepository = new ProtocolInstallerRepository<>(

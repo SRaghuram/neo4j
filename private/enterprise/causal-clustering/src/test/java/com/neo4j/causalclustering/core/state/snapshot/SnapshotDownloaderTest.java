@@ -23,10 +23,12 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
+import static com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV5;
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.CATCHUP;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_3_0;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_4_0;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_5_0;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -95,6 +97,11 @@ class SnapshotDownloaderTest
         {
             MockClientV4 v4 = spy( new MockClientV4( clientResponses, databaseIdRepository ) );
             catchupClient = new MockCatchupClient( protocol, v4 );
+        }
+        else if ( protocol.equals( CATCHUP_5_0 ) )
+        {
+            MockClientV5 v5 = spy( new MockClientV5( clientResponses, databaseIdRepository ) );
+            catchupClient = new MockCatchupClient( protocol, v5 );
         }
         else
         {

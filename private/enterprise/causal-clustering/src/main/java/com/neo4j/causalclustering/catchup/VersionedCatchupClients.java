@@ -31,14 +31,14 @@ public interface VersionedCatchupClients extends AutoCloseable
      * Short circuits the builder to the second step (avoiding some kind of explicit `getBuilder()` call).
      *
      * @param v3Request the operation to be invoked against a CatchupClient in the event that V3 of the protocol is agreed during handshake
-     * @param <RESULT> the type of result expected when executing he operation in {@code v1Request}
+     * @param <RESULT>  the type of result expected when executing he operation in {@code v1Request}
      * @return the second stage of the {@link CatchupRequestBuilder} step builder.
      */
     <RESULT> NeedsV4Handler<RESULT> v3( Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request );
 
     /** Step builder interface for Catchup requests (instances of {@link CatchupProtocolMessage}) against multiple versions of the protocol */
     interface CatchupRequestBuilder<RESULT>
-            extends NeedsV3Handler<RESULT>, NeedsV4Handler<RESULT>, NeedsResponseHandler<RESULT>, IsPrepared<RESULT>
+            extends NeedsV3Handler<RESULT>, NeedsV4Handler<RESULT>, NeedsV5Handler<RESULT>, NeedsResponseHandler<RESULT>, IsPrepared<RESULT>
     {
     }
 
@@ -55,16 +55,28 @@ public interface VersionedCatchupClients extends AutoCloseable
      */
     interface NeedsV4Handler<RESULT>
     {
-        NeedsResponseHandler<RESULT> v4( Function<CatchupClientV4,PreparedRequest<RESULT>> v4Request );
+        NeedsV5Handler<RESULT> v4( Function<CatchupClientV4,PreparedRequest<RESULT>> v4Request );
     }
 
-    /** {@link CatchupRequestBuilder} Step 3 */
+    /**
+     * {@link CatchupRequestBuilder} Step 3
+     */
+    interface NeedsV5Handler<RESULT>
+    {
+        NeedsResponseHandler<RESULT> v5( Function<CatchupClientV5,PreparedRequest<RESULT>> v5Request );
+    }
+
+    /**
+     * {@link CatchupRequestBuilder} Step 4
+     */
     interface NeedsResponseHandler<RESULT>
     {
         IsPrepared<RESULT> withResponseHandler( CatchupResponseCallback<RESULT> responseHandler );
     }
 
-    /** {@link CatchupRequestBuilder} Final step */
+    /**
+     * {@link CatchupRequestBuilder} Final step
+     */
     interface IsPrepared<RESULT>
     {
         RESULT request() throws Exception;
@@ -112,6 +124,10 @@ public interface VersionedCatchupClients extends AutoCloseable
         PreparedRequest<InfoResponse> getReconciledInfo( NamedDatabaseId databaseId );
 
         PreparedRequest<GetMetadataResponse> getMetadata( String databaseName, String includeMetadata );
+    }
+
+    interface CatchupClientV5 extends CatchupClientV4
+    {
     }
 
     @FunctionalInterface

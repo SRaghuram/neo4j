@@ -80,6 +80,7 @@ class SimpleCatchupClient implements AutoCloseable
         return catchUpClientFactory.getClient( from, log )
                 .v3( c -> c.prepareStoreCopy( expectedStoreId, expectedNamedDatabaseId ) )
                 .v4( c -> c.prepareStoreCopy( expectedStoreId, expectedNamedDatabaseId ) )
+                .v5( c -> c.prepareStoreCopy( expectedStoreId, expectedNamedDatabaseId ) )
                 .withResponseHandler( responseHandler )
                 .request();
     }
@@ -96,6 +97,7 @@ class SimpleCatchupClient implements AutoCloseable
         return catchUpClientFactory.getClient( from, log )
                 .v3( c -> c.getStoreFile( expectedStoreId, file, lastTransactionId, expectedNamedDatabaseId ) )
                 .v4( c -> c.getStoreFile( expectedStoreId, file, lastTransactionId, expectedNamedDatabaseId ) )
+                .v5( c -> c.getStoreFile( expectedStoreId, file, lastTransactionId, expectedNamedDatabaseId ) )
                 .withResponseHandler( responseHandler )
                 .request();
     }
@@ -126,6 +128,7 @@ class SimpleCatchupClient implements AutoCloseable
         return catchUpClientFactory.getClient( from, log )
                 .v3( c -> c.getReconciledInfo( namedDatabaseId ) )
                 .v4( c -> c.getReconciledInfo( namedDatabaseId ) )
+                .v5( c -> c.getReconciledInfo( namedDatabaseId ) )
                 .withResponseHandler( new CatchupResponseAdaptor<>()
                 {
                     @Override

@@ -104,6 +104,7 @@ class BackupDelegator extends LifecycleAdapter
             return catchUpClient.getClient( fromAddress, logProvider.getLog( getClass() ) )
                                 .v3( client -> client.getDatabaseId( databaseName ) )
                                 .v4( client -> client.getDatabaseId( databaseName ) )
+                                .v5( client -> client.getDatabaseId( databaseName ) )
                                 .withResponseHandler( copyWithDatabaseId )
                                 .request();
         }
@@ -128,6 +129,7 @@ class BackupDelegator extends LifecycleAdapter
             return catchUpClient.getClient( fromAddress, logProvider.getLog( getClass() ) )
                                 .v3( VersionedCatchupClients.CatchupClientV3::getAllDatabaseIds )
                                 .v4( VersionedCatchupClients.CatchupClientV4::getAllDatabaseIds )
+                                .v5( VersionedCatchupClients.CatchupClientV5::getAllDatabaseIds )
                                 .withResponseHandler( responseHandler )
                                 .request()
                                 .databaseIds();
@@ -155,6 +157,7 @@ class BackupDelegator extends LifecycleAdapter
             return catchUpClient.getClient( fromAddress, logProvider.getLog( getClass() ) )
                                 .v3( client -> client.getMetadata( databaseName, includeMetadata ) )
                                 .v4( client -> client.getMetadata( databaseName, includeMetadata ) )
+                                .v5( client -> client.getMetadata( databaseName, includeMetadata ) )
                                 .withResponseHandler( responseHandler )
                                 .request()
                     .commands;

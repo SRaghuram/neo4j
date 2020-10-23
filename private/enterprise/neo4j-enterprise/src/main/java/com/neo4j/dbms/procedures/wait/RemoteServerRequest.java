@@ -37,6 +37,7 @@ class RemoteServerRequest extends ServerRequest
         return catchupClientFactory.getClient( target, log )
                 .v3( cli -> cli.getReconciledInfo( databaseId ) )
                 .v4( cli -> cli.getReconciledInfo( databaseId ) )
+                .v5( cli -> cli.getReconciledInfo( databaseId ) )
                 .withResponseHandler( new CatchupResponseAdaptor<>()
                 {
                     @Override

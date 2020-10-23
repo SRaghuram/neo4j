@@ -12,7 +12,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.function.Predicates;
+
+import static com.neo4j.configuration.CausalClusteringInternalSettings.experimental_catchup_protocol;
 
 public enum ApplicationProtocols implements ApplicationProtocol
 {
@@ -23,7 +26,8 @@ public enum ApplicationProtocols implements ApplicationProtocol
 
     // support for catchup 1.0 and 2.0 was removed in neo4j 4.0
     CATCHUP_3_0( ApplicationProtocolCategory.CATCHUP, new ApplicationProtocolVersion( 3, 0 ) ),
-    CATCHUP_4_0( ApplicationProtocolCategory.CATCHUP, new ApplicationProtocolVersion( 4, 0 ) );
+    CATCHUP_4_0( ApplicationProtocolCategory.CATCHUP, new ApplicationProtocolVersion( 4, 0 ) ),
+    CATCHUP_5_0( ApplicationProtocolCategory.CATCHUP, new ApplicationProtocolVersion( 5, 0 ) );
 
     private final ApplicationProtocolVersion version;
     private final ApplicationProtocolCategory identifier;
@@ -59,6 +63,16 @@ public enum ApplicationProtocols implements ApplicationProtocol
     public boolean isSameCategory( ApplicationProtocols applicationProtocol )
     {
         return category().equals( applicationProtocol.category() );
+    }
+
+    public static ApplicationProtocols maximumCatchupProtocol( Config config )
+    {
+        return config.get( experimental_catchup_protocol ) ? experimentalCatchupProtocol() : CATCHUP_4_0;
+    }
+
+    public static ApplicationProtocols experimentalCatchupProtocol()
+    {
+        return CATCHUP_5_0;
     }
 
 }

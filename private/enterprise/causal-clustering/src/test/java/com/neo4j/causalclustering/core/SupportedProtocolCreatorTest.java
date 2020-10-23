@@ -20,6 +20,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_3_0;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_4_0;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.RAFT_2_0;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.RAFT_3_0;
 import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocols.COMPRESSION_SNAPPY;
@@ -75,7 +76,7 @@ class SupportedProtocolCreatorTest
     }
 
     @Test
-    void shouldReturnAllVersionExpectCatchup_4_0IfNoVersionsConfiguredAndExperimentalVersionIsTurnOff()
+    void shouldReturnAllVersionExpectCatchup_5_0IfNoVersionsConfiguredAndExperimentalVersionIsTurnOff()
     {
         // given
         var config = Config.defaults();
@@ -84,7 +85,7 @@ class SupportedProtocolCreatorTest
         var catchupProtocols = new SupportedProtocolCreator( config, log ).getSupportedCatchupProtocolsFromConfiguration();
 
         // then
-        assertEquals( List.of( CATCHUP_3_0.implementation() ), catchupProtocols.versions() );
+        assertEquals( List.of( CATCHUP_3_0.implementation(), CATCHUP_4_0.implementation() ), catchupProtocols.versions() );
     }
 
     @Test

@@ -58,14 +58,17 @@ import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.SuppressOutputExtension;
 
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.CatchupClientV4;
+import static com.neo4j.causalclustering.catchup.MockCatchupClient.CatchupClientV5;
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientResponses;
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV4;
+import static com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV5;
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
 import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.E_TOO_FAR_BEHIND;
 import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.SUCCESS;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.CATCHUP;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_3_0;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_4_0;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_5_0;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -116,6 +119,7 @@ class StoreCopyClientTest
     private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
     private final CatchupClientV3 v3Client = spy( new MockClientV3( clientResponses, databaseIdRepository ) );
     private final CatchupClientV4 v4Client = spy( new MockClientV4( clientResponses, databaseIdRepository ) );
+    private final CatchupClientV5 v5Client = spy( new MockClientV5( clientResponses, databaseIdRepository ) );
 
     @Target( ElementType.METHOD )
     @Retention( RetentionPolicy.RUNTIME )
@@ -141,6 +145,10 @@ class StoreCopyClientTest
         else if ( protocol.equals( CATCHUP_4_0 ) )
         {
             catchupClient = new MockCatchupClient( protocol, v4Client );
+        }
+        else if ( protocol.equals( CATCHUP_5_0 ) )
+        {
+            catchupClient = new MockCatchupClient( protocol, v5Client );
         }
         else
         {
@@ -404,6 +412,10 @@ class StoreCopyClientTest
         else if ( protocol.equals( CATCHUP_4_0 ) )
         {
             verify( v4Client, atLeastOnce() ).getStoreFile( any( StoreId.class ), fileArgumentCaptor.capture(), anyLong(), any( NamedDatabaseId.class ) );
+        }
+        else if ( protocol.equals( CATCHUP_5_0 ) )
+        {
+            verify( v5Client, atLeastOnce() ).getStoreFile( any( StoreId.class ), fileArgumentCaptor.capture(), anyLong(), any( NamedDatabaseId.class ) );
         }
         else
         {

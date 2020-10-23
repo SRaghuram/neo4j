@@ -21,6 +21,8 @@ import com.neo4j.causalclustering.catchup.v4.CatchupProtocolServerInstallerV4;
 import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponse;
 import com.neo4j.causalclustering.catchup.v4.info.InfoResponse;
 import com.neo4j.causalclustering.catchup.v4.metadata.GetMetadataResponse;
+import com.neo4j.causalclustering.catchup.v5.CatchupProtocolClientInstallerV5;
+import com.neo4j.causalclustering.catchup.v5.CatchupProtocolServerInstallerV5;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
@@ -203,6 +205,12 @@ abstract class EnterpriseCatchupTest
             new CatchupProtocolClientInstallerV4( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler,
                                                   new TestCommandReaderFactory() ).install( client );
             new CatchupProtocolServerInstallerV4( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, serverResponseHandler ).install( server );
+        }
+        else if ( applicationProtocols == ApplicationProtocols.CATCHUP_5_0 )
+        {
+            new CatchupProtocolClientInstallerV5( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler,
+                                                  new TestCommandReaderFactory() ).install( client );
+            new CatchupProtocolServerInstallerV5( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, serverResponseHandler ).install( server );
         }
         else
         {

@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.catchup.v3.CatchupProtocolClientInstallerV3;
 import com.neo4j.causalclustering.catchup.v4.CatchupProtocolClientInstallerV4;
+import com.neo4j.causalclustering.catchup.v5.CatchupProtocolClientInstallerV5;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
@@ -41,7 +42,7 @@ import static com.neo4j.causalclustering.protocol.application.ApplicationProtoco
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolUtil.checkInstallersExhaustive;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_3_0;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_4_0;
-import static com.neo4j.configuration.CausalClusteringInternalSettings.experimental_catchup_protocol;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_5_0;
 
 public final class CatchupClientBuilder
 {
@@ -179,7 +180,7 @@ public final class CatchupClientBuilder
 
         private List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Client,?>> buildProtocolList( CatchupResponseHandler handler )
         {
-            final var maximumProtocol = config.get( experimental_catchup_protocol ) ? CATCHUP_4_0 : CATCHUP_3_0;
+            final var maximumProtocol = ApplicationProtocols.maximumCatchupProtocol( config );
             final var protocolMap = buildProtocolMap( handler );
 
             checkInstallersExhaustive( protocolMap.keySet(), CATCHUP );
@@ -190,7 +191,8 @@ public final class CatchupClientBuilder
         private Map<ApplicationProtocol,ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Client,?>> buildProtocolMap( CatchupResponseHandler handler )
         {
             return Map.of( CATCHUP_3_0, new CatchupProtocolClientInstallerV3.Factory( pipelineBuilder, debugLogProvider, handler, commandReaderFactory ),
-                           CATCHUP_4_0, new CatchupProtocolClientInstallerV4.Factory( pipelineBuilder, debugLogProvider, handler, commandReaderFactory ) );
+                           CATCHUP_4_0, new CatchupProtocolClientInstallerV4.Factory( pipelineBuilder, debugLogProvider, handler, commandReaderFactory ),
+                           CATCHUP_5_0, new CatchupProtocolClientInstallerV5.Factory( pipelineBuilder, debugLogProvider, handler, commandReaderFactory ) );
         }
     }
 

@@ -40,6 +40,7 @@ public class MockCatchupClient implements VersionedCatchupClients
     private ApplicationProtocol protocol;
     private CatchupClientV3 v3Client;
     private CatchupClientV4 v4Client;
+    private CatchupClientV5 v5Client;
 
     public MockCatchupClient( ApplicationProtocol protocol, CatchupClientV3 v3Client )
     {
@@ -53,6 +54,12 @@ public class MockCatchupClient implements VersionedCatchupClients
         this.v4Client = v4Client;
     }
 
+    public MockCatchupClient( ApplicationProtocol protocol, CatchupClientV5 v5Client )
+    {
+        this.protocol = protocol;
+        this.v5Client = v5Client;
+    }
+
     public static MockClientResponses responses()
     {
         return new MockClientResponses();
@@ -62,7 +69,7 @@ public class MockCatchupClient implements VersionedCatchupClients
     public <RESULT> NeedsV4Handler<RESULT> v3( Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request )
     {
 
-        Builder<RESULT> reqBuilder = new Builder<>( v3Client, v4Client );
+        Builder<RESULT> reqBuilder = new Builder<>( v3Client, v4Client, v5Client );
         return reqBuilder.v3( v3Request );
     }
 
@@ -85,14 +92,17 @@ public class MockCatchupClient implements VersionedCatchupClients
     {
         private Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request;
         private Function<CatchupClientV4,PreparedRequest<RESULT>> v4Request;
+        private Function<CatchupClientV5,PreparedRequest<RESULT>> v5Request;
         private final CatchupClientV3 v3Client;
         private final CatchupClientV4 v4Client;
+        private final CatchupClientV5 v5Client;
         private Log log = NullLog.getInstance();
 
-        Builder( CatchupClientV3 v3Client, CatchupClientV4 v4Client )
+        Builder( CatchupClientV3 v3Client, CatchupClientV4 v4Client, CatchupClientV5 v5Client )
         {
             this.v3Client = v3Client;
             this.v4Client = v4Client;
+            this.v5Client = v5Client;
         }
 
         @Override
@@ -103,9 +113,16 @@ public class MockCatchupClient implements VersionedCatchupClients
         }
 
         @Override
-        public NeedsResponseHandler<RESULT> v4( Function<CatchupClientV4,PreparedRequest<RESULT>> v4Request )
+        public NeedsV5Handler<RESULT> v4( Function<CatchupClientV4,PreparedRequest<RESULT>> v4Request )
         {
             this.v4Request = v4Request;
+            return this;
+        }
+
+        @Override
+        public NeedsResponseHandler<RESULT> v5( Function<CatchupClientV5,PreparedRequest<RESULT>> v5Request )
+        {
+            this.v5Request = v5Request;
             return this;
         }
 
@@ -134,6 +151,14 @@ public class MockCatchupClient implements VersionedCatchupClients
                     throw new IllegalStateException( "v4Client is not initialized" );
                 }
                 return withProgressMonitor( v4Request.apply( v4Client ).execute( null ) ).get();
+            }
+            else if ( protocol.equals( ApplicationProtocols.CATCHUP_5_0 ) )
+            {
+                if ( v5Client == null || v5Request == null )
+                {
+                    throw new IllegalStateException( "v5Client is not initialized" );
+                }
+                return withProgressMonitor( v5Request.apply( v5Client ).execute( null ) ).get();
             }
             return withProgressMonitor( failedFuture( new Exception( "Unrecognised protocol" ) ) ).get();
         }
@@ -223,6 +248,15 @@ public class MockCatchupClient implements VersionedCatchupClients
         public PreparedRequest<GetMetadataResponse> getMetadata( String databaseName, String includeMetadata )
         {
             throw new IllegalStateException( "Method is not implemented" );
+        }
+    }
+
+    public static class MockClientV5 extends MockClientV4 implements CatchupClientV5
+    {
+
+        public MockClientV5( MockClientResponses responses, DatabaseIdRepository databaseIdRepository )
+        {
+            super( responses, databaseIdRepository );
         }
     }
 

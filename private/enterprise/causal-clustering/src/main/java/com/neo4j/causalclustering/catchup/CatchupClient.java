@@ -88,6 +88,7 @@ class CatchupClient implements VersionedCatchupClients
         private final Log log;
         private Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request;
         private Function<CatchupClientV4,PreparedRequest<RESULT>> v4Request;
+        private Function<CatchupClientV5,PreparedRequest<RESULT>> v5Request;
         private CatchupResponseCallback<RESULT> responseHandler;
 
         private Builder( CompletableFuture<CatchupChannel> channel, Log log )
@@ -104,9 +105,16 @@ class CatchupClient implements VersionedCatchupClients
         }
 
         @Override
-        public NeedsResponseHandler<RESULT> v4( Function<CatchupClientV4,PreparedRequest<RESULT>> v4Request )
+        public NeedsV5Handler<RESULT> v4( Function<CatchupClientV4,PreparedRequest<RESULT>> v4Request )
         {
             this.v4Request = v4Request;
+            return this;
+        }
+
+        @Override
+        public NeedsResponseHandler<RESULT> v5( Function<CatchupClientV5,PreparedRequest<RESULT>> v5Request )
+        {
+            this.v5Request = v5Request;
             return this;
         }
 
@@ -139,6 +147,11 @@ class CatchupClient implements VersionedCatchupClients
             {
                 CatchupClient.V4 client = new CatchupClient.V4( catchupChannel );
                 return performRequest( client, v4Request, protocol, catchupChannel );
+            }
+            else if ( protocol.equals( ApplicationProtocols.CATCHUP_5_0 ) )
+            {
+                CatchupClient.V5 client = new CatchupClient.V5( catchupChannel );
+                return performRequest( client, v5Request, protocol, catchupChannel );
             }
             else
             {
@@ -281,6 +294,71 @@ class CatchupClient implements VersionedCatchupClients
         public PreparedRequest<GetMetadataResponse> getMetadata( String databaseName, String includeMetadata )
         {
             return handler -> makeBlockingRequest( new GetMetadataRequest( databaseName, includeMetadata ), handler, channel );
+        }
+    }
+
+    private static class V5 implements CatchupClientV5
+    {
+
+        private final V4 v4;
+
+        V5( CatchupChannel channel )
+        {
+            this.v4 = new V4( channel );
+        }
+
+        @Override
+        public PreparedRequest<NamedDatabaseId> getDatabaseId( String databaseName )
+        {
+            return v4.getDatabaseId( databaseName );
+        }
+
+        @Override
+        public PreparedRequest<CoreSnapshot> getCoreSnapshot( NamedDatabaseId namedDatabaseId )
+        {
+            return v4.getCoreSnapshot( namedDatabaseId );
+        }
+
+        @Override
+        public PreparedRequest<StoreId> getStoreId( NamedDatabaseId namedDatabaseId )
+        {
+            return v4.getStoreId( namedDatabaseId );
+        }
+
+        @Override
+        public PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, NamedDatabaseId namedDatabaseId )
+        {
+            return v4.pullTransactions( storeId, previousTxId, namedDatabaseId );
+        }
+
+        @Override
+        public PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, NamedDatabaseId namedDatabaseId )
+        {
+            return v4.prepareStoreCopy( storeId, namedDatabaseId );
+        }
+
+        @Override
+        public PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, Path path, long requiredTxId, NamedDatabaseId namedDatabaseId )
+        {
+            return v4.getStoreFile( storeId, path, requiredTxId, namedDatabaseId );
+        }
+
+        @Override
+        public PreparedRequest<GetAllDatabaseIdsResponse> getAllDatabaseIds()
+        {
+            return v4.getAllDatabaseIds();
+        }
+
+        @Override
+        public PreparedRequest<InfoResponse> getReconciledInfo( NamedDatabaseId databaseId )
+        {
+            return v4.getReconciledInfo( databaseId );
+        }
+
+        @Override
+        public PreparedRequest<GetMetadataResponse> getMetadata( String databaseName, String includeMetadata )
+        {
+            return v4.getMetadata( databaseName, includeMetadata );
         }
     }
 

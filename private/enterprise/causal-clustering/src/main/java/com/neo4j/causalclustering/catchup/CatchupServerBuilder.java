@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstallerV3;
 import com.neo4j.causalclustering.catchup.v4.CatchupProtocolServerInstallerV4;
+import com.neo4j.causalclustering.catchup.v5.CatchupProtocolServerInstallerV5;
 import com.neo4j.causalclustering.core.ServerNameService;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.Server;
@@ -15,6 +16,7 @@ import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 import com.neo4j.causalclustering.protocol.ProtocolInstallerRepository;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
+import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationProtocolRepository;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
 import com.neo4j.causalclustering.protocol.handshake.HandshakeServerInitializer;
@@ -44,8 +46,8 @@ import static com.neo4j.causalclustering.protocol.application.ApplicationProtoco
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolUtil.checkInstallersExhaustive;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_3_0;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_4_0;
+import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_5_0;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.values;
-import static com.neo4j.configuration.CausalClusteringInternalSettings.experimental_catchup_protocol;
 
 public final class CatchupServerBuilder
 {
@@ -210,9 +212,8 @@ public final class CatchupServerBuilder
                 ServerNameService serverNameService, Config config, NettyPipelineBuilderFactory pipelineBuilder,
                 CatchupServerHandler catchupServerHandler )
         {
-            final var maximumProtocol = config.get( experimental_catchup_protocol ) ? CATCHUP_4_0 : CATCHUP_3_0;
-            final var protocolMap =
-                    createApplicationProtocolMap( pipelineBuilder, serverNameService.getInternalLogProvider(), catchupServerHandler );
+            final var maximumProtocol = ApplicationProtocols.maximumCatchupProtocol( config );
+            final var protocolMap = createApplicationProtocolMap( pipelineBuilder, serverNameService.getInternalLogProvider(), catchupServerHandler );
             checkInstallersExhaustive( protocolMap.keySet(), CATCHUP );
 
             return buildServerInstallers( protocolMap, maximumProtocol );
@@ -222,7 +223,8 @@ public final class CatchupServerBuilder
                 NettyPipelineBuilderFactory pipelineBuilder, LogProvider debugLogProvider, CatchupServerHandler catchupServerHandler )
         {
             return Map.of( CATCHUP_3_0, new CatchupProtocolServerInstallerV3.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler ),
-                           CATCHUP_4_0, new CatchupProtocolServerInstallerV4.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler ) );
+                           CATCHUP_4_0, new CatchupProtocolServerInstallerV4.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler ),
+                           CATCHUP_5_0, new CatchupProtocolServerInstallerV5.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler ) );
         }
     }
 

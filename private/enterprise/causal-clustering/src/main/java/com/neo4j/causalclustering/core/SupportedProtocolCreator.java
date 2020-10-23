@@ -46,7 +46,7 @@ public class SupportedProtocolCreator
 
         final var catchupList = config.get( CausalClusteringSettings.catchup_implementations );
         final var userExperimentalProtocol = config.get( CausalClusteringInternalSettings.experimental_catchup_protocol );
-        final var protocols = getProtocols( catchupList, userExperimentalProtocol, ApplicationProtocols.CATCHUP_4_0 );
+        final var protocols = getProtocols( catchupList, userExperimentalProtocol, ApplicationProtocols.experimentalCatchupProtocol() );
         return getApplicationSupportedProtocols( protocols, ApplicationProtocolCategory.CATCHUP );
     }
 
