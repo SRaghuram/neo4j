@@ -23,6 +23,9 @@ public class BranchAndVersionTest
         BranchAndVersion.validate( Repository.MICRO_BENCH, Repository.MICRO_BENCH.defaultOwner(), "3.4" );
         BranchAndVersion.validate( Repository.LDBC_BENCH, Repository.LDBC_BENCH.defaultOwner(), "3.4" );
         BranchAndVersion.validate( Repository.MACRO_BENCH, Repository.MACRO_BENCH.defaultOwner(), "3.4" );
+        BranchAndVersion.validate( Repository.MICRO_BENCH, Repository.MICRO_BENCH.defaultOwner(), "4.2.0-drop07" );
+        BranchAndVersion.validate( Repository.LDBC_BENCH, Repository.LDBC_BENCH.defaultOwner(), "4.2.0-drop07" );
+        BranchAndVersion.validate( Repository.MACRO_BENCH, Repository.MACRO_BENCH.defaultOwner(), "4.2.0-drop07" );
         BranchAndVersion.validate( Repository.ALGOS, Repository.ALGOS.defaultOwner(), "master" );
         BranchAndVersion.validate( Repository.ALGOS_JMH, Repository.ALGOS_JMH.defaultOwner(), "master" );
         BranchAndVersion.validate( Repository.QUALITY_TASK, Repository.QUALITY_TASK.defaultOwner(), "master" );

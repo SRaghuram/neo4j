@@ -18,11 +18,7 @@ public class VersionTest
     @Test
     public void getMainVersion()
     {
-        Version version = new Version( "3.4.0" );
-        assertThat( "3", equalTo( version.mainVersion() ) );
-        assertThat( "3.4", equalTo( version.minorVersion() ) );
-        assertThat( "3.4.0", equalTo( version.patchVersion() ) );
-        assertThat( "3.4.0", equalTo( version.fullVersion() ) );
+        assertVersion( "3.4.0","3","3.4","3.4.0","3.4.0" );
     }
 
     @Test
@@ -49,11 +45,8 @@ public class VersionTest
     @Test
     public void shouldAllowToVersionsThatBetasAndAlphas()
     {
-        Version version = new Version( "4.0.0-beta" );
-        assertThat( "4", equalTo( version.mainVersion() ) );
-        assertThat( "4.0", equalTo( version.minorVersion() ) );
-        assertThat( "4.0.0", equalTo( version.patchVersion() ) );
-        assertThat( "4.0.0-beta", equalTo( version.fullVersion() ) );
+        assertVersion( "4.0.0-beta","4","4.0","4.0.0","4.0.0-beta" );
+        assertVersion( "4.0.0-beta9","4","4.0","4.0.0","4.0.0-beta9" );
     }
 
     @Test
@@ -72,7 +65,6 @@ public class VersionTest
         assertThat( patch, equalTo( version.patchVersion() ) );
         assertThat( full, equalTo( version.fullVersion() ) );
     }
-
     @Test
     public void shouldNotAllowToVersionsThatWrongSeparators() throws Exception
     {
