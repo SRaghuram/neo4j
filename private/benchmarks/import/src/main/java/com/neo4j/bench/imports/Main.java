@@ -318,9 +318,6 @@ public class Main
 
     private void report( long start, long time, Neo4jConfig neo4jConfig, BenchmarkGroupBenchmarkMetrics metrics )
     {
-        // trim anything like '-M01' from end of Neo4j version string
-        boolean isDropBranch = neo4jBranch.contains( "drop" );
-        neo4jVersion = Version.toSanitizeVersion( neo4jVersion, isDropBranch );
         if ( !BranchAndVersion.isPersonalBranch( NEO4J, neo4jBranchOwner ) )
         {
             BranchAndVersion.assertBranchEqualsSeries( neo4jVersion, neo4jBranch );

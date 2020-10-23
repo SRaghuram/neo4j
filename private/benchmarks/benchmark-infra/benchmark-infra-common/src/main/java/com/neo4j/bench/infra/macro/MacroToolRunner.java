@@ -146,7 +146,7 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunToolMacroWorkl
                                    resultStoreCredentials.username(),
                                    resultStoreCredentials.password(),
                                    runMacroWorkloadParams.neo4jCommit(),
-                                   runMacroWorkloadParams.neo4jVersion().patchVersion(),
+                                   runMacroWorkloadParams.neo4jVersion().fullVersion(),
                                    runMacroWorkloadParams.neo4jBranch(),
                                    runMacroWorkloadParams.neo4jBranchOwner(),
                                    runMacroWorkloadParams.toolCommit(),

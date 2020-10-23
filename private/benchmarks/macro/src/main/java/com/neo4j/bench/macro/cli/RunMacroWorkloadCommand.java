@@ -325,7 +325,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                     testRun,
                     benchmarkConfig,
                     newHashSet( new Neo4j( params.neo4jCommit(),
-                                           params.neo4jVersion().patchVersion(),
+                                           params.neo4jVersion().fullVersion(),
                                            params.neo4jEdition(),
                                            params.neo4jBranch(),
                                            params.neo4jBranchOwner() ) ),

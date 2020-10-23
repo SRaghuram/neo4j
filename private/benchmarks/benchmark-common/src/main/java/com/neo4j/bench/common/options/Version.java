@@ -36,7 +36,6 @@ public class Version
 
         mainVersion = ensureValidVersionNumber( split[0] );
         minorVersion = ensureValidVersionNumber( split[1] );
-
         patchVersion = ensureValidVersionNumber( patchAndPreReleaseBranch[0] );
         if ( patchAndPreReleaseBranch.length > 1 )
         {
@@ -80,11 +79,6 @@ public class Version
             return patchVersion();
         }
         return String.format( "%s.%s.%s-%s", mainVersion, minorVersion, patchVersion, preReleaseBranch );
-    }
-
-    public static String toSanitizeVersion( String version, boolean isDropBranch )
-    {
-        return isDropBranch ? version : new Version( version ).patchVersion();
     }
 
     @Override

@@ -141,13 +141,7 @@ public class RunReportCommand extends BaseRunReportCommand
             profiler.profilerType().assertEnvironmentVariablesPresent( errorOnMissingSecondaryEnvironmentVariables );
         }
 
-        // trim anything like '-M01' from end of Neo4j version string
-        // We have two styles of branch names.
-        // and we need a automatic way of telling if this is a
-        // 4.2.0
-        // 4.2-drop2
-        boolean isDropBranch = runReportParams.neo4jBranch().contains( "drop" );
-        String neo4jVersion = Version.toSanitizeVersion( runReportParams.neo4jVersion(), isDropBranch );
+        String neo4jVersion = runReportParams.neo4jVersion();
 
         Neo4jConfig baseNeo4jConfig = Neo4jConfigBuilder.withDefaults()
                                                         .mergeWith( Neo4jConfigBuilder.fromFile( runReportParams.neo4jConfigFile() ).build() )
