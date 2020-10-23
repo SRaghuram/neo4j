@@ -8,7 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import java.util
 import java.util.concurrent.ThreadLocalRandom
 
-import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.ast.NodeExistsConstraints
@@ -30,13 +30,15 @@ import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_WGS84_MAX
 import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_WGS84_MIN
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.kernel.api.impl.fulltext.analyzer.providers.StandardNoStopWords
+import org.neo4j.kernel.impl.index.schema.FulltextIndexProviderFactory
+import org.neo4j.kernel.impl.index.schema.GenericNativeIndexProvider
 import org.neo4j.service.Services
 import org.neo4j.values.storable.RandomValues
 
 class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
-  private val btreeProvider = GraphDatabaseSettings.SchemaIndex.NATIVE_BTREE10.providerName()
-  private val fulltextProvider = "fulltext-1.0"
+  private val defaultBtreeProvider = GenericNativeIndexProvider.DESCRIPTOR.name()
+  private val fulltextProvider = FulltextIndexProviderFactory.DESCRIPTOR.name()
 
   private val defaultBtreeOptionsString: String =
     "{indexConfig: {" +
@@ -48,7 +50,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
       s"`${SPATIAL_WGS84_3D_MIN.getSettingName}`: [-180.0, -90.0, -1000000.0]," +
       s"`${SPATIAL_WGS84_MAX.getSettingName}`: [180.0, 90.0]," +
       s"`${SPATIAL_WGS84_MIN.getSettingName}`: [-180.0, -90.0]}, " +
-      s"indexProvider: '$btreeProvider'}"
+      s"indexProvider: '$defaultBtreeProvider'}"
 
   private val defaultBtreeOptionsMap: Map[String, Object] = Map(
     "indexConfig" -> Map(
@@ -60,7 +62,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
       SPATIAL_WGS84_3D_MIN.getSettingName -> Array(-180.0, -90.0, -1000000.0),
       SPATIAL_WGS84_MAX.getSettingName -> Array(180.0, 90.0),
       SPATIAL_WGS84_MIN.getSettingName -> Array(-180.0, -90.0)),
-    "indexProvider" -> btreeProvider)
+    "indexProvider" -> defaultBtreeProvider)
 
   private val defaultFulltextConfigString =
     s"{`${FULLTEXT_ANALYZER.getSettingName}`: '${StandardNoStopWords.ANALYZER_NAME}',`${FULLTEXT_EVENTUALLY_CONSISTENT.getSettingName}`: 'false'}"
@@ -710,7 +712,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   private def createDefaultUniquenessConstraint(): Unit = graph.createUniqueConstraintWithName("constraint1", label, prop)
 
   private def defaultUniquenessBriefIndexOutput(id: Long): Map[String, Any] =
-    indexOutputBrief(id, "constraint1", "UNIQUE", "BTREE", "NODE", List(label), List(prop), btreeProvider)
+    indexOutputBrief(id, "constraint1", "UNIQUE", "BTREE", "NODE", List(label), List(prop), defaultBtreeProvider)
 
   private def defaultUniquenessVerboseIndexOutput(id: Long): Map[String, Any] = defaultUniquenessBriefIndexOutput(id) ++
     indexOutputVerbose(s"CREATE CONSTRAINT `constraint1` ON (n:`$label`) ASSERT (n.`$prop`) IS UNIQUE OPTIONS $defaultBtreeOptionsString")
@@ -726,7 +728,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   private def createDefaultNodeKeyConstraint(): Unit = graph.createNodeKeyConstraintWithName("constraint2", label2, prop2)
 
   private def defaultNodeKeyBriefIndexOutput(id: Long): Map[String, Any] =
-    indexOutputBrief(id, "constraint2", "UNIQUE", "BTREE", "NODE", List(label2), List(prop2), btreeProvider)
+    indexOutputBrief(id, "constraint2", "UNIQUE", "BTREE", "NODE", List(label2), List(prop2), defaultBtreeProvider)
 
   private def defaultNodeKeyVerboseIndexOutput(id: Long): Map[String, Any] = defaultNodeKeyBriefIndexOutput(id) ++
     indexOutputVerbose(s"CREATE CONSTRAINT `constraint2` ON (n:`$label2`) ASSERT (n.`$prop2`) IS NODE KEY OPTIONS $defaultBtreeOptionsString")
@@ -822,7 +824,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
         case (None, Some(recreated)) =>
           fail(s"Expected options to be null but was $recreated.")
         case (None, None) =>
-        // Options was expected to be null and was null, this is success.
+          // Options was expected to be null and was null, this is success.
       }
     }
   }
@@ -862,7 +864,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
   }
 
   private def randomBtreeProvider(): String = {
-    val availableProviders = GraphDatabaseSettings.SchemaIndex.values().map(value => value.providerName())
+    val availableProviders = SchemaIndex.values().map(value => value.providerName())
     randomValues.among(availableProviders)
   }
 

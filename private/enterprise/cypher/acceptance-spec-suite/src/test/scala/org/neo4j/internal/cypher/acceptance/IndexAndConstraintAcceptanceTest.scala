@@ -11,6 +11,8 @@ import org.neo4j.exceptions.CypherExecutionException
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.Label
 import org.neo4j.graphdb.RelationshipType
+import org.neo4j.graphdb.schema.IndexSettingImpl.FULLTEXT_ANALYZER
+import org.neo4j.graphdb.schema.IndexSettingImpl.FULLTEXT_EVENTUALLY_CONSISTENT
 import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_CARTESIAN_3D_MAX
 import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_CARTESIAN_3D_MIN
 import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_CARTESIAN_MAX
@@ -22,6 +24,7 @@ import org.neo4j.graphdb.schema.IndexSettingImpl.SPATIAL_WGS84_MIN
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
+import org.neo4j.kernel.impl.index.schema.FulltextIndexProviderFactory
 import org.neo4j.kernel.impl.index.schema.GenericNativeIndexProvider
 import org.neo4j.kernel.impl.index.schema.fusion.NativeLuceneFusionIndexProviderFactory30
 
@@ -30,6 +33,20 @@ import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 //noinspection RedundantDefaultArgument
 // Disable warnings for redundant default argument since its used for clarification of the `assertStats` when nothing should have happened
 class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
+
+  private val nativeProvider = GenericNativeIndexProvider.DESCRIPTOR.name()
+  private val nativeLuceneProvider = NativeLuceneFusionIndexProviderFactory30.DESCRIPTOR.name()
+  private val fulltextProvider = FulltextIndexProviderFactory.DESCRIPTOR.name()
+  private val cartesianMin = SPATIAL_CARTESIAN_MIN.getSettingName
+  private val cartesianMax = SPATIAL_CARTESIAN_MAX.getSettingName
+  private val cartesian3dMin = SPATIAL_CARTESIAN_3D_MIN.getSettingName
+  private val cartesian3dMax = SPATIAL_CARTESIAN_3D_MAX.getSettingName
+  private val wgsMin = SPATIAL_WGS84_MIN.getSettingName
+  private val wgsMax = SPATIAL_WGS84_MAX.getSettingName
+  private val wgs3dMin = SPATIAL_WGS84_3D_MIN.getSettingName
+  private val wgs3dMax = SPATIAL_WGS84_3D_MAX.getSettingName
+  private val eventuallyConsistent = FULLTEXT_EVENTUALLY_CONSISTENT.getSettingName
+  private val analyzer = FULLTEXT_ANALYZER.getSettingName
 
   // Create index
 
@@ -235,7 +252,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   test("should be able to set index provider when creating index") {
     // WHEN
-    executeSingle("CREATE INDEX myIndex FOR (n:Person) ON (n.name) OPTIONS {indexProvider : 'native-btree-1.0'}")
+    executeSingle(s"CREATE INDEX myIndex FOR (n:Person) ON (n.name) OPTIONS {indexProvider : '$nativeProvider'}")
     graph.awaitIndexesOnline()
 
     // THEN
@@ -246,15 +263,15 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should be able to set config values when creating index") {
     // WHEN
     executeSingle(
-      """CREATE INDEX myIndex FOR (n:Person) ON (n.name) OPTIONS {indexConfig: {
-        | `spatial.cartesian.min`: [-100.0, -100.0],
-        | `spatial.cartesian.max`: [100.0, 100.0],
-        | `spatial.cartesian-3d.min`: [-100.0, -100.0, -100.0],
-        | `spatial.cartesian-3d.max`: [100.0, 100.0, 100.0],
-        | `spatial.wgs-84.min`: [-60.0, -40.0],
-        | `spatial.wgs-84.max`: [60.0, 40.0],
-        | `spatial.wgs-84-3d.min`: [-60.0, -40.0, -100.0],
-        | `spatial.wgs-84-3d.max`: [60.0, 40.0, 100.0]
+      s"""CREATE INDEX myIndex FOR (n:Person) ON (n.name) OPTIONS {indexConfig: {
+        | `$cartesianMin`: [-100.0, -100.0],
+        | `$cartesianMax`: [100.0, 100.0],
+        | `$cartesian3dMin`: [-100.0, -100.0, -100.0],
+        | `$cartesian3dMax`: [100.0, 100.0, 100.0],
+        | `$wgsMin`: [-60.0, -40.0],
+        | `$wgsMax`: [60.0, 40.0],
+        | `$wgs3dMin`: [-60.0, -40.0, -100.0],
+        | `$wgs3dMax`: [60.0, 40.0, 100.0]
         |}}""".stripMargin)
     graph.awaitIndexesOnline()
 
@@ -273,9 +290,9 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should be able to set both index provider and config when creating index") {
     // WHEN
     executeSingle(
-      """CREATE INDEX myIndex FOR (n:Person) ON (n.name) OPTIONS {
-        | indexProvider : 'lucene+native-3.0',
-        | indexConfig: {`spatial.cartesian.min`: [-60.0, -40.0]}
+      s"""CREATE INDEX myIndex FOR (n:Person) ON (n.name) OPTIONS {
+        | indexProvider : '$nativeLuceneProvider',
+        | indexConfig: {`$cartesianMin`: [-60.0, -40.0]}
         |}""".stripMargin)
     graph.awaitIndexesOnline()
 
@@ -288,7 +305,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     configuration(SPATIAL_CARTESIAN_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(1000000.0, 1000000.0)
   }
 
-  test("should get default values when creating index with empty OPTIONS map when creating index") {
+  test("should get default values when creating index with empty OPTIONS map") {
     // WHEN
     executeSingle("CREATE INDEX myIndex FOR (n:Person) ON (n.name) OPTIONS {}")
     graph.awaitIndexesOnline()
@@ -426,7 +443,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should fail to create index with invalid options (config map directly)") {
     // WHEN
     val exception = the[SyntaxException] thrownBy {
-      executeSingle("CREATE INDEX FOR (n:Person) ON (n.name) OPTIONS {`spatial.cartesian.max`: [100.0, 100.0]}")
+      executeSingle(s"CREATE INDEX FOR (n:Person) ON (n.name) OPTIONS {`$cartesianMax`: [100.0, 100.0]}")
     }
     // THEN
     exception.getMessage should include("Failed to create index: Invalid option provided, valid options are `indexProvider` and `indexConfig`.")
@@ -453,11 +470,11 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should fail to create index with invalid provider: fulltext provider") {
     // WHEN
     val exception = the[InvalidArgumentsException] thrownBy {
-      executeSingle("CREATE INDEX FOR (n:Person) ON (n.name) OPTIONS {indexProvider : 'fulltext-1.0'}")
+      executeSingle(s"CREATE INDEX FOR (n:Person) ON (n.name) OPTIONS {indexProvider : '$fulltextProvider'}")
     }
     // THEN
     exception.getMessage should include(
-      """Could not create index with specified index provider 'fulltext-1.0'.
+      s"""Could not create index with specified index provider '$fulltextProvider'.
         |To create fulltext index, please use 'db.index.fulltext.createNodeIndex' or 'db.index.fulltext.createRelationshipIndex'.""".stripMargin)
   }
 
@@ -482,39 +499,39 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should fail to create index with invalid config: config value not a list") {
     // WHEN
     val exception = the[InvalidArgumentsException] thrownBy {
-      executeSingle("CREATE INDEX FOR (n:Person) ON (n.name) OPTIONS {indexConfig : {`spatial.cartesian.max`: 100.0}}")
+      executeSingle(s"CREATE INDEX FOR (n:Person) ON (n.name) OPTIONS {indexConfig : {`$cartesianMax`: 100.0}}")
     }
     // THEN
-    exception.getMessage should include("Could not create index with specified index config '{spatial.cartesian.max: 100.0}'. Expected a map from String to Double[].")
+    exception.getMessage should include(s"Could not create index with specified index config '{$cartesianMax: 100.0}'. Expected a map from String to Double[].")
   }
 
   test("should fail to create index with invalid config: config value includes non-valid types") {
     // WHEN
     val exception = the[InvalidArgumentsException] thrownBy {
-      executeSingle("CREATE INDEX FOR (n:Person) ON (n.name) OPTIONS {indexConfig : {`spatial.cartesian.max`: [100.0,'hundred']}}")
+      executeSingle(s"CREATE INDEX FOR (n:Person) ON (n.name) OPTIONS {indexConfig : {`$cartesianMax`: [100.0,'hundred']}}")
     }
     // THEN
     exception.getMessage should include(
-      "Could not create index with specified index config '{spatial.cartesian.max: [100.0, hundred]}'. Expected a map from String to Double[].")
+      s"Could not create index with specified index config '{$cartesianMax: [100.0, hundred]}'. Expected a map from String to Double[].")
   }
 
   test("should fail to create index with invalid config: fulltext config values") {
     // WHEN
     val exceptionBoolean = the[InvalidArgumentsException] thrownBy {
-      executeSingle("CREATE INDEX FOR (n:Person) ON (n.name) OPTIONS {indexConfig : {`fulltext.eventually_consistent`: true}}")
+      executeSingle(s"CREATE INDEX FOR (n:Person) ON (n.name) OPTIONS {indexConfig : {`$eventuallyConsistent`: true}}")
     }
     // THEN
     exceptionBoolean.getMessage should include(
-      """Could not create index with specified index config '{fulltext.eventually_consistent: true}', contains fulltext config options.
+      s"""Could not create index with specified index config '{$eventuallyConsistent: true}', contains fulltext config options.
         |To create fulltext index, please use 'db.index.fulltext.createNodeIndex' or 'db.index.fulltext.createRelationshipIndex'.""".stripMargin)
 
     // WHEN
     val exceptionList = the[InvalidArgumentsException] thrownBy {
-      executeSingle("CREATE INDEX FOR (n:Person) ON (n.name) OPTIONS {indexConfig : {`fulltext.analyzer`: [100.0], `spatial.cartesian.max`: [100.0, 100.0]}}")
+      executeSingle(s"CREATE INDEX FOR (n:Person) ON (n.name) OPTIONS {indexConfig : {`$analyzer`: [100.0], `$cartesianMax`: [100.0, 100.0]}}")
     }
     // THEN
     exceptionList.getMessage should include(
-      """Could not create index with specified index config '{fulltext.analyzer: [100.0], spatial.cartesian.max: [100.0, 100.0]}', contains fulltext config options.
+      s"""Could not create index with specified index config '{$analyzer: [100.0], $cartesianMax: [100.0, 100.0]}', contains fulltext config options.
         |To create fulltext index, please use 'db.index.fulltext.createNodeIndex' or 'db.index.fulltext.createRelationshipIndex'.""".stripMargin)
   }
 
@@ -781,7 +798,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   test("should be able to set index provider when creating node key constraint") {
     // WHEN
-    executeSingle("CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexProvider : 'native-btree-1.0'}")
+    executeSingle(s"CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexProvider : '$nativeProvider'}")
     graph.awaitIndexesOnline()
 
     // THEN: for the index backing the constraint
@@ -792,15 +809,15 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should be able to set config values when creating node key constraint") {
     // WHEN
     executeSingle(
-      """CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexConfig: {
-        | `spatial.cartesian.min`: [-100.0, -100.0],
-        | `spatial.cartesian.max`: [100.0, 100.0],
-        | `spatial.cartesian-3d.min`: [-100.0, -100.0, -100.0],
-        | `spatial.cartesian-3d.max`: [100.0, 100.0, 100.0],
-        | `spatial.wgs-84.min`: [-60.0, -40.0],
-        | `spatial.wgs-84.max`: [60.0, 40.0],
-        | `spatial.wgs-84-3d.min`: [-60.0, -40.0, -100.0],
-        | `spatial.wgs-84-3d.max`: [60.0, 40.0, 100.0]
+      s"""CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexConfig: {
+        | `$cartesianMin`: [-100.0, -100.0],
+        | `$cartesianMax`: [100.0, 100.0],
+        | `$cartesian3dMin`: [-100.0, -100.0, -100.0],
+        | `$cartesian3dMax`: [100.0, 100.0, 100.0],
+        | `$wgsMin`: [-60.0, -40.0],
+        | `$wgsMax`: [60.0, 40.0],
+        | `$wgs3dMin`: [-60.0, -40.0, -100.0],
+        | `$wgs3dMax`: [60.0, 40.0, 100.0]
         |}}""".stripMargin)
     graph.awaitIndexesOnline()
 
@@ -819,9 +836,9 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should be able to set both index provider and config when creating node key constraint") {
     // WHEN
     executeSingle(
-      """CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {
-        | indexProvider : 'lucene+native-3.0',
-        | indexConfig: {`spatial.cartesian.max`: [60.0, 40.0]}
+      s"""CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {
+        | indexProvider : '$nativeLuceneProvider',
+        | indexConfig: {`$cartesianMax`: [60.0, 40.0]}
         |}""".stripMargin)
     graph.awaitIndexesOnline()
 
@@ -834,7 +851,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     configuration(SPATIAL_CARTESIAN_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(60.0, 40.0)
   }
 
-  test("should get default values when creating index with empty OPTIONS map when creating node key constraint") {
+  test("should get default values when creating node key constraint with empty OPTIONS map") {
     // WHEN
     executeSingle("CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {}")
     graph.awaitIndexesOnline()
@@ -890,7 +907,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should fail to create node key constraint with invalid options (config map directly)") {
     // WHEN
     val exception = the[SyntaxException] thrownBy {
-      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {`spatial.cartesian.max`: [100.0, 100.0]}")
+      executeSingle(s"CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {`$cartesianMax`: [100.0, 100.0]}")
     }
     // THEN
     exception.getMessage should include("Failed to create node key constraint: Invalid option provided, valid options are `indexProvider` and `indexConfig`.")
@@ -917,11 +934,11 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should fail to create node key constraint with invalid provider: fulltext provider") {
     // WHEN
     val exception = the[InvalidArgumentsException] thrownBy {
-      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexProvider : 'fulltext-1.0'}")
+      executeSingle(s"CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexProvider : '$fulltextProvider'}")
     }
     // THEN
     exception.getMessage should include(
-      """Could not create node key constraint with specified index provider 'fulltext-1.0'.
+      s"""Could not create node key constraint with specified index provider '$fulltextProvider'.
         |To create fulltext index, please use 'db.index.fulltext.createNodeIndex' or 'db.index.fulltext.createRelationshipIndex'.""".stripMargin)
   }
 
@@ -946,39 +963,39 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should fail to create node key constraint with invalid config: config value not a list") {
     // WHEN
     val exception = the[InvalidArgumentsException] thrownBy {
-      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexConfig : {`spatial.cartesian.max`: 100.0}}")
+      executeSingle(s"CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexConfig : {`$cartesianMax`: 100.0}}")
     }
     // THEN
-    exception.getMessage should include("Could not create node key constraint with specified index config '{spatial.cartesian.max: 100.0}'. Expected a map from String to Double[].")
+    exception.getMessage should include(s"Could not create node key constraint with specified index config '{$cartesianMax: 100.0}'. Expected a map from String to Double[].")
   }
 
   test("should fail to create node key constraint with invalid config: config value includes non-valid types") {
     // WHEN
     val exception = the[InvalidArgumentsException] thrownBy {
-      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexConfig : {`spatial.cartesian.max`: [100.0,'hundred']}}")
+      executeSingle(s"CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexConfig : {`$cartesianMax`: [100.0,'hundred']}}")
     }
     // THEN
     exception.getMessage should include(
-      "Could not create node key constraint with specified index config '{spatial.cartesian.max: [100.0, hundred]}'. Expected a map from String to Double[].")
+      s"Could not create node key constraint with specified index config '{$cartesianMax: [100.0, hundred]}'. Expected a map from String to Double[].")
   }
 
   test("should fail to create node key constraint with invalid config: fulltext config values") {
     // WHEN
     val exceptionBoolean = the[InvalidArgumentsException] thrownBy {
-      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexConfig : {`fulltext.eventually_consistent`: true}}")
+      executeSingle(s"CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexConfig : {`$eventuallyConsistent`: true}}")
     }
     // THEN
     exceptionBoolean.getMessage should include(
-      """Could not create node key constraint with specified index config '{fulltext.eventually_consistent: true}', contains fulltext config options.
+      s"""Could not create node key constraint with specified index config '{$eventuallyConsistent: true}', contains fulltext config options.
         |To create fulltext index, please use 'db.index.fulltext.createNodeIndex' or 'db.index.fulltext.createRelationshipIndex'.""".stripMargin)
 
     // WHEN
     val exceptionList = the[InvalidArgumentsException] thrownBy {
-      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexConfig : {`fulltext.analyzer`: [100.0], `spatial.cartesian.max`: [100.0, 100.0]}}")
+      executeSingle(s"CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY OPTIONS {indexConfig : {`$analyzer`: [100.0], `$cartesianMax`: [100.0, 100.0]}}")
     }
     // THEN
     exceptionList.getMessage should include(
-      """Could not create node key constraint with specified index config '{fulltext.analyzer: [100.0], spatial.cartesian.max: [100.0, 100.0]}', contains fulltext config options.
+      s"""Could not create node key constraint with specified index config '{$analyzer: [100.0], $cartesianMax: [100.0, 100.0]}', contains fulltext config options.
         |To create fulltext index, please use 'db.index.fulltext.createNodeIndex' or 'db.index.fulltext.createRelationshipIndex'.""".stripMargin)
   }
 
@@ -1096,7 +1113,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   test("should be able to set index provider when creating unique property constraint") {
     // WHEN
-    executeSingle("CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexProvider : 'lucene+native-3.0'}")
+    executeSingle(s"CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexProvider : '$nativeLuceneProvider'}")
     graph.awaitIndexesOnline()
 
     // THEN: for the index backing the constraint
@@ -1107,15 +1124,15 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should be able to set config values when creating unique property constraint") {
     // WHEN
     executeSingle(
-      """CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexConfig: {
-        | `spatial.cartesian.min`: [-100.0, -100.0],
-        | `spatial.cartesian.max`: [100.0, 100.0],
-        | `spatial.cartesian-3d.min`: [-100.0, -100.0, -100.0],
-        | `spatial.cartesian-3d.max`: [100.0, 100.0, 100.0],
-        | `spatial.wgs-84.min`: [-60.0, -40.0],
-        | `spatial.wgs-84.max`: [60.0, 40.0],
-        | `spatial.wgs-84-3d.min`: [-60.0, -40.0, -100.0],
-        | `spatial.wgs-84-3d.max`: [60.0, 40.0, 100.0]
+      s"""CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexConfig: {
+        | `$cartesianMin`: [-100.0, -100.0],
+        | `$cartesianMax`: [100.0, 100.0],
+        | `$cartesian3dMin`: [-100.0, -100.0, -100.0],
+        | `$cartesian3dMax`: [100.0, 100.0, 100.0],
+        | `$wgsMin`: [-60.0, -40.0],
+        | `$wgsMax`: [60.0, 40.0],
+        | `$wgs3dMin`: [-60.0, -40.0, -100.0],
+        | `$wgs3dMax`: [60.0, 40.0, 100.0]
         |}}""".stripMargin)
     graph.awaitIndexesOnline()
 
@@ -1134,9 +1151,9 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should be able to set both index provider and config when creating unique property constraint") {
     // WHEN
     executeSingle(
-      """CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {
-        | indexProvider : 'native-btree-1.0',
-        | indexConfig: {`spatial.cartesian.min`: [-60.0, -40.0], `spatial.cartesian.max`: [60.0, 40.0]}
+      s"""CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {
+        | indexProvider : '$nativeProvider',
+        | indexConfig: {`$cartesianMin`: [-60.0, -40.0], `$cartesianMax`: [60.0, 40.0]}
         |}""".stripMargin)
     graph.awaitIndexesOnline()
 
@@ -1149,7 +1166,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     configuration(SPATIAL_CARTESIAN_MAX).asInstanceOf[Array[Double]] should contain theSameElementsInOrderAs Array(60.0, 40.0)
   }
 
-  test("should get default values when creating index with empty OPTIONS map when creating unique property constraint") {
+  test("should get default values when creating unique property constraint with empty OPTIONS map") {
     // WHEN
     executeSingle("CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {}")
     graph.awaitIndexesOnline()
@@ -1223,7 +1240,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should fail to create unique property constraint with invalid options (config map directly)") {
     // WHEN
     val exception = the[SyntaxException] thrownBy {
-      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {`spatial.cartesian.max`: [100.0, 100.0]}")
+      executeSingle(s"CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {`$cartesianMax`: [100.0, 100.0]}")
     }
     // THEN
     exception.getMessage should include("Failed to create uniqueness constraint: Invalid option provided, valid options are `indexProvider` and `indexConfig`.")
@@ -1250,11 +1267,11 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should fail to create unique property constraint with invalid provider: fulltext provider") {
     // WHEN
     val exception = the[InvalidArgumentsException] thrownBy {
-      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexProvider : 'fulltext-1.0'}")
+      executeSingle(s"CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexProvider : '$fulltextProvider'}")
     }
     // THEN
     exception.getMessage should include(
-      """Could not create uniqueness constraint with specified index provider 'fulltext-1.0'.
+      s"""Could not create uniqueness constraint with specified index provider '$fulltextProvider'.
         |To create fulltext index, please use 'db.index.fulltext.createNodeIndex' or 'db.index.fulltext.createRelationshipIndex'.""".stripMargin)
   }
 
@@ -1279,39 +1296,39 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should fail to create unique property constraint with invalid config: config value not a list") {
     // WHEN
     val exception = the[InvalidArgumentsException] thrownBy {
-      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexConfig : {`spatial.cartesian.max`: 100.0}}")
+      executeSingle(s"CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexConfig : {`$cartesianMax`: 100.0}}")
     }
     // THEN
-    exception.getMessage should include("Could not create uniqueness constraint with specified index config '{spatial.cartesian.max: 100.0}'. Expected a map from String to Double[].")
+    exception.getMessage should include(s"Could not create uniqueness constraint with specified index config '{$cartesianMax: 100.0}'. Expected a map from String to Double[].")
   }
 
   test("should fail to create unique property constraint with invalid config: config value includes non-valid types") {
     // WHEN
     val exception = the[InvalidArgumentsException] thrownBy {
-      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexConfig : {`spatial.cartesian.max`: [100.0,'hundred']}}")
+      executeSingle(s"CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexConfig : {`$cartesianMax`: [100.0,'hundred']}}")
     }
     // THEN
     exception.getMessage should include(
-      "Could not create uniqueness constraint with specified index config '{spatial.cartesian.max: [100.0, hundred]}'. Expected a map from String to Double[].")
+      s"Could not create uniqueness constraint with specified index config '{$cartesianMax: [100.0, hundred]}'. Expected a map from String to Double[].")
   }
 
   test("should fail to create unique property constraint with invalid config: fulltext config values") {
     // WHEN
     val exceptionBoolean = the[InvalidArgumentsException] thrownBy {
-      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexConfig : {`fulltext.eventually_consistent`: true}}")
+      executeSingle(s"CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexConfig : {`$eventuallyConsistent`: true}}")
     }
     // THEN
     exceptionBoolean.getMessage should include(
-      """Could not create uniqueness constraint with specified index config '{fulltext.eventually_consistent: true}', contains fulltext config options.
+      s"""Could not create uniqueness constraint with specified index config '{$eventuallyConsistent: true}', contains fulltext config options.
         |To create fulltext index, please use 'db.index.fulltext.createNodeIndex' or 'db.index.fulltext.createRelationshipIndex'.""".stripMargin)
 
     // WHEN
     val exceptionList = the[InvalidArgumentsException] thrownBy {
-      executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexConfig : {`fulltext.analyzer`: [100.0], `spatial.cartesian.max`: [100.0, 100.0]}}")
+      executeSingle(s"CREATE CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE OPTIONS {indexConfig : {`$analyzer`: [100.0], `$cartesianMax`: [100.0, 100.0]}}")
     }
     // THEN
     exceptionList.getMessage should include(
-      """Could not create uniqueness constraint with specified index config '{fulltext.analyzer: [100.0], spatial.cartesian.max: [100.0, 100.0]}', contains fulltext config options.
+      s"""Could not create uniqueness constraint with specified index config '{$analyzer: [100.0], $cartesianMax: [100.0, 100.0]}', contains fulltext config options.
         |To create fulltext index, please use 'db.index.fulltext.createNodeIndex' or 'db.index.fulltext.createRelationshipIndex'.""".stripMargin)
   }
 
