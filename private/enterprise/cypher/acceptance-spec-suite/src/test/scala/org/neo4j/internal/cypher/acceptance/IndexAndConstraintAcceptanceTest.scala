@@ -1460,6 +1460,15 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     error4.getMessage should startWith (errorMessage)
   }
 
+  test("should fail to create node property existence constraint with OPTIONS") {
+    // WHEN
+    val error = the[SyntaxException] thrownBy {
+      executeSingle("CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT EXISTS(n.name) OPTIONS {}")
+    }
+    // THEN
+    error.getMessage should startWith ("Failed to create node property existence constraint: `OPTIONS` cannot be used together with this command.")
+  }
+
   // Relationship property existence
 
   test("should create relationship property existence constraint") {
@@ -1586,6 +1595,15 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       executeSingle("CREATE OR REPLACE CONSTRAINT IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
     }
     error4.getMessage should startWith (errorMessage)
+  }
+
+  test("should fail to create relationship property existence constraint with OPTIONS") {
+    // WHEN
+    val error = the[SyntaxException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON ()-[r:HasPet]-() ASSERT EXISTS (r.since) OPTIONS {}")
+    }
+    // THEN
+    error.getMessage should startWith ("Failed to create relationship property existence constraint: `OPTIONS` cannot be used together with this command.")
   }
 
   // Multiple constraints
