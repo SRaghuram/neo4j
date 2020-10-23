@@ -9,6 +9,7 @@ import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventList
 
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.DbmsRuntimeRepository;
+import org.neo4j.dbms.database.DbmsRuntimeVersion;
 
 /**
  * A version of {@link} DbmsRuntimeRepository for cluster editions.
@@ -19,6 +20,15 @@ public class ClusterDbmsRuntimeRepository extends DbmsRuntimeRepository implemen
     public ClusterDbmsRuntimeRepository( DatabaseManager<?> databaseManager )
     {
         super( databaseManager );
+    }
+
+    @Override
+    protected DbmsRuntimeVersion getFallbackVersion()
+    {
+        // New components are not currently initialised in cluster deployment when new binaries are booted on top of an existing database.
+        // This is a known shortcoming of the lifecycle of System graph components.
+        // As the result of above, if the execution path makes it here, it means new binaries are booted on top of an existing database.
+        return PREVIOUS_VERSION;
     }
 
     @Override

@@ -6,6 +6,7 @@
 package com.neo4j.dbms.database;
 
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import org.neo4j.dbms.database.DbmsRuntimeRepository;
 import org.neo4j.dbms.database.TransactionLogVersionProviderImpl;
@@ -33,15 +34,18 @@ public class DbmsLogEntryWriterProvider
 
     public LogEntryWriterFactory getEntryWriterFactory( NamedDatabaseId namedDatabaseId )
     {
-        return Optional.ofNullable( namedDatabaseId )
-                       .flatMap( databaseManager::getDatabaseContext )
-                       .flatMap( ctx -> resolveEntryWriterFactoryOpt( ctx.database() ) )
-                       .orElse( LogEntryWriterFactory.LATEST );
+        // Because of chicken and egg type of problem in cluster bootstrap this might get called
+        // before database manager is populated with databases,
+        // so the initialization of the log entry factory is delayed until its first use.
+        return new LazyLogEntryWriterFactory( () -> Optional.ofNullable( namedDatabaseId )
+                                                            .flatMap( databaseManager::getDatabaseContext )
+                                                            .flatMap( ctx -> resolveEntryWriterFactoryOpt( ctx.database() ) )
+                                                            .orElse( LogEntryWriterFactory.LATEST ) );
     }
 
     public static LogEntryWriterFactory resolveEntryWriterFactory( Database database )
     {
-        return resolveEntryWriterFactoryOpt( database ).orElse( LogEntryWriterFactory.LATEST );
+        return new LazyLogEntryWriterFactory( () -> resolveEntryWriterFactoryOpt( database ).orElse( LogEntryWriterFactory.LATEST ) );
     }
 
     private static Optional<LogEntryWriterFactory> resolveEntryWriterFactoryOpt( Database database )
@@ -73,4 +77,26 @@ public class DbmsLogEntryWriterProvider
             return LogEntryWriterFactory.LATEST;
         }
     };
+
+    private static class LazyLogEntryWriterFactory implements LogEntryWriterFactory
+    {
+        private final Supplier<LogEntryWriterFactory> factorySupplier;
+        private LogEntryWriterFactory wrappedFactory;
+
+        private LazyLogEntryWriterFactory( Supplier<LogEntryWriterFactory> factorySupplier )
+        {
+            this.factorySupplier = factorySupplier;
+        }
+
+        @Override
+        public <T extends WritableChecksumChannel> LogEntryWriter<T> createEntryWriter( T channel )
+        {
+            if ( wrappedFactory == null )
+            {
+                wrappedFactory = factorySupplier.get();
+            }
+
+            return wrappedFactory.createEntryWriter( channel );
+        }
+    }
 }
