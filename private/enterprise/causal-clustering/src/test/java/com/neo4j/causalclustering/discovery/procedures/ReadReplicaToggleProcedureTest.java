@@ -51,6 +51,12 @@ class ReadReplicaToggleProcedureTest
     }
 
     @Test
+    public void procedureShouldBeAvailableOnlyForAdmins()
+    {
+        assertThat( procedure.signature().admin() ).isTrue();
+    }
+
+    @Test
     public void shouldThrowExceptionIfInputIsEmpty()
     {
         //given

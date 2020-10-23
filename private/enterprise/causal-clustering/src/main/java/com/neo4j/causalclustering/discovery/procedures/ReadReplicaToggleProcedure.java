@@ -45,6 +45,7 @@ public class ReadReplicaToggleProcedure extends CallableProcedure.BasicProcedure
                        .out( "state", Neo4jTypes.NTString )
                        .description( "The toggle can pause or resume read replica" )
                        .systemProcedure()
+                       .admin( true )
                        .build() );
         this.databaseManager = databaseManager;
     }
