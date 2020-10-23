@@ -25,7 +25,7 @@ public class Version
         if ( split.length != 4 && split.length != 3 )
         {
             throw new IllegalArgumentException(
-                    String.format( "Neo4j version have always been on the form x.y.z(-dropxy.z) , but this version is %s", versionString ) );
+                    String.format( "Expected Neo4j version of the form x.y.z(-dropxy.z) , but got %s", versionString ) );
         }
 
         String[] patchAndPreReleaseBranch = split[2].split( "-" );

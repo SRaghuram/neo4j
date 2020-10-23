@@ -59,11 +59,18 @@ public class VersionTest
     @Test
     public void shouldSupportDropReleases()
     {
-        Version version = new Version( "4.2.0-drop07.0" );
-        assertThat( "4", equalTo( version.mainVersion() ) );
-        assertThat( "4.2", equalTo( version.minorVersion() ) );
-        assertThat( "4.2.0", equalTo( version.patchVersion() ) );
-        assertThat( "4.2.0-drop07.0", equalTo( version.fullVersion() ) );
+        assertVersion( "4.2.0-drop07.0", "4", "4.2", "4.2.0", "4.2.0-drop07.0" );
+        assertVersion( "4.2.0-drop7.0", "4", "4.2", "4.2.0", "4.2.0-drop7.0" );
+        assertVersion( "4.2.0-drop07.00", "4", "4.2", "4.2.0", "4.2.0-drop07.00" );
+    }
+
+    private void assertVersion( String versionString, String main, String minor, String patch, String full )
+    {
+        Version version = new Version( versionString );
+        assertThat( main, equalTo( version.mainVersion() ) );
+        assertThat( minor, equalTo( version.minorVersion() ) );
+        assertThat( patch, equalTo( version.patchVersion() ) );
+        assertThat( full, equalTo( version.fullVersion() ) );
     }
 
     @Test
