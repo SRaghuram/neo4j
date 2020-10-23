@@ -72,7 +72,7 @@ public abstract class ClusteringEditionModule extends AbstractEditionModule
     {
         var config = dependencies.resolveDependency( Config.class );
         var bookmarkAwaitDuration = config.get( GraphDatabaseSettings.bookmark_ready_timeout );
-        return new BoltKernelDatabaseManagementServiceProvider( managementService, reconciledTxTracker, monitors, clock, bookmarkAwaitDuration );
+        return new BoltKernelDatabaseManagementServiceProvider( managementService, monitors, clock, bookmarkAwaitDuration );
     }
 
     private static void configureThreadFactories( JobScheduler jobScheduler )

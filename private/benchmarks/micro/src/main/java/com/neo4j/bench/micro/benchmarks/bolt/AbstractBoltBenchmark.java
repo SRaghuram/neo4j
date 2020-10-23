@@ -71,9 +71,8 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
         Authentication authentication = new BasicAuthentication( resolver.resolveDependency( AuthManager.class ) );
 
         SystemNanoClock clock = Clocks.nanoClock();
-        ReconciledTransactionTracker reconciledTxTracker = new DefaultReconciledTransactionTracker( NullLogService.getInstance() );
         BoltGraphDatabaseManagementServiceSPI databaseManagementService = new BoltKernelDatabaseManagementServiceProvider( managementService,
-                reconciledTxTracker, new Monitors(), clock, config.get( GraphDatabaseSettings.bookmark_ready_timeout ) );
+                new Monitors(), clock, config.get( GraphDatabaseSettings.bookmark_ready_timeout ) );
         return new BoltStateMachineFactoryImpl( databaseManagementService,
                 authentication,
                 clock,

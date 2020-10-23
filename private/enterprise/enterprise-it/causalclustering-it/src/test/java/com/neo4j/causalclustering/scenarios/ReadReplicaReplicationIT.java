@@ -408,8 +408,7 @@ class ReadReplicaReplicationIT
 
     private static TransactionIdTracker transactionIdTracker( ClusterMember member )
     {
-        var reconciledTxTracker = member.systemDatabase().getDependencyResolver().resolveDependency( ReconciledTransactionTracker.class );
-        return new TransactionIdTracker( member.managementService(), reconciledTxTracker, new Monitors(), Clocks.nanoClock() );
+        return new TransactionIdTracker( member.managementService(), new Monitors(), Clocks.nanoClock() );
     }
 
     private static NamedDatabaseId defaultDatabaseId( ClusterMember member )

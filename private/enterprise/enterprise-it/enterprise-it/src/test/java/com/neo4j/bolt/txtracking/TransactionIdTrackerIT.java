@@ -59,10 +59,8 @@ class TransactionIdTrackerIT
     @BeforeEach
     void beforeEach()
     {
-        var systemDb = (GraphDatabaseAPI) dbService.database( SYSTEM_DATABASE_NAME );
-        var reconciledTxTracker = systemDb.getDependencyResolver().resolveDependency( ReconciledTransactionTracker.class );
         monitors = new Monitors();
-        tracker = new TransactionIdTracker( dbService, reconciledTxTracker, monitors, Clocks.nanoClock() );
+        tracker = new TransactionIdTracker( dbService, monitors, Clocks.nanoClock() );
     }
 
     @AfterEach
@@ -130,7 +128,7 @@ class TransactionIdTrackerIT
     }
 
     @Test
-    void shouldAwaitForTransactionIdOnNonSystemDatabase( TestInfo testInfo ) throws Exception
+    void shouldAwaitForTransactionIdOnNonSystemDatabase( TestInfo testInfo )
     {
         var waitTrackingMonitor = new WaitTrackingMonitor();
         monitors.addMonitorListener( waitTrackingMonitor );
@@ -160,7 +158,7 @@ class TransactionIdTrackerIT
     }
 
     @Test
-    void shouldAwaitForTransactionIdOnSystemDatabase( TestInfo testInfo ) throws Exception
+    void shouldAwaitForTransactionIdOnSystemDatabase( TestInfo testInfo )
     {
         var waitTrackingMonitor = new WaitTrackingMonitor();
         monitors.addMonitorListener( waitTrackingMonitor );
