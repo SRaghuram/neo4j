@@ -283,9 +283,9 @@ class TxPullRequestHandlerTest
                 isFirst = false;
             }
 
-            var chunk2 = txStream.readChunk( allocator );
+            var chunk2 = (WritableTxPullResponse) txStream.readChunk( allocator );
             var writableTxPullResponse = new WritableTxPullResponse( new TxPullResponse( storeId, tx ), LogEntryWriterFactory.LATEST );
-            assertEquals( writableTxPullResponse, chunk2 );
+            assertEquals( writableTxPullResponse.txPullResponse(), chunk2.txPullResponse() );
         }
     }
 
