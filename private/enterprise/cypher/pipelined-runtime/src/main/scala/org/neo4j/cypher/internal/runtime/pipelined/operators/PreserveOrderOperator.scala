@@ -50,7 +50,12 @@ class PreserveOrderOperator(val argumentStateMapId: ArgumentStateMapId,
                            stateFactory: StateFactory,
                            state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = {
-    argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id), ordered = true)
+    argumentStateCreator.createArgumentStateMap(
+      argumentStateMapId,
+      new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id),
+      stateFactory.newMemoryTracker(id.x),
+      ordered = true
+    )
     this
   }
 

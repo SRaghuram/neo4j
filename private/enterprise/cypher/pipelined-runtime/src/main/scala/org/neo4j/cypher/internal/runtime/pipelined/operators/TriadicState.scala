@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
+import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 
 class TriadicState(override val argumentRowId: Long,
@@ -52,9 +53,13 @@ class TriadicState(override val argumentRowId: Long,
   }
 
   override def toString: String = s"TriadicState($argumentRowId)"
+
+  override def shallowSize: Long = TriadicState.SHALLOW_SIZE
 }
 
 object TriadicState {
+  private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[TriadicState])
+
   class Factory(memoryTracker: MemoryTracker) extends ArgumentStateFactory[TriadicState] {
 
     override def completeOnConstruction: Boolean = true

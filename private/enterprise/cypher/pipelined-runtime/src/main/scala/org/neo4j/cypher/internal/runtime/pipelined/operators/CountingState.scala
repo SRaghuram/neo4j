@@ -48,6 +48,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.InvalidArgumentException
+import org.neo4j.memory.HeapEstimator
 import org.neo4j.util.Preconditions
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.FloatingPointValue
@@ -91,6 +92,12 @@ object CountingState {
     }
     override def getCount: Long = countLeft
     override def toString: String = s"StandardCountingState($argumentRowId, countLeft=$countLeft)"
+
+    override def shallowSize: Long = StandardCountingState.SHALLOW_SIZE
+  }
+
+  object StandardCountingState {
+    private final val SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[StandardCountingState])
   }
 
   abstract class ConcurrentCountingState(override val argumentRowId: Long,
@@ -113,6 +120,12 @@ object CountingState {
     override def getCount: Long = countLeft.get()
 
     override def toString: String = s"ConcurrentCountingState($argumentRowId, countLeft=${countLeft.get()})"
+
+    override def shallowSize: Long = ConcurrentCountingState.SHALLOW_SIZE
+  }
+
+  object ConcurrentCountingState {
+    private final val SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[ConcurrentCountingState])
   }
 }
 

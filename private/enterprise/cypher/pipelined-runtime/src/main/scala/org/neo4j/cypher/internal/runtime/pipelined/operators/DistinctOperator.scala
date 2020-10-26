@@ -66,6 +66,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.kernel.impl.util.collection.DistinctSet
+import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 
@@ -175,6 +176,12 @@ object DistinctOperator {
     }
 
     override def toString: String = s"StandardDistinctState($argumentRowId)"
+
+    override def shallowSize: Long = StandardDistinctState.SHALLOW_SIZE
+  }
+
+  object StandardDistinctState {
+    private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[StandardDistinctState])
   }
 
   class ConcurrentDistinctState(override val argumentRowId: Long, override val argumentRowIdsForReducers: Array[Long])
@@ -189,6 +196,12 @@ object DistinctOperator {
       seenSet.add(key)
 
     override def toString: String = s"ConcurrentDistinctState($argumentRowId)"
+
+    override def shallowSize: Long = ConcurrentDistinctState.SHALLOW_SIZE
+  }
+
+  object ConcurrentDistinctState {
+    private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[ConcurrentDistinctState])
   }
 }
 

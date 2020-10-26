@@ -69,6 +69,7 @@ import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.symbols.CTRelationship
 import org.neo4j.exceptions.InternalException
+import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.VirtualNodeValue
@@ -171,6 +172,12 @@ object DistinctSinglePrimitiveOperator {
     }
 
     override def toString: String = s"StandardDistinctSinglePrimitiveState($argumentRowId)"
+
+    override def shallowSize: Long = StandardDistinctSinglePrimitiveState.SHALLOW_SIZE
+  }
+
+  object StandardDistinctSinglePrimitiveState {
+    private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[StandardDistinctSinglePrimitiveState])
   }
 
   class ConcurrentDistinctSinglePrimitiveState(override val argumentRowId: Long, override val argumentRowIdsForReducers: Array[Long])
@@ -185,6 +192,12 @@ object DistinctSinglePrimitiveOperator {
       seenSet.add(key)
 
     override def toString: String = s"ConcurrentDistinctSinglePrimitiveState($argumentRowId)"
+
+    override def shallowSize: Long = ConcurrentDistinctSinglePrimitiveState.SHALLOW_SIZE
+  }
+
+  object ConcurrentDistinctSinglePrimitiveState {
+    private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[ConcurrentDistinctSinglePrimitiveState])
   }
 }
 

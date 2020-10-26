@@ -14,7 +14,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.StandardArgumentStateMap.StandardCompletedStateController
 import org.neo4j.cypher.internal.runtime.pipelined.state.StandardArgumentStateMap.StandardStateController
-import org.neo4j.cypher.internal.runtime.pipelined.state.StandardArgumentStateMap.StandardStateController
 import org.neo4j.kernel.impl.util.collection.HeapTrackingOrderedAppendMap
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
@@ -126,7 +125,7 @@ object StandardArgumentStateMap {
       s"[count: ${_count}, state: $state]"
     }
 
-    override def estimatedHeapUsage(): Long = StandardStateController.SHALLOW_SIZE + HeapEstimator.sizeOf(state)
+    override def shallowSize: Long = StandardStateController.SHALLOW_SIZE + state.shallowSize
   }
 
   object StandardStateController {
@@ -168,7 +167,7 @@ object StandardArgumentStateMap {
       s"[completed, state: $state]"
     }
 
-    override def estimatedHeapUsage(): Long = StandardCompletedStateController.SHALLOW_SIZE + HeapEstimator.sizeOf(state)
+    override def shallowSize: Long = StandardCompletedStateController.SHALLOW_SIZE + state.shallowSize
   }
 
   object StandardCompletedStateController {

@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
+import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 
 /**
@@ -23,9 +24,12 @@ case class AggregatedRowAccumulator(override val argumentRowId: Long,
                                     aggregatorRow: AggregatedRow) extends MorselAccumulator[AnyRef] {
 
   override def update(data: AnyRef, resources: QueryResources): Unit = {}
+
+  override def shallowSize: Long = AggregatedRowAccumulator.SHALLOW_SIZE
 }
 
 object AggregatedRowAccumulator {
+  private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[AggregatedRowAccumulator])
   class Factory(aggregators: Array[Aggregator],
                 memoryTracker: MemoryTracker,
                 numberOfWorkers: Int) extends ArgumentStateFactory[AggregatedRowAccumulator] {

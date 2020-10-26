@@ -22,6 +22,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.HeapEstimator
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -187,9 +188,13 @@ class ArgumentStreamArgumentStateBuffer(argumentRowId: Long,
   override def toString: String = {
     s"${getClass.getSimpleName}(argumentRowId=$argumentRowId, argumentRowIdsForReducers=[${argumentRowIdsForReducers.mkString(",")}], argumentMorsel=$argumentRow, inner=$inner)"
   }
+
+  override def shallowSize: Long = ArgumentStreamArgumentStateBuffer.SHALLOW_SIZE
 }
 
 object ArgumentStreamArgumentStateBuffer extends ArgumentStateBufferFactoryFactory {
+  private final val SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[ArgumentStreamArgumentStateBuffer])
+
   class Factory(stateFactory: StateFactory, operatorId: Id) extends ArgumentStateFactory[ArgumentStateBuffer] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
       new ArgumentStreamArgumentStateBuffer(argumentRowId, argumentMorsel.snapshot(), new StandardArgumentStreamBuffer[Morsel](stateFactory.newBuffer[Morsel](operatorId)), argumentRowIdsForReducers)

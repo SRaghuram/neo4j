@@ -116,6 +116,12 @@ class StandardAggregationMap(override val argumentRowId: Long,
     reducerMap.close()
     super.close()
   }
+
+  override def shallowSize: Long = StandardAggregationMap.SHALLOW_SIZE
+}
+
+object StandardAggregationMap {
+  private final val SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[StandardAggregationMap])
 }
 
 object StandardAggregators {
@@ -186,6 +192,12 @@ class ConcurrentAggregationMap(override val argumentRowId: Long,
     }
     new ConcurrentAggregators(reducers, numberOfWorkers)
   }
+
+  override def shallowSize: Long = ConcurrentAggregationMap.SHALLOW_SIZE
+}
+
+object ConcurrentAggregationMap {
+  private final val SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[ConcurrentAggregationMap])
 }
 
 class ConcurrentAggregators(reducers: Array[Reducer], numberOfWorkers: Int) extends AggregatedRow {

@@ -8,17 +8,14 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.physicalplanning.ReadOnlyArray
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorsel
-import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselUnitTest
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.StandardArgumentStateMap
-import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.memory.EmptyMemoryTracker
+import org.neo4j.memory.HeapEstimator
 
 import scala.collection.mutable
 
@@ -467,6 +464,12 @@ class MorselBufferTest extends MorselUnitTest with MorselTestHelper {
     override def argumentRowIdsForReducers: Array[Long] = ???
 
     override def remaining: Long = if (isCancelled) 0L else Long.MaxValue
+
+    override def shallowSize: Long = StaticCanceller.SHALLOW_SIZE
+  }
+
+  object StaticCanceller {
+    private final val SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[StaticCanceller])
   }
 
   case class CancellerFactory(predicate: Long => Boolean) extends ArgumentStateMap.ArgumentStateFactory[StaticCanceller] {

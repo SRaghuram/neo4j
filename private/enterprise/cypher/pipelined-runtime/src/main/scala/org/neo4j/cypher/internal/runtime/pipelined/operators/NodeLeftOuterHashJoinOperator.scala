@@ -43,6 +43,7 @@ import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.c
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.fillKeyArray
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.api.StatementConstants
+import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.memory.ScopedMemoryTracker
 import org.neo4j.values.storable.Value
@@ -265,6 +266,12 @@ object NodeLeftOuterHashJoinOperator {
     override def close(): Unit = {
       scopedMemoryTracker.close()
     }
+
+    override def shallowSize: Long = StandardHashTableAndSet.SHALLOW_SIZE
+  }
+
+  object StandardHashTableAndSet {
+    private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[StandardHashTableAndSet])
   }
 
   class ConcurrentHashTableAndSet(val hashTable: ConcurrentHashTable) extends HashTableAndSet {
@@ -284,6 +291,12 @@ object NodeLeftOuterHashJoinOperator {
 
     override def close(): Unit = {
     }
+
+    override def shallowSize: Long = ConcurrentHashTableAndSet.SHALLOW_SIZE
+  }
+
+  object ConcurrentHashTableAndSet {
+    private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[ConcurrentHashTableAndSet])
   }
 }
 

@@ -38,6 +38,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 
 object SkipOperator {
@@ -128,6 +129,12 @@ object SerialSkipState {
     override protected def getCount: Long = countLeft
     override protected def setCount(count: Long): Unit = countLeft = count
     override def toString: String = s"StandardSerialTopLevelSkipState($argumentRowId, countLeft=$countLeft)"
+
+    override def shallowSize: Long = StandardSerialSkipState.SHALLOW_SIZE
+  }
+
+  object StandardSerialSkipState {
+    private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[StandardSerialSkipState])
   }
 
   /**
@@ -143,6 +150,12 @@ object SerialSkipState {
     override protected def getCount: Long = countLeft
     override protected def setCount(count: Long): Unit = countLeft = count
     override def toString: String = s"VolatileSerialTopLevelSkipState($argumentRowId, countLeft=$countLeft)"
+
+    override def shallowSize = VolatileSerialSkipState.SHALLOW_SIZE
+  }
+
+  object VolatileSerialSkipState {
+    private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[VolatileSerialSkipState])
   }
 }
 

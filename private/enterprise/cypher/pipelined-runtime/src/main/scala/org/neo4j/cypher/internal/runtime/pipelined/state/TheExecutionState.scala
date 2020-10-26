@@ -258,7 +258,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
                                                                ordered: Boolean): ArgumentStateMap[S] = {
     val asm = argumentStateMaps(argumentStateMapId)
     if (asm == null)
-      createArgumentStateMap(argumentStateMapId, factory, memoryTracker.getScopedMemoryTracker, ordered)
+      createArgumentStateMap(argumentStateMapId, factory, memoryTracker, ordered)
     else
       asm.asInstanceOf[ArgumentStateMap[S]]
   }

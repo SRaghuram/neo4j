@@ -147,7 +147,7 @@ object ConcurrentArgumentStateMap {
       s"[count: ${count.get()}, state: $state]"
     }
 
-    override def estimatedHeapUsage(): Long = ConcurrentStateController.SHALLOW_SIZE + HeapEstimator.sizeOf(state)
+    override def shallowSize: Long = ConcurrentStateController.SHALLOW_SIZE + state.shallowSize
   }
 
   object ConcurrentStateController {
@@ -185,7 +185,8 @@ object ConcurrentArgumentStateMap {
       s"[completed, state: ${atomicState.get()}]"
     }
 
-    override def estimatedHeapUsage(): Long = ConcurrentCompletedStateController.SHALLOW_SIZE + HeapEstimator.sizeOf(atomicState)
+    // Currently we don't track memory in concurrent runtime
+    override def shallowSize: Long = 0 // ConcurrentCompletedStateController.SHALLOW_SIZE + HeapEstimator.sizeOf(atomicState)
   }
 
   object ConcurrentCompletedStateController {

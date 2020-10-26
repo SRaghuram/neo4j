@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.HeapEstimator
 
 /**
  * Delegating [[Buffer]] used in argument state maps.
@@ -42,9 +43,13 @@ class ArgumentStateBuffer(override val argumentRowId: Long,
   override def toString: String = {
     s"${getClass.getSimpleName}(argumentRowId=$argumentRowId, inner=$inner)"
   }
+
+  override def shallowSize: Long = ArgumentStateBuffer.SHALLOW_SIZE
 }
 
 object ArgumentStateBuffer {
+  private final val SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[ArgumentStateBuffer])
+
   class Factory(stateFactory: StateFactory, operatorId: Id) extends ArgumentStateFactory[ArgumentStateBuffer] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
       new ArgumentStateBuffer(argumentRowId, stateFactory.newBuffer[Morsel](operatorId), argumentRowIdsForReducers)

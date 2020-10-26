@@ -32,6 +32,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.helpers.ArrayUtil
+import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 
 class PartialTopWorkCanceller(override val argumentRowId: Long, limit: Int) extends WorkCanceller {
@@ -46,9 +47,13 @@ class PartialTopWorkCanceller(override val argumentRowId: Long, limit: Int) exte
 
   override def toString: String =
     s"PartialTopWorkCanceller(argumentRowId=$argumentRowId, remaining=$remaining)"
+
+  override def shallowSize: Long = PartialTopWorkCanceller.SHALLOW_SIZE
 }
 
 object PartialTopWorkCanceller {
+  private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[PartialTopWorkCanceller])
+
   class Factory(stateFactory: StateFactory, operatorId: Id, limit: Int) extends ArgumentStateFactory[PartialTopWorkCanceller] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): PartialTopWorkCanceller =
       new PartialTopWorkCanceller(argumentRowId, limit)

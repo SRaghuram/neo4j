@@ -20,6 +20,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArg
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.HeapEstimator
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -157,6 +158,12 @@ object AntiArgumentState {
     override def toString: String = {
       s"StandardAntiArgumentState(argumentRowId=$argumentRowId, argumentRowIdsForReducers=[${argumentRowIdsForReducers.mkString(",")}], argumentMorsel=$argumentRow)"
     }
+
+    override def shallowSize: Long = StandardAntiArgumentState.SHALLOW_SIZE
+  }
+
+  object StandardAntiArgumentState {
+    private final val SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[AntiArgumentState])
   }
 
   class ConcurrentAntiArgumentState(override val argumentRowId: Long,
@@ -173,6 +180,12 @@ object AntiArgumentState {
     override def toString: String = {
       s"ConcurrentAntiArgumentState(argumentRowId=$argumentRowId, argumentRowIdsForReducers=[${argumentRowIdsForReducers.mkString(",")}], argumentMorsel=$argumentRow)"
     }
+
+    override def shallowSize: Long = ConcurrentAntiArgumentState.SHALLOW_SIZE
+  }
+
+  object ConcurrentAntiArgumentState {
+    private final val SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[ConcurrentAntiArgumentState])
   }
 }
 

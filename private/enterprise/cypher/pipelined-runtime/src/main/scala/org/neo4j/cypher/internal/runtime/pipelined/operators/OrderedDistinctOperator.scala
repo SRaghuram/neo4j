@@ -24,6 +24,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.util.collection.DistinctSet
+import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 
 class OrderedDistinctOperator(argumentStateMapId: ArgumentStateMapId,
@@ -85,6 +86,12 @@ class OrderedDistinctOperator(argumentStateMapId: ArgumentStateMapId,
       super.close()
     }
     override def toString: String = s"OrderedDistinctState($argumentRowId)"
+
+    override def shallowSize: Long = OrderedDistinctState.SHALLOW_SIZE
+  }
+
+  object OrderedDistinctState {
+    private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[OrderedDistinctState])
   }
 }
 

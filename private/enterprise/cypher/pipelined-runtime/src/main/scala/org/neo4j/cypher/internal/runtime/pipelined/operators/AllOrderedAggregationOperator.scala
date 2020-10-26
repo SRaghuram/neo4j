@@ -38,14 +38,14 @@ class AllOrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
                            stateFactory: StateFactory,
                            state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = {
-    val memoryTracker = stateFactory.newMemoryTracker(id.x).getScopedMemoryTracker
+    val memoryTracker = stateFactory.newMemoryTracker(id.x)
     argumentStateCreator.createArgumentStateMap(
       argumentStateMapId,
       new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id),
       memoryTracker,
       ordered = true
     )
-    new AllOrderedAggregationState(memoryTracker)
+    new AllOrderedAggregationState(memoryTracker.getScopedMemoryTracker)
   }
 
   override def toString: String = "AllOrderedAggregationOperator"

@@ -12,7 +12,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
 import org.neo4j.memory.HeapEstimator
-import org.neo4j.memory.Measurable
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.util.Preconditions
 
@@ -24,6 +23,7 @@ import scala.collection.mutable.ArrayBuffer
  */
 abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: AbstractArgumentStateMap.StateController[STATE]](memoryTracker: MemoryTracker)
   extends ArgumentStateMap[STATE] {
+  val scopedMemoryTracker = memoryTracker.getScopedMemoryTracker
 
   trait Controllers[V] {
     /**
@@ -148,7 +148,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     var i = 0
     while (i < builder.length) {
       val controller = controllers.remove(builder(i).argumentRowId)
-      memoryTracker.releaseHeap(controller.estimatedHeapUsage() + HeapEstimator.LONG_SIZE)
+      scopedMemoryTracker.releaseHeap(controller.shallowSize + HeapEstimator.LONG_SIZE)
 
       i += 1
     }
@@ -188,7 +188,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
       val completedState = controller.takeCompleted()
       if (completedState != null) {
         controllers.remove(completedState.argumentRowId)
-        memoryTracker.releaseHeap(controller.estimatedHeapUsage() + HeapEstimator.LONG_SIZE)
+        scopedMemoryTracker.releaseHeap(controller.shallowSize + HeapEstimator.LONG_SIZE)
         DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, completedState.argumentRowId)
         ArgumentStateWithCompleted(completedState, isCompleted = true)
       } else {
@@ -263,7 +263,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     DebugSupport.ASM.log("ASM %s rem %03d", argumentStateMapId, argument)
     val controller = controllers.remove(argument)
     if (controller != null) {
-      memoryTracker.releaseHeap(controller.estimatedHeapUsage() + HeapEstimator.LONG_SIZE)
+      scopedMemoryTracker.releaseHeap(controller.shallowSize + HeapEstimator.LONG_SIZE)
       controller.take()
     } else {
       null.asInstanceOf[STATE]
@@ -274,7 +274,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     DebugSupport.ASM.log("ASM %s init %03d", argumentStateMapId, argument)
     val newController = newStateController(argument, argumentMorsel, argumentRowIdsForReducers, initialCount)
     val previousValue = controllers.put(argument, newController)
-    memoryTracker.allocateHeap(newController.estimatedHeapUsage() + HeapEstimator.LONG_SIZE)
+    scopedMemoryTracker.allocateHeap(newController.shallowSize + HeapEstimator.LONG_SIZE)
     Preconditions.checkState(previousValue == null, "ArgumentStateMap cannot re-initiate the same argument (argument: %d)", Long.box(argument))
   }
 
@@ -308,7 +308,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
 }
 
 object AbstractArgumentStateMap {
-  trait StateController[STATE <: ArgumentState] extends Measurable {
+  trait StateController[STATE <: ArgumentState] {
 
     /**
      * Increment the count.
@@ -352,5 +352,10 @@ object AbstractArgumentStateMap {
      * @return true if the controller has a count of zero _and_ the state has not already been taken, otherwise false.
      */
     def hasCompleted: Boolean
+
+    /**
+     * @return the shallow size of the state controller
+     */
+    def shallowSize: Long
   }
 }

@@ -35,6 +35,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.memory.EmptyMemoryTracker
+import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 
 /**
@@ -215,6 +216,12 @@ object TopOperator {
 
     private def error() =
       throw new IllegalStateException("Top table method should never be called with LIMIT 0")
+
+    override def shallowSize: Long = ZeroTable.SHALLOW_SIZE
+  }
+
+  object ZeroTable {
+    private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[ZeroTable])
   }
 
   class StandardTopTable(override val argumentRowId: Long,
@@ -255,6 +262,12 @@ object TopOperator {
       topTable.sort()
       topTable.iterator().asInstanceOf[util.Iterator[MorselRow]]
     }
+
+    override def shallowSize: Long = StandardTopTable.SHALLOW_SIZE
+  }
+
+  object StandardTopTable {
+    private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[StandardTopTable])
   }
 
   class ConcurrentTopTable(override val argumentRowId: Long,
@@ -287,7 +300,12 @@ object TopOperator {
         mergedTopTable.iterator().asInstanceOf[util.Iterator[MorselRow]]
       }
     }
+
+    override def shallowSize = ConcurrentTopTable.SHALLOW_SIZE
   }
 
+  object ConcurrentTopTable {
+    private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[ConcurrentTopTable])
+  }
 }
 

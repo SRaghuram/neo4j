@@ -46,6 +46,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.FilterStateWithIsLast
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 
 object LimitOperator {
@@ -230,6 +231,12 @@ object SerialTopLevelLimitOperatorTaskTemplate {
     override protected def setCount(count: Long): Unit = countLeft = count
     override def toString: String = s"StandardSerialTopLevelLimitState($argumentRowId, countLeft=$countLeft)"
     override def isCancelled: Boolean = getCount == 0
+
+    override def shallowSize: Long = StandardSerialLimitState.SHALLOW_SIZE
+  }
+
+  object StandardSerialLimitState {
+    private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[StandardSerialLimitState])
   }
 
   /**
@@ -246,5 +253,11 @@ object SerialTopLevelLimitOperatorTaskTemplate {
     override protected def setCount(count: Long): Unit = countLeft = count
     override def toString: String = s"VolatileSerialTopLevelLimitState($argumentRowId, countLeft=$countLeft)"
     override def isCancelled: Boolean = getCount == 0
+
+    override def shallowSize: Long = VolatileSerialLimitState.SHALLOW_SIZE
+  }
+
+  object VolatileSerialLimitState {
+    private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[VolatileSerialLimitState])
   }
 }

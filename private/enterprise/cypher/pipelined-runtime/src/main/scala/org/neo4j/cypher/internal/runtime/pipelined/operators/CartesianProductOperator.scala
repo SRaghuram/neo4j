@@ -23,6 +23,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselAttachBuffer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.HeapEstimator
 
 class CartesianProductOperator(val workIdentity: WorkIdentity,
                                lhsArgumentStateMapId: ArgumentStateMapId,
@@ -94,9 +95,12 @@ object CartesianProductOperator {
     override def toString: String = {
       s"LHSMorsel(argumentRowId=$argumentRowId)"
     }
+
+    override def shallowSize: Long = LHSMorsel.SHALLOW_SIZE
   }
 
   object LHSMorsel {
+    private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[LHSMorsel])
 
     /**
      * This Factory creates [[LHSMorsel]] instances by detaching the morsel which is attached to the argument morsel. It has been attached in

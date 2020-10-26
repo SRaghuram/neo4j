@@ -31,6 +31,7 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.util.collection.ProbeTable
+import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
@@ -139,6 +140,12 @@ object ValueHashJoinOperator {
       table.close()
       super.close()
     }
+
+    override def shallowSize = StandardHashTable.SHALLOW_SIZE
+  }
+
+  object StandardHashTable {
+    private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[StandardHashTable])
   }
 
   class ConcurrentHashTable(override val argumentRowId: Long,
@@ -167,7 +174,11 @@ object ValueHashJoinOperator {
       else
         lhsRows.iterator()
     }
+
+    override def shallowSize: Long = ConcurrentHashTable.SHALLOW_SIZE
+  }
+
+  object ConcurrentHashTable {
+    private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[ConcurrentHashTable])
   }
 }
-
-

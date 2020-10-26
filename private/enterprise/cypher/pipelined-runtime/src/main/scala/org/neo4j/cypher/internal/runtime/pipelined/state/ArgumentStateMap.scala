@@ -207,6 +207,11 @@ object ArgumentStateMap {
     def argumentRowId: Long
 
     /**
+     * The shallow size of the ArgumentStateMap
+     */
+    def shallowSize: Long
+
+    /**
      * The argument row ids of reducers for that correspond to argumentRowId.
      * This is needed to decrement the reducers with the right IDs when
      * we close an argument state. This is allowed to be null if these argument
