@@ -550,12 +550,7 @@ public abstract class ProcedureInteractionTestBase<S>
         assertSuccess( subject, database, call, null, resultConsumer );
     }
 
-    void assertSuccess( S subject, String call, Map<String, Object> params, Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
-    {
-        assertSuccess( subject, DEFAULT_DATABASE_NAME, call, params, resultConsumer );
-    }
-
-    private void assertSuccess( S subject, String database, String call, Map<String,Object> params,
+    void assertSuccess( S subject, String database, String call, Map<String,Object> params,
                                 Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
     {
         String err = neo.executeQuery( subject, database, call, params, resultConsumer );

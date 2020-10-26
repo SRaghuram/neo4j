@@ -36,7 +36,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
     {
         this.authManager = authManager;
         this.shiroSubject = shiroSubject;
-        this.defaultDatabase = defaultDatabase;
+        this.defaultDatabase = shiroSubject.getDefaultDatabase() == null ? defaultDatabase : shiroSubject.getDefaultDatabase();
         this.neoShiroSubject = new NeoShiroSubject();
     }
 
@@ -135,6 +135,12 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
             {
                 return ""; // Should never clash with a valid username
             }
+        }
+
+        @Override
+        public String defaultDatabase()
+        {
+           return shiroSubject.getDefaultDatabase();
         }
 
         @Override

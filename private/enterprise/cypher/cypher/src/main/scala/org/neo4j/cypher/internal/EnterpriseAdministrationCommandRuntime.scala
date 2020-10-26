@@ -258,11 +258,11 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // CREATE [OR REPLACE] USER foo [IF NOT EXISTS] SET [PLAINTEXT | ENCRYPTED] PASSWORD password
     // CREATE [OR REPLACE] USER foo [IF NOT EXISTS] SET [PLAINTEXT | ENCRYPTED] PASSWORD $password
-    case CreateUser(source, userName, isEncryptedPassword, password, requirePasswordChange, suspendedOptional) => (context, parameterMapping) =>
+    case CreateUser(source, userName, isEncryptedPassword, password, requirePasswordChange, suspendedOptional, defaultDatabase) => (context, parameterMapping) =>
       val suspended = suspendedOptional.getOrElse(false)
       val sourcePlan: Option[ExecutionPlan] = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
       val restrictedUsers = if (config.get(GraphDatabaseInternalSettings.restrict_upgrade)) Seq(config.get(GraphDatabaseInternalSettings.upgrade_username)) else Seq.empty
-      makeCreateUserExecutionPlan(userName, isEncryptedPassword, password, requirePasswordChange, suspended, restrictedUsers)(sourcePlan, normalExecutionEngine)
+      makeCreateUserExecutionPlan(userName, isEncryptedPassword, password, requirePasswordChange, suspended, defaultDatabase, restrictedUsers)(sourcePlan, normalExecutionEngine)
 
     // ALTER USER foo [SET [PLAINTEXT | ENCRYPTED] PASSWORD pw] [CHANGE [NOT] REQUIRED] [SET STATUS ACTIVE]
     case AlterUser(source, userName, isEncryptedPassword, password, requirePasswordChange, suspended) => (context, parameterMapping) =>

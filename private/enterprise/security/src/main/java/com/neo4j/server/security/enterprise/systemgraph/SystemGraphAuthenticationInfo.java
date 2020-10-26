@@ -29,6 +29,12 @@ class SystemGraphAuthenticationInfo extends ShiroAuthenticationInfo
         return userRecord;
     }
 
+    @Override
+    public String getDefaultDatabase()
+    {
+        return userRecord.defaultDatabase();
+    }
+
     void setAuthenticationResult( AuthenticationResult authenticationResult )
     {
         this.authenticationResult = authenticationResult;

@@ -503,6 +503,12 @@ class SecurityAdministrationCommandLoggingIT
                 {
                     return subjectUsername;
                 }
+
+                @Override
+                public String defaultDatabase()
+                {
+                    return null;
+                }
             };
         }
 

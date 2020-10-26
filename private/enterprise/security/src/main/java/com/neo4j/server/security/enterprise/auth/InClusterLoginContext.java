@@ -87,6 +87,12 @@ public class InClusterLoginContext implements EnterpriseLoginContext
         }
 
         @Override
+        public String defaultDatabase()
+        {
+            return null;
+        }
+
+        @Override
         public boolean hasUsername( String username )
         {
             return Objects.equals( this.username, username );

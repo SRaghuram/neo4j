@@ -596,7 +596,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should create user with all parameters") {
     // WHEN
-    execute("CREATE USER foo SET PLAINTEXT PASSWORD 'password' CHANGE NOT REQUIRED SET STATUS SUSPENDED")
+    execute("CREATE USER foo SET PLAINTEXT PASSWORD 'password' CHANGE NOT REQUIRED SET STATUS SUSPENDED DEFAULT DATABASE neo4j")
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo", passwordChangeRequired = false, suspended = true))
@@ -1081,7 +1081,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       execute("ALTER USER foo SET PASSWORD 'imAString'+$password", Map("password" -> "imAParameter"))
       // THEN
     }
-    exception.getMessage should include("Invalid input '+': expected whitespace, SET, ';' or end of input")
+    exception.getMessage should include("Invalid input '+': expected whitespace, SET, CHANGE, ';' or end of input")
   }
 
   test("should fail when altering user password as missing parameter") {
@@ -2040,6 +2040,19 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       resultHandler = (row, _) => {
         row.get("name").equals(DEFAULT_DATABASE_NAME)
         row.get("requestedStatus").equals(Online.stringValue())
+      })
+  }
+
+  test("should set default database and connect to that database") {
+
+    // GIVEN
+    execute("CREATE DATABASE foo")
+    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED DEFAULT DATABASE foo")
+
+    // WHEN / THEN
+    executeOnSystem("alice", "abc", "SHOW DEFAULT DATABASE",
+      resultHandler = (row, _) => {
+        row.get("name").equals("foo")
       })
   }
 
