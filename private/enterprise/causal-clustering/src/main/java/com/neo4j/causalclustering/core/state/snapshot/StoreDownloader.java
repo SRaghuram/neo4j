@@ -84,8 +84,8 @@ public class StoreDownloader
         if ( context.hasStore() && !remoteStoreId.equals( context.storeId() ) )
         {
             throw new SnapshotFailedException(
-                    "Store copy failed due to store ID mismatch. There are database operating with different store ids.",
-                    SnapshotFailedException.Status.UNRECOVERABLE );
+                    "Store copy failed due to store ID mismatch. There are database operating with different store ids. Received a different store ID from " +
+                    address, SnapshotFailedException.Status.UNRECOVERABLE );
         }
         return remoteStoreId;
     }

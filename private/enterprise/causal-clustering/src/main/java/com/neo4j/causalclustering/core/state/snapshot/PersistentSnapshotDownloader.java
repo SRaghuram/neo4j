@@ -173,7 +173,7 @@ class PersistentSnapshotDownloader implements Runnable
             }
             catch ( SnapshotFailedException e )
             {
-                if ( e.status() == SnapshotFailedException.Status.TERMINAL || e.status() == SnapshotFailedException.Status.UNRECOVERABLE )
+                if ( e.status() != SnapshotFailedException.Status.RETRYABLE )
                 {
                     throw e;
                 }
