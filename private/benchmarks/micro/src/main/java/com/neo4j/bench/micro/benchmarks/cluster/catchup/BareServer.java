@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
+import com.neo4j.causalclustering.catchup.tx.WritableTxPullResponse;
 import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreFileRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
@@ -31,6 +32,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import org.neo4j.kernel.database.DatabaseIdFactory;
+import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -81,7 +83,7 @@ class BareServer implements CatchupServerHandler
             @Override
             protected void channelRead0( ChannelHandlerContext ctx, GetDatabaseIdRequest msg )
             {
-                respond( ctx, protocol, DATABASE_ID_RESPONSE, databaseId );
+                respond( ctx, protocol, DATABASE_ID_RESPONSE, databaseId.databaseId() );
             }
         };
     }
@@ -142,9 +144,9 @@ class BareServer implements CatchupServerHandler
                     ctx.write( TX );
                     while ( transactionProvider.hasNext() )
                     {
-                        ctx.write( new TxPullResponse( storeId, transactionProvider.next() ) );
+                        ctx.write( new WritableTxPullResponse( new TxPullResponse( storeId, transactionProvider.next() ), LogEntryWriterFactory.LATEST ) );
                     }
-                    ctx.write( TxPullResponse.EMPTY );
+                    ctx.write( new WritableTxPullResponse( TxPullResponse.EMPTY, LogEntryWriterFactory.LATEST ) );
                 }
                 respond( ctx, protocol, TX_STREAM_FINISHED, new TxStreamFinishedResponse( SUCCESS_END_OF_STREAM, lastTxId ) );
             }
