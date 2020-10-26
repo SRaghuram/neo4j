@@ -10,8 +10,6 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 
 import static java.lang.String.format;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -135,25 +133,10 @@ public class BranchAndVersionTest
 
         BranchAndVersion.assertBranchEqualsSeries( "1.2.3", "1.2" );
         BranchAndVersion.assertBranchEqualsSeries( "11.22.33", "11.22" );
+        BranchAndVersion.assertBranchEqualsSeries( "1.2.3-drop08.0", "1.2" );
 
         assertException( RuntimeException.class,
                                        () -> BranchAndVersion.assertBranchEqualsSeries( "1.2.3", "2.3" ) );
-    }
-
-    @Test
-    public void checksToSanitizedVersion()
-    {
-        Arrays.stream( Repository.values() )
-              .filter( r -> r != Repository.QUALITY_TASK ) // Ignore Quality repos, as they use a different version scheme
-              .forEach( repository ->
-                        {
-                            assertThat( BranchAndVersion.toSanitizeVersion( repository, "3.1.0" ), equalTo( "3.1.0" ) );
-                            assertThat( BranchAndVersion.toSanitizeVersion( repository, "3.1.0-SNAPSHOT" ), equalTo( "3.1.0" ) );
-
-                            assertException( RuntimeException.class,
-                                                           () -> assertThat( BranchAndVersion.toSanitizeVersion( repository, "cake-SNAPSHOT" ),
-                                                                             equalTo( "3.1.0" ) ) );
-                        } );
     }
 
     public static <EXCEPTION extends Throwable> EXCEPTION assertException( Class<EXCEPTION> exception, ThrowingRunnable fun )

@@ -15,6 +15,8 @@ import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
+import com.neo4j.bench.model.model.BranchAndVersion;
+import com.neo4j.bench.model.model.Repository;
 import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.model.process.JvmArgs;
 import org.apache.commons.lang3.StringUtils;
@@ -267,7 +269,7 @@ public abstract class BaseRunWorkloadCommand implements Runnable
         Duration minMeasurementDuration = Duration.ofSeconds( minMeasurementSeconds );
         Duration maxMeasurementDuration = Duration.ofSeconds( maxMeasurementSeconds );
         JvmArgs jvmArgs = JvmArgs.parse( this.jvmArgs );
-
+        performSanityChecks();
         List<String> queries = StringUtils.isBlank( queryNames )
                                ? Collections.emptyList()
                                : Arrays.asList( queryNames.split( "," ) );
@@ -302,6 +304,14 @@ public abstract class BaseRunWorkloadCommand implements Runnable
                                                                            triggeredBy );
 
         doRun( commandParams );
+    }
+
+    private void performSanityChecks()
+    {
+        if ( !BranchAndVersion.isPersonalBranch( Repository.NEO4J, neo4jBranchOwner ) )
+        {
+            BranchAndVersion.assertBranchEqualsSeries( neo4jVersion, neo4jBranch );
+        }
     }
 
     protected abstract void doRun( RunMacroWorkloadParams params );

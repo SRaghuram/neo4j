@@ -499,7 +499,10 @@ public class RunReportCommand implements Runnable
                                                         .build();
             assertDisallowFormatMigration( neo4jConfig );
             assertStoreFormatIsSet( neo4jConfig );
-
+            if ( !BranchAndVersion.isPersonalBranch( Repository.NEO4J, neo4jBranchOwner ) )
+            {
+                BranchAndVersion.assertBranchEqualsSeries( neo4jVersion, neo4jBranch );
+            }
             Files.createDirectories( resultsDir.toPath() );
 
             jvmArgs = buildJvmArgsString( jvmArgs, neo4jConfig );
@@ -885,14 +888,6 @@ public class RunReportCommand implements Runnable
     {
         TestRun testRun = new TestRun( finishTime - startTime, startTime, build, parentBuild, triggeredBy );
         BenchmarkConfig benchmarkConfig = new BenchmarkConfig( ldbcConfig.asMap() );
-        if ( !BranchAndVersion.isPersonalBranch( Repository.NEO4J, neo4jBranchOwner ) )
-        {
-            BranchAndVersion.assertBranchEqualsSeries( neo4jVersion, neo4jBranch );
-        }
-        if ( !BranchAndVersion.isPersonalBranch( Repository.LDBC_BENCH, toolBranch ) )
-        {
-            BranchAndVersion.assertBranchEqualsSeries( neo4jVersion, toolBranch );
-        }
         Neo4j neo4j = new Neo4j( neo4jCommit, neo4jVersion, ENTERPRISE, neo4jBranch, neo4jBranchOwner );
         BenchmarkTool tool = new BenchmarkTool( Repository.LDBC_BENCH, toolCommit, toolBranchOwner, toolBranch );
         Java java = Java.current( jvmArgs );

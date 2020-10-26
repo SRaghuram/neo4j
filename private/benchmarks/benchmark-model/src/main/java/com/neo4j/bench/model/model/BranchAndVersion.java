@@ -60,15 +60,7 @@ public class BranchAndVersion
 
     private static String versionToBranch( String version )
     {
-        int i = version.lastIndexOf( '.' );
-        return (-1 == i) ? version : version.substring( 0, i );
-    }
-
-    public static String toSanitizeVersion( Repository repository, String version )
-    {
-        int i = version.indexOf( '-' );
-        String sanitizedVersion = (-1 == i) ? version : version.substring( 0, i );
-        repository.assertValidVersion( sanitizedVersion );
-        return sanitizedVersion;
+        String[] split = version.split( "\\." );
+        return split[0] + "." + split[1];
     }
 }

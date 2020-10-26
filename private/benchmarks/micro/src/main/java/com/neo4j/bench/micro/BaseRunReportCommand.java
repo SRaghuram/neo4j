@@ -16,6 +16,8 @@ import com.neo4j.bench.common.tool.micro.RunReportParams;
 import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.common.util.ErrorReporter;
 import com.neo4j.bench.common.util.Jvm;
+import com.neo4j.bench.model.model.BranchAndVersion;
+import com.neo4j.bench.model.model.Repository;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -276,8 +278,16 @@ public abstract class BaseRunReportCommand implements Runnable
                                      errorPolicy,
                                      jvmFile,
                                      triggeredBy );
-
+        performSanityChecks();
         doRun( runReportParams );
+    }
+
+    private void performSanityChecks()
+    {
+        if ( !BranchAndVersion.isPersonalBranch( Repository.NEO4J, neo4jBranchOwner ) )
+        {
+            BranchAndVersion.assertBranchEqualsSeries( neo4jVersion, neo4jBranch );
+        }
     }
 
     protected abstract void doRun( RunReportParams runReportParams );
