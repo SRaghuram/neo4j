@@ -233,7 +233,7 @@ public final class CompiledHelpers
     public static IndexQuery[] manyExactQueries( int property, AnyValue seekValues )
     {
         Set<AnyValue> seen = new HashSet<>();
-        ListValueBuilder builder = new ListValueBuilder.UnknownSizeListValueBuilder();
+        ListValueBuilder builder = ListValueBuilder.newListBuilder();
         ListValue seekValuesAsList = CypherFunctions.asList( seekValues );
         for ( AnyValue value : seekValuesAsList )
         {

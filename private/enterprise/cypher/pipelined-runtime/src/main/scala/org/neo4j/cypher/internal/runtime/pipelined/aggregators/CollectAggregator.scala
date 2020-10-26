@@ -29,11 +29,6 @@ case object CollectAggregator extends Aggregator {
   override val standardShallowSize: Long =
     HeapEstimator.shallowSizeOfInstance(classOf[CollectStandardReducer]) +
     ListValueBuilder.UNKNOWN_LIST_VALUE_BUILDER_SHALLOW_SIZE
-
-  // Since we are not using a heap-tracking ListValueBuilder, we low-bound
-  // estimate the container size to numElement * reference_bytes
-  def registerCollectedItem(value: AnyValue, memoryTracker: MemoryTracker): Unit =
-    memoryTracker.allocateHeap(value.estimatedHeapUsage() + HeapEstimator.OBJECT_REFERENCE_BYTES)
 }
 
 /**
@@ -60,8 +55,8 @@ case object CollectDistinctAggregator extends Aggregator {
       ListValueBuilder.UNKNOWN_LIST_VALUE_BUILDER_SHALLOW_SIZE
 }
 
-abstract class CollectUpdater(preserveNulls: Boolean) {
-  private[aggregators] var collection = new ListValueBuilder.UnknownSizeListValueBuilder()
+abstract class CollectUpdater(preserveNulls: Boolean, memoryTracker: MemoryTracker) {
+  private[aggregators] var collection = ListValueBuilder.newHeapTrackingListBuilder(memoryTracker)
   protected def collect(value: AnyValue): Boolean = {
     val addMe = preserveNulls || !(value eq Values.NO_VALUE)
     if (addMe) {
@@ -70,21 +65,24 @@ abstract class CollectUpdater(preserveNulls: Boolean) {
     addMe
   }
   protected def reset(): Unit = {
-    collection = ListValueBuilder.newListBuilder()
+    collection.close()
+    collection = ListValueBuilder.newHeapTrackingListBuilder(memoryTracker)
   }
 }
 
-class CollectStandardReducer(preserveNulls: Boolean, memoryTracker: MemoryTracker) extends CollectUpdater(preserveNulls) with DirectStandardReducer {
+class CollectStandardReducer(preserveNulls: Boolean, memoryTracker: MemoryTracker) extends CollectUpdater(preserveNulls, memoryTracker) with DirectStandardReducer {
 
   // Reducer
   override def newUpdater(): Updater = this
-  override def result: AnyValue = collection.build()
+  override def result: AnyValue = {
+    val listValue = collection.build()
+    collection.close()
+    listValue
+  }
 
   // Updater
   override def add(value: AnyValue): Unit = {
-    if (collect(value)) {
-      CollectAggregator.registerCollectedItem(value, memoryTracker)
-    }
+    collect(value)
   }
 }
 
@@ -94,10 +92,12 @@ class CollectConcurrentReducer(preserveNulls: Boolean) extends Reducer {
   override def newUpdater(): Updater = new Upd()
   override def result: AnyValue = VirtualValues.concat(collections.toArray(new Array[ListValue](0)):_*)
 
-  class Upd() extends CollectUpdater(preserveNulls) with Updater {
+  class Upd() extends CollectUpdater(preserveNulls, EmptyMemoryTracker.INSTANCE) with Updater {
     override def add(value: AnyValue): Unit = collect(value)
     override def applyUpdates(): Unit = {
-      collections.add(collection.build())
+      val listValue = collection.build()
+      collections.add(listValue)
+      collection.close()
       reset()
     }
   }
@@ -107,12 +107,14 @@ class CollectDistinctStandardReducer(memoryTracker: MemoryTracker) extends Direc
   // NOTE: The owner is responsible for closing the given memory tracker in the right scope, so we do not need to use a ScopedMemoryTracker
   //       or close the seenSet explicitly here.
   private val seenSet = HeapTrackingCollections.newSet[AnyValue](memoryTracker)
-  private val collection = new ListValueBuilder.UnknownSizeListValueBuilder()
+  private val collection = ListValueBuilder.newHeapTrackingListBuilder(memoryTracker)
 
   // Reducer
   override def newUpdater(): Updater = this
   override def result: AnyValue = {
-    collection.build()
+    val listValue = collection.build()
+    collection.close()
+    listValue
   }
 
   // Updater
@@ -120,7 +122,6 @@ class CollectDistinctStandardReducer(memoryTracker: MemoryTracker) extends Direc
     if (!(value eq Values.NO_VALUE)) {
       val isUnique = seenSet.add(value)
       if (isUnique) {
-        CollectAggregator.registerCollectedItem(value, memoryTracker)
         collection.add(value)
       }
     }
