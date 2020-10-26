@@ -15,6 +15,7 @@ import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
+import org.neo4j.values.virtual.HeapTrackingListValueBuilder
 import org.neo4j.values.virtual.ListValue
 import org.neo4j.values.virtual.ListValueBuilder
 import org.neo4j.values.virtual.VirtualValues
@@ -56,7 +57,7 @@ case object CollectDistinctAggregator extends Aggregator {
 }
 
 abstract class CollectUpdater(preserveNulls: Boolean, memoryTracker: MemoryTracker) {
-  private[aggregators] var collection = ListValueBuilder.newHeapTrackingListBuilder(memoryTracker)
+  private[aggregators] var collection = HeapTrackingListValueBuilder.newHeapTrackingListBuilder(memoryTracker)
   protected def collect(value: AnyValue): Boolean = {
     val addMe = preserveNulls || !(value eq Values.NO_VALUE)
     if (addMe) {
@@ -66,7 +67,7 @@ abstract class CollectUpdater(preserveNulls: Boolean, memoryTracker: MemoryTrack
   }
   protected def reset(): Unit = {
     collection.close()
-    collection = ListValueBuilder.newHeapTrackingListBuilder(memoryTracker)
+    collection = HeapTrackingListValueBuilder.newHeapTrackingListBuilder(memoryTracker)
   }
 }
 
@@ -75,9 +76,7 @@ class CollectStandardReducer(preserveNulls: Boolean, memoryTracker: MemoryTracke
   // Reducer
   override def newUpdater(): Updater = this
   override def result: AnyValue = {
-    val listValue = collection.build()
-    collection.close()
-    listValue
+    collection.buildAndClose()
   }
 
   // Updater
@@ -95,9 +94,8 @@ class CollectConcurrentReducer(preserveNulls: Boolean) extends Reducer {
   class Upd() extends CollectUpdater(preserveNulls, EmptyMemoryTracker.INSTANCE) with Updater {
     override def add(value: AnyValue): Unit = collect(value)
     override def applyUpdates(): Unit = {
-      val listValue = collection.build()
+      val listValue = collection.buildAndClose()
       collections.add(listValue)
-      collection.close()
       reset()
     }
   }
@@ -107,14 +105,12 @@ class CollectDistinctStandardReducer(memoryTracker: MemoryTracker) extends Direc
   // NOTE: The owner is responsible for closing the given memory tracker in the right scope, so we do not need to use a ScopedMemoryTracker
   //       or close the seenSet explicitly here.
   private val seenSet = HeapTrackingCollections.newSet[AnyValue](memoryTracker)
-  private val collection = ListValueBuilder.newHeapTrackingListBuilder(memoryTracker)
+  private val collection = HeapTrackingListValueBuilder.newHeapTrackingListBuilder(memoryTracker)
 
   // Reducer
   override def newUpdater(): Updater = this
   override def result: AnyValue = {
-    val listValue = collection.build()
-    collection.close()
-    listValue
+    collection.buildAndClose()
   }
 
   // Updater
