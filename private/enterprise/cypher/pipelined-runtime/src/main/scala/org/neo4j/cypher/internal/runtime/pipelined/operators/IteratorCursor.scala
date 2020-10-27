@@ -14,7 +14,7 @@ import org.neo4j.values.AnyValue
  */
 class IteratorCursor(iterator: java.util.Iterator[AnyValue]) {
 
-  private var _value: AnyValue = _
+  private[this] var _value: AnyValue = _
 
   def next(): Boolean = {
     if (iterator.hasNext) {
