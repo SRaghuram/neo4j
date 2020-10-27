@@ -30,6 +30,10 @@ while (("$#")); do
     returned_partition_number=$2
     shift 2
     ;;
+  --jvm-path)
+    jvm_path=$2
+    shift 2
+    ;;
   --) # end of argument parsing
     shift
     break
@@ -37,17 +41,17 @@ while (("$#")); do
   esac
 done
 
-java -jar target/micro-benchmarks.jar config groups \
-  --path "${benchmark_conf}" \
-  "${group}"
+${jvm_path} -jar target/micro-benchmarks.jar config groups \
+            --path "${benchmark_conf}" \
+            "${group}"
 
 if [ "${partitions}" -ge 1 ]; then
   benchmark_partitions=$(pwd)/partition
   mkdir "${benchmark_partitions}"
-  java -jar target/micro-benchmarks.jar config partition \
-    -p "${partitions}" \
-    -d "${benchmark_partitions}" \
-    --config-path "${benchmark_conf}"
+  ${jvm_path} -jar target/micro-benchmarks.jar config partition \
+              -p "${partitions}" \
+              -d "${benchmark_partitions}" \
+              --config-path "${benchmark_conf}"
   # now we have generated the configs in $benchmark_partition
   # if we want a specific number back we have to be returned
   if [ "${returned_partition_number}" -ge 0 ]; then
