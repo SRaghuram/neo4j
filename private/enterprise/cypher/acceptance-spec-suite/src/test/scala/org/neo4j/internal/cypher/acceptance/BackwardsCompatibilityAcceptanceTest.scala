@@ -345,225 +345,47 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     exception.getMessage should include("Existential subquery is not supported in this Cypher version.")
   }
 
-  // Additions 4.2
-
-  test("Showing privileges as commands should not work with Cypher 4.1") {
+  test("create node key constraint with options should not work with CYPHER 3.5") {
     // WHEN
     val exception = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 SHOW PRIVILEGES AS COMMANDS")
-    }
-    exception.getMessage should include("SHOW PRIVILEGES AS COMMANDS command is not supported in this Cypher version.")
-  }
-
-  test("Creating a user with an encrypted password should not work with Cypher 4.1") {
-    // WHEN
-    val exception = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 CREATE USER foo SET ENCRYPTED PASSWORD 'bar'")
-    }
-    exception.getMessage should include("Creating a user with an encrypted password is not supported in this Cypher version.")
-  }
-
-  test("Updating a user with an encrypted password should not work with Cypher 4.1") {
-    // WHEN
-    val exception = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 ALTER USER foo SET ENCRYPTED PASSWORD 'bar'")
-    }
-    exception.getMessage should include("Updating a user with an encrypted password is not supported in this Cypher version.")
-  }
-
-  test("should not be able to specify multiple roles for SHOW ROLE PRIVILEGES in 4.1") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
-    // WHEN
-    val exception = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 SHOW ROLES reader, editor PRIVILEGES")
-    }
-    exception.getMessage should include("Multiple roles in SHOW ROLE PRIVILEGE command is not supported in this Cypher version.")
-  }
-
-  test("should not be able to specify multiple users for SHOW USER PRIVILEGES in 4.1") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
-    // WHEN
-    val exception = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 SHOW USERS $user1, $user2 PRIVILEGES")
-    }
-    exception.getMessage should include("Multiple users in SHOW USER PRIVILEGE command is not supported in this Cypher version.")
-  }
-
-  test("DEFAULT GRAPH should not work with CYPHER 4.1") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("GRANT TRAVERSE ON DEFAULT GRAPH TO custom")
-
-    // WHEN
-    val exception = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 GRANT CREATE ON DEFAULT GRAPH ELEMENTS * TO custom")
-    }
-    exception.getMessage should include("Default graph is not supported in this Cypher version.")
-  }
-
-  test("EXECUTE PROCEDURE should not work with CYPHER 4.1") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    val exception = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 GRANT EXECUTE PROCEDURE * ON DBMS TO custom")
-    }
-    exception.getMessage should include("EXECUTE PROCEDURE is not supported in this Cypher version.")
-  }
-
-  test("EXECUTE BOOSTED PROCEDURE should not work with CYPHER 4.1") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    val exception = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 DENY EXECUTE BOOSTED PROCEDURE * ON DBMS TO custom")
-    }
-    exception.getMessage should include("EXECUTE BOOSTED PROCEDURE is not supported in this Cypher version.")
-  }
-
-  test("EXECUTE ADMIN PROCEDURES should not work with CYPHER 4.1") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    val exception = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 REVOKE EXECUTE ADMIN PROCEDURES ON DBMS FROM custom")
-    }
-    exception.getMessage should include("EXECUTE ADMIN PROCEDURES is not supported in this Cypher version.")
-  }
-
-  test("EXECUTE FUNCTION should not work with CYPHER 4.1") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    val exception = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 GRANT EXECUTE FUNCTION * ON DBMS TO custom")
-    }
-    exception.getMessage should include("EXECUTE FUNCTION is not supported in this Cypher version.")
-  }
-
-  test("EXECUTE BOOSTED FUNCTION should not work with CYPHER 4.1") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    val exception = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 DENY EXECUTE BOOSTED FUNCTION * ON DBMS TO custom")
-    }
-    exception.getMessage should include("EXECUTE BOOSTED FUNCTION is not supported in this Cypher version.")
-  }
-
-  test("create index with options should not work with CYPHER 4.1") {
-    // WHEN
-    val exception = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 CREATE INDEX my_index FOR (n:Label) ON (n.prop) OPTIONS {irrelevantValue: 'CantBeEmptyMap'}")
+      executeSingle("CYPHER 3.5 CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NODE KEY OPTIONS {irrelevantValue: 'CantBeEmptyMap'}")
     }
 
     // THEN
-    exception.getMessage should include("Creating index with options is not supported in this Cypher version.")
-    graph.getMaybeIndex("Label", Seq("prop")).isEmpty should be(true)
+    exception.getMessage should include("Creating node key constraint with options is not supported in this Cypher version.")
+    graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
   }
 
-  test("create node key constraint with options should not work with CYPHER 3.5 - 4.1") {
-    Seq("CYPHER 3.5", "CYPHER 4.1").foreach(version => withClue(version) {
-      // WHEN
-      val exception = the[SyntaxException] thrownBy {
-        executeSingle(s"$version CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NODE KEY OPTIONS {irrelevantValue: 'CantBeEmptyMap'}")
-      }
-
-      // THEN
-      exception.getMessage should include("Creating node key constraint with options is not supported in this Cypher version.")
-      graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
-    })
-  }
-
-  test("create uniqueness constraint with options should not work with CYPHER 3.5 - 4.1") {
-    Seq("CYPHER 3.5", "CYPHER 4.1").foreach(version => withClue(version) {
-      // WHEN
-      val exception = the[SyntaxException] thrownBy {
-        executeSingle(s"$version CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS UNIQUE OPTIONS {irrelevantValue: 'CantBeEmptyMap'}")
-      }
-
-      // THEN
-      exception.getMessage should include("Creating uniqueness constraint with options is not supported in this Cypher version.")
-      graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
-    })
-  }
-
-  test("SHOW INDEXES should not work with Cypher 3.5 - 4.1") {
-    Seq("CYPHER 3.5", "CYPHER 4.1").foreach(version => withClue(version) {
-      // WHEN
-      val exception = the[SyntaxException] thrownBy {
-        executeSingle(s"$version SHOW INDEXES")
-      }
-
-      // THEN
-      exception.getMessage should include("SHOW INDEXES is not supported in this Cypher version.")
-    })
-  }
-
-  test("SHOW CONSTRAINTS should not work with Cypher 3.5 - 4.1") {
-    Seq("CYPHER 3.5", "CYPHER 4.1").foreach(version => withClue(version) {
-      // WHEN
-      val exception = the[SyntaxException] thrownBy {
-        executeSingle(s"$version SHOW CONSTRAINTS")
-      }
-
-      // THEN
-      exception.getMessage should include("SHOW CONSTRAINTS is not supported in this Cypher version.")
-    })
-  }
-
-  test("SHOW CURRENT USER should not work with Cypher 3.5") {
+  test("create uniqueness constraint with options should not work with CYPHER 3.5") {
     // WHEN
     val exception = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 SHOW CURRENT USER")
+      executeSingle("CYPHER 3.5 CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS UNIQUE OPTIONS {irrelevantValue: 'CantBeEmptyMap'}")
     }
-    exception.getMessage should include("SHOW CURRENT USER is not supported in this Cypher version.")
+
+    // THEN
+    exception.getMessage should include("Creating uniqueness constraint with options is not supported in this Cypher version.")
+    graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
   }
 
-  test("SHOW CURRENT USER should not work with Cypher 4.1") {
+  test("SHOW INDEXES should not work with Cypher 3.5") {
     // WHEN
     val exception = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 SHOW CURRENT USER")
+      executeSingle("CYPHER 3.5 SHOW INDEXES")
     }
-    exception.getMessage should include("SHOW CURRENT USER is not supported in this Cypher version.")
+
+    // THEN
+    exception.getMessage should include("SHOW INDEXES is not supported in this Cypher version.")
   }
 
-  test("SHOW INDEX privilege should not work with CYPHER 4.1") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
+  test("SHOW CONSTRAINTS should not work with Cypher 3.5") {
     // WHEN
     val exception = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 DENY SHOW INDEX ON DATABASE * TO custom")
+      executeSingle("CYPHER 3.5 SHOW CONSTRAINTS")
     }
-    exception.getMessage should include("SHOW INDEX privilege is not supported in this Cypher version.")
+
+    // THEN
+    exception.getMessage should include("SHOW CONSTRAINTS is not supported in this Cypher version.")
   }
 
-  test("SHOW CONSTRAINT privilege should not work with CYPHER 4.1") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-
-    // WHEN
-    val exception = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.1 GRANT SHOW CONSTRAINT ON DATABASE * TO custom")
-    }
-    exception.getMessage should include("SHOW CONSTRAINT privilege is not supported in this Cypher version.")
-  }
+  // Additions 4.3
 }
