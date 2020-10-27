@@ -89,4 +89,45 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
       includeSomewhere.aPlan("Limit")
         .withEstimatedRows(17)
   }
+
+  test("should estimate rows for skip + limit") {
+    val nodeCount = 100
+    (0 until nodeCount).foreach(_ => createNode())
+
+    final case class TestCase(query: String, skip: Int, limit: Int)
+    val defaultLimit = PlannerDefaults.DEFAULT_LIMIT_ROW_COUNT
+    val defaultSkip = PlannerDefaults.DEFAULT_SKIP_ROW_COUNT
+
+    Seq(
+      TestCase("MATCH (n) RETURN n SKIP 17 LIMIT 42", // SKIP auto-parameterized
+        skip = 42, limit = 42 + defaultSkip),
+      TestCase("MATCH (n) RETURN n SKIP 17 LIMIT 500", // SKIP auto-parameterized
+        skip = nodeCount - defaultSkip, limit = nodeCount),
+      TestCase("MATCH (n) RETURN n SKIP 333 LIMIT 444", // SKIP auto-parameterized
+        skip = nodeCount - defaultSkip, limit = nodeCount),
+      TestCase("MATCH (n) RETURN n SKIP 12345 LIMIT 17", // SKIP auto-parameterized
+        skip = 17, limit = 17 + defaultSkip),
+      TestCase("MATCH (n) RETURN n SKIP $skip LIMIT $limit",
+        skip = defaultLimit, limit = defaultLimit + defaultSkip),
+      TestCase("MATCH (n) RETURN n SKIP 17 LIMIT $limit",
+        skip = defaultLimit, limit = defaultLimit + 17),
+      TestCase("MATCH (n) RETURN n, $prop SKIP 42 LIMIT 17",
+        skip = 17, limit = 17 + 42),
+      TestCase("MATCH (n) RETURN n, $prop SKIP 444 LIMIT 333",
+        skip = 0, limit = nodeCount),
+      TestCase("MATCH (n) RETURN n, $prop SKIP 0 LIMIT 17",
+        skip = 17, limit = 17),
+      TestCase("MATCH (n) RETURN n, $prop SKIP 0 LIMIT 0",
+        skip = 0, limit = 0),
+    ) foreach { t =>
+      withClue(t) {
+        val result = executeSingle(s"EXPLAIN ${t.query}", Map("prop" -> "hack", "skip" -> 17, "limit" -> 23))
+        result.executionPlanDescription() should {
+          includeSomewhere.aPlan("Skip").withEstimatedRows(t.skip) onTopOf
+            aPlan("Limit").withEstimatedRows(t.limit)
+        }
+      }
+    }
+
+  }
 }
