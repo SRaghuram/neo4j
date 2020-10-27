@@ -136,6 +136,7 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProject
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.findDistinctPhysicalOp
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.partitionGroupingExpressions
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColumnOrder
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipelineBreakingPolicy
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.KeyOffsets
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
@@ -162,7 +163,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
   private val aggregatorFactory = AggregatorFactory(physicalPlan)
 
   // When determining if an interpreted pipe fallback operator can be used as a middle operator we need breakOn() to answer with fusion disabled
-  private val breakingPolicyForInterpretedPipesFallback = PipelinedPipelineBreakingPolicy(OPERATOR_FUSION_DISABLED, interpretedPipesFallbackPolicy, parallelExecution)
+  private val breakingPolicyForInterpretedPipesFallback = PipelinedPipelineBreakingPolicy(OPERATOR_FUSION_DISABLED, interpretedPipesFallbackPolicy, parallelExecution, SlottedPipelineBreakingPolicy)
 
   def create(plan: LogicalPlan, inputBuffer: BufferDefinition): Operator = {
     val id = plan.id

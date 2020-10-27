@@ -112,7 +112,6 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedProper
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotWithKeyAndAliases
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
-import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.util.Foldable.SkipChildren
 import org.neo4j.cypher.internal.util.Foldable.TraverseChildren
@@ -173,12 +172,10 @@ object SlotAllocation {
                     semanticTable: SemanticTable,
                     breakingPolicy: PipelineBreakingPolicy,
                     availableExpressionVariables: AvailableExpressionVariables,
-                    levagedOrders: LeveragedOrders,
                     allocateArgumentSlots: Boolean = false): SlotMetaData =
     new SingleQuerySlotAllocator(allocateArgumentSlots,
       breakingPolicy,
-      availableExpressionVariables,
-      levagedOrders).allocateSlots(lp, semanticTable, None)
+      availableExpressionVariables).allocateSlots(lp, semanticTable, None)
 }
 
 /**
@@ -188,13 +185,11 @@ object SlotAllocation {
 class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: Boolean,
                                                          breakingPolicy: PipelineBreakingPolicy,
                                                          availableExpressionVariables: AvailableExpressionVariables,
-                                                         leveragedOrders: LeveragedOrders) {
-
-  private val allocations = new SlotConfigurations
-  private val argumentSizes = new ArgumentSizes
-  private val applyPlans = new ApplyPlans
-  private val nestedPlanArgumentConfigurations = new NestedPlanArgumentConfigurations
-
+                                                         private val allocations: SlotConfigurations = new SlotConfigurations,
+                                                         private val argumentSizes: ArgumentSizes = new ArgumentSizes,
+                                                         private val applyPlans: ApplyPlans = new ApplyPlans,
+                                                         private val nestedPlanArgumentConfigurations: NestedPlanArgumentConfigurations = new NestedPlanArgumentConfigurations
+                                                        ) {
   /**
    * We need argument row id slots for cartesian product in the pipelines runtime
    */
@@ -417,7 +412,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
 
             // Allocate slots for nested plan
             // Pass in mutable attributes to be modified by recursive call
-            val nestedPhysicalPlan = allocateSlots(e.plan, semanticTable, Some(slotsAndArgument))
+            val nestedPhysicalPlan = withBreakingPolicy(breakingPolicy.nestedPlanBreakingPolicy).allocateSlots(e.plan, semanticTable, Some(slotsAndArgument))
 
             // Allocate slots for the projection expression, based on the resulting slot configuration
             // from the inner plan
@@ -450,6 +445,16 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         }
     }
   }
+
+  private def withBreakingPolicy(newBreakingPolicy: PipelineBreakingPolicy) =
+    new SingleQuerySlotAllocator(allocateArgumentSlots,
+      newBreakingPolicy,
+      availableExpressionVariables,
+      allocations,
+      argumentSizes,
+      applyPlans,
+      nestedPlanArgumentConfigurations
+    )
 
   /**
    * Compute the slot configuration of a leaf logical plan operator `lp`.

@@ -50,7 +50,6 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates
-import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.NodeOperations
 import org.neo4j.cypher.internal.runtime.QueryContext
@@ -117,7 +116,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
   private def build(beforeRewrite: LogicalPlan): Pipe = {
     val tokenContext = mock[TokenContext]
     when(tokenContext.getOptPropertyKeyId("propertyKey")).thenReturn(Some(0))
-    val physicalPlan = PhysicalPlanner.plan(tokenContext, beforeRewrite, table, SlottedPipelineBreakingPolicy, new LeveragedOrders)
+    val physicalPlan = PhysicalPlanner.plan(tokenContext, beforeRewrite, table, SlottedPipelineBreakingPolicy)
     val converters = new ExpressionConverters(SlottedExpressionConverters(physicalPlan),
       CommunityExpressionConverter(TokenContext.EMPTY))
 

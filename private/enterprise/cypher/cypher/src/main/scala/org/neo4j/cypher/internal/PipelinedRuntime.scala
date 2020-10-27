@@ -62,6 +62,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.expressions.PipelinedBlacklis
 import org.neo4j.cypher.internal.runtime.pipelined.rewriters.pipelinedPrePhysicalPlanRewriter
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipelineBreakingPolicy
 import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
 import org.neo4j.cypher.internal.util.CypherException
@@ -157,14 +158,17 @@ class PipelinedRuntime private(parallelExecution: Boolean,
     PipelinedBlacklist.throwOnUnsupportedPlan(logicalPlan, parallelExecution, query.leveragedOrders, name)
 
     val interpretedPipesFallbackPolicy = InterpretedPipesFallbackPolicy(context.interpretedPipesFallback, parallelExecution, name)
-    val breakingPolicy = PipelinedPipelineBreakingPolicy(operatorFusionPolicy, interpretedPipesFallbackPolicy, parallelExecution)
+    val breakingPolicy = PipelinedPipelineBreakingPolicy(
+      operatorFusionPolicy,
+      interpretedPipesFallbackPolicy,
+      parallelExecution,
+      nestedPlanBreakingPolicy = SlottedPipelineBreakingPolicy)
 
     var physicalPlan = PhysicalPlanner.plan(context.tokenContext,
                                             logicalPlan,
                                             query.semanticTable,
                                             breakingPolicy,
-                                            query.leveragedOrders,
-                                            allocateArgumentSlots = true)
+      allocateArgumentSlots = true)
 
     if (ENABLE_DEBUG_PRINTS && PRINT_PLAN_INFO_EARLY) {
       printRewrittenPlanInfo(physicalPlan.logicalPlan)

@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.cypher.CypherInterpretedPipesFallbackOption.disabled
 import org.neo4j.cypher.internal.compiler.helpers.LogicalPlanBuilder
-import org.neo4j.cypher.internal.logical.plans.Ascending
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipelineBreakingPolicy
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
@@ -19,7 +19,7 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
 
     // when
     val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = 8, readOnly = true, parallelExecution = false),
-      InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+      InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false, SlottedPipelineBreakingPolicy)
 
     //then
     policy.breakOn(plan, Id.INVALID_ID) shouldBe false
@@ -31,7 +31,7 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
 
     // when
     val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = false, fusionOverPipelineLimit = 8, readOnly = true, parallelExecution = true),
-      InterpretedPipesFallbackPolicy(disabled, parallelExecution = true, runtimeName = "Pipelined"), parallelExecution = false)
+      InterpretedPipesFallbackPolicy(disabled, parallelExecution = true, runtimeName = "Pipelined"), parallelExecution = false, SlottedPipelineBreakingPolicy)
 
     //then
     policy.breakOn(plan, Id.INVALID_ID) shouldBe true
@@ -48,7 +48,7 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
 
     // when
     val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = 8, readOnly = true, parallelExecution = false),
-      InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+      InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false, SlottedPipelineBreakingPolicy)
 
     //then
     policy.breakOn(plan, Id.INVALID_ID) shouldBe true
@@ -66,7 +66,7 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
 
     // when
     val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = 8, readOnly = true, parallelExecution = false),
-      InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+      InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false, SlottedPipelineBreakingPolicy)
 
     //then
     policy.breakOn(plan, Id.INVALID_ID) shouldBe false
@@ -84,7 +84,7 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
 
     // when
     val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = 8, readOnly = true, parallelExecution = false),
-      InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+      InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false, SlottedPipelineBreakingPolicy)
 
     //then
     policy.breakOn(plan, Id.INVALID_ID) shouldBe true
@@ -106,7 +106,7 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
       // when
       val fusionOverPipelineLimit = 3
       val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = fusionOverPipelineLimit, readOnly = true, parallelExecution = false),
-                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false, SlottedPipelineBreakingPolicy)
 
       //then
       policy.breakOn(plan, Id.INVALID_ID) shouldBe true
@@ -117,7 +117,7 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
       // when
       val fusionOverPipelineLimit = 4
       val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = fusionOverPipelineLimit, readOnly = true, parallelExecution = false),
-                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false, SlottedPipelineBreakingPolicy)
 
       //then
       policy.breakOn(plan, Id.INVALID_ID) shouldBe false
@@ -135,7 +135,7 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
     // when
     val fusionOverPipelineLimit = 0
     val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = fusionOverPipelineLimit, readOnly = true, parallelExecution = false),
-                                                 InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+                                                 InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false, SlottedPipelineBreakingPolicy)
 
     //then
     policy.breakOn(plan, Id.INVALID_ID) shouldBe true
@@ -151,7 +151,7 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
     // when
     val fusionOverPipelineLimit = 0
     val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = fusionOverPipelineLimit, readOnly = true, parallelExecution = false),
-                                                 InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+                                                 InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false, SlottedPipelineBreakingPolicy)
 
     //then
     policy.breakOn(plan, Id.INVALID_ID) shouldBe false
@@ -175,7 +175,7 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
       // when
       val fusionOverPipelineLimit = 3
       val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = fusionOverPipelineLimit, readOnly = true, parallelExecution = false),
-                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false, SlottedPipelineBreakingPolicy)
 
       //then
       policy.breakOn(plan, Id.INVALID_ID) shouldBe true
@@ -186,7 +186,7 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
       // when
       val fusionOverPipelineLimit = 4
       val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = fusionOverPipelineLimit, readOnly = true, parallelExecution = false),
-                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false, SlottedPipelineBreakingPolicy)
 
       //then
       policy.breakOn(plan, Id.INVALID_ID) shouldBe false
@@ -212,7 +212,7 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
       // when
       val fusionOverPipelineLimit = 2
       val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = fusionOverPipelineLimit, readOnly = true, parallelExecution = false),
-                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false, SlottedPipelineBreakingPolicy)
 
       //then
       policy.breakOn(plan, Id.INVALID_ID) shouldBe true
@@ -223,7 +223,7 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
       // when
       val fusionOverPipelineLimit = 3
       val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = fusionOverPipelineLimit, readOnly = true, parallelExecution = false),
-                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false, SlottedPipelineBreakingPolicy)
 
       //then
       policy.breakOn(plan, Id.INVALID_ID) shouldBe false
@@ -249,7 +249,7 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
       // when
       val fusionOverPipelineLimit = 1
       val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = fusionOverPipelineLimit, readOnly = true, parallelExecution = false),
-                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false, SlottedPipelineBreakingPolicy)
 
       //then
       policy.breakOn(plan, Id.INVALID_ID) shouldBe true
@@ -260,7 +260,7 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
       // when
       val fusionOverPipelineLimit = 2
       val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, fusionOverPipelineLimit = fusionOverPipelineLimit, readOnly = true, parallelExecution = false),
-                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false)
+                                                   InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"), parallelExecution = false, SlottedPipelineBreakingPolicy)
 
       //then
       policy.breakOn(plan, Id.INVALID_ID) shouldBe false

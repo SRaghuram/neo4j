@@ -50,8 +50,7 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
       val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
         query.logicalPlan,
         query.semanticTable,
-        SlottedPipelineBreakingPolicy,
-        query.leveragedOrders)
+        SlottedPipelineBreakingPolicy)
 
       if (ENABLE_DEBUG_PRINTS && PRINT_PLAN_INFO_EARLY) {
         printRewrittenPlanInfo(physicalPlan.logicalPlan)

@@ -53,7 +53,6 @@ class ExecutionGraphDefinitionBuilder(operatorFuserFactory: OperatorFuserFactory
       logicalPlan,
       semanticTable,
       breakingPolicy,
-      leveragedOrders,
       allocateArgumentSlots = true)
     val converters: ExpressionConverters = mock(classOf[ExpressionConverters])
     ExecutionGraphDefiner.defineFrom(breakingPolicy, operatorFuserFactory, physicalPlan, converters, leveragedOrders)

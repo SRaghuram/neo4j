@@ -75,7 +75,8 @@ import org.neo4j.exceptions.CantCompileQueryException
 
 case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
                                            interpretedPipesPolicy: InterpretedPipesFallbackPolicy,
-                                           parallelExecution: Boolean) extends PipelineBreakingPolicy {
+                                           parallelExecution: Boolean,
+                                           override val nestedPlanBreakingPolicy: PipelineBreakingPolicy) extends PipelineBreakingPolicy {
 
   private class BreakOn extends Attribute[LogicalPlan, (Boolean, Int)]
 

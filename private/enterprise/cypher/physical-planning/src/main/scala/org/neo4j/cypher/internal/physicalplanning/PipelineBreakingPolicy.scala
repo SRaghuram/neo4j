@@ -29,6 +29,8 @@ trait PipelineBreakingPolicy {
         case _ => slots.copy()
       }
     } else slots
+
+  def nestedPlanBreakingPolicy: PipelineBreakingPolicy = this
 }
 
 object BREAK_FOR_LEAFS extends PipelineBreakingPolicy {
