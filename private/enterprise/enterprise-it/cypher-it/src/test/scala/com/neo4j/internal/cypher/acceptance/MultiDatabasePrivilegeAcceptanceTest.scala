@@ -794,7 +794,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute("CREATE ()")
 
     // WHEN .. THEN
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n") should be(0)
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n") should be(0)
   }
 
   test("should be able to access database with grant privilege") {
@@ -810,7 +810,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"GRANT ACCESS ON DATABASE $DEFAULT_DATABASE_NAME TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n") should be(0)
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n") should be(0)
   }
 
   test("should not be able to access database with deny privilege") {
@@ -823,7 +823,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n) RETURN n")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n")
     } should have message "Database access is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
@@ -835,7 +835,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n) RETURN n")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n")
     } should have message "Database access is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
@@ -892,7 +892,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute("GRANT ALL ON DEFAULT DATABASE TO custom")
 
     // THEN
-    executeOnDefault("alice", "abc", "MATCH (n) RETURN n") should be(0)
+    executeOnDBMSDefault("alice", "abc", "MATCH (n) RETURN n") should be(0)
   }
 
   // REDUCED ADMIN
@@ -944,7 +944,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // create tokens
     the[QueryExecutionException] thrownBy {
-      executeOnDefault("Alice", "secret", "CALL db.createLabel('Label')")
+      executeOnDBMSDefault("Alice", "secret", "CALL db.createLabel('Label')")
     } should have message s"Creating new node label is not allowed for user 'Alice' with roles [PUBLIC, $role] restricted to TOKEN_WRITE. " +
       "See GRANT CREATE NEW NODE LABEL ON DATABASE..."
 
@@ -952,23 +952,23 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute("CALL db.createLabel('Label')")
     execute("CALL db.createProperty('prop')")
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("Alice", "secret", "CREATE INDEX FOR (n:Label) ON (n.prop)")
+      executeOnDBMSDefault("Alice", "secret", "CREATE INDEX FOR (n:Label) ON (n.prop)")
     } should have message s"Schema operations are not allowed for user 'Alice' with roles [PUBLIC, $role]."
 
     // constraint management
     execute("CREATE CONSTRAINT my_constraint ON (n:Label) ASSERT n.prop IS NOT NULL")
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("Alice", "secret", "DROP CONSTRAINT my_constraint")
+      executeOnDBMSDefault("Alice", "secret", "DROP CONSTRAINT my_constraint")
     } should have message s"Schema operations are not allowed for user 'Alice' with roles [PUBLIC, $role]."
 
     // write
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("Alice", "secret", "CREATE (n:Label {prop: 'value'})")
+      executeOnDBMSDefault("Alice", "secret", "CREATE (n:Label {prop: 'value'})")
     } should have message s"Create node with labels 'Label' is not allowed for user 'Alice' with roles [PUBLIC, $role]."
 
     // read/traverse
     execute("CREATE (n:Label {prop: 'value'})")
-    executeOnDefault("Alice", "secret", "MATCH (n:Label) RETURN n.prop") should be(0)
+    executeOnDBMSDefault("Alice", "secret", "MATCH (n:Label) RETURN n.prop") should be(0)
 
     // stop database
     the[AuthorizationViolationException] thrownBy {
@@ -993,25 +993,25 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     testAlwaysAllowedForAdmin(populatedRoles)
 
     // create tokens
-    executeOnDefault("Alice", "secret", "CALL db.createLabel('Label')")
+    executeOnDBMSDefault("Alice", "secret", "CALL db.createLabel('Label')")
 
     // index management
-    executeOnDefault("Alice", "secret", "CREATE INDEX FOR (n:Label) ON (n.prop)") should be(0)
+    executeOnDBMSDefault("Alice", "secret", "CREATE INDEX FOR (n:Label) ON (n.prop)") should be(0)
     graph.getMaybeIndex("Label", Seq("prop")).isDefined should be(true)
 
     // constraint management
     execute("CREATE CONSTRAINT my_constraint ON (n:Label) ASSERT n.prop IS NOT NULL")
-    executeOnDefault("Alice", "secret", "DROP CONSTRAINT my_constraint") should be(0)
+    executeOnDBMSDefault("Alice", "secret", "DROP CONSTRAINT my_constraint") should be(0)
     graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
 
     // write
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("Alice", "secret", "CREATE (n:Label {prop: 'value'})")
+      executeOnDBMSDefault("Alice", "secret", "CREATE (n:Label {prop: 'value'})")
     } should have message s"Create node with labels 'Label' is not allowed for user 'Alice' with roles [PUBLIC, $role]."
 
     // read/traverse
     execute("CREATE (n:Label {prop: 'value'})")
-    executeOnDefault("Alice", "secret", "MATCH (n:Label) RETURN n.prop") should be(0)
+    executeOnDBMSDefault("Alice", "secret", "MATCH (n:Label) RETURN n.prop") should be(0)
 
     // stop database
     executeOnSystem("Alice", "secret", "STOP DATABASE foo") should be(0)

@@ -111,7 +111,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     setupUserAndGraph("foo", "bar")
 
     // THEN
-    executeOnDefault("foo", "bar", "RETURN toLower('A')", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "RETURN toLower('A')", resultHandler = (row, _) => {
       row.get("toLower('A')") should equal("a")
     }) should be(1)
   }
@@ -121,7 +121,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     setupUserAndGraph("foo", "bar")
 
     // THEN
-    executeOnDefault("foo", "bar", "RETURN date('2020-09-25').year AS year", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "RETURN date('2020-09-25').year AS year", resultHandler = (row, _) => {
       row.get("year") should equal(2020)
     }) should be(1)
   }
@@ -132,7 +132,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     execute("DENY EXECUTE FUNCTION toLower ON DBMS TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "RETURN toLower('A')", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "RETURN toLower('A')", resultHandler = (row, _) => {
       row.get("toLower('A')") should equal("a")
     }) should be(1)
   }
@@ -143,7 +143,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     execute("DENY EXECUTE FUNCTION * ON DBMS TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "RETURN date('2020-09-25').year AS year", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "RETURN date('2020-09-25').year AS year", resultHandler = (row, _) => {
       row.get("year") should equal(2020)
     }) should be(1)
   }
@@ -154,7 +154,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
 
     // THEN
     (the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("foo", "bar", "RETURN test.function() AS result")
+      executeOnDBMSDefault("foo", "bar", "RETURN test.function() AS result")
     }).getMessage should include(FAIL_EXECUTE_FUNC)
   }
 
@@ -168,7 +168,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
         execute(s"GRANT EXECUTE FUNCTION $function ON DBMS TO custom")
 
         // THEN
-        executeOnDefault("foo", "bar", "RETURN test.function() AS result", resultHandler = (row, _) => {
+        executeOnDBMSDefault("foo", "bar", "RETURN test.function() AS result", resultHandler = (row, _) => {
           row.get("result") should equal("OK")
         }) should be(1)
       }
@@ -181,7 +181,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
         execute(s"GRANT EXECUTE BOOSTED FUNCTION $function ON DBMS TO custom")
 
         // THEN
-        executeOnDefault("foo", "bar", "RETURN test.function() AS result", resultHandler = (row, _) => {
+        executeOnDBMSDefault("foo", "bar", "RETURN test.function() AS result", resultHandler = (row, _) => {
           row.get("result") should equal("OK")
         }) should be(1)
       }
@@ -204,7 +204,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
 
         // THEN
         (the[AuthorizationViolationException] thrownBy {
-          executeOnDefault("foo", "bar", "RETURN test.function() AS result")
+          executeOnDBMSDefault("foo", "bar", "RETURN test.function() AS result")
         }).getMessage should include(FAIL_EXECUTE_FUNC)
       }
 
@@ -218,7 +218,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
 
         // THEN
         (the[AuthorizationViolationException] thrownBy {
-          executeOnDefault("foo", "bar", "RETURN test.function() AS result")
+          executeOnDBMSDefault("foo", "bar", "RETURN test.function() AS result")
         }).getMessage should include(FAIL_EXECUTE_FUNC)
       }
   }
@@ -232,7 +232,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "MATCH (a:A) RETURN test.safe.read.property(a, 'prop', 'N/A') AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "MATCH (a:A) RETURN test.safe.read.property(a, 'prop', 'N/A') AS result", resultHandler = (row, _) => {
       row.get("result") should equal("N/A")
     }) should be(1)
   }
@@ -248,7 +248,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     execute("DENY EXECUTE BOOSTED FUNCTION test.safe.* ON DBMS TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "MATCH (a:A) RETURN test.safe.read.property(a, 'prop', 'N/A') AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "MATCH (a:A) RETURN test.safe.read.property(a, 'prop', 'N/A') AS result", resultHandler = (row, _) => {
       row.get("result") should equal("N/A")
     }) should be(1)
   }
@@ -262,7 +262,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     execute("GRANT MATCH {prop} ON GRAPH * NODES A TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "MATCH (a:A) RETURN test.safe.read.property(a, 'prop', 'N/A') AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "MATCH (a:A) RETURN test.safe.read.property(a, 'prop', 'N/A') AS result", resultHandler = (row, _) => {
       row.get("result") should equal(1)
     }) should be(1)
   }
@@ -276,7 +276,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "MATCH (a:A) RETURN test.safe.read.property(a, 'prop', 'N/A') AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "MATCH (a:A) RETURN test.safe.read.property(a, 'prop', 'N/A') AS result", resultHandler = (row, _) => {
       row.get("result") should equal(1)
     }) should be(1)
   }
@@ -291,7 +291,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
 
     // THEN
     (the[QueryExecutionException] thrownBy {
-      executeOnDefault("foo", "bar", "MATCH (a:A) RETURN test.read.property(a, 'prop') AS result")
+      executeOnDBMSDefault("foo", "bar", "MATCH (a:A) RETURN test.read.property(a, 'prop') AS result")
     }).getMessage should include("No such property")
   }
 
@@ -307,7 +307,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
 
     // THEN
     (the[QueryExecutionException] thrownBy {
-      executeOnDefault("foo", "bar", "MATCH (a:A) RETURN test.read.property(a, 'prop') AS result")
+      executeOnDBMSDefault("foo", "bar", "MATCH (a:A) RETURN test.read.property(a, 'prop') AS result")
     }).getMessage should include("No such property")
   }
 
@@ -320,7 +320,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     execute("GRANT MATCH {prop} ON GRAPH * NODES A TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "MATCH (a:A) RETURN test.read.property(a, 'prop') AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "MATCH (a:A) RETURN test.read.property(a, 'prop') AS result", resultHandler = (row, _) => {
       row.get("result") should equal(1)
     }) should be(1)
   }
@@ -334,7 +334,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "MATCH (a:A) RETURN test.read.property(a, 'prop') AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "MATCH (a:A) RETURN test.read.property(a, 'prop') AS result", resultHandler = (row, _) => {
       row.get("result") should equal(1)
     }) should be(1)
   }
@@ -346,7 +346,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     setupUserAndGraph("foo", "bar")
 
     // THEN
-    executeOnDefault("foo", "bar", "UNWIND [1,2,3] AS x RETURN sum(x)", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "UNWIND [1,2,3] AS x RETURN sum(x)", resultHandler = (row, _) => {
       row.get("sum(x)") should equal(6)
     }) should be(1)
   }
@@ -357,7 +357,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     execute("DENY EXECUTE FUNCTION sum ON DBMS TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "UNWIND [1,2,3] AS x RETURN sum(x)", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "UNWIND [1,2,3] AS x RETURN sum(x)", resultHandler = (row, _) => {
       row.get("sum(x)") should equal(6)
     }) should be(1)
   }
@@ -368,7 +368,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
 
     // THEN
     (the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("foo", "bar", "UNWIND [1,2,3] AS l RETURN test.return.latest(l) AS result")
+      executeOnDBMSDefault("foo", "bar", "UNWIND [1,2,3] AS l RETURN test.return.latest(l) AS result")
     }).getMessage should include(FAIL_EXECUTE_AGG_FUNC)
   }
 
@@ -382,7 +382,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
         execute(s"GRANT EXECUTE FUNCTION $function ON DBMS TO custom")
 
         // THEN
-        executeOnDefault("foo", "bar", "UNWIND [1,2,3] AS l RETURN test.return.latest(l) AS result", resultHandler = (row, _) => {
+        executeOnDBMSDefault("foo", "bar", "UNWIND [1,2,3] AS l RETURN test.return.latest(l) AS result", resultHandler = (row, _) => {
           row.get("result") should equal(3)
         }) should be(1)
       }
@@ -395,7 +395,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
         execute(s"GRANT EXECUTE BOOSTED FUNCTION $function ON DBMS TO custom")
 
         // THEN
-        executeOnDefault("foo", "bar", "UNWIND [1,2,3] AS l RETURN test.return.latest(l) AS result", resultHandler = (row, _) => {
+        executeOnDBMSDefault("foo", "bar", "UNWIND [1,2,3] AS l RETURN test.return.latest(l) AS result", resultHandler = (row, _) => {
           row.get("result") should equal(3)
         }) should be(1)
       }
@@ -418,7 +418,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
 
         // THEN
         (the[AuthorizationViolationException] thrownBy {
-          executeOnDefault("foo", "bar", "UNWIND [1,2,3] AS l RETURN test.return.latest(l) AS result")
+          executeOnDBMSDefault("foo", "bar", "UNWIND [1,2,3] AS l RETURN test.return.latest(l) AS result")
         }).getMessage should include(FAIL_EXECUTE_AGG_FUNC)
       }
 
@@ -432,7 +432,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
 
         // THEN
         (the[AuthorizationViolationException] thrownBy {
-          executeOnDefault("foo", "bar", "UNWIND [1,2,3] AS l RETURN test.return.latest(l) AS result")
+          executeOnDBMSDefault("foo", "bar", "UNWIND [1,2,3] AS l RETURN test.return.latest(l) AS result")
         }).getMessage should include(FAIL_EXECUTE_AGG_FUNC)
       }
   }
@@ -446,7 +446,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     execute("GRANT TRAVERSE ON GRAPH * NODES B TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
       row.get("result") should equal(0)
     }) should be(1)
   }
@@ -462,7 +462,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     execute("DENY EXECUTE BOOSTED FUNCTION test.safe.* ON DBMS TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
       row.get("result") should equal(0)
     }) should be(1)
   }
@@ -476,7 +476,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     execute("GRANT MATCH {prop} ON GRAPH * NODES B TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
       row.get("result") should equal(6)
     }) should be(1)
   }
@@ -490,7 +490,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     execute("GRANT TRAVERSE ON GRAPH * NODES B TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
       row.get("result") should equal(6)
     }) should be(1)
   }
@@ -505,7 +505,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
 
     // THEN
     (the[QueryExecutionException] thrownBy {
-      executeOnDefault("foo", "bar", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result")
+      executeOnDBMSDefault("foo", "bar", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result")
     }).getMessage should include("No such property")
   }
 
@@ -521,7 +521,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
 
     // THEN
     (the[QueryExecutionException] thrownBy {
-      executeOnDefault("foo", "bar", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result")
+      executeOnDBMSDefault("foo", "bar", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result")
     }).getMessage should include("No such property")
   }
 
@@ -534,7 +534,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     execute("GRANT MATCH {prop} ON GRAPH * NODES B TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result", resultHandler = (row, _) => {
       row.get("result") should equal(6)
     }) should be(1)
   }
@@ -548,7 +548,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     execute("GRANT TRAVERSE ON GRAPH * NODES B TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result", resultHandler = (row, _) => {
       row.get("result") should equal(6)
     }) should be(1)
   }
@@ -564,7 +564,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     execute("GRANT ALL ON DBMS TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result", resultHandler = (row, _) => {
       row.get("result") should equal(6)
     }) should be(1)
   }
@@ -579,7 +579,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     execute("DENY EXECUTE BOOSTED FUNCTION * ON DBMS TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
       row.get("result") should equal(0)
     }) should be(1)
   }
@@ -594,7 +594,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
 
     // THEN
     (the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("foo", "bar", "RETURN test.function()")
+      executeOnDBMSDefault("foo", "bar", "RETURN test.function()")
     }).getMessage should include(FAIL_EXECUTE_FUNC)
   }
 
@@ -606,7 +606,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     execute("GRANT TRAVERSE ON GRAPH * NODES B TO funcRole")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH (a:B) RETURN test.safe.read.sum.prop(a) AS result", resultHandler = (row, _) => {
       row.get("result") should equal(6)
     }) should be(1)
   }
@@ -619,7 +619,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     // THEN
     withClue("Without EXECUTE privilege") {
       (the[AuthorizationViolationException] thrownBy {
-        executeOnDefault("joe", "soap", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result")
+        executeOnDBMSDefault("joe", "soap", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result")
       }).getMessage should include(FAIL_EXECUTE_AGG_FUNC)
     }
 
@@ -630,7 +630,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     // THEN
     withClue("With EXECUTE privilege") {
       (the[QueryExecutionException] thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result")
+      executeOnDBMSDefault("joe", "soap", "MATCH (a:B) RETURN test.read.sum.prop(a) AS result")
       }).getMessage should include("No such property")
     }
   }
@@ -641,7 +641,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     execute("GRANT TRAVERSE ON GRAPH * NODES A TO default")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH (a:A) RETURN test.safe.read.property(a, 'prop', 'N/A') AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH (a:A) RETURN test.safe.read.property(a, 'prop', 'N/A') AS result", resultHandler = (row, _) => {
       row.get("result") should equal(1)
     }) should be(1)
   }
@@ -652,7 +652,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     execute("GRANT TRAVERSE ON GRAPH * NODES A TO default")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH (a:A) RETURN test.read.property(a, 'prop') AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH (a:A) RETURN test.read.property(a, 'prop') AS result", resultHandler = (row, _) => {
       row.get("result") should equal(1)
     }) should be(1)
   }
@@ -665,7 +665,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     // THEN
     withClue("Without EXECUTE privilege") {
       (the[AuthorizationViolationException] thrownBy {
-        executeOnDefault("joe", "soap", "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result")
+        executeOnDBMSDefault("joe", "soap", "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result")
       }).getMessage should include(FAIL_EXECUTE_AGG_FUNC)
     }
 
@@ -675,7 +675,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
 
     // THEN
     withClue("With EXECUTE privilege") {
-      executeOnDefault("joe", "soap", "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result", resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result", resultHandler = (row, _) => {
         row.get("result") should equal(0)
       }) should be(1)
     }
@@ -690,7 +690,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     // THEN
     withClue("With DENY EXECUTE privilege") {
       (the[AuthorizationViolationException] thrownBy {
-        executeOnDefault("joe", "soap", "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result")
+        executeOnDBMSDefault("joe", "soap", "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result")
       }).getMessage should include(FAIL_EXECUTE_AGG_FUNC)
     }
 
@@ -702,7 +702,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     // THEN
     withClue("With DENY EXECUTE BOOSTED privilege") {
       (the[AuthorizationViolationException] thrownBy {
-        executeOnDefault("joe", "soap", "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result")
+        executeOnDBMSDefault("joe", "soap", "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result")
       }).getMessage should include(FAIL_EXECUTE_AGG_FUNC)
     }
 
@@ -712,7 +712,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
 
     // THEN
     withClue("With GRANT EXECUTE and DENY EXECUTE BOOSTED privilege") {
-      executeOnDefault("joe", "soap", "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result", resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", "MATCH (b:B) RETURN test.safe.read.sum.prop(b) AS result", resultHandler = (row, _) => {
         row.get("result") should equal(0)
       }) should be(1)
     }
@@ -724,7 +724,7 @@ class ExecuteFunctionPrivilegeAcceptanceTest extends AdministrationCommandAccept
     execute("GRANT ACCESS ON DATABASE * TO PUBLIC")
 
     // WHEN
-    executeOnDefault("joe", "soap", "RETURN public.function() AS result", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "RETURN public.function() AS result", resultHandler = (row, _) => {
       row.get("result") should be(42)
     }) should be(1)
   }

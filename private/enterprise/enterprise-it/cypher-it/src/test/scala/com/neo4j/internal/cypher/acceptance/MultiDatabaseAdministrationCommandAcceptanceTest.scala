@@ -26,6 +26,7 @@ import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.DatabaseShutdownException
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
+import org.neo4j.internal.kernel.api.security.AuthenticationResult
 import org.neo4j.internal.kernel.api.security.LoginContext
 import org.neo4j.kernel.DeadlockDetectedException
 import org.neo4j.kernel.api.KernelTransaction
@@ -301,7 +302,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val result = execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
-    result.toList should be(List(db(DEFAULT_DATABASE_NAME, default = true)))
+    result.toList should be(List(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true)))
   }
 
   test(s"should show database $DEFAULT_DATABASE_NAME with parameter") {
@@ -312,7 +313,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val result = execute("SHOW DATABASE $db", Map("db" -> DEFAULT_DATABASE_NAME))
 
     // THEN
-    result.toList should be(List(db(DEFAULT_DATABASE_NAME, default = true)))
+    result.toList should be(List(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true)))
   }
 
   test("should show database with yield") {
@@ -451,6 +452,57 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     result.toList should be(List(Map("count(*)" -> 4)))
+  }
+
+  test("should show default DBMS database") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val result = execute("SHOW DEFAULT DBMS DATABASE")
+
+    // THEN
+    result.head("name") shouldBe "neo4j"
+  }
+
+  test("should show default DBMS database for user with custom default database") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("GRANT ACCESS ON DATABASE foo TO PUBLIC")
+    execute("CREATE USER user SET PASSWORD '123' CHANGE NOT REQUIRED DEFAULT DATABASE foo")
+
+    // WHEN
+    executeOnSystem("user", "123", "SHOW DEFAULT DBMS DATABASE", resultHandler = (row, _) => {
+      // THEN
+      row.get("name") should be ("neo4j")
+    }) should be (1)
+  }
+
+  test("should show default DBMS database with YIELD and WHERE") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val result = execute("SHOW DEFAULT DBMS DATABASE YIELD name WHERE name = 'neo4j'")
+
+    // THEN
+    result.size should be (1)
+    result.toList.head should be (Map("name" -> "neo4j"))
+  }
+
+  test("should show default database where multiple databases exist") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("GRANT ACCESS ON DATABASE foo TO PUBLIC")
+    execute("CREATE USER user SET PASSWORD '123' CHANGE NOT REQUIRED DEFAULT DATABASE foo")
+
+    // WHEN
+    executeOnSystem("user", "123", "SHOW DEFAULT DATABASE", resultHandler = (row, _) => {
+      // THEN
+      row.get("name") should be ("foo")
+    }) should be (1)
   }
 
   test("should show default database with YIELD and aliases") {
@@ -827,13 +879,83 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val result = execute("SHOW DATABASE foo")
 
     // THEN
-    result.toList should be(List(db("foo", default = true)))
+    result.toList should be(List(db("foo", default = true, systemDefault = true)))
 
     // WHEN
     val result2 = execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
     result2.toList should be(empty)
+  }
+
+  test("should show user specific default database") {
+    // GIVEN
+    val config = Config.defaults()
+    config.set[java.lang.Boolean](GraphDatabaseSettings.auth_enabled, true)
+    setup(config)
+    execute("CREATE DATABASE foo WAIT")
+    execute("GRANT ACCESS ON DATABASE foo TO PUBLIC")
+    execute("CREATE USER bar SET PASSWORD '123' CHANGE NOT REQUIRED DEFAULT DATABASE foo")
+
+    // WHEN
+    executeOnSystem("bar", "123", "SHOW DATABASE foo", resultHandler = (row, _) => {
+      // THEN
+      row.get("name") should be("foo")
+      row.get("default") shouldBe(true)
+      row.get("systemDefault") shouldBe(false)
+    }) should be (1)
+
+    // WHEN
+    executeOnSystem("bar", "123", "SHOW DATABASE neo4j", resultHandler = (row, _) => {
+      // THEN
+      row.get("name") should be("neo4j")
+      row.get("default") shouldBe(false)
+      row.get("systemDefault") shouldBe(true)
+    }) should be (1)
+  }
+
+  test("should default to 'system default database' when 'current default database' is stopped in SHOW USERS") {
+    // GIVEN
+    val config = Config.defaults()
+    config.set[java.lang.Boolean](GraphDatabaseSettings.auth_enabled, true)
+    setup(config)
+    execute("CREATE DATABASE foo WAIT")
+    execute("GRANT ACCESS ON DATABASE foo TO PUBLIC")
+    execute("CREATE USER bar SET PASSWORD '123' DEFAULT DATABASE foo")
+    execute("STOP DATABASE foo")
+
+    // WHEN
+    val result = execute("SHOW USERS WHERE user = 'bar'")
+
+    // THEN
+    result.toSet should be(Set(user("bar", requestedDefaultDatabase = "foo", currentDefaultDatabase = "neo4j")))
+  }
+
+  test("should update 'current default database' when 'requested default database' is created") {
+    // GIVEN
+    val username = "foo"
+    execute(s"CREATE USER $username SET PASSWORD $$password DEFAULT DATABASE $$database", Map("password" -> "pass", "database" -> "bar"))
+
+    // WHEN
+    execute("CREATE")
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user(username, requestedDefaultDatabase = "bar", currentDefaultDatabase = DEFAULT_DATABASE_NAME))
+    testUserLogin(username, "pass", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+  }
+
+  test("should default to 'default database' when 'requested default database' is dropped") {
+    // GIVEN
+    val username = "foo"
+    execute("CREATE DATABASE bar")
+    execute(s"CREATE USER $username SET PASSWORD $$password DEFAULT DATABASE $$database", Map("password" -> "pass", "database" -> "bar"))
+
+    // WHEN
+    execute("DROP DATABASE bar")
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user(username, requestedDefaultDatabase = "bar", currentDefaultDatabase = DEFAULT_DATABASE_NAME))
+    testUserLogin(username, "pass", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
   test("should show database for switch of default database") {
@@ -847,7 +969,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val fooResult = execute("SHOW DATABASE foo")
 
     // THEN
-    neoResult.toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
+    neoResult.toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true)))
     fooResult.toSet should be(Set(db("foo")))
 
     // GIVEN
@@ -860,7 +982,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     neoResult2.toSet should be(Set(db(DEFAULT_DATABASE_NAME)))
-    fooResult2.toSet should be(Set(db("foo", default = true)))
+    fooResult2.toSet should be(Set(db("foo", default = true, systemDefault = true)))
   }
 
   test("should start a stopped database when it becomes default") {
@@ -1157,7 +1279,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     the[DatabaseNotFoundException] thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n.name")
     } should have message DEFAULT_DATABASE_NAME
 
     // WHEN
@@ -1168,7 +1290,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     // THEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(publicPrivileges("joe"))
   }
@@ -1272,7 +1394,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       granted(access).database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
       granted(matchPrivilege).node("*").graph(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
     ))
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name",
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n.name",
       resultHandler = (row, _) => row.get("n.name") should be("a")) should be(1)
 
     // WHEN
@@ -1281,7 +1403,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     the[DatabaseNotFoundException] thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n.name")
     } should have message DEFAULT_DATABASE_NAME
 
     // WHEN
@@ -1293,7 +1415,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     // THEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(publicPrivileges("joe"))
@@ -2017,7 +2139,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     the[DatabaseShutdownException] thrownBy {
-      executeOnDefault("foo", "bar", "MATCH (n) RETURN n")
+      executeOnDBMSDefault("foo", "bar", "MATCH (n) RETURN n")
     } should have message "This database is shutdown."
 
     // WHEN
@@ -2025,7 +2147,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute(s"START DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
-    executeOnDefault("foo", "bar", "MATCH (n) RETURN n") should be(0)
+    executeOnDBMSDefault("foo", "bar", "MATCH (n) RETURN n") should be(0)
   }
 
   test("should be able to stop a stopped database") {

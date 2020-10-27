@@ -5,6 +5,8 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
+import java.util
+
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.graphdb.RelationshipType
@@ -33,14 +35,14 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
     execute("GRANT READ {name} ON GRAPH * ELEMENTS A (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * ELEMENTS A (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       (row.get("n1.name"), row.get("r.name"), row.get("n2.name")) should be(("n1", "r", "n2"))
     }) should be(1)
   }
@@ -56,7 +58,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
     val query = "MATCH (n1)-[r]->(n2) RETURN n1.name, r.name, n2.name ORDER BY n1.name, r.name"
 
     an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", query)
+      executeOnDBMSDefault("joe", "soap", query)
     }
 
     // WHEN
@@ -64,14 +66,14 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
     execute("GRANT ACCESS ON DATABASE * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * ELEMENTS A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       (row.get("n1.name"), row.get("r.name"), row.get("n2.name")) should be((null, null, null))
     }) should be(1)
 
@@ -80,7 +82,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
     execute("GRANT READ {name} ON GRAPH * ELEMENTS A, B TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       (row.get("n1.name"), row.get("r.name"), row.get("n2.name")) should be(("a1", "ra1", "a2"))
     }) should be(1)
 
@@ -95,7 +97,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
       ("b1", "ra2", "b2"),
       ("b3", "rb2", "b4")
     )
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.get("n1.name"), row.get("r.name"), row.get("n2.name")) should be(expected1(index))
     }) should be(4)
 
@@ -110,7 +112,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
       (null, "rb1", null),
       (null, null, null)
     )
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.get("n1.name"), row.get("r.name"), row.get("n2.name")) should be(expected2(index))
     }) should be(4)
 
@@ -119,7 +121,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
     execute("REVOKE MATCH {name} ON GRAPH * ELEMENTS B FROM custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       (row.get("n1.name"), row.get("r.name"), row.get("n2.name")) should be((null, null, null))
     }) should be(1)
 
@@ -128,7 +130,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
     execute("REVOKE TRAVERSE ON GRAPH * ELEMENTS A FROM custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
   }
 
   test("should rollback transaction") {
@@ -169,7 +171,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
 
     // THEN
     val all = List("prop1", "prop2", "prop3", "prop4", "prop5", "prop6", "prop7")
-    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (_, _) => {
       fail("Should be empty because no properties are whitelisted")
     }) should be(0)
 
@@ -179,7 +181,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
 
     // THEN
     // expect no change
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("propertyKey") should be(all(index))
     }) should be(all.size)
 
@@ -188,7 +190,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
     execute("DENY READ {prop3} ON GRAPH * NODES B TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("propertyKey") should be(all(index))
     }) should be(all.size)
 
@@ -197,7 +199,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
     execute("DENY READ {*} ON GRAPH * NODES C TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("propertyKey") should be(all(index))
     }) should be(all.size)
 
@@ -207,7 +209,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
 
     // THEN
     val withoutFive = all.filter(_ != "prop5")
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("propertyKey") should be(withoutFive(index))
     }) should be(withoutFive.size)
 
@@ -216,7 +218,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
     execute("DENY READ {prop5} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("propertyKey") should be(withoutFive(index))
     }) should be(withoutFive.size)
 
@@ -225,7 +227,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
     execute("DENY READ {*} ON GRAPH * NODES * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (_, _) => {
       fail("Should be empty because all properties are denied on nodes and not whitelisted on relationships")
     }) should be(0)
 
@@ -234,7 +236,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
     execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("propertyKey") should be(withoutFive(index))
     }) should be(withoutFive.size)
 
@@ -243,9 +245,63 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
     execute("DENY READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (_, _) => {
       fail("Should be empty because all properties are denied on everything")
     }) should be(0)
+  }
+
+  test("Counting queries should work with restricted user") {
+    // The two queries are used by the browser
+    val countingNodesQuery = "MATCH () RETURN { name:'nodes', data:count(*) } AS result"
+    val countingRelsQuery = "MATCH ()-[]->() RETURN { name:'relationships', data: count(*)} AS result"
+
+    // Given
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:Person)-[:WROTE]->(:Letter)<-[:HAS_STAMP]-(:Stamp)")
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER tim SET PASSWORD '123' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE role")
+    execute("GRANT ROLE role TO tim")
+    execute("GRANT ACCESS ON DATABASE * TO role")
+    execute("GRANT MATCH {*} ON GRAPH * ELEMENTS * TO role")
+    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIP WROTE TO role")
+
+    // RELS
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    // When & Then
+
+    // unrestricted:
+    execute(countingRelsQuery).toList should be(List(Map("result" -> Map("data" -> 2, "name" -> "relationships"))))
+
+    // restricted
+    executeOnDBMSDefault("tim", "123", countingRelsQuery,
+      resultHandler = (row, _) => {
+        val result = row.get("result").asInstanceOf[util.Map[String, AnyRef]]
+        result.get("data") should be (1L)
+        result.get("name") should be ("relationships")
+      }
+    ) should be(1)
+
+    // Given
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * NODES Person TO role")
+
+    // NODES
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    // When & Then
+
+    // unrestricted:
+    execute(countingNodesQuery).toList should be(List(Map("result" -> Map("data" -> 3, "name" -> "nodes"))))
+
+    // restricted
+    executeOnDBMSDefault("tim", "123", countingNodesQuery,
+      resultHandler = (row, _) => {
+        val result = row.get("result").asInstanceOf[util.Map[String, AnyRef]]
+        result.get("data") should be (2L)
+        result.get("name") should be ("nodes")
+      }
+    ) should be(1)
   }
 
   test("should see label and type but not properties when returning path with only full traverse privilege") {
@@ -257,7 +313,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
     execute("CREATE (:Person {name: 'Alice'})-[:KNOWS {since: '2019'}]->(:Person {name: 'Bob'})")
 
     // When
-    executeOnDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
       val path = row.getPath("p")
       val node1 = path.startNode()
       val node2 = path.endNode()
@@ -283,7 +339,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
     execute("CREATE (:Person {name: 'Alice'})-[:KNOWS {since: '2019'}]->(:Person {name: 'Bob'})")
 
     // When
-    executeOnDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
       val path = row.getPath("p")
       val node1 = path.startNode()
       val node2 = path.endNode()
@@ -313,7 +369,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
         |""".stripMargin)
 
     // When
-    executeOnDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
       val path = row.getPath("p")
       val node1 = path.startNode()
       val node2 = path.endNode()
@@ -345,7 +401,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
         |""".stripMargin)
 
     // When
-    executeOnDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
       val path = row.getPath("p")
       val node1 = path.startNode()
       val node2 = path.endNode()
@@ -376,7 +432,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
         |""".stripMargin)
 
     // When
-    executeOnDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
       val path = row.getPath("p")
       val node1 = path.startNode()
       val node2 = path.endNode()
@@ -411,7 +467,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
         |""".stripMargin)
 
     // When
-    executeOnDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
       val path = row.getPath("p")
       val node1 = path.startNode()
       val node2 = path.endNode()
@@ -443,7 +499,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
         |""".stripMargin)
 
     // When
-    executeOnDefault("joe", "soap", "MATCH p=()-[*3]->() RETURN p", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH p=()-[*3]->() RETURN p", resultHandler = (row, _) => {
       val path = row.getPath("p")
       val nodes = path.nodes().asScala
       val relationships = path.relationships().asScala
@@ -479,7 +535,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
         |""".stripMargin)
 
     // When
-    executeOnDefault("joe", "soap", "MATCH p=()-[*3]->() RETURN p", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH p=()-[*3]->() RETURN p", resultHandler = (row, _) => {
       val path = row.getPath("p")
       val nodes = path.nodes().asScala
       val relationships = path.relationships().asScala

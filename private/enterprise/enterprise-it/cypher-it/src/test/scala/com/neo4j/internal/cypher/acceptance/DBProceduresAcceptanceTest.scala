@@ -35,7 +35,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
     // WHEN & THEN
     val query = "CALL db.relationshipTypes"
-    executeOnDefault("joe", "soap", query ) should be(0)
+    executeOnDBMSDefault("joe", "soap", query ) should be(0)
   }
 
   test("db.relationshipTypes should return type when granted traverse") {
@@ -51,7 +51,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
     // THEN
     val query = "CALL db.relationshipTypes"
-    executeOnDefault("joe", "soap", query, resultHandler = (row,_) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       row.get("relationshipType") should be("A")
     } ) should be(1)
   }
@@ -68,7 +68,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
     // THEN
     val query = "CALL db.relationshipTypes"
-    executeOnDefault("joe", "soap", query, resultHandler = (row,_) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       row.get("relationshipType") should be("A")
     } ) should be(1)
   }
@@ -86,7 +86,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     // THEN
     val query = "CALL db.relationshipTypes() YIELD relationshipType RETURN relationshipType ORDER BY relationshipType"
     val expected = List("A", "B")
-    executeOnDefault("joe", "soap", query, resultHandler = (row,index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("relationshipType") should be(expected(index))
     } ) should be(2)
   }
@@ -104,7 +104,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
     // THEN
     val query = "CALL db.relationshipTypes"
-    executeOnDefault("joe", "soap", query, resultHandler = (row,_) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       row.get("relationshipType") should be("B")
     } ) should be(1)
   }
@@ -120,7 +120,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("GRANT READ {prop} ON GRAPH * RELATIONSHIPS A (*) TO custom")
 
     // WHEN & THEN
-    executeOnDefault("joe", "soap", "CALL db.relationshipTypes()") shouldBe 0
+    executeOnDBMSDefault("joe", "soap", "CALL db.relationshipTypes()") shouldBe 0
   }
 
   test("db.relationshipTypes should return empty result for user with only denied read") {
@@ -134,7 +134,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("DENY READ {prop} ON GRAPH * RELATIONSHIPS A (*) TO custom")
 
     // WHEN & THEN
-    executeOnDefault("joe", "soap", "CALL db.relationshipTypes()") shouldBe 0
+    executeOnDBMSDefault("joe", "soap", "CALL db.relationshipTypes()") shouldBe 0
   }
 
   test("db.relationshipTypes should return type with grant traverse and deny read") {
@@ -149,7 +149,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("DENY READ {prop} ON GRAPH * RELATIONSHIPS A (*) TO custom")
 
     // WHEN & THEN
-    executeOnDefault("joe", "soap", "CALL db.relationshipTypes()", resultHandler = (row,_) => {
+    executeOnDBMSDefault("joe", "soap", "CALL db.relationshipTypes()", resultHandler = (row, _) => {
       row.get("relationshipType") should be("A")
     }) shouldBe 1
   }
@@ -165,7 +165,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("GRANT WRITE ON GRAPH * TO custom")
 
     // WHEN & THEN
-    executeOnDefault("joe", "soap", "CALL db.relationshipTypes()") shouldBe 0
+    executeOnDBMSDefault("joe", "soap", "CALL db.relationshipTypes()") shouldBe 0
   }
 
   test("db.relationshipTypes should return empty result for user with denied write") {
@@ -179,7 +179,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("DENY WRITE ON GRAPH * TO custom")
 
     // WHEN & THEN
-    executeOnDefault("joe", "soap", "CALL db.relationshipTypes()") shouldBe 0
+    executeOnDBMSDefault("joe", "soap", "CALL db.relationshipTypes()") shouldBe 0
   }
 
   /*
@@ -195,7 +195,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
     // WHEN & THEN
     val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
   }
 
   test("db.labels should return correct result for user with traverse") {
@@ -210,7 +210,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
     // THEN
     val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       row.get("label") should be("A")
     }) should be(1)
   }
@@ -228,7 +228,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     // THEN
     val expected = List( "A", "B" )
     val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("label") should be(expected(index))
     }) should be(2)
   }
@@ -246,7 +246,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
     // THEN
     val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       row.get("label") should be("A")
     }) should be(1)
   }
@@ -263,11 +263,11 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
     // THEN
     val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       row.get("label") should be("A")
     }) should be(1)
 
-    executeOnDefault("joe", "soap", "MATCH (n:A) RETURN labels(n) as labels", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH (n:A) RETURN labels(n) as labels", resultHandler = (row, _) => {
       row.get("labels") should be(List("A", "B").asJava)
     }) should be(1)
   }
@@ -285,7 +285,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
     // THEN
     val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       row.get("label") should be("B")
     }) should be(1)
   }
@@ -298,7 +298,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
     // WHEN & THEN
     val query = "CALL db.labels()"
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
   }
 
   test("db.labels should return indexed label with traverse") {
@@ -313,7 +313,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
     // THEN
     val query = "CALL db.labels()"
-    executeOnDefault("joe", "soap", query) should be(1)
+    executeOnDBMSDefault("joe", "soap", query) should be(1)
   }
 
   test("db.labels should return empty result for user with only read but not traverse") {
@@ -327,7 +327,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("GRANT READ {prop} ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.labels()") shouldBe 0
+    executeOnDBMSDefault("joe", "soap", "CALL db.labels()") shouldBe 0
   }
 
   test("db.labels should return empty result for user with only denied read") {
@@ -341,7 +341,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("DENY READ {prop} ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.labels()") shouldBe 0
+    executeOnDBMSDefault("joe", "soap", "CALL db.labels()") shouldBe 0
   }
 
   test("db.labels should return label with grant traverse and deny read") {
@@ -356,7 +356,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("DENY READ {prop} ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.labels()", resultHandler = (row,_) => {
+    executeOnDBMSDefault("joe", "soap", "CALL db.labels()", resultHandler = (row, _) => {
       row.get("label") should be("A")
     }) shouldBe 1
   }
@@ -372,7 +372,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("GRANT WRITE ON GRAPH * TO custom")
 
     // WHEN & THEN
-    executeOnDefault("joe", "soap", "CALL db.labels()") shouldBe 0
+    executeOnDBMSDefault("joe", "soap", "CALL db.labels()") shouldBe 0
   }
 
   test("db.labels should return empty result for user with only denied write") {
@@ -386,7 +386,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("DENY WRITE ON GRAPH * TO custom")
 
     // WHEN & THEN
-    executeOnDefault("joe", "soap", "CALL db.labels()") shouldBe 0
+    executeOnDBMSDefault("joe", "soap", "CALL db.labels()") shouldBe 0
   }
 
   test("db.labels should not return unused label after being removed in transaction") {
@@ -400,7 +400,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
     // THEN
     val expected = List( "A", "B" )
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("label") should be(expected(index))
     }) should be(2)
 
@@ -408,7 +408,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     val executeBefore: InternalTransaction => Unit = tx => tx.execute("MATCH (n:A:B) REMOVE n:B")
 
     // THEN
-    executeOnDefault("joe", "soap", query, executeBefore = executeBefore, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, executeBefore = executeBefore, resultHandler = (row, _) => {
       row.get("label") should be("A")
     }) should be(1)
   }
@@ -424,7 +424,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("CALL db.createLabel('B')")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       row.get("label") should be("A")
     }) should be(1)
 
@@ -433,7 +433,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
     // THEN
     val expected = List( "A", "B" )
-    executeOnDefault("joe", "soap", query, executeBefore = executeBefore, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, executeBefore = executeBefore, resultHandler = (row, index) => {
       row.get("label") should be(expected(index))
     }) should be(2)
   }
@@ -453,7 +453,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("DENY TRAVERSE ON GRAPH * NODE B TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       row.get("label") should be("A")
     }) should be(1)
 
@@ -463,7 +463,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     val executeBefore: InternalTransaction => Unit = tx => tx.execute("MATCH (n:A) SET n:B")
 
     // THEN
-    executeOnDefault("joe", "soap", query, executeBefore = executeBefore, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, executeBefore = executeBefore, resultHandler = (row, _) => {
       row.get("label") should be("A")
     }) should be(1)
 
@@ -484,14 +484,14 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("DENY TRAVERSE ON GRAPH * NODE A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
     execute(query).toList should be(Seq.empty)
 
     // WHEN
     val executeBefore: InternalTransaction => Unit = tx => tx.execute("CREATE (:A)")
 
     // THEN
-    executeOnDefault("joe", "soap", query, executeBefore = executeBefore) should be(0)
+    executeOnDBMSDefault("joe", "soap", query, executeBefore = executeBefore) should be(0)
     execute(query).toList should be(Seq(Map("label" -> "A")))
   }
 
@@ -506,7 +506,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("CREATE ({a:1})")
 
     // WHEN & THEN
-    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
+    executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
   }
 
   test("db.propertyKeys should return empty result for user with only write") {
@@ -520,7 +520,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("GRANT WRITE ON GRAPH * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
+    executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
   }
 
   test("db.propertyKeys should return empty result for user with only denied write") {
@@ -534,7 +534,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("DENY WRITE ON GRAPH * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
+    executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
   }
 
   test("db.propertyKeys should return empty result for user with only traverse grant") {
@@ -548,7 +548,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
+    executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
   }
 
   test("db.propertyKeys should return empty result for user with denied traverse") {
@@ -562,7 +562,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("DENY TRAVERSE ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
+    executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
   }
 
   test("db.propertyKeys should return correct result for user with only read grant") {
@@ -576,7 +576,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("GRANT READ {a} ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 1
+    executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 1
   }
 
   test("db.propertyKeys should return empty result for user with denied read") {
@@ -590,7 +590,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("DENY READ {a} ON GRAPH * NODES A (*) TO custom")
 
     // WHEN & THEN
-    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
+    executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
   }
 
   test("db.propertyKeys should return correct result for user with match on any label as long as that propertyKey is part of the grant") {
@@ -604,7 +604,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("GRANT MATCH {x} ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 1
+    executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 1
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -614,14 +614,14 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     // THEN
     // When the transaction is started, there exists no label B,
     // thus the privilege concerning B is not added to the access mode
-    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
+    executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
 
     // WHEN
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CALL db.createLabel('B')")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 1
+    executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 1
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -629,7 +629,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("GRANT MATCH {x} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 1
+    executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 1
   }
 
   test("db.propertyKeys should return correct result for user with match on any label but deny on one") {
@@ -645,14 +645,14 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("DENY MATCH {x} ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 1
+    executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 1
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("DENY MATCH {x} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
+    executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -660,7 +660,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("REVOKE GRANT TRAVERSE ON GRAPH * NODES * (*) FROM custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
+    executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
   }
 
   test("db.propertyKeys should return correct result for user with match on any label and type as long as that propertyKey is part of the grant") {
@@ -674,35 +674,35 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("GRANT MATCH {b} ON GRAPH * RELATIONSHIPS A (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 1
+    executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 1
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH {a} ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 2
+    executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 2
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT READ {c} ON GRAPH * ELEMENTS * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 3
+    executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 3
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("DENY READ {c} ON GRAPH * ELEMENTS * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 2
+    executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 2
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("DENY READ {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
+    executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
   }
 
   /*
@@ -719,7 +719,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // WHEN & THEN
-    executeOnDefault("joe", "soap", "CALL db.schema.nodeTypeProperties()") shouldBe 0
+    executeOnDBMSDefault("joe", "soap", "CALL db.schema.nodeTypeProperties()") shouldBe 0
   }
 
   test("make sure that db.schema.nodeTypeProperties return correct result with grants") {
@@ -733,7 +733,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("GRANT MATCH {a} ON GRAPH * NODES A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.schema.nodeTypeProperties()", resultHandler = (row,_) => {
+    executeOnDBMSDefault("joe", "soap", "CALL db.schema.nodeTypeProperties()", resultHandler = (row, _) => {
       row.get("propertyName") should be("a")
       row.get("nodeLabels") should equal(List("A").asJava)
     }) shouldBe 1
@@ -746,7 +746,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("CREATE ()-[:A {a:1, b:2}]->()")
 
     // WHEN & THEN
-    executeOnDefault("joe", "soap", "CALL db.schema.relTypeProperties()") shouldBe 0
+    executeOnDBMSDefault("joe", "soap", "CALL db.schema.relTypeProperties()") shouldBe 0
   }
 
   test("make sure that db.schema.relTypeProperties return correct result with grants") {
@@ -762,7 +762,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
     // THEN
     selectDatabase(DEFAULT_DATABASE_NAME)
-    executeOnDefault("joe", "soap", "CALL db.schema.relTypeProperties()", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "CALL db.schema.relTypeProperties()", resultHandler = (row, _) => {
       row.get("relType") should be(":`A`")
       row.get("propertyName") should be("a")
     }) shouldBe 1
@@ -775,7 +775,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("CREATE (:A {a:1})-[:A {a:1}]->(:B {a:1})")
 
     // WHEN & THEN
-    executeOnDefault("joe", "soap", "CALL db.schema.visualization()", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "CALL db.schema.visualization()", resultHandler = (row, _) => {
       row.get("relationships") should equal(util.Collections.EMPTY_LIST)
       row.get("nodes") should equal(util.Collections.EMPTY_LIST)
     }) shouldBe 1
@@ -796,7 +796,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("DENY READ {prop1} ON GRAPH * NODES A TO custom")
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS A TO custom")
 
-    executeOnDefault("joe", "soap", "CALL db.schema.visualization()", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "CALL db.schema.visualization()", resultHandler = (row, _) => {
       // check the relationship type and the start and end node labels
       val relationships = row.get("relationships").asInstanceOf[util.ArrayList[Relationship]].asScala
       relationships.map(rel => (rel.getStartNode.getAllProperties.get("name"), rel.getType.name(), rel.getEndNode.getAllProperties.get("name"))) should be(Seq(

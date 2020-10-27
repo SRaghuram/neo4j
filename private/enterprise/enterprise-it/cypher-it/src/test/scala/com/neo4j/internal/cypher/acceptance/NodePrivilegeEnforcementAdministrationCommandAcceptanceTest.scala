@@ -24,18 +24,18 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     selectDatabase(DEFAULT_DATABASE_NAME)
     graph.withTx( tx => tx.execute("CREATE (n:A {name:'a'})"))
     an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN labels(n)")
     }
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT ACCESS ON DATABASE * TO custom")
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)") should be(0)
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN labels(n)") should be(0)
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN labels(n)", resultHandler = (row, _) => {
       row.get("labels(n)").asInstanceOf[util.Collection[String]] should contain("A")
     }) should be(1)
   }
@@ -47,7 +47,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     graph.withTx( tx => tx.execute("CREATE (n:A {name:'a'})"))
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
       row.get("n.name") should be(null)
     }) should be(1)
 
@@ -55,7 +55,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT READ {name} ON GRAPH * NODES A (*) TO custom")
 
     // WHEN
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
       row.get("n.name") should be("a")
     }) should be(1)
   }
@@ -70,7 +70,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
 
     // THEN
     an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN labels(n)")
     }
 
     // WHEN
@@ -78,14 +78,14 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT ACCESS ON DATABASE * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH {name} ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
       row.get("n.name") should be("a")
     }) should be(1)
 
@@ -94,7 +94,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("REVOKE GRANT MATCH {name} ON GRAPH * NODES A (*) FROM custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
   }
 
   test("should read properties when granted MATCH privilege to custom role for a specific graph") {
@@ -113,7 +113,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute(s"GRANT MATCH {*} ON GRAPH $DEFAULT_DATABASE_NAME NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
       row.get("n.name") should be("a")
     }) should be(1)
 
@@ -133,7 +133,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT READ {name} ON GRAPH * NODES A (*) TO custom")
 
     // WHEN
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
   }
 
   test("read privilege for node should not imply traverse privilege on default graph") {
@@ -147,7 +147,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT READ {name} ON DEFAULT GRAPH NODES A (*) TO custom")
 
     // WHEN
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
   }
 
   test("read privilege for relationship should not imply traverse privilege") {
@@ -161,7 +161,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT READ {name} ON GRAPH * RELATIONSHIPS REL (*) TO custom")
 
     // WHEN
-    executeOnDefault("joe", "soap", "MATCH ()-[r]-() RETURN r.name") should be(0)
+    executeOnDBMSDefault("joe", "soap", "MATCH ()-[r]-() RETURN r.name") should be(0)
   }
 
   test("traverse privilege on default graph") {
@@ -175,7 +175,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT TRAVERSE ON DEFAULT GRAPH RELATIONSHIPS REL TO custom")
 
     // WHEN
-    executeOnDefault("joe", "soap", "MATCH ()-[r]-() RETURN r.name") should be(0)
+    executeOnDBMSDefault("joe", "soap", "MATCH ()-[r]-() RETURN r.name") should be(0)
   }
 
   test("should see properties and nodes depending on granted traverse and read privileges for role") {
@@ -203,7 +203,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
 
     // WHEN
     an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n), n.foo, n.bar") should be(0)
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN labels(n), n.foo, n.bar") should be(0)
     }
 
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -216,7 +216,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
       ("", 7, 8)
     )
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
       resultHandler = (row, index) => {
         (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
       }) should be(4)
@@ -232,7 +232,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
       ("", null, null)
     )
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
       resultHandler = (row, index) => {
         (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
       }) should be(4)
@@ -246,7 +246,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
       (":A:B", 5, 6)
     )
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
       resultHandler = (row, index) => {
         (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
       }) should be(2)
@@ -277,7 +277,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
 
     // WHEN
     an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n), n.foo, n.bar") should be(0)
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN labels(n), n.foo, n.bar") should be(0)
     }
 
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -290,7 +290,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
       ("", 7, 8)
     )
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
       resultHandler = (row, index) => {
         (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
       }) should be(4)
@@ -306,7 +306,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
       ("", null, null)
     )
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
       resultHandler = (row, index) => {
         (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
       }) should be(4)
@@ -320,7 +320,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
       (":A:B", 5, 6)
     )
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
       resultHandler = (row, index) => {
         (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
       }) should be(2)
@@ -350,7 +350,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
 
     // WHEN
     an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n), n.foo, n.bar") should be(0)
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN labels(n), n.foo, n.bar") should be(0)
     }
 
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -363,7 +363,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
       ("", 7, 8)
     )
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
       resultHandler = (row, index) => {
         (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
       }) should be(4)
@@ -379,7 +379,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
       ("", null, null)
     )
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
       resultHandler = (row, index) => {
         (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
       }) should be(4)
@@ -393,7 +393,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
       (":A:B", 5, 6)
     )
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
       resultHandler = (row, index) => {
         (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
       }) should be(2)
@@ -406,7 +406,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
 
     // WHEN
     an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n), n.foo, n.bar") should be(0)
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN labels(n), n.foo, n.bar") should be(0)
     }
 
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -425,7 +425,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
       ("", 7, 8)
     )
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
       resultHandler = (row, index) => {
         (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
       }) should be(4)
@@ -440,7 +440,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
       ("", null, null)
     )
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
       resultHandler = (row, index) => {
         (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
       }) should be(4)
@@ -453,7 +453,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
       (":A:B", 5, 6)
     )
 
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN reduce(s = '', x IN labels(n) | s + ':' + x) AS labels, n.foo, n.bar ORDER BY n.foo, n.bar",
       resultHandler = (row, index) => {
         (row.getString("labels"), row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
       }) should be(2)
@@ -475,7 +475,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     // THEN
     val expected = List((0, ":A"),(3, ":A:B"), (4, ":A:C"), (6, ":A:B:C"))  // Nodes with label :A
 
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.get("n.id"), row.get("labels")) should be(expected(index))
       }) should be(4)
@@ -485,7 +485,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("DENY TRAVERSE ON GRAPH * NODES * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
   }
 
   test("should not be able to traverse labels with grant and deny on all label traversal") {
@@ -514,7 +514,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
         (7, "")
       )
 
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.get("n.id"), row.get("labels")) should be(expected(index))
       }) should be(8)
@@ -524,14 +524,14 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("DENY TRAVERSE ON GRAPH * NODES * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
   }
 
   test("should see correct nodes and labels with grant traversal on all labels and deny on specific label") {
@@ -561,7 +561,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
         (7, "")
       )
 
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.get("n.id"), row.get("labels")) should be(expected1(index))
       }) should be(8)
@@ -580,7 +580,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
         (7, "")
       )
 
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.get("n.id"), row.get("labels")) should be(expected2(index))
       }) should be(4)
@@ -597,16 +597,16 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH (n:A) RETURN n") should be(2)
-    executeOnDefault("joe", "soap", "MATCH (n:B) RETURN n") should be(1)
+    executeOnDBMSDefault("joe", "soap", "MATCH (n:A) RETURN n") should be(2)
+    executeOnDBMSDefault("joe", "soap", "MATCH (n:B) RETURN n") should be(1)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("DENY TRAVERSE ON GRAPH * NODES B TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH (n:A) RETURN n") should be(1)
-    executeOnDefault("joe", "soap", "MATCH (n:B) RETURN n") should be(0)
+    executeOnDBMSDefault("joe", "soap", "MATCH (n:A) RETURN n") should be(1)
+    executeOnDBMSDefault("joe", "soap", "MATCH (n:B) RETURN n") should be(0)
 
   }
 
@@ -628,7 +628,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     // THEN
     val expected = List((0, ":A"),(4, ":A:C"))  // Nodes with label :A but not :B
 
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.get("n.id"), row.get("labels")) should be(expected(index))
       }) should be(2)
@@ -643,7 +643,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     val query = "MATCH (n) RETURN properties(n) as props ORDER BY n.foo, n.bar"
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       row.get("props") should equal(util.Collections.emptyMap())
     }) should be(4)
 
@@ -659,7 +659,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
       util.Collections.emptyMap() //:B or no labels
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should equal(expected1(index))
     }) should be(4)
 
@@ -675,7 +675,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
       util.Map.of("bar", 8L) //no labels
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should equal(expected2(index))
     }) should be(4)
 
@@ -701,7 +701,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
       }) should be(4)
@@ -711,7 +711,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("DENY READ {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, _) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be((null, null))
       }) should be(4)
@@ -721,7 +721,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT READ {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, _) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be((null, null))
       }) should be(4)
@@ -747,7 +747,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should equal(expected1(index))
       }) should be(4)
@@ -757,7 +757,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("DENY READ {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, _) => {
         row.get("props") should equal(util.Collections.emptyMap())
       }) should be(4)
@@ -767,7 +767,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT READ {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, _) => {
         row.get("props") should equal(util.Collections.emptyMap())
       }) should be(4)
@@ -793,7 +793,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
       }) should be(4)
@@ -810,7 +810,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
       }) should be(4)
@@ -820,7 +820,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT READ {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
       }) should be(4)
@@ -846,7 +846,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected1(index))
       }) should be(4)
@@ -863,7 +863,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected2(index))
       }) should be(4)
@@ -873,7 +873,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT READ {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected2(index))
       }) should be(4)
@@ -899,7 +899,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
       }) should be(4)
@@ -916,7 +916,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
       }) should be(4)
@@ -926,7 +926,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT READ {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
       }) should be(4)
@@ -952,7 +952,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected1(index))
       }) should be(4)
@@ -969,7 +969,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected2(index))
       }) should be(4)
@@ -979,7 +979,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT READ {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected2(index))
       }) should be(4)
@@ -1005,7 +1005,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
       }) should be(4)
@@ -1022,7 +1022,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
       }) should be(4)
@@ -1032,7 +1032,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT READ {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
       }) should be(4)
@@ -1058,7 +1058,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected1(index))
       }) should be(4)
@@ -1075,7 +1075,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected2(index))
       }) should be(4)
@@ -1085,7 +1085,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT READ {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected2(index))
       }) should be(4)
@@ -1111,7 +1111,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
       }) should be(4)
@@ -1128,7 +1128,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
       }) should be(4)
@@ -1145,7 +1145,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected3(index))
       }) should be(4)
@@ -1162,7 +1162,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected4(index))
       }) should be(4)
@@ -1179,7 +1179,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected5(index))
       }) should be(4)
@@ -1205,7 +1205,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected1(index))
       }) should be(4)
@@ -1222,7 +1222,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected2(index))
       }) should be(4)
@@ -1239,7 +1239,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected3(index))
       }) should be(4)
@@ -1256,7 +1256,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected4(index))
       }) should be(4)
@@ -1273,7 +1273,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected5(index))
       }) should be(4)
@@ -1299,7 +1299,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
       }) should be(4)
@@ -1309,14 +1309,14 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("DENY MATCH {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
   }
 
   test("should not be able read properties using properties() function when denied match privilege for all labels and all properties") {
@@ -1339,7 +1339,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected1(index))
       }) should be(4)
@@ -1349,14 +1349,14 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("DENY MATCH {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
   }
 
   test("should read correct properties when denied match privilege for all labels and specific property") {
@@ -1379,7 +1379,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
       }) should be(4)
@@ -1396,7 +1396,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
       }) should be(4)
@@ -1406,7 +1406,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT MATCH {foo} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
       }) should be(4)
@@ -1432,7 +1432,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected1(index))
       }) should be(4)
@@ -1449,7 +1449,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected2(index))
       }) should be(4)
@@ -1459,7 +1459,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT MATCH {foo} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected2(index))
       }) should be(4)
@@ -1485,7 +1485,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
       }) should be(4)
@@ -1500,7 +1500,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
       }) should be(2)
@@ -1510,7 +1510,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT MATCH {*} ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
       }) should be(2)
@@ -1536,7 +1536,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected1(index))
       }) should be(4)
@@ -1551,7 +1551,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected2(index))
       }) should be(2)
@@ -1561,7 +1561,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT MATCH {*} ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected2(index))
       }) should be(2)
@@ -1587,7 +1587,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected1(index))
       }) should be(4)
@@ -1604,7 +1604,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
       }) should be(4)
@@ -1614,7 +1614,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT MATCH {foo} ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
       }) should be(4)
@@ -1640,7 +1640,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected1(index))
       }) should be(4)
@@ -1657,7 +1657,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected2(index))
       }) should be(4)
@@ -1667,10 +1667,99 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT MATCH {foo} ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected2(index))
       }) should be(4)
+  }
+
+  test("should get correct count within transaction for restricted user") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT WRITE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A), (:A:B), (:B)")
+
+    val countQuery = "MATCH (n:A) RETURN count(n) as count"
+    val createAndCountQuery = "CREATE (x:A) WITH x MATCH (n:A) RETURN count(n) as count"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+
+    // THEN
+    executeOnDBMSDefault("joe", "soap", createAndCountQuery, resultHandler = (row, _) => {
+      row.get("count") should be(3) // committed (:A) and (:A:B) nodes and one in TX, but not the commited (:B) node
+    }) should be(1)
+
+    execute(countQuery).toList should be(List(Map("count" -> 3)))
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
+
+    // THEN
+    executeOnDBMSDefault("joe", "soap", createAndCountQuery, resultHandler = (row, _) => {
+      row.get("count") should be(4) // committed one more, and allowed traverse on all labels (but not matching on B)
+    }) should be(1)
+
+    execute(countQuery).toList should be(List(Map("count" -> 4)))
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * NODES B TO custom")
+
+    // THEN
+    executeOnDBMSDefault("joe", "soap", createAndCountQuery, resultHandler = (row, _) => {
+      row.get("count") should be(4) // Committed one more, but disallowed B so (:A:B) disappears
+    }) should be(1)
+
+    execute(countQuery).toList should be(List(Map("count" -> 5)))
+  }
+
+  test("should get correct count within transaction for restricted user using count store") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT WRITE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A), (:A:B), (:B)")
+
+    val countQuery = "MATCH (n:A) RETURN count(n) as count"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+
+    // THEN
+    executeOnDBMSDefault("joe", "soap", countQuery, requiredOperator = Some("NodeCountFromCountStore"), resultHandler = (row, _) => {
+      row.get("count") should be(3) // commited (:A) and (:A:B) nodes and one in TX, but not the commited (:B) node
+    }, executeBefore = tx => tx.createNode(Label.label("A"))) should be(1)
+
+    execute(countQuery).toList should be(List(Map("count" -> 3)))
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
+
+    // THEN
+    executeOnDBMSDefault("joe", "soap", countQuery, requiredOperator = Some("NodeCountFromCountStore"), resultHandler = (row, _) => {
+      row.get("count") should be(4) // commited one more, and allowed traverse on all labels (but not matching on B)
+    }, executeBefore = tx => tx.createNode(Label.label("A"))) should be(1)
+
+    execute(countQuery).toList should be(List(Map("count" -> 4)))
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * NODES B TO custom")
+
+    // THEN
+    executeOnDBMSDefault("joe", "soap", countQuery, requiredOperator = Some("NodeCountFromCountStore"), resultHandler = (row, _) => {
+      row.get("count") should be(4) // Commited one more, but disallowed B so (:A:B) disappears
+    }, executeBefore = tx => tx.createNode(Label.label("A"))) should be(1)
+
+    execute(countQuery).toList should be(List(Map("count" -> 5)))
   }
 
   test("should get correct nodes from NodeByIdSeek") {
@@ -1692,7 +1781,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     // THEN
 
     // Restricted user
-    executeOnDefault("joe", "soap", query,
+    executeOnDBMSDefault("joe", "soap", query,
       resultHandler = (row, _) => {
         row.get("n.prop") should be("visible")
       }, requiredOperator = Some("NodeByIdSeek")) should be(2)
@@ -1733,7 +1822,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
       (queryExists, expectedRangeExists, 2)
     ).foreach {
       case (query, expected, nbrRows) =>
-        executeOnDefault("customUser", "secret", query, resultHandler = (row, index) => {
+        executeOnDBMSDefault("customUser", "secret", query, resultHandler = (row, index) => {
           row.getNumber("n.foo") should be(expected(index))
         }) should be(nbrRows)
     }
@@ -1749,7 +1838,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
       (queryExists, expectedRangeExists, 2)
     ).foreach {
       case (query, expected, nbrRows) =>
-        executeOnDefault("customUser", "secret", query, resultHandler = (row, index) => {
+        executeOnDBMSDefault("customUser", "secret", query, resultHandler = (row, index) => {
           row.getNumber("n.foo") should be(expected(index))
         }) should be(nbrRows)
     }
@@ -1781,7 +1870,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
       (queryExists, expectedRangeExists, 1)
     ).foreach {
       case (query, expected, nbrRows) =>
-        executeOnDefault("customUser", "secret", query, resultHandler = (row, _) => {
+        executeOnDBMSDefault("customUser", "secret", query, resultHandler = (row, _) => {
           (row.getNumber("n.foo"), row.getNumber("n.prop")) should be(expected)
         }) should be(nbrRows)
     }
@@ -1796,7 +1885,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
       (queryExists, expectedRangeExists, 1)
     ).foreach {
       case (query, expected, nbrRows) =>
-        executeOnDefault("customUser", "secret", query, resultHandler = (row, _) => {
+        executeOnDBMSDefault("customUser", "secret", query, resultHandler = (row, _) => {
           (row.getNumber("n.foo"), row.getNumber("n.prop")) should be(expected)
         }) should be(nbrRows)
     }
@@ -1827,7 +1916,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
       (queryExists, expectedRangeExists, 2)
     ).foreach {
       case (query, expected, nbrRows) =>
-        executeOnDefault("customUser", "secret", query, resultHandler = (row, index) => {
+        executeOnDBMSDefault("customUser", "secret", query, resultHandler = (row, index) => {
           (row.getNumber("n.foo"), row.getNumber("n.prop")) should be(expected(index))
         }) should be(nbrRows)
     }
@@ -1842,7 +1931,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
       (queryExists, expectedRangeExists, 2)
     ).foreach {
       case (query, expected, nbrRows) =>
-        executeOnDefault("customUser", "secret", query, resultHandler = (row, index) => {
+        executeOnDBMSDefault("customUser", "secret", query, resultHandler = (row, index) => {
           (row.getNumber("n.foo"), row.getNumber("n.prop")) should be(expected(index))
         }) should be(nbrRows)
     }
@@ -1858,10 +1947,10 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("DENY TRAVERSE ON GRAPH * NODES B TO role")
     execute("GRANT WRITE ON GRAPH * TO role")
 
-    executeOnDefault("user", "secret", "MERGE (n:A {foo: 1})")
+    executeOnDBMSDefault("user", "secret", "MERGE (n:A {foo: 1})")
 
     val exception = the[QueryExecutionException] thrownBy {
-      executeOnDefault("user", "secret", "MERGE (n:A {foo: 5})")
+      executeOnDBMSDefault("user", "secret", "MERGE (n:A {foo: 5})")
     }
 
     exception.getMessage should include("already exists with label `A` and property `foo` = 5")
@@ -1892,7 +1981,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     Seq("user1" -> 1, "user2" -> 0, "user3" -> 0).foreach {
       case (user, count) =>
         val query = "MATCH (n:A) WHERE n.foo = 5 RETURN count(n)"
-        executeOnDefault(user, "secret", query, resultHandler = (row, _) => {
+        executeOnDBMSDefault(user, "secret", query, resultHandler = (row, _) => {
           withClue(s"User '$user' should get count $count for query '$query'") {
             row.get("count(n)") should be(count)
           }
@@ -1903,7 +1992,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     Seq("user1" -> 2, "user2" -> 1, "user3" -> 1).foreach {
       case (user, count) =>
         val query = "MATCH (n:A) WHERE n.foo > 0 RETURN count(n)"
-        executeOnDefault(user, "secret", query, resultHandler = (row, _) => {
+        executeOnDBMSDefault(user, "secret", query, resultHandler = (row, _) => {
           withClue(s"User '$user' should get count $count for query '$query'") {
             row.get("count(n)") should be(count)
           }
@@ -1914,7 +2003,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     Seq("user1" -> 2, "user2" -> 1, "user3" -> 1).foreach {
       case (user, count) =>
         val query = "MATCH (n:A) WHERE exists(n.foo) RETURN count(n)"
-        executeOnDefault(user, "secret", query, resultHandler = (row, _) => {
+        executeOnDBMSDefault(user, "secret", query, resultHandler = (row, _) => {
           withClue(s"User '$user' should get count $count for query '$query'") {
             row.get("count(n)") should be(count)
           }

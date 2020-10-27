@@ -126,12 +126,12 @@ class AllGraphPrivilegeAdministrationCommandAcceptanceTest extends Administratio
       // THEN
 
       // Should be allowed to traverse and read nodes
-      executeOnDefault(username, password, "MATCH (n:A) RETURN n.prop", resultHandler = (row, _) => {
+      executeOnDBMSDefault(username, password, "MATCH (n:A) RETURN n.prop", resultHandler = (row, _) => {
         row.get("n.prop") should be("nodeValue")
       }) should be(1)
 
       // Should be allowed to traverse and read relationships
-      executeOnDefault(username, password, "MATCH (:A)-[r:R]->(:B) RETURN r.prop", resultHandler = (row, _) => {
+      executeOnDBMSDefault(username, password, "MATCH (:A)-[r:R]->(:B) RETURN r.prop", resultHandler = (row, _) => {
         row.get("r.prop") should be("relValue")
       }) should be(1)
     }
@@ -153,16 +153,16 @@ class AllGraphPrivilegeAdministrationCommandAcceptanceTest extends Administratio
     // THEN
 
     // Should be allowed to create nodes and relationships
-    executeOnDefault(username, password, "CREATE (:A {prop:'value'})-[r:R {prop: 'relValue'}]->()")
+    executeOnDBMSDefault(username, password, "CREATE (:A {prop:'value'})-[r:R {prop: 'relValue'}]->()")
 
     // Should be allowed to set labels
-    executeOnDefault(username, password, "MATCH (n:A) SET n:B")
+    executeOnDBMSDefault(username, password, "MATCH (n:A) SET n:B")
 
     // Should be allowed to remove labels
-    executeOnDefault(username, password, "MATCH (n:A:B) REMOVE n:A")
+    executeOnDBMSDefault(username, password, "MATCH (n:A:B) REMOVE n:A")
 
     // Should be allowed to set property
-    executeOnDefault(username, password, "MATCH (n:B) SET n.prop = 'value2'")
+    executeOnDBMSDefault(username, password, "MATCH (n:B) SET n.prop = 'value2'")
 
     // Confirm that all writes took effect
     val result = execute("MATCH (n:B)-[r]->() RETURN n.prop, r.prop, labels(n) AS labels")
@@ -180,7 +180,7 @@ class AllGraphPrivilegeAdministrationCommandAcceptanceTest extends Administratio
 
     // not allowed to run database command
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault(username, password, "CREATE CONSTRAINT foo_constraint ON (n:Label) ASSERT n.prop IS NOT NULL")
+      executeOnDBMSDefault(username, password, "CREATE CONSTRAINT foo_constraint ON (n:Label) ASSERT n.prop IS NOT NULL")
     } should have message s"Schema operations are not allowed for user '$username' with roles [$PUBLIC, $roleName]."
 
      // not allowed to run dbms command
@@ -202,14 +202,14 @@ class AllGraphPrivilegeAdministrationCommandAcceptanceTest extends Administratio
     // THEN
 
     // Should not be allowed traverse
-    executeOnDefault(username, password, "MATCH (n:A) RETURN n") should be(0)
+    executeOnDBMSDefault(username, password, "MATCH (n:A) RETURN n") should be(0)
 
     // Should not be allowed read
-    executeOnDefault(username, password, "MATCH (n) RETURN n.prop") should be(0)
+    executeOnDBMSDefault(username, password, "MATCH (n) RETURN n.prop") should be(0)
 
     // Should not be allowed write
      the[AuthorizationViolationException] thrownBy {
-      executeOnDefault(username, password, "CREATE (:A {prop:'value'})")
+       executeOnDBMSDefault(username, password, "CREATE (:A {prop:'value'})")
     } should have message s"Create node with labels 'A' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
   }
 
@@ -227,14 +227,14 @@ class AllGraphPrivilegeAdministrationCommandAcceptanceTest extends Administratio
     // THEN
 
     // Should not be allowed traverse on default database
-    executeOnDefault(username, password, "MATCH (n:A) RETURN n") should be(0)
+    executeOnDBMSDefault(username, password, "MATCH (n:A) RETURN n") should be(0)
 
     // Should not be allowed read on default database
-    executeOnDefault(username, password, "MATCH (n) RETURN n.prop") should be(0)
+    executeOnDBMSDefault(username, password, "MATCH (n) RETURN n.prop") should be(0)
 
     // Should not be allowed write on default database
      the[AuthorizationViolationException] thrownBy {
-      executeOnDefault(username, password, "CREATE (:A {prop:'value'})")
+       executeOnDBMSDefault(username, password, "CREATE (:A {prop:'value'})")
     } should have message s"Create node with labels 'A' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
   }
 
@@ -252,12 +252,12 @@ class AllGraphPrivilegeAdministrationCommandAcceptanceTest extends Administratio
 
     // THEN
     // Should only be allowed to traverse :B
-       executeOnDefault(username, password, "MATCH (n) RETURN n.prop", resultHandler = (row, _) => {
+       executeOnDBMSDefault(username, password, "MATCH (n) RETURN n.prop", resultHandler = (row, _) => {
       row.get("n.prop") should be(2)
     }) should be(1)
 
     // Should still be allowed write
-    executeOnDefault(username, password, "CREATE (:A {prop: 3})")
+    executeOnDBMSDefault(username, password, "CREATE (:A {prop: 3})")
 
     execute("MATCH (n) RETURN n.prop").toSet should be(Set(Map("n.prop" -> 1), Map("n.prop" -> 2), Map("n.prop" -> 3)))
   }

@@ -19,6 +19,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     execute("GRANT DROP USER ON DBMS TO custom")
     execute("GRANT SHOW USER ON DBMS TO custom")
     execute("GRANT SET USER STATUS ON DBMS TO custom")
+    execute("GRANT SET USER DEFAULT DATABASE ON DBMS TO custom")
     execute("GRANT SET PASSWORDS ON DBMS TO custom")
     execute("GRANT ALTER USER ON DBMS TO custom")
     execute("GRANT USER MANAGEMENT ON DBMS TO custom")
@@ -33,6 +34,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
       granted(adminAction("show_user")).role("custom").map,
       granted(adminAction("set_user_status")).role("custom").map,
       granted(adminAction("set_passwords")).role("custom").map,
+      granted(adminAction("set_user_default_database")).role("custom").map,
       granted(adminAction("alter_user")).role("custom").map
     ))
   }
@@ -326,6 +328,49 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
         the[AuthorizationViolationException] thrownBy {
           executeOnSystem("foo", "bar", "ALTER USER user SET STATUS SUSPENDED")
         } should have message PERMISSION_DENIED_SET_USER_STATUS
+      }
+  }
+
+  //// SET USER DEFAULT DATABASE
+
+  Seq("alter user", "set user default database").foreach {
+    privilege =>
+      test(s"should enforce privilege for setting user default database with $privilege") {
+        // GIVEN
+        setupUserWithCustomRole("foo", "123")
+        execute("CREATE DATABASE bar")
+        execute("GRANT ACCESS ON DATABASE bar TO custom")
+
+        // WHEN
+        execute(s"GRANT $privilege ON DBMS TO custom")
+
+        // THEN
+        executeOnSystem("foo", "123", "ALTER USER foo DEFAULT DATABASE bar")
+        executeOnSystem("foo", "123", "SHOW DEFAULT DATABASE", resultHandler = (row, _) => {
+          row.get("name") should be ("bar")
+        }) should be (1)
+
+        // WHEN
+        execute(s"REVOKE $privilege ON DBMS FROM custom")
+
+        // THEN
+        the[AuthorizationViolationException] thrownBy {
+          executeOnSystem("foo", "123", "ALTER USER user DEFAULT DATABASE neo4j")
+        } should have message PERMISSION_DENIED_SET_USER_DEFAULT_DATABASE
+      }
+
+      test(s"should fail setting user default database when denied $privilege") {
+        // GIVEN
+        setupUserWithCustomAdminRole("foo", "bar")
+
+        // WHEN
+        execute("CREATE USER user SET PASSWORD 'abc'")
+        execute(s"DENY $privilege ON DBMS TO custom")
+
+        // THEN
+        the[AuthorizationViolationException] thrownBy {
+          executeOnSystem("foo", "bar", "ALTER USER user DEFAULT DATABASE neo4j")
+        } should have message PERMISSION_DENIED_SET_USER_DEFAULT_DATABASE
       }
   }
 

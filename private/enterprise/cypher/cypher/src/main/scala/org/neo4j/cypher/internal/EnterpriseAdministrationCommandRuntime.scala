@@ -167,6 +167,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
   private val create_drop_database_is_blocked = config.get(GraphDatabaseInternalSettings.block_create_drop_database)
   private val start_stop_database_is_blocked = config.get(GraphDatabaseInternalSettings.block_start_stop_database)
   private val operator_name = config.get(GraphDatabaseInternalSettings.upgrade_username)
+  private val default_database = config.get(GraphDatabaseSettings.default_database)
 
   override def name: String = "enterprise administration-commands"
 
@@ -220,15 +221,22 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // SHOW USERS
     case ShowUsers(source, symbols, yields, returns) => (context, parameterMapping) =>
+      val defaultDatabaseKey = internalKey("defaultDatabase")
       SystemCommandExecutionPlan("ShowUsers", normalExecutionEngine,
         s"""MATCH (u:User)
           |OPTIONAL MATCH (u)-[:HAS_ROLE]->(r:Role)
           |WITH u, r.name as roleNames ORDER BY roleNames
           |WITH u, collect(roleNames) as roles
-          |WITH u.name as user, roles + 'PUBLIC' as roles, u.passwordChangeRequired AS passwordChangeRequired, u.suspended AS suspended
+          |OPTIONAL MATCH (d:Database)
+          |WHERE d.name = u.defaultDatabase AND d.status = "online"
+          |WITH u.name as user, roles + 'PUBLIC' as roles, u.passwordChangeRequired AS passwordChangeRequired,
+          |u.suspended AS suspended,
+          |u.defaultDatabase as requestedDefaultDatabase,
+          |coalesce(d.name, $$`$defaultDatabaseKey`) as currentDefaultDatabase
           ${AdministrationShowCommandUtils.generateReturnClause(symbols, yields, returns, Seq("user"))}
           |""".stripMargin,
-        VirtualValues.EMPTY_MAP, source = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
+        VirtualValues.map(Array(defaultDatabaseKey), Array(Values.stringValue(default_database))),
+        source = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
       )
 
     // SHOW CURRENT USER
@@ -236,6 +244,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       val currentUserKey = internalKey("currentUser")
       val currentUserRolesKey = internalKey("currentUserRoles")
       val currentUserPwChangeKey = internalKey("currentUserPwChange")
+      val defaultDatabaseKey = internalKey("defaultDatabase")
 
       // securityContext.subject.username() is "" if the securityContext is AUTH_DISABLED (both for community and enterprise)
       // so test for this and return 0 rows in this case
@@ -244,15 +253,20 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
            |WHERE user <> ""
            |OPTIONAL MATCH (u:User)
            |WHERE u.name = $$`$currentUserKey`
-           |WITH user, roles, passwordChangeRequired, coalesce(u.suspended, false) AS suspended
+           |OPTIONAL MATCH (d:Database)
+           |WHERE d.name = u.defaultDatabase AND d.status = "online"
+           |WITH user, roles, passwordChangeRequired, coalesce(u.suspended, false) AS suspended,
+           |u.defaultDatabase as requestedDefaultDatabase,
+           |coalesce(d.name, $$`$defaultDatabaseKey`) as currentDefaultDatabase
            |${AdministrationShowCommandUtils.generateReturnClause(symbols, yields, returns, Seq("user"))}
            |""".stripMargin,
         VirtualValues.EMPTY_MAP,
         parameterGenerator = (_, securityContext) => VirtualValues.map(
-          Array(currentUserKey, currentUserRolesKey, currentUserPwChangeKey),
+          Array(currentUserKey, currentUserRolesKey, currentUserPwChangeKey, defaultDatabaseKey),
           Array(Values.utf8Value(securityContext.subject().username()),
             Values.stringArray(securityContext.roles().asScala.toArray: _*),
-            Values.booleanValue(securityContext.subject.getAuthenticationResult == AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+            Values.booleanValue(securityContext.subject.getAuthenticationResult == AuthenticationResult.PASSWORD_CHANGE_REQUIRED),
+            Values.stringValue(default_database)
           )),
       )
 
@@ -265,9 +279,9 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       makeCreateUserExecutionPlan(userName, isEncryptedPassword, password, requirePasswordChange, suspended, defaultDatabase, restrictedUsers)(sourcePlan, normalExecutionEngine)
 
     // ALTER USER foo [SET [PLAINTEXT | ENCRYPTED] PASSWORD pw] [CHANGE [NOT] REQUIRED] [SET STATUS ACTIVE]
-    case AlterUser(source, userName, isEncryptedPassword, password, requirePasswordChange, suspended) => (context, parameterMapping) =>
+    case AlterUser(source, userName, isEncryptedPassword, password, requirePasswordChange, suspended, defaultDatabase) => (context, parameterMapping) =>
       val sourcePlan: Option[ExecutionPlan] = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
-      makeAlterUserExecutionPlan(userName, isEncryptedPassword, password, requirePasswordChange, suspended)(sourcePlan, normalExecutionEngine)
+      makeAlterUserExecutionPlan(userName, isEncryptedPassword, password, requirePasswordChange, suspended, defaultDatabase)(sourcePlan, normalExecutionEngine)
 
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
     case ShowRoles(source, withUsers, showAll, symbols, yields, returns) => (context, parameterMapping) =>

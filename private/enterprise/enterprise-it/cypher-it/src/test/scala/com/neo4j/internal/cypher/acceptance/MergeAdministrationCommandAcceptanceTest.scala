@@ -307,7 +307,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
     execute("CREATE ()")
 
     // WHEN
-    executeOnDefault("joe", "soap", s"MERGE (n) ON CREATE SET n.prop = 'created' on MATCH SET n.prop='matched'")
+    executeOnDBMSDefault("joe", "soap", s"MERGE (n) ON CREATE SET n.prop = 'created' on MATCH SET n.prop='matched'")
 
     // THEN
     execute("MATCH (n) RETURN n.prop").toSet shouldBe Set(Map("n.prop" -> "matched"))
@@ -322,7 +322,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
     execute("CALL db.createProperty('prop')")
 
     // WHEN
-    executeOnDefault("joe", "soap", s"MERGE (n) ON CREATE SET n.prop = 'created' on MATCH SET n.prop='matched'")
+    executeOnDBMSDefault("joe", "soap", s"MERGE (n) ON CREATE SET n.prop = 'created' on MATCH SET n.prop='matched'")
 
     // THEN
     execute("MATCH (n) RETURN n.prop").toSet shouldBe Set(Map("n.prop" -> "created"))
@@ -339,7 +339,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
 
     // WHEN
     val exception = the [AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", s"MERGE (n) ON CREATE SET n.wrong = 'created' on MATCH SET n.wrong='matched'")
+      executeOnDBMSDefault("joe", "soap", s"MERGE (n) ON CREATE SET n.wrong = 'created' on MATCH SET n.wrong='matched'")
     }
     exception.getMessage should startWith("Set property for property 'wrong' is not allowed for user")
 
@@ -358,7 +358,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
 
     // WHEN
     val exception = the [AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", s"MERGE (n:Bar) ON CREATE SET n.prop = 'created' on MATCH SET n.prop='matched'")
+      executeOnDBMSDefault("joe", "soap", s"MERGE (n:Bar) ON CREATE SET n.prop = 'created' on MATCH SET n.prop='matched'")
     }
     exception.getMessage should startWith("Create node with labels 'Bar' is not allowed for user")
 
@@ -378,7 +378,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
 
     // WHEN
     val exception = the [AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", s"MERGE (n) ON CREATE SET n.wrong = 'created' on MATCH SET n.wrong='matched'")
+      executeOnDBMSDefault("joe", "soap", s"MERGE (n) ON CREATE SET n.wrong = 'created' on MATCH SET n.wrong='matched'")
     }
     exception.getMessage should startWith("Set property for property 'wrong' is not allowed for user")
 
@@ -399,7 +399,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
 
     // WHEN
     val exception = the [AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", s"MERGE (n:Bar) ON CREATE SET n.prop = 'created' on MATCH SET n.prop='matched'")
+      executeOnDBMSDefault("joe", "soap", s"MERGE (n:Bar) ON CREATE SET n.prop = 'created' on MATCH SET n.prop='matched'")
     }
     exception.getMessage should startWith("Set property for property 'prop' is not allowed for user")
 
@@ -417,7 +417,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
     execute("CALL db.createLabel('Foo')")
 
     // WHEN
-    executeOnDefault("joe", "soap", s"CREATE (:Foo {prop:'value'})")
+    executeOnDBMSDefault("joe", "soap", s"CREATE (:Foo {prop:'value'})")
 
     // THEN
     execute("MATCH (n) RETURN n.prop").toSet shouldBe Set(Map("n.prop" -> "value"))
@@ -434,7 +434,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
     execute("CREATE()")
 
     // WHEN
-    executeOnDefault("joe", "soap", s"MATCH (n) SET n.prop='value'")
+    executeOnDBMSDefault("joe", "soap", s"MATCH (n) SET n.prop='value'")
 
     // THEN
     execute("MATCH (n) RETURN n.prop").toSet shouldBe Set(Map("n.prop" -> "value"))
@@ -451,7 +451,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
     execute("CREATE (:Foo)")
 
     // WHEN
-    executeOnDefault("joe", "soap", s"MERGE (n:Foo) ON CREATE SET n.prop = 'created' on MATCH SET n.prop='matched'")
+    executeOnDBMSDefault("joe", "soap", s"MERGE (n:Foo) ON CREATE SET n.prop = 'created' on MATCH SET n.prop='matched'")
 
     // THEN
     execute("MATCH (n) RETURN n.prop").toSet shouldBe Set(Map("n.prop" -> null),Map("n.prop" -> "created"))
@@ -468,7 +468,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
 
     // WHEN
     Range(0, 10).foreach { _ =>
-      executeOnDefault("joe", "soap", "MERGE (n:Foo {visible:1}) ON MATCH SET n.visible = n.visible + 1")
+      executeOnDBMSDefault("joe", "soap", "MERGE (n:Foo {visible:1}) ON MATCH SET n.visible = n.visible + 1")
     }
 
     // THEN
@@ -490,7 +490,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
 
     // WHEN
     Range(0, 10).foreach { _ =>
-      executeOnDefault("joe", "soap", "MERGE (n:Foo {invisible:1}) ON CREATE SET n.visible = 1 on MATCH SET n.visible = n.visible + 1")
+      executeOnDBMSDefault("joe", "soap", "MERGE (n:Foo {invisible:1}) ON CREATE SET n.visible = 1 on MATCH SET n.visible = n.visible + 1")
     }
 
     // THEN
@@ -509,7 +509,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
     execute("CREATE (:Bar)")
 
     // WHEN
-    executeOnDefault("joe", "soap", s"MATCH (a:Foo), (b:Bar) MERGE (a)-[r:R1]->(b)")
+    executeOnDBMSDefault("joe", "soap", s"MATCH (a:Foo), (b:Bar) MERGE (a)-[r:R1]->(b)")
 
     // THEN
     execute("MATCH (a)-[r:R1]->(b) RETURN r").toSet should have size 1
@@ -527,7 +527,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
     execute("CREATE (:Bar)")
 
     // WHEN
-    executeOnDefault("joe", "soap", s"MATCH (a:Foo), (b:Bar) MERGE (a)-[r:R1{prop:'value'}]->(b)")
+    executeOnDBMSDefault("joe", "soap", s"MATCH (a:Foo), (b:Bar) MERGE (a)-[r:R1{prop:'value'}]->(b)")
 
     // THEN
     execute("MATCH (a)-[r:R1]->(b) RETURN r.prop").toSet should be(Set(Map("r.prop" -> "value")))
@@ -547,7 +547,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
 
     // WHEN
     val exception = the [AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", s"MATCH (a:Foo), (b:Bar) MERGE (a)-[r:R2]->(b)")
+      executeOnDBMSDefault("joe", "soap", s"MATCH (a:Foo), (b:Bar) MERGE (a)-[r:R2]->(b)")
     }
     exception.getMessage should startWith("Create relationship with type 'R2' is not allowed for user")
 
@@ -569,7 +569,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
 
     // WHEN
     val exception = the [AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", s"MATCH (a:Foo), (b:Bar) MERGE (a)-[r:R1{wrong:'value'}]->(b)")
+      executeOnDBMSDefault("joe", "soap", s"MATCH (a:Foo), (b:Bar) MERGE (a)-[r:R1{wrong:'value'}]->(b)")
     }
     exception.getMessage should startWith("Set property for property 'wrong' is not allowed for user")
 
@@ -588,7 +588,7 @@ class MergeAdministrationCommandAcceptanceTest extends AdministrationCommandAcce
     execute("CREATE (:Foo)-[:R1]->(:Bar)")
 
     // WHEN
-    executeOnDefault("joe", "soap", s"MATCH (a:Foo)-[r:R1]->(b:Bar) SET r.prop='value' ")
+    executeOnDBMSDefault("joe", "soap", s"MATCH (a:Foo)-[r:R1]->(b:Bar) SET r.prop='value' ")
 
     // THEN
     execute("MATCH (a)-[r:R1]->(b) RETURN r.prop").toSet should be(Set(Map("r.prop" -> "value")))

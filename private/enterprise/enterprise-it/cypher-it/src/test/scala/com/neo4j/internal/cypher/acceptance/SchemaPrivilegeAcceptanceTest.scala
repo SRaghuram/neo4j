@@ -514,7 +514,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)")
+      executeOnDBMSDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)")
     } should have message "Creating new node label is not allowed for user 'joe' with roles [PUBLIC, custom]. See GRANT CREATE NEW NODE LABEL ON DATABASE..."
 
     // THEN
@@ -527,7 +527,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)")
+      executeOnDBMSDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)")
     } should have message "Schema operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
@@ -539,7 +539,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)")
+      executeOnDBMSDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)")
     } should have message "Schema operation 'create_index' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
@@ -548,11 +548,11 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     setupUserWithCustomRole()
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
     execute("GRANT CREATE INDEX ON DATABASE * TO custom")
-    executeOnDefault("joe", "soap", s"CREATE INDEX $indexName FOR (u:User) ON (u.name)") should be(0)
+    executeOnDBMSDefault("joe", "soap", s"CREATE INDEX $indexName FOR (u:User) ON (u.name)") should be(0)
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", s"DROP INDEX $indexName")
+      executeOnDBMSDefault("joe", "soap", s"DROP INDEX $indexName")
     } should have message "Schema operation 'drop_index' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
@@ -565,7 +565,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       execute("CREATE (:User {name: 'Me'})")
 
       // WHEN
-      executeOnDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)") should be(0)
+      executeOnDBMSDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)") should be(0)
 
       // THEN
       assert(graph.getMaybeIndex("User", Seq("name")).isDefined)
@@ -584,7 +584,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       ))
 
       // WHEN & THEN
-      executeOnDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)") should be(0)
+      executeOnDBMSDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)") should be(0)
     }
 
     test("Should allow index dropping for normal user with index drop privilege") {
@@ -600,7 +600,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       ))
 
       // WHEN
-      executeOnDefault("joe", "soap", s"DROP INDEX $indexName") should be(0)
+      executeOnDBMSDefault("joe", "soap", s"DROP INDEX $indexName") should be(0)
 
       // THEN
       graph.getMaybeIndex(labelString, Seq(propString)) should be(None)
@@ -619,13 +619,13 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       ))
 
       // WHEN
-      executeOnDefault("joe", "soap", s"CREATE INDEX $indexName FOR (u:User) ON (u.name)") should be(0)
+      executeOnDBMSDefault("joe", "soap", s"CREATE INDEX $indexName FOR (u:User) ON (u.name)") should be(0)
 
       // THEN
       graph.getMaybeIndex("User", Seq("name")).isDefined should be(true)
 
       // WHEN
-      executeOnDefault("joe", "soap", s"DROP INDEX $indexName") should be(0)
+      executeOnDBMSDefault("joe", "soap", s"DROP INDEX $indexName") should be(0)
 
       // THEN
       graph.getMaybeIndex("User", Seq("name")).isDefined should be(false)
@@ -661,7 +661,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "SHOW INDEXES")
+      executeOnDBMSDefault("joe", "soap", "SHOW INDEXES")
     } should have message ShowSchemaNotAllowed("indexes")
   }
 
@@ -674,12 +674,12 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     withClue("db.indexes") {
-      executeOnDefault("joe", "soap", "CALL db.indexes()", resultHandler = checkName(indexName)) should be(1)
+      executeOnDBMSDefault("joe", "soap", "CALL db.indexes()", resultHandler = checkName(indexName)) should be(1)
     }
 
     // WHEN & THEN
     withClue("db.indexDetails") {
-      executeOnDefault("joe", "soap", s"CALL db.indexDetails('$indexName')", resultHandler = checkName(indexName)) should be(1)
+      executeOnDBMSDefault("joe", "soap", s"CALL db.indexDetails('$indexName')", resultHandler = checkName(indexName)) should be(1)
     }
   }
 
@@ -693,12 +693,12 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     withClue("db.indexes") {
-      executeOnDefault("joe", "soap", "CALL db.indexes()", resultHandler = checkName(indexName)) should be(1)
+      executeOnDBMSDefault("joe", "soap", "CALL db.indexes()", resultHandler = checkName(indexName)) should be(1)
     }
 
     // WHEN & THEN
     withClue("db.indexDetails") {
-      executeOnDefault("joe", "soap", s"CALL db.indexDetails('$indexName')", resultHandler = checkName(indexName)) should be(1)
+      executeOnDBMSDefault("joe", "soap", s"CALL db.indexDetails('$indexName')", resultHandler = checkName(indexName)) should be(1)
     }
   }
 
@@ -712,7 +712,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     val expected = Seq(constraintName, indexName)
-    executeOnDefault("joe", "soap", "SHOW INDEXES", resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", "SHOW INDEXES", resultHandler = (row, index) => {
       row.get("name") should be(expected(index))
     }) should be(2)
   }
@@ -725,7 +725,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("GRANT INDEX ON DATABASE * TO custom")
 
     // WHEN & THEN
-    executeOnDefault("joe", "soap", "SHOW INDEXES", resultHandler = checkName(indexName)) should be(1)
+    executeOnDBMSDefault("joe", "soap", "SHOW INDEXES", resultHandler = checkName(indexName)) should be(1)
   }
 
   test("Should allow showing indexes with all database privilege") {
@@ -736,7 +736,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("GRANT ALL ON DATABASE * TO custom")
 
     // WHEN & THEN
-    executeOnDefault("joe", "soap", "SHOW INDEXES", resultHandler = checkName(indexName)) should be(1)
+    executeOnDBMSDefault("joe", "soap", "SHOW INDEXES", resultHandler = checkName(indexName)) should be(1)
   }
 
   test("Should allow showing indexes with built in roles architect and admin") {
@@ -751,7 +751,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     withClue("Role: architect") {
-      executeOnDefault("joe", "soap", "SHOW INDEXES", resultHandler = checkName(indexName)) should be(1)
+      executeOnDBMSDefault("joe", "soap", "SHOW INDEXES", resultHandler = checkName(indexName)) should be(1)
     }
 
     // WHEN
@@ -761,7 +761,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     withClue("Role: admin") {
-      executeOnDefault("joe", "soap", "SHOW INDEXES", resultHandler = checkName(indexName)) should be(1)
+      executeOnDBMSDefault("joe", "soap", "SHOW INDEXES", resultHandler = checkName(indexName)) should be(1)
     }
   }
 
@@ -778,7 +778,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // THEN
     withClue("Role: reader") {
       the[AuthorizationViolationException] thrownBy {
-        executeOnDefault("joe", "soap", "SHOW INDEXES")
+        executeOnDBMSDefault("joe", "soap", "SHOW INDEXES")
       } should have message ShowSchemaNotAllowed("indexes", "reader")
     }
 
@@ -790,7 +790,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // THEN
     withClue("Role: editor") {
       the[AuthorizationViolationException] thrownBy {
-        executeOnDefault("joe", "soap", "SHOW INDEXES")
+        executeOnDBMSDefault("joe", "soap", "SHOW INDEXES")
       } should have message ShowSchemaNotAllowed("indexes", "editor")
     }
 
@@ -802,7 +802,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // THEN
     withClue("Role: editor") {
       the[AuthorizationViolationException] thrownBy {
-        executeOnDefault("joe", "soap", "SHOW INDEXES")
+        executeOnDBMSDefault("joe", "soap", "SHOW INDEXES")
       } should have message ShowSchemaNotAllowed("indexes", "publisher")
     }
   }
@@ -831,7 +831,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "SHOW INDEXES")
+      executeOnDBMSDefault("joe", "soap", "SHOW INDEXES")
     } should have message ShowSchemaNotAllowed("indexes")
   }
 
@@ -845,7 +845,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "SHOW INDEXES")
+      executeOnDBMSDefault("joe", "soap", "SHOW INDEXES")
     } should have message ShowSchemaNotAllowed("indexes")
   }
 
@@ -859,7 +859,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "SHOW INDEXES")
+      executeOnDBMSDefault("joe", "soap", "SHOW INDEXES")
     } should have message ShowSchemaNotAllowed("indexes")
   }
 
@@ -873,7 +873,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "SHOW INDEXES")
+      executeOnDBMSDefault("joe", "soap", "SHOW INDEXES")
     } should have message ShowSchemaNotAllowed("indexes")
   }
 
@@ -887,7 +887,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "SHOW INDEXES")
+      executeOnDBMSDefault("joe", "soap", "SHOW INDEXES")
     } should have message ShowSchemaNotAllowed("indexes")
   }
 
@@ -899,13 +899,13 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", s"CREATE INDEX FOR (n:$labelString) ON (n.$propString)")
+      executeOnDBMSDefault("joe", "soap", s"CREATE INDEX FOR (n:$labelString) ON (n.$propString)")
     } should have message "Schema operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
 
     // WHEN & THEN
     graph.createIndexWithName(indexName, labelString, propString)
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", s"DROP INDEX $indexName")
+      executeOnDBMSDefault("joe", "soap", s"DROP INDEX $indexName")
     } should have message "Schema operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
@@ -980,7 +980,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT n.name IS NOT NULL")
+      executeOnDBMSDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT n.name IS NOT NULL")
     } should have message "Creating new node label is not allowed for user 'joe' with roles [PUBLIC, custom]. See GRANT CREATE NEW NODE LABEL ON DATABASE..."
 
     // THEN
@@ -993,7 +993,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT n.name IS NOT NULL")
+      executeOnDBMSDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT n.name IS NOT NULL")
     } should have message "Schema operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
@@ -1005,7 +1005,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT n.name IS NOT NULL")
+      executeOnDBMSDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT n.name IS NOT NULL")
     } should have message "Schema operation 'create_constraint' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
@@ -1014,11 +1014,11 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     setupUserWithCustomRole()
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
     execute("GRANT CREATE CONSTRAINT ON DATABASE * TO custom")
-    executeOnDefault("joe", "soap", s"CREATE CONSTRAINT $constraintName ON (n:User) ASSERT n.name IS NOT NULL") should be(0)
+    executeOnDBMSDefault("joe", "soap", s"CREATE CONSTRAINT $constraintName ON (n:User) ASSERT n.name IS NOT NULL") should be(0)
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", s"DROP CONSTRAINT $constraintName")
+      executeOnDBMSDefault("joe", "soap", s"DROP CONSTRAINT $constraintName")
     } should have message "Schema operation 'drop_constraint' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
@@ -1043,7 +1043,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       execute("CREATE (:User {name: 'Me'})")
 
       // WHEN
-      executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT n.name IS NOT NULL") should be(0)
+      executeOnDBMSDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT n.name IS NOT NULL") should be(0)
 
       // THEN
       assert(graph.getMaybeNodeConstraint("User", Seq("name")).isDefined)
@@ -1062,7 +1062,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       ))
 
       // WHEN & THEN
-      executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT n.name IS NOT NULL") should be(0)
+      executeOnDBMSDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT n.name IS NOT NULL") should be(0)
     }
 
     test("Should allow constraint dropping for normal user with constraint drop privilege") {
@@ -1078,7 +1078,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       ))
 
       // WHEN
-      executeOnDefault("joe", "soap", s"DROP CONSTRAINT $constraintName") should be(0)
+      executeOnDBMSDefault("joe", "soap", s"DROP CONSTRAINT $constraintName") should be(0)
 
       // THEN
       graph.getMaybeNodeConstraint(labelString, Seq(propString)) should be(None)
@@ -1097,13 +1097,13 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       ))
 
       // WHEN
-      executeOnDefault("joe", "soap", s"CREATE CONSTRAINT $constraintName ON (u:User) ASSERT u.name IS NOT NULL") should be(0)
+      executeOnDBMSDefault("joe", "soap", s"CREATE CONSTRAINT $constraintName ON (u:User) ASSERT exists(u.name)") should be(0)
 
       // THEN
       graph.getMaybeNodeConstraint("User", Seq("name")).isDefined should be(true)
 
       // WHEN
-      executeOnDefault("joe", "soap", s"DROP CONSTRAINT $constraintName") should be(0)
+      executeOnDBMSDefault("joe", "soap", s"DROP CONSTRAINT $constraintName") should be(0)
 
       // THEN
       graph.getMaybeNodeConstraint("User", Seq("name")).isDefined should be(false)
@@ -1127,7 +1127,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "SHOW CONSTRAINTS")
+      executeOnDBMSDefault("joe", "soap", "SHOW CONSTRAINTS")
     } should have message ShowSchemaNotAllowed("constraints")
   }
 
@@ -1140,12 +1140,12 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     withClue("db.constraints") {
-      executeOnDefault("joe", "soap", "CALL db.constraints()", resultHandler = checkName(constraintName)) should be(1)
+      executeOnDBMSDefault("joe", "soap", "CALL db.constraints()", resultHandler = checkName(constraintName)) should be(1)
     }
 
     // WHEN & THEN (shows both index and constraint)
     withClue("db.schemaStatements") {
-      executeOnDefault("joe", "soap", "CALL db.schemaStatements()", resultHandler = checkName(constraintName)) should be(1)
+      executeOnDBMSDefault("joe", "soap", "CALL db.schemaStatements()", resultHandler = checkName(constraintName)) should be(1)
     }
   }
 
@@ -1159,12 +1159,12 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     withClue("db.constraints") {
-      executeOnDefault("joe", "soap", "CALL db.constraints()", resultHandler = checkName(constraintName)) should be(1)
+      executeOnDBMSDefault("joe", "soap", "CALL db.constraints()", resultHandler = checkName(constraintName)) should be(1)
     }
 
     // WHEN & THEN (shows both index and constraint)
     withClue("db.schemaStatements") {
-      executeOnDefault("joe", "soap", "CALL db.schemaStatements()", resultHandler = checkName(constraintName)) should be(1)
+      executeOnDBMSDefault("joe", "soap", "CALL db.schemaStatements()", resultHandler = checkName(constraintName)) should be(1)
     }
   }
 
@@ -1176,7 +1176,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute(s"GRANT SHOW CONSTRAINT ON DATABASE $DEFAULT_DATABASE_NAME TO custom")
 
     // WHEN & THEN
-    executeOnDefault("joe", "soap", "SHOW CONSTRAINTS", resultHandler = checkName(constraintName)) should be(1)
+    executeOnDBMSDefault("joe", "soap", "SHOW CONSTRAINTS", resultHandler = checkName(constraintName)) should be(1)
   }
 
   test("Should allow showing constraints with constraint management privilege") {
@@ -1191,7 +1191,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     val expected = Seq("constraint1", "constraint2", "constraint3", "constraint4")
-    executeOnDefault("joe", "soap", "SHOW CONSTRAINTS", resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", "SHOW CONSTRAINTS", resultHandler = (row, index) => {
       row.get("name") should be(expected(index))
     }) should be(4)
   }
@@ -1204,7 +1204,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("GRANT ALL ON DATABASE * TO custom")
 
     // WHEN & THEN
-    executeOnDefault("joe", "soap", "SHOW CONSTRAINTS", resultHandler = checkName(constraintName)) should be(1)
+    executeOnDBMSDefault("joe", "soap", "SHOW CONSTRAINTS", resultHandler = checkName(constraintName)) should be(1)
   }
 
   test("Should allow showing constraints with built in roles architect and admin") {
@@ -1219,7 +1219,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     withClue("Role: architect") {
-      executeOnDefault("joe", "soap", "SHOW CONSTRAINTS", resultHandler = checkName(constraintName)) should be(1)
+      executeOnDBMSDefault("joe", "soap", "SHOW CONSTRAINTS", resultHandler = checkName(constraintName)) should be(1)
     }
 
     // WHEN
@@ -1229,7 +1229,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     withClue("Role: admin") {
-      executeOnDefault("joe", "soap", "SHOW CONSTRAINTS", resultHandler = checkName(constraintName)) should be(1)
+      executeOnDBMSDefault("joe", "soap", "SHOW CONSTRAINTS", resultHandler = checkName(constraintName)) should be(1)
     }
   }
 
@@ -1246,7 +1246,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // THEN
     withClue("Role: reader") {
       the[AuthorizationViolationException] thrownBy {
-        executeOnDefault("joe", "soap", "SHOW CONSTRAINTS")
+        executeOnDBMSDefault("joe", "soap", "SHOW CONSTRAINTS")
       } should have message ShowSchemaNotAllowed("constraints", "reader")
     }
 
@@ -1258,7 +1258,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // THEN
     withClue("Role: editor") {
       the[AuthorizationViolationException] thrownBy {
-        executeOnDefault("joe", "soap", "SHOW CONSTRAINTS")
+        executeOnDBMSDefault("joe", "soap", "SHOW CONSTRAINTS")
       } should have message ShowSchemaNotAllowed("constraints", "editor")
     }
 
@@ -1270,7 +1270,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // THEN
     withClue("Role: editor") {
       the[AuthorizationViolationException] thrownBy {
-        executeOnDefault("joe", "soap", "SHOW CONSTRAINTS")
+        executeOnDBMSDefault("joe", "soap", "SHOW CONSTRAINTS")
       } should have message ShowSchemaNotAllowed("constraints", "publisher")
     }
   }
@@ -1299,7 +1299,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "SHOW CONSTRAINTS")
+      executeOnDBMSDefault("joe", "soap", "SHOW CONSTRAINTS")
     } should have message ShowSchemaNotAllowed("constraints")
   }
 
@@ -1313,7 +1313,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "SHOW CONSTRAINTS")
+      executeOnDBMSDefault("joe", "soap", "SHOW CONSTRAINTS")
     } should have message ShowSchemaNotAllowed("constraints")
   }
 
@@ -1327,7 +1327,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "SHOW CONSTRAINTS")
+      executeOnDBMSDefault("joe", "soap", "SHOW CONSTRAINTS")
     } should have message ShowSchemaNotAllowed("constraints")
   }
 
@@ -1341,7 +1341,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "SHOW CONSTRAINTS")
+      executeOnDBMSDefault("joe", "soap", "SHOW CONSTRAINTS")
     } should have message ShowSchemaNotAllowed("constraints")
   }
 
@@ -1354,7 +1354,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "SHOW CONSTRAINTS")
+      executeOnDBMSDefault("joe", "soap", "SHOW CONSTRAINTS")
     } should have message ShowSchemaNotAllowed("constraints")
   }
 
@@ -1366,13 +1366,13 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (u:User) ASSERT (u.name) IS UNIQUE")
+      executeOnDBMSDefault("joe", "soap", "CREATE CONSTRAINT ON (u:User) ASSERT (u.name) IS UNIQUE")
     } should have message "Schema operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
 
     // WHEN & THEN
     graph.createUniqueConstraintWithName(constraintName, labelString, propString)
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", s"DROP CONSTRAINT $constraintName")
+      executeOnDBMSDefault("joe", "soap", s"DROP CONSTRAINT $constraintName")
     } should have message "Schema operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
@@ -1452,12 +1452,12 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CREATE (n:User) RETURN n")
+      executeOnDBMSDefault("joe", "soap", "CREATE (n:User) RETURN n")
     } should have message "Creating new node label is not allowed for user 'joe' with roles [PUBLIC, custom]. See GRANT CREATE NEW NODE LABEL ON DATABASE..."
 
     // WHEN & THEN
     the[QueryExecutionException] thrownBy {
-      executeOnDefault("joe", "soap", "CALL db.createLabel('A')")
+      executeOnDBMSDefault("joe", "soap", "CALL db.createLabel('A')")
     } should have message "Creating new node label is not allowed for user 'joe' with roles [PUBLIC, custom] restricted to TOKEN_WRITE. " +
       "See GRANT CREATE NEW NODE LABEL ON DATABASE..."
   }
@@ -1470,13 +1470,13 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CREATE ()-[n:Rel]->() RETURN n")
+      executeOnDBMSDefault("joe", "soap", "CREATE ()-[n:Rel]->() RETURN n")
     } should have message "Creating new relationship type is not allowed for user 'joe' with roles [PUBLIC, custom]. " +
       "See GRANT CREATE NEW RELATIONSHIP TYPE ON DATABASE..."
 
     // WHEN & THEN
     the[QueryExecutionException] thrownBy {
-      executeOnDefault("joe", "soap", "CALL db.createRelationshipType('A')")
+      executeOnDBMSDefault("joe", "soap", "CALL db.createRelationshipType('A')")
     } should have message "Creating new relationship type is not allowed for user 'joe' with roles [PUBLIC, custom] restricted to TOKEN_WRITE. " +
       "See GRANT CREATE NEW RELATIONSHIP TYPE ON DATABASE..."
   }
@@ -1489,19 +1489,19 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CREATE (n:User {name: 'Alice'}) RETURN n")
+      executeOnDBMSDefault("joe", "soap", "CREATE (n:User {name: 'Alice'}) RETURN n")
     } should have message "Creating new property name is not allowed for user 'joe' with roles [PUBLIC, custom]. " +
       "See GRANT CREATE NEW PROPERTY NAME ON DATABASE..."
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CREATE ()-[n:Rel {prop: 'value'}]->() RETURN n")
+      executeOnDBMSDefault("joe", "soap", "CREATE ()-[n:Rel {prop: 'value'}]->() RETURN n")
     } should have message "Creating new property name is not allowed for user 'joe' with roles [PUBLIC, custom]. " +
       "See GRANT CREATE NEW PROPERTY NAME ON DATABASE..."
 
     // WHEN & THEN
     the[QueryExecutionException] thrownBy {
-      executeOnDefault("joe", "soap", "CALL db.createProperty('age')")
+      executeOnDBMSDefault("joe", "soap", "CALL db.createProperty('age')")
     } should have message "Creating new property name is not allowed for user 'joe' with roles [PUBLIC, custom] restricted to TOKEN_WRITE. " +
       "See GRANT CREATE NEW PROPERTY NAME ON DATABASE..."
   }
@@ -1513,7 +1513,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CREATE (n:User {name: 'Alice'}) RETURN n.name")
+      executeOnDBMSDefault("joe", "soap", "CREATE (n:User {name: 'Alice'}) RETURN n.name")
     } should have message "Creating new property name is not allowed for user 'joe' with roles [PUBLIC, custom]. " +
       "See GRANT CREATE NEW PROPERTY NAME ON DATABASE..."
   }
@@ -1525,7 +1525,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CREATE ()-[r:Rel {prop: 'value'}]->() RETURN r.prop")
+      executeOnDBMSDefault("joe", "soap", "CREATE ()-[r:Rel {prop: 'value'}]->() RETURN r.prop")
     } should have message "Creating new property name is not allowed for user 'joe' with roles [PUBLIC, custom]. " +
       "See GRANT CREATE NEW PROPERTY NAME ON DATABASE..."
   }
@@ -1537,7 +1537,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       execute("GRANT CREATE NEW LABEL ON DATABASE * TO custom")
 
       // WHEN & THEN
-      executeOnDefault("joe", "soap", "CALL db.createLabel('A')") should be(0)
+      executeOnDBMSDefault("joe", "soap", "CALL db.createLabel('A')") should be(0)
     }
 
     test("Should allow type creation for normal user with type create privilege") {
@@ -1545,7 +1545,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       execute("GRANT CREATE NEW TYPE ON DATABASE * TO custom")
 
       // WHEN & THEN
-      executeOnDefault("joe", "soap", "CALL db.createRelationshipType('A')") should be(0)
+      executeOnDBMSDefault("joe", "soap", "CALL db.createRelationshipType('A')") should be(0)
     }
 
     test("Should allow property key creation for normal user with name creation privilege") {
@@ -1554,7 +1554,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       selectDatabase(DEFAULT_DATABASE_NAME)
 
       // WHEN & THEN
-      executeOnDefault("joe", "soap", "CALL db.createProperty('age')") should be(0)
+      executeOnDBMSDefault("joe", "soap", "CALL db.createProperty('age')") should be(0)
     }
 
     test("Should allow all creation for normal user with name management privilege") {
@@ -1563,7 +1563,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
 
       // WHEN & THEN
-      executeOnDefault("joe", "soap", "CREATE (n:User {name: 'Alice'})-[:KNOWS {since: 2019}]->(:User {name: 'Bob'}) RETURN n.name", resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", "CREATE (n:User {name: 'Alice'})-[:KNOWS {since: 2019}]->(:User {name: 'Bob'}) RETURN n.name", resultHandler = (row, _) => {
         row.get("n.name") should be("Alice")
       }) should be(1)
     }
@@ -1653,7 +1653,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       execute("GRANT ALL ON DATABASE * TO custom")
 
       // WHEN & THEN
-      executeOnDefault("joe", "soap", "CREATE (n:User {name: 'Alice'})-[:KNOWS {since: 2019}]->(:User {name: 'Bob'}) RETURN n.name", resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", "CREATE (n:User {name: 'Alice'})-[:KNOWS {since: 2019}]->(:User {name: 'Bob'}) RETURN n.name", resultHandler = (row, _) => {
         row.get("n.name") should be("Alice")
       }) should be(1)
     }

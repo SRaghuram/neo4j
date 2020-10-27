@@ -373,6 +373,8 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       row.get("roles") should be(Array("custom", "PUBLIC"))
       row.get("passwordChangeRequired") shouldBe false
       row.get("suspended") shouldBe false
+      row.get("requestedDefaultDatabase") shouldBe null
+      row.get("currentDefaultDatabase") shouldBe DEFAULT_DATABASE_NAME
     }) should be(1)
   }
 
@@ -404,6 +406,8 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
         row.get("roles") should be(Array("custom", "PUBLIC"))
         row.get("passwordChangeRequired") shouldBe false
         row.get("suspended") shouldBe false
+        row.get("requestedDefaultDatabase") shouldBe null
+        row.get("currentDefaultDatabase") shouldBe DEFAULT_DATABASE_NAME
       }) should be(1)
   }
 
@@ -599,7 +603,8 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE USER foo SET PLAINTEXT PASSWORD 'password' CHANGE NOT REQUIRED SET STATUS SUSPENDED DEFAULT DATABASE neo4j")
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo", passwordChangeRequired = false, suspended = true))
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo", passwordChangeRequired = false, suspended = true,
+      requestedDefaultDatabase = DEFAULT_DATABASE_NAME))
   }
 
   test("should fail when creating already existing user") {
@@ -842,6 +847,31 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
+  test("should create user with default database") {
+    // GIVEN
+    val username = "foo"
+    execute("CREATE DATABASE bar")
+
+    // WHEN
+    execute(s"CREATE USER $username SET PASSWORD $$password DEFAULT DATABASE $$database", Map("password" -> "pass", "database" -> "bar"))
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user(username, requestedDefaultDatabase = "bar", currentDefaultDatabase = "bar"))
+    testUserLogin(username, "pass", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+  }
+
+  test("should create user with default database that does not exist") {
+    // GIVEN
+    val username = "foo"
+
+    // WHEN
+    execute(s"CREATE USER $username SET PASSWORD $$password DEFAULT DATABASE $$database", Map("password" -> "pass", "database" -> "bar"))
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user(username, requestedDefaultDatabase = "bar", currentDefaultDatabase = DEFAULT_DATABASE_NAME))
+    testUserLogin(username, "pass", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+  }
+
   // Tests for dropping users
 
   test("should drop user") {
@@ -1081,7 +1111,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       execute("ALTER USER foo SET PASSWORD 'imAString'+$password", Map("password" -> "imAParameter"))
       // THEN
     }
-    exception.getMessage should include("Invalid input '+': expected whitespace, SET, CHANGE, ';' or end of input")
+    exception.getMessage should include("Invalid input '+': expected whitespace, SET, CHANGE, DEFAULT DATABASE db, ';' or end of input")
   }
 
   test("should fail when altering user password as missing parameter") {
@@ -1127,7 +1157,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("alice", "abc", "MATCH (n) RETURN n")
+      executeOnDBMSDefault("alice", "abc", "MATCH (n) RETURN n")
     } should have message String.format("Permission denied." + PASSWORD_CHANGE_REQUIRED_MESSAGE)
   }
 
@@ -1496,6 +1526,58 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     testUserLogin(username, oldPassword, AuthenticationResult.FAILURE)
     testUserLogin(username, encryptedPassword, AuthenticationResult.FAILURE)
     testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+  }
+
+  test("should alter users default database") {
+    // GIVEN
+    execute("CREATE USER foo SET PASSWORD 'password' CHANGE NOT REQUIRED")
+    execute("CREATE DATABASE bar")
+    execute("GRANT ACCESS ON DATABASE bar to PUBLIC")
+
+    // WHEN
+    execute(s"ALTER USER foo DEFAULT DATABASE bar")
+
+    // THEN
+    executeOnSystem("foo", "password", "SHOW DATABASE bar", resultHandler = (row, _) => {
+      // THEN
+      row.get("name") should be("bar")
+      withClue("bar should be default database: ")(row.get("default") shouldBe(true))
+      withClue("bar should not be system default database: ")(row.get("systemDefault") shouldBe(false))
+    }) should be (1)
+  }
+
+  test("should alter users default database with parameter") {
+    // GIVEN
+    execute("CREATE USER foo SET PASSWORD 'password' CHANGE NOT REQUIRED")
+    execute("CREATE DATABASE bar")
+    execute("GRANT ACCESS ON DATABASE bar to PUBLIC")
+
+    // WHEN
+    execute(s"ALTER USER foo DEFAULT DATABASE $$db", Map("db" -> "bar"))
+
+    // THEN
+    executeOnSystem("foo", "password", "SHOW DATABASE bar", resultHandler = (row, _) => {
+      // THEN
+      row.get("name") should be("bar")
+      withClue("bar should be default database: ")(row.get("default") shouldBe(true))
+      withClue("bar should not be system default database: ")(row.get("systemDefault") shouldBe(false))
+    }) should be (1)
+  }
+
+  test("should alter users default database to non-existent database") {
+    // GIVEN
+    execute("CREATE USER foo SET PASSWORD 'password' CHANGE NOT REQUIRED")
+
+    // WHEN
+    execute(s"ALTER USER foo DEFAULT DATABASE $$db", Map("db" -> "doesnotexist"))
+
+    // THEN
+    executeOnSystem("foo", "password", "SHOW CURRENT USER", resultHandler = (row, _) => {
+      // THEN
+      row.get("user") should be("foo")
+      row.get("requestedDefaultDatabase") shouldBe("doesnotexist")
+      row.get("currentDefaultDatabase") shouldBe("neo4j")
+    }) should be (1)
   }
 
   // Tests for changing own password

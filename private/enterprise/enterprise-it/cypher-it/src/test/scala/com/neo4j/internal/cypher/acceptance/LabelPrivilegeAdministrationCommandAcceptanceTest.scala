@@ -292,7 +292,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       execute("CREATE ()")
 
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (n) SET n:Label")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) SET n:Label")
 
       // THEN
       execute("MATCH (n:Label) RETURN n").toSet should have size 1
@@ -309,7 +309,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       execute("MATCH (n:Label) RETURN n").toSet should have size 1
 
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (n) Remove n:Label")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) Remove n:Label")
 
       // THEN
       execute("MATCH (n:Label) RETURN n.name").toSet should be(Set.empty)
@@ -327,12 +327,12 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("CALL db.createLabel('foo')")
     execute("CREATE ()")
 
-    executeOnDefault("joe", "soap", "MATCH (n) SET n:foo")
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) SET n:foo")
     execute("MATCH (n:foo) RETURN n").toSet should have size 1
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (n) SET n:bar")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) SET n:bar")
       // THEN
     } should have message "Set label for label 'bar' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
@@ -347,12 +347,12 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("CREATE (:Label :AnotherLabel)")
 
     // WHEN
-    executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:Label")
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) REMOVE n:Label")
     execute("MATCH (n:Label) RETURN n").toSet should have size 0
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:AnotherLabel")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) REMOVE n:AnotherLabel")
       // THEN
     } should have message "Remove label for label 'AnotherLabel' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
@@ -373,7 +373,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (n) SET n:Label")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) SET n:Label")
       // THEN
     } should have message "Set label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
@@ -390,7 +390,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:Label")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) REMOVE n:Label")
       // THEN
     } should have message "Remove label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
@@ -409,7 +409,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (n) SET n:Label")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) SET n:Label")
       // THEN
     } should have message "Set label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
@@ -426,7 +426,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:Label")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) REMOVE n:Label")
       // THEN
     } should have message "Remove label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
@@ -444,7 +444,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (n) SET n:Label")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) SET n:Label")
       // THEN
     } should have message "Set label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
@@ -465,7 +465,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (n) SET n:Label")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) SET n:Label")
       // THEN
     } should have message "Set label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
@@ -485,7 +485,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:Label")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) REMOVE n:Label")
       // THEN
     } should have message "Remove label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
@@ -505,7 +505,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:Label")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) REMOVE n:Label")
       // THEN
     } should have message "Remove label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
@@ -523,7 +523,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("CREATE (:Label)")
 
     // WHEN
-    executeOnDefault("joe", "soap", "MATCH (n) SET n:Label")
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) SET n:Label")
 
     // THEN
     execute("MATCH (n:Label) RETURN n").toSet should have size 1
@@ -539,7 +539,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("CREATE (:Label)")
 
     // WHEN
-    executeOnDefault("joe", "soap", "MATCH (n) SET n:Label")
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) SET n:Label")
 
     // THEN
     execute("MATCH (n:Label) RETURN n").toSet should have size 1
@@ -555,7 +555,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("CREATE (:Label)")
 
     // WHEN
-    executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:AnotherLabel RETURN n")
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) REMOVE n:AnotherLabel RETURN n")
 
     // THEN
     execute("MATCH (n:Label) RETURN n").toSet should have size 1
@@ -571,7 +571,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("CREATE (:Label)")
 
     // WHEN
-    executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:AnotherLabel")
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) REMOVE n:AnotherLabel")
 
     // THEN
     execute("MATCH (n:Label) RETURN n").toSet should have size 1
@@ -587,7 +587,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("CREATE ()")
     execute("CALL db.createLabel('Label')")
 
-    executeOnDefault("joe", "soap", "MATCH (n:Label) REMOVE n:Label", executeBefore = tx => {
+    executeOnDBMSDefault("joe", "soap", "MATCH (n:Label) REMOVE n:Label", executeBefore = tx => {
       tx.execute("MATCH (n) SET n:Label")
     })
   }
@@ -605,7 +605,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (n:Label) REMOVE n:Label", executeBefore = tx => {
+      executeOnDBMSDefault("joe", "soap", "MATCH (n:Label) REMOVE n:Label", executeBefore = tx => {
         tx.execute("MATCH (n) SET n:Label")
       })
       // THEN
@@ -621,7 +621,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:Label)")
 
-    executeOnDefault("joe", "soap", "MATCH (n) SET n:Label", executeBefore = tx => {
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) SET n:Label", executeBefore = tx => {
       tx.execute("MATCH (n:Label) REMOVE n:Label")
     })
   }
@@ -638,7 +638,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (n) SET n:Label", executeBefore = tx => {
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) SET n:Label", executeBefore = tx => {
         tx.execute("MATCH (n:Label) REMOVE n:Label")
       })
     } should have message "Set label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
@@ -654,7 +654,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("CALL db.createLabel('Label')")
 
     // WHEN
-    executeOnDefault( "joe", "soap", "MATCH (n) SET n:Label")
+    executeOnDBMSDefault( "joe", "soap", "MATCH (n) SET n:Label")
 
     //THEN
     execute("MATCH (n:Label) RETURN n").toSet should have size 1
@@ -670,7 +670,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("CALL db.createLabel('Label')")
 
     // WHEN
-    executeOnDefault( "joe", "soap", "MATCH (n) SET n:Label")
+    executeOnDBMSDefault( "joe", "soap", "MATCH (n) SET n:Label")
 
     //THEN
     execute("MATCH (n:Label) RETURN n").toSet should have size 1
@@ -687,7 +687,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // WHEN, THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault( "joe", "soap", "MATCH (n) SET n:OtherLabel")
+      executeOnDBMSDefault( "joe", "soap", "MATCH (n) SET n:OtherLabel")
     } should have message "Set label for label 'OtherLabel' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
   }
@@ -717,7 +717,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("CREATE (n:Label)")
 
     // WHEN
-    executeOnDefault( "joe", "soap", "MATCH (n:Label) REMOVE n:Label")
+    executeOnDBMSDefault( "joe", "soap", "MATCH (n:Label) REMOVE n:Label")
 
     //THEN
     execute("MATCH(n:Label) RETURN count(n)").toSet should be(Set(Map("count(n)" -> 0)))
@@ -735,7 +735,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:Label")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) REMOVE n:Label")
       // THEN
     } should have message "Remove label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
@@ -770,7 +770,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // WHEN, THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault( "joe", "soap", "MATCH (n) SET n:Label")
+      executeOnDBMSDefault( "joe", "soap", "MATCH (n) SET n:Label")
     } should have message "Set label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 

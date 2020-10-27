@@ -86,6 +86,7 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ROLE_MANAGE
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_LABEL;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_PASSWORDS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_PROPERTY;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_USER_DEFAULT_DATABASE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_USER_STATUS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SHOW_CONNECTION;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SHOW_CONSTRAINT;
@@ -151,6 +152,7 @@ class PrivilegesAsCommandsIT
                 CREATE_USER == action ||
                 SET_USER_STATUS == action ||
                 SET_PASSWORDS == action ||
+                SET_USER_DEFAULT_DATABASE == action ||
                 DROP_USER == action ||
                 SHOW_ROLE == action ||
                 CREATE_ROLE == action ||

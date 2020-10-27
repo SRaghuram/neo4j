@@ -293,7 +293,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
       execute("CREATE ()")
 
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (n) SET n.prop = 'value'")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) SET n.prop = 'value'")
 
       // THEN
       execute("MATCH (n{prop:'value'}) RETURN n").toSet should have size 1
@@ -310,7 +310,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
       execute("CREATE ({prop:'value'})")
 
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (n) SET n.prop = null")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) SET n.prop = null")
 
       // THEN
       execute("match (n{prop:'value'}) return n").toSet should have size 0
@@ -328,10 +328,10 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
       execute("CREATE ()")
 
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (n) SET n.prop = 'value'")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) SET n.prop = 'value'")
       the[AuthorizationViolationException] thrownBy {
         // WHEN
-        executeOnDefault("joe", "soap", "MATCH (n) SET n.prop2 = 'value'")
+        executeOnDBMSDefault("joe", "soap", "MATCH (n) SET n.prop2 = 'value'")
         // THEN
       } should have message "Set property for property 'prop2' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
@@ -351,10 +351,10 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
       execute("CREATE (:A)-[:R]->(:B)")
 
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (:A)-[r:R]->(:B) SET r.prop = 'value'")
+      executeOnDBMSDefault("joe", "soap", "MATCH (:A)-[r:R]->(:B) SET r.prop = 'value'")
       the[AuthorizationViolationException] thrownBy {
         // WHEN
-        executeOnDefault("joe", "soap", "MATCH (:A)-[r:R]->(:B) SET r.prop2 = 'value'")
+        executeOnDBMSDefault("joe", "soap", "MATCH (:A)-[r:R]->(:B) SET r.prop2 = 'value'")
         // THEN
       } should have message "Set property for property 'prop2' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
@@ -373,7 +373,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
       execute("CREATE (:A)-[:R]->(:B)")
 
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (:A)-[r:R]->(:B) SET r.prop = 'value'")
+      executeOnDBMSDefault("joe", "soap", "MATCH (:A)-[r:R]->(:B) SET r.prop = 'value'")
 
       // THEN
       execute("MATCH (:A)-[r:R]->(:B) RETURN r.prop").toSet should be(Set(Map("r.prop" -> "value")))
@@ -390,7 +390,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
       execute("CREATE (:A)-[:R{prop:'value'}]->(:B)")
 
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (:A)-[r:R]->(:B) SET r.prop = null")
+      executeOnDBMSDefault("joe", "soap", "MATCH (:A)-[r:R]->(:B) SET r.prop = null")
 
       // THEN
       execute("MATCH (:A)-[r:R{prop:'value'}]->(:B) RETURN r.prop").toSet should be(empty)
@@ -409,7 +409,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
 
       the[AuthorizationViolationException] thrownBy {
         // WHEN
-        executeOnDefault("joe", "soap", "MATCH (n) SET n.prop = 'value'")
+        executeOnDBMSDefault("joe", "soap", "MATCH (n) SET n.prop = 'value'")
         // THEN
       } should have message "Set property for property 'prop' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
@@ -430,7 +430,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
 
       the[AuthorizationViolationException] thrownBy {
         // WHEN
-        executeOnDefault("joe", "soap", "MATCH (n)-[r:R]->(o) SET r.prop = 'value'")
+        executeOnDBMSDefault("joe", "soap", "MATCH (n)-[r:R]->(o) SET r.prop = 'value'")
         // THEN
       } should have message "Set property for property 'prop' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
@@ -451,7 +451,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
 
       the[AuthorizationViolationException] thrownBy {
         // WHEN
-        executeOnDefault("joe", "soap", "MATCH (n)-[r:R]->(o) SET r.prop = 'value'")
+        executeOnDBMSDefault("joe", "soap", "MATCH (n)-[r:R]->(o) SET r.prop = 'value'")
         // THEN
       } should have message "Set property for property 'prop' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
@@ -471,7 +471,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
 
       the[AuthorizationViolationException] thrownBy {
         // WHEN
-        executeOnDefault("joe", "soap", "MATCH (n)-[r:R]->(o) SET r.prop = 'value'")
+        executeOnDBMSDefault("joe", "soap", "MATCH (n)-[r:R]->(o) SET r.prop = 'value'")
         // THEN
       } should have message "Set property for property 'prop' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
@@ -490,7 +490,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
       execute("CREATE (:A)")
 
       // WHEN
-      executeOnDefault( "joe", "soap", "MATCH (n) SET n.prop = 'newVal'")
+      executeOnDBMSDefault( "joe", "soap", "MATCH (n) SET n.prop = 'newVal'")
 
       //THEN
       execute("MATCH(n) RETURN n.prop").toSet should be(Set(Map("n.prop" -> "newVal")))
@@ -507,7 +507,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
       execute("CREATE ({prop:'value'})")
 
       // WHEN
-      executeOnDefault( "joe", "soap", "MATCH (n) SET n.prop = null")
+      executeOnDBMSDefault( "joe", "soap", "MATCH (n) SET n.prop = null")
 
       // THEN
       execute("match (n{prop:'value'}) return n").toSet should have size 0
@@ -542,7 +542,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
 
       // WHEN, THEN
       the[AuthorizationViolationException] thrownBy {
-        executeOnDefault("joe", "soap", "MATCH (n) SET n.prop = 'newVal'")
+        executeOnDBMSDefault("joe", "soap", "MATCH (n) SET n.prop = 'newVal'")
       } should have message "Set property for property 'prop' is not allowed for user 'joe' with roles [PUBLIC, custom]."
     }
 
@@ -559,7 +559,7 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
 
       // WHEN, THEN
       the[AuthorizationViolationException] thrownBy {
-        executeOnDefault("joe", "soap", "MATCH (n) SET n.prop = null")
+        executeOnDBMSDefault("joe", "soap", "MATCH (n) SET n.prop = null")
       } should have message "Set property for property 'prop' is not allowed for user 'joe' with roles [PUBLIC, custom]."
     }
 

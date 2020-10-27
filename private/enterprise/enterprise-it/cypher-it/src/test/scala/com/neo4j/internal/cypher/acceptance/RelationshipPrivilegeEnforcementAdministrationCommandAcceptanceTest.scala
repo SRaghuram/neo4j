@@ -29,16 +29,16 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     val expected = List(
       "a", "b"
     )
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, index) => {
       row.get("n.name") should be(expected(index))
     }) should be(2)
 
-    executeOnDefault("joe", "soap", "MATCH (n)-->(m) RETURN n.name") should be(0)
+    executeOnDBMSDefault("joe", "soap", "MATCH (n)-->(m) RETURN n.name") should be(0)
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
 
-    executeOnDefault("joe", "soap", "MATCH (n)-->(m) RETURN n.name", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH (n)-->(m) RETURN n.name", resultHandler = (row, _) => {
       row.get("n.name") should be("a")
     }) should be(1)
   }
@@ -58,7 +58,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       row.get("n.name") should be("a")
     }) should be(1)
 
@@ -67,7 +67,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
   }
 
   test("should not find relationship with grant and deny on all reltype traversal") {
@@ -87,7 +87,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     // THEN
     val expected = List("a", "b")
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("n.name") should be(expected(index))
     }) should be(2)
 
@@ -96,14 +96,14 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
   }
 
   test("should find correct relationships with grant traversal on all reltypes and deny on specific reltype") {
@@ -123,7 +123,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     // THEN
     val expected = List("a", "b")
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("n.name") should be(expected(index))
     }) should be(2)
 
@@ -132,7 +132,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS HATES TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       row.get("n.name") should be("a")
     }) should be(1)
   }
@@ -153,7 +153,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS HATES TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       row.get("n.name") should be("a")
     }) should be(1)
   }
@@ -168,7 +168,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     graph.withTx( tx => tx.execute("CREATE (a:Start), (a)-[:A]->(), (a)-[:B]->()"))
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
       val node = row.get("a").asInstanceOf[Node]
       node.getRelationships().asScala.map(_.getType.name()).toSet should be(Set())
     }) should be(1)
@@ -178,7 +178,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
       val node = row.get("a").asInstanceOf[Node]
       node.getRelationships().asScala.map(_.getType.name()).toSet should be(Set("A"))
     }) should be(1)
@@ -188,7 +188,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
       val node = row.get("a").asInstanceOf[Node]
       node.getRelationships().asScala.map(_.getType.name()).toSet should be(Set("A", "B"))
     }) should be(1)
@@ -198,7 +198,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
       val node = row.get("a").asInstanceOf[Node]
       node.getRelationships().asScala.map(_.getType.name()).toSet should be(Set("B"))
     }) should be(1)
@@ -208,7 +208,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
       val node = row.get("a").asInstanceOf[Node]
       node.getRelationships().asScala.map(_.getType.name()).toSet should be(Set())
     }) should be(1)
@@ -227,14 +227,14 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
 
     val query = "MATCH ()-[r]->() RETURN properties(r) as props ORDER BY r.id"
 
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       row.get("props") should equal(util.Collections.emptyMap())
     }) should be(2)
 
@@ -248,7 +248,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       util.Collections.emptyMap()
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should equal(expected1(index))
     }) should be(2)
 
@@ -262,7 +262,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       util.Map.of("foo", 4L)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should equal(expected2(index))
     }) should be(2)
   }
@@ -292,7 +292,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       (3, 4)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected1(index))
     }) should be(2)
 
@@ -301,7 +301,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("DENY READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       (row.getNumber("r.id"), row.getNumber("r.foo")) should be((null, null))
     }) should be(2)
 
@@ -310,7 +310,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("GRANT READ{*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       (row.getNumber("r.id"), row.getNumber("r.foo")) should be((null, null))
     }) should be(2)
   }
@@ -340,7 +340,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       util.Map.of("id", 3L, "foo", 4L)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should be(expected1(index))
     }) should be(2)
 
@@ -349,7 +349,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("DENY READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       row.get("props") should equal(util.Collections.emptyMap())
     }) should be(2)
 
@@ -358,7 +358,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("GRANT READ{*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       row.get("props") should equal(util.Collections.emptyMap())
     }) should be(2)
   }
@@ -388,7 +388,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       (3, 4)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected1(index))
     }) should be(2)
 
@@ -402,7 +402,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       (3, null)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected2(index))
     }) should be(2)
 
@@ -411,7 +411,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("GRANT READ {foo} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected2(index))
     }) should be(2)
 
@@ -442,7 +442,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       util.Map.of("id", 3L, "foo", 4L)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should be(expected1(index))
     }) should be(2)
 
@@ -456,7 +456,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       util.Map.of("id", 3L)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should be(expected2(index))
     }) should be(2)
 
@@ -465,7 +465,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("GRANT READ {foo} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should be(expected2(index))
     }) should be(2)
 
@@ -496,7 +496,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       (3, 4)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected1(index))
     }) should be(2)
 
@@ -510,7 +510,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       (null, null)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected2(index))
     }) should be(2)
 
@@ -519,7 +519,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected2(index))
     }) should be(2)
 
@@ -550,7 +550,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       util.Map.of("id", 3L, "foo", 4L)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should be(expected1(index))
     }) should be(2)
 
@@ -564,7 +564,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       util.Collections.emptyMap()
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should be(expected2(index))
     }) should be(2)
 
@@ -573,7 +573,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should be(expected2(index))
     }) should be(2)
 
@@ -604,7 +604,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       (3, 4)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected1(index))
     }) should be(2)
 
@@ -618,7 +618,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       (3, 4)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected2(index))
     }) should be(2)
 
@@ -627,7 +627,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("GRANT READ {foo} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected2(index))
     }) should be(2)
 
@@ -658,7 +658,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       util.Map.of("id", 3L, "foo", 4L)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should be(expected1(index))
     }) should be(2)
 
@@ -672,7 +672,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       util.Map.of("id", 3L, "foo", 4L)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should be(expected2(index))
     }) should be(2)
 
@@ -681,7 +681,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("GRANT READ {foo} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should be(expected2(index))
     }) should be(2)
 
@@ -712,7 +712,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       (3, null, null)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.getNumber("r.id"), row.getNumber("r.foo"), row.getNumber("r.bar")) should be(expected1(index))
     }) should be(2)
 
@@ -726,7 +726,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       (null, null, null)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.getNumber("r.id"), row.getNumber("r.foo"), row.getNumber("r.bar")) should be(expected2(index))
     }) should be(2)
 
@@ -740,7 +740,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       (null, 2, null)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.getNumber("r.id"), row.getNumber("r.foo"), row.getNumber("r.bar")) should be(expected3(index))
     }) should be(2)
 
@@ -754,7 +754,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       (null, 2, null)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.getNumber("r.id"), row.getNumber("r.foo"), row.getNumber("r.bar")) should be(expected4(index))
     }) should be(2)
 
@@ -768,7 +768,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       (null, 2, 5)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.getNumber("r.id"), row.getNumber("r.foo"), row.getNumber("r.bar")) should be(expected5(index))
     }) should be(2)
 
@@ -799,7 +799,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       util.Map.of("id", 3L)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should be(expected1(index))
     }) should be(2)
 
@@ -813,7 +813,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       util.Collections.emptyMap()
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should be(expected2(index))
     }) should be(2)
 
@@ -827,7 +827,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       util.Map.of("foo", 2L)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should be(expected3(index))
     }) should be(2)
 
@@ -841,7 +841,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       util.Map.of("foo", 2L)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should be(expected4(index))
     }) should be(2)
 
@@ -855,7 +855,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       util.Map.of("foo", 2L, "bar", 5L )
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should be(expected5(index))
     }) should be(2)
 
@@ -880,7 +880,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
 
     val query = "MATCH ()-[r]->() WHERE r.foo = 1 OR r.bar = 1 RETURN r.id, r.foo, r.bar"
 
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -893,7 +893,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       (6, 1, null)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.get("r.id"), row.get("r.foo"), row.get("r.bar")) should be(expected1(index))
     }) should be(3)
 
@@ -910,7 +910,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       (6, 1, 0)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.get("r.id"), row.get("r.foo"), row.get("r.bar")) should be(expected2(index))
     }) should be(5)
   }
@@ -940,7 +940,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       (3, 4)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected1(index))
     }) should be(2)
 
@@ -949,14 +949,14 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("DENY MATCH {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
   }
 
   test("should not be able to read properties using properties() function when denied match privilege for all reltypes and all properties") {
@@ -984,7 +984,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       util.Map.of("id", 3L, "foo", 4L)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should be(expected1(index))
     }) should be(2)
 
@@ -993,14 +993,14 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("DENY MATCH {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
   }
 
   test("should read correct properties when denied match privilege for all reltypes and specific property") {
@@ -1028,7 +1028,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       (3, 4)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected1(index))
     }) should be(2)
 
@@ -1042,7 +1042,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       (3, null)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected2(index))
     }) should be(2)
 
@@ -1051,7 +1051,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("GRANT MATCH {foo} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected2(index))
     }) should be(2)
   }
@@ -1081,7 +1081,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       util.Map.of("id", 3L, "foo", 4L)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should be(expected1(index))
     }) should be(2)
 
@@ -1095,7 +1095,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       util.Map.of("id", 3L)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should be(expected2(index))
     }) should be(2)
 
@@ -1104,7 +1104,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("GRANT MATCH {foo} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should be(expected2(index))
     }) should be(2)
 
@@ -1135,7 +1135,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       (3, 4)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected1(index))
     }) should be(2)
 
@@ -1144,7 +1144,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("DENY MATCH {*} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       (row.getNumber("r.id"), row.getNumber("r.foo")) should be((3, 4))
     }) should be(1)
 
@@ -1153,7 +1153,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("GRANT MATCH {*} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       (row.getNumber("r.id"), row.getNumber("r.foo")) should be((3,4))
     }) should be(1)
 
@@ -1184,7 +1184,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       util.Map.of("id", 3L, "foo", 4L)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should be(expected1(index))
     }) should be(2)
 
@@ -1193,7 +1193,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("DENY MATCH {*} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       row.get("props") should be(util.Map.of("id", 3L, "foo", 4L))
     }) should be(1)
 
@@ -1202,7 +1202,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("GRANT MATCH {*} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       row.get("props") should be(util.Map.of("id", 3L, "foo", 4L))
     }) should be(1)
 
@@ -1233,7 +1233,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       (3, 4)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected1(index))
     }) should be(2)
 
@@ -1247,7 +1247,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       (3, 4)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected2(index))
     }) should be(2)
 
@@ -1256,7 +1256,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("GRANT MATCH {foo} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected2(index))
     }) should be(2)
   }
@@ -1286,7 +1286,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       util.Map.of("id", 3L, "foo", 4L)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should be(expected1(index))
     }) should be(2)
 
@@ -1300,7 +1300,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       util.Map.of("id", 3L, "foo", 4L)
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should be(expected2(index))
     }) should be(2)
 
@@ -1309,7 +1309,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("GRANT MATCH {foo} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("props") should be(expected2(index))
     }) should be(2)
 
@@ -1339,13 +1339,13 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     // THEN
 
     // Restricted user, directed relationship
-    executeOnDefault("joe", "soap", queryDirected,
+    executeOnDBMSDefault("joe", "soap", queryDirected,
       resultHandler = (row, _) => {
         row.get("r.prop") should be("visible")
       }, requiredOperator = Some("DirectedRelationshipByIdSeek")) should be(1)
 
     // Restricted user, undirected relationship
-    executeOnDefault("joe", "soap", queryUndirected,
+    executeOnDBMSDefault("joe", "soap", queryUndirected,
       resultHandler = (row, _) => {
         row.get("r.prop") should be("visible")
       }, requiredOperator = Some("UndirectedRelationshipByIdSeek")) should be(2)
@@ -1394,14 +1394,14 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
 
     val query = "CALL db.index.fulltext.queryRelationships('relIndex', 'true') YIELD relationship AS r RETURN r.id, r.foo, r.bar ORDER BY r.id"
 
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH {foo} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -1416,7 +1416,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       (6, "true", "false")
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       (row.get("r.id"), row.get("r.foo"), row.get("r.bar")) should be(expected(index))
     }) should be(5)
   }
@@ -1438,21 +1438,21 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
 
     val query = "MATCH ()-[r]->() WHERE r.prop contains 'words' RETURN r.prop AS prop"
 
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIP A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT READ {prop} ON GRAPH * RELATIONSHIP A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       row.get("prop") should be("string with words in it")
     }) should be(1)
 
@@ -1461,7 +1461,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("GRANT READ {prop} ON GRAPH * RELATIONSHIP B TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       row.get("prop") should be("string with words in it")
     }) should be(1)
 
@@ -1475,7 +1475,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       "another string with words in it"
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("prop") should be(expected1(index))
     }) should be(2)
 
@@ -1490,7 +1490,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       "this string contains words"
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("prop") should be(expected2(index))
     }) should be(3)
   }
@@ -1516,21 +1516,21 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
 
     val query = "CALL db.index.fulltext.queryRelationships('relIndex', 'words') YIELD relationship RETURN relationship.prop AS prop"
 
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIP A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT READ {prop} ON GRAPH * RELATIONSHIP A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       row.get("prop") should be("string with words in it")
     }) should be(1)
 
@@ -1539,7 +1539,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("GRANT READ {prop} ON GRAPH * RELATIONSHIP B TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
       row.get("prop") should be("string with words in it")
     }) should be(1)
 
@@ -1553,7 +1553,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       "another string with words in it"
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("prop") should be(expected1(index))
     }) should be(2)
 
@@ -1568,7 +1568,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       "another string with words in it"
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("prop") should be(expected2(index))
     }) should be(3)
   }
@@ -1606,7 +1606,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       "words words words"
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("prop") should be(expected1(index))
     }) should be(4)
 
@@ -1621,7 +1621,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       "words words words"
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("prop") should be(expected2(index))
     }) should be(3)
 
@@ -1634,7 +1634,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       "another string with words in it",
     )
 
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+    executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("prop") should be(expected3(index))
     }) should be(1)
 
@@ -1643,6 +1643,6 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS B TO custom" )
 
     // THEN
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDBMSDefault("joe", "soap", query) should be(0)
   }
 }

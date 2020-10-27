@@ -148,7 +148,7 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
 
         // WHEN
         the[RuntimeException] thrownBy {
-          executeOnDefault("neo4j", "neo", query)
+          executeOnDBMSDefault("neo4j", "neo", query)
         } should have message s"This is an administration command and it should be executed against the system database: $name"
       }
   }

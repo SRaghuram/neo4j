@@ -136,7 +136,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     execute("GRANT EXECUTE PROCEDURE * ON DBMS TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "CALL db.labels", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "CALL db.labels", resultHandler = (row, _) => {
       row.get("label") should equal("A")
     }) should be(1)
   }
@@ -149,7 +149,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     execute("GRANT EXECUTE PROCEDURE dbms.showCurrentUser ON DBMS TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "CALL dbms.showCurrentUser()", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "CALL dbms.showCurrentUser()", resultHandler = (row, _) => {
       row.get("username") should equal("foo")
     }) should be(1)
   }
@@ -162,7 +162,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     execute("GRANT EXECUTE PROCEDURE dbms.show* ON DBMS TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "CALL dbms.showCurrentUser()", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "CALL dbms.showCurrentUser()", resultHandler = (row, _) => {
       row.get("username") should equal("foo")
     }) should be(1)
 
@@ -172,7 +172,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     execute("GRANT EXECUTE PROCEDURE d?.l?bels ON DBMS TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "CALL db.labels", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "CALL db.labels", resultHandler = (row, _) => {
       row.get("label") should equal("A")
     }) should be(1)
   }
@@ -186,7 +186,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     (the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("foo", "bar", "CALL db.labels")
+      executeOnDBMSDefault("foo", "bar", "CALL db.labels")
     }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 
@@ -196,7 +196,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     (the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("foo", "bar", "CALL dbms.showCurrentUser()")
+      executeOnDBMSDefault("foo", "bar", "CALL dbms.showCurrentUser()")
     }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 
@@ -211,7 +211,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     (the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("foo", "bar", "CALL db.labels")
+      executeOnDBMSDefault("foo", "bar", "CALL db.labels")
     }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 
@@ -225,7 +225,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     (the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("foo", "bar", "CALL dbms.showCurrentUser()")
+      executeOnDBMSDefault("foo", "bar", "CALL dbms.showCurrentUser()")
     }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 
@@ -241,7 +241,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     val expected = Seq("A", "B")
     // THEN
-    executeOnDefault("foo", "bar", "CALL db.labels() YIELD label RETURN label ORDER BY label ASC", resultHandler = (row, idx) => {
+    executeOnDBMSDefault("foo", "bar", "CALL db.labels() YIELD label RETURN label ORDER BY label ASC", resultHandler = (row, idx) => {
       row.get("label") should equal(expected(idx))
     }) should be(2)
   }
@@ -256,7 +256,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     val expected = Seq("A", "B")
     // THEN
-    executeOnDefault("foo", "bar", "CALL db.labels() YIELD label RETURN label ORDER BY label ASC", resultHandler = (row, idx) => {
+    executeOnDBMSDefault("foo", "bar", "CALL db.labels() YIELD label RETURN label ORDER BY label ASC", resultHandler = (row, idx) => {
       row.get("label") should equal(expected(idx))
     }) should be(2)
   }
@@ -271,7 +271,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     execute("DENY EXECUTE BOOSTED PROCEDURE db.labels ON DBMS TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "CALL db.labels", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "CALL db.labels", resultHandler = (row, _) => {
       row.get("label") should equal("A")
     }) should be(1)
   }
@@ -286,7 +286,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     execute("DENY EXECUTE BOOSTED PROCEDURE db.la?els ON DBMS TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "CALL db.labels", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "CALL db.labels", resultHandler = (row, _) => {
       row.get("label") should equal("A")
     }) should be(1)
   }
@@ -302,7 +302,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     (the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("foo", "bar", "CALL db.labels")
+      executeOnDBMSDefault("foo", "bar", "CALL db.labels")
     }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 
@@ -317,7 +317,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     (the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("foo", "bar", "CALL db.labels")
+      executeOnDBMSDefault("foo", "bar", "CALL db.labels")
     }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 
@@ -331,7 +331,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     execute("GRANT EXECUTE ADMIN PROCEDURES ON DBMS TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')") should be(1)
+    executeOnDBMSDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')") should be(1)
   }
 
   test("should fail execute admin procedure with EXECUTE ADMIN PROCEDURES and DENIED BOOSTED specific") {
@@ -344,7 +344,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     (the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
+      executeOnDBMSDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
     }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 
@@ -358,7 +358,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     (the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
+      executeOnDBMSDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
     }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 
@@ -373,7 +373,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     (the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
+      executeOnDBMSDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
     }).getMessage should include(FAIL_EXECUTE_ADMIN_PROC)
   }
 
@@ -387,7 +387,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     (the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
+      executeOnDBMSDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
     }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 
@@ -402,7 +402,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     (the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
+      executeOnDBMSDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
     }).getMessage should include(FAIL_EXECUTE_ADMIN_PROC)
   }
 
@@ -438,7 +438,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     (the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("foo", "bar", "CALL db.labels")
+      executeOnDBMSDefault("foo", "bar", "CALL db.labels")
     }).getMessage should include(FAIL_EXECUTE_PROC)
 
     // THEN
@@ -458,7 +458,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     (the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
+      executeOnDBMSDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
     }).getMessage should include(FAIL_EXECUTE_ADMIN_PROC)
   }
 
@@ -470,7 +470,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     execute("GRANT EXECUTE BOOSTED PROCEDURE dbms.listConfig ON DBMS TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')") should be(1)
+    executeOnDBMSDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')") should be(1)
   }
 
   test("should fail execute admin procedure with execute boosted and denied execute procedure") {
@@ -483,7 +483,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     (the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
+      executeOnDBMSDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')")
     }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 
@@ -500,7 +500,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     // THEN
     val expected = Seq("A", "B")
     // THEN
-    executeOnDefault("foo", "bar", "CALL db.labels() YIELD label RETURN label ORDER BY label ASC", resultHandler = (row, idx) => {
+    executeOnDBMSDefault("foo", "bar", "CALL db.labels() YIELD label RETURN label ORDER BY label ASC", resultHandler = (row, idx) => {
       row.get("label") should equal(expected(idx))
     }) should be(2)
   }
@@ -513,7 +513,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     execute("GRANT ALL ON DBMS TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')") should be(1)
+    executeOnDBMSDefault("foo", "bar", "CALL dbms.listConfig('dbms.security.auth_enabled')") should be(1)
   }
 
   test("should execute procedure without boosting when granted all on dbms denied execute boosted") {
@@ -526,7 +526,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     execute("DENY EXECUTE BOOSTED PROCEDURE db.labels ON DBMS TO custom")
 
     // THEN
-    executeOnDefault("foo", "bar", "CALL db.labels", resultHandler = (row, _) => {
+    executeOnDBMSDefault("foo", "bar", "CALL db.labels", resultHandler = (row, _) => {
       row.get("label") should equal("A")
     }) should be(1)
   }
@@ -542,7 +542,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     (the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("foo", "bar", "CALL db.labels")
+      executeOnDBMSDefault("foo", "bar", "CALL db.labels")
     }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 
@@ -555,7 +555,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     // THEN
     val expected = Seq("A", "B")
 
-    executeOnDefault("joe", "soap", "CALL db.labels() YIELD label RETURN label ORDER BY label ASC", resultHandler = (row, idx) => {
+    executeOnDBMSDefault("joe", "soap", "CALL db.labels() YIELD label RETURN label ORDER BY label ASC", resultHandler = (row, idx) => {
       row.get("label") should equal(expected(idx))
     }) should be(2)
   }
@@ -567,7 +567,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     // THEN
     withClue("Without EXECUTE privilege") {
       (the[AuthorizationViolationException] thrownBy {
-        executeOnDefault("joe", "soap", "CALL db.relationshipTypes()")
+        executeOnDBMSDefault("joe", "soap", "CALL db.relationshipTypes()")
       }).getMessage should include(FAIL_EXECUTE_PROC)
     }
 
@@ -577,7 +577,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     withClue("With EXECUTE privilege") {
-      executeOnDefault("joe", "soap", "CALL db.relationshipTypes()") should be(0)
+      executeOnDBMSDefault("joe", "soap", "CALL db.relationshipTypes()") should be(0)
     }
   }
 
@@ -588,7 +588,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     // THEN
     val expected = Seq("A", "B")
 
-    executeOnDefault("joe", "soap", "CALL db.labels() YIELD label RETURN label ORDER BY label ASC", resultHandler = (row, idx) => {
+    executeOnDBMSDefault("joe", "soap", "CALL db.labels() YIELD label RETURN label ORDER BY label ASC", resultHandler = (row, idx) => {
       row.get("label") should equal(expected(idx))
     }) should be(2)
   }
@@ -598,7 +598,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     setupUserAndGraph(rolename = "default")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.relationshipTypes()", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "CALL db.relationshipTypes()", resultHandler = (row, _) => {
       row.get("relationshipType") should equal("REL")
     }) should be(1)
   }
@@ -610,7 +610,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     // THEN
     withClue("Without EXECUTE privilege") {
       (the[AuthorizationViolationException] thrownBy {
-        executeOnDefault("joe", "soap", "CALL db.propertyKeys()")
+        executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()")
       }).getMessage should include(FAIL_EXECUTE_PROC)
     }
 
@@ -620,7 +620,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     withClue("With EXECUTE privilege") {
-      executeOnDefault("joe", "soap", "CALL db.propertyKeys()") should be(0)
+      executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()") should be(0)
     }
   }
 
@@ -632,7 +632,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     // THEN
     withClue("With DENY EXECUTE privilege") {
       (the[AuthorizationViolationException] thrownBy {
-        executeOnDefault("joe", "soap", "CALL db.propertyKeys()")
+        executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()")
       }).getMessage should include(FAIL_EXECUTE_PROC)
     }
 
@@ -644,7 +644,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
     // THEN
     withClue("With DENY EXECUTE BOOSTED privilege") {
       (the[AuthorizationViolationException] thrownBy {
-        executeOnDefault("joe", "soap", "CALL db.propertyKeys()")
+        executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()")
       }).getMessage should include(FAIL_EXECUTE_PROC)
     }
 
@@ -654,7 +654,7 @@ class ExecuteProcedurePrivilegeAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     withClue("With GRANT EXECUTE and DENY EXECUTE BOOSTED privilege") {
-      executeOnDefault("joe", "soap", "CALL db.propertyKeys()") should be(0)
+      executeOnDBMSDefault("joe", "soap", "CALL db.propertyKeys()") should be(0)
     }
   }
 

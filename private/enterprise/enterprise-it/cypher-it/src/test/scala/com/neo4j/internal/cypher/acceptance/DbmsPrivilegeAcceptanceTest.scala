@@ -181,7 +181,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set(granted(traverse).node("A").role("otherRole").graph("*").map))
 
     // Should be able to execute @admin procedure
-    executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.default_database')") should be(1)
+    executeOnDBMSDefault("foo", "bar", "CALL dbms.listConfig('dbms.default_database')") should be(1)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -215,7 +215,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // Should not be able to execute (@admin) procedure
     (the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("foo", "bar", "CALL dbms.listConfig('dbms.default_database')")
+      executeOnDBMSDefault("foo", "bar", "CALL dbms.listConfig('dbms.default_database')")
     }).getMessage should include(FAIL_EXECUTE_PROC)
   }
 

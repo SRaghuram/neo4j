@@ -76,6 +76,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val PERMISSION_DENIED_REMOVE_ROLE: String = "Permission denied for REMOVE ROLE." + helpfulCheckUserPrivilegeErrorText
   val PERMISSION_DENIED_SET_PASSWORDS: String = "Permission denied for SET PASSWORDS." + helpfulCheckUserPrivilegeErrorText
   val PERMISSION_DENIED_SET_USER_STATUS: String = "Permission denied for SET USER STATUS." + helpfulCheckUserPrivilegeErrorText
+  val PERMISSION_DENIED_SET_USER_DEFAULT_DATABASE: String = "Permission denied for SET USER DEFAULT DATABASE." + helpfulCheckUserPrivilegeErrorText
   val PERMISSION_DENIED_SET_PASSWORDS_OR_USER_STATUS: String = "Permission denied for SET PASSWORDS and/or SET USER STATUS." + helpfulCheckUserPrivilegeErrorText
 
   val roleName: String = "custom"
@@ -199,24 +200,28 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
 
   override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(GraphDatabaseSettings.auth_enabled -> TRUE)
 
-  def user(username: String, roles: Seq[String] = Seq.empty, suspended: Boolean = false, passwordChangeRequired: Boolean = true): Map[String, Any] = {
+  def user(username: String, roles: Seq[String] = Seq.empty, suspended: Boolean = false,
+           passwordChangeRequired: Boolean = true, requestedDefaultDatabase:String = null, currentDefaultDatabase: String = DEFAULT_DATABASE_NAME): Map[String, Any] = {
     val rolesWithPublic = roles.sorted :+ PredefinedRoles.PUBLIC
-    Map("user" -> username, "roles" -> rolesWithPublic, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired)
+    Map("user" -> username, "roles" -> rolesWithPublic, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired,
+      "requestedDefaultDatabase" -> requestedDefaultDatabase, "currentDefaultDatabase" -> currentDefaultDatabase)
   }
 
-  def adminUser(username: String, passwordChangeRequired: Boolean = true): Map[String, Any] = {
+  def adminUser(username: String, passwordChangeRequired: Boolean = true, requestedDefaultDatabase:String = null, currentDefaultDatabase: String = DEFAULT_DATABASE_NAME): Map[String, Any] = {
     val rolesWithPublic = Seq(PredefinedRoles.ADMIN, PredefinedRoles.PUBLIC)
-    Map("user" -> username, "roles" -> rolesWithPublic, "suspended" -> false, "passwordChangeRequired" -> passwordChangeRequired)
+    Map("user" -> username, "roles" -> rolesWithPublic, "suspended" -> false, "passwordChangeRequired" -> passwordChangeRequired,
+      "requestedDefaultDatabase" -> requestedDefaultDatabase, "currentDefaultDatabase" -> currentDefaultDatabase)
   }
 
-  def db(name: String, status: String = onlineStatus, default: Boolean = false): Map[String, Any] =
+  def db(name: String, status: String = onlineStatus, default: Boolean = false, systemDefault: Boolean = false): Map[String, Any] =
     Map("name" -> name,
       "address" -> "localhost:7687",
       "role" -> "standalone",
       "requestedStatus" -> status,
       "currentStatus" -> status,
       "error" -> "",
-      "default" -> default)
+      "default" -> default,
+      "systemDefault" -> systemDefault)
 
   def defaultDb(name: String = DEFAULT_DATABASE_NAME, status: String = onlineStatus): Map[String, String] =
     Map("name" -> name,
@@ -496,11 +501,11 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     }
   }
 
-  def executeOnDefault(username: String, password: String, query: String,
-                       params: util.Map[String, Object] = Collections.emptyMap(),
-                       resultHandler: (Result.ResultRow, Int) => Unit = (_, _) => {},
-                       executeBefore: InternalTransaction => Unit = _ => (),
-                       requiredOperator: Option[String] = None): Int = {
+  def executeOnDBMSDefault(username: String, password: String, query: String,
+                           params: util.Map[String, Object] = Collections.emptyMap(),
+                           resultHandler: (Result.ResultRow, Int) => Unit = (_, _) => {},
+                           executeBefore: InternalTransaction => Unit = _ => (),
+                           requiredOperator: Option[String] = None): Int = {
     executeOn(GraphDatabaseSettings.DEFAULT_DATABASE_NAME, username, password, query, params, resultHandler, executeBefore, requiredOperator)
   }
 

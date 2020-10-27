@@ -357,7 +357,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
       execute(s"GRANT CREATE ON GRAPH * NODES * TO $roleName")
 
       // WHEN
-      executeOnDefault(username, password, "CREATE ()")
+      executeOnDBMSDefault(username, password, "CREATE ()")
 
       // THEN
       execute("MATCH (n) RETURN n").toSet should have size 1
@@ -370,7 +370,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
       execute("CALL db.createLabel('Foo')")
 
       // WHEN
-      executeOnDefault(username, password, "CREATE (:Foo)")
+      executeOnDBMSDefault(username, password, "CREATE (:Foo)")
 
       // THEN
       execute("MATCH (n:Foo) RETURN n").toSet should have size 1
@@ -382,7 +382,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault(username, password, "CREATE ()")
+      executeOnDBMSDefault(username, password, "CREATE ()")
       // THEN
     } should have message s"Create node with labels '' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
   }
@@ -397,7 +397,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault(username, password, "CREATE (:Foo{prop:'foo'})")
+      executeOnDBMSDefault(username, password, "CREATE (:Foo{prop:'foo'})")
     } should have message s"Set property for property 'prop' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
 
     // THEN
@@ -411,7 +411,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault(username, password, "CREATE (:Foo)")
+      executeOnDBMSDefault(username, password, "CREATE (:Foo)")
       // THEN
     } should have message s"Create node with labels 'Foo' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
   }
@@ -425,7 +425,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault(username, password, "CREATE (:Foo)")
+      executeOnDBMSDefault(username, password, "CREATE (:Foo)")
       // THEN
     } should have message s"Create node with labels 'Foo' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
   }
@@ -439,7 +439,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault(username, password, "CREATE (:Foo:Bar)")
+      executeOnDBMSDefault(username, password, "CREATE (:Foo:Bar)")
       // THEN
     } should have message s"Create node with labels 'Foo,Bar' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
   }
@@ -450,7 +450,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
     execute(s"GRANT CREATE ON DEFAULT GRAPH TO $roleName")
 
     // WHEN
-    executeOnDefault(username, password, "CREATE (n)")
+    executeOnDBMSDefault(username, password, "CREATE (n)")
 
     //THEN
     execute("MATCH(n) RETURN count(n)").toSet should be(Set(Map("count(n)" -> 1)))
@@ -491,7 +491,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
     execute("CREATE (:A), (:B)")
 
     // WHEN
-    executeOnDefault(username, password, "MATCH (a:A), (b:B) CREATE (a)-[:REL]->(b)")
+    executeOnDBMSDefault(username, password, "MATCH (a:A), (b:B) CREATE (a)-[:REL]->(b)")
 
     // THEN
     execute("MATCH (:A)-[r:REL]->(:B) RETURN r").toSet should have size 1
@@ -506,7 +506,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault(username, password, "MATCH (a:A), (b:B) CREATE (a)-[:REL]->(b)")
+      executeOnDBMSDefault(username, password, "MATCH (a:A), (b:B) CREATE (a)-[:REL]->(b)")
       // THEN
     } should have message s"Create relationship with type 'REL' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
   }
@@ -522,7 +522,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault(username, password, "MATCH (a:A), (b:B) CREATE (a)-[:REL]->(b)")
+      executeOnDBMSDefault(username, password, "MATCH (a:A), (b:B) CREATE (a)-[:REL]->(b)")
       // THEN
     } should have message s"Create relationship with type 'REL' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
   }
@@ -537,7 +537,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
     execute("CREATE (:A:B)")
 
     // WHEN
-    executeOnDefault(username, password, "MATCH (a:A) DELETE a")
+    executeOnDBMSDefault(username, password, "MATCH (a:A) DELETE a")
 
     // THEN
     execute("MATCH (a:A) RETURN a").toSet should have size 0
@@ -551,7 +551,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
     execute("CREATE (:A:B)")
 
     // WHEN
-    executeOnDefault(username, password, "MATCH (a:A) DELETE a")
+    executeOnDBMSDefault(username, password, "MATCH (a:A) DELETE a")
 
     // THEN
     execute("MATCH (a:A) RETURN a").toSet should have size 0
@@ -567,7 +567,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
     // WHEN
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault(username, password, "MATCH (a:A) DELETE a")
+      executeOnDBMSDefault(username, password, "MATCH (a:A) DELETE a")
       // THEN
     } should have message s"Delete node with labels 'A,B' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
   }
@@ -581,7 +581,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
     execute("CREATE (n)")
 
     // WHEN
-    executeOnDefault(username, password, "MATCH (n) DELETE n")
+    executeOnDBMSDefault(username, password, "MATCH (n) DELETE n")
 
     //THEN
     execute("MATCH(n) RETURN count(n)").toSet should be(Set(Map("count(n)" -> 0)))
@@ -612,7 +612,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
     // WHEN, THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault(username, password, "MATCH (n) DELETE n")
+      executeOnDBMSDefault(username, password, "MATCH (n) DELETE n")
     } should have message s"Delete node with labels '' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
   }
 
@@ -624,7 +624,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
     execute("CREATE (:A)-[:REL]->(:B)")
 
     // WHEN
-    executeOnDefault(username, password, "MATCH (:A)-[r:REL]->(:B) DELETE r")
+    executeOnDBMSDefault(username, password, "MATCH (:A)-[r:REL]->(:B) DELETE r")
 
     // THEN
     execute("MATCH (:A)-[r:REL]->(:B) RETURN r").toSet should have size 0
@@ -639,7 +639,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault(username, password, "MATCH (:A)-[r:REL]->(:B) DELETE r")
+      executeOnDBMSDefault(username, password, "MATCH (:A)-[r:REL]->(:B) DELETE r")
       // THEN
     } should have message s"Delete relationship with type 'REL' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
   }
@@ -655,7 +655,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault(username, password, "MATCH (:A)-[r:REL]->(:B) DELETE r")
+      executeOnDBMSDefault(username, password, "MATCH (:A)-[r:REL]->(:B) DELETE r")
       // THEN
     } should have message s"Delete relationship with type 'REL' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
   }
@@ -668,7 +668,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
     execute("CREATE (:A)")
 
     // WHEN
-    executeOnDefault(username, password, "MATCH (a:A) DETACH DELETE a")
+    executeOnDBMSDefault(username, password, "MATCH (a:A) DETACH DELETE a")
 
     // THEN
     execute("MATCH (a:A) RETURN a").toSet should have size 0
@@ -684,7 +684,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
     // WHEN
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault(username, password, "MATCH (a:A) DETACH DELETE a")
+      executeOnDBMSDefault(username, password, "MATCH (a:A) DETACH DELETE a")
       // THEN
     } should have message s"Delete relationship with type 'REL' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
   }
@@ -695,7 +695,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
     execute(s"GRANT CREATE ON GRAPH * TO $roleName")
     execute(s"GRANT CREATE NEW LABEL ON DATABASE * TO $roleName")
 
-    executeOnDefault(username, password, "MATCH (a:A) DELETE a", executeBefore = tx => {
+    executeOnDBMSDefault(username, password, "MATCH (a:A) DELETE a", executeBefore = tx => {
       tx.execute("CREATE (:A)")
     })
   }
@@ -713,7 +713,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault(username, password, "CREATE (:Label)")
+      executeOnDBMSDefault(username, password, "CREATE (:Label)")
       // THEN
     } should have message s"Create node with labels 'Label' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
 
@@ -732,7 +732,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault(username, password, "CREATE (:Label)")
+      executeOnDBMSDefault(username, password, "CREATE (:Label)")
       // THEN
     } should have message s"Create node with labels 'Label' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
 
@@ -753,7 +753,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault(username, password, "MATCH (a:A), (b:B) CREATE (a)-[:R]->(b)")
+      executeOnDBMSDefault(username, password, "MATCH (a:A), (b:B) CREATE (a)-[:R]->(b)")
       // THEN
     } should have message s"Create relationship with type 'R' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
 
@@ -774,7 +774,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault(username, password, "MATCH (a:A), (b:B) CREATE (a)-[:R]->(b)")
+      executeOnDBMSDefault(username, password, "MATCH (a:A), (b:B) CREATE (a)-[:R]->(b)")
       // THEN
     } should have message s"Create relationship with type 'R' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
 
@@ -794,7 +794,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault(username, password, "MATCH (n) DELETE n")
+      executeOnDBMSDefault(username, password, "MATCH (n) DELETE n")
       // THEN
     } should have message s"Delete node with labels '' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
 
@@ -814,7 +814,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault(username, password, "MATCH (n) DELETE n")
+      executeOnDBMSDefault(username, password, "MATCH (n) DELETE n")
       // THEN
     } should have message s"Delete node with labels '' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
 
@@ -834,7 +834,7 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault(username, password, "MATCH ()-[r:R]->() DELETE r")
+      executeOnDBMSDefault(username, password, "MATCH ()-[r:R]->() DELETE r")
       // THEN
     } should have message s"Delete relationship with type 'R' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
 
@@ -854,12 +854,94 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
-      executeOnDefault(username, password, "MATCH ()-[r:R]->() DELETE r")
+      executeOnDBMSDefault(username, password, "MATCH ()-[r:R]->() DELETE r")
       // THEN
     } should have message s"Delete relationship with type 'R' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
 
     // THEN
     execute("MATCH ()-[r]->() RETURN r").toSet should have size 1
+  }
+
+  test("grant create on default graph") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT CREATE ON DEFAULT GRAPH TO custom")
+
+    // WHEN
+    executeOnDBMSDefault(username, password, "CREATE (n)")
+
+    //THEN
+    execute("MATCH(n) RETURN count(n)").toSet should be(Set(Map("count(n)" -> 1)))
+  }
+
+  test("grant create on default graph, should not allow on other graph") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT CREATE ON DEFAULT GRAPH TO custom")
+    execute("CREATE DATABASE foo")
+
+    // WHEN, THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOn("foo", username, password, "CREATE (n)")
+    } should have message s"Create node with labels '' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
+  }
+
+  test("grant delete on default graph") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+    execute("GRANT DELETE ON DEFAULT GRAPH TO custom")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (n)")
+
+    // WHEN
+    executeOnDBMSDefault( username, password, "MATCH (n) DELETE n")
+
+    //THEN
+    execute("MATCH(n) RETURN count(n)").toSet should be(Set(Map("count(n)" -> 0)))
+  }
+
+  test("grant delete on default graph, should not allow on other graph") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+    execute("GRANT CREATE ON DEFAULT GRAPH TO custom")
+    execute("CREATE DATABASE foo")
+    selectDatabase("foo")
+    execute("CREATE (n)")
+
+    // WHEN, THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOn("foo", username, password, "MATCH (n) DELETE n")
+    } should have message s"Delete node with labels '' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
+  }
+
+  test("deny create on default graph, should allow on other graph") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT CREATE ON GRAPH * TO custom")
+    execute("DENY CREATE ON DEFAULT GRAPH TO custom")
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    executeOn("foo", username, password, "CREATE (n)")
+
+    // THEN
+    execute("MATCH(n) RETURN count(n)").toSet should be(Set(Map("count(n)" -> 1)))
+  }
+
+  test("deny delete on default graph") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+    execute("DENY DELETE ON DEFAULT GRAPH TO custom")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (n)")
+
+    // WHEN, THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDBMSDefault( username, password, "MATCH (n) DELETE n")
+    } should have message s"Delete node with labels '' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
   }
 
 }

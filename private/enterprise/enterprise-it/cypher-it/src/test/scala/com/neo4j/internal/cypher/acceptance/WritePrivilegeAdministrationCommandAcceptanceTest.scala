@@ -422,7 +422,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       the[AuthorizationViolationException] thrownBy {
         // WHEN
-        executeOnDefault("joe", "soap", "CREATE()")
+        executeOnDBMSDefault("joe", "soap", "CREATE()")
         // THEN
       } should have message "Create node with labels '' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
@@ -437,7 +437,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       setupTokens()
 
       // WHEN
-      executeOnDefault("joe", "soap", "CREATE (n:A {name: 'a'})")
+      executeOnDBMSDefault("joe", "soap", "CREATE (n:A {name: 'a'})")
 
       // THEN
       execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a")))
@@ -451,7 +451,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       the[AuthorizationViolationException] thrownBy {
         // WHEN
-        executeOnDefault("joe", "soap", "CREATE()")
+        executeOnDBMSDefault("joe", "soap", "CREATE()")
         // THEN
       } should have message "Create node with labels '' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
@@ -469,7 +469,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       the[AuthorizationViolationException] thrownBy {
         // WHEN
-        executeOnDefault("joe", "soap", "MATCH (a:A),(b:B) CREATE (a)-[:R]->(b)")
+        executeOnDBMSDefault("joe", "soap", "MATCH (a:A),(b:B) CREATE (a)-[:R]->(b)")
         // THEN
       } should have message "Create relationship with type 'R' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
@@ -487,7 +487,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       execute("CREATE (:A),(:B)")
 
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (a:A),(b:B) CREATE (a)-[:R]->(b)")
+      executeOnDBMSDefault("joe", "soap", "MATCH (a:A),(b:B) CREATE (a)-[:R]->(b)")
 
       // THEN
       execute("MATCH ()-[r]->() RETURN r").toSet should have size 1
@@ -505,7 +505,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       the[AuthorizationViolationException] thrownBy {
         // WHEN
-        executeOnDefault("joe", "soap", "MATCH (a:A),(b:B) CREATE (a)-[:R]->(b)")
+        executeOnDBMSDefault("joe", "soap", "MATCH (a:A),(b:B) CREATE (a)-[:R]->(b)")
         // THEN
       } should have message "Create relationship with type 'R' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
@@ -523,7 +523,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       the[AuthorizationViolationException] thrownBy {
         // WHEN
-        executeOnDefault("joe", "soap", "MATCH (a:A) DELETE a")
+        executeOnDBMSDefault("joe", "soap", "MATCH (a:A) DELETE a")
         // THEN
       } should have message "Delete node with labels 'A' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
@@ -541,7 +541,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       execute("CREATE (:A)")
 
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (a:A) DELETE a")
+      executeOnDBMSDefault("joe", "soap", "MATCH (a:A) DELETE a")
 
       // THEN
       execute("MATCH (n) RETURN n").toSet should have size 0
@@ -559,7 +559,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       the[AuthorizationViolationException] thrownBy {
         // WHEN
-        executeOnDefault("joe", "soap", "MATCH (a:A) DELETE a")
+        executeOnDBMSDefault("joe", "soap", "MATCH (a:A) DELETE a")
         // THEN
       } should have message "Delete node with labels 'A' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
@@ -577,7 +577,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       the[AuthorizationViolationException] thrownBy {
         // WHEN
-        executeOnDefault("joe", "soap", "MATCH ()-[r]->() DELETE r")
+        executeOnDBMSDefault("joe", "soap", "MATCH ()-[r]->() DELETE r")
         // THEN
       } should have message "Delete relationship with type 'R' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
@@ -595,7 +595,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       execute("CREATE ()-[:R]->()")
 
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH ()-[r]->() DELETE r")
+      executeOnDBMSDefault("joe", "soap", "MATCH ()-[r]->() DELETE r")
 
       // THEN
       execute("MATCH ()-[r]->() RETURN r").toSet should have size 0
@@ -613,7 +613,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       the[AuthorizationViolationException] thrownBy {
         // WHEN
-        executeOnDefault("joe", "soap", "MATCH ()-[r]->() DELETE r")
+        executeOnDBMSDefault("joe", "soap", "MATCH ()-[r]->() DELETE r")
         // THEN
       } should have message "Delete relationship with type 'R' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
@@ -631,13 +631,13 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       the[AuthorizationViolationException] thrownBy {
         // WHEN
-        executeOnDefault("joe", "soap", "MATCH (n:B) SET n:A")
+        executeOnDBMSDefault("joe", "soap", "MATCH (n:B) SET n:A")
         // THEN
       } should have message "Set label for label 'A' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
       the[AuthorizationViolationException] thrownBy {
         // WHEN
-        executeOnDefault("joe", "soap", "MATCH (n:B) REMOVE n:B")
+        executeOnDBMSDefault("joe", "soap", "MATCH (n:B) REMOVE n:B")
         // THEN
       } should have message "Remove label for label 'B' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
@@ -655,8 +655,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       execute("CREATE (:B)")
 
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (n:B) SET n:A")
-      executeOnDefault("joe", "soap", "MATCH (n:B) REMOVE n:B")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n:B) SET n:A")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n:B) REMOVE n:B")
 
       // THEN
       execute("MATCH (n) RETURN labels(n)").toSet should be(Set(Map("labels(n)" -> List("A"))))
@@ -674,13 +674,13 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       the[AuthorizationViolationException] thrownBy {
         // WHEN
-        executeOnDefault("joe", "soap", "MATCH (n:B) SET n:A")
+        executeOnDBMSDefault("joe", "soap", "MATCH (n:B) SET n:A")
         // THEN
       } should have message "Set label for label 'A' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
       the[AuthorizationViolationException] thrownBy {
         // WHEN
-        executeOnDefault("joe", "soap", "MATCH (n:B) REMOVE n:B")
+        executeOnDBMSDefault("joe", "soap", "MATCH (n:B) REMOVE n:B")
         // THEN
       } should have message "Remove label for label 'B' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
@@ -698,13 +698,13 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       the[AuthorizationViolationException] thrownBy {
         // WHEN
-        executeOnDefault("joe", "soap", "MATCH (n:A) SET n.name = 'b'")
+        executeOnDBMSDefault("joe", "soap", "MATCH (n:A) SET n.name = 'b'")
         // THEN
       } should have message "Set property for property 'name' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
       the[AuthorizationViolationException] thrownBy {
         // WHEN
-        executeOnDefault("joe", "soap", "MATCH (n:A) REMOVE n.prop")
+        executeOnDBMSDefault("joe", "soap", "MATCH (n:A) REMOVE n.prop")
         // THEN
       } should have message "Set property for property 'prop' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
@@ -722,8 +722,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       execute("CREATE (n:A {name:'a', prop: 'b'})")
 
       // WHEN
-      executeOnDefault("joe", "soap", "MATCH (n:A) SET n.name = 'b'")
-      executeOnDefault("joe", "soap", "MATCH (n:A) REMOVE n.prop")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n:A) SET n.name = 'b'")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n:A) REMOVE n.prop")
 
       // THEN
       execute("MATCH (n) RETURN properties(n) as props").toSet should be(Set(Map("props" -> Map("name" -> "b"))))
@@ -741,13 +741,13 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       the[AuthorizationViolationException] thrownBy {
         // WHEN
-        executeOnDefault("joe", "soap", "MATCH (n:A) SET n.name = 'b'")
+        executeOnDBMSDefault("joe", "soap", "MATCH (n:A) SET n.name = 'b'")
         // THEN
       } should have message "Set property for property 'name' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
       the[AuthorizationViolationException] thrownBy {
         // WHEN
-        executeOnDefault("joe", "soap", "MATCH (n:A) REMOVE n.prop")
+        executeOnDBMSDefault("joe", "soap", "MATCH (n:A) REMOVE n.prop")
         // THEN
       } should have message "Set property for property 'prop' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
@@ -774,12 +774,12 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       // THEN
       val query = s"CYPHER runtime=$runtime CREATE (n:A {name: 'b'}) WITH 1 AS ignore MATCH (m:A) RETURN m.name AS name ORDER BY name"
-      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
         row.get("name") should be("b")
       }) should be(1)
 
       execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
-      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (n:A) RETURN n.name") should be(0)
+      executeOnDBMSDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (n:A) RETURN n.name") should be(0)
     }
 
     test(s"should read you own writes on nodes with WRITE and TRAVERSE privilege with $runtime") {
@@ -800,12 +800,12 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       val expected = List("b", null)
 
       val query = s"CYPHER runtime=$runtime CREATE (n:A {name: 'b'}) WITH 1 AS ignore MATCH (m:A) RETURN m.name AS name ORDER BY name"
-      executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
         row.get("name") should be(expected(index))
       }) should be(2)
 
       execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
-      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (n:A) RETURN n.name AS name", resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (n:A) RETURN n.name AS name", resultHandler = (row, _) => {
         row.get("name") should be(null)
       }) should be(2)
     }
@@ -827,7 +827,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       val expected1 = List(("a", null), ("b", 22))
 
       val query = s"CYPHER runtime=$runtime CREATE (n:A {name: 'b', age: 22}) WITH 1 AS ignore MATCH (m:A) RETURN m.name AS name, m.age AS age ORDER BY name"
-      executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
         (row.get("name"), row.get("age")) should be(expected1(index))
       }) should be(2)
 
@@ -835,7 +835,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       execute(s"CYPHER runtime=$runtime MATCH (n) RETURN n.name, n.age").toSet should be(Set(Map("n.name" -> "a", "n.age" -> 21), Map("n.name" -> "b", "n.age" -> 22)))
 
       val expected2 = List(("a", null), ("b", null))
-      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (n:A) RETURN n.name AS name, n.age AS age ORDER BY name", resultHandler = (row, index) => {
+      executeOnDBMSDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (n:A) RETURN n.name AS name, n.age AS age ORDER BY name", resultHandler = (row, index) => {
         (row.get("name"), row.get("age")) should be(expected2(index))
       }) should be(2)
     }
@@ -860,7 +860,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       val expected1 = List("ab", "b")
 
       val query = s"CYPHER runtime=$runtime CREATE (n:B {name: 'b'}) WITH 1 AS ignore MATCH (m:B) RETURN m.name AS name ORDER BY name"
-      executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
         row.get("name") should be(expected1(index))
       }) should be(2)
 
@@ -868,12 +868,12 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       selectDatabase(DEFAULT_DATABASE_NAME)
       execute(s"CYPHER runtime=$runtime MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "ab"), Map("n.name" -> "b")))
 
-      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (n:B) RETURN n.name AS name ORDER BY name", resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (n:B) RETURN n.name AS name ORDER BY name", resultHandler = (row, _) => {
         row.get("name") should be("ab")
       }) should be(1)
 
       val expected2 = List("ab", null)
-      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (n:A) RETURN n.name AS name ORDER BY name", resultHandler = (row, index) => {
+      executeOnDBMSDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (n:A) RETURN n.name AS name ORDER BY name", resultHandler = (row, index) => {
         row.get("name") should be(expected2(index))
       }) should be(2)
     }
@@ -894,12 +894,12 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       // THEN
       val query = s"CYPHER runtime=$runtime CREATE (n:B {name: 'b'}) WITH 1 AS ignore MATCH (m:B) RETURN m.name AS name ORDER BY name"
-      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
         row.get("name") should be("b")
       }) should be(1)
 
       // THEN
-      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (n:B) RETURN n.name AS name ORDER BY name") should be(0)
+      executeOnDBMSDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (n:B) RETURN n.name AS name ORDER BY name") should be(0)
 
       execute(s"CYPHER runtime=$runtime MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "ab"), Map("n.name" -> "b")))
     }
@@ -921,12 +921,12 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       // THEN
       val expected = Seq("b", null)
       val query = s"CYPHER runtime=$runtime CREATE (n:B {name: 'b'}) WITH 1 AS ignore MATCH (m:B) RETURN m.name AS name ORDER BY name"
-      executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
         row.get("name") should be(expected(index))
       }) should be(2)
 
       // THEN
-      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (n:B) RETURN n.name AS name ORDER BY name", resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (n:B) RETURN n.name AS name ORDER BY name", resultHandler = (row, _) => {
         row.get("name") should be(null)
       }) should be(2)
 
@@ -956,7 +956,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
            |SET a:B
            |RETURN a.name AS name""".stripMargin
 
-      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
         row.get("name") should be("a")
       }) should be(1)
     }
@@ -987,7 +987,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
            |MATCH (a:A)
            |RETURN a.name AS name""".stripMargin
 
-      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
         row.get("name") should be("a")
       }) should be(1)
     }
@@ -1017,7 +1017,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
            |MATCH (a:A)
            |RETURN a.name AS name""".stripMargin
 
-      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
         row.get("name") should be("a")
       }) should be(1)
     }
@@ -1037,12 +1037,12 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       execute("DENY TRAVERSE ON GRAPH * NODES B (*) TO custom")
 
       // THEN: check read-only
-      executeOnDefault("joe", "soap", "MATCH (a:A) RETURN a.name AS name", resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", "MATCH (a:A) RETURN a.name AS name", resultHandler = (row, _) => {
         row.get("name") should be("a")
       }) should be(1)
 
       // THEN: two part query
-      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (a:A) SET a:B WITH 1 AS ignore MATCH (a:A) RETURN a.name AS name", resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (a:A) SET a:B WITH 1 AS ignore MATCH (a:A) RETURN a.name AS name", resultHandler = (row, _) => {
         row.get("name") should be("a")
       }) should be(1)
 
@@ -1050,7 +1050,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       execute("MATCH (n:A) REMOVE n:B")
 
       // THEN: two queries in same transaction
-      executeOnDefault("joe", "soap", executeBefore = tx => tx.execute("MATCH (a:A) SET a:B"), query = s"CYPHER runtime=$runtime MATCH (a:A) RETURN a.name AS name", resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", executeBefore = tx => tx.execute("MATCH (a:A) SET a:B"), query = s"CYPHER runtime=$runtime MATCH (a:A) RETURN a.name AS name", resultHandler = (row, _) => {
         row.get("name") should be("a")
       }) should be(1)
     }
@@ -1081,7 +1081,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
            |MATCH (b:B)
            |RETURN b.name AS name""".stripMargin
 
-      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
         row.get("name") should be("a")
       }) should be(1)
     }
@@ -1104,7 +1104,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       // THEN: label B is not a existing token
       val query = s"CYPHER runtime=$runtime MATCH (a:A) WHERE a.name = 'a' SET a:B WITH 1 AS ignore MATCH (a:A) RETURN a.name AS name"
-      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
         row.get("name") should be("a")
       })
     }
@@ -1123,10 +1123,10 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       execute("DENY READ {name} ON GRAPH * NODES B (*) TO custom")
 
       // THEN: check read-only
-      executeOnDefault("joe", "soap", "MATCH (a:A) WHERE exists(a.name) RETURN a.name AS name") should be(0)
+      executeOnDBMSDefault("joe", "soap", "MATCH (a:A) WHERE exists(a.name) RETURN a.name AS name") should be(0)
 
       // THEN: two part query
-      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (a:A:B) REMOVE a:B WITH 1 AS ignore MATCH (a:A) RETURN a.name AS name", resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (a:A:B) REMOVE a:B WITH 1 AS ignore MATCH (a:A) RETURN a.name AS name", resultHandler = (row, _) => {
         row.get("name") should be(null)
       }) should be(1)
 
@@ -1134,12 +1134,12 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       execute("MATCH (n:A) SET n:B")
 
       // THEN: two queries in same transaction
-      executeOnDefault("joe", "soap", executeBefore = tx => tx.execute("MATCH (a:A:B) REMOVE a:B"), query = s"CYPHER runtime=$runtime MATCH (a:A) RETURN a.name AS name", resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", executeBefore = tx => tx.execute("MATCH (a:A:B) REMOVE a:B"), query = s"CYPHER runtime=$runtime MATCH (a:A) RETURN a.name AS name", resultHandler = (row, _) => {
         row.get("name") should be(null)
       }) should be(1)
 
       // THEN: check read-only after removal of denied label
-      executeOnDefault("joe", "soap", "MATCH (a:A) WHERE exists(a.name) RETURN a.name AS name", resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", "MATCH (a:A) WHERE exists(a.name) RETURN a.name AS name", resultHandler = (row, _) => {
         row.get("name") should be("a")
       }) should be(1)
     }
@@ -1171,7 +1171,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
            |WHERE a.name = 'a'
            |RETURN a.name AS name""".stripMargin
 
-      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
         row.get("name") should be("a")
       }, requiredOperator = Some("NodeIndexSeek")) should be(1)
     }
@@ -1192,7 +1192,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       execute("DENY READ {name} ON GRAPH * NODES B (*) TO custom")
 
       // THEN: read-only check
-      executeOnDefault("joe", "soap", "MATCH (a:A) WHERE exists(a.name) RETURN a.name AS name", requiredOperator = Some("NodeIndexScan")) should be(0)
+      executeOnDBMSDefault("joe", "soap", "MATCH (a:A) WHERE exists(a.name) RETURN a.name AS name", requiredOperator = Some("NodeIndexScan")) should be(0)
 
       // THEN
       val query =
@@ -1203,10 +1203,10 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
            |MATCH (a:A) WHERE exists(a.name)
            |RETURN a.name AS name""".stripMargin
 
-      executeOnDefault("joe", "soap", query, requiredOperator = Some("NodeIndexScan")) should be(0)
+      executeOnDBMSDefault("joe", "soap", query, requiredOperator = Some("NodeIndexScan")) should be(0)
 
       // THEN: read-only check
-      executeOnDefault("joe", "soap", "MATCH (a:A) WHERE exists(a.name) RETURN a.name AS name", resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", "MATCH (a:A) WHERE exists(a.name) RETURN a.name AS name", resultHandler = (row, _) => {
         row.get("name") should be("a")
       }, requiredOperator = Some("NodeIndexScan")) should be(1)
     }
@@ -1226,13 +1226,13 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       // THEN
       val query = s"CYPHER runtime=$runtime CREATE (:A)-[:REL {name:'b'}]->() WITH 1 AS ignore MATCH (:A)-[r:REL]->() RETURN r.name AS name"
-      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
         row.get("name") should be("b")
       }) should be(1)
 
       execute("MATCH (:A)-[r:REL]->() RETURN r.name").toSet should be(Set(Map("r.name" -> "a"), Map("r.name" -> "b")))
 
-      executeOnDefault("joe", "soap", "MATCH (:A)-[r:REL]->() RETURN r.name AS name") should be(0)
+      executeOnDBMSDefault("joe", "soap", "MATCH (:A)-[r:REL]->() RETURN r.name AS name") should be(0)
     }
 
     test(s"should read your own writes on relationships when granted TRAVERSE and WRITE privilege with $runtime") {
@@ -1253,13 +1253,13 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       val expected = List("b", null)
 
       val query = s"CYPHER runtime=$runtime CREATE (:A)-[:REL {name:'b'}]->() WITH 1 AS ignore MATCH (:A)-[r:REL]->() RETURN r.name AS name ORDER BY name"
-      executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
         row.get("name") should be(expected(index))
       }) should be(2)
 
       execute("MATCH (:A)-[r:REL]->() RETURN r.name").toSet should be(Set(Map("r.name" -> "a"), Map("r.name" -> "b")))
 
-      executeOnDefault("joe", "soap", "MATCH (:A)-[r:REL]->() RETURN r.name AS name", resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", "MATCH (:A)-[r:REL]->() RETURN r.name AS name", resultHandler = (row, _) => {
         row.get("name") should be(null)
       }) should be(2)
     }
@@ -1281,14 +1281,14 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       // THEN
       val query = s"CYPHER runtime=$runtime CREATE (:A)-[:REL {name:'b'}]->() WITH 1 AS ignore MATCH (:A)-[r:REL]->() RETURN r.name AS name"
-      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
         row.get("name") should be("b")
       }) should be(1)
 
       // THEN
       execute(s"CYPHER runtime=$runtime MATCH (:A)-[r:REL]->() RETURN r.name AS name").toSet should be(Set(Map("name" -> "a"), Map("name" -> "b")))
 
-      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (:A)-[r:REL]->() RETURN r.name AS name") should be(0)
+      executeOnDBMSDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (:A)-[r:REL]->() RETURN r.name AS name") should be(0)
     }
 
     test(s"should read your own writes on relationships with WRITE and restricted READ privilege with $runtime") {
@@ -1311,7 +1311,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       val expected1 = List(("a", null, null), ("b", 22, false))
 
       val query = s"CYPHER runtime=$runtime CREATE (:A)-[:REL {name:'b', age: 22, pets: false}]->() WITH 1 AS ignore MATCH (:A)-[r:REL]->() RETURN r.name AS name, r.age AS age, r.pets AS pets ORDER BY name"
-      executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, index) => {
         (row.get("name"), row.get("age"), row.get("pets")) should be(expected1(index))
       }) should be(2)
 
@@ -1319,7 +1319,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       execute(s"CYPHER runtime=$runtime MATCH (:A)-[r:REL]->() RETURN r.name AS name, r.age AS age, r.pets AS pets").toSet should be(Set(Map("name" -> "a", "age" -> 21, "pets" -> true), Map("name" -> "b", "age" -> 22, "pets" -> false)))
 
       val expected2 = List(("a", null, null), ("b", null, null))
-      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (:A)-[r:REL]->() RETURN r.name AS name, r.age AS age, r.pets AS pets ORDER BY name", resultHandler = (row, index) => {
+      executeOnDBMSDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (:A)-[r:REL]->() RETURN r.name AS name, r.age AS age, r.pets AS pets ORDER BY name", resultHandler = (row, index) => {
         (row.get("name"), row.get("age"), row.get("pets")) should be(expected2(index))
       }) should be(2)
     }
@@ -1338,28 +1338,28 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("GRANT WRITE ON GRAPH * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CREATE (n:A {name: 'b'}) RETURN n.name", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "CREATE (n:A {name: 'b'}) RETURN n.name", resultHandler = (row, _) => {
       row.get("n.name") should be("b")
     }) should be(1)
 
     // Need token permission to create node with non-existing label
     an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "CREATE (n:B) RETURN n")
+      executeOnDBMSDefault("joe", "soap", "CREATE (n:B) RETURN n")
     }
 
     // Need token permission to create node with non-existing property name
     an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "CREATE (n:A {prop: 'b'}) RETURN n")
+      executeOnDBMSDefault("joe", "soap", "CREATE (n:A {prop: 'b'}) RETURN n")
     }
 
     // Need schema permission to add index
     an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "CREATE INDEX FOR (n:A) ON (n.name)")
+      executeOnDBMSDefault("joe", "soap", "CREATE INDEX FOR (n:A) ON (n.name)")
     }
 
     // Need schema permission to add constraint
     an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:A) ASSERT n.name IS NOT NULL")
+      executeOnDBMSDefault("joe", "soap", "CREATE CONSTRAINT ON (n:A) ASSERT n.name IS NOT NULL")
     }
   }
 
@@ -1376,7 +1376,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // THEN
     an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)")
+      executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN labels(n)")
     }
   }
 
@@ -1392,7 +1392,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("GRANT WRITE ON GRAPH * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)") should be(0)
+    executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN labels(n)") should be(0)
   }
 
   test("should create nodes when granted WRITE privilege to custom role for a specific graph") {
@@ -1407,7 +1407,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute(s"GRANT WRITE ON GRAPH $DEFAULT_DATABASE_NAME TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CREATE (n:A {name: 'b'}) RETURN 1 AS dummy", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "CREATE (n:A {name: 'b'}) RETURN 1 AS dummy", resultHandler = (row, _) => {
       row.get("dummy") should be(1)
     }) should be(1)
 
@@ -1434,7 +1434,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("DENY WRITE ON GRAPH foo TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CREATE (:A {name: 'b'}) RETURN 1 AS dummy", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "CREATE (:A {name: 'b'}) RETURN 1 AS dummy", resultHandler = (row, _) => {
       row.get("dummy") should be(1)
     }) should be(1)
 
