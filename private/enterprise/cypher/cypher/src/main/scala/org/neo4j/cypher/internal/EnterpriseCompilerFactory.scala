@@ -16,7 +16,7 @@ import org.neo4j.cypher.CypherVersion
 import org.neo4j.cypher.internal.cache.ExecutorBasedCaffeineCacheFactory
 import org.neo4j.cypher.internal.compiler.CypherPlannerConfiguration
 import org.neo4j.cypher.internal.compiler.phases.Compatibility3_5
-import org.neo4j.cypher.internal.compiler.phases.Compatibility4_1
+import org.neo4j.cypher.internal.compiler.phases.Compatibility4_2
 import org.neo4j.cypher.internal.compiler.phases.Compatibility4_3
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.planning.CypherPlanner
@@ -61,7 +61,7 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
 
     val compatibilityMode = cypherVersion match {
       case CypherVersion.v3_5 => Compatibility3_5
-      case CypherVersion.v4_1 => Compatibility4_1
+      case CypherVersion.v4_2 => Compatibility4_2
       case CypherVersion.v4_3 => Compatibility4_3
     }
 

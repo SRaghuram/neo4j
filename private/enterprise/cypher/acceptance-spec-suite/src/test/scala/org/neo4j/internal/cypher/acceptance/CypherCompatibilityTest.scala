@@ -9,7 +9,7 @@ import com.neo4j.cypher.RunWithConfigTestSupport
 import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.CypherParserVersion.V_35
-import org.neo4j.configuration.GraphDatabaseSettings.CypherParserVersion.V_41
+import org.neo4j.configuration.GraphDatabaseSettings.CypherParserVersion.V_42
 import org.neo4j.configuration.GraphDatabaseSettings.CypherParserVersion.V_43
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
@@ -31,7 +31,7 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
       db =>
         db.withTx( tx => {
           tx.execute(s"CYPHER 3.5 $QUERY").asScala.toList shouldBe empty
-          tx.execute(s"CYPHER 4.1 $QUERY").asScala.toList shouldBe empty
+          tx.execute(s"CYPHER 4.2 $QUERY").asScala.toList shouldBe empty
           tx.execute(s"CYPHER 4.3 $QUERY").asScala.toList shouldBe empty
         })
     }
@@ -42,19 +42,19 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
       db =>
         db.withTx(tx => {
           tx.execute(s"CYPHER 3.5 $QUERY").asScala.toList shouldBe empty
-          tx.execute(s"CYPHER 4.1 $QUERY").asScala.toList shouldBe empty
+          tx.execute(s"CYPHER 4.2 $QUERY").asScala.toList shouldBe empty
           tx.execute(s"CYPHER 4.3 $QUERY").asScala.toList shouldBe empty
         })
     }
   }
 
   Seq(
-    (V_35, V_41),
+    (V_35, V_42),
     (V_35, V_43),
-    (V_41, V_35),
-    (V_41, V_43),
+    (V_42, V_35),
+    (V_42, V_43),
     (V_43, V_35),
-    (V_43, V_41)
+    (V_43, V_42)
   ).foreach {
     case (configVersion, queryVersion) =>
       test(s"should be able to override config version $configVersion with $queryVersion") {
@@ -80,7 +80,7 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
     runWithConfig() {
       db =>
         assertProfiled(db, "CYPHER 3.5 runtime=interpreted PROFILE MATCH (n) RETURN n")
-        assertProfiled(db, "CYPHER 4.1 runtime=interpreted PROFILE MATCH (n) RETURN n")
+        assertProfiled(db, "CYPHER 4.2 runtime=interpreted PROFILE MATCH (n) RETURN n")
         assertProfiled(db, "CYPHER 4.3 runtime=interpreted PROFILE MATCH (n) RETURN n")
     }
   }
@@ -89,7 +89,7 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
     runWithConfig() {
       db =>
         assertExplained(db, "CYPHER 3.5 EXPLAIN MATCH (n) RETURN n")
-        assertExplained(db, "CYPHER 4.1 EXPLAIN MATCH (n) RETURN n")
+        assertExplained(db, "CYPHER 4.2 EXPLAIN MATCH (n) RETURN n")
         assertExplained(db, "CYPHER 4.3 EXPLAIN MATCH (n) RETURN n")
     }
   }
@@ -98,8 +98,8 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
     runWithConfig() {
       db =>
         assertVersionAndRuntime(db, "3.5", "slotted")
-        assertVersionAndRuntime(db, "4.1", "slotted")
-        assertVersionAndRuntime(db, "4.1", "pipelined")
+        assertVersionAndRuntime(db, "4.2", "slotted")
+        assertVersionAndRuntime(db, "4.2", "pipelined")
         assertVersionAndRuntime(db, "4.3", "slotted")
         assertVersionAndRuntime(db, "4.3", "pipelined")
     }
@@ -128,6 +128,8 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
         db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 3.3 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError") )
         db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 3.4 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError") )
         db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 3.6 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError") )
+        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 4.0 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError") )
+        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 4.1 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError") )
     }
   }
 

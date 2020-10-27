@@ -496,7 +496,7 @@ class ExecutionResultTest
     @Test
     void shouldContainCompletePlanFromFromLegacyVersions()
     {
-        for ( String version : new String[]{"3.5", "4.1"} )
+        for ( String version : new String[]{"3.5", "4.2"} )
         {
             try ( Transaction transaction = db.beginTx() )
             {
@@ -525,7 +525,7 @@ class ExecutionResultTest
             tx.commit();
         }
 
-        for ( String version : new String[]{"3.5", "4.1"} )
+        for ( String version : new String[]{"3.5", "4.2"} )
         {
             // When
             try ( Transaction transaction = db.beginTx() )
