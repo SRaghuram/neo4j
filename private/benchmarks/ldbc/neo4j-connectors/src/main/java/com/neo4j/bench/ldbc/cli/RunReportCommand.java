@@ -29,6 +29,7 @@ import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload
 import com.neo4j.bench.client.env.InstanceDiscovery;
 import com.neo4j.bench.client.reporter.ResultsReporter;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.ParameterVerifier;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.options.Version;
@@ -499,10 +500,7 @@ public class RunReportCommand implements Runnable
                                                         .build();
             assertDisallowFormatMigration( neo4jConfig );
             assertStoreFormatIsSet( neo4jConfig );
-            if ( !BranchAndVersion.isPersonalBranch( Repository.NEO4J, neo4jBranchOwner ) )
-            {
-                BranchAndVersion.assertBranchEqualsSeries( neo4jVersion, neo4jBranch );
-            }
+            ParameterVerifier.performSanityChecks( neo4jBranchOwner, neo4jVersion, neo4jBranch );
             Files.createDirectories( resultsDir.toPath() );
 
             jvmArgs = buildJvmArgsString( jvmArgs, neo4jConfig );

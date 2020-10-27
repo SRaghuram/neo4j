@@ -11,6 +11,7 @@ import com.github.rvesse.airline.annotations.restrictions.AllowedEnumValues;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.client.reporter.ResultsReporter;
+import com.neo4j.bench.common.ParameterVerifier;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.tool.micro.RunReportParams;
 import com.neo4j.bench.model.options.Edition;
@@ -278,16 +279,8 @@ public abstract class BaseRunReportCommand implements Runnable
                                      errorPolicy,
                                      jvmFile,
                                      triggeredBy );
-        performSanityChecks();
+        ParameterVerifier.performSanityChecks( neo4jBranchOwner, neo4jVersion, neo4jBranch );
         doRun( runReportParams );
-    }
-
-    private void performSanityChecks()
-    {
-        if ( !BranchAndVersion.isPersonalBranch( Repository.NEO4J, neo4jBranchOwner ) )
-        {
-            BranchAndVersion.assertBranchEqualsSeries( neo4jVersion, neo4jBranch );
-        }
     }
 
     protected abstract void doRun( RunReportParams runReportParams );

@@ -18,6 +18,7 @@ import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.client.env.InstanceDiscovery;
 import com.neo4j.bench.client.queries.submit.SubmitTestRun;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.ParameterVerifier;
 import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkConfig;
@@ -318,10 +319,7 @@ public class Main
 
     private void report( long start, long time, Neo4jConfig neo4jConfig, BenchmarkGroupBenchmarkMetrics metrics )
     {
-        if ( !BranchAndVersion.isPersonalBranch( NEO4J, neo4jBranchOwner ) )
-        {
-            BranchAndVersion.assertBranchEqualsSeries( neo4jVersion, neo4jBranch );
-        }
+        ParameterVerifier.performSanityChecks( neo4jBranchOwner, neo4jVersion, neo4jBranch );
         BenchmarkTool tool = new BenchmarkTool( IMPORT_BENCH, toolCommit, IMPORT_OWNER, neo4jBranch );
         Java java = Java.current( Stream.of( jvmArgs ).collect( joining( " " ) ) );
 

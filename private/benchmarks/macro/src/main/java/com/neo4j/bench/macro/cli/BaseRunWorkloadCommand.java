@@ -8,6 +8,7 @@ package com.neo4j.bench.macro.cli;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
+import com.neo4j.bench.common.ParameterVerifier;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.options.Version;
@@ -269,7 +270,7 @@ public abstract class BaseRunWorkloadCommand implements Runnable
         Duration minMeasurementDuration = Duration.ofSeconds( minMeasurementSeconds );
         Duration maxMeasurementDuration = Duration.ofSeconds( maxMeasurementSeconds );
         JvmArgs jvmArgs = JvmArgs.parse( this.jvmArgs );
-        performSanityChecks();
+        ParameterVerifier.performSanityChecks( neo4jBranchOwner, neo4jVersion, neo4jBranch );
         List<String> queries = StringUtils.isBlank( queryNames )
                                ? Collections.emptyList()
                                : Arrays.asList( queryNames.split( "," ) );
@@ -304,14 +305,6 @@ public abstract class BaseRunWorkloadCommand implements Runnable
                                                                            triggeredBy );
 
         doRun( commandParams );
-    }
-
-    private void performSanityChecks()
-    {
-        if ( !BranchAndVersion.isPersonalBranch( Repository.NEO4J, neo4jBranchOwner ) )
-        {
-            BranchAndVersion.assertBranchEqualsSeries( neo4jVersion, neo4jBranch );
-        }
     }
 
     protected abstract void doRun( RunMacroWorkloadParams params );

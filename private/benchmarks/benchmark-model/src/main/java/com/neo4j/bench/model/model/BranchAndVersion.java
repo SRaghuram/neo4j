@@ -61,6 +61,10 @@ public class BranchAndVersion
     private static String versionToBranch( String version )
     {
         String[] split = version.split( "\\." );
+        if ( split.length != 4 && split.length != 3 )
+        {
+            throw new RuntimeException( "Branch could not be converted to Version, wrong size expected x.z.y(-dropxz.y) but got " + version );
+        }
         return split[0] + "." + split[1];
     }
 }
