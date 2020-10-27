@@ -32,7 +32,6 @@ import javax.naming.NamingException;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.cache.CaffeineCacheFactory;
-import org.neo4j.cypher.internal.cache.ExecutorBasedCaffeineCacheFactory;
 import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
@@ -51,7 +50,7 @@ class LdapCachingTest
     private MultiRealmAuthManager authManager;
     private TestRealm testRealm;
     private FakeTicker fakeTicker;
-    private CaffeineCacheFactory cacheFactory = new ExecutorBasedCaffeineCacheFactory( Runnable::run );
+    private CaffeineCacheFactory cacheFactory = TestExecutorCaffeineCacheFactory.getInstance();
 
     private final LoginContext.IdLookup token = LoginContext.IdLookup.EMPTY;
 

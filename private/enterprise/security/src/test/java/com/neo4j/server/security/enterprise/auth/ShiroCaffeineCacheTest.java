@@ -10,7 +10,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.cypher.internal.cache.CaffeineCacheFactory;
-import org.neo4j.cypher.internal.cache.ExecutorBasedCaffeineCacheFactory;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -22,7 +21,7 @@ class ShiroCaffeineCacheTest
     private ShiroCaffeineCache<Integer,String> cache;
     private FakeTicker fakeTicker;
     private final long TTL = 100;
-    private CaffeineCacheFactory caffeineCacheFactory = new ExecutorBasedCaffeineCacheFactory( Runnable::run );
+    private CaffeineCacheFactory caffeineCacheFactory = TestExecutorCaffeineCacheFactory.getInstance();
 
     @BeforeEach
     void setUp()

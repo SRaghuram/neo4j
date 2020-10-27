@@ -65,7 +65,8 @@ class MultiRealmAuthManagerTest
     private MultiRealmAuthManager createAuthManager( boolean logSuccessfulAuthentications ) throws Throwable
     {
         realmHelper = spy( new SystemGraphRealmHelper( null, new SecureHasher() ) );
-        SystemGraphRealm realm = new SystemGraphRealm( realmHelper, authStrategy, true, true, mock( EnterpriseSecurityGraphComponent.class ) );
+        SystemGraphRealm realm = new SystemGraphRealm( realmHelper, authStrategy, true, true,
+                                                       mock( EnterpriseSecurityGraphComponent.class ), TestExecutorCaffeineCacheFactory.getInstance() );
 
         Config config = Config.defaults();
         config.set( SecuritySettings.security_log_successful_authentication, logSuccessfulAuthentications );

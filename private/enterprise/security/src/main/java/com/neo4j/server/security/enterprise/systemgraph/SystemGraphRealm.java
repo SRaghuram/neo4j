@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
-import com.github.benmanes.caffeine.cache.Caffeine;
 import com.neo4j.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
@@ -30,8 +29,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.ForkJoinPool;
 
+import org.neo4j.cypher.internal.cache.CaffeineCacheFactory;
 import org.neo4j.cypher.internal.security.FormatException;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Label;
@@ -65,7 +64,8 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
     private com.github.benmanes.caffeine.cache.Cache<String,Set<ResourcePrivilege>> privilegeCache;
 
     public SystemGraphRealm( SystemGraphRealmHelper systemGraphRealmHelper, AuthenticationStrategy authenticationStrategy, boolean authenticationEnabled,
-                             boolean authorizationEnabled, EnterpriseSecurityGraphComponent enterpriseSecurityGraphComponent )
+                             boolean authorizationEnabled, EnterpriseSecurityGraphComponent enterpriseSecurityGraphComponent,
+                             CaffeineCacheFactory cacheFactory )
     {
         this.systemGraphRealmHelper = systemGraphRealmHelper;
         this.authenticationStrategy = authenticationStrategy;
@@ -75,11 +75,7 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
         setAuthenticationCachingEnabled( true );
         setName( SecuritySettings.NATIVE_REALM_NAME );
         this.authorizationEnabled = authorizationEnabled;
-        Caffeine<Object,Object> builder = Caffeine.newBuilder()
-                .maximumSize( 10000 )
-                .executor( ForkJoinPool.commonPool() )
-                .expireAfterAccess( Duration.ofHours( 1 ) );
-        privilegeCache = builder.build();
+        privilegeCache = cacheFactory.createCache( 10000, Duration.ofHours( 1 ).toMillis() );
         setAuthorizationCachingEnabled( true );
         setCredentialsMatcher( this );
     }

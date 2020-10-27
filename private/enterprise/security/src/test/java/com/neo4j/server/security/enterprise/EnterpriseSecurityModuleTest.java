@@ -8,6 +8,7 @@ package com.neo4j.server.security.enterprise;
 import com.neo4j.configuration.SecurityInternalSettings;
 import com.neo4j.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.auth.SecurityProcedures;
+import com.neo4j.server.security.enterprise.auth.TestExecutorCaffeineCacheFactory;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent;
 import org.junit.jupiter.api.BeforeEach;
@@ -76,7 +77,7 @@ class EnterpriseSecurityModuleTest
         mockEventListeners = mock( GlobalTransactionEventListeners.class );
         mockDependencies = new Dependencies();
         mockDependencies.satisfyDependency( mockProcedures );
-        caffeineCacheFactory = new ExecutorBasedCaffeineCacheFactory( Runnable::run );
+        caffeineCacheFactory = TestExecutorCaffeineCacheFactory.getInstance();
         when( mockLogProvider.getLog( anyString() ) ).thenReturn( mockLog );
         when( mockLog.isDebugEnabled() ).thenReturn( true );
         when( config.get( SecurityInternalSettings.property_level_authorization_enabled ) ).thenReturn( false );

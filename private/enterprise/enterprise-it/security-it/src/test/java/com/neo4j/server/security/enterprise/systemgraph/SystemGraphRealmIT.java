@@ -13,6 +13,7 @@ import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
+import com.neo4j.server.security.enterprise.auth.TestExecutorCaffeineCacheFactory;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
@@ -473,7 +474,8 @@ class SystemGraphRealmIT
         systemGraphInitializer.start();
 
         RateLimitedAuthenticationStrategy authenticationStrategy = new RateLimitedAuthenticationStrategy( Clock.systemUTC(), config );
-        realm = new SystemGraphRealm( realmHelper, authenticationStrategy, true, true, enterpriseSecurityGraphComponent );
+        realm = new SystemGraphRealm( realmHelper, authenticationStrategy, true, true, enterpriseSecurityGraphComponent,
+                                      TestExecutorCaffeineCacheFactory.getInstance() );
     }
 
     private static class TestDatabaseManager extends BasicSystemGraphRealmTestHelper.TestDatabaseManager

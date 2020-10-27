@@ -269,7 +269,8 @@ public class EnterpriseSecurityModule extends SecurityModule
                 strategy,
                 securityConfig.nativeAuthentication,
                 securityConfig.nativeAuthorization,
-                enterpriseSecurityGraphComponent
+                enterpriseSecurityGraphComponent,
+                cacheFactory
         );
     }
 
