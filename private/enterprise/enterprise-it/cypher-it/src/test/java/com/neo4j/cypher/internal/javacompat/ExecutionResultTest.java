@@ -33,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @EnterpriseDbmsExtension
 class ExecutionResultTest
 {
-    private static final String CURRENT_VERSION = "CYPHER 4.2";
+    private static final String CURRENT_VERSION = "CYPHER 4.3";
     @Inject
     private GraphDatabaseService db;
 

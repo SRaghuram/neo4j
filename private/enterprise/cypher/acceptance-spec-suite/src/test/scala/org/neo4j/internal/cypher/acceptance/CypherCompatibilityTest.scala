@@ -10,7 +10,7 @@ import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.CypherParserVersion.V_35
 import org.neo4j.configuration.GraphDatabaseSettings.CypherParserVersion.V_41
-import org.neo4j.configuration.GraphDatabaseSettings.CypherParserVersion.V_42
+import org.neo4j.configuration.GraphDatabaseSettings.CypherParserVersion.V_43
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.graphdb.QueryExecutionException
@@ -32,7 +32,7 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
         db.withTx( tx => {
           tx.execute(s"CYPHER 3.5 $QUERY").asScala.toList shouldBe empty
           tx.execute(s"CYPHER 4.1 $QUERY").asScala.toList shouldBe empty
-          tx.execute(s"CYPHER 4.2 $QUERY").asScala.toList shouldBe empty
+          tx.execute(s"CYPHER 4.3 $QUERY").asScala.toList shouldBe empty
         })
     }
   }
@@ -43,18 +43,18 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
         db.withTx(tx => {
           tx.execute(s"CYPHER 3.5 $QUERY").asScala.toList shouldBe empty
           tx.execute(s"CYPHER 4.1 $QUERY").asScala.toList shouldBe empty
-          tx.execute(s"CYPHER 4.2 $QUERY").asScala.toList shouldBe empty
+          tx.execute(s"CYPHER 4.3 $QUERY").asScala.toList shouldBe empty
         })
     }
   }
 
   Seq(
     (V_35, V_41),
-    (V_35, V_42),
+    (V_35, V_43),
     (V_41, V_35),
-    (V_41, V_42),
-    (V_42, V_35),
-    (V_42, V_41)
+    (V_41, V_43),
+    (V_43, V_35),
+    (V_43, V_41)
   ).foreach {
     case (configVersion, queryVersion) =>
       test(s"should be able to override config version $configVersion with $queryVersion") {
@@ -71,7 +71,7 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
         db.withTx(tx => {
           val result = tx.execute(QUERY)
           result.asScala.toList shouldBe empty
-          result.getExecutionPlanDescription.getArguments.get("version") should equal("CYPHER 4.2")
+          result.getExecutionPlanDescription.getArguments.get("version") should equal("CYPHER 4.3")
         })
     }
   }
@@ -81,7 +81,7 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
       db =>
         assertProfiled(db, "CYPHER 3.5 runtime=interpreted PROFILE MATCH (n) RETURN n")
         assertProfiled(db, "CYPHER 4.1 runtime=interpreted PROFILE MATCH (n) RETURN n")
-        assertProfiled(db, "CYPHER 4.2 runtime=interpreted PROFILE MATCH (n) RETURN n")
+        assertProfiled(db, "CYPHER 4.3 runtime=interpreted PROFILE MATCH (n) RETURN n")
     }
   }
 
@@ -90,7 +90,7 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
       db =>
         assertExplained(db, "CYPHER 3.5 EXPLAIN MATCH (n) RETURN n")
         assertExplained(db, "CYPHER 4.1 EXPLAIN MATCH (n) RETURN n")
-        assertExplained(db, "CYPHER 4.2 EXPLAIN MATCH (n) RETURN n")
+        assertExplained(db, "CYPHER 4.3 EXPLAIN MATCH (n) RETURN n")
     }
   }
 
@@ -100,8 +100,8 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
         assertVersionAndRuntime(db, "3.5", "slotted")
         assertVersionAndRuntime(db, "4.1", "slotted")
         assertVersionAndRuntime(db, "4.1", "pipelined")
-        assertVersionAndRuntime(db, "4.2", "slotted")
-        assertVersionAndRuntime(db, "4.2", "pipelined")
+        assertVersionAndRuntime(db, "4.3", "slotted")
+        assertVersionAndRuntime(db, "4.3", "pipelined")
     }
   }
 

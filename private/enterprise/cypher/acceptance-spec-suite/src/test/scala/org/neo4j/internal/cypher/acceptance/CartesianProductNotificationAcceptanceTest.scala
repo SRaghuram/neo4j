@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.compiler.CypherPlannerConfiguration
 import org.neo4j.cypher.internal.compiler.CypherPlannerFactory
 import org.neo4j.cypher.internal.compiler.StatsDivergenceCalculator
 import org.neo4j.cypher.internal.compiler.defaultUpdateStrategy
-import org.neo4j.cypher.internal.compiler.phases.Compatibility4_2
+import org.neo4j.cypher.internal.compiler.phases.Compatibility4_3
 import org.neo4j.cypher.internal.compiler.phases.PlannerContext
 import org.neo4j.cypher.internal.compiler.phases.PlannerContextCreator
 import org.neo4j.cypher.internal.compiler.planner.logical.CachedMetricsFactory
@@ -104,7 +104,7 @@ class CartesianProductNotificationAcceptanceTest extends CypherFunSuite with Gra
     graph.withTx( tx => {
       val tracer = CompilationPhaseTracer.NO_TRACING
       val innerVariableNamer = new GeneratingNamer
-      val parsed = compiler.parseQuery(query, query, logger, IDPPlannerName.name, Set.empty, None, tracer, innerVariableNamer, MapValue.EMPTY, compatibilityMode = Compatibility4_2)
+      val parsed = compiler.parseQuery(query, query, logger, IDPPlannerName.name, Set.empty, None, tracer, innerVariableNamer, MapValue.EMPTY, compatibilityMode = Compatibility4_3)
       val kernelTransaction = tx.kernelTransaction()
       val statement = kernelTransaction.acquireStatement()
       val context = PlannerContextCreator.create(tracer, logger, planContext(kernelTransaction, statement), parsed.queryText, Set.empty,

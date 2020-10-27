@@ -126,10 +126,10 @@ class AdministrationCommandPlannerTest extends AdministrationCommandAcceptanceTe
 
   private def assertAdminCommandPlan(plan: String): Unit =
     plan should be(
-      "Compiler CYPHER 4.2" + doubleNewLine +
+      "Compiler CYPHER 4.3" + doubleNewLine +
         "Planner ADMINISTRATION" + doubleNewLine +
         "Runtime SYSTEM" + doubleNewLine +
-        "Runtime version 4.2" + doubleNewLine +
+        "Runtime version 4.3" + doubleNewLine +
         "+------------------------+" + newLine +
         "| Operator               |" + newLine +
         "+------------------------+" + newLine +
