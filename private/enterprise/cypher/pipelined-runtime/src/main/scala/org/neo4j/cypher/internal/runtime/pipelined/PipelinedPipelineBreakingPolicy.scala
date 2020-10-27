@@ -213,8 +213,6 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
     }
   }
 
-  override def onNestedPlanBreak(): Unit = {}
-
   /**
    * Checks if the current one-child operator can be fused.
    *

@@ -60,6 +60,4 @@ object SlottedPipelineBreakingPolicy extends PipelineBreakingPolicy {
         false
     }
   }
-
-  override def onNestedPlanBreak(): Unit = ()
 }

@@ -407,7 +407,6 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
           if (acc.doNotTraverseExpression.contains(e)) {
             SkipChildren(acc)
           } else {
-            breakingPolicy.onNestedPlanBreak()
             val argumentSlotConfiguration = slots.copy()
             availableExpressionVariables(e.plan.id).foreach { expVar =>
               argumentSlotConfiguration.newReference(expVar.name, nullable = true, CTAny)
