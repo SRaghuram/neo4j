@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
+import java.util
+
 import org.neo4j.cypher.internal
 import org.neo4j.cypher.internal.ast.ProcedureResultItem
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
@@ -128,7 +130,6 @@ import org.neo4j.cypher.internal.util.symbols.CTRelationship
 import org.neo4j.cypher.internal.util.symbols.ListType
 import org.neo4j.exceptions.InternalException
 
-import scala.collection.mutable
 import scala.util.Try
 
 /**
@@ -205,9 +206,9 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
                     semanticTable: SemanticTable,
                     initialSlotsAndArgument: Option[SlotsAndArgument]): SlotMetaData = {
 
-    val planStack = new mutable.Stack[(Boolean, LogicalPlan)]()
-    val resultStack = new mutable.Stack[SlotConfiguration]()
-    val argumentStack = new mutable.Stack[SlotsAndArgument]()
+    val planStack = new util.ArrayDeque[(Boolean, LogicalPlan)]()
+    val resultStack = new util.ArrayDeque[SlotConfiguration]()
+    val argumentStack = new util.ArrayDeque[SlotsAndArgument]()
     initialSlotsAndArgument.foreach(argumentStack.push)
     var comingFrom = lp
 
@@ -235,10 +236,10 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
 
     populate(lp, nullIn = false)
 
-    while (planStack.nonEmpty) {
+    while (!planStack.isEmpty) {
       val (nullable, current) = planStack.pop()
 
-      val outerApplyPlan = if (argumentStack.isEmpty) Id.INVALID_ID else argumentStack.top.argumentPlan
+      val outerApplyPlan = if (argumentStack.isEmpty) Id.INVALID_ID else argumentStack.getFirst.argumentPlan
       applyPlans.set(current.id, outerApplyPlan)
 
       (current.lhs, current.rhs) match {
@@ -246,7 +247,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
           val argument = if (argumentStack.isEmpty) {
             NO_ARGUMENT(allocateArgumentSlots)
           } else {
-            argumentStack.top
+            argumentStack.getFirst
           }
           recordArgument(current, argument)
 
@@ -262,7 +263,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
           val argument = if (argumentStack.isEmpty) {
             NO_ARGUMENT(allocateArgumentSlots)
           } else {
-            argumentStack.top
+            argumentStack.getFirst
           }
           allocateExpressionsOneChild(current, nullable, sourceSlots, semanticTable)
 
@@ -273,7 +274,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
 
         case (Some(left), Some(right)) if (comingFrom eq left) && current.isInstanceOf[ApplyPlan] =>
           planStack.push((nullable, current))
-          val argumentSlots = resultStack.top
+          val argumentSlots = resultStack.getFirst
           if (allocateArgumentSlots) {
             argumentSlots.newArgument(current.id)
           }
@@ -285,7 +286,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
 
         case (Some(left), Some(right)) if comingFrom eq left =>
           planStack.push((nullable, current))
-          val previousArgument = if (argumentStack.isEmpty) NO_ARGUMENT(allocateArgumentSlots) else argumentStack.top
+          val previousArgument = if (argumentStack.isEmpty) NO_ARGUMENT(allocateArgumentSlots) else argumentStack.getFirst
           if (argumentRowIdSlotForCartesianProductNeeded(current)) {
             // We put a new argument on the argument stack, but in contrast to Apply, we create a copy of the previous argument, because
             // the RHS does not need any slots from the LHS.
@@ -303,7 +304,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
           val argument = if (argumentStack.isEmpty) {
             NO_ARGUMENT(allocateArgumentSlots)
           } else {
-            argumentStack.top
+            argumentStack.getFirst
           }
           // NOTE: If we introduce a two sourced logical plan with an expression that needs to be evaluated in a
           //       particular scope (lhs or rhs) we need to add handling of it to allocateExpressionsTwoChild.
@@ -324,9 +325,6 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
   }
 
   case class Accumulator(doNotTraverseExpression: Option[Expression])
-
-  private val TRAVERSE_INTO_CHILDREN = Some((s: Accumulator) => s)
-  private val DO_NOT_TRAVERSE_INTO_CHILDREN = None
 
   private def allocateExpressionsOneChild(plan: LogicalPlan,
                                           nullable: Boolean,
