@@ -7,7 +7,9 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.QueryStatisticsTestSupport
+import org.neo4j.graphdb.Direction
 import org.neo4j.graphdb.Relationship
+import org.neo4j.graphdb.RelationshipType
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
@@ -161,5 +163,58 @@ class MergeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     // Then
     assertStats(result, nodesCreated = 1, labelsAdded = 1, propertiesWritten = 1)
+  }
+
+  test("should work in a correlated subquery") {
+    val n = createLabeledNode("N")
+    val m = createLabeledNode("M")
+
+    val result = executeWith(Configs.InterpretedAndSlotted,
+      """MATCH (n:N)
+        |CALL {
+        |  WITH n
+        |  MATCH (m:M)
+        |  MERGE (n)-[:REL]->(m)
+        |  RETURN m
+        |}
+        |RETURN n, m""".stripMargin)
+
+    assertStats(result, relationshipsCreated = 1)
+
+    countNodes() shouldBe 2
+    countRelationships() shouldBe 1
+
+    result.toList shouldBe List(
+      Map("n" -> n, "m" -> m)
+    )
+
+    withTx { tx =>
+      val endNode = tx.getNodeById(n.getId)
+        .getSingleRelationship(RelationshipType.withName("REL"), Direction.OUTGOING)
+        .getEndNode
+      endNode shouldBe m
+    }
+  }
+
+  test("should work in a horizon that does not carry over node") {
+    val n = createLabeledNode("N")
+    val m = createLabeledNode("M")
+
+    val result = executeWith(Configs.InterpretedAndSlotted,
+      """MATCH (n:N)
+        |WITH 1 AS foo
+        |MATCH (m:M)
+        |MERGE (n)-[:REL]->(m)
+        |RETURN n, m""".stripMargin,
+      expectedDifferentResults = Configs.All // Creating the second n, so different results are expected
+    )
+
+    assertStats(result, relationshipsCreated = 1, nodesCreated = 1)
+
+    countNodes() shouldBe 3
+    countRelationships() shouldBe 1
+
+    result.toList.head("m") should be (m)
+    result.toList.head("n") shouldNot be (n)
   }
 }
