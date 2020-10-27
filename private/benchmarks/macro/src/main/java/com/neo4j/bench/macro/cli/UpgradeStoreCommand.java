@@ -9,21 +9,23 @@ import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
+import com.google.common.collect.Lists;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.AutoDetectStore;
 import com.neo4j.bench.common.database.Store;
-import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.workload.Workload;
+import com.neo4j.bench.model.options.Edition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 
 import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.allow_upgrade;
@@ -65,6 +67,13 @@ public class UpgradeStoreCommand implements Runnable
              title = "Neo4j configuration file" )
     private File neo4jConfigFile;
 
+    private static final String CMD_RECORD_FORMAT = "--record-format";
+    @Option( type = OptionType.COMMAND,
+            name = {CMD_RECORD_FORMAT},
+            title = "Store record format" )
+    @Required
+    private String recordFormat;
+
     @Override
     public void run()
     {
@@ -90,7 +99,7 @@ public class UpgradeStoreCommand implements Runnable
                 neo4jConfigPath = Paths.get( "neo4j.conf" );
                 Neo4jConfigBuilder.empty()
                                   .withSetting( allow_upgrade, TRUE )
-                                  .withSetting( record_format, "high_limit" )
+                                  .withSetting( record_format, recordFormat )
                                   .writeToFile( neo4jConfigPath );
             }
 
@@ -100,5 +109,29 @@ public class UpgradeStoreCommand implements Runnable
             EmbeddedDatabase.recreateSchema( originalStore, edition, neo4jConfigPath, workload.expectedSchema() );
             LOG.debug( "Upgrade complete" );
         }
+    }
+
+    public static List<String> argsFor( Path originalDbDir,
+                                        String workloadName,
+                                        Edition edition,
+                                        Path neo4jConfigFile,
+                                        String recordFormat )
+    {
+        List<String> args = Lists.newArrayList(
+                "upgrade-store",
+                CMD_ORIGINAL_DB,
+                originalDbDir.toAbsolutePath().toString(),
+                CMD_WORKLOAD,
+                workloadName,
+                CMD_EDITION,
+                edition.name(),
+                CMD_RECORD_FORMAT,
+                recordFormat );
+        if ( null != neo4jConfigFile )
+        {
+            args.add( CMD_NEO4J_CONFIG );
+            args.add( neo4jConfigFile.toAbsolutePath().toString() );
+        }
+        return args;
     }
 }

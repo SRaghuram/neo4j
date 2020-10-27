@@ -238,11 +238,6 @@ public class EmbeddedDatabase implements Database
         } );
     }
 
-    public GraphDatabaseService db()
-    {
-        return db;
-    }
-
     public Schema getSchema()
     {
         try ( Transaction tx = db.beginTx() )

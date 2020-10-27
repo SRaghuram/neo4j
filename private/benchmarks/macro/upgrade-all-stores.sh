@@ -19,30 +19,30 @@ fi
 new_neo4j_version="${1}"
 old_neo4j_version="${2}"
 
-db_and_workloads=(
- "accesscontrol;accesscontrol"
- "bubble_eye;bubble_eye"
- "cineasts;cineasts"
- "cineasts_csv;cineasts_csv"
- "elections;elections"
- "generatedmusicdata;generatedmusicdata_read"
- "grid;grid"
- "ldbc_sf001;ldbc_sf001"
- "ldbc_sf010;ldbc_sf010"
- "levelstory;levelstory"
- "logistics;logistics"
- "musicbrainz;musicbrainz"
- "nexlp;nexlp"
- "pokec;pokec_read"
- "qmul;qmul_read"
- "recommendations;recommendations"
- "socialnetwork;socialnetwork"
- "osmnodes;osmnodes"
- "offshore_leaks;offshore_leaks"
- "fraud-poc;fraud-poc-credit"
- "alacrity;alacrity"
- "ciena;ciena"
- "zero;zero")
+db_and_workloads_record_format=(
+ "accesscontrol;accesscontrol;high_limit"
+ "bubble_eye;bubble_eye;high_limit"
+ "cineasts;cineasts;high_limit"
+ "cineasts_csv;cineasts_csv;high_limit"
+ "elections;elections;high_limit"
+ "generatedmusicdata;generatedmusicdata_read;high_limit"
+ "grid;grid;high_limit"
+ "ldbc_sf001;ldbc_sf001;high_limit"
+ "ldbc_sf010;ldbc_sf010;high_limit"
+ "levelstory;levelstory;high_limit"
+ "logistics;logistics;high_limit"
+ "musicbrainz;musicbrainz;high_limit"
+ "nexlp;nexlp;high_limit"
+ "pokec;pokec_read;high_limit"
+ "qmul;qmul_read;high_limit"
+ "recommendations;recommendations;high_limit"
+ "socialnetwork;socialnetwork;high_limit"
+ "osmnodes;osmnodes;high_limit"
+ "offshore_leaks;offshore_leaks;high_limit"
+ "fraud-poc;fraud-poc-credit;high_limit"
+ "alacrity;alacrity;high_limit"
+ "ciena;ciena;standard"
+ "zero;zero;high_limit")
 
 compress_with=$(command -v pigz)
 
@@ -50,12 +50,13 @@ if [[ ! -f "$compress_with" ]]; then
   compress_with=$(command -v gzip)
 fi
 
-for i in "${db_and_workloads[@]}"; do
+for i in "${db_and_workloads_record_format[@]}"; do
 
     # shellcheck disable=SC2206
     arr=(${i//;/ })
     db_name=${arr[0]}
     workload=${arr[1]}
+    record_format=${arr[2]}
     zip_file=${db_name}.tgz
     echo "---------------"
     echo Working on file: "${zip_file}"
@@ -67,7 +68,8 @@ for i in "${db_and_workloads[@]}"; do
     "${JAVA_HOME}/bin/java"  -jar target/macro.jar upgrade-store \
                                --original-db "${db_name}" \
                                --workload "${workload}" \
-                               --db-edition ENTERPRISE
+                               --db-edition ENTERPRISE \
+                               --record-format "${record_format}"
 
     tar -cvzf "${zip_file}" "${db_name}"
     aws s3 cp "${zip_file}" s3://benchmarking.neo4j.com/datasets/macro/"${new_neo4j_version}"-enterprise-datasets/"${zip_file}" --no-progress

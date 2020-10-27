@@ -31,11 +31,17 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 
 public class Main
 {
 
     private static final Logger LOG = LoggerFactory.getLogger( Main.class );
+
+    public static void main( List<String> args )
+    {
+        main( args.toArray( new String[]{} ) );
+    }
 
     public static void main( String[] args )
     {

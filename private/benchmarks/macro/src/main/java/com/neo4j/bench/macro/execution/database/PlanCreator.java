@@ -54,7 +54,7 @@ public class PlanCreator
             /*
              * Run query with profile to get plan & output query plan
              */
-            return getPlan( query, parametersReader, database.db() );
+            return getPlan( query, parametersReader, database.inner() );
         }
         catch ( Exception e )
         {
