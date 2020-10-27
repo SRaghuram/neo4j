@@ -20,6 +20,7 @@ import java.util.List;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
+import org.neo4j.cypher.internal.runtime.BoundedQueryMemoryTrackerTest$;
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel;
 import org.neo4j.driver.internal.value.NullValue;
 import org.neo4j.harness.junit.rule.Neo4jRule;
@@ -67,7 +68,7 @@ public class BoltQueryLoggingMemoryIT
     public void shouldLogQueryMemoryUsageAndHeapDumpViaBolt() throws IOException
     {
         int numberOfDumpedQueries = 1; // Heap dumps are time consuming, try to keep it to a minimum
-        long estimatedHeapUsage = Morsel.createInitialRow().estimatedHeapUsage();
+        long estimatedHeapUsage = Morsel.createInitialRow().estimatedHeapUsage() + BoundedQueryMemoryTrackerTest$.MODULE$.DEFAULT_SIZE_OF_GROWING_ARRAY();
 
         try ( var driver = graphDatabaseDriver( neo4j.boltURI() );
               var session = driver.session() )

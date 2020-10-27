@@ -28,8 +28,7 @@ case object CollectAggregator extends Aggregator {
   override def newConcurrentReducer: Reducer = new CollectConcurrentReducer(preserveNulls = false)
 
   override val standardShallowSize: Long =
-    HeapEstimator.shallowSizeOfInstance(classOf[CollectStandardReducer]) +
-    ListValueBuilder.UNKNOWN_LIST_VALUE_BUILDER_SHALLOW_SIZE
+    HeapEstimator.shallowSizeOfInstance(classOf[CollectStandardReducer])
 }
 
 /**
@@ -40,8 +39,7 @@ case object CollectAllAggregator extends Aggregator {
   override def newConcurrentReducer: Reducer = new CollectConcurrentReducer(preserveNulls = true)
 
   override val standardShallowSize: Long =
-    HeapEstimator.shallowSizeOfInstance(classOf[CollectStandardReducer]) +
-      ListValueBuilder.UNKNOWN_LIST_VALUE_BUILDER_SHALLOW_SIZE
+    HeapEstimator.shallowSizeOfInstance(classOf[CollectStandardReducer])
 }
 
 /**
@@ -52,8 +50,7 @@ case object CollectDistinctAggregator extends Aggregator {
   override def newConcurrentReducer: Reducer = new CollectDistinctConcurrentReducer()
 
   override val standardShallowSize: Long =
-    HeapEstimator.shallowSizeOfInstance(classOf[CollectDistinctStandardReducer]) +
-      ListValueBuilder.UNKNOWN_LIST_VALUE_BUILDER_SHALLOW_SIZE
+    HeapEstimator.shallowSizeOfInstance(classOf[CollectDistinctStandardReducer])
 }
 
 abstract class CollectUpdater(preserveNulls: Boolean, memoryTracker: MemoryTracker) {
