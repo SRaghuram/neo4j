@@ -22,7 +22,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.HeapEstimator
+import org.neo4j.memory.MemoryTracker
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -162,7 +164,9 @@ trait BufferUsageHistory {
 class ArgumentStreamArgumentStateBuffer(argumentRowId: Long,
                                         val argumentRow: MorselRow,
                                         inner: Buffer[Morsel] with BufferUsageHistory,
-                                        argumentRowIdsForReducers: Array[Long]) extends ArgumentStateBuffer(argumentRowId, inner, argumentRowIdsForReducers) {
+                                        argumentRowIdsForReducers: Array[Long],
+                                        memoryTracker: MemoryTracker) extends ArgumentStateBuffer(argumentRowId, inner, argumentRowIdsForReducers, memoryTracker) {
+  memoryTracker.allocateHeap(ArgumentStreamArgumentStateBuffer.SHALLOW_SIZE - ArgumentStateBuffer.SHALLOW_SIZE)
   /**
    * @return `true` if this buffer held data at any point in time, `false` if it was always empty.
    */
@@ -189,6 +193,11 @@ class ArgumentStreamArgumentStateBuffer(argumentRowId: Long,
     s"${getClass.getSimpleName}(argumentRowId=$argumentRowId, argumentRowIdsForReducers=[${argumentRowIdsForReducers.mkString(",")}], argumentMorsel=$argumentRow, inner=$inner)"
   }
 
+  override def close(): Unit = {
+    memoryTracker.releaseHeap(ArgumentStreamArgumentStateBuffer.SHALLOW_SIZE - ArgumentStateBuffer.SHALLOW_SIZE)
+    super.close()
+  }
+
   override def shallowSize: Long = ArgumentStreamArgumentStateBuffer.SHALLOW_SIZE
 }
 
@@ -196,11 +205,16 @@ object ArgumentStreamArgumentStateBuffer extends ArgumentStateBufferFactoryFacto
   private final val SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[ArgumentStreamArgumentStateBuffer])
 
   class Factory(stateFactory: StateFactory, operatorId: Id) extends ArgumentStateFactory[ArgumentStateBuffer] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
-      new ArgumentStreamArgumentStateBuffer(argumentRowId, argumentMorsel.snapshot(), new StandardArgumentStreamBuffer[Morsel](stateFactory.newBuffer[Morsel](operatorId)), argumentRowIdsForReducers)
+    override def newStandardArgumentState(argumentRowId: Long,
+                                          argumentMorsel: MorselReadCursor,
+                                          argumentRowIdsForReducers: Array[Long],
+                                          memoryTracker: MemoryTracker): ArgumentStateBuffer =
+      new ArgumentStreamArgumentStateBuffer(argumentRowId, argumentMorsel.snapshot(), new StandardArgumentStreamBuffer[Morsel](stateFactory.newBuffer[Morsel](operatorId)), argumentRowIdsForReducers, memoryTracker)
 
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
-      new ArgumentStreamArgumentStateBuffer(argumentRowId, argumentMorsel.snapshot(), new ConcurrentArgumentStreamBuffer[Morsel](stateFactory.newBuffer[Morsel](operatorId)), argumentRowIdsForReducers)
+    override def newConcurrentArgumentState(argumentRowId: Long,
+                                            argumentMorsel: MorselReadCursor,
+                                            argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
+      new ArgumentStreamArgumentStateBuffer(argumentRowId, argumentMorsel.snapshot(), new ConcurrentArgumentStreamBuffer[Morsel](stateFactory.newBuffer[Morsel](operatorId)), argumentRowIdsForReducers, EmptyMemoryTracker.INSTANCE)
   }
 
   def createFactory(stateFactory: StateFactory, operatorId: Int): Factory = {

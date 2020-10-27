@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
+import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 
@@ -21,9 +22,16 @@ import org.neo4j.memory.MemoryTracker
 case class AggregatedRowAccumulator(override val argumentRowId: Long,
                                     override val argumentRowIdsForReducers: Array[Long],
                                     argumentRow: MorselRow,
-                                    aggregatorRow: AggregatedRow) extends MorselAccumulator[AnyRef] {
+                                    aggregatorRow: AggregatedRow,
+                                    memoryTracker: MemoryTracker) extends MorselAccumulator[AnyRef] {
+  memoryTracker.allocateHeap(AggregatedRowAccumulator.SHALLOW_SIZE)
 
   override def update(data: AnyRef, resources: QueryResources): Unit = {}
+
+  override def close(): Unit = {
+    memoryTracker.releaseHeap(AggregatedRowAccumulator.SHALLOW_SIZE)
+    super.close()
+  }
 
   override def shallowSize: Long = AggregatedRowAccumulator.SHALLOW_SIZE
 }
@@ -31,13 +39,13 @@ case class AggregatedRowAccumulator(override val argumentRowId: Long,
 object AggregatedRowAccumulator {
   private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[AggregatedRowAccumulator])
   class Factory(aggregators: Array[Aggregator],
-                memoryTracker: MemoryTracker,
                 numberOfWorkers: Int) extends ArgumentStateFactory[AggregatedRowAccumulator] {
     private[this] val needToApplyUpdates = !Aggregator.allDirect(aggregators)
 
     override def newStandardArgumentState(argumentRowId: Long,
                                           argumentMorsel: MorselReadCursor,
-                                          argumentRowIdsForReducers: Array[Long]): AggregatedRowAccumulator = {
+                                          argumentRowIdsForReducers: Array[Long],
+                                          memoryTracker: MemoryTracker): AggregatedRowAccumulator = {
       var i = 0
       val reducers = new Array[StandardReducer](aggregators.length)
       while (i < reducers.length) {
@@ -52,7 +60,7 @@ object AggregatedRowAccumulator {
           new StandardAggregators(reducers)
         } else {
           new StandardDirectAggregators(reducers)
-        })
+        }, memoryTracker)
     }
 
     override def newConcurrentArgumentState(argumentRowId: Long,
@@ -62,6 +70,7 @@ object AggregatedRowAccumulator {
         argumentRowId,
         argumentRowIdsForReducers,
         argumentMorsel.snapshot(),
-        new ConcurrentAggregators(aggregators.map(_.newConcurrentReducer), numberOfWorkers))
+        new ConcurrentAggregators(aggregators.map(_.newConcurrentReducer), numberOfWorkers),
+        EmptyMemoryTracker.INSTANCE)
   }
 }

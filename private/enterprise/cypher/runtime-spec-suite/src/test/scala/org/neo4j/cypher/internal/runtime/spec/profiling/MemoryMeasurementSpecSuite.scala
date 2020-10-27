@@ -31,7 +31,7 @@ class PipelinedBigMorselMemoryMeasurementTest
 
 class PipelinedSmallMorselMemoryMeasurementTest
   extends MemoryMeasurementTestBase(ENTERPRISE_PROFILING, PIPELINED, DEFAULT_MORSEL_SIZE_SMALL)
-    with AssertFusingSucceeded
+  with AssertFusingSucceeded
 
 class PipelinedBigMorselNoFusingMemoryMeasurementTest
   extends MemoryMeasurementTestBase(

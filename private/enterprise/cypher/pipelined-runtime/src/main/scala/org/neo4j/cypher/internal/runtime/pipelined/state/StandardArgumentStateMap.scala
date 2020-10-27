@@ -67,11 +67,13 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: A
   override protected def newStateController(argument: Long,
                                             argumentMorsel: MorselReadCursor,
                                             argumentRowIdsForReducers: Array[Long],
-                                            initialCount: Int): AbstractArgumentStateMap.StateController[STATE] = {
+                                            initialCount: Int,
+                                            memoryTracker: MemoryTracker): AbstractArgumentStateMap.StateController[STATE] = {
     if (factory.completeOnConstruction) {
-      new StandardCompletedStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
+      val state = factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers, memoryTracker)
+      new StandardCompletedStateController(state)
     } else {
-      new StandardStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers), initialCount)
+      new StandardStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers, memoryTracker), initialCount)
     }
   }
 }
@@ -130,7 +132,7 @@ object StandardArgumentStateMap {
       s"[count: ${_count}, state: $state]"
     }
 
-    override def shallowSize: Long = StandardStateController.SHALLOW_SIZE + state.shallowSize
+    override def shallowSize: Long = StandardStateController.SHALLOW_SIZE
   }
 
   object StandardStateController {
@@ -172,7 +174,7 @@ object StandardArgumentStateMap {
       s"[completed, state: $state]"
     }
 
-    override def shallowSize: Long = StandardCompletedStateController.SHALLOW_SIZE + state.shallowSize
+    override def shallowSize: Long = StandardCompletedStateController.SHALLOW_SIZE
   }
 
   object StandardCompletedStateController {

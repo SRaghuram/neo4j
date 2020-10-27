@@ -108,7 +108,7 @@ class DistinctPrimitiveOperator(argumentStateMapId: ArgumentStateMapId,
                           resources: QueryResources,
                           memoryTracker: MemoryTracker): OperatorTask = {
     new DistinctPrimitiveOperatorTask(
-      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new DistinctStateFactory(memoryTracker), memoryTracker),
+      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new DistinctStateFactory, memoryTracker),
       workIdentity,
       primitiveSlots,
       groupings

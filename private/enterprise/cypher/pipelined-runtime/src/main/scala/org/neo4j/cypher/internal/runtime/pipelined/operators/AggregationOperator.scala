@@ -260,7 +260,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
       val memoryTracker = stateFactory.newMemoryTracker(id.x)
       argumentStateCreator.createArgumentStateMap(
         argumentStateMapId,
-        new AggregatedRowMap.Factory(aggregations, memoryTracker, state.numberOfWorkers),
+        new AggregatedRowMap.Factory(aggregations, state.numberOfWorkers),
         memoryTracker
       )
       this

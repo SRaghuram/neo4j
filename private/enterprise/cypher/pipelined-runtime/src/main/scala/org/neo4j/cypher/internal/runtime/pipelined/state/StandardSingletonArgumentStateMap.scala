@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.StandardArgumentStateMap.StandardCompletedStateController
 import org.neo4j.cypher.internal.runtime.pipelined.state.StandardArgumentStateMap.StandardStateController
+import org.neo4j.memory.MemoryTracker
 
 /**
  * Not thread-safe of SingletonArgumentStateMap.
@@ -26,11 +27,12 @@ class StandardSingletonArgumentStateMap[STATE <: ArgumentState](val argumentStat
   override protected def newStateController(argument: Long,
                                             argumentMorsel: MorselReadCursor,
                                             argumentRowIdsForReducers: Array[Long],
-                                            initialCount: Int): AbstractArgumentStateMap.StateController[STATE] = {
+                                            initialCount: Int,
+                                            memoryTracker: MemoryTracker): AbstractArgumentStateMap.StateController[STATE] = {
     if (factory.completeOnConstruction) {
-      new StandardCompletedStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
+      new StandardCompletedStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers, memoryTracker))
     } else {
-      new StandardStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers), initialCount)
+      new StandardStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers, memoryTracker), initialCount)
     }
   }
 }

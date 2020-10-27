@@ -66,6 +66,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.kernel.impl.util.collection.DistinctSet
+import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
@@ -120,7 +121,7 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
                           resources: QueryResources,
                           memoryTracker: MemoryTracker): OperatorTask = {
     new DistinctOperatorTask(
-      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new DistinctStateFactory(memoryTracker), memoryTracker),
+      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new DistinctStateFactory, memoryTracker),
       workIdentity,
       groupings
     )
@@ -129,13 +130,18 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
 
 object DistinctOperator {
 
-  class DistinctStateFactory(memoryTracker: MemoryTracker) extends ArgumentStateFactory[DistinctState] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): DistinctState = {
+  class DistinctStateFactory extends ArgumentStateFactory[DistinctState] {
+    override def newStandardArgumentState(argumentRowId: Long,
+                                          argumentMorsel: MorselReadCursor,
+                                          argumentRowIdsForReducers: Array[Long],
+                                          memoryTracker: MemoryTracker): DistinctState = {
       new StandardDistinctState(argumentRowId, argumentRowIdsForReducers, memoryTracker)
     }
 
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): DistinctState = {
-      new ConcurrentDistinctState(argumentRowId, argumentRowIdsForReducers)
+    override def newConcurrentArgumentState(argumentRowId: Long,
+                                            argumentMorsel: MorselReadCursor,
+                                            argumentRowIdsForReducers: Array[Long]): DistinctState = {
+      new ConcurrentDistinctState(argumentRowId, argumentRowIdsForReducers, EmptyMemoryTracker.INSTANCE)
     }
 
     override def completeOnConstruction: Boolean = true
@@ -150,7 +156,8 @@ object DistinctOperator {
     def setMemoryTracker(memoryTracker: MemoryTracker): Unit
   }
 
-  class StandardDistinctState(override val argumentRowId: Long, override val argumentRowIdsForReducers: Array[Long])
+  class StandardDistinctState(override val argumentRowId: Long,
+                              override val argumentRowIdsForReducers: Array[Long])
     extends DistinctState {
 
     def this(argumentRowId: Long, argumentRowIdsForReducers: Array[Long], memoryTracker: MemoryTracker) = {
@@ -184,7 +191,7 @@ object DistinctOperator {
     private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[StandardDistinctState])
   }
 
-  class ConcurrentDistinctState(override val argumentRowId: Long, override val argumentRowIdsForReducers: Array[Long])
+  class ConcurrentDistinctState(override val argumentRowId: Long, override val argumentRowIdsForReducers: Array[Long], memoryTracker: MemoryTracker)
     extends DistinctState {
 
     private val seenSet = ConcurrentHashMap.newKeySet[AnyValue]()
@@ -209,14 +216,14 @@ object DistinctOperatorState {
   object DistinctStateFactory extends ArgumentStateFactory[DistinctState] {
     override def newStandardArgumentState(argumentRowId: Long,
                                           argumentMorsel: MorselReadCursor,
-                                          argumentRowIdsForReducers: Array[Long]): DistinctState = {
-      new StandardDistinctState(argumentRowId, argumentRowIdsForReducers)
+                                          argumentRowIdsForReducers: Array[Long], memoryTracker: MemoryTracker): DistinctState = {
+      new StandardDistinctState(argumentRowId, argumentRowIdsForReducers, memoryTracker)
     }
 
     override def newConcurrentArgumentState(argumentRowId: Long,
                                             argumentMorsel: MorselReadCursor,
                                             argumentRowIdsForReducers: Array[Long]): DistinctState = {
-      new ConcurrentDistinctState(argumentRowId, argumentRowIdsForReducers)
+      new ConcurrentDistinctState(argumentRowId, argumentRowIdsForReducers, EmptyMemoryTracker.INSTANCE)
     }
   }
 }

@@ -146,7 +146,6 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
     val query = "MATCH (n:Start) RETURN [p = (n)-->() | p] AS list"
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
-
     result.toList should equal(List(Map("list" -> List(PathImpl(n1, r, n2)))))
   }
 

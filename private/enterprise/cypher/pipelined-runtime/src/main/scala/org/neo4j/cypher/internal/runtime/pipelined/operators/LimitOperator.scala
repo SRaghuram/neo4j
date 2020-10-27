@@ -58,10 +58,15 @@ object LimitOperator {
   }
 
   class LimitStateFactory(count: Long) extends ArgumentStateFactory[LimitState] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): LimitState =
-      new StandardCountingState(argumentRowId, count, argumentRowIdsForReducers) with LimitState
+    override def newStandardArgumentState(argumentRowId: Long,
+                                          argumentMorsel: MorselReadCursor,
+                                          argumentRowIdsForReducers: Array[Long],
+                                          memoryTracker: MemoryTracker): LimitState =
+      new StandardCountingState(argumentRowId, count, argumentRowIdsForReducers, memoryTracker) with LimitState
 
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): LimitState =
+    override def newConcurrentArgumentState(argumentRowId: Long,
+                                            argumentMorsel: MorselReadCursor,
+                                            argumentRowIdsForReducers: Array[Long]): LimitState =
       new ConcurrentCountingState(argumentRowId, count, argumentRowIdsForReducers) with LimitState
 
     override def completeOnConstruction: Boolean = true
@@ -212,10 +217,15 @@ object SerialTopLevelLimitOperatorTaskTemplate {
 
   // This is used by fused limit in a serial pipeline, i.e. only safe to use in single-threaded execution or by a serial pipeline in parallel execution
   object SerialLimitStateFactory extends ArgumentStateFactory[LimitState] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): LimitState =
-      new StandardSerialLimitState(argumentRowId, argumentRowIdsForReducers)
+    override def newStandardArgumentState(argumentRowId: Long,
+                                          argumentMorsel: MorselReadCursor,
+                                          argumentRowIdsForReducers: Array[Long],
+                                          memoryTracker: MemoryTracker): LimitState =
+      new StandardSerialLimitState(argumentRowId, argumentRowIdsForReducers, memoryTracker)
 
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): LimitState =
+    override def newConcurrentArgumentState(argumentRowId: Long,
+                                            argumentMorsel: MorselReadCursor,
+                                            argumentRowIdsForReducers: Array[Long]): LimitState =
     // NOTE: This is actually _not_ threadsafe and only safe to use in a serial pipeline!
       new VolatileSerialLimitState(argumentRowId, argumentRowIdsForReducers)
 
@@ -223,14 +233,20 @@ object SerialTopLevelLimitOperatorTaskTemplate {
   }
 
   class StandardSerialLimitState(override val argumentRowId: Long,
-                                 override val argumentRowIdsForReducers: Array[Long]) extends SerialCountingState with LimitState {
-
+                                 override val argumentRowIdsForReducers: Array[Long],
+                                 memoryTracker: MemoryTracker) extends SerialCountingState with LimitState {
+    memoryTracker.allocateHeap(StandardSerialLimitState.SHALLOW_SIZE)
     private var countLeft: Long = -1L
 
     override protected def getCount: Long = countLeft
     override protected def setCount(count: Long): Unit = countLeft = count
     override def toString: String = s"StandardSerialTopLevelLimitState($argumentRowId, countLeft=$countLeft)"
     override def isCancelled: Boolean = getCount == 0
+
+    override def close(): Unit = {
+      memoryTracker.releaseHeap(StandardSerialLimitState.SHALLOW_SIZE)
+      super.close()
+    }
 
     override def shallowSize: Long = StandardSerialLimitState.SHALLOW_SIZE
   }

@@ -41,8 +41,11 @@ class AllOrderedDistinctOperator(argumentStateMapId: ArgumentStateMapId,
       workIdentity)
 
   object AllOrderedDistinctStateFactory extends ArgumentStateFactory[AllOrderedDistinctState] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): AllOrderedDistinctState =
-      new AllOrderedDistinctState(argumentRowId, argumentRowIdsForReducers)
+    override def newStandardArgumentState(argumentRowId: Long,
+                                          argumentMorsel: MorselReadCursor,
+                                          argumentRowIdsForReducers: Array[Long],
+                                          memoryTracker: MemoryTracker): AllOrderedDistinctState =
+      new AllOrderedDistinctState(argumentRowId, argumentRowIdsForReducers, memoryTracker)
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): AllOrderedDistinctState =
       throw new IllegalStateException("OrderedDistinct is not supported in parallel")
@@ -51,7 +54,9 @@ class AllOrderedDistinctOperator(argumentStateMapId: ArgumentStateMapId,
   }
 
   class AllOrderedDistinctState(override val argumentRowId: Long,
-                                override val argumentRowIdsForReducers: Array[Long]) extends AbstractOrderedDistinctState {
+                                override val argumentRowIdsForReducers: Array[Long],
+                                memoryTracker: MemoryTracker) extends AbstractOrderedDistinctState {
+    memoryTracker.allocateHeap(AllOrderedDistinctState.SHALLOW_SIZE)
 
     private var prevGroupingKey: groupings.KeyType = _
 
@@ -66,6 +71,8 @@ class AllOrderedDistinctOperator(argumentStateMapId: ArgumentStateMapId,
       }
     }
     override def toString: String = s"AllOrderedDistinctState($argumentRowId)"
+
+    override def close(): Unit = memoryTracker.releaseHeap(AllOrderedDistinctState.SHALLOW_SIZE)
 
     def shallowSize: Long = AllOrderedDistinctState.SHALLOW_SIZE
   }

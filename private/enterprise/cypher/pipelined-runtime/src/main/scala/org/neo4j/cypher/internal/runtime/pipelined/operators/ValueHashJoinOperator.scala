@@ -56,7 +56,7 @@ class ValueHashJoinOperator(val workIdentity: WorkIdentity,
                            resources: QueryResources): OperatorState = {
     val memoryTracker = stateFactory.newMemoryTracker(id.x)
     argumentStateCreator.createArgumentStateMap(
-      lhsArgumentStateMapId, new HashTableFactory(memoryTracker, lhsExpression, state), memoryTracker)
+      lhsArgumentStateMapId, new HashTableFactory(lhsExpression, state), memoryTracker)
     argumentStateCreator.createArgumentStateMap(
       rhsArgumentStateMapId,
       new ArgumentStateBuffer.Factory(stateFactory, id),
@@ -100,8 +100,11 @@ class ValueHashJoinOperator(val workIdentity: WorkIdentity,
 
 object ValueHashJoinOperator {
 
-  class HashTableFactory(memoryTracker: MemoryTracker, expression: Expression, state: PipelinedQueryState) extends ArgumentStateFactory[HashTable] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): HashTable =
+  class HashTableFactory(expression: Expression, state: PipelinedQueryState) extends ArgumentStateFactory[HashTable] {
+    override def newStandardArgumentState(argumentRowId: Long,
+                                          argumentMorsel: MorselReadCursor,
+                                          argumentRowIdsForReducers: Array[Long],
+                                          memoryTracker: MemoryTracker): HashTable =
       new StandardHashTable(argumentRowId, argumentRowIdsForReducers, expression, state, memoryTracker)
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): HashTable =
@@ -118,6 +121,7 @@ object ValueHashJoinOperator {
                           state: PipelinedQueryState,
                           memoryTracker: MemoryTracker) extends HashTable {
     private val table = ProbeTable.createProbeTable[AnyValue, Morsel]( memoryTracker )
+    memoryTracker.allocateHeap(StandardHashTable.SHALLOW_SIZE)
 
     // This is update from LHS, i.e. we need to put stuff into a hash table
     override def update(morsel: Morsel, resources: QueryResources): Unit = {
@@ -137,6 +141,7 @@ object ValueHashJoinOperator {
     }
 
     override def close(): Unit = {
+      memoryTracker.releaseHeap(StandardHashTable.SHALLOW_SIZE)
       table.close()
       super.close()
     }

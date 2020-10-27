@@ -116,7 +116,7 @@ class DistinctSinglePrimitiveOperator(argumentStateMapId: ArgumentStateMapId,
                           resources: QueryResources,
                           memoryTracker: MemoryTracker): OperatorTask = {
     new DistinctSinglePrimitiveOperatorTask(
-      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new DistinctSinglePrimitiveStateFactory(memoryTracker), memoryTracker),
+      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new DistinctSinglePrimitiveStateFactory, memoryTracker),
       workIdentity,
       setInSlot,
       offset,
@@ -125,8 +125,11 @@ class DistinctSinglePrimitiveOperator(argumentStateMapId: ArgumentStateMapId,
 }
 
 object DistinctSinglePrimitiveOperator {
-  class DistinctSinglePrimitiveStateFactory(memoryTracker: MemoryTracker) extends ArgumentStateFactory[DistinctSinglePrimitiveState] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): DistinctSinglePrimitiveState = {
+  class DistinctSinglePrimitiveStateFactory extends ArgumentStateFactory[DistinctSinglePrimitiveState] {
+    override def newStandardArgumentState(argumentRowId: Long,
+                                          argumentMorsel: MorselReadCursor,
+                                          argumentRowIdsForReducers: Array[Long],
+                                          memoryTracker: MemoryTracker): DistinctSinglePrimitiveState = {
       new StandardDistinctSinglePrimitiveState(argumentRowId, argumentRowIdsForReducers, memoryTracker)
     }
 
@@ -206,8 +209,9 @@ object DistinctSinglePrimitiveState {
   object DistinctStateFactory extends ArgumentStateFactory[DistinctSinglePrimitiveState] {
     override def newStandardArgumentState(argumentRowId: Long,
                                           argumentMorsel: MorselReadCursor,
-                                          argumentRowIdsForReducers: Array[Long]): DistinctSinglePrimitiveState = {
-      new StandardDistinctSinglePrimitiveState(argumentRowId, argumentRowIdsForReducers)
+                                          argumentRowIdsForReducers: Array[Long],
+                                          memoryTracker: MemoryTracker): DistinctSinglePrimitiveState = {
+      new StandardDistinctSinglePrimitiveState(argumentRowId, argumentRowIdsForReducers, memoryTracker)
     }
 
     override def newConcurrentArgumentState(argumentRowId: Long,

@@ -12,6 +12,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
+import org.neo4j.memory.EmptyMemoryTracker
+import org.neo4j.memory.MemoryTracker
 
 /**
  * A singleton argument state map, where singleton means it will only ever hold one STATE, of the argument 0. This is the
@@ -38,7 +40,11 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
    *
    * @param initialCount the initial count for the argument row id
    */
-  protected def newStateController(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int): CONTROLLER
+  protected def newStateController(argument: Long,
+                                   argumentMorsel: MorselReadCursor,
+                                   argumentRowIdsForReducers: Array[Long],
+                                   initialCount: Int,
+                                   memoryTracker: MemoryTracker): CONTROLLER
 
   // ARGUMENT STATE MAP FUNCTIONALITY
 
@@ -168,7 +174,7 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
   override def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int): Unit = {
     TopLevelArgument.assertTopLevelArgument(argument)
     DebugSupport.ASM.log("ASM %s init %03d", argumentStateMapId, argument)
-    controller = newStateController(argument, argumentMorsel, argumentRowIdsForReducers, initialCount)
+    controller = newStateController(argument, argumentMorsel, argumentRowIdsForReducers, initialCount, EmptyMemoryTracker.INSTANCE)
   }
 
   override def increment(argument: Long): Unit = {

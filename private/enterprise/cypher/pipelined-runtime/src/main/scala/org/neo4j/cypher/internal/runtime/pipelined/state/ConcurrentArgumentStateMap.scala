@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentStateMap.ConcurrentStateController
 import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.HeapEstimator
+import org.neo4j.memory.MemoryTracker
 
 /**
  * Concurrent and quite naive implementation of ArgumentStateMap. Also JustGetItWorking(tm)
@@ -63,7 +64,8 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
   override protected def newStateController(argument: Long,
                                             argumentMorsel: MorselReadCursor,
                                             argumentRowIdsForReducers: Array[Long],
-                                            initialCount: Int): AbstractArgumentStateMap.StateController[STATE] = {
+                                            initialCount: Int,
+                                            memoryTracker: MemoryTracker): AbstractArgumentStateMap.StateController[STATE] = {
     if (factory.completeOnConstruction) {
       ConcurrentCompletedStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
     } else {
@@ -146,7 +148,7 @@ object ConcurrentArgumentStateMap {
       s"[count: ${count.get()}, state: $state]"
     }
 
-    override def shallowSize: Long = ConcurrentStateController.SHALLOW_SIZE + state.shallowSize
+    override def shallowSize: Long = ConcurrentStateController.SHALLOW_SIZE
   }
 
   object ConcurrentStateController {
@@ -184,8 +186,7 @@ object ConcurrentArgumentStateMap {
       s"[completed, state: ${atomicState.get()}]"
     }
 
-    // Currently we don't track memory in concurrent runtime
-    override def shallowSize: Long = 0 // ConcurrentCompletedStateController.SHALLOW_SIZE + HeapEstimator.sizeOf(atomicState)
+    override def shallowSize: Long = ConcurrentCompletedStateController.SHALLOW_SIZE
   }
 
   object ConcurrentCompletedStateController {

@@ -63,8 +63,11 @@ trait AggregatedRowMap extends MorselAccumulator[AnyRef] {
 // ============ Factory ============
 
 object AggregatedRowMap {
-  class Factory(aggregators: Array[Aggregator], memoryTracker: MemoryTracker, numberOfWorkers: Int) extends ArgumentStateFactory[AggregatedRowMap] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): AggregatedRowMap =
+  class Factory(aggregators: Array[Aggregator], numberOfWorkers: Int) extends ArgumentStateFactory[AggregatedRowMap] {
+    override def newStandardArgumentState(argumentRowId: Long,
+                                          argumentMorsel: MorselReadCursor,
+                                          argumentRowIdsForReducers: Array[Long],
+                                          memoryTracker: MemoryTracker): AggregatedRowMap =
       new StandardAggregationMap(argumentRowId, aggregators, argumentRowIdsForReducers, argumentMorsel.snapshot(), memoryTracker)
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): AggregatedRowMap =
@@ -79,6 +82,8 @@ class StandardAggregationMap(override val argumentRowId: Long,
                              override val argumentRowIdsForReducers: Array[Long],
                              override val argumentRow: MorselRow,
                              memoryTracker: MemoryTracker) extends AggregatedRowMap {
+  memoryTracker.allocateHeap(StandardAggregationMap.SHALLOW_SIZE)
+
   private[this] val reducerMap: HeapTrackingOrderedAppendMap[AnyValue, StandardAggregators] =
     HeapTrackingOrderedAppendMap.createOrderedMap[AnyValue, StandardAggregators](memoryTracker)
   private[this] val estimatedShallowSizeOfMapValue =
@@ -113,6 +118,7 @@ class StandardAggregationMap(override val argumentRowId: Long,
     reducerMap.autoClosingEntryIterator().asInstanceOf[java.util.Iterator[java.util.Map.Entry[AnyValue, AggregatedRow]]]
 
   override def close(): Unit = {
+    memoryTracker.releaseHeap(StandardAggregationMap.SHALLOW_SIZE)
     reducerMap.close()
     super.close()
   }

@@ -23,7 +23,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselAttachBuffer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.HeapEstimator
+import org.neo4j.memory.MemoryTracker
 
 class CartesianProductOperator(val workIdentity: WorkIdentity,
                                lhsArgumentStateMapId: ArgumentStateMapId,
@@ -86,14 +88,21 @@ object CartesianProductOperator {
 
   class LHSMorsel(override val argumentRowId: Long,
                   val lhsMorsel: Morsel,
-                  override val argumentRowIdsForReducers: Array[Long])
+                  override val argumentRowIdsForReducers: Array[Long],
+                  memoryTracker: MemoryTracker)
     extends MorselAccumulator[Morsel] {
+    memoryTracker.allocateHeap(LHSMorsel.SHALLOW_SIZE)
 
     override def update(morsel: Morsel, resources: QueryResources): Unit =
       throw new IllegalStateException("LHSMorsel is complete on construction, and cannot be further updated.")
 
     override def toString: String = {
       s"LHSMorsel(argumentRowId=$argumentRowId)"
+    }
+
+    override def close(): Unit = {
+      memoryTracker.releaseHeap(LHSMorsel.SHALLOW_SIZE)
+      super.close()
     }
 
     override def shallowSize: Long = LHSMorsel.SHALLOW_SIZE
@@ -107,11 +116,15 @@ object CartesianProductOperator {
      * the [[MorselAttachBuffer]].
      */
     class Factory(stateFactory: StateFactory) extends ArgumentStateFactory[LHSMorsel] {
-      override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): LHSMorsel =
-        new LHSMorsel(argumentRowId, argumentMorsel.morsel.detach(), argumentRowIdsForReducers)
+      override def newStandardArgumentState(argumentRowId: Long,
+                                            argumentMorsel: MorselReadCursor,
+                                            argumentRowIdsForReducers: Array[Long],
+                                            memoryTracker: MemoryTracker): LHSMorsel =
+        new LHSMorsel(argumentRowId, argumentMorsel.morsel.detach(), argumentRowIdsForReducers, memoryTracker)
 
-      override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): LHSMorsel =
-        new LHSMorsel(argumentRowId, argumentMorsel.morsel.detach(), argumentRowIdsForReducers)
+      override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor,
+                                              argumentRowIdsForReducers: Array[Long]): LHSMorsel =
+        new LHSMorsel(argumentRowId, argumentMorsel.morsel.detach(), argumentRowIdsForReducers, EmptyMemoryTracker.INSTANCE)
 
       override def completeOnConstruction: Boolean = true
     }

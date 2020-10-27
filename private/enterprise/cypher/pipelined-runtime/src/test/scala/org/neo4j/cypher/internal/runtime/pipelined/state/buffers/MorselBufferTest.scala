@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.StandardArgumentStateMap
 import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.HeapEstimator
+import org.neo4j.memory.MemoryTracker
 
 import scala.collection.mutable
 
@@ -460,10 +461,16 @@ class MorselBufferTest extends MorselUnitTest with MorselTestHelper {
       decrements(argumentRowId) = decrements.getOrElseUpdate(argumentRowId, 0) + 1
   }
 
-  class StaticCanceller(override val isCancelled: Boolean, val argumentRowId: Long) extends WorkCanceller {
+  class StaticCanceller(override val isCancelled: Boolean, val argumentRowId: Long, memoryTracker: MemoryTracker) extends WorkCanceller {
+    memoryTracker.allocateHeap(StaticCanceller.SHALLOW_SIZE)
     override def argumentRowIdsForReducers: Array[Long] = ???
 
     override def remaining: Long = if (isCancelled) 0L else Long.MaxValue
+
+    override def close(): Unit = {
+      memoryTracker.releaseHeap(StaticCanceller.SHALLOW_SIZE)
+      super.close()
+    }
 
     override def shallowSize: Long = StaticCanceller.SHALLOW_SIZE
   }
@@ -475,8 +482,9 @@ class MorselBufferTest extends MorselUnitTest with MorselTestHelper {
   case class CancellerFactory(predicate: Long => Boolean) extends ArgumentStateMap.ArgumentStateFactory[StaticCanceller] {
     override def newStandardArgumentState(argumentRowId: Long,
                                           argumentMorsel: MorselReadCursor,
-                                          argumentRowIdsForReducers: Array[Long]): StaticCanceller =
-      new StaticCanceller(predicate(argumentRowId), argumentRowId)
+                                          argumentRowIdsForReducers: Array[Long],
+                                          memoryTracker: MemoryTracker): StaticCanceller =
+      new StaticCanceller(predicate(argumentRowId), argumentRowId, memoryTracker)
 
     override def newConcurrentArgumentState(argumentRowId: Long,
                                             argumentMorsel: MorselReadCursor,

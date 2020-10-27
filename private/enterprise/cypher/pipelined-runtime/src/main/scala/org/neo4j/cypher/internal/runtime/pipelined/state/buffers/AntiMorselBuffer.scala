@@ -21,6 +21,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.memory.HeapEstimator
+import org.neo4j.memory.MemoryTracker
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -138,8 +139,11 @@ trait AntiArgumentState extends MorselAccumulator[Morsel] {
 
 object AntiArgumentState {
   class Factory(operatorId: Id) extends ArgumentStateFactory[AntiArgumentState] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): AntiArgumentState =
-      new StandardAntiArgumentState(argumentRowId, argumentMorsel.snapshot(), argumentRowIdsForReducers)
+    override def newStandardArgumentState(argumentRowId: Long,
+                                          argumentMorsel: MorselReadCursor,
+                                          argumentRowIdsForReducers: Array[Long],
+                                          memoryTracker: MemoryTracker): AntiArgumentState =
+      new StandardAntiArgumentState(argumentRowId, argumentMorsel.snapshot(), argumentRowIdsForReducers, memoryTracker)
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): AntiArgumentState =
       new ConcurrentAntiArgumentState(argumentRowId, argumentMorsel.snapshot(), argumentRowIdsForReducers)
@@ -147,7 +151,9 @@ object AntiArgumentState {
 
   class StandardAntiArgumentState(override val argumentRowId: Long,
                                   override val argumentRow: MorselRow,
-                                  override val argumentRowIdsForReducers: Array[Long]) extends AntiArgumentState {
+                                  override val argumentRowIdsForReducers: Array[Long],
+                                  memoryTracker: MemoryTracker) extends AntiArgumentState {
+    memoryTracker.allocateHeap(StandardAntiArgumentState.SHALLOW_SIZE)
 
     private var _didReceiveData: Boolean = false
 
@@ -157,6 +163,11 @@ object AntiArgumentState {
 
     override def toString: String = {
       s"StandardAntiArgumentState(argumentRowId=$argumentRowId, argumentRowIdsForReducers=[${argumentRowIdsForReducers.mkString(",")}], argumentMorsel=$argumentRow)"
+    }
+
+    override def close(): Unit = {
+      memoryTracker.releaseHeap(StandardAntiArgumentState.SHALLOW_SIZE)
+      super.close()
     }
 
     override def shallowSize: Long = StandardAntiArgumentState.SHALLOW_SIZE

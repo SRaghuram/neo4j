@@ -232,7 +232,7 @@ class NodeLeftOuterHashJoinOperator(val workIdentity: WorkIdentity,
 
 object NodeLeftOuterHashJoinOperator {
   class LeftOuterJoinFactory(lhsOffsets: KeyOffsets, memoryTracker: MemoryTracker) extends ArgumentStateFactory[HashTableAndSet] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): StandardHashTableAndSet =
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], memoryTracker: MemoryTracker): StandardHashTableAndSet =
       new StandardHashTableAndSet(new StandardHashTable(argumentRowId, lhsOffsets, argumentRowIdsForReducers, memoryTracker, acceptNulls = true), memoryTracker)
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): ConcurrentHashTableAndSet = {
       new ConcurrentHashTableAndSet(new ConcurrentHashTable(argumentRowId, lhsOffsets, argumentRowIdsForReducers, acceptNulls = true))
@@ -251,6 +251,7 @@ object NodeLeftOuterHashJoinOperator {
     private val scopedMemoryTracker = new ScopedMemoryTracker(memoryTracker)
     private val rhsKeys: MutableSet[Value] = HeapTrackingCollections.newSet[Value](scopedMemoryTracker)
 
+    scopedMemoryTracker.allocateHeap(StandardHashTableAndSet.SHALLOW_SIZE)
     override def update(data: Morsel, resources: QueryResources): Unit = hashTable.update(data, resources)
 
     override def argumentRowId: Long = hashTable.argumentRowId

@@ -242,7 +242,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
       val memoryTracker = stateFactory.newMemoryTracker(id.x)
       argumentStateCreator.createArgumentStateMap(
         argumentStateMapId,
-        new AggregatedRowAccumulator.Factory(aggregations, memoryTracker, state.numberOfWorkers),
+        new AggregatedRowAccumulator.Factory(aggregations, state.numberOfWorkers),
         memoryTracker
       )
       this

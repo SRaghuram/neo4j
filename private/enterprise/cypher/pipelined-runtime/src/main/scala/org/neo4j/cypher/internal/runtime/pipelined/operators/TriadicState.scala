@@ -18,6 +18,7 @@ import org.neo4j.memory.MemoryTracker
 class TriadicState(override val argumentRowId: Long,
                    override val argumentRowIdsForReducers: Array[Long],
                    memoryTracker: MemoryTracker) extends ArgumentState {
+  memoryTracker.allocateHeap(TriadicState.SHALLOW_SIZE)
 
   private case class Chunk(sourceId: Long, seenIds: HeapTrackingLongHashSet)
 
@@ -47,6 +48,7 @@ class TriadicState(override val argumentRowId: Long,
   }
 
   override def close(): Unit = {
+    memoryTracker.releaseHeap(TriadicState.SHALLOW_SIZE)
     seenChunks.forEach(_.seenIds.close())
     seenChunks.close()
     super.close()
@@ -60,13 +62,14 @@ class TriadicState(override val argumentRowId: Long,
 object TriadicState {
   private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[TriadicState])
 
-  class Factory(memoryTracker: MemoryTracker) extends ArgumentStateFactory[TriadicState] {
+  class Factory extends ArgumentStateFactory[TriadicState] {
 
     override def completeOnConstruction: Boolean = true
 
     override def newStandardArgumentState(argumentRowId: Long,
                                           argumentMorsel: MorselReadCursor,
-                                          argumentRowIdsForReducers: Array[Long]): TriadicState =
+                                          argumentRowIdsForReducers: Array[Long],
+                                          memoryTracker: MemoryTracker): TriadicState =
       new TriadicState(argumentRowId, argumentRowIdsForReducers, memoryTracker)
 
     override def newConcurrentArgumentState(argumentRowId: Long,

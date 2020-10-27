@@ -59,7 +59,7 @@ class NodeHashJoinSingleNodeOperator(val workIdentity: WorkIdentity,
     val memoryTracker = stateFactory.newMemoryTracker(id.x)
     argumentStateCreator.createArgumentStateMap(
       lhsArgumentStateMapId,
-      new HashTableFactory(lhsKeyOffset, memoryTracker, id), memoryTracker)
+      new HashTableFactory(lhsKeyOffset, id), memoryTracker)
     argumentStateCreator.createArgumentStateMap(
       rhsArgumentStateMapId,
       new ArgumentStateBuffer.Factory(stateFactory, id), memoryTracker)
@@ -102,10 +102,16 @@ class NodeHashJoinSingleNodeOperator(val workIdentity: WorkIdentity,
 
 object NodeHashJoinSingleNodeOperator {
 
-  class HashTableFactory(lhsKeyOffset: SingleKeyOffset, memoryTracker: MemoryTracker, operatorId: Id) extends ArgumentStateFactory[HashTable] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): HashTable =
+  class HashTableFactory(lhsKeyOffset: SingleKeyOffset, operatorId: Id) extends ArgumentStateFactory[HashTable] {
+    override def newStandardArgumentState(argumentRowId: Long,
+                                          argumentMorsel: MorselReadCursor,
+                                          argumentRowIdsForReducers: Array[Long],
+                                          memoryTracker: MemoryTracker): HashTable =
       new StandardHashTable(argumentRowId, lhsKeyOffset, argumentRowIdsForReducers, memoryTracker)
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): HashTable =
+
+    override def newConcurrentArgumentState(argumentRowId: Long,
+                                            argumentMorsel: MorselReadCursor,
+                                            argumentRowIdsForReducers: Array[Long]): HashTable =
       new ConcurrentHashTable(argumentRowId, lhsKeyOffset, argumentRowIdsForReducers)
   }
 
@@ -125,6 +131,8 @@ object NodeHashJoinSingleNodeOperator {
 
     private val lhsOffset: Int = lhsKeyOffset.offset
     private val lhsIsReference: Boolean = lhsKeyOffset.isReference
+
+    memoryTracker.allocateHeap(StandardHashTable.SHALLOW_SIZE)
 
     // This is update from LHS, i.e. we need to put stuff into a hash table
     override def update(morsel: Morsel, resources: QueryResources): Unit = {
@@ -151,6 +159,7 @@ object NodeHashJoinSingleNodeOperator {
 
     override def close(): Unit = {
       table.close()
+      memoryTracker.releaseHeap(StandardHashTable.SHALLOW_SIZE)
       super.close()
     }
 

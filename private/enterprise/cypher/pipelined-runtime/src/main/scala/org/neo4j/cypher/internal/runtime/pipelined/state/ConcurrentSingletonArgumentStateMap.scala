@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentStateMap.ConcurrentCompletedStateController
 import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentStateMap.ConcurrentStateController
+import org.neo4j.memory.MemoryTracker
 
 /**
  * Thread-safe implementation of SingletonArgumentStateMap.
@@ -28,7 +29,8 @@ class ConcurrentSingletonArgumentStateMap[STATE <: ArgumentState](val argumentSt
   override protected def newStateController(argument: Long,
                                             argumentMorsel: MorselReadCursor,
                                             argumentRowIdsForReducers: Array[Long],
-                                            initialCount: Int): AbstractArgumentStateMap.StateController[STATE] = {
+                                            initialCount: Int,
+                                            memoryTracker: MemoryTracker): AbstractArgumentStateMap.StateController[STATE] = {
     if (factory.completeOnConstruction) {
       ConcurrentCompletedStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
     } else {

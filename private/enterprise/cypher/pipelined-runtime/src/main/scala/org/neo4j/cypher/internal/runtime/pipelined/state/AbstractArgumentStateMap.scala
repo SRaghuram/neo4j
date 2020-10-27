@@ -74,7 +74,11 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
    *
    * @param initialCount the initial count for the controller
    */
-  protected def newStateController(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int): CONTROLLER
+  protected def newStateController(argument: Long,
+                                   argumentMorsel: MorselReadCursor,
+                                   argumentRowIdsForReducers: Array[Long],
+                                   initialCount: Int,
+                                   memoryTracker: MemoryTracker): CONTROLLER
 
   override def update(argumentRowId: Long, onState: STATE => Unit): Unit = {
     DebugSupport.ASM.log("ASM %s update %03d", argumentStateMapId, argumentRowId)
@@ -263,8 +267,9 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     DebugSupport.ASM.log("ASM %s rem %03d", argumentStateMapId, argument)
     val controller = controllers.remove(argument)
     if (controller != null) {
+      val state = controller.take()
       scopedMemoryTracker.releaseHeap(controller.shallowSize + HeapEstimator.LONG_SIZE)
-      controller.take()
+      state
     } else {
       null.asInstanceOf[STATE]
     }
@@ -272,7 +277,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
 
   override def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int): Unit = {
     DebugSupport.ASM.log("ASM %s init %03d", argumentStateMapId, argument)
-    val newController = newStateController(argument, argumentMorsel, argumentRowIdsForReducers, initialCount)
+    val newController = newStateController(argument, argumentMorsel, argumentRowIdsForReducers, initialCount, memoryTracker)
     val previousValue = controllers.put(argument, newController)
     scopedMemoryTracker.allocateHeap(newController.shallowSize + HeapEstimator.LONG_SIZE)
     Preconditions.checkState(previousValue == null, "ArgumentStateMap cannot re-initiate the same argument (argument: %d)", Long.box(argument))

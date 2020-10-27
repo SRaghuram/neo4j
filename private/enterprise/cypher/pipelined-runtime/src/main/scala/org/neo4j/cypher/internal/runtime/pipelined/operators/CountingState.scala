@@ -49,6 +49,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.memory.HeapEstimator
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.util.Preconditions
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.FloatingPointValue
@@ -82,8 +83,10 @@ object CountingState {
 
   abstract class StandardCountingState(override val argumentRowId: Long,
                                        countTotal: Long,
-                                       override val argumentRowIdsForReducers: Array[Long]) extends CountingState {
+                                       override val argumentRowIdsForReducers: Array[Long],
+                                       memoryTracker: MemoryTracker) extends CountingState {
     protected var countLeft: Long = countTotal
+    memoryTracker.allocateHeap(StandardCountingState.SHALLOW_SIZE)
 
     override def reserve(wanted: Int): Int = {
       val got = math.min(countLeft, wanted)
@@ -92,6 +95,11 @@ object CountingState {
     }
     override def getCount: Long = countLeft
     override def toString: String = s"StandardCountingState($argumentRowId, countLeft=$countLeft)"
+
+    override def close(): Unit = {
+      memoryTracker.releaseHeap(StandardCountingState.SHALLOW_SIZE)
+      super.close()
+    }
 
     override def shallowSize: Long = StandardCountingState.SHALLOW_SIZE
   }

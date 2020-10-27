@@ -39,12 +39,12 @@ class OrderedDistinctOperator(argumentStateMapId: ArgumentStateMapId,
                           resources: QueryResources): OperatorTask = {
     val memoryTracker = stateFactory.newMemoryTracker(id.x)
     new OrderedDistinctOperatorTask(
-      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new OrderedDistinctStateFactory(memoryTracker), memoryTracker),
+      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new OrderedDistinctStateFactory, memoryTracker),
       workIdentity)
   }
 
-  class OrderedDistinctStateFactory(memoryTracker: MemoryTracker) extends ArgumentStateFactory[OrderedDistinctState] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): OrderedDistinctState =
+  class OrderedDistinctStateFactory extends ArgumentStateFactory[OrderedDistinctState] {
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], memoryTracker: MemoryTracker): OrderedDistinctState =
       new OrderedDistinctState(argumentRowId, argumentRowIdsForReducers, memoryTracker)
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): OrderedDistinctState =
@@ -59,6 +59,7 @@ class OrderedDistinctOperator(argumentStateMapId: ArgumentStateMapId,
 
     private var prevOrderedGroupingKey: orderedGroupings.KeyType = _
     private var seen: DistinctSet[unorderedGroupings.KeyType] = _
+    memoryTracker.allocateHeap(OrderedDistinctState.SHALLOW_SIZE)
 
     override def filterOrProject(row: ReadWriteRow, queryState: QueryState): Boolean = {
       val orderedGroupingKey = orderedGroupings.computeGroupingKey(row, queryState)
@@ -81,6 +82,7 @@ class OrderedDistinctOperator(argumentStateMapId: ArgumentStateMapId,
     }
 
     override def close(): Unit = {
+      memoryTracker.releaseHeap(OrderedDistinctState.SHALLOW_SIZE)
       seen.close()
       seen = null
       super.close()

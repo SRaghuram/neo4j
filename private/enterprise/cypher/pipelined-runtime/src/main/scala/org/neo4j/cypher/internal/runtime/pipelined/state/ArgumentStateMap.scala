@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBuffer
+import org.neo4j.memory.MemoryTracker
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -253,11 +254,11 @@ object ArgumentStateMap {
    * Operators that use ArgumentStateMaps need to implement this to be able to instantiate
    * the corresponding ArgumentStateMap.
    */
-  trait ArgumentStateFactory[S <: ArgumentState] {
+  abstract class ArgumentStateFactory[S <: ArgumentState] {
     /**
      * Construct new ArgumentState for non-concurrent use.
      */
-    def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): S
+    def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], memoryTracker: MemoryTracker): S
 
     /**
      * Construct new ArgumentState for concurrent use.

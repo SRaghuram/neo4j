@@ -49,8 +49,11 @@ object SkipOperator {
   }
 
   class SkipStateFactory(count: Long) extends ArgumentStateFactory[CountingState] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): CountingState =
-      new StandardCountingState(argumentRowId, count, argumentRowIdsForReducers) with NonCancellableState
+    override def newStandardArgumentState(argumentRowId: Long,
+                                          argumentMorsel: MorselReadCursor,
+                                          argumentRowIdsForReducers: Array[Long],
+                                          memoryTracker: MemoryTracker): CountingState =
+      new StandardCountingState(argumentRowId, count, argumentRowIdsForReducers, memoryTracker) with NonCancellableState
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): CountingState =
       new ConcurrentCountingState(argumentRowId, count, argumentRowIdsForReducers) with NonCancellableState
@@ -113,8 +116,8 @@ object SerialSkipState {
 
   // This is used by fused skip in a serial pipeline, i.e. only safe to use in single-threaded execution or by a serial pipeline in parallel execution
   object SerialSkipStateFactory extends ArgumentStateFactory[SerialCountingState] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): SerialCountingState =
-      new StandardSerialSkipState(argumentRowId, argumentRowIdsForReducers)
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], memoryTracker: MemoryTracker): SerialCountingState =
+      new StandardSerialSkipState(argumentRowId, argumentRowIdsForReducers, memoryTracker)
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): SerialCountingState =
     // NOTE: This is actually _not_ threadsafe and only safe to use in a serial pipeline!
@@ -122,15 +125,22 @@ object SerialSkipState {
   }
 
   class StandardSerialSkipState(override val argumentRowId: Long,
-                                override val argumentRowIdsForReducers: Array[Long]) extends SerialCountingState {
+                                override val argumentRowIdsForReducers: Array[Long],
+                                memoryTracker: MemoryTracker) extends SerialCountingState {
 
     private var countLeft: Long = -1L
+    memoryTracker.allocateHeap(StandardSerialSkipState.SHALLOW_SIZE)
 
     override protected def getCount: Long = countLeft
     override protected def setCount(count: Long): Unit = countLeft = count
     override def toString: String = s"StandardSerialTopLevelSkipState($argumentRowId, countLeft=$countLeft)"
 
     override def shallowSize: Long = StandardSerialSkipState.SHALLOW_SIZE
+
+    override def close(): Unit = {
+      memoryTracker.releaseHeap(StandardSerialSkipState.SHALLOW_SIZE)
+      super.close()
+    }
   }
 
   object StandardSerialSkipState {

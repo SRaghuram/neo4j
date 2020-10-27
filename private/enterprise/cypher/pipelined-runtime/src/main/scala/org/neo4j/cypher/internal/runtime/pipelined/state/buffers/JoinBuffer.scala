@@ -31,11 +31,15 @@ object JoinBuffer {
                                              rhsBuffer: ArgumentStateBuffer,
                                              argumentRowId: Long): Unit = {
     // If all data is processed and we are the first thread to remove the RHS accumulator (there can be a race here)
-    if (rhsBuffer != null && !rhsBuffer.hasData && rhsArgumentStateMap.remove(argumentRowId) != null) {
-      // Clean up the LHS as well
-      val lhsAccumulator = lhsArgumentStateMap.remove(argumentRowId)
-      if (lhsAccumulator != null) {
-        lhsAccumulator.close()
+    if (rhsBuffer != null && !rhsBuffer.hasData) {
+      val rhsAccumulator = rhsArgumentStateMap.remove(argumentRowId)
+      if (rhsAccumulator != null) {
+        rhsAccumulator.close()
+        // Clean up the LHS as well
+        val lhsAccumulator = lhsArgumentStateMap.remove(argumentRowId)
+        if (lhsAccumulator != null) {
+          lhsAccumulator.close()
+        }
       }
     }
   }
