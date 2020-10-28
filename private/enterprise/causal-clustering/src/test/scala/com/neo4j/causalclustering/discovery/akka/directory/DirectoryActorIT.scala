@@ -48,6 +48,18 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
       expectReplicatorUpdates(replicator, dataKey)
     }
 
+    "not update replicated data on receipt of an unpublishable leader info setting message" in new Fixture {
+      Given("unpublishable leader info update")
+      val badInfo = new LeaderInfo(null, 1L)
+      val badUpdate = new LeaderInfoSettingMessage(badInfo, randomNamedDatabaseId())
+
+      When("message received")
+      replicatedDataActorRef ! badUpdate
+
+      Then("replicated data was not updated")
+      expectNoReplicatorUpdates(replicator, dataKey)
+    }
+
     "send initial data to replicator when asked" in new Fixture {
       Given("some initial leaderships and a DirectoryActor")
       val databaseIds = List.fill(3)(randomNamedDatabaseId).toSet
@@ -64,6 +76,27 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
       val ddata = update.modify(Option(ORMap.empty))
       ddata.size shouldBe 3
       ddata.entries.mapValues(_.leaderInfo) shouldBe leadershipSnapshot
+    }
+
+    "not send unpublishable leader infos as part of initial data when asked" in new Fixture {
+      Given("some publishable and unpublishable initial leaderships, plus a DirectoryActor")
+      val goodDatabaseIds = List.fill(3)(randomNamedDatabaseId).toSet
+      val badDatabaseIds = List.fill(3)(randomNamedDatabaseId).toSet
+      val goodLeaderships = goodDatabaseIds.map(_.databaseId -> randomLeaderInfo).toMap
+      val badLeaderships = badDatabaseIds.map(_.databaseId -> new LeaderInfo(null,random.nextLong())).toMap
+      val leadershipSnapshot = goodLeaderships ++ badLeaderships
+      val actor = system.actorOf(DirectoryActor.props(cluster, replicator.ref, discoverySink, rrActor.ref, monitor))
+      val stateService = databaseStateService(goodDatabaseIds ++ badDatabaseIds)
+      val identityModule = new InMemoryCoreServerIdentity
+
+      When("PublishInitialData request received")
+      actor ! new PublishInitialData(new TestCoreDiscoveryMember(identityModule,stateService,leadershipSnapshot.asJava))
+
+      Then("the initial leaderships should be published")
+      val update = expectReplicatorUpdates(replicator, dataKey)
+      val ddata = update.modify(Option(ORMap.empty))
+      ddata.size shouldBe 3
+      ddata.entries.mapValues(_.leaderInfo) shouldBe goodLeaderships
     }
 
     "send incoming data to read replica actor and outside world" in new Fixture {
@@ -91,7 +124,7 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
   }
 
   class Fixture extends ReplicatedDataActorFixture[ORMap[DatabaseId,ReplicatedLeaderInfo]] {
-    private val random = new Random()
+    val random = new Random()
 
     def randomLeaderInfo = new LeaderInfo(IdFactory.randomRaftMemberId, random.nextLong)
     def randomReplicatedLeaderInfo = new ReplicatedLeaderInfo(randomLeaderInfo)

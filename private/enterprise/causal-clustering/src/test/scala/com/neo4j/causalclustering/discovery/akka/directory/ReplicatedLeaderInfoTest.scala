@@ -49,6 +49,23 @@ class ReplicatedLeaderInfoTest extends NeoSuite {
      val newLeaderInfo = leaderInfo.mergeData(steppingDownleaderInfo)
      assert(leaderInfo != newLeaderInfo && steppingDownleaderInfo == newLeaderInfo)
    }
+
+   "prefer non-null non-stepdown LeaderInfo values when merging in the same term" in {
+     Given("Null member leaderInfo")
+     val nullLeaderInfo = new ReplicatedLeaderInfo(new LeaderInfo(null,1L))
+
+     And("Normal leaderInfo")
+     val leaderInfo = new ReplicatedLeaderInfo(new LeaderInfo(IdFactory.randomRaftMemberId(),1L))
+
+     When("Merging normal into null")
+
+     Then("should keep normal")
+     assert(leaderInfo == nullLeaderInfo.mergeData(leaderInfo))
+
+     And("should overwrite null")
+     val newLeaderInfo = leaderInfo.mergeData(nullLeaderInfo)
+     assert(nullLeaderInfo != newLeaderInfo && leaderInfo == newLeaderInfo)
+   }
  }
 
 }

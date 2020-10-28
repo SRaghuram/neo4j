@@ -116,6 +116,15 @@ abstract class BaseAkkaIT(name: String) extends TestKit(ActorSystem(name, BaseAk
     }
   }
 
+  def expectNoReplicatorUpdates[A <: ReplicatedData](replicator: TestProbe, key: Key[A]): Unit = {
+    val messages = replicator.receiveWhile(defaultWaitTime) { case msg => msg }
+    messages.foreach {
+      case update: Replicator.Update[A] if update.key == key =>
+        fail(s"Received unexpected replicator update: ${update}")
+      case _ => //no-op
+    }
+  }
+
   def replicatedDataActor[A <: ReplicatedData](newFixture: => ReplicatedDataActorFixture[A]) = {
     "subscribe to replicator" in {
       val fixture = newFixture

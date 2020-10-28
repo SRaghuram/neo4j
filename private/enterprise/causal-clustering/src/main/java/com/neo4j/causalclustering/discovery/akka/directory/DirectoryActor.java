@@ -16,6 +16,7 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
+import scala.concurrent.java8.FuturesConvertersImpl;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -50,12 +51,21 @@ public class DirectoryActor extends BaseReplicatedDataActor<ORMap<DatabaseId,Rep
     protected void sendInitialDataToReplicator( DiscoveryMember memberSnapshot )
     {
         var localLeaderships = memberSnapshot.databaseLeaderships().entrySet().stream()
-               .reduce( ORMap.create(), this::addLeadership, ORMap::merge );
+                                             .filter( entry -> isPublishableLeaderInfo( entry.getValue() ) )
+                                             .reduce( ORMap.create(), this::addLeadership, ORMap::merge );
 
         if ( !localLeaderships.isEmpty() )
         {
             modifyReplicatedData( key, map -> map.merge( localLeaderships ) );
         }
+    }
+
+    /**
+     * Avoid publishing leaderInfos with null members unless we ourselves are stepping down.
+     */
+    private boolean isPublishableLeaderInfo( LeaderInfo leaderInfo )
+    {
+        return leaderInfo.memberId() != null || leaderInfo.isSteppingDown();
     }
 
     @Override
@@ -66,7 +76,10 @@ public class DirectoryActor extends BaseReplicatedDataActor<ORMap<DatabaseId,Rep
 
     private void handleLeaderInfoSet( LeaderInfoSettingMessage message )
     {
-        modifyReplicatedData( key, map -> map.put( cluster, message.database(), new ReplicatedLeaderInfo( message.leaderInfo() ) ) );
+        if ( isPublishableLeaderInfo( message.leaderInfo() ) )
+        {
+            modifyReplicatedData( key, map -> map.put( cluster, message.database(), new ReplicatedLeaderInfo( message.leaderInfo() ) ) );
+        }
     }
 
     private ORMap<DatabaseId,ReplicatedLeaderInfo> addLeadership( ORMap<DatabaseId,ReplicatedLeaderInfo> acc,

@@ -404,7 +404,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
             log.info( "I am server %s. Updating leader info to member %s %s and term %s", serverId(), newLeaderInfo.memberId(), namedDatabaseId,
                     newLeaderInfo.term() );
             localLeadersByDatabaseId.put( namedDatabaseId, newLeaderInfo );
-            sendLeaderInfoIfNeeded( newLeaderInfo, namedDatabaseId );
+            sendLeaderInfo( newLeaderInfo, namedDatabaseId );
         }
     }
 
@@ -424,7 +424,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
 
             var newLeaderInfo = currentLeaderInfo.stepDown();
             localLeadersByDatabaseId.put( namedDatabaseId, newLeaderInfo );
-            sendLeaderInfoIfNeeded( newLeaderInfo, namedDatabaseId );
+            sendLeaderInfo( newLeaderInfo, namedDatabaseId );
         }
     }
 
@@ -513,10 +513,10 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         return globalTopologyState;
     }
 
-    private void sendLeaderInfoIfNeeded( LeaderInfo leaderInfo, NamedDatabaseId namedDatabaseId )
+    private void sendLeaderInfo( LeaderInfo leaderInfo, NamedDatabaseId namedDatabaseId )
     {
         var directoryActor = directoryActorRef;
-        if ( directoryActor != null && (leaderInfo.memberId() != null || leaderInfo.isSteppingDown()) )
+        if ( directoryActor != null )
         {
             directoryActor.tell( new LeaderInfoSettingMessage( leaderInfo, namedDatabaseId ), noSender() );
         }
