@@ -48,7 +48,7 @@ import static org.neo4j.test.conditions.Conditions.equalityCondition;
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
 class AkkaDistributedDataLeakIT
 {
-    private static final int TIMEOUT = 60;
+    private static final int TIMEOUT = 120;
 
     /** Part of Akka cluster. Bootstraps cluster. Listens to changes in distributed data, exposes for assertions */
     private Harness harness;
