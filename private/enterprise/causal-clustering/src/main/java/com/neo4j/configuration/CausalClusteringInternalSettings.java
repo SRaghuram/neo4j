@@ -161,7 +161,7 @@ public class CausalClusteringInternalSettings implements SettingsDeclaration
             "suspicions but ensures a quick detection in the event of a real crash. Conversely, a high threshold generates fewer mistakes but needs more " +
             "time to detect actual crashes." )
     public static final Setting<Double> akka_failure_detector_threshold =
-            newBuilder( "causal_clustering.middleware.akka.failure_detector.threshold", DOUBLE, 10.0 ).build();
+            newBuilder( "causal_clustering.middleware.akka.failure_detector.threshold", DOUBLE, 12.0 ).build();
 
     @Internal
     @Description( "Akka cluster phi accrual failure detector. Number of the samples of inter-heartbeat arrival times to adaptively calculate the failure " +
@@ -180,7 +180,7 @@ public class CausalClusteringInternalSettings implements SettingsDeclaration
             "to be an anomaly. This margin is important to be able to survive sudden, occasional, pauses in heartbeat arrivals, due to for example garbage " +
             "collect or network drop." )
     public static final Setting<Duration> akka_failure_detector_acceptable_heartbeat_pause =
-            newBuilder( "causal_clustering.middleware.akka.failure_detector.acceptable_heartbeat_pause", DURATION, ofSeconds( 4 ) ).build();
+            newBuilder( "causal_clustering.middleware.akka.failure_detector.acceptable_heartbeat_pause", DURATION, ofSeconds( 30 ) ).build();
 
     @Internal
     @Description( "Akka cluster phi accrual failure detector. Number of member nodes that each member will send heartbeat messages to, i.e. each node " +
@@ -192,7 +192,7 @@ public class CausalClusteringInternalSettings implements SettingsDeclaration
     @Description( "Akka cluster phi accrual failure detector. After the heartbeat request has been sent the first failure detection will start after this " +
             "period, even though no heartbeat message has been received." )
     public static final Setting<Duration> akka_failure_detector_expected_response_after =
-            newBuilder( "causal_clustering.middleware.akka.failure_detector.expected_response_after", DURATION, ofSeconds( 1 ) ).build();
+            newBuilder( "causal_clustering.middleware.akka.failure_detector.expected_response_after", DURATION, ofSeconds( 10 ) ).build();
     /*
     End akka failure detector
     */
