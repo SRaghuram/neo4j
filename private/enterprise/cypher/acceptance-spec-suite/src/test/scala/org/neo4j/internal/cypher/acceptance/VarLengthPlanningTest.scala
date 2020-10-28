@@ -120,7 +120,7 @@ class VarLengthPlanningTest extends ExecutionEngineFunSuite with QueryStatistics
   }
 
   def haveNoneRelFilter: Matcher[InternalPlanDescription] =
-    includeSomewhere.aPlan("Filter").containingArgumentRegex("none\\(.*\\)".r)
+    includeSomewhere.aPlan("Filter").containingArgumentRegex(".*none\\(.*\\).*".r)
 
   /*
   This tree model generator will generate a binary tree, starting with a single root(named "n0").
