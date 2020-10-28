@@ -24,6 +24,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.Result;
 import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
@@ -73,7 +74,7 @@ public class SetDefaultDatabaseIT
         CausalClusteringTestHelpers.createDatabase( "foo", cluster );
         CausalClusteringTestHelpers.stopDatabase( "neo4j", cluster );
         CausalClusteringTestHelpers.assertDatabaseEventuallyStarted( "foo", cluster );
-        CausalClusteringTestHelpers.assertDatabaseEventuallyStopped( "neo4j", cluster );
+        CausalClusteringTestHelpers.assertDatabaseEventuallyInStateSeenByAll( "neo4j", cluster.allMembers(), STOPPED );
 
         cluster.systemTx( ( db, tx ) ->
         {

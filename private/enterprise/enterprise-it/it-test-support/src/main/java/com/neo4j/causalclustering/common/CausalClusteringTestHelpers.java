@@ -14,6 +14,8 @@ import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.discovery.TopologyService;
+import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
+import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
@@ -32,6 +34,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +43,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
@@ -47,6 +51,7 @@ import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
+import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
@@ -54,6 +59,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
@@ -455,6 +461,46 @@ public final class CausalClusteringTestHelpers
         }
         var databaseStateService = member.resolveDependency( SYSTEM_DATABASE_NAME, DatabaseStateService.class );
         return (EnterpriseOperatorState) databaseStateService.stateOfDatabase( database.databaseId() ).operatorState();
+    }
+
+    public static void assertDatabaseEventuallyInStateSeenByAll( String databaseName, Set<ClusterMember> members, EnterpriseOperatorState state )
+    {
+        assertEventually( () -> "Database is not seen as " + state + " on all members by all members / " + memberDatabaseStates( databaseName, members ),
+                () -> membersHaveDatabaseStateSeenByAll( members, databaseName ), allStatesMatch( state ), 1, MINUTES );
+    }
+
+    private static List<EnterpriseOperatorState> membersHaveDatabaseStateSeenByAll( Set<? extends ClusterMember> members,
+            String databaseName )
+    {
+        var serverIds = members.stream().map( ClusterMember::serverId ).collect( Collectors.toSet() );
+        return members.stream()
+                .flatMap( member -> memberDatabaseStateSeenByAll( member, serverIds, databaseName ) ).collect( toList() );
+    }
+
+    private static Stream<EnterpriseOperatorState> memberDatabaseStateSeenByAll( ClusterMember member, Set<ServerId> serverIds, String databaseName )
+    {
+        NamedDatabaseId databaseId;
+        try
+        {
+            // database is only needed to get the database id
+            var database = member.database( databaseName );
+            databaseId = database.databaseId();
+        }
+        catch ( DatabaseNotFoundException e )
+        {
+            return Stream.of( EnterpriseOperatorState.UNKNOWN );
+        }
+        var topologyService = member.resolveDependency( SYSTEM_DATABASE_NAME, TopologyService.class );
+        var allStates = new HashMap<ServerId, EnterpriseOperatorState>();
+        allStates.putAll( convertTopologyState( topologyService.allCoreStatesForDatabase( databaseId ) ) );
+        allStates.putAll( convertTopologyState( topologyService.allReadReplicaStatesForDatabase( databaseId ) ) );
+        return serverIds.stream().map( serverId -> allStates.getOrDefault( serverId, UNKNOWN ) );
+    }
+
+    private static Map<ServerId, EnterpriseOperatorState> convertTopologyState( Map<MemberId,DiscoveryDatabaseState> memberIdDiscoveryDatabaseStateMap )
+    {
+        return memberIdDiscoveryDatabaseStateMap.entrySet().stream()
+                .collect( Collectors.toMap( Map.Entry::getKey, entry -> (EnterpriseOperatorState) entry.getValue().operatorState() ) );
     }
 
     private static Map<ClusterMember,Set<String>> memberUserStates( Cluster cluster )
