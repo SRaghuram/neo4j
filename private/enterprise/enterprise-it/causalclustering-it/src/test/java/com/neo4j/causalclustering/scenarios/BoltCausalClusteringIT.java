@@ -46,6 +46,8 @@ import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.forceReelection;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.runWithLeaderDisabled;
+import static com.neo4j.configuration.CausalClusteringSettings.cluster_allow_reads_on_followers;
+import static com.neo4j.configuration.CausalClusteringSettings.cluster_topology_refresh;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -433,7 +435,11 @@ class BoltCausalClusteringIT
                     .clusterConfig()
                     .withNumberOfCoreMembers( 3 )
                     .withNumberOfReadReplicas( 1 )
-                    .withSharedCoreParams( Map.of( GraphDatabaseSettings.routing_ttl.name(), "1s" ) ) );
+                    .withSharedCoreParam( cluster_topology_refresh, "5s" )
+                    .withSharedReadReplicaParam( cluster_topology_refresh, "5s" )
+                    .withSharedCoreParam( cluster_allow_reads_on_followers, "false" )
+                    .withSharedReadReplicaParam( GraphDatabaseSettings.bookmark_ready_timeout, "1s" )
+                    .withSharedCoreParam( GraphDatabaseSettings.routing_ttl, "1s" ) );
             cluster.start();
 
             try ( Driver driver = makeDriver( cluster ) )
@@ -491,7 +497,7 @@ class BoltCausalClusteringIT
                     }
 
                     return readReplicas.size() == 0; // have sent something to all replicas
-                }, TRUE, 30, SECONDS );
+                }, TRUE, 120, SECONDS );
             }
         }
 
