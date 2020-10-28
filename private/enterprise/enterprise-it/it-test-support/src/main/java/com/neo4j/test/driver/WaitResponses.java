@@ -16,8 +16,8 @@ public class WaitResponses
     public static WaitResponses create( Result result )
     {
         return new WaitResponses( result.stream()
-                .map( WaitResponse::createServerResponse )
-                .collect( toSet() ) );
+                                        .map( WaitResponse::createServerResponse )
+                                        .collect( toSet() ) );
     }
 
     private final Set<WaitResponse> waitResponse;

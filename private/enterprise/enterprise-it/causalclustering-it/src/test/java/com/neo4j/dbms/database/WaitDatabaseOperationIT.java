@@ -12,6 +12,7 @@ import com.neo4j.test.causalclustering.ClusterFactory;
 import com.neo4j.test.driver.DriverExtension;
 import com.neo4j.test.driver.DriverFactory;
 import com.neo4j.test.driver.DriverTestHelper;
+import com.neo4j.test.driver.WaitResponseStates;
 import com.neo4j.test.driver.WaitResponses;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -66,8 +67,10 @@ public class WaitDatabaseOperationIT
     @MethodSource( "blockingOperations" )
     void testWaitCommands( OperationFunction operationFunction )
     {
-        assertThat( operationFunction.apply( driver, "foo" ) ).matches( WaitResponses::successful )
-                .matches( waitResponses -> waitResponses.responses().size() == cluster.readReplicas().size() + cluster.coreMembers().size() );
+        var responses = operationFunction.apply( driver, "foo" );
+        assertResponsesAreSuccessful( responses );
+        var expectedSize = cluster.readReplicas().size() + cluster.coreMembers().size();
+        assertThat( responses.responses() ).hasSize( expectedSize );
     }
 
     @Test
@@ -78,15 +81,15 @@ public class WaitDatabaseOperationIT
         {
             var responses = session.writeTransaction( tx -> WaitResponses.create( tx.run( "CREATE DATABASE " + dbName + " IF NOT EXISTS WAIT" ) ) );
 
-            assertThat( responses.successful() ).isTrue();
+            assertResponsesAreSuccessful( responses );
             assertDatabaseHasStarted( dbName, cluster );
 
             var responsesAfter = session.writeTransaction( tx -> WaitResponses.create( tx.run( "CREATE DATABASE " + dbName + " IF NOT EXISTS WAIT" ) ) );
 
-            assertThat( responsesAfter.successful() ).isTrue();
-            assertThat( responsesAfter.responses() ).hasSize( 1 );
-            assertThat( responsesAfter.responses().stream().findFirst().orElseThrow() ).matches(
-                    response -> response.message().equals( "No operation needed" ) );
+            assertResponsesAreSuccessful( responsesAfter );
+            assertThat( responsesAfter.responses() )
+                    .extracting( "message" )
+                    .containsExactly( "No operation needed" );
         }
     }
 
@@ -98,10 +101,10 @@ public class WaitDatabaseOperationIT
         {
             var responses = session.writeTransaction( tx -> WaitResponses.create( tx.run( "DROP DATABASE " + dbName + " IF EXISTS WAIT" ) ) );
 
-            assertThat( responses.successful() ).isTrue();
-            assertThat( responses.responses() ).hasSize( 1 );
-            assertThat( responses.responses().stream().findFirst().orElseThrow() ).matches(
-                    response -> response.message().equals( "No operation needed" ) );
+            assertResponsesAreSuccessful( responses );
+            assertThat( responses.responses() )
+                    .extracting( "message" )
+                    .containsExactly( "No operation needed" );
         }
     }
 
@@ -113,14 +116,14 @@ public class WaitDatabaseOperationIT
         {
             var responses = session.writeTransaction( tx -> WaitResponses.create( tx.run( "CREATE OR REPLACE DATABASE " + dbName + " WAIT" ) ) );
 
-            assertThat( responses.successful() ).isTrue();
+            assertResponsesAreSuccessful( responses );
             assertDatabaseHasStarted( dbName, cluster );
             var idBefore = cluster.getCoreMemberByIndex( 0 ).databaseId( dbName );
 
             var responsesAfter = session.writeTransaction( tx -> WaitResponses.create( tx.run( "CREATE OR REPLACE DATABASE " + dbName + " WAIT" ) ) );
 
             var idAfter = cluster.getCoreMemberByIndex( 0 ).databaseId( dbName );
-            assertThat( responsesAfter.successful() ).isTrue();
+            assertResponsesAreSuccessful( responsesAfter );
             assertDatabaseHasStarted( dbName, cluster );
             assertThat( idAfter ).isNotEqualTo( idBefore );
         }
@@ -132,7 +135,7 @@ public class WaitDatabaseOperationIT
         var dbName = "createDB";
         var responses = DriverTestHelper.createDatabaseWait( driver, dbName );
 
-        assertThat( responses.successful() ).isTrue();
+        assertResponsesAreSuccessful( responses );
         assertDatabaseHasStarted( dbName, cluster );
         DriverTestHelper.writeData( driver, dbName );
     }
@@ -144,7 +147,7 @@ public class WaitDatabaseOperationIT
         DriverTestHelper.createDatabaseNoWait( driver, dbName );
         var responses = DriverTestHelper.stopDatabaseWait( driver, dbName );
 
-        assertThat( responses.successful() ).isTrue();
+        assertResponsesAreSuccessful( responses );
         assertDatabaseHasStopped( dbName, cluster );
         assertThrows( Exception.class, () -> DriverTestHelper.writeData( driver, dbName ) );
     }
@@ -157,7 +160,7 @@ public class WaitDatabaseOperationIT
         DriverTestHelper.stopDatabaseNoWait( driver, dbName );
         var responses = DriverTestHelper.startDatabaseWait( driver, dbName );
 
-        assertThat( responses.successful() ).isTrue();
+        assertResponsesAreSuccessful( responses );
         assertDatabaseHasStarted( dbName, cluster );
         DriverTestHelper.writeData( driver, dbName );
     }
@@ -169,9 +172,16 @@ public class WaitDatabaseOperationIT
         DriverTestHelper.createDatabaseNoWait( driver, dbName );
         var responses = DriverTestHelper.dropDatabaseWait( driver, dbName );
 
-        assertThat( responses.successful() ).isTrue();
+        assertResponsesAreSuccessful( responses );
         assertDatabaseHasDropped( dbName, cluster );
         assertThrows( Exception.class, () -> DriverTestHelper.writeData( driver, dbName ) );
+    }
+
+    private void assertResponsesAreSuccessful( WaitResponses responses )
+    {
+        assertThat( responses.responses() )
+                .extracting( "state" )
+                .containsOnly( WaitResponseStates.CaughtUp );
     }
 
     private interface OperationFunction extends BiFunction<Driver,String,WaitResponses>
