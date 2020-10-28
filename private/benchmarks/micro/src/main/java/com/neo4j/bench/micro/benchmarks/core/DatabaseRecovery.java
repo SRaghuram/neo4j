@@ -22,8 +22,7 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
 
 import java.nio.file.Path;
-import java.util.ArrayDeque;
-import java.util.Deque;
+import java.util.Optional;
 import java.util.SplittableRandom;
 
 import org.neo4j.configuration.Config;
@@ -35,15 +34,12 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.impl.transaction.log.ReadableLogChannel;
-import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
-import org.neo4j.kernel.impl.transaction.log.entry.LogEntryInlinedCheckPoint;
-import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
-import org.neo4j.kernel.impl.transaction.log.files.LogFile;
+import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
+import org.neo4j.kernel.impl.transaction.log.files.checkpoint.CheckpointFile;
+import org.neo4j.kernel.impl.transaction.log.files.checkpoint.CheckpointInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static com.neo4j.bench.micro.data.DataGenerator.GraphWriter.TRANSACTIONAL;
@@ -117,9 +113,8 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
     {
         GraphDatabaseAPI db = (GraphDatabaseAPI) managedStore.db();
         DatabaseLayout databaseLayout = db.databaseLayout();
-        StorageEngineFactory storageEngineFactory = db.getDependencyResolver().resolveDependency( StorageEngineFactory.class );
         ManagedStore.getManagementService().shutdown();
-        removeLastCheckpointsRecordFromLastLogFile( databaseLayout, storageEngineFactory );
+        removeLastCheckpointsUntilRecoveryRequired( databaseLayout );
         if ( !isRecoveryRequired( databaseLayout, Config.defaults(), INSTANCE ) )
         {
             throw new IllegalStateException( "Store should require recovery." );
@@ -145,37 +140,27 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
         return false;
     }
 
-    private static void removeLastCheckpointsRecordFromLastLogFile( DatabaseLayout databaseLayout, StorageEngineFactory storageEngineFactory ) throws Exception
+    private static void removeLastCheckpointsUntilRecoveryRequired( DatabaseLayout databaseLayout ) throws Exception
     {
         DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
         LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.getTransactionLogsDirectory(), fileSystem ).build();
 
-        LogFile logFile = logFiles.getLogFile();
-        VersionAwareLogEntryReader entryReader = new VersionAwareLogEntryReader( storageEngineFactory.commandReaderFactory() );
-        ReadableLogChannel reader = logFile.getReader( logFile.extractHeader( logFile.getHighestLogVersion() ).getStartPosition() );
-        LogEntry logEntry;
-        Deque<LogEntryInlinedCheckPoint> checkPoints = new ArrayDeque<>();
-        do
+        CheckpointFile checkpointFile = logFiles.getCheckpointFile();
+        Optional<CheckpointInfo> latestCheckpoint = checkpointFile.findLatestCheckpoint();
+
+        while ( latestCheckpoint.isPresent() )
         {
-            logEntry = entryReader.readLogEntry( reader );
-            if ( logEntry instanceof LogEntryInlinedCheckPoint )
+            LogPosition checkpointEntryPosition = latestCheckpoint.get().getCheckpointEntryPosition();
+            Path logFile = checkpointFile.getDetachedCheckpointFileForVersion( checkpointEntryPosition.getLogVersion() );
+            try ( StoreChannel storeChannel = fileSystem.write( logFile ) )
             {
-                checkPoints.add( (LogEntryInlinedCheckPoint) logEntry );
-            }
-        }
-        while ( logEntry != null );
-        Path highestLogFile = logFile.getLogFileForVersion( logFile.getHighestLogVersion() );
-        while ( !checkPoints.isEmpty() )
-        {
-            LogEntryInlinedCheckPoint checkPoint = checkPoints.pollLast();
-            try ( StoreChannel storeChannel = fileSystem.write( highestLogFile ) )
-            {
-                storeChannel.truncate( checkPoint.getLogPosition().getByteOffset() );
+                storeChannel.truncate( checkpointEntryPosition.getByteOffset() );
             }
             if ( isRecoveryRequired( fileSystem, databaseLayout, Config.defaults(), INSTANCE ) )
             {
                 return;
             }
+            latestCheckpoint = checkpointFile.findLatestCheckpoint();
         }
     }
 }
