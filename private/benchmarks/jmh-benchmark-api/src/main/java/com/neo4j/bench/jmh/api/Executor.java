@@ -11,6 +11,7 @@ import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
 import com.neo4j.bench.jmh.api.config.JmhOptionsUtil;
 import com.neo4j.bench.jmh.api.profile.AbstractMicroProfiler;
+import com.neo4j.bench.model.model.BenchmarkGroup;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -80,7 +81,7 @@ public class Executor
                     catch ( Exception e )
                     {
                         successfulBenchmarks.remove( benchmark );
-                        errorReporter.recordOrThrow( e, benchmark.group(), benchmark.guessSingleName() );
+                        errorReporter.recordOrThrow( e, new BenchmarkGroup( benchmark.group() ), benchmark.benchmark() );
                     }
                     finally
                     {

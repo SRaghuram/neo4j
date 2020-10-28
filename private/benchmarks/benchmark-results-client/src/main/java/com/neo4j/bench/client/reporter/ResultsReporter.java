@@ -12,6 +12,8 @@ import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.model.model.TestRunError;
 import com.neo4j.bench.model.model.TestRunReport;
 import com.neo4j.bench.model.util.JsonUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.URI;
@@ -25,6 +27,8 @@ import static org.apache.commons.lang3.StringUtils.appendIfMissing;
 
 public class ResultsReporter
 {
+    private static final Logger LOG = LoggerFactory.getLogger( ResultsReporter.class );
+
     private final String resultsStoreUsername;
     private final String resultsStorePassword;
     private final URI resultsStoreUri;
@@ -45,16 +49,16 @@ public class ResultsReporter
                                  String awsEndpointURL,
                                  ErrorReportingPolicy errorReportingPolicy )
     {
-        Objects.requireNonNull(recordingsBaseUri.getScheme(), "Recordings URI must contain scheme");
+        Objects.requireNonNull( recordingsBaseUri.getScheme(), "Recordings URI must contain scheme" );
 
         try
         {
             Path testRunReportFile = workDir.toPath().resolve( "test-result.json" );
-            System.out.println( "Exporting results as JSON to: " + testRunReportFile.toAbsolutePath() );
+            LOG.debug( "Exporting results as JSON to: {}", testRunReportFile.toAbsolutePath() );
             JsonUtil.serializeJson( testRunReportFile, testRunReport );
 
             String testRunId = testRunReport.testRun().id();
-            System.out.printf( "Reporting test run with id %s%n", testRunId );
+            LOG.debug( "Reporting test run with id {}", testRunId );
 
             Path tempRecordingsDir = Files.createTempDirectory( workDir.toPath(), null );
             URI s3ProfilerRecordingsFolderUri = AmazonS3Upload.constructS3Uri( recordingsBaseUri, tempRecordingsDir );
@@ -67,16 +71,16 @@ public class ResultsReporter
 
             String archiveName = tempRecordingsDir.getFileName() + ".tar.gz";
             Path testRunArchive = workDir.toPath().resolve( archiveName );
-            System.out.printf( "creating .tar.gz archive '%s' of profiles directory '%s'%n", testRunArchive, tempRecordingsDir );
+            LOG.debug( "creating .tar.gz archive '{}' of profiles directory '{}'", testRunArchive, tempRecordingsDir );
             TarGzArchive.compress( testRunArchive, tempRecordingsDir );
 
             try ( AmazonS3Upload amazonS3Upload = AmazonS3Upload.create( awsRegion, awsEndpointURL ) )
             {
-                System.out.printf( "uploading profiler recording directory '%s' to '%s'%n", tempRecordingsDir, s3ProfilerRecordingsFolderUri );
+                LOG.debug( "uploading profiler recording directory '{}' to '{}'", tempRecordingsDir, s3ProfilerRecordingsFolderUri );
                 amazonS3Upload.uploadFolder( tempRecordingsDir, s3ProfilerRecordingsFolderUri );
 
                 URI testRunArchiveS3Uri = AmazonS3Upload.constructS3Uri( recordingsBaseUri, testRunArchive );
-                System.out.printf( "uploading profiler recordings archive '%s' to '%s'%n", testRunArchive, testRunArchiveS3Uri );
+                LOG.debug( "uploading profiler recordings archive '{}' to '{}'", testRunArchive, testRunArchiveS3Uri );
                 amazonS3Upload.uploadFile( testRunArchive, testRunArchiveS3Uri );
                 String s3ArchivePath = dropScheme( testRunArchiveS3Uri );
                 testRunReport.testRun().setArchive( s3ArchivePath );
@@ -105,7 +109,7 @@ public class ResultsReporter
             }
             SubmitTestRun submitTestRun = new SubmitTestRun( testRunReport );
             new QueryRetrier( true, QueryRetrier.DEFAULT_TIMEOUT ).execute( client, submitTestRun );
-            System.out.println( "Successfully reported results" );
+            LOG.debug( "Successfully reported results" );
             if ( errorReportingPolicy.equals( ErrorReportingPolicy.REPORT_THEN_FAIL ) )
             {
                 assertNoErrors( testRunReport );
@@ -120,7 +124,7 @@ public class ResultsReporter
         {
             throw new RuntimeException( "==============================================================================================\n" +
                                         "Test Run Report Contained (" + errors.size() + ") Errors:\n" +
-                                        errors.stream().map( e -> "\t" + e.groupName() + e.benchmarkName() ).collect( joining( "\n" ) ) + "\n" +
+                                        errors.stream().map( e -> "\t" + e.benchmarkGroup().name() + e.benchmark().name() ).collect( joining( "\n" ) ) + "\n" +
                                         "==============================================================================================\n" +
                                         errors.stream()
                                               .map( TestRunError::message )

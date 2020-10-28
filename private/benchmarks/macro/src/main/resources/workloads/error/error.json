@@ -1,0 +1,10 @@
+{
+  "name": "error",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Q1",
+      "description": "Invalid Cypher query",
+      "queryFile": "queries/Q1.cypher"
+    } ]
+}

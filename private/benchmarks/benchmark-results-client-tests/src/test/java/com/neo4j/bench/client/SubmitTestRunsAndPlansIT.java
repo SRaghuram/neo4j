@@ -172,6 +172,7 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "Instance", 1, client );
             assertRelationship( "Environment", "HAS_INSTANCE", "Instance", 1, client );
             assertLabelCount( "BenchmarkTool", 1, client );
+            assertLabelCount( "Error", 0, client );
             // plan specific
             assertLabelCount( "Plan", 0, client );
             assertLabelCount( "PlanTree", 0, client );
@@ -187,10 +188,11 @@ public class SubmitTestRunsAndPlansIT
             TestRunReport testRunReport2 = createTestRunReportTwoProjects(
                     testRun2,
                     newArrayList(), // no plans
-                    newArrayList( new TestRunError( "group1", "benchmark1", "description 1" ),
-                                  new TestRunError( "group2", "benchmark2", "description 2" ) ), // has errors
+                    newArrayList( new TestRunError( group, benchmark1, "description 1" ),
+                                  new TestRunError( group, benchmark2, "description 2" ) ), // has errors
                     group,
-                    benchmark1, benchmark2 );
+                    benchmark1,
+                    benchmark2 );
 
             BenchmarkUtil.assertException( RuntimeException.class,
                                            () -> resultsReporter.report( testRunReport2, FAIL ) );
@@ -210,6 +212,7 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "Instance", 1, client );
             assertRelationship( "Environment", "HAS_INSTANCE", "Instance", 1, client );
             assertLabelCount( "BenchmarkTool", 1, client );
+            assertLabelCount( "Error", 0, client );
             // plan specific
             assertLabelCount( "Plan", 0, client );
             assertLabelCount( "PlanTree", 0, client );
@@ -239,6 +242,7 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "Instance", 1, client );
             assertRelationship( "Environment", "HAS_INSTANCE", "Instance", 2, client );
             assertLabelCount( "BenchmarkTool", 1, client );
+            assertLabelCount( "Error", 2, client );
             // plan specific
             assertLabelCount( "Plan", 0, client );
             assertLabelCount( "PlanTree", 0, client );
@@ -254,8 +258,8 @@ public class SubmitTestRunsAndPlansIT
             TestRunReport testRunReport3 = createTestRunReportTwoProjects(
                     testRun3,
                     newArrayList(), // no plans
-                    newArrayList( new TestRunError( "group1", "benchmark1", "description 1" ),
-                                  new TestRunError( "group2", "benchmark2", "description 2" ) ), // has errors
+                    newArrayList( new TestRunError( group, benchmark1, "description 1" ),
+                                  new TestRunError( group, benchmark2, "description 2" ) ), // has errors
                     group,
                     benchmark1, benchmark2 );
             // no exception is expected
@@ -460,8 +464,8 @@ public class SubmitTestRunsAndPlansIT
             List<BenchmarkPlan> benchmarkPlans = newArrayList(
                     new BenchmarkPlan( group, benchmark1, plan( "a" ) ),
                     new BenchmarkPlan( group, benchmark2, plan( "b" ) ) );
-            ArrayList<TestRunError> errors = newArrayList( new TestRunError( "group1", "benchmark1", "description 1" ),
-                                                           new TestRunError( "group2", "benchmark2", "description 2" ) );
+            ArrayList<TestRunError> errors = newArrayList( new TestRunError( group, benchmark1, "description 1" ),
+                                                           new TestRunError( group, benchmark2, "description 2" ) );
             TestRunReport testRunReport1 = createTestRunReport( testRun1, benchmarkPlans, errors, group, benchmark1, benchmark2 );
             addProfilerRecordings( testRunReport1, group, benchmark1, benchmark2 );
             resultsReporter.report( testRunReport1, errors.isEmpty() ? FAIL : IGNORE );
@@ -545,8 +549,8 @@ public class SubmitTestRunsAndPlansIT
             List<BenchmarkPlan> benchmarkPlans = newArrayList(
                     new BenchmarkPlan( group, benchmark1, plan( "a" ) ),
                     new BenchmarkPlan( group, benchmark2, plan( "a" ) ) );
-            ArrayList<TestRunError> errors = newArrayList( new TestRunError( "group1", "benchmark1", "description 1" ),
-                                                           new TestRunError( "group2", "benchmark2", "description 2" ) );
+            ArrayList<TestRunError> errors = newArrayList( new TestRunError( group, benchmark1, "description 1" ),
+                                                           new TestRunError( group, benchmark2, "description 2" ) );
             TestRunReport testRunReport1 = createTestRunReport( testRun1, benchmarkPlans, errors, group, benchmark1, benchmark2 );
             addProfilerRecordings( testRunReport1, group, benchmark1, benchmark2 );
             resultsReporter.report( testRunReport1, errors.isEmpty() ? FAIL : IGNORE );

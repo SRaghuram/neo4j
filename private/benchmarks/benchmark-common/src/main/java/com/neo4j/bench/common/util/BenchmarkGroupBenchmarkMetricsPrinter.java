@@ -68,7 +68,7 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
         }
         for ( TestRunError error : errors )
         {
-            String[] errorData = rowWriter.registerErrorRow( error.groupName(), error.benchmarkName() );
+            String[] errorData = rowWriter.registerErrorRow( error.benchmarkGroup().name(), error.benchmark().name() );
             rows.add( new Row( null /* data */, errorData, null  /* auxiliary data */ ) );
         }
         rows.sort( new RowComparator() );

@@ -149,7 +149,11 @@ class PlannerDescriptionIT
         Path neo4jConfigFile = writeEmbeddedNeo4jConfig();
         try ( Resources resources = new Resources( temporaryFolder.directory( format( "resources-%s", randId ) ) ) )
         {
-            for ( Workload workload : Workload.all( resources, Deployment.embedded() ) )
+            for ( Workload workload : Workload.all( resources, Deployment.embedded() )
+                                              .stream()
+                                              // filter out mock workload which always fails
+                                              .filter( workload -> !"error".equals( workload.name() ) )
+                                              .collect( toList() ) )
             {
                 LOG.debug( "Verifying plan extraction on workload: " + workload.name() );
                 Path storePath = temporaryFolder.directory( format( "store-%s-%s", workload.name(), randId ) );
@@ -185,7 +189,12 @@ class PlannerDescriptionIT
 
         try ( Resources resources = new Resources( temporaryFolder.directory( format( "resources-%s", randId ) ) ) )
         {
-            for ( Workload workload : Workload.all( resources, Deployment.embedded() ) )
+            // filter out error workload
+            List<Workload> workloads = Workload.all( resources, Deployment.embedded() )
+                                               .stream()
+                                               .filter( workload -> !"error".equals( workload.name() ) )
+                                               .collect( toList() );
+            for ( Workload workload : workloads )
             {
                 LOG.debug( "Verifying plan extraction on workload: " + workload.name() );
                 Redirect outputRedirect = Redirect.to( temporaryFolder.file( format( "neo4j-out-%s-%s.log", workload.name(), randId ) ).toFile() );

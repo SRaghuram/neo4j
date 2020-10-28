@@ -63,7 +63,6 @@ import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
 public class SyntheticStoreGenerator
@@ -76,6 +75,7 @@ public class SyntheticStoreGenerator
     private static final DecimalFormat THROUGHPUT_FORMAT = new DecimalFormat( "#,###,##0.00" );
     private static final int DEFAULT_DAYS = 7;
     private static final int DEFAULT_RESULTS_PER_DAY = 10;
+    private static final double DEFAULT_ERROR_RATE = 0.2;
     private static final Repository[] TOOLS = {MICRO_BENCH, MACRO_BENCH, LDBC_BENCH, IMPORT_BENCH};
     private static final Map<String,String> BENCHMARK_PARAMETERS =
             IntStream.range( 0, 10 ).mapToObj( Integer::toString ).collect( toMap( s -> "k_" + s, s -> "v_" + s ) );
@@ -125,10 +125,6 @@ public class SyntheticStoreGenerator
             return build++;
         }
     };
-    private static final Supplier<List<TestRunError>> ERRORS = () -> IntStream
-            .range( 0, RNG.nextInt( 0, 3 ) )
-            .mapToObj( i -> new TestRunError( "group", "benchmark-" + i, "Error No." + i ) )
-            .collect( toList() );
 
     private static final long SAMPLE_SIZE = 10_000;
 
@@ -136,6 +132,7 @@ public class SyntheticStoreGenerator
     {
         private int days = DEFAULT_DAYS;
         private int resultsPerDay = DEFAULT_RESULTS_PER_DAY;
+        private double errorRate = DEFAULT_ERROR_RATE;
         private ToolBenchGroup[] toolBenchGroups = DEFAULT_TOOL_BENCH_GROUPS;
         private String[] neo4jVersions = DEFAULT_NEO4J_VERSIONS;
         private Edition[] neo4jEditions = DEFAULT_NEO4J_EDITIONS;
@@ -159,6 +156,12 @@ public class SyntheticStoreGenerator
         SyntheticStoreGeneratorBuilder withResultsPerDay( int resultsPerDay )
         {
             this.resultsPerDay = resultsPerDay;
+            return this;
+        }
+
+        SyntheticStoreGeneratorBuilder withErrorRate( double errorRate )
+        {
+            this.errorRate = errorRate;
             return this;
         }
 
@@ -245,6 +248,7 @@ public class SyntheticStoreGenerator
             return new SyntheticStoreGenerator(
                     days,
                     resultsPerDay,
+                    errorRate,
                     toolBenchGroups,
                     neo4jVersions,
                     neo4jEditions,
@@ -265,6 +269,10 @@ public class SyntheticStoreGenerator
     private final int days;
 
     private final int resultsPerDay;
+    /**
+     * error rate (1/errorRate) in resultsPerDay
+     */
+    private final double errorRate;
     private final ToolBenchGroup[] toolBenchGroups;
     private final String[] neo4jVersions;
     private final Edition[] neo4jEditions;
@@ -283,6 +291,7 @@ public class SyntheticStoreGenerator
     private SyntheticStoreGenerator(
             int days,
             int resultsPerDay,
+            double errorRate,
             ToolBenchGroup[] toolBenchGroups,
             String[] neo4jVersions,
             Edition[] neo4jEditions,
@@ -299,6 +308,7 @@ public class SyntheticStoreGenerator
     {
         this.days = days;
         this.resultsPerDay = resultsPerDay;
+        this.errorRate = errorRate;
         this.toolBenchGroups = toolBenchGroups;
         this.neo4jVersions = neo4jVersions;
         this.neo4jEditions = neo4jEditions;
@@ -346,23 +356,39 @@ public class SyntheticStoreGenerator
             {
                 for ( ToolBenchGroup toolBenchGroup : toolBenchGroups )
                 {
+                    List<TestRunError> errors = new ArrayList<>();
                     BenchmarkTool tool = generateBenchmarkTool( toolBenchGroup.tool );
                     BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics = new BenchmarkGroupBenchmarkMetrics();
                     BenchmarkGroup benchmarkGroup = toolBenchGroup.group();
                     for ( Benchmark benchmark : toolBenchGroup.benchmarks() )
                     {
-                        Metrics maybeAuxiliaryMetrics = randomAuxiliaryMetrics();
-                        benchmarkGroupBenchmarkMetrics.add(
-                                benchmarkGroup,
-                                benchmark,
-                                randomMetrics( benchmark.mode() ),
-                                maybeAuxiliaryMetrics,
-                                config );
                         generationResult.addBenchmark( tool, benchmarkGroup, benchmark );
-                        generationResult.incMetrics();
-                        if ( maybeAuxiliaryMetrics != null )
+                        if ( isTestRunError() )
                         {
-                            generationResult.incAuxiliaryMetrics();
+                            // generate test run error
+                            TestRunError testRunError = new TestRunError( benchmarkGroup,
+                                                                          benchmark,
+                                                                          format( "Error in group %s, benchmark %s",
+                                                                                  benchmarkGroup.name(),
+                                                                                  benchmark.name() ) );
+                            errors.add( testRunError );
+                            generationResult.incTestRunErrors();
+                        }
+                        else
+                        {
+                            // generate metrics
+                            Metrics maybeAuxiliaryMetrics = randomAuxiliaryMetrics();
+                            benchmarkGroupBenchmarkMetrics.add(
+                                    benchmarkGroup,
+                                    benchmark,
+                                    randomMetrics( benchmark.mode() ),
+                                    maybeAuxiliaryMetrics,
+                                    config );
+                            generationResult.incMetrics();
+                            if ( maybeAuxiliaryMetrics != null )
+                            {
+                                generationResult.incAuxiliaryMetrics();
+                            }
                         }
                     }
 
@@ -378,9 +404,9 @@ public class SyntheticStoreGenerator
                     Map<Instance,Long> instances = new HashMap();
                     for ( int i = 0; i < RNG.nextInt( 1, 4 ); i++ )
                     {
-                        instances.put( new Instance( "instance",
-                                                     Instance.Kind.AWS,
-                                                     "Linux",
+                        instances.put( new Instance( servers[RNG.nextInt( 0, servers.length )],
+                                                     Instance.Kind.Server,
+                                                     operatingSystems[RNG.nextInt( 0, operatingSystems.length )],
                                                      i,
                                                      1024 ), 1L );
                     }
@@ -392,7 +418,6 @@ public class SyntheticStoreGenerator
                             randomFrom( jvmArgs ) );
                     generationResult.addJavas( java );
                     List<BenchmarkPlan> plans = new ArrayList<>();
-                    List<TestRunError> errors = ERRORS.get();
 
                     TestRunReport testRunReport = new TestRunReport(
                             testRun,
@@ -458,6 +483,11 @@ public class SyntheticStoreGenerator
                                THROUGHPUT_FORMAT.format( opsPerMs * 1000 ) ) );
         }
         return generationResult;
+    }
+
+    private boolean isTestRunError()
+    {
+        return RNG.nextDouble( 0, 1 ) < errorRate;
     }
 
     private Metrics randomMetrics( Mode mode )
@@ -608,20 +638,21 @@ public class SyntheticStoreGenerator
     static class GenerationResult
     {
         private final int expectedTotalTestRuns;
-        private Set<List<String>> benchmarkGroups = new HashSet<>();
-        private Set<List<String>> benchmarks = new HashSet<>();
+        private final Set<List<String>> benchmarkGroups = new HashSet<>();
+        private final Set<List<String>> benchmarks = new HashSet<>();
         private int testRuns;
-        private List<Long> packagingBuildIds = new ArrayList<>();
-        private Set<Environment> environments = new HashSet<>();
-        private Set<Java> javas = new HashSet<>();
-        private Set<Project> projects = new HashSet<>();
-        private Set<String> tools = new HashSet<>();
-        private Set<BenchmarkTool> toolVersions = new HashSet<>();
-        private Set<String> projectBranchOwners = new HashSet<>();
+        private final List<Long> packagingBuildIds = new ArrayList<>();
+        private final Set<Environment> environments = new HashSet<>();
+        private final Set<Java> javas = new HashSet<>();
+        private final Set<Project> projects = new HashSet<>();
+        private final Set<String> tools = new HashSet<>();
+        private final Set<BenchmarkTool> toolVersions = new HashSet<>();
+        private final Set<String> projectBranchOwners = new HashSet<>();
         private int metrics;
         private int auxiliaryMetrics;
         private int testRunAnnotations;
         private int metricsAnnotations;
+        private int testRunErrors;
 
         private GenerationResult( int expectedTotalTestRuns )
         {
@@ -712,11 +743,6 @@ public class SyntheticStoreGenerator
             return testRuns;
         }
 
-        int environments()
-        {
-            return environments.size();
-        }
-
         int javas()
         {
             return javas.size();
@@ -775,6 +801,16 @@ public class SyntheticStoreGenerator
         List<Long> packagingBuildIds()
         {
             return packagingBuildIds;
+        }
+
+        public void incTestRunErrors()
+        {
+            testRunErrors++;
+        }
+
+        public int testRunErrors()
+        {
+            return testRunErrors;
         }
     }
 }

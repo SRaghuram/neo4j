@@ -8,13 +8,13 @@
     <span class="caption">:Neo4jConfig</span><dl class="properties"><dt>key_1</dt><dd>.</dd><dt>key_2</dt><dd>.</dd><dt>key_n</dt><dd>.</dd></dl></li>
   <li class="node" data-node-id="3" data-x="-1291.6634578436206" data-y="-637.8824232497676">
     <span class="caption">:TestRun (UNIQUE-id)</span><dl class="properties"><dt>date</dt><dd>.</dd><dt>id</dt><dd>.</dd><dt>duration</dt><dd>.</dd><dt>archive</dt><dd>.</dd><dt>build</dt><dd>.</dd><dt>parent_build</dt><dd>.</dd><dt>triggered_by</dt><dd>.</dd></dl></li>
-  <li class="node" data-node-id="4" data-x="212.89435804913956" data-y="1139.5219644965066">
+  <li class="node" data-node-id="4" data-x="1423.7081929470728" data-y="1116.7651443100137">
     <span class="caption">:BenchmarkGroup (UNIQUE-name)</span><dl class="properties"><dt>name</dt><dd>.</dd></dl></li>
   <li class="node" data-node-id="5" data-x="-1291.6634578436206" data-y="1116.7651443100137">
     <span class="caption">:Benchmark</span><dl class="properties"><dt>name</dt><dd>.</dd><dt>simple_name</dt><dd>.</dd><dt>mode</dt><dd>.</dd><dt>description</dt><dd>.</dd><dt>active</dt><dd>.</dd><dt>cypher_query</dt><dd>(optional)</dd></dl></li>
   <li class="node" data-node-id="6" data-x="-1291.6634578436206" data-y="46.48105235167004">
     <span class="caption">:Metrics</span><dl class="properties"><dt>unit</dt><dd>.</dd><dt>min</dt><dd>.</dd><dt>max</dt><dd>.</dd><dt>mean</dt><dd>.</dd><dt>sample_size</dt><dd>.</dd><dt>perc_25</dt><dd>.</dd><dt>perc_50</dt><dd>.</dd><dt>perc_75</dt><dd>.</dd><dt>perc_90</dt><dd>.</dd><dt>perc_95</dt><dd>.</dd><dt>perc_99</dt><dd>.</dd><dt>perc_99_9</dt><dd>.</dd></dl></li>
-  <li class="node" data-node-id="7" data-x="212.89435804913956" data-y="46.48105235167004">
+  <li class="node" data-node-id="7" data-x="1423.7081929470728" data-y="312.46486523756965">
     <span class="caption">:BenchmarkTool (UNIQUE)</span><dl class="properties"><dt>name</dt><dd>.</dd><dt>repository_name</dt><dd>.</dd></dl></li>
   <li class="node" data-node-id="8" data-x="-2413.891475193943" data-y="-965.1552468958035">
     <span class="caption">:Java (UNIQUE)</span><dl class="properties"><dt>jvm</dt><dd>.</dd><dt>version</dt><dd>.</dd><dt>args</dt><dd>.</dd></dl></li>
@@ -34,17 +34,19 @@
     <span class="caption">:Operator</span><dl class="properties"><dt>operator_type</dt><dd>.</dd><dt>estimated_rows</dt><dd>.</dd><dt>db_hits</dt><dd>.</dd><dt>rows</dt><dd>.</dd></dl></li>
   <li class="node" data-node-id="16" data-x="-3595.3968464488753" data-y="-944.3629520040167">
     <span class="caption">:StoreSchema</span><dl class="properties"><dt>version</dt><dd>.</dd></dl></li>
-  <li class="node" data-node-id="17" data-x="-637.9057433840246" data-y="342.35594209461357">
+  <li class="node" data-node-id="17" data-x="-739.4847425649722" data-y="278.8690233068112">
     <span class="caption">:Profiles (UNIQUE-*)</span><dl class="properties"><dt>jfr</dt><dd>.</dd><dt>jfr_flamegraph</dt><dd>.</dd><dt>async</dt><dd>.</dd><dt>async_flamegraph</dt><dd>.</dd><dt>gc_log</dt><dd>.</dd><dt>gc_csv</dt><dd>.</dd><dt>gc_summary</dt><dd>.</dd></dl></li>
   <li class="node" data-node-id="18" data-x="-3936.9341959123562" data-y="46.48105235167004">
     <span class="caption">:Operator</span><dl class="properties"><dt>operator_type</dt><dd>.</dd><dt>estimated_rows</dt><dd>.</dd><dt>db_hits</dt><dd>.</dd><dt>rows</dt><dd>.</dd></dl></li>
-  <li class="node" data-node-id="19" data-x="212.89435804913956" data-y="-637.8824232497676">
+  <li class="node" data-node-id="19" data-x="1423.7081929470728" data-y="-660.9906090486584">
     <span class="caption">:BenchmarkToolVersion  (UNIQUE)</span><dl class="properties"><dt>commit</dt><dd>.</dd><dt>owner</dt><dd>.</dd><dt>branch</dt><dd>.</dd></dl></li>
   <li class="node" data-node-id="20" data-x="-3437.1317808089725" data-y="-637.8824232497676">
     <span class="caption">Instance (UNIQUE)</span><dl class="properties"><dt>host</dt><dd>.</dd><dt>kind</dt><dd>.</dd><dt>operating_system</dt><dd>.</dd><dt>available_cores</dt><dd>.</dd><dt>total_memory</dt><dd>.</dd></dl></li>
-  <li class="node" data-node-id="21" data-x="-896.2907361008909" data-y="707.0926073559168">
+  <li class="node" data-node-id="21" data-x="-1093.100133152302" data-y="424.5758719098482">
     <span class="caption">Regression</span><dl class="properties"><dt>comment</dt><dd>.</dd><dt>date</dt><dd>.</dd><dt>eventId</dt><dd>.</dd><dt>author</dt><dd>.</dd><dt>status</dt><dd>.</dd><dt>trello_card_url</dt><dd>.</dd><dt>baseline_branch</dt><dd>.</dd></dl></li>
-  <li class="node" data-node-id="26" data-x="-637.9057433840246" data-y="-318.21874415370706">
+  <li class="node" data-node-id="22" data-x="996.4116250315021" data-y="17.185993809854004">
+    <span class="caption">:Error</span><dl class="properties"><dt>message</dt><dd>.</dd></dl></li>
+  <li class="node" data-node-id="26" data-x="-698.2182827615445" data-y="-283.3009447270439">
     <span class="caption">:Annotation</span><dl class="properties"><dt>comment</dt><dd>.</dd><dt>date</dt><dd>.</dd><dt>event_id</dt><dd>.</dd><dt>author</dt><dd>.</dd></dl></li>
   <li class="relationship" data-from="4" data-to="5">
     <span class="type">:HAS_BENCHMARK (1+..1)</span>
@@ -117,4 +119,10 @@
   </li>
   <li class="relationship" data-from="1" data-to="20">
     <span class="type">:HAS_INSTANCE(1+..1+)</span><dl class="properties"><dt>count</dt><dd>.</dd></dl></li>
+  <li class="relationship" data-from="3" data-to="22">
+    <span class="type">:HAS_ERROR (1..[0-n])</span>
+  </li>
+  <li class="relationship" data-from="22" data-to="5">
+    <span class="type">:ERROR_FOR (1..1)</span>
+  </li>
 </ul>

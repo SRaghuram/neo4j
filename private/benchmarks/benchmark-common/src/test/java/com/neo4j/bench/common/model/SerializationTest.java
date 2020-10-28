@@ -134,9 +134,9 @@ public class SerializationTest
                 java,
                 Lists.newArrayList( benchmarkPlan1a, benchmarkPlan1b ),
                 Lists.newArrayList(
-                        new TestRunError( "group 1", "", "" ),
-                        new TestRunError( "group 2", "name", "a bad thing\nhappened" ),
-                        new TestRunError( "group 3", "boom", "also\nthis other thing is not good" ) ) );
+                        new TestRunError( benchmarkGroup1, benchmark1a, "" ),
+                        new TestRunError( benchmarkGroup1, benchmark1b, "a bad thing\nhappened" ),
+                        new TestRunError( benchmarkGroup2, benchmark2a, "also\nthis other thing is not good" ) ) );
 
         // then
         shouldSerializeAndDeserialize( before );

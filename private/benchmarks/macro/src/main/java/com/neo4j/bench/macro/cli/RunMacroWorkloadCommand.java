@@ -204,7 +204,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                     LOG.debug( "Preparing to recreate schema..." );
                     EmbeddedDatabase.recreateSchema( store, params.neo4jEdition(), neo4jConfig, workload.expectedSchema() );
                 }
-                LOG.debug( "Store verified\n" );
+                LOG.debug( "Store verified" );
                 EmbeddedDatabase.verifyStoreFormat( store );
             }
 

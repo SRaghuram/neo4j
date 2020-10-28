@@ -110,6 +110,11 @@ public class VerifyStoreSchema implements Query<Void>
             assertOneToOneWhenLhsExists( "AuxiliaryMetrics nodes connect to Metrics nodes correctly",
                                          "(:Metrics)", "-[:HAS_AUXILIARY_METRICS]->", "(:AuxiliaryMetrics)", session );
 
+            assertManyToOne( "Error nodes connect to TestRun correctly",
+                             "(:Error)", "<-[:HAS_ERROR]-", "(:TestRun)", session );
+            assertManyToOne( "Error nodes connect to Benchmark correctly",
+                              "(:Error)", "-[:ERROR_FOR]->", "(:Benchmark)", session );
+
             // --------------------------------------------------------------------------------------------------------
             // ------------------------------- Isolated Nodes ---------------------------------------------------------
             // --------------------------------------------------------------------------------------------------------
@@ -186,12 +191,12 @@ public class VerifyStoreSchema implements Query<Void>
     }
 
     /**
-     * Some nodes of the schema are optional, but when they do exist they should connect to exactly one other node, with exactly one relationship.
-     * This method performs this check.
+     * Some nodes of the schema are optional, but when they do exist they should connect to exactly one other node, with exactly one relationship. This method
+     * performs this check.
      *
-     * @param leftNode node that is always present, i.e., not optional
+     * @param leftNode              node that is always present, i.e., not optional
      * @param optionalRelExpression relationship that connects LHS to RHS nodes, when the optional RHS node is present
-     * @param optionalRightNode optional node, i.e., not always present
+     * @param optionalRightNode     optional node, i.e., not always present
      */
     private void assertOneToOneWhenLhsExists(
             String reason,

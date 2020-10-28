@@ -13,7 +13,6 @@ import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.Repository;
 import com.neo4j.harness.junit.extension.EnterpriseNeo4jExtension;
 import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.hamcrest.core.AnyOf;
 import org.junit.jupiter.api.AfterEach;
@@ -48,6 +47,8 @@ import static com.neo4j.bench.model.options.Edition.COMMUNITY;
 import static com.neo4j.bench.model.options.Edition.ENTERPRISE;
 import static java.util.Collections.singletonMap;
 import static java.util.stream.Collectors.toList;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SyntheticStoreGeneratorIT
@@ -168,88 +169,93 @@ public class SyntheticStoreGeneratorIT
 
                 int testRunCount = session.run( "MATCH (:TestRun) RETURN count(*) AS c" ).next().get( "c" ).asInt();
 
-                MatcherAssert.assertThat( "store has same number of TestRun nodes as generator claims it created",
-                                          testRunCount,
-                                          CoreMatchers.equalTo( generationResult.testRuns() ) );
+                assertThat( "store has same number of TestRun nodes as generator claims it created",
+                            testRunCount,
+                            equalTo( generationResult.testRuns() ) );
 
-                MatcherAssert.assertThat( "store has same number of TestRun nodes as generator was configured to create",
-                                          testRunCount,
-                                          CoreMatchers.equalTo( generationResult.expectedTotalTestRuns() ) );
+                assertThat( "store has same number of TestRun nodes as generator was configured to create",
+                            testRunCount,
+                            equalTo( generationResult.expectedTotalTestRuns() ) );
 
-                MatcherAssert.assertThat( "has correct number of unique Environment nodes",
-                                          session.run( "MATCH (:Environment) RETURN count(*) AS c" ).next().get( "c" ).asInt(),
-                                          CoreMatchers.equalTo( generationResult.testRuns() ) );
+                assertThat( "has correct number of unique Environment nodes",
+                            session.run( "MATCH (:Environment) RETURN count(*) AS c" ).next().get( "c" ).asInt(),
+                            equalTo( generationResult.testRuns() ) );
 
-                MatcherAssert.assertThat( "has correct number of unique Java nodes",
-                                          session.run( "MATCH (:Java) RETURN count(*) AS c" ).next().get( "c" ).asInt(),
-                                          CoreMatchers.equalTo( generationResult.javas() ) );
+                assertThat( "has correct number of unique Java nodes",
+                            session.run( "MATCH (:Java) RETURN count(*) AS c" ).next().get( "c" ).asInt(),
+                            equalTo( generationResult.javas() ) );
 
-                MatcherAssert.assertThat( "has correct number of unique Project nodes",
-                                          session.run( "MATCH (:Project) RETURN count(*) AS c" ).next().get( "c" ).asInt(),
-                                          CoreMatchers.equalTo( generationResult.projects() ) );
+                assertThat( "has correct number of unique Project nodes",
+                            session.run( "MATCH (:Project) RETURN count(*) AS c" ).next().get( "c" ).asInt(),
+                            equalTo( generationResult.projects() ) );
 
-                MatcherAssert.assertThat( "has correct number of unique base Neo4jConfig nodes",
-                                          session.run( "RETURN size((:TestRun)-[:HAS_CONFIG]->(:Neo4jConfig)) AS c" )
-                                                 .next().get( "c" ).asInt(),
-                                          CoreMatchers.equalTo( generationResult.baseNeo4jConfigs() ) );
+                assertThat( "has correct number of unique base Neo4jConfig nodes",
+                            session.run( "RETURN size((:TestRun)-[:HAS_CONFIG]->(:Neo4jConfig)) AS c" )
+                                   .next().get( "c" ).asInt(),
+                            equalTo( generationResult.baseNeo4jConfigs() ) );
 
                 int toolVersionCount = session.run( "MATCH (:BenchmarkToolVersion) RETURN count(*) AS c" ).next().get( "c" ).asInt();
-                MatcherAssert.assertThat( "has correct number of unique BenchmarkToolVersion nodes",
-                                          toolVersionCount,
-                                          CoreMatchers.equalTo( generationResult.toolVersions() ) );
+                assertThat( "has correct number of unique BenchmarkToolVersion nodes",
+                            toolVersionCount,
+                            equalTo( generationResult.toolVersions() ) );
 
                 int toolCount = session.run( "MATCH (:BenchmarkTool) RETURN count(*) AS c" ).next().get( "c" ).asInt();
-                MatcherAssert.assertThat( "has correct number of unique BenchmarkTool nodes",
-                                          toolCount,
-                                          CoreMatchers.equalTo( generationResult.tools() ) );
+                assertThat( "has correct number of unique BenchmarkTool nodes",
+                            toolCount,
+                            equalTo( generationResult.tools() ) );
 
                 int metricsCount = session.run( "MATCH (:Metrics) RETURN count(*) AS c" ).next().get( "c" ).asInt();
-                MatcherAssert.assertThat( "has correct number of unique Metrics nodes",
-                                          metricsCount,
-                                          CoreMatchers.equalTo( generationResult.metrics() ) );
+                assertThat( "has correct number of unique Metrics nodes",
+                            metricsCount,
+                            equalTo( generationResult.metrics() ) );
 
                 int auxiliaryMetricsCount = session.run( "MATCH (:AuxiliaryMetrics) RETURN count(*) AS c" ).next().get( "c" ).asInt();
-                MatcherAssert.assertThat( "has correct number of unique Auxiliary Metrics nodes",
-                                          auxiliaryMetricsCount,
-                                          CoreMatchers.equalTo( generationResult.auxiliaryMetrics() ) );
+                assertThat( "has correct number of unique Auxiliary Metrics nodes",
+                            auxiliaryMetricsCount,
+                            equalTo( generationResult.auxiliaryMetrics() ) );
 
                 int allMetricsCount = session.run( "MATCH (n) WHERE n:Metrics OR n:AuxiliaryMetrics RETURN count(*) AS c" )
                                              .next()
                                              .get( "c" )
                                              .asInt();
-                MatcherAssert.assertThat( "has correct number of unique Auxiliary Metrics & Metrics nodes",
-                                          allMetricsCount,
-                                          CoreMatchers.equalTo( metricsCount + auxiliaryMetricsCount ) );
+                assertThat( "has correct number of unique Auxiliary Metrics & Metrics nodes",
+                            allMetricsCount,
+                            equalTo( metricsCount + auxiliaryMetricsCount ) );
 
                 int benchmarkGroupCount = session.run( "MATCH (:BenchmarkGroup) RETURN count(*) AS c" ).next().get( "c" ).asInt();
-                MatcherAssert.assertThat( "has correct number of unique BenchmarkGroup nodes",
-                                          benchmarkGroupCount,
-                                          CoreMatchers.equalTo( generationResult.benchmarkGroups() ) );
+                assertThat( "has correct number of unique BenchmarkGroup nodes",
+                            benchmarkGroupCount,
+                            equalTo( generationResult.benchmarkGroups() ) );
 
                 int benchmarkCount = session.run( "MATCH (:Benchmark) RETURN count(*) AS c" ).next().get( "c" ).asInt();
-                MatcherAssert.assertThat( "has correct number of unique Benchmark nodes",
-                                          benchmarkCount,
-                                          CoreMatchers.equalTo( generationResult.benchmarks() ) );
+                assertThat( "has correct number of unique Benchmark nodes",
+                            benchmarkCount,
+                            equalTo( generationResult.benchmarks() ) );
 
-                MatcherAssert.assertThat( "has correct number of unique Neo4jConfig nodes",
-                                          session.run( "MATCH (:Neo4jConfig) RETURN count(*) AS c" ).next().get( "c" ).asInt(),
-                                          CoreMatchers.equalTo( generationResult.neo4jConfigs() ) );
+                assertThat( "has correct number of unique Neo4jConfig nodes",
+                            session.run( "MATCH (:Neo4jConfig) RETURN count(*) AS c" ).next().get( "c" ).asInt(),
+                            equalTo( generationResult.neo4jConfigs() ) );
 
                 verifyPersonalRuns( session, generationResult );
 
                 int testRunAnnotations = session.run( "RETURN size((:TestRun)-[:WITH_ANNOTATION]->(:Annotation)) AS c" ).next().get( "c" ).asInt();
-                MatcherAssert.assertThat( "has correct number of TestRun Annotation nodes",
-                                          testRunAnnotations,
-                                          CoreMatchers.equalTo( generationResult.testRunAnnotations() ) );
+                assertThat( "has correct number of TestRun Annotation nodes",
+                            testRunAnnotations,
+                            equalTo( generationResult.testRunAnnotations() ) );
 
                 int metricsAnnotations = session.run( "RETURN size((:Metrics)-[:WITH_ANNOTATION]->(:Annotation)) AS c" ).next().get( "c" ).asInt();
-                MatcherAssert.assertThat( "has correct number of Metrics Annotation nodes",
-                                          metricsAnnotations,
-                                          CoreMatchers.equalTo( generationResult.metricsAnnotations() ) );
+                assertThat( "has correct number of Metrics Annotation nodes",
+                            metricsAnnotations,
+                            equalTo( generationResult.metricsAnnotations() ) );
 
-                MatcherAssert.assertThat( "has correct number of Annotations nodes",
-                                          session.run( "MATCH (:Annotation) RETURN count(*) AS c" ).next().get( "c" ).asInt(),
-                                          CoreMatchers.equalTo( testRunAnnotations + metricsAnnotations ) );
+                assertThat( "has correct number of Annotations nodes",
+                            session.run( "MATCH (:Annotation) RETURN count(*) AS c" ).next().get( "c" ).asInt(),
+                            equalTo( testRunAnnotations + metricsAnnotations ) );
+
+                int testRunErrors = session.run( "RETURN size((:TestRun)-[:HAS_ERROR]->(:Error)) AS c" ).next().get( "c" ).asInt();
+                assertThat( "has correct number of Error nodes",
+                            generationResult.testRunErrors(),
+                            equalTo( testRunErrors ) );
 
                 // -------------------------------------------------------------
                 // -------------------- Relationship Checks --------------------
@@ -261,9 +267,9 @@ public class SyntheticStoreGeneratorIT
                 int constrainedInEnvironmentCount =
                         session.run( "RETURN size((:Environment)<-[:IN_ENVIRONMENT]-(:TestRun)) AS c" )
                                .next().get( "c" ).asInt();
-                MatcherAssert.assertThat( "has correct number of IN_ENVIRONMENT relationships",
-                                          totalInEnvironmentCount,
-                                          CoreMatchers.allOf( CoreMatchers.equalTo( testRunCount ), CoreMatchers.equalTo( constrainedInEnvironmentCount ) ) );
+                assertThat( "has correct number of IN_ENVIRONMENT relationships",
+                            totalInEnvironmentCount,
+                            CoreMatchers.allOf( equalTo( testRunCount ), equalTo( constrainedInEnvironmentCount ) ) );
 
                 int totalWithJavaCount =
                         session.run( "RETURN size(()<-[:WITH_JAVA]-()) AS c" )
@@ -271,51 +277,51 @@ public class SyntheticStoreGeneratorIT
                 int constrainedWithJavaCount =
                         session.run( "RETURN size((:Java)<-[:WITH_JAVA]-(:TestRun)) AS c" )
                                .next().get( "c" ).asInt();
-                MatcherAssert.assertThat( "has correct number of WITH_JAVA relationships",
-                                          totalWithJavaCount,
-                                          CoreMatchers.allOf( CoreMatchers.equalTo( testRunCount ), CoreMatchers.equalTo( constrainedWithJavaCount ) ) );
+                assertThat( "has correct number of WITH_JAVA relationships",
+                            totalWithJavaCount,
+                            CoreMatchers.allOf( equalTo( testRunCount ), equalTo( constrainedWithJavaCount ) ) );
 
                 int totalWithProjectCount =
                         session.run( "RETURN size(()<-[:WITH_PROJECT]-()) AS c" )
                                .next().get( "c" ).asInt();
-                MatcherAssert.assertThat( "has correct number of Project",
-                                          totalWithProjectCount,
-                                          CoreMatchers.allOf( CoreMatchers.equalTo( totalWithProjectCount ), CoreMatchers.equalTo( testRunCount ) ) );
+                assertThat( "has correct number of Project",
+                            totalWithProjectCount,
+                            CoreMatchers.allOf( equalTo( totalWithProjectCount ), equalTo( testRunCount ) ) );
 
                 int projectCount =
                         session.run( "MATCH (:Project) RETURN COUNT(*) AS c" )
                                .next().get( "c" ).asInt();
-                MatcherAssert.assertThat( "has correct number of Project",
-                                          totalWithProjectCount,
-                                          CoreMatchers.allOf( CoreMatchers.equalTo( testRunCount ), CoreMatchers.equalTo( projectCount ) ) );
+                assertThat( "has correct number of Project",
+                            totalWithProjectCount,
+                            CoreMatchers.allOf( equalTo( testRunCount ), equalTo( projectCount ) ) );
 
                 int constrainedWithNeo4jCount =
                         session.run( "RETURN size((:Project)<-[:WITH_PROJECT]-(:TestRun)) AS c" )
                                .next().get( "c" ).asInt();
-                MatcherAssert.assertThat( "has correct number of WITH_PROJECT relationships",
-                                          totalWithProjectCount,
-                                          CoreMatchers.allOf( CoreMatchers.equalTo( testRunCount ), CoreMatchers.equalTo( constrainedWithNeo4jCount ) ) );
+                assertThat( "has correct number of WITH_PROJECT relationships",
+                            totalWithProjectCount,
+                            CoreMatchers.allOf( equalTo( testRunCount ), equalTo( constrainedWithNeo4jCount ) ) );
 
                 int totalHasConfigCount =
                         session.run( "RETURN size(()<-[:HAS_CONFIG]-()) AS c" )
                                .next().get( "c" ).asInt();
-                MatcherAssert.assertThat( "has correct number of HAS_CONFIG relationships",
-                                          totalHasConfigCount,
-                                          CoreMatchers.equalTo( testRunCount + metricsCount ) );
+                assertThat( "has correct number of HAS_CONFIG relationships",
+                            totalHasConfigCount,
+                            equalTo( testRunCount + metricsCount ) );
 
                 int testRunHasConfigCount =
                         session.run( "RETURN size((:Neo4jConfig)<-[:HAS_CONFIG]-(:TestRun)) AS c" )
                                .next().get( "c" ).asInt();
-                MatcherAssert.assertThat( "has correct number of HAS_CONFIG relationships",
-                                          testRunHasConfigCount,
-                                          CoreMatchers.equalTo( testRunCount ) );
+                assertThat( "has correct number of HAS_CONFIG relationships",
+                            testRunHasConfigCount,
+                            equalTo( testRunCount ) );
 
                 int metricsHasConfigCount =
                         session.run( "RETURN size((:Neo4jConfig)<-[:HAS_CONFIG]-(:Metrics)) AS c" )
                                .next().get( "c" ).asInt();
-                MatcherAssert.assertThat( "has correct number of HAS_CONFIG relationships",
-                                          metricsHasConfigCount,
-                                          CoreMatchers.equalTo( metricsCount ) );
+                assertThat( "has correct number of HAS_CONFIG relationships",
+                            metricsHasConfigCount,
+                            equalTo( metricsCount ) );
 
                 int totalWithToolCount =
                         session.run( "RETURN size(()<-[:WITH_TOOL]-()) AS c" )
@@ -323,9 +329,9 @@ public class SyntheticStoreGeneratorIT
                 int constrainedWithToolCount =
                         session.run( "RETURN size((:BenchmarkToolVersion)<-[:WITH_TOOL]-(:TestRun)) AS c" )
                                .next().get( "c" ).asInt();
-                MatcherAssert.assertThat( "has correct number of WITH_TOOL relationships",
-                                          totalWithToolCount,
-                                          CoreMatchers.allOf( CoreMatchers.equalTo( toolVersionCount ), CoreMatchers.equalTo( constrainedWithToolCount ) ) );
+                assertThat( "has correct number of WITH_TOOL relationships",
+                            totalWithToolCount,
+                            CoreMatchers.allOf( equalTo( toolVersionCount ), equalTo( constrainedWithToolCount ) ) );
 
                 int totalHasMetricsCount =
                         session.run( "RETURN size(()<-[:HAS_METRICS]-()) AS c" )
@@ -333,9 +339,9 @@ public class SyntheticStoreGeneratorIT
                 int constrainedHasMetricsCount =
                         session.run( "RETURN size((:Metrics)<-[:HAS_METRICS]-(:TestRun)) AS c" )
                                .next().get( "c" ).asInt();
-                MatcherAssert.assertThat( "has correct number of HAS_METRICS relationships",
-                                          totalHasMetricsCount,
-                                          CoreMatchers.allOf( CoreMatchers.equalTo( metricsCount ), CoreMatchers.equalTo( constrainedHasMetricsCount ) ) );
+                assertThat( "has correct number of HAS_METRICS relationships",
+                            totalHasMetricsCount,
+                            CoreMatchers.allOf( equalTo( metricsCount ), equalTo( constrainedHasMetricsCount ) ) );
 
                 int totalMetricsForCount =
                         session.run( "RETURN size(()<-[:METRICS_FOR]-()) AS c" )
@@ -343,9 +349,9 @@ public class SyntheticStoreGeneratorIT
                 int constrainedMetricsForCount =
                         session.run( "RETURN size((:Benchmark)<-[:METRICS_FOR]-(:Metrics)) AS c" )
                                .next().get( "c" ).asInt();
-                MatcherAssert.assertThat( "has correct number of METRICS_FOR relationships",
-                                          totalMetricsForCount,
-                                          CoreMatchers.allOf( CoreMatchers.equalTo( metricsCount ), CoreMatchers.equalTo( constrainedMetricsForCount ) ) );
+                assertThat( "has correct number of METRICS_FOR relationships",
+                            totalMetricsForCount,
+                            CoreMatchers.allOf( equalTo( metricsCount ), equalTo( constrainedMetricsForCount ) ) );
 
                 int totalHasBenchmarkCount =
                         session.run( "RETURN size(()<-[:HAS_BENCHMARK]-()) AS c" )
@@ -353,9 +359,9 @@ public class SyntheticStoreGeneratorIT
                 int constrainedHasBenchmarkCount =
                         session.run( "RETURN size((:Benchmark)<-[:HAS_BENCHMARK]-(:BenchmarkGroup)) AS c" )
                                .next().get( "c" ).asInt();
-                MatcherAssert.assertThat( "has correct number of HAS_BENCHMARK relationships",
-                                          totalHasBenchmarkCount,
-                                          CoreMatchers.allOf( CoreMatchers.equalTo( benchmarkCount ), CoreMatchers.equalTo( constrainedHasBenchmarkCount ) ) );
+                assertThat( "has correct number of HAS_BENCHMARK relationships",
+                            totalHasBenchmarkCount,
+                            CoreMatchers.allOf( equalTo( benchmarkCount ), equalTo( constrainedHasBenchmarkCount ) ) );
             }
         }
     }
@@ -386,8 +392,8 @@ public class SyntheticStoreGeneratorIT
                                                        "MATCH (n:Project {owner: $owner}) RETURN count(n) AS count",
                                                        singletonMap( "owner", owner ) );
 
-                MatcherAssert.assertThat( countForOwner,
-                                          AnyOf.anyOf( Matchers.greaterThanOrEqualTo( 0 ), Matchers.lessThanOrEqualTo( personalNeo4jCount ) ) );
+                assertThat( countForOwner,
+                            AnyOf.anyOf( Matchers.greaterThanOrEqualTo( 0 ), Matchers.lessThanOrEqualTo( personalNeo4jCount ) ) );
             }
         }
     }

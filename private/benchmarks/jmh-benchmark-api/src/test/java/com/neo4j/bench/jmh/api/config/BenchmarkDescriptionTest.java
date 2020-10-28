@@ -5,16 +5,19 @@
  */
 package com.neo4j.bench.jmh.api.config;
 
+import com.google.common.collect.ImmutableSet;
 import com.neo4j.bench.jmh.api.benchmarks.invalid.DuplicateAllowedBenchmark;
 import com.neo4j.bench.jmh.api.benchmarks.invalid.DuplicateBaseBenchmark;
 import com.neo4j.bench.jmh.api.benchmarks.valid.ValidDisabledBenchmark;
 import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark1;
+import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledGroupBenchmark;
 import org.junit.jupiter.api.Test;
 import org.openjdk.jmh.annotations.Mode;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -36,6 +39,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -908,5 +912,49 @@ class BenchmarkDescriptionTest extends BenchmarksFinderFixture
         List<BenchmarkDescription> implode = BenchmarkDescription.implode( explodedDescriptions );
         assertThat( implode.size(), equalTo( 2 ) );
         assertThat( implode, containsInAnyOrder( original1, original2 ) );
+    }
+
+    @Test
+    public void getBenchmarkAndBenchmarkGroup()
+    {
+        // when
+        Validation validation = new Validation();
+        Class benchmarkClass = ValidEnabledBenchmark1.class;
+        String name = benchmarkClass.getName();
+        BenchmarkDescription benchDesc = BenchmarkDescription.of( benchmarkClass, validation, getBenchmarksFinder() );
+        Set<BenchmarkDescription> explodedBenchmarkDesc = benchDesc.explode();
+        // when
+        Set<String> singleNames = new HashSet<>();
+        for ( BenchmarkDescription benchmarkDescription : explodedBenchmarkDesc )
+        {
+            singleNames.add( benchmarkDescription.benchmark().name() );
+        }
+        // then
+        assertEquals( ImmutableSet.of( "ValidEnabledBenchmark1.methodTwo_(number,1)_(string,a)_(mode,LATENCY)",
+                                       "ValidEnabledBenchmark1.methodTwo_(number,1)_(string,a)_(mode,THROUGHPUT)",
+                                       "ValidEnabledBenchmark1.methodTwo_(number,1)_(string,b)_(mode,LATENCY)",
+                                       "ValidEnabledBenchmark1.methodTwo_(number,1)_(string,b)_(mode,THROUGHPUT)",
+                                       "ValidEnabledBenchmark1.methodOne_(number,1)_(string,a)_(mode,LATENCY)",
+                                       "ValidEnabledBenchmark1.methodOne_(number,1)_(string,b)_(mode,LATENCY)" ), singleNames );
+    }
+
+    @Test
+    public void getBenchmarkAndBenchmarkGroupForGroup()
+    {
+        // when
+        Validation validation = new Validation();
+        Class benchmarkClass = ValidEnabledGroupBenchmark.class;
+        String name = benchmarkClass.getName();
+        BenchmarkDescription benchDesc = BenchmarkDescription.of( benchmarkClass, validation, getBenchmarksFinder() );
+        Set<BenchmarkDescription> explodedBenchmarkDesc = benchDesc.explode();
+        // when
+        Set<String> singleNames = new HashSet<>();
+        for ( BenchmarkDescription benchmarkDescription : explodedBenchmarkDesc )
+        {
+            singleNames.add( benchmarkDescription.benchmark().name() );
+        }
+        // then
+        assertEquals( ImmutableSet.of( "ValidEnabledGroupBenchmark.group_(string,a)_(mode,LATENCY)",
+                                       "ValidEnabledGroupBenchmark.group_(string,b)_(mode,LATENCY)" ), singleNames );
     }
 }

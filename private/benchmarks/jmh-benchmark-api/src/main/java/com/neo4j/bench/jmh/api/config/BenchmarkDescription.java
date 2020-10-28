@@ -147,8 +147,9 @@ public class BenchmarkDescription
      * It is not essential for the string to be identical to that returned by {@link Benchmark#name()}.
      * <p>
      * IMPORTANT: method assumes the {@link BenchmarkDescription} instance represents exactly one benchmark, e.g., after {@link BenchmarkDescription#explode()}.
+     * @return
      */
-    public String guessSingleName()
+    public Benchmark benchmark()
     {
         if ( methods().size() != 1 )
         {
@@ -180,7 +181,7 @@ public class BenchmarkDescription
         try
         {
             String simpleName = Class.forName( className ).getSimpleName() + "." + method.name();
-            return Benchmark.benchmarkFor( description(), simpleName, mode, params ).name();
+            return Benchmark.benchmarkFor( description(), simpleName, mode, params );
         }
         catch ( ClassNotFoundException e )
         {

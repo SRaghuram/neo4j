@@ -56,6 +56,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.SessionConfig;
@@ -89,7 +90,8 @@ public abstract class BaseEndToEndIT
          * Called after benchmark process completes.
          *
          * @param recordingDir folder containing profiler recordings
-         * @param profilers list of profilers that were used
+         * @param profilers    list of profilers that were used
+
          */
         void assertOnRecordings( Path recordingDir, List<ProfilerType> profilers ) throws Exception;
     }
@@ -219,6 +221,37 @@ public abstract class BaseEndToEndIT
                                      int recordingDirsCount,
                                      ExpectedRecordings expectedRecording ) throws Exception
     {
+        runReportBenchmarks(
+                scriptName,
+                toolJar,
+                profilers,
+                processArgs,
+                recordingsAssertion,
+                recordingDirsCount,
+                0, expectedRecording );
+    }
+
+    /**
+     * Executes run report benchmarks test.
+     *
+     * @param scriptName         name of the run script
+     * @param toolJar            path to tool toolJar
+     * @param profilers          list of profilers to run with
+     * @param processArgs        tool process arguments
+     * @oaram recordingsAssertion custom assertions
+     * @param recordingDirsCount
+     * @param expectedExitCode   expected eun report script exit code
+     * @param expectedRecording
+     */
+    public void runReportBenchmarks( String scriptName,
+                                     Path toolJar,
+                                     List<ProfilerType> profilers,
+                                     List<String> processArgs,
+                                     AssertOnRecordings recordingsAssertion,
+                                     int recordingDirsCount,
+                                     int expectedExitCode,
+                                     ExpectedRecordings expectedRecording ) throws Exception
+    {
         // we can be running in forked process (if run from Maven) look for base dir
         Path baseDir = findBaseDir( scriptName );
         Path resolvedToolJar = baseDir.resolve( toolJar );
@@ -259,8 +292,9 @@ public abstract class BaseEndToEndIT
             // start watching outputlog
             tailerExecutor.submit( tailer );
             int processExitCode = process.waitFor();
-            assertEquals( 0, processExitCode,
-                          scriptName + " finished with non-zero code\n" + FileUtils.readFileToString( outputLog, Charset.defaultCharset() ) );
+            assertEquals( expectedExitCode,
+                          processExitCode,
+                          scriptName + " finished with unexpected exit code\n" + FileUtils.readFileToString( outputLog, Charset.defaultCharset() ) );
             assertStoreSchema( boltUri );
             assertRecordingFilesExist( s3Path, profilers, recordingsAssertion, recordingDirsCount );
             assertProfilingNodesAreSameAsS3( boltUri, s3Path, expectedRecording.expectedRecordingKeys() );
@@ -363,6 +397,19 @@ public abstract class BaseEndToEndIT
 
                 recordingsAssertion.assertOnRecordings( recordingDir, profilers );
             }
+        }
+    }
+
+    protected void assertErrorNodeCount( int nodeCount )
+    {
+        try ( Session session = GraphDatabase.driver( boltUri ).session() )
+        {
+
+            Long errCount = session
+                    .readTransaction( tx -> tx.run( "MATCH (err:Error) RETURN count(err) as errCount" )
+                                              .single()
+                                              .get( "errCount", 0L ) );
+            assertEquals( nodeCount, errCount.longValue() );
         }
     }
 

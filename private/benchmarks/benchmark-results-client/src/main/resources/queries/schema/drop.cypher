@@ -74,6 +74,7 @@ DROP CONSTRAINT ON ( testrun:TestRun ) ASSERT exists(testrun.triggered_by)
 DROP CONSTRAINT ON ( job:Job ) ASSERT exists(job.id)
 DROP CONSTRAINT ON ( instance:Instance) ASSERT (instance.instance_type,instance.kind,instance.operating_system,instance.available_cores,instance.total_memory) IS NODE KEY
 DROP CONSTRAINT ON ()-[has_instance:HAS_INSTANCE]->() ASSERT exists(has_instance.count)
+DROP CONSTRAINT ON ( error:Error ) ASSERT exists(error.message)
 // Index
 DROP INDEX ON :Annotation(author)
 DROP INDEX ON :Annotation(comment)

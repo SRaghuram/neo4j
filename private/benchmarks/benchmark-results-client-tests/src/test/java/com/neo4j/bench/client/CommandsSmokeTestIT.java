@@ -302,6 +302,7 @@ public class CommandsSmokeTestIT
                 .withToolBranchOwners( "neo-technology" )
                 .withProjects( NEO4J )
                 .withPrintout( false )
+                .withErrorRate( 0 )
                 .build();
 
         try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )

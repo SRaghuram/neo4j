@@ -43,11 +43,6 @@ public class ErrorReporter
 
     public void recordOrThrow( Exception exception, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
     {
-        recordOrThrow( exception, benchmarkGroup.name(), benchmark.name() );
-    }
-
-    public void recordOrThrow( Exception exception, String groupName, String benchmarkName )
-    {
         switch ( errorPolicy )
         {
         case FAIL:
@@ -55,7 +50,7 @@ public class ErrorReporter
         case SKIP:
             StringWriter sw = new StringWriter();
             exception.printStackTrace( new PrintWriter( sw ) );
-            errors.add( new TestRunError( groupName, benchmarkName, sw.toString() ) );
+            errors.add( new TestRunError( benchmarkGroup, benchmark, sw.toString() ) );
             break;
         default:
             throw new RuntimeException( "Unrecognized error policy: " + errorPolicy );

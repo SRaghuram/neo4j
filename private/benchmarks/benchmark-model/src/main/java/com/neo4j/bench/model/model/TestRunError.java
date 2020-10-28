@@ -5,50 +5,46 @@
  */
 package com.neo4j.bench.model.model;
 
-import java.util.Objects;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
 public class TestRunError
 {
-    private final String groupName;
-    private final String benchmarkName;
+    public static final String BENCHMARK_GROUP_NAME = "benchmarkGroupName";
+    public static final String BENCHMARK_PROPERTIES = "benchmarkProperties";
+    public static final String BENCHMARK_PARAMS = "benchmarkParams";
+    public static final String MESSAGE = "message";
+
+    private final BenchmarkGroup benchmarkGroup;
+    private final Benchmark benchmark;
     private final String message;
 
-    /**
-     * WARNING: Never call this explicitly.
-     * No-params constructor is only used for JSON (de)serialization.
-     */
-    public TestRunError()
+    @JsonCreator
+    public TestRunError( @JsonProperty( "benchmarkGroup" ) BenchmarkGroup benchmarkGroup,
+                         @JsonProperty( "benchmark" ) Benchmark benchmark,
+                         @JsonProperty( "message" ) String message )
     {
-        this( "", "", "" );
-    }
-
-    public TestRunError( String groupName, String benchmarkName, String message )
-    {
-        this.groupName = assertValidName( groupName );
-        this.benchmarkName = assertValidName( benchmarkName );
+        this.benchmarkGroup = requireNonNull( benchmarkGroup );
+        this.benchmark = requireNonNull( benchmark );
         this.message = message;
     }
 
-    private static String assertValidName( String name )
+    public BenchmarkGroup benchmarkGroup()
     {
-        boolean isNotOneLine = name.contains( "\n" ) || name.contains( "\r" );
-        if ( isNotOneLine )
-        {
-            throw new RuntimeException( "Name must be one line\n" + name );
-        }
-        return name;
+        return benchmarkGroup;
     }
 
-    public String groupName()
+    public Benchmark benchmark()
     {
-        return groupName;
-    }
-
-    public String benchmarkName()
-    {
-        return benchmarkName;
+        return benchmark;
     }
 
     public String message()
@@ -56,33 +52,32 @@ public class TestRunError
         return message;
     }
 
+    public Map<String,Object> toMap()
+    {
+        Map<String,Object> map = new HashMap<>();
+        map.put( BENCHMARK_GROUP_NAME, benchmarkGroup.name() );
+        map.put( BENCHMARK_PROPERTIES, benchmark.toMap() );
+        map.put( BENCHMARK_PARAMS, benchmark.parameters() );
+        map.put( MESSAGE, message );
+        return map;
+    }
+
     @Override
     public boolean equals( Object o )
     {
-        if ( this == o )
-        {
-            return true;
-        }
-        if ( o == null || getClass() != o.getClass() )
-        {
-            return false;
-        }
-        TestRunError that = (TestRunError) o;
-        return Objects.equals( groupName, that.groupName ) &&
-               Objects.equals( benchmarkName, that.benchmarkName ) &&
-               Objects.equals( message, that.message );
+        return EqualsBuilder.reflectionEquals( this, o );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( groupName, benchmarkName, message );
+        return HashCodeBuilder.reflectionHashCode( this );
     }
 
     @Override
     public String toString()
     {
         return format( "%s.%s\n" +
-                       "%s", groupName, benchmarkName, message );
+                       "%s", benchmarkGroup, benchmark, message );
     }
 }

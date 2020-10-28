@@ -79,6 +79,7 @@ CREATE CONSTRAINT ON ( testrun:TestRun ) ASSERT exists(testrun.triggered_by)
 CREATE CONSTRAINT ON ( job:Job ) ASSERT exists(job.id)
 CREATE CONSTRAINT ON ( instance:Instance) ASSERT (instance.host,instance.kind,instance.operating_system,instance.available_cores,instance.total_memory) IS NODE KEY
 CREATE CONSTRAINT ON ()-[has_instance:HAS_INSTANCE]->() ASSERT exists(has_instance.count)
+CREATE CONSTRAINT ON ( error:Error ) ASSERT exists(error.message)
 // Index
 CREATE INDEX ON :Annotation(author)
 CREATE INDEX ON :Annotation(comment)

@@ -5,12 +5,14 @@
  */
 package com.neo4j.bench.client.queries.submit;
 
+import com.google.common.collect.ImmutableMap;
 import com.neo4j.bench.client.queries.Query;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.model.model.BenchmarkMetrics;
 import com.neo4j.bench.model.model.Project;
 import com.neo4j.bench.model.model.TestRun;
+import com.neo4j.bench.model.model.TestRunError;
 import com.neo4j.bench.model.model.TestRunReport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,14 +34,18 @@ import org.neo4j.driver.Value;
 import static com.neo4j.bench.model.model.BenchmarkMetrics.extractBenchmarkMetrics;
 import static com.neo4j.bench.model.util.MapPrinter.prettyPrint;
 import static java.lang.String.format;
+import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
+import static org.apache.commons.collections4.CollectionUtils.isEmpty;
+import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.neo4j.driver.AccessMode.WRITE;
 
 public class SubmitTestRun implements Query<SubmitTestRunResult>
 {
     private static final Logger LOG = LoggerFactory.getLogger( SubmitTestRun.class );
     private static final String SUBMIT_TEST_RUN = Resources.fileToString( "/queries/write/submit_test_run.cypher" );
+    private static final String SUBMIT_TEST_RUN_ERRORS = Resources.fileToString( "/queries/write/submit_test_run_errors.cypher" );
 
     private final TestRunReport report;
     private final Planner submitTreeWithPlanner;
@@ -62,75 +68,156 @@ public class SubmitTestRun implements Query<SubmitTestRunResult>
     {
         LOG.debug( "submitting test results {}", report );
 
+        assertHasErrorsOrMetrics();
+
         try ( Session session = driver.session( SessionConfig.builder().withDefaultAccessMode( WRITE ).build() ) )
         {
             try ( Transaction tx = session.beginTransaction() )
             {
-                Map<String,Object> params = params();
-                Result statementResult = tx.run( SUBMIT_TEST_RUN, params );
+                Map<String,Object> submitTestRunParams = submitTestRunParams();
+                Result statementResult = tx.run( SUBMIT_TEST_RUN, submitTestRunParams );
+
+                assertHasResults( statementResult );
+
+                SubmitTestRunResult result = null;
                 if ( statementResult.hasNext() )
                 {
                     Record record = statementResult.next();
-
-                    if ( statementResult.hasNext() )
-                    {
-                        throw new RuntimeException( "Query returned more than one row!" );
-                    }
-
-                    // benchmark_metrics : [[benchmark, metrics, params, [auxiliaryMetrics]]]
-                    List<List<Value>> benchmarkMetricsLists = record.get( "benchmark_metrics" ).asList( e -> e.asList( v -> v ) );
-                    List<BenchmarkMetrics> benchmarkMetrics =
-                            benchmarkMetricsLists.stream()
-                                                 .map( metrics ->
-                                                       {
-                                                           Map<String,Object> benchmarkMap = metrics.get( 0 ).asMap();
-                                                           Map<String,Object> metricsMap = metrics.get( 1 ).asMap();
-                                                           Map<String,Object> benchmarkParamsMap = metrics.get( 2 ).asMap();
-                                                           /*
-                                                           Note: at the moment submit_test_run.cypher supports creating more than one auxiliary metrics nodes,
-                                                           but the rest of the stack restricts to [0,1] (i.e., one optional) nodes.
-                                                           The following checks are just sanity checks to make sure that we really are only creating one.
-                                                           If in future we want to create more than one auxiliary per metrics it would be trivial to support.
-                                                            */
-                                                           List<Map<String,Object>> auxiliaryMetricsMaps = metrics.get( 3 ).asList( Value::asMap );
-                                                           if ( auxiliaryMetricsMaps.size() > 1 )
-                                                           {
-                                                               throw new RuntimeException( format( "Expected to create [0,1] auxiliary metrics but was %s",
-                                                                                                   auxiliaryMetricsMaps.size() ) );
-                                                           }
-                                                           Map<String,Object> maybeAuxiliaryMetricsMap = auxiliaryMetricsMaps.isEmpty()
-                                                                                                         ? null
-                                                                                                         : auxiliaryMetricsMaps.get( 0 );
-                                                           return extractBenchmarkMetrics( benchmarkMap,
-                                                                                           metricsMap,
-                                                                                           maybeAuxiliaryMetricsMap,
-                                                                                           benchmarkParamsMap );
-                                                       } )
-                                                 .collect( toList() );
-                    SubmitTestRunResult result = new SubmitTestRunResult(
-                            new TestRun( record.get( "test_run" ).asMap() ),
-                            benchmarkMetrics );
-
-                    maybeSetNonFatalError( result.benchmarkMetricsList().size() );
-
+                    assertHasNoMoreResults( statementResult );
+                    result = toSubmitTestRunResult( record );
+                    maybeSetNonFatalErrorForBenchmarkGroupMetrics( result.benchmarkMetricsList().size() );
                     if ( !report.benchmarkPlans().isEmpty() )
                     {
                         PlanTreeSubmitter.execute( tx, report.testRun(), report.benchmarkPlans(), submitTreeWithPlanner );
                     }
-                    tx.commit();
-                    return result;
                 }
-                else
+
+                if ( !report.errors().isEmpty() )
                 {
-                    tx.rollback();
-                    maybeSetNonFatalError( 0 );
-                    return null;
+                    TestRun testRun = submitTestRunErrors( tx );
+                    if ( result == null )
+                    {
+                        result = new SubmitTestRunResult( testRun, emptyList() );
+                    }
                 }
+
+                tx.commit();
+                return result;
             }
         }
     }
 
-    private void maybeSetNonFatalError( int actualResultSize )
+    private SubmitTestRunResult toSubmitTestRunResult( Record record )
+    {
+        // benchmark_metrics : [[benchmark, metrics, params, [auxiliaryMetrics]]]
+        List<List<Value>> benchmarkMetricsLists = record.get( "benchmark_metrics" ).asList( e -> e.asList( v -> v ) );
+        List<BenchmarkMetrics> benchmarkMetrics =
+                benchmarkMetricsLists.stream()
+                                     .map( metrics ->
+                                           {
+                                               Map<String,Object> benchmarkMap = metrics.get( 0 ).asMap();
+                                               Map<String,Object> metricsMap = metrics.get( 1 ).asMap();
+                                               Map<String,Object> benchmarkParamsMap = metrics.get( 2 ).asMap();
+                                               /*
+                                               Note: at the moment submit_test_run.cypher supports creating more than one auxiliary metrics nodes,
+                                               but the rest of the stack restricts to [0,1] (i.e., one optional) nodes.
+                                               The following checks are just sanity checks to make sure that we really are only creating one.
+                                               If in future we want to create more than one auxiliary per metrics it would be trivial to support.
+                                                */
+                                               List<Map<String,Object>> auxiliaryMetricsMaps = metrics.get( 3 ).asList( Value::asMap );
+                                               if ( auxiliaryMetricsMaps.size() > 1 )
+                                               {
+                                                   throw new RuntimeException( format( "Expected to create [0,1] auxiliary metrics but was %s",
+                                                                                       auxiliaryMetricsMaps.size() ) );
+                                               }
+                                               Map<String,Object> maybeAuxiliaryMetricsMap = auxiliaryMetricsMaps.isEmpty()
+                                                                                             ? null
+                                                                                             : auxiliaryMetricsMaps.get( 0 );
+                                               return extractBenchmarkMetrics( benchmarkMap,
+                                                                               metricsMap,
+                                                                               maybeAuxiliaryMetricsMap,
+                                                                               benchmarkParamsMap );
+                                           } )
+                                     .collect( toList() );
+        SubmitTestRunResult result = new SubmitTestRunResult(
+                new TestRun( record.get( "test_run" ).asMap() ),
+                benchmarkMetrics );
+        return result;
+    }
+
+    private static void assertHasNoMoreResults( Result statementResult )
+    {
+        if ( statementResult.hasNext() )
+        {
+            throw new RuntimeException( "Query returned more than one row!" );
+        }
+    }
+
+    private void assertHasResults( Result statementResult )
+    {
+        if ( !report.benchmarkGroupBenchmarks().isEmpty() &&
+             !statementResult.hasNext() )
+        {
+            throw new RuntimeException( "metrics where not empty, were expecting results" );
+        }
+    }
+
+    private void assertHasErrorsOrMetrics()
+    {
+        if ( isEmpty( report.errors() ) &&
+             isEmpty( report.benchmarkGroupBenchmarkMetrics().benchmarkGroupBenchmarks() ) )
+        {
+            throw new RuntimeException( "test run report should contain metrics or errors" );
+        }
+    }
+
+    private TestRun submitTestRunErrors( Transaction tx )
+    {
+        LOG.debug( "reporting errors {} for test run {}", report.errors(), report.testRun() );
+        Map<String,Object> params = testRunErrorsParams();
+        Result result = tx.run( SUBMIT_TEST_RUN_ERRORS, params );
+
+        if ( isNotEmpty( report.errors() ) &&
+             !result.hasNext() )
+        {
+            throw new RuntimeException( "errors where not empty, were expecting results " );
+        }
+
+        Record record = result.next();
+        List<Object> testRunErrors = record.get( "test_run_errors", emptyList() );
+        int nodesCreated = testRunErrors.size();
+        if ( nodesCreated != report.errors().size() )
+        {
+            throw new RuntimeException( format( "error when submitting test errors, expected %d got %d", report.errors().size(), nodesCreated ) );
+        }
+        maybeSetNonFatalErrorForTestRunErrors( nodesCreated );
+        return new TestRun( record.get( "test_run" ).asMap() );
+    }
+
+    private Map<String,Object> testRunErrorsParams()
+    {
+        return ImmutableMap.<String,Object>builder()
+                .put( "testRunId", report.testRun().id() )
+                .put( "errors", report.errors()
+                                      .stream()
+                                      .map( TestRunError::toMap )
+                                      .collect( toList() ) )
+                .build();
+    }
+
+    private void maybeSetNonFatalErrorForTestRunErrors( int actualResultSize )
+    {
+        if ( actualResultSize != report.errors().size() )
+        {
+            nonFatalError = format( "Query created/returned unexpected number of test run errors\n" +
+                                    "Expected %s\n" +
+                                    "Received %s",
+                                    report.benchmarkGroupBenchmarkMetrics().toList().size(),
+                                    actualResultSize );
+        }
+    }
+
+    private void maybeSetNonFatalErrorForBenchmarkGroupMetrics( int actualResultSize )
     {
         if ( actualResultSize != report.benchmarkGroupBenchmarkMetrics().toList().size() )
         {
@@ -142,7 +229,7 @@ public class SubmitTestRun implements Query<SubmitTestRunResult>
         }
     }
 
-    public Map<String,Object> params()
+    public Map<String,Object> submitTestRunParams()
     {
         Map<String,Object> params = new HashMap<>();
         params.put( "metrics_tuples", report.benchmarkGroupBenchmarkMetrics().toList() );
@@ -172,7 +259,7 @@ public class SubmitTestRun implements Query<SubmitTestRunResult>
     public String toString()
     {
         return "Params:\n" +
-               prettyPrint( params() ) +
+               prettyPrint( submitTestRunParams() ) +
                SUBMIT_TEST_RUN;
     }
 }

@@ -12,6 +12,7 @@ import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.jmh.api.config.BenchmarkConfigFile;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import com.neo4j.bench.jmh.api.config.Validation;
+import com.neo4j.bench.micro.benchmarks.test.AlwaysCrashes;
 import com.neo4j.bench.micro.benchmarks.test.NoOpBenchmark;
 import com.neo4j.bench.test.BaseEndToEndIT;
 import org.junit.jupiter.api.Test;
@@ -35,16 +36,40 @@ class EndToEndIT extends BaseEndToEndIT
     {
         List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC, ProfilerType.GC );
 
-        runReportBenchmarks( scriptName(),
-                             getJar(),
-                             profilers,
-                             processArgs( profilers,
-                                          getAWSEndpointURL(),
-                                          Jvm.defaultJvmOrFail(),
-                                          getResultStoreCredentials() ),
-                             this::assertOnRecordings,
-                             1,
-                             ExpectedRecordings.from( profilers ) );
+        runReportBenchmarks(
+                scriptName(),
+                getJar(),
+                profilers,
+                processArgs( profilers,
+                             getAWSEndpointURL(),
+                             Jvm.defaultJvmOrFail(),
+                             getResultStoreCredentials(),
+                             NoOpBenchmark.class ),
+                this::assertOnRecordings,
+                1,
+                ExpectedRecordings.from( profilers ) );
+    }
+
+    @Test
+    public void runReportCrashingBenchmark() throws Exception
+    {
+
+        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC, ProfilerType.GC );
+
+        runReportBenchmarks(
+                scriptName(),
+                getJar(),
+                profilers,
+                processArgs( profilers,
+                             getAWSEndpointURL(),
+                             Jvm.defaultJvmOrFail(),
+                             getResultStoreCredentials(),
+                             AlwaysCrashes.class ),
+                this::assertOnRecordings,
+                0,
+                1,
+                ExpectedRecordings.from( profilers ) );
+        assertErrorNodeCount( 1 );
     }
 
     protected String scriptName()
@@ -60,13 +85,14 @@ class EndToEndIT extends BaseEndToEndIT
     protected List<String> processArgs( List<ProfilerType> profilers,
                                         String endpointUrl,
                                         Jvm jvm,
-                                        ResultStoreCredentials resultStoreCredentials )
+                                        ResultStoreCredentials resultStoreCredentials,
+                                        Class<?> benchmarkClass )
     {
         // prepare neo4j config file
         Path neo4jConfig = temporaryFolder.resolve( "neo4j.config" );
         Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfig );
 
-        File benchmarkConfig = createBenchmarkConfig( temporaryFolder );
+        File benchmarkConfig = createBenchmarkConfig( temporaryFolder, benchmarkClass );
 
         File workDir = temporaryFolder.resolve( "work_dir" ).toFile();
 
@@ -126,7 +152,7 @@ class EndToEndIT extends BaseEndToEndIT
         assertEquals( expectedRecordingsCount, existingRecordingsCount, "number of existing recordings differs from expected number of recordings" );
     }
 
-    private File createBenchmarkConfig( Path temporaryFolder )
+    private File createBenchmarkConfig( Path temporaryFolder, Class<?> benchmarkClass )
     {
         File benchmarkConfig = temporaryFolder.resolve( "benchmarkConfig" ).toFile();
 
@@ -135,7 +161,7 @@ class EndToEndIT extends BaseEndToEndIT
         Validation.assertValid( validation );
         BenchmarkConfigFile.write(
                 suiteDescription,
-                ImmutableSet.of( NoOpBenchmark.class.getName() ),
+                ImmutableSet.of( benchmarkClass.getName() ),
                 false,
                 false,
                 benchmarkConfig.toPath() );

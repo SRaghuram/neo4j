@@ -130,6 +130,39 @@ class EndToEndIT extends BaseEndToEndIT
         test( deployment, workloadName, executionMode, recordingDirsCount, forks );
     }
 
+    @Test
+    public void runReadWorkloadEmbeddedWithErrors() throws Exception
+    {
+
+        List<ProfilerType> profilers = asList( ProfilerType.GC );
+        Deployment deployment = Deployment.embedded();
+        String workloadName = "error";
+        int recordingDirsCount = 0;
+        int forks = 1;
+        ExecutionMode executionMode = ExecutionMode.EXECUTE;
+        ExpectedRecordings expectedRecordings = expectedRecordingsFor( profilers, executionMode, deployment, forks );
+
+        try ( Resources resources = new Resources( temporaryFolder ) )
+        {
+            runReportBenchmarks(
+                    SCRIPT_NAME,
+                    JAR,
+                    profilers,
+                    processArgs( resources,
+                                 profilers,
+                                 workloadName,
+                                 deployment,
+                                 forks,
+                                 executionMode ),
+                    assertOnRecordings( resources, deployment, workloadName, forks, executionMode ),
+                    recordingDirsCount,
+                    1,
+                    expectedRecordings );
+
+            assertErrorNodeCount( 1 );
+        }
+    }
+
     // <><><><><><><><><><><><> Forked - Server <><><><><><><><><><><><>
 
     @Test
@@ -369,7 +402,7 @@ class EndToEndIT extends BaseEndToEndIT
                        Runtime.DEFAULT.name(),
                        "neo4j",
                        // error_policy
-                       ErrorPolicy.FAIL.name(),
+                       ErrorPolicy.SKIP.name(),
                        // embedded OR server:<path>
                        neo4jDeployment.toString(),
                        "",
