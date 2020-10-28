@@ -26,7 +26,7 @@ import java.util.Set;
 
 import org.neo4j.cli.AbstractCommand;
 import org.neo4j.cli.ExecutionContext;
-import org.neo4j.configuration.ExternalSettings;
+import org.neo4j.configuration.BootloaderSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.archive.Loader;
 import org.neo4j.test.extension.Inject;
@@ -61,7 +61,7 @@ public class AdminCommandsIT
         Path configFile = confDir.resolve( "neo4j.conf" );
         Files.createFile( configFile, PosixFilePermissions.asFileAttribute( Set.of( OWNER_READ, OWNER_WRITE ) ) );
         GraphDatabaseSettings.strict_config_validation.name();
-        Files.write( configFile, (ExternalSettings.initial_heap_size.name() + "=$(expr 500)").getBytes() );
+        Files.write( configFile, (BootloaderSettings.initial_heap_size.name() + "=$(expr 500)").getBytes() );
     }
 
     @Test

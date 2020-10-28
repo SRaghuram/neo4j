@@ -17,7 +17,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
-import org.neo4j.configuration.ExternalSettings;
+import org.neo4j.configuration.BootloaderSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
@@ -71,7 +71,7 @@ public class Neo4jConfigBuilder
             while ( keys.hasNext() )
             {
                 String settingName = keys.next();
-                if ( settingName.startsWith( ExternalSettings.additional_jvm.name() ) )
+                if ( settingName.startsWith( BootloaderSettings.additional_jvm.name() ) )
                 {
                     for ( Object settingValue : config.getList( settingName ) )
                     {
@@ -96,7 +96,7 @@ public class Neo4jConfigBuilder
     {
         List<String> lines = new ArrayList<>();
         neo4jConfig.toMap().forEach( ( key, value ) -> lines.add( key + "=" + value ) );
-        neo4jConfig.getJvmArgs().forEach( jvmArg -> lines.add( ExternalSettings.additional_jvm.name() + "=" + jvmArg ) );
+        neo4jConfig.getJvmArgs().forEach( jvmArg -> lines.add( BootloaderSettings.additional_jvm.name() + "=" + jvmArg ) );
         String contents = String.join( "\n", lines ) + "\n";
         BenchmarkUtil.stringToFile( contents, file );
     }

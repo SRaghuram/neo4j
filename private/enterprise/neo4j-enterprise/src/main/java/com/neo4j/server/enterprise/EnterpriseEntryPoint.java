@@ -5,19 +5,18 @@
  */
 package com.neo4j.server.enterprise;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.server.BlockingBootstrapper;
 import org.neo4j.server.Bootstrapper;
 import org.neo4j.server.NeoBootstrapper;
+import org.neo4j.server.startup.EntryPoint;
 
 import static org.neo4j.internal.unsafe.UnsafeUtil.disableIllegalAccessLogger;
 
-public class EnterpriseEntryPoint
+@ServiceProvider
+public class EnterpriseEntryPoint implements EntryPoint
 {
     private static Bootstrapper bootstrapper;
-
-    private EnterpriseEntryPoint()
-    {
-    }
 
     public static void main( String[] args )
     {
@@ -49,5 +48,11 @@ public class EnterpriseEntryPoint
         {
             bootstrapper.stop();
         }
+    }
+
+    @Override
+    public Priority getPriority()
+    {
+        return Priority.MEDIUM;
     }
 }
