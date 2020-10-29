@@ -19,11 +19,11 @@ import akka.stream.javadsl.Source
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
-import com.neo4j.causalclustering.discovery.TestCoreDiscoveryMember
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.DirectoryUpdateSink
 import com.neo4j.causalclustering.discovery.akka.PublishInitialData
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
+import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember
 import com.neo4j.causalclustering.identity.IdFactory
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity
 import org.neo4j.kernel.database.DatabaseId

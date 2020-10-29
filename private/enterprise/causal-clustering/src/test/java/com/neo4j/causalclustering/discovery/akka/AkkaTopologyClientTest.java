@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.akka;
 
-import com.neo4j.causalclustering.discovery.TestReadReplicaDiscoveryMember;
+import com.neo4j.causalclustering.discovery.member.TestReadReplicaDiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.readreplica.ReadReplicaIdentityModule;

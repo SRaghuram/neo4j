@@ -27,7 +27,6 @@ import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.DatabaseId;
 
 import static com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.METADATA;
-import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 
 public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,CoreServerInfoForServerId>>
 {
@@ -81,7 +80,7 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
     @Override
     public void sendInitialDataToReplicator( DiscoveryMember memberSnapshot )
     {
-        var databaseIds = memberSnapshot.databasesInState( STARTED );
+        var databaseIds = memberSnapshot.discoverableDatabases();
         startedDatabases.addAll( databaseIds );
         sendCoreServerInfo();
     }

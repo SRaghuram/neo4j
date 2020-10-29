@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.dbms.DatabaseState;
-import org.neo4j.dbms.OperatorState;
 import org.neo4j.kernel.database.DatabaseId;
 
 /**
@@ -22,7 +21,7 @@ public interface DiscoveryMember
 {
     Map<DatabaseId,LeaderInfo> databaseLeaderships();
 
-    Set<DatabaseId> databasesInState( OperatorState operatorState );
+    Set<DatabaseId> discoverableDatabases();
 
     Map<DatabaseId,DatabaseState> databaseStates();
 

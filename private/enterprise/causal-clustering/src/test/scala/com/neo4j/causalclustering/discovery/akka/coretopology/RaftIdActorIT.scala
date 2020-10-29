@@ -12,11 +12,11 @@ import akka.cluster.ddata.LWWMapKey
 import akka.cluster.ddata.Replicator
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
-import com.neo4j.causalclustering.discovery.TestCoreDiscoveryMember
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.PublishInitialData
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
 import com.neo4j.causalclustering.discovery.member.CoreDiscoveryMemberFactory
+import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember
 import com.neo4j.causalclustering.identity.IdFactory
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity
 import com.neo4j.causalclustering.identity.RaftGroupId

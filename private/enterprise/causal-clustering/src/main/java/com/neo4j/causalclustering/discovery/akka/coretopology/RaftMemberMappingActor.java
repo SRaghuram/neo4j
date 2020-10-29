@@ -75,7 +75,7 @@ public class RaftMemberMappingActor extends BaseReplicatedDataActor<LWWMap<Datab
     public void sendInitialDataToReplicator( DiscoveryMember memberSnapshot )
     {
         var serverId = myIdentity.serverId();
-        memberSnapshot.databasesInState( STARTED ).forEach( databaseId ->
+        memberSnapshot.discoverableDatabases().forEach( databaseId ->
                 modifyReplicatedData( key, map -> map.put( cluster,
                         new DatabaseServer( databaseId, serverId ), myIdentity.raftMemberId( databaseId ) ) ) );
     }

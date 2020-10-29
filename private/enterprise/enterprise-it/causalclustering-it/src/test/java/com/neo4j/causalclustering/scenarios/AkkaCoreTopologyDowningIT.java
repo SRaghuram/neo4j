@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
 import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
-import com.neo4j.causalclustering.discovery.TestCoreDiscoveryMember;
+import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember;
 import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.Restarter;

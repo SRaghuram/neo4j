@@ -9,20 +9,25 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.dbms.EnterpriseDatabaseState;
+import com.neo4j.dbms.EnterpriseOperatorState;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.neo4j.dbms.DatabaseState;
+import org.neo4j.dbms.OperatorState;
 import org.neo4j.dbms.StubDatabaseStateService;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
-import static com.neo4j.dbms.EnterpriseOperatorState.DIRTY;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
-import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
+import static java.util.function.Predicate.not;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -32,44 +37,54 @@ class DefaultDiscoveryMemberTest
 {
     private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
     private final CoreServerIdentity identityModule = new InMemoryCoreServerIdentity();
-    private final NamedDatabaseId databaseId1 = databaseIdRepository.getRaw( "one" );
-    private final NamedDatabaseId databaseId2 = databaseIdRepository.getRaw( "two" );
-    private final NamedDatabaseId databaseId3 = databaseIdRepository.getRaw( "three" );
 
-    @Test
-    void shouldCorrectlyFilterStoppedDatabases()
+    private static Set<OperatorState> discoverableStates()
     {
-        Map<NamedDatabaseId,DatabaseState> states = Map.of(
-                databaseId1, new EnterpriseDatabaseState( databaseId1, STARTED ),
-                databaseId2, new EnterpriseDatabaseState( databaseId2, STOPPED ),
-                databaseId3, new EnterpriseDatabaseState( databaseId3, STARTED )
-        );
+        return DefaultDiscoveryMember.DISCOVERABLE_DATABASE_STATES;
+    }
 
-        var databaseStates = new StubDatabaseStateService( states, EnterpriseDatabaseState::unknown );
-        var discoveryMember = DefaultDiscoveryMember.coreFactory( identityModule, databaseStates, Map.of() );
+    private static Set<OperatorState> undiscoverableStates()
+    {
+        return Arrays.stream( EnterpriseOperatorState.values() )
+                     .filter( not( discoverableStates()::contains ) )
+                     .collect( Collectors.toSet() );
+    }
 
-        assertEquals( Set.of( databaseId1.databaseId(), databaseId3.databaseId() ), discoveryMember.databasesInState( STARTED ) );
+    Map<NamedDatabaseId,DatabaseState> databaseStates( Set<OperatorState> operatorStates, int offset )
+    {
+        var stateArr = operatorStates.toArray( OperatorState[]::new );
+        return IntStream.range( 0, stateArr.length ).mapToObj( i ->
+        {
+            var state = (EnterpriseOperatorState) stateArr[i];
+            var databaseId = databaseIdRepository.getRaw( Integer.toString( i + offset ) );
+            return new EnterpriseDatabaseState( databaseId, state );
+        } ).collect( Collectors.toMap( EnterpriseDatabaseState::databaseId, Function.identity() ) );
     }
 
     @Test
-    void shouldCorrectlyFilterFailedDatabases()
+    void shouldCorrectlyFilterUndiscoverableDatabases()
     {
-        var err = new IOException();
-        Map<NamedDatabaseId,DatabaseState> states = Map.of(
-                databaseId1, new EnterpriseDatabaseState( databaseId1, DIRTY ).failed( err ),
-                databaseId2, new EnterpriseDatabaseState( databaseId2, STARTED ),
-                databaseId3, new EnterpriseDatabaseState( databaseId3, STARTED )
-        );
+        var undiscoverableDatabaseStates = databaseStates( undiscoverableStates(), 0 );
+        var offset = undiscoverableDatabaseStates.size();
+        var discoverableDatabaseStates = databaseStates( discoverableStates(), offset );
+        var allStates = new HashMap<NamedDatabaseId,DatabaseState>();
+        allStates.putAll( undiscoverableDatabaseStates );
+        allStates.putAll( discoverableDatabaseStates );
 
-        var databaseStates = new StubDatabaseStateService( states, EnterpriseDatabaseState::unknown );
+        var databaseStates = new StubDatabaseStateService( allStates, EnterpriseDatabaseState::unknown );
         var discoveryMember = DefaultDiscoveryMember.coreFactory( identityModule, databaseStates, Map.of() );
 
-        assertEquals( Set.of( databaseId2.databaseId(), databaseId3.databaseId() ), discoveryMember.databasesInState( STARTED ) );
+        var expected = discoverableDatabaseStates.keySet().stream()
+                                                 .map( NamedDatabaseId::databaseId )
+                                                 .collect( Collectors.toSet() );
+        assertEquals( expected, discoveryMember.discoverableDatabases() );
     }
 
     @Test
     void discoveryMemberContentsShouldBeUnmodifiable()
     {
+        var databaseId1 = databaseIdRepository.getRaw( "one" );
+        var databaseId2 = databaseIdRepository.getRaw( "two" );
         var databaseStates = new StubDatabaseStateService( EnterpriseDatabaseState::unknown );
         var discoveryMember = DefaultDiscoveryMember.coreFactory( identityModule, databaseStates, Map.of() );
 
@@ -82,6 +97,6 @@ class DefaultDiscoveryMemberTest
         assertThrows( UnsupportedOperationException.class,
                       () -> discoveryMember.databaseStates().put( databaseId2.databaseId(), new EnterpriseDatabaseState( databaseId2, STARTED ) ) );
         assertThrows( UnsupportedOperationException.class,
-                      () -> discoveryMember.databasesInState( STARTED ).add( databaseId1.databaseId() ) );
+                      () -> discoveryMember.discoverableDatabases().add( databaseId1.databaseId() ) );
     }
 }

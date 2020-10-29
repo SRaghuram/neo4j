@@ -23,7 +23,6 @@ import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.CoreServerInfo
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology
 import com.neo4j.causalclustering.discovery.ReplicatedRaftMapping
-import com.neo4j.causalclustering.discovery.TestCoreDiscoveryMember
 import com.neo4j.causalclustering.discovery.TestTopology
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor

@@ -3,10 +3,9 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.discovery;
+package com.neo4j.causalclustering.discovery.member;
 
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
-import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.util.Map;
@@ -16,9 +15,10 @@ import java.util.stream.Collectors;
 
 import org.neo4j.dbms.DatabaseState;
 import org.neo4j.dbms.DatabaseStateService;
-import org.neo4j.dbms.OperatorState;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
+
+import static com.neo4j.causalclustering.discovery.member.DefaultDiscoveryMember.DISCOVERABLE_DATABASE_STATES;
 
 public class TestReadReplicaDiscoveryMember implements DiscoveryMember
 {
@@ -53,12 +53,12 @@ public class TestReadReplicaDiscoveryMember implements DiscoveryMember
     }
 
     @Override
-    public Set<DatabaseId> databasesInState( OperatorState operatorState )
+    public Set<DatabaseId> discoverableDatabases()
     {
-        return databaseStates.values().stream()
-                             .filter( state -> Objects.equals( state.operatorState(), operatorState ) )
-                             .map( state -> state.databaseId().databaseId() )
-                             .collect( Collectors.toSet() );
+        return databaseStates.entrySet().stream()
+                             .filter( entry -> DISCOVERABLE_DATABASE_STATES.contains( entry.getValue().operatorState() ) )
+                             .map( Map.Entry::getKey )
+                             .collect( Collectors.toUnmodifiableSet() );
     }
 
     @Override

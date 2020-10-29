@@ -39,7 +39,6 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
-import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 
 public class ClientTopologyActor extends AbstractActorWithTimers
 {
@@ -116,7 +115,7 @@ public class ClientTopologyActor extends AbstractActorWithTimers
     public void preStart()
     {
         getTimers().startPeriodicTimer( REFRESH, TopologiesRefresh.INSTANCE, refreshDuration );
-        var databaseIds = discoveryMemberSnapshot.databasesInState( STARTED );
+        var databaseIds = discoveryMemberSnapshot.discoverableDatabases();
         startedDatabases.addAll( databaseIds );
         sendReadReplicaInfo();
     }

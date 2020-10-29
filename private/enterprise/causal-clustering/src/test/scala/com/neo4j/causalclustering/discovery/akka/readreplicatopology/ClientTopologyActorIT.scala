@@ -19,7 +19,6 @@ import com.neo4j.causalclustering.discovery.DatabaseCoreTopology
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState
 import com.neo4j.causalclustering.discovery.ReplicatedRaftMapping
-import com.neo4j.causalclustering.discovery.TestCoreDiscoveryMember
 import com.neo4j.causalclustering.discovery.TestTopology
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.DatabaseStateUpdateSink
@@ -29,6 +28,7 @@ import com.neo4j.causalclustering.discovery.akka.TopologyUpdateSink
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage
+import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember
 import com.neo4j.causalclustering.identity.IdFactory
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity
 import com.neo4j.causalclustering.identity.RaftGroupId

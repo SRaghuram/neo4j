@@ -15,12 +15,12 @@ import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState
-import com.neo4j.causalclustering.discovery.TestCoreDiscoveryMember
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.DatabaseStateUpdateSink
 import com.neo4j.causalclustering.discovery.akka.PublishInitialData
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
 import com.neo4j.causalclustering.discovery.member.CoreDiscoveryMemberFactory
+import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity
 import com.neo4j.dbms.EnterpriseDatabaseState
 import com.neo4j.dbms.EnterpriseOperatorState

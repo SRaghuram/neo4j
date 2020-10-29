@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.discovery.CoreTopologyService.Listener;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
-import com.neo4j.causalclustering.discovery.TestCoreDiscoveryMember;
+import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.causalclustering.identity.IdFactory;

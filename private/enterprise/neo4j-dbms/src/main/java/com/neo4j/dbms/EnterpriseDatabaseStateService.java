@@ -43,12 +43,17 @@ public class EnterpriseDatabaseStateService implements DatabaseStateService
     public Map<NamedDatabaseId,DatabaseState> stateOfAllDatabases()
     {
         return databaseManager.registeredDatabases().keySet().stream()
-                              .map( this::stateOrUnknown )
+                              .map( this::stateOrInitial )
                               .collect( Collectors.toUnmodifiableMap( EnterpriseDatabaseState::databaseId, Function.identity() ) );
     }
 
     private EnterpriseDatabaseState stateOrUnknown( NamedDatabaseId namedDatabaseId )
     {
         return reconciler.getReconcilerEntryOrDefault( namedDatabaseId, () -> EnterpriseDatabaseState.unknown( namedDatabaseId ) );
+    }
+
+    private EnterpriseDatabaseState stateOrInitial( NamedDatabaseId namedDatabaseId )
+    {
+        return reconciler.getReconcilerEntryOrDefault( namedDatabaseId, () -> EnterpriseDatabaseState.initial( namedDatabaseId ) );
     }
 }

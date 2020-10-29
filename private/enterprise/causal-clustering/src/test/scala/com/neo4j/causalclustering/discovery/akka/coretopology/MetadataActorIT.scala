@@ -12,7 +12,6 @@ import akka.cluster.ddata.LWWMapKey
 import akka.cluster.ddata.Replicator
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
-import com.neo4j.causalclustering.discovery.TestCoreDiscoveryMember
 import com.neo4j.causalclustering.discovery.TestTopology
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.PublishInitialData
@@ -20,8 +19,11 @@ import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
 import com.neo4j.causalclustering.discovery.member.CoreDiscoveryMemberFactory
+import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember
 import com.neo4j.causalclustering.identity.IdFactory
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity
+import com.neo4j.dbms.EnterpriseDatabaseState
+import com.neo4j.dbms.EnterpriseOperatorState
 import org.neo4j.configuration.Config
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.NamedDatabaseId
@@ -42,6 +44,20 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
 
       Then("the initial serverInfos should be published")
       expectUpdateWithDatabases(namedDatabaseIds)
+    }
+
+    "only send initial data to replicator for discoverable databases" in new Fixture {
+      Given("stateService with some undiscoverable databases")
+      val databaseStates = Map(
+        systemDatabaseId -> new EnterpriseDatabaseState(systemDatabaseId, EnterpriseOperatorState.STOPPED),
+        notSystemDatabaseId -> new EnterpriseDatabaseState(notSystemDatabaseId, EnterpriseOperatorState.INITIAL) )
+      val memberSnapshot = memberSnapshotFactory.createSnapshot(identityModule, databaseStateService(databaseStates), Map.empty[DatabaseId,LeaderInfo].asJava)
+
+      When("PublishInitialData request received")
+      replicatedDataActorRef ! new PublishInitialData( memberSnapshot )
+
+      Then("only discoverable serverInfos should be published")
+      expectUpdateWithDatabases(Set(notSystemDatabaseId))
     }
 
     "send metadata to core topology actor on update" in new Fixture {
@@ -138,7 +154,9 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
     val data = LWWMap.empty[UniqueAddress, CoreServerInfoForServerId]
 
     val databaseIdRepository = new TestDatabaseIdRepository()
-    val namedDatabaseIds = Set("system", "not_system").map(databaseIdRepository.getRaw)
+    val systemDatabaseId = databaseIdRepository.getRaw("system")
+    val notSystemDatabaseId = databaseIdRepository.getRaw("not_system")
+    val namedDatabaseIds = Set(systemDatabaseId,notSystemDatabaseId)
     val stateService = databaseStateService(namedDatabaseIds)
     val memberSnapshotFactory: CoreDiscoveryMemberFactory = TestCoreDiscoveryMember.factory _
     val snapshot = memberSnapshotFactory.createSnapshot(identityModule, stateService, Map.empty[DatabaseId, LeaderInfo].asJava)

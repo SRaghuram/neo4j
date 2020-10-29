@@ -20,8 +20,14 @@ import org.neo4j.dbms.OperatorState;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
+import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
+
 public final class DefaultDiscoveryMember implements DiscoveryMember
 {
+    static final Set<OperatorState> DISCOVERABLE_DATABASE_STATES = Set.of( INITIAL, STARTED, STORE_COPYING );
+
     private final Map<DatabaseId,DatabaseState> databaseStates;
     private final Map<DatabaseId,RaftMemberId> databaseMemberships;
     private final Map<DatabaseId,LeaderInfo> databaseLeaderships;
@@ -65,10 +71,10 @@ public final class DefaultDiscoveryMember implements DiscoveryMember
     }
 
     @Override
-    public Set<DatabaseId> databasesInState( OperatorState operatorState )
+    public Set<DatabaseId> discoverableDatabases()
     {
         return databaseStates.entrySet().stream()
-                             .filter( entry -> Objects.equals( entry.getValue().operatorState(), operatorState ) )
+                             .filter( entry ->  DISCOVERABLE_DATABASE_STATES.contains( entry.getValue().operatorState() ) )
                              .map( Map.Entry::getKey )
                              .collect( Collectors.toUnmodifiableSet() );
     }

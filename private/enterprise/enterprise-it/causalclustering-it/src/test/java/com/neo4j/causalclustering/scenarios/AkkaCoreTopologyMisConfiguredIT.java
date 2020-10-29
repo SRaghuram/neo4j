@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
-import com.neo4j.causalclustering.discovery.TestCoreDiscoveryMember;
+import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember;
 import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
@@ -99,7 +99,7 @@ class AkkaCoreTopologyMisConfiguredIT
                 logProvider,
                 new NoRetriesStrategy(),
                 new Restarter( constant( 1, MILLISECONDS ), 2 ),
-                TestCoreDiscoveryMember::factory,
+                TestCoreDiscoveryMember::new,
                 jobScheduler,
                 Clocks.systemClock(),
                 new Monitors(),
