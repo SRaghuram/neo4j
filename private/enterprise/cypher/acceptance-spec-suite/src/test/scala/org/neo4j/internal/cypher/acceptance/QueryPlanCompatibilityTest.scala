@@ -59,7 +59,7 @@ class QueryPlanCompatibilityTest extends ExecutionEngineFunSuite with CypherComp
         |RETURN count(r)
       """.stripMargin
     val expectedPlan = generateExpectedPlan(query)
-    executeWith(Configs.OptionalExpand, query,
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = ComparePlansWithAssertion(assertSimilarPlans(_, expectedPlan)))
   }
 

@@ -67,7 +67,7 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
 
   test("should provide sensible error message for invalid regex syntax together with index") {
     executeSingle("CREATE (n:Person {text:'abcxxxdefyyyfff'})")
-    failWithError(Configs.CachedProperty,
+    failWithError(Configs.InterpretedAndSlottedAndPipelined,
       "MATCH (x:Person) WHERE x.text =~ '*xxx*yyy*' RETURN x.text", "Invalid Regex:")
   }
 

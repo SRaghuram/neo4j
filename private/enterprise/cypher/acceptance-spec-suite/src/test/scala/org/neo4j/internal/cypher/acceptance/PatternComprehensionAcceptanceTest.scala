@@ -566,7 +566,7 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
     relate(createLabeledNode(Map("name" -> "b"), "Thing"),
       createLabeledNode(Map("name" -> "item2"), "Thing2"), "Has")
 
-    val result = executeWith(Configs.RollUpApply,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       """MATCH (n:`Thing`) WITH n
         |RETURN n{.name, Thing_Has_Thing2:[ (n)-[:Has]->(thing2:Thing2)| thing2.name ]}
         |ORDER BY n.name""".stripMargin)

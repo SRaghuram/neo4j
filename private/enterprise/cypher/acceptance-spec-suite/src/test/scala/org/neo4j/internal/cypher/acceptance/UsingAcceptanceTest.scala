@@ -567,7 +567,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     relate(c, d, "X")
     relate(e, d, "Y")
 
-    val result = executeWith(Configs.VarExpand,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       s"""
          |MATCH (a:Foo)-[:X*]->(b)<-[:Y]->(c:Bar)
          |USING JOIN ON b
@@ -851,7 +851,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         |RETURN count(p)
         |""".stripMargin
 
-    executeWith(Configs.VarExpand, query,
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("k"))
           .and(includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("t")))
@@ -874,7 +874,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         |RETURN count(p)
         |""".stripMargin
 
-    executeWith(Configs.VarExpand, query,
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription should
           includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("k"))

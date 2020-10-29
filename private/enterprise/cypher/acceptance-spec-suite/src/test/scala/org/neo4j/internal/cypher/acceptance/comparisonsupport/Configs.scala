@@ -61,24 +61,9 @@ object Configs {
   // from being supported in pipelined. When adding support for one of the below in morsel,
   // adding it here should be a fast way to correct many tests, although some might still
   // fail for lack of some other operator or construct.
-  val NodeById              : TestConfiguration = InterpretedRuntime + SlottedRuntime +  Pipelined
-  val RelationshipById      : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
-  val NodeIndexEndsWithScan : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
-  val CartesianProduct      : TestConfiguration = InterpretedRuntime + SlottedRuntime +  Pipelined
-  val ShortestPath          : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
-  val ShortestPathExpr      : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
-  val OptionalExpand        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
-  val Optional              : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
-  val CountDistinct         : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
-  val RollUpApply           : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
-  val VarExpand             : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
-  val ExpandInto            : TestConfiguration = InterpretedRuntime + SlottedRuntime +  Pipelined
-  val DropResult            : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
-  val FromCountStore        : TestConfiguration = InterpretedRuntime + SlottedRuntime +  Pipelined
-  val UDF                   : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedSingleThreaded
-  val CachedProperty        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
-  val NestedPlan            : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedSingleThreaded
   val Create                : TestConfiguration = InterpretedRuntime + SlottedRuntime
-  val ProcedureCallRead     : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedSingleThreaded
   val ProcedureCallWrite    : TestConfiguration = InterpretedRuntime + SlottedRuntime
+  val UDF                   : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedSingleThreaded
+  val NestedPlan            : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedSingleThreaded
+  val ProcedureCallRead     : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedSingleThreaded
 }

@@ -60,7 +60,7 @@ class StartsWithImplementationAcceptanceTest extends ExecutionEngineFunSuite wit
       drain(tx.execute("MATCH (u:User {name: 'Stefanie'}) SET u.name = 'steffi'"))
     }
 
-    executeWith(Configs.CachedProperty, "MATCH (u:User) WHERE u.name STARTS WITH 'Ste' RETURN u.name as name", executeBefore = prepare,
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (u:User) WHERE u.name STARTS WITH 'Ste' RETURN u.name as name", executeBefore = prepare,
       resultAssertionInTx = Some(result => {
         result.toSet should equal(Set(Map("name" -> "Stefan"), Map("name" -> "Steven")))
       }))

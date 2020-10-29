@@ -146,14 +146,14 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
 
   test("projecting with null value") {
     createNode("foo" -> 1, "bar" -> "apa")
-    val result = executeWith(Configs.Optional, "OPTIONAL MATCH (n) RETURN n{.*, baz: toString(NULL)}")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "OPTIONAL MATCH (n) RETURN n{.*, baz: toString(NULL)}")
 
     result.toList should equal(List(Map("n" -> Map("foo" -> 1, "bar" -> "apa", "baz" -> null))))
   }
 
   test("projecting from a null identifier produces a null value") {
 
-    val result = executeWith(Configs.Optional, "OPTIONAL MATCH (n) RETURN n{.foo, .bar}")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "OPTIONAL MATCH (n) RETURN n{.foo, .bar}")
 
     result.toList should equal(List(Map("n" -> null)))
   }

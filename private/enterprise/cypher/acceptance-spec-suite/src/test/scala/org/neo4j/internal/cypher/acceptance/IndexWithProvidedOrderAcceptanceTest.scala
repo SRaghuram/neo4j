@@ -78,7 +78,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
   for (TestOrder(cypherToken, expectedOrder, providedOrder) <- List(ASCENDING, DESCENDING)) {
 
     test(s"$cypherToken: should use index order for exists predicate when returning that property") {
-      val result = executeWith(Configs.CachedProperty, s"MATCH (n:Awesome) WHERE exists(n.prop2) RETURN n.prop2 ORDER BY n.prop2 $cypherToken",
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, s"MATCH (n:Awesome) WHERE exists(n.prop2) RETURN n.prop2 ORDER BY n.prop2 $cypherToken",
         executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should not (includeSomewhere.aPlan("Sort"))
@@ -100,7 +100,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken: should use index order for IS NOT NULL predicate when returning that property") {
-      val result = executeWith(Configs.CachedProperty, s"MATCH (n:Awesome) WHERE n.prop2 IS NOT NULL RETURN n.prop2 ORDER BY n.prop2 $cypherToken",
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, s"MATCH (n:Awesome) WHERE n.prop2 IS NOT NULL RETURN n.prop2 ORDER BY n.prop2 $cypherToken",
         executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should not (includeSomewhere.aPlan("Sort"))
@@ -122,7 +122,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken: should use index order for existance constraint when returning that property") {
-      val result = executeWith(Configs.CachedProperty, s"MATCH (n:Amazing) RETURN n.prop2 ORDER BY n.prop2 $cypherToken",
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, s"MATCH (n:Amazing) RETURN n.prop2 ORDER BY n.prop2 $cypherToken",
         executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should not (includeSomewhere.aPlan("Sort"))
@@ -144,7 +144,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken: should use index order for exists predicate when not returning that property") {
-      val result = executeWith(Configs.CachedProperty, s"MATCH (n:Awesome) WHERE exists(n.prop2) RETURN n.prop2Copy ORDER BY n.prop2 $cypherToken",
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, s"MATCH (n:Awesome) WHERE exists(n.prop2) RETURN n.prop2Copy ORDER BY n.prop2 $cypherToken",
         executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should not (includeSomewhere.aPlan("Sort"))
@@ -166,7 +166,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken: should use index order for IS NOT NULL predicate when not returning that property") {
-      val result = executeWith(Configs.CachedProperty, s"MATCH (n:Awesome) WHERE n.prop2 IS NOT NULL RETURN n.prop2Copy ORDER BY n.prop2 $cypherToken",
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, s"MATCH (n:Awesome) WHERE n.prop2 IS NOT NULL RETURN n.prop2Copy ORDER BY n.prop2 $cypherToken",
         executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should not (includeSomewhere.aPlan("Sort"))
@@ -188,7 +188,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken: should use index for exists predicate on composite index ") {
-      val result = executeWith(Configs.CachedProperty, s"MATCH (n:Awesome) WHERE exists(n.prop2) AND exists(n.prop2Copy) RETURN n.prop2 ORDER BY n.prop2 $cypherToken",
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, s"MATCH (n:Awesome) WHERE exists(n.prop2) AND exists(n.prop2Copy) RETURN n.prop2 ORDER BY n.prop2 $cypherToken",
         executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should not(includeSomewhere.aPlan("Sort"))
@@ -210,7 +210,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken: should use index for IS NOT NULL predicate on composite index ") {
-      val result = executeWith(Configs.CachedProperty, s"MATCH (n:Awesome) WHERE n.prop2 IS NOT NULL AND n.prop2Copy IS NOT NULL RETURN n.prop2 ORDER BY n.prop2 $cypherToken",
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, s"MATCH (n:Awesome) WHERE n.prop2 IS NOT NULL AND n.prop2Copy IS NOT NULL RETURN n.prop2 ORDER BY n.prop2 $cypherToken",
         executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should not(includeSomewhere.aPlan("Sort"))
@@ -232,7 +232,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken: should use index order for range predicate when returning that property") {
-      val result = executeWith(Configs.CachedProperty, s"MATCH (n:Awesome) WHERE n.prop2 > 1 RETURN n.prop2 ORDER BY n.prop2 $cypherToken",
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, s"MATCH (n:Awesome) WHERE n.prop2 > 1 RETURN n.prop2 ORDER BY n.prop2 $cypherToken",
         executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should not (includeSomewhere.aPlan("Sort"))
@@ -268,7 +268,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken: Order by index backed property renamed in an earlier WITH") {
-      val result = executeWith(Configs.CachedProperty,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"""MATCH (n:Awesome) WHERE n.prop3 STARTS WITH 'foo'
            |WITH n AS nnn
            |MATCH (m)<-[r]-(nnn)
@@ -294,7 +294,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       graph.withTx(tx => createNodesForNamedIndex(tx))
       graph.createIndexWithName("my_index", "Label", "prop")
 
-      val result = executeWith(Configs.CachedProperty,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"""MATCH (n:Label) WHERE n.prop > 42
            |WITH n AS nnn
            |MATCH (m)<-[r]-(nnn)
@@ -398,7 +398,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     test(s"$cypherToken: Order by index backed property should plan with provided order (contains scan)") {
       graph.withTx( tx => createStringyNodes(tx))
 
-      val result = executeWith(Configs.CachedProperty,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n:Awesome) WHERE n.prop3 CONTAINS 'cat' RETURN n.prop3 ORDER BY n.prop3 $cypherToken",
         executeBefore = createStringyNodes)
 
@@ -417,7 +417,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     test(s"$cypherToken: Order by index backed property should plan with provided order (ends with scan)") {
       graph.withTx(tx => createStringyNodes(tx))
 
-      val result = executeWith(Configs.NodeIndexEndsWithScan,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n:Awesome) WHERE n.prop3 ENDS WITH 'og' RETURN n.prop3 ORDER BY n.prop3 $cypherToken",
         executeBefore = createStringyNodes)
 
@@ -564,7 +564,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
              |WHERE n.prop1 >= 42 AND n.prop2 <= 3
              |RETURN n.prop1, n.prop2
              |ORDER BY $orderByString""".stripMargin
-        val result = executeWith(Configs.CachedProperty, query)
+        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
         // Then
         result.toList should equal(expected)
@@ -612,7 +612,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
              |WHERE n.prop1 >= 42 AND exists(n.prop2)
              |RETURN n.prop1, n.prop2
              |ORDER BY $orderByString""".stripMargin
-        val result = executeWith(Configs.CachedProperty, query)
+        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
         // Then
         withClue(orderByString) {
@@ -647,7 +647,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
              |WHERE n.prop1 >= 42 AND exists(n.prop2)
              |RETURN n.prop1, n.prop2
              |ORDER BY $orderByString""".stripMargin
-        val result = executeWith(Configs.CachedProperty, query)
+        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
         // Then
         withClue(orderByString) {
@@ -1596,7 +1596,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   for ((TestOrder(cypherToken, expectedOrder, providedOrder), functionName) <- List((ASCENDING, "min"), (DESCENDING, "max"))) {
     test(s"$cypherToken-$functionName: should use provided index order with exists predicate") {
-      val result = executeWith(Configs.Optional,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n:Awesome) WHERE exists(n.prop1) RETURN $functionName(n.prop1)", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should
@@ -1618,7 +1618,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: should use provided index order with no predicate") {
-      val result = executeWith(Configs.Optional,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n:Awesome) RETURN $functionName(n.prop1)", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should
@@ -1641,7 +1641,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
 
     test(s"$cypherToken-$functionName: should use provided index order with range") {
-      val result = executeWith(Configs.Optional,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 RETURN $functionName(n.prop1)", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should
@@ -1665,7 +1665,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
         tx.execute("CREATE (:Awesome {prop1: 35.5})")
       })
 
-      val result = executeWith(Configs.Optional,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 RETURN $functionName(n.prop1)", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should
@@ -1684,7 +1684,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: should use provided index order with renamed property") {
-      val result = executeWith(Configs.Optional,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 WITH n.prop1 AS prop RETURN $functionName(prop) AS extreme", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should
@@ -1708,7 +1708,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       graph.withTx(tx => createNodesForNamedIndex(tx))
       graph.createIndexWithName("my_index", "Label", "prop")
 
-      val result = executeWith(Configs.Optional,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n:Label) WHERE n.prop > 0 WITH n.prop AS prop RETURN $functionName(prop) AS extreme", executeBefore = createNodesForNamedIndex)
 
       result.executionPlanDescription() should
@@ -1729,7 +1729,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: should use provided index order with renamed variable") {
-      val result = executeWith(Configs.Optional,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 WITH n as m RETURN $functionName(m.prop1) AS extreme", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should
@@ -1750,7 +1750,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: should use provided index order with renamed variable and property") {
-      val result = executeWith(Configs.Optional,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 WITH n as m WITH m.prop1 AS prop RETURN $functionName(prop) AS extreme", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should
@@ -1775,7 +1775,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     test(s"$cypherToken-$functionName: should use provided index order for empty index"){
       graph.createIndex("B", "prop")
 
-      val result = executeWith(Configs.Optional,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n: B) WHERE n.prop > 0 RETURN $functionName(n.prop)", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should
@@ -1791,7 +1791,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: should use provided index order with ORDER BY on same property") {
-      val result = executeWith(Configs.Optional,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 RETURN $functionName(n.prop1) ORDER BY $functionName(n.prop1) $cypherToken", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should
@@ -1810,7 +1810,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: cannot use provided index order for prop2 when ORDER BY prop1") {
-      val result = executeWith(Configs.CachedProperty,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 WITH n.prop1 AS prop1, n.prop2 as prop2 ORDER BY prop1 RETURN $functionName(prop2)",
         executeBefore = createSomeNodes)
 
@@ -1828,7 +1828,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       graph.withTx( tx => tx.execute("CREATE (:Awesome {prop3: 'ha'})"))
 
       //should give the length of the alphabetically smallest/largest prop3 string
-      val result = executeWith(Configs.Optional,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n:Awesome) WHERE n.prop3 > '' RETURN size($functionName(n.prop3)) AS agg", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should
@@ -1852,7 +1852,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       graph.withTx( tx => tx.execute("CREATE (:Awesome {prop3: 'ha'})"))
 
       //should give the length of the shortest/longest prop3 string
-      val result = executeWith(Configs.CachedProperty,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n:Awesome) WHERE n.prop3 > '' RETURN $functionName(size(n.prop3)) AS agg", executeBefore = createSomeNodes)
 
       val expected = expectedOrder(List(
@@ -1866,7 +1866,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       graph.withTx( tx => tx.execute("CREATE (:Awesome {prop3: 'ha'})"))
 
       //should give the length of the shortest/longest prop3 string
-      val result = executeWith(Configs.CachedProperty,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n:Awesome) WHERE n.prop3 > '' RETURN $functionName(size(trim(replace(n.prop3, 'a', 'aa')))) AS agg",
         executeBefore = createSomeNodes)
 
@@ -1880,7 +1880,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     // The planer doesn't yet support composite range scans, so we can't avoid the aggregation
     // TODO fix so we can avoid the aggregation now that range scans are handled
     test(s"$cypherToken-$functionName: cannot use provided index order from composite index without filter") {
-      val result = executeWith(Configs.CachedProperty,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n:Awesome) WHERE n.prop1 = 40 AND n.prop2 < 4 RETURN $functionName(n.prop1), $functionName(n.prop2)",
         executeBefore = createMoreNodes)
 
@@ -1894,7 +1894,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: cannot use provided index order from composite index with filter") {
-      val result = executeWith(Configs.CachedProperty,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n:Awesome) WHERE n.prop1 > 40 AND n.prop2 > 0 RETURN $functionName(n.prop1), $functionName(n.prop2)",
         executeBefore = createMoreNodes)
 
@@ -1908,7 +1908,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: cannot use provided index order with multiple aggregations") {
-      val result = executeWith(Configs.CachedProperty,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 RETURN $functionName(n.prop1), count(n.prop1)", executeBefore = createSomeNodes)
 
       val plan = result.executionPlanDescription()
@@ -1922,7 +1922,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: cannot use provided index order with grouping expression (caused by return n.prop2)") {
-      val result = executeWith(Configs.CachedProperty,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 RETURN $functionName(n.prop1), n.prop2", executeBefore = createSomeNodes)
 
       val plan = result.executionPlanDescription()
@@ -1949,7 +1949,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: should plan aggregation for index scan") {
-      val result = executeWith(Configs.CachedProperty,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n:Awesome) RETURN $functionName(n.prop1)", executeBefore = createSomeNodes)
       result.executionPlanDescription() should
         includeSomewhere.aPlan("Optional")
@@ -1970,7 +1970,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
       createLabeledNode(Map("foo" -> 2), "B")
 
-      val result = executeWith(Configs.CachedProperty,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (n:B) WHERE n.foo > 0 RETURN $functionName(n.foo)", executeBefore = createSomeNodes)
 
       val plan = result.executionPlanDescription()

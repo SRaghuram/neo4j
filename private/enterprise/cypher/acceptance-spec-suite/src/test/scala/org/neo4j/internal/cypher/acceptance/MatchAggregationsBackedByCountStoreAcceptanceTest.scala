@@ -26,8 +26,8 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
     // one non-loop
     relate(n, createNode())
 
-    val resultStar = executeWith(Configs.ExpandInto, "MATCH (a)-->(a) RETURN count(*)")
-    val resultVar = executeWith(Configs.ExpandInto, "MATCH (a)-[r]->(a) RETURN count(r)")
+    val resultStar = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (a)-->(a) RETURN count(*)")
+    val resultVar = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (a)-[r]->(a) RETURN count(r)")
 
     resultStar.toList should equal(List(Map("count(*)" -> 2)))
     resultVar.toList should equal(List(Map("count(r)" -> 2)))
@@ -82,8 +82,8 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
     val query = "MATCH (n:User) RETURN count(n) > 0"
 
     // Then
-    compareCount(query, false, Configs.FromCountStore)
-    compareCount(query, true, Configs.FromCountStore, executeBefore = executeBefore)
+    compareCount(query, false, Configs.InterpretedAndSlottedAndPipelined)
+    compareCount(query, true, Configs.InterpretedAndSlottedAndPipelined, executeBefore = executeBefore)
   }
 
   test("counts nodes using count store and projection expression with variable") {
@@ -308,9 +308,9 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
     val query = "MATCH (n:User) RETURN count(n) > 1"
 
     // Then
-    compareCount(query, false, Configs.FromCountStore)
+    compareCount(query, false, Configs.InterpretedAndSlottedAndPipelined)
     setupBigModel(label1 = "Admin")
-    compareCount(query, true, Configs.FromCountStore, assertCountInTransaction = true, executeBefore = executeBefore)
+    compareCount(query, true, Configs.InterpretedAndSlottedAndPipelined, assertCountInTransaction = true, executeBefore = executeBefore)
   }
 
   test("counts nodes using count store and projection expression with variable considering transaction state") {
@@ -363,9 +363,9 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
     val query = "MATCH ()-[r]->() RETURN count(r) > 2"
 
     // Then
-    compareCount(query, false, Configs.FromCountStore, expectedLogicalPlan = "RelationshipCountFromCountStore")
+    compareCount(query, false, Configs.InterpretedAndSlottedAndPipelined, expectedLogicalPlan = "RelationshipCountFromCountStore")
     setupBigModel()
-    compareCount(query, true, Configs.FromCountStore, expectedLogicalPlan = "RelationshipCountFromCountStore", assertCountInTransaction = true, executeBefore = executeBefore)
+    compareCount(query, true, Configs.InterpretedAndSlottedAndPipelined, expectedLogicalPlan = "RelationshipCountFromCountStore", assertCountInTransaction = true, executeBefore = executeBefore)
   }
 
   test("counts relationships using count store and projection with expression and variable considering transaction state") {
@@ -387,7 +387,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
                   |MATCH (n)-[r:KNOWS]->() WITH count(r) as otherKnows, n, userKnows WHERE otherKnows <> userKnows
                   |RETURN userKnows, otherKnows
                 """.stripMargin
-    val expectSucceed = Configs.FromCountStore
+    val expectSucceed = Configs.InterpretedAndSlottedAndPipelined
 
     // Then
     val resultOnEmpty = executeWith(
@@ -662,7 +662,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   private def compareCount(query: String,
                            expectedCount: Any,
-                           expectSucceed: TestConfiguration = Configs.FromCountStore,
+                           expectSucceed: TestConfiguration = Configs.InterpretedAndSlottedAndPipelined,
                            expectedLogicalPlan: String = "NodeCountFromCountStore",
                            assertCountInTransaction: Boolean = false,
                            executeBefore: InternalTransaction => Unit = _ => {}): Unit = {

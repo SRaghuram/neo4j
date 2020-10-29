@@ -120,7 +120,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   }
 
   test("Don't warn for cartesian product when not using explain") {
-    val result = executeWith(Configs.CartesianProduct, "match (a)-->(b), (c)-->(d) return *")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (a)-->(b), (c)-->(d) return *")
 
     result.notifications shouldBe empty
   }
@@ -159,9 +159,9 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   }
 
   test("Warnings should work on potentially cached queries") {
-    val resultWithoutExplain = executeWith(Configs.CartesianProduct,
+    val resultWithoutExplain = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       "match (a)-->(b), (c)-->(d) return *")
-    val resultWithExplain = executeWith(Configs.CartesianProduct,
+    val resultWithExplain = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       "explain match (a)-->(b), (c)-->(d) return *")
 
     resultWithoutExplain.notifications.toList shouldBe empty

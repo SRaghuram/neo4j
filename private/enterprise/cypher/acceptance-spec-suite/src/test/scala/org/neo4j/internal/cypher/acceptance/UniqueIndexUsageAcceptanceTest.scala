@@ -49,7 +49,7 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     given()
 
     // When
-    val result = executeWith(Configs.CachedProperty,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       "MATCH (n:Crew) WHERE n.name = 'Neo' AND n.name = 'Morpheus' RETURN n",
       planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription.toString should include("NodeUniqueIndexSeek")
@@ -105,7 +105,7 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     graph.createUniqueConstraint("Place", "name")
 
     // When
-    val result = executeWith(Configs.Optional,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       """
         |MATCH ()-[f:FRIEND_OF]->()
         |WITH f.placeName AS placeName
@@ -134,7 +134,7 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
          |RETURN m""".stripMargin
 
     // When
-    val result = executeWith(Configs.CachedProperty, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     // Then
     result.toList should equal(List(

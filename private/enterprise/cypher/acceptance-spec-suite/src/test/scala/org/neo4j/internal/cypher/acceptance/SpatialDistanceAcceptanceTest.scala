@@ -250,7 +250,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
            |WHERE distance(p.location, $point) < $distance
            |RETURN p.location as point
         """.stripMargin
-      val result = executeWith(Configs.CachedProperty, query)
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
       // Then
       result.toList should equal(List(Map("point" -> expected)))
@@ -386,7 +386,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian, 0, 0)),
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian, 0, 9.99))
       )
-      val result = executeWith(Configs.CachedProperty, query)
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
       result.executionPlanDescription() shouldNot includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgumentRegex(".*distance.*".r)
       result.toList.toSet should equal(expected)
     }
@@ -677,7 +677,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
       """.stripMargin
 
     // Then
-    val result = executeWith(Configs.CachedProperty, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("Filter").containingArgumentRegex("distance.*".r)
@@ -723,7 +723,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
          |RETURN p.location as point
         """.stripMargin
     // When
-    val result = executeWith(Configs.CachedProperty, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     // Then
     expectResultsAndIndexUsage(query, Set.empty, inclusiveRange = true)
@@ -740,7 +740,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
          |RETURN p.location as point
         """.stripMargin
     // When
-    val result = executeWith(Configs.CachedProperty, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     // Then
     val plan = result.executionPlanDescription()
@@ -763,7 +763,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         |RETURN p.location as point
         """.stripMargin
     // When
-    val result = executeWith(Configs.CachedProperty, query, params = Map("poi" -> 5))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, params = Map("poi" -> 5))
 
     // Then
     result.toList shouldBe empty
@@ -771,7 +771,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
     // And given
     executeSingle(s"DROP INDEX ON :Place(location)")
     // when
-    val resultNoIndex = executeWith(Configs.CachedProperty, query,  params = Map("poi" -> 5))
+    val resultNoIndex = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,  params = Map("poi" -> 5))
 
     // Then
     resultNoIndex.toList shouldBe empty
@@ -789,7 +789,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         |RETURN p.location as point
       """.stripMargin
     // When
-    val result = executeWith(Configs.CachedProperty, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     // Then
     result.toList shouldBe empty
@@ -797,7 +797,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
     // And given
     executeSingle(s"DROP INDEX ON :Place(location)")
     // when
-    val resultNoIndex = executeWith(Configs.CachedProperty, query)
+    val resultNoIndex = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     // Then
     resultNoIndex.toList shouldBe empty
@@ -847,7 +847,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   private def expectResultsAndIndexUsage(query: String, expectedResults: Set[_ <: Any], inclusiveRange: Boolean,
-                                         config: TestConfiguration = Configs.CachedProperty): Unit = {
+                                         config: TestConfiguration = Configs.InterpretedAndSlottedAndPipelined): Unit = {
     val result = executeWith(config, query)
 
     // Then

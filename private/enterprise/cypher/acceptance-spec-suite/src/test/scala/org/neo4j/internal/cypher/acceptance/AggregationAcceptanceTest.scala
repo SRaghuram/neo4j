@@ -97,7 +97,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     createLabeledNode("Person")
     createNode()
     // CountStore not supported by sloted
-    val result = executeWith(Configs.FromCountStore, "MATCH (a:Person) WITH count(a) as c RETURN c")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (a:Person) WITH count(a) as c RETURN c")
     result.toList should equal(List(Map("c" -> 2L)))
   }
 
@@ -147,7 +147,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
   test("combine simple aggregation with sorting (can use node count store)") {
     createNode()
     createNode()
-    val result = executeWith(Configs.FromCountStore, "MATCH (a) RETURN count(a) ORDER BY count(a)")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (a) RETURN count(a) ORDER BY count(a)")
     result.toList should equal(List(Map("count(a)" -> 2)))
   }
 

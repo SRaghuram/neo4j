@@ -20,7 +20,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     createNode(Map("foo" -> 112))
     createNode(Map("foo" -> 113))
     createNode(Map("foo" -> 114))
-    val res = executeWith(Configs.CachedProperty,"PROFILE MATCH (n) WHERE n.foo > 10 RETURN n.foo",
+    val res = executeWith(Configs.InterpretedAndSlottedAndPipelined,"PROFILE MATCH (n) WHERE n.foo > 10 RETURN n.foo",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
         aPlan("Projection")
         .containingArgumentForProjection(Map("`n.foo`" -> "cache[n.foo]"))
@@ -37,7 +37,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     relate(createNode(), createNode(), "foo" -> 1)
     relate(createNode(), createNode(), "foo" -> 20)
     relate(createNode(), createNode(), "foo" -> 30)
-    val res = executeWith(Configs.CachedProperty,"PROFILE MATCH ()-[r]->() WHERE r.foo > 10 RETURN r.foo",
+    val res = executeWith(Configs.InterpretedAndSlottedAndPipelined,"PROFILE MATCH ()-[r]->() WHERE r.foo > 10 RETURN r.foo",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
         aPlan("Projection")
         .containingArgumentForProjection(Map("`r.foo`" -> "cache[r.foo]"))
@@ -56,7 +56,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     createLabeledNode(Map("prop" -> 3), "M")
     createLabeledNode(Map("prop" -> 4), "M")
     val q ="PROFILE MATCH (n:N), (m:M) WHERE n.prop <> m.prop WITH n AS m, m AS x RETURN m.prop, x.prop"
-    val res = executeWith(Configs.CachedProperty, q,
+    val res = executeWith(Configs.InterpretedAndSlottedAndPipelined, q,
       planComparisonStrategy = ComparePlansWithAssertion(_  should includeSomewhere.
         aPlan("Projection")
         .containingArgumentForProjection(Map("`m.prop`" -> "cache[m.prop]", "`x.prop`" -> "cache[x.prop]"))
@@ -116,7 +116,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     n1 = createNode()
     n2 = createNode(Map("foo" -> 2))
 
-    val res = executeWith(Configs.CachedProperty, "PROFILE MATCH (n) WHERE EXISTS(n.foo) RETURN n.foo",
+    val res = executeWith(Configs.InterpretedAndSlottedAndPipelined, "PROFILE MATCH (n) WHERE EXISTS(n.foo) RETURN n.foo",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
         aPlan("Projection")
         .containingArgumentForProjection(Map("`n.foo`" -> "cache[n.foo]"))
@@ -138,7 +138,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     r1 = relate(createNode(), createNode())
     r2 = relate(createNode(), createNode(), "foo" -> 1)
 
-    val res = executeWith(Configs.CachedProperty, "PROFILE MATCH ()-[r]->() WHERE EXISTS(r.foo) RETURN r.foo",
+    val res = executeWith(Configs.InterpretedAndSlottedAndPipelined, "PROFILE MATCH ()-[r]->() WHERE EXISTS(r.foo) RETURN r.foo",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
         aPlan("Projection")
         .containingArgumentForProjection(Map("`r.foo`" -> "cache[r.foo]"))
@@ -164,7 +164,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     n3 = createNode(Map("foo" -> 3))
     n4 = createNode(Map("foo" -> 4))
 
-    val res = executeWith(Configs.CachedProperty, "MATCH (n) WHERE NOT EXISTS(n.foo) RETURN EXISTS(n.foo) AS x, n.foo",
+    val res = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) WHERE NOT EXISTS(n.foo) RETURN EXISTS(n.foo) AS x, n.foo",
       executeBefore = tx => {
         tx.getNodeById(n2.getId).setProperty("foo", 2)
         tx.getNodeById(n3.getId).removeProperty("foo")
@@ -194,7 +194,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     r3 = relate(createNode(), createNode(), "foo" -> 1)
     r4 = relate(createNode(), createNode(), "foo" -> 4)
 
-    val res = executeWith(Configs.CachedProperty, "MATCH ()-[r]->() WHERE NOT EXISTS(r.foo) RETURN EXISTS(r.foo) AS x, r.foo",
+    val res = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH ()-[r]->() WHERE NOT EXISTS(r.foo) RETURN EXISTS(r.foo) AS x, r.foo",
       executeBefore = tx => {
         tx.getRelationshipById(r2.getId).setProperty("foo", 2)
         tx.getRelationshipById(r3.getId).removeProperty("foo")
@@ -216,7 +216,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   test("should handle rename followed by aggregation") {
     relate(createNode("prop" -> 2), createNode("prop" -> 3))
 
-    val res = executeWith(Configs.CachedProperty, "MATCH (x) WHERE x.prop = 2 WITH x AS y MATCH (y)-->(z) WITH y, collect(z) AS ignore RETURN y.prop")
+    val res = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (x) WHERE x.prop = 2 WITH x AS y MATCH (y)-->(z) WITH y, collect(z) AS ignore RETURN y.prop")
 
     res.executionPlanDescription() should includeSomewhere.
       aPlan("Projection").containingArgumentForProjection(Map("`y.prop`" -> "cache[y.prop]"))
@@ -240,7 +240,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
                   |} as m
                   |RETURN a, m""".stripMargin
 
-    val result = executeWith(Configs.CachedProperty, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.executionPlanDescription() should includeSomewhere.
       aPlan("Projection").containingArgumentForProjection(Map("m" -> "{x: b, y: cache[b.prop], z: cache[b.prop]}"))
@@ -264,7 +264,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
                   |} as m
                   |RETURN a, m""".stripMargin
 
-    val result = executeWith(Configs.CachedProperty, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.executionPlanDescription() should includeSomewhere.
       aPlan("Projection").containingArgumentForProjection(Map("m" -> "{x: c, y: cache[c.prop], z: cache[c.prop]}"))
@@ -286,7 +286,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         |RETURN x.prop, y
         |""".stripMargin
 
-    val result = executeWith(Configs.CachedProperty, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     val expectedResult = Range.inclusive(1, 10).map(y => Map("x.prop" -> 123, "y" -> y)).toSet
 
     result.executionPlanDescription() should includeSomewhere.aPlan("CacheProperties")

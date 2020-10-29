@@ -223,8 +223,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       case (predicates, useScan, shouldFilter, filterArgument, resultSet) =>
         val query = s"MATCH (n:User) WHERE $predicates RETURN n"
 
-        val config = if (filterArgument.isEmpty) Configs.InterpretedAndSlottedAndPipelined else Configs.CachedProperty
-        val result = executeWith(config, query,
+        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
           planComparisonStrategy = ComparePlansWithAssertion(plan => {
             if (shouldFilter)
               plan should includeSomewhere.aPlan("Filter").containingArgumentRegex(filterArgument.r)
@@ -660,7 +659,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     }
 
     // When
-    val result = executeWith(Configs.CachedProperty,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       """MATCH (n:Foo)
         |WHERE n.bar = 1
         |  AND n.baz IN [0,1,2,3,4,5,6,7,8,9]
@@ -684,7 +683,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     }
 
     // When
-    val result = executeWith(Configs.CachedProperty,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       """MATCH (n:Foo)
         |WHERE n.baz = 1
         |  AND n.bar IN [0,1,2,3,4,5,6,7,8,9]
@@ -831,7 +830,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     createLabeledNode(Map("p1" -> 1, "p2" -> 3), "X")
 
     // When
-    val result = executeWith(Configs.CachedProperty,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       "MATCH (n:X) WHERE exists(n.p1) AND n.p2 > 1 RETURN n.p1 AS p1, n.p2 AS p2",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
@@ -850,7 +849,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     createLabeledNode(Map("p1" -> 1, "p2" -> 3), "X")
 
     // When
-    val result = executeWith(Configs.CachedProperty,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       "MATCH (n:X) WHERE exists(n.p1) AND n.p2 > 1 RETURN n.p1 AS p1, n.p2 AS p2",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
@@ -895,7 +894,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       case (predicates, indexOn, resultSet, shouldFilter, filterArgument) =>
         // When
         val query = s"MATCH (n:User) WHERE $predicates RETURN n"
-        val config = if (filterArgument.isEmpty) Configs.InterpretedAndSlottedAndPipelined else Configs.CachedProperty
+        val config = if (filterArgument.isEmpty) Configs.InterpretedAndSlottedAndPipelined else Configs.InterpretedAndSlottedAndPipelined
         val result = executeWith(config, query,
                                  planComparisonStrategy = ComparePlansWithAssertion(plan => {
             if (shouldFilter)
@@ -946,7 +945,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
         // When
         val query = s"MATCH (n:User) WHERE $predicates RETURN n"
-        val config = if (filterStrings.isEmpty) Configs.InterpretedAndSlottedAndPipelined else Configs.CachedProperty
+        val config = if (filterStrings.isEmpty) Configs.InterpretedAndSlottedAndPipelined else Configs.InterpretedAndSlottedAndPipelined
         val result = try {
           executeWith(config, query,
             planComparisonStrategy = ComparePlansWithAssertion(plan => {
@@ -1029,7 +1028,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     resampleIndexes()
 
     // When
-    val res2 = executeWith(Configs.CachedProperty, query,
+    val res2 = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         // Then
         plan should includeSomewhere.aPlan("Filter")
@@ -1081,7 +1080,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     ).foreach {
       case (predicates, resultSet, useScan, shouldFilter, filterArguments) =>
         // When
-        val config = Configs.CachedProperty
+        val config = Configs.InterpretedAndSlottedAndPipelined
         val query = s"MATCH (n:User) WHERE $predicates RETURN (n.name + ' ' + n.surname) AS name"
         withClue(query+"\n") {
           val result = executeWith(config, query,
@@ -1112,7 +1111,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val a = createNode("p1" -> 1, "p2" -> 1)
     val b = createLabeledNode(Map("p1" -> 1, "p2" -> 1), "X")
 
-    val result = executeWith(Configs.NodeById, "match (a), (b:X) where id(a) = $id AND b.p1 = a.p1 AND b.p2 = 1 return b",
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (a), (b:X) where id(a) = $id AND b.p1 = a.p1 AND b.p2 = 1 return b",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentForIndexPlan("b", "X", Seq("p1", "p2"))
@@ -1163,7 +1162,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     graph.createIndex("User", "name", "city", "age")
     resampleIndexes()
 
-    val resultIndex = executeWith(Configs.CachedProperty, query,
+    val resultIndex = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("Filter").containingArgumentRegex(".*distance\\(cache\\[n.city\\], point.*".r, ".*cache\\[n\\.age\\] >.*".r)
@@ -1271,7 +1270,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     graph.createIndex("Awesome", "prop1", "prop2")
     createNodes()
 
-    val result = executeWith(Configs.CachedProperty,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       "MATCH (n:Awesome) WHERE n.prop1 = 40 AND n.prop2 = 3 RETURN n.prop1, n.prop2",
       executeBefore = createNodesInTxState,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
@@ -1289,7 +1288,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     graph.createIndex("Awesome", "prop1", "prop2", "prop5")
     createNodes()
 
-    val result = executeWith(Configs.CachedProperty,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       s"MATCH (n:Awesome) WHERE n.prop1 = 44 AND n.prop2 = 1 AND n.prop5 > 'e' RETURN n.prop1, n.prop2, n.prop5",
       executeBefore = createNodesInTxState,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
@@ -1322,7 +1321,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
           |""".stripMargin)
     }
 
-    val result = executeWith(Configs.CachedProperty,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       "MATCH (n:Awesome) WHERE n.prop1 = 'futhark' AND n.prop2 STARTS WITH 'o' RETURN n.prop1, n.prop2",
       executeBefore = createMe,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
@@ -1344,7 +1343,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     graph.createIndex("Awesome", "prop1", "prop2")
     createNodes()
 
-    val result = executeWith(Configs.CachedProperty,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       "MATCH (n:Awesome) WHERE n.prop1 = 40 AND exists(n.prop2) RETURN n.prop1, n.prop2",
       executeBefore = createNodesInTxState,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
@@ -1368,7 +1367,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     graph.createIndex("Awesome", "prop1", "prop2")
     createNodes()
 
-    val result = executeWith(Configs.CachedProperty,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       "MATCH (n:Awesome) WHERE n.prop1 >= 40 AND n.prop2 = 1 RETURN n.prop1, n.prop2",
       executeBefore = createNodesInTxState,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
@@ -1395,7 +1394,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     graph.createIndex("Awesome", "prop1", "prop2")
     createNodes()
 
-    val result = executeWith(Configs.CachedProperty,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       "MATCH (n:Awesome) WHERE n.prop1 > 40 AND n.prop2 > 1 RETURN n.prop1, n.prop2",
       executeBefore = createNodesInTxState,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
@@ -1420,7 +1419,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     graph.createIndex("Awesome", "prop1", "prop2")
     createNodes()
 
-    val result = executeWith(Configs.CachedProperty,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       "MATCH (n:Awesome) WHERE n.prop1 < 44 AND exists(n.prop2) RETURN n.prop1, n.prop2",
       executeBefore = createNodesInTxState,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
@@ -1447,7 +1446,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     graph.createIndex("Awesome", "prop1", "prop2")
     createNodes()
 
-    val result = executeWith(Configs.CachedProperty,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       s"MATCH (n:Awesome) WHERE exists(n.prop1) AND exists(n.prop2) RETURN n.prop1, n.prop2",
       executeBefore = createNodesInTxState,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
@@ -1490,7 +1489,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     graph.createIndex("Awesome", "prop1", "prop2")
     createNodes()
 
-    val result = executeWith(Configs.CachedProperty,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       "MATCH (n:Awesome) WHERE n.prop1 STARTS WITH 'fo' AND n.prop2 >= '' RETURN n.prop1, n.prop2",
       executeBefore = createNodesInTxState,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
@@ -1536,7 +1535,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     createLabeledNode(Map("prop1" -> LocalTime.of(0, 30, 0), "prop2" -> "mole"), "Awesome")
     createLabeledNode(Map("prop1" -> DurationValue.duration(0, 0, 1800, 0).asObject(), "prop2" -> "kangaroo"), "Awesome")
 
-    val result = executeWith(Configs.CachedProperty,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       "MATCH (n:Awesome) WHERE n.prop1 STARTS WITH 'f' AND exists(n.prop2) RETURN n.prop1, n.prop2",
       executeBefore = createMe,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
@@ -1577,7 +1576,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       ) )
     resampleIndexes()
 
-    val result = executeWith(Configs.CachedProperty,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       s"MATCH (n:Awesome) WHERE n.prop1 ENDS WITH 'a' AND n.prop2 >= '' RETURN n.prop1, n.prop2",
       executeBefore = createNodesInTxState,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
@@ -1616,7 +1615,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       ) )
     resampleIndexes()
 
-    val result = executeWith(Configs.CachedProperty,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       s"MATCH (n:Awesome) WHERE n.prop1 ENDS WITH 'a' AND n.prop2 >= '' RETURN n.prop1, n.prop2",
       executeBefore = createNodesInTxState,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
@@ -1655,7 +1654,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       ) )
     resampleIndexes()
 
-    val result = executeWith(Configs.CachedProperty,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       s"MATCH (n:Awesome) WHERE n.prop1 CONTAINS 'foo' AND n.prop2 >= '' RETURN n.prop1, n.prop2",
       executeBefore = createNodesInTxState,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
@@ -1699,7 +1698,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         |RETURN n.name, n.city
         |""".stripMargin
 
-    val result = executeWith(Configs.CachedProperty, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek")
@@ -1743,7 +1742,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         |RETURN n.name, n.city
         |""".stripMargin
 
-    val result = executeWith(Configs.CachedProperty, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek")

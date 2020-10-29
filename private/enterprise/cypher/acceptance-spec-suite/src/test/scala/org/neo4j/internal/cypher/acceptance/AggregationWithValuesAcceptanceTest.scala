@@ -37,26 +37,24 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
       """)
   }
 
-  for ((i, func, funcBody, property, supportsCompiled, supportsPipelined) <-
+  for ((i, func, funcBody, property) <-
          List(
-           (0, "min", "n.prop3", "n.prop3", false, true),
-           (1, "max", "n.prop3", "n.prop3", false, true),
-           (2, "sum", "n.prop2", "n.prop2", false, true),
-           (3, "avg", "n.prop2", "n.prop2", false, true),
-           (4, "stDev", "n.prop2", "n.prop2", false, true),
-           (5, "stDevP", "n.prop2", "n.prop2", false, true),
-           (6, "percentileDisc", "n.prop1, 0.25", "n.prop1", false, true),
-           (7, "percentileCont", "n.prop1, 0.75", "n.prop1", false, true),
-           (8, "count", "n.prop1", "n.prop1", true, true),
-           (9, "count", "DISTINCT n.prop2", "n.prop2", true, true)
+           (0, "min", "n.prop3", "n.prop3"),
+           (1, "max", "n.prop3", "n.prop3"),
+           (2, "sum", "n.prop2", "n.prop2"),
+           (3, "avg", "n.prop2", "n.prop2"),
+           (4, "stDev", "n.prop2", "n.prop2"),
+           (5, "stDevP", "n.prop2", "n.prop2"),
+           (6, "percentileDisc", "n.prop1, 0.25", "n.prop1"),
+           (7, "percentileCont", "n.prop1, 0.75", "n.prop1"),
+           (8, "count", "n.prop1", "n.prop1"),
+           (9, "count", "DISTINCT n.prop2", "n.prop2")
          )
        ) {
     // Simple aggregation functions implicitly gives exists
 
     test(s"$i-$func: should use index provided values") {
-      val config =
-        if (supportsPipelined) Configs.CachedProperty
-        else Configs.InterpretedAndSlotted
+      val config = Configs.InterpretedAndSlottedAndPipelined
 
       val query = s"MATCH (n:Awesome) RETURN $func($funcBody) as aggregation"
       val result = executeWith(config, query, executeBefore = createSomeNodes)
@@ -71,14 +69,8 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
     // Combination of aggregation and grouping expression does not implicitly give exist
     test(s"$i-$func: cannot use index provided values with grouping expression without exists") {
-      val config =
-        if (supportsCompiled && supportsPipelined) Configs.CachedProperty
-        else if (supportsCompiled) Configs.All - Configs.Pipelined
-        else if (supportsPipelined) Configs.CachedProperty
-        else Configs.InterpretedAndSlotted
-
       val query = s"MATCH (n:Awesome) RETURN $property as res1, $func($funcBody) as res2"
-      val result = executeWith(config, query, executeBefore = createSomeNodes)
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should includeSomewhere.aPlan("NodeByLabelScan")
 
@@ -99,10 +91,8 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     }
 
     test(s"$i-$func: should use index provided values with grouping expression with exists") {
-      //Compiled does not support exists
-      val config =  Configs.CachedProperty
       val query = s"MATCH (n:Awesome) WHERE exists($property) RETURN $property as res1, $func($funcBody) as res2"
-      val result = executeWith(config, query, executeBefore = createSomeNodes)
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should
         includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentRegex(s".*cache\\[$property\\]".r)
@@ -136,7 +126,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("should use index provided values with renamed property") {
     val query = "MATCH (n: Awesome) WITH n.prop1 AS property RETURN min(property)"
-    val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1")
@@ -146,7 +136,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("should use index provided values after renaming multiple properties") {
     val query = "MATCH (n: Awesome) WITH n.prop1 AS property, n.prop2 AS prop RETURN min(property)"
-    val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1")
@@ -163,7 +153,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
         | RETURN min(prop)
       """.stripMargin
 
-    val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1")
@@ -173,7 +163,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("should use index provided values with renamed variable") {
     val query = "MATCH (n:Awesome) WITH n as m RETURN min(m.prop1)"
-    val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1")
@@ -183,7 +173,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("should use index provided values with renamed variable and property") {
     val query = "MATCH (n:Awesome) WITH n as m WITH m.prop1 AS prop RETURN min(prop)"
-    val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1")
@@ -200,7 +190,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
         | RETURN min(prop)
       """.stripMargin
 
-    val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1")
@@ -217,7 +207,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
         | RETURN min(property)
       """.stripMargin
 
-    val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1")
@@ -237,7 +227,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("should use index provided values for multiple aggregations on same property") {
     val query = "MATCH (n: Awesome) RETURN min(n.prop1) AS min, max(n.prop1) AS max, avg(n.prop1) AS avg"
-    val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1")
@@ -292,7 +282,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     graph.createIndex("Label", "prop2")
 
     val query = "MATCH (n:Awesome), (m:Label) RETURN count(m.prop2) AS count"
-    val result = executeWith(Configs.CartesianProduct, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("CartesianProduct")
@@ -310,7 +300,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     createLabeledNode(Map("prop1" -> 2), "Label")
 
     val query = "MATCH (n:Awesome), (m:Label) RETURN min(n.prop1) AS min, count(m.prop1) AS count"
-    val result = executeWith(Configs.CartesianProduct, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("CartesianProduct")
@@ -329,7 +319,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     graph.createIndex("Label", "prop1")
 
     val query = "MATCH (n:Awesome), (m:Label) RETURN min(n.prop1) AS min, count(m.prop1) AS count"
-    val result = executeWith(Configs.CartesianProduct, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("CartesianProduct")
@@ -356,7 +346,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     graph.createIndex("LabelN", "prop2")
 
     val query = "MATCH (n:LabelN)-[]->(m:Label) RETURN count(n.prop2) AS count"
-    val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop2")
@@ -396,7 +386,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
       includeSomewhere.aPlan("NodeByLabelScan")
     result1.toList should equal(List(Map("avg(n.prop1)" -> 41)))
 
-    val result2 = executeWith(Configs.FromCountStore, "MATCH (n:New) RETURN count(n)")
+    val result2 = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:New) RETURN count(n)")
     result2.toList should equal(List(Map("count(n)" -> 10)))
   }
 
@@ -410,7 +400,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     result1.toList should equal(List(Map("avg(prop)" -> 41)))
     result1.toList should equal(List(Map("avg(prop)" -> 41)))
 
-    val result2 = executeWith(Configs.FromCountStore, "MATCH (n:New) RETURN count(n)")
+    val result2 = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:New) RETURN count(n)")
     result2.toList should equal(List(Map("count(n)" -> 10)))
   }
 
@@ -423,7 +413,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
       includeSomewhere.aPlan("NodeByLabelScan")
     result1.toList should equal(List(Map("avg(prop)" -> 41)))
 
-    val result2 = executeWith(Configs.FromCountStore, "MATCH (n:New) RETURN count(n)")
+    val result2 = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:New) RETURN count(n)")
     result2.toList should equal(List(Map("count(n)" -> 10)))
   }
 
@@ -435,7 +425,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
       includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1")
     result1.toList should equal(List(Map("avg" -> 41)))
 
-    val result2 = executeWith(Configs.FromCountStore, "MATCH (n:New) RETURN count(n)")
+    val result2 = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:New) RETURN count(n)")
     result2.toList should equal(List(Map("count(n)" -> 1)))
   }
 
@@ -451,7 +441,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("should use index provided values when UNWIND before aggregation") {
     val query = "UNWIND [1,2,3] AS i MATCH (n: Awesome) RETURN count(n.prop1)"
-    val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").containingArgumentForCachedProperty("n", "prop1")
@@ -462,7 +452,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("should use index provided values when complex UNWIND before aggregation") {
     val query = "MATCH (n: Awesome) UNWIND labels(n) + [n.prop1, n.prop2, 1, 'abc'] AS i RETURN count(n.prop1)"
-    val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").containingArgumentForCachedProperty("n", "prop1")

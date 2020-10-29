@@ -40,7 +40,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     createLabeledNode(Map("prop" -> 3), "L")
 
     // When
-    val result = executeWith(Configs.CachedProperty, "MATCH (n:L) WHERE n.prop = 1 AND n.prop = 2 RETURN n",
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:L) WHERE n.prop = 1 AND n.prop = 2 RETURN n",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeIndexSeek"))))
 
     // Then
@@ -177,7 +177,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     setUpDatabaseForTests()
 
     // When
-    val result = executeWith(Configs.CachedProperty, "MATCH (n:Crew) WHERE n.name = 'Neo' AND n.name = 'Morpheus' RETURN n",
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:Crew) WHERE n.name = 'Neo' AND n.name = 'Morpheus' RETURN n",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeek")))
 
     // Then
@@ -239,7 +239,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     graph.createIndex("Place", "name")
 
     // When
-    val result = executeWith(Configs.Optional,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       """
         |MATCH ()-[f:FRIEND_OF]->()
         |WITH f.placeName AS placeName
@@ -295,7 +295,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
          |RETURN m""".stripMargin
 
     // When
-    val result = executeWith(Configs.CachedProperty, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription.toString shouldNot include("index")
       }))

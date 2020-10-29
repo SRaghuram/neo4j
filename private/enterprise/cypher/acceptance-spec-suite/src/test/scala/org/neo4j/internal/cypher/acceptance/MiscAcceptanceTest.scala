@@ -141,7 +141,7 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
         |RETURN COUNT(end) as count
       """.stripMargin
 
-    val countResult = executeWith(Configs.Optional, countQuery)
+    val countResult = executeWith(Configs.InterpretedAndSlottedAndPipelined, countQuery)
 
     countResult.toList should be(List(Map("count" -> 1)))
 
@@ -151,7 +151,7 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
         |RETURN COUNT(DISTINCT end) as count
       """.stripMargin
 
-    val countDistinctResult = executeWith(Configs.CountDistinct, countDistinctQuery)
+    val countDistinctResult = executeWith(Configs.InterpretedAndSlottedAndPipelined, countDistinctQuery)
 
     countDistinctResult.toList should be(List(Map("count" -> 1)))
   }
@@ -279,7 +279,7 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
         |  RETURN ID(r) LIMIT 5""".stripMargin
 
     //then
-    val result = executeWith(Configs.DropResult, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     //then, we shouldn't crash
     result shouldBe empty

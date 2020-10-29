@@ -59,7 +59,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
     graph.createIndex("C", "id")
 
     // when
-    val result = executeWith(Configs.OptionalExpand,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       "MATCH (a:A)-->(b), (c:C) WHERE b.id = c.id AND a.id = 42 OPTIONAL MATCH (a)-[:T]->() RETURN count(*)",
       planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription should includeSomewhere.aPlan("Apply").withRHS(aPlan("NodeIndexSeek"))
@@ -102,7 +102,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
         | MATCH (f:Foo) WHERE f.id = b.id
         | RETURN f
       """.stripMargin
-    val result = executeWith(Configs.CachedProperty, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = ComparePlansWithAssertion( _ should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("f"))))
     result.columnAs[Node]("f").toList should equal(List(nodes(123)))
   }
@@ -120,7 +120,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
         | MATCH (f:Foo) WHERE f.id = b.id
         | RETURN f
       """.stripMargin
-    val result = executeWith(Configs.CachedProperty, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = ComparePlansWithAssertion( _ should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("f"))))
     result.columnAs[Node]("f").toSet should equal(Set(nodes(122), nodes(123)))
   }
@@ -205,7 +205,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
 
     // Matches the word "distance" anywhere in the argument string
     val distanceRegex = ".*distance.*".r
-    val result = executeWith(Configs.CachedProperty, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgumentRegex(distanceRegex)))
 
     result.columnAs[Node]("id(a)").toList should equal(List(99, 100, 101))
