@@ -28,6 +28,7 @@ import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
 import org.neo4j.internal.kernel.api.Scan;
 import org.neo4j.internal.kernel.api.Token;
+import org.neo4j.internal.kernel.api.TokenRead;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.schema.IndexDescriptor;
@@ -258,7 +259,20 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
     }
 
     @Test
-    void countsForNode() throws Throwable
+    void countsForNodeAllLabels() throws Throwable
+    {
+        // given
+        changeUser( getLoginContext() );
+
+        // when
+        long nodesCount = read.countsForNode( TokenRead.ANY_LABEL );
+
+        // then
+        assertThat( nodesCount, equalTo( 2L ) );
+    }
+
+    @Test
+    void countsForNodeSpecificLabel() throws Throwable
     {
         // given
         changeUser( getLoginContext() );
@@ -271,7 +285,20 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
     }
 
     @Test
-    void countsForNodeWithoutTxState() throws Throwable
+    void countsForNodeWithoutTxStateAllLabels() throws Throwable
+    {
+        // given
+        changeUser( getLoginContext() );
+
+        // when
+        long nodesCount = read.countsForNodeWithoutTxState( TokenRead.ANY_LABEL );
+
+        // then
+        assertThat( nodesCount, equalTo( 2L ) );
+    }
+
+    @Test
+    void countsForNodeWithoutTxStateSpecificLabel() throws Throwable
     {
         // given
         changeUser( getLoginContext() );
