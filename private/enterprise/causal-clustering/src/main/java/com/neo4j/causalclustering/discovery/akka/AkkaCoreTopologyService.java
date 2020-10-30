@@ -398,34 +398,40 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     @Override
     public void setLeader( LeaderInfo newLeaderInfo, NamedDatabaseId namedDatabaseId )
     {
-        var currentLeaderInfo = getLocalLeader( namedDatabaseId );
-        if ( currentLeaderInfo.term() < newLeaderInfo.term() )
+        localLeadersByDatabaseId.compute( namedDatabaseId, ( databaseId, leaderInfo ) ->
         {
-            log.info( "I am server %s. Updating leader info to member %s %s and term %s", serverId(), newLeaderInfo.memberId(), namedDatabaseId,
-                    newLeaderInfo.term() );
-            localLeadersByDatabaseId.put( namedDatabaseId, newLeaderInfo );
-            sendLeaderInfo( newLeaderInfo, namedDatabaseId );
-        }
+            var currentLeaderInfo = leaderInfo != null ?  leaderInfo : LeaderInfo.INITIAL;
+            if ( currentLeaderInfo.term() < newLeaderInfo.term() )
+            {
+                log.info( "I am server %s. Updating leader info to member %s %s and term %s", serverId(), newLeaderInfo.memberId(), namedDatabaseId,
+                          newLeaderInfo.term() );
+                sendLeaderInfo( newLeaderInfo, namedDatabaseId );
+                return newLeaderInfo;
+            }
+            return currentLeaderInfo;
+        } );
     }
 
     @Override
     public void handleStepDown( long term, NamedDatabaseId namedDatabaseId )
     {
-        var currentLeaderInfo = getLocalLeader( namedDatabaseId );
-
-        var wasLeaderForTerm =
-                Objects.equals( myIdentity.raftMemberId( namedDatabaseId ), currentLeaderInfo.memberId() ) &&
-                term == currentLeaderInfo.term();
-
-        if ( wasLeaderForTerm )
+        localLeadersByDatabaseId.computeIfPresent( namedDatabaseId, ( databaseId, currentLeaderInfo ) ->
         {
-            log.info( "Step down event detected. This topology member, with MemberId %s, was leader for %s in term %s, now moving " +
-                      "to follower.", serverId(), namedDatabaseId, currentLeaderInfo.term() );
+            var wasLeaderForTerm =
+                    Objects.equals( myIdentity.raftMemberId( namedDatabaseId ), currentLeaderInfo.memberId() ) &&
+                    term == currentLeaderInfo.term();
 
-            var newLeaderInfo = currentLeaderInfo.stepDown();
-            localLeadersByDatabaseId.put( namedDatabaseId, newLeaderInfo );
-            sendLeaderInfo( newLeaderInfo, namedDatabaseId );
-        }
+            if ( wasLeaderForTerm )
+            {
+                log.info( "Step down event detected. This topology member, with MemberId %s, was leader for %s in term %s, now moving " +
+                          "to follower.", serverId(), namedDatabaseId, currentLeaderInfo.term() );
+
+                var newLeaderInfo = currentLeaderInfo.stepDown();
+                sendLeaderInfo( newLeaderInfo, namedDatabaseId );
+                return newLeaderInfo;
+            }
+            return currentLeaderInfo;
+        } );
     }
 
     @Override
@@ -525,11 +531,6 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     private GlobalTopologyState newGlobalTopologyState( LogProvider logProvider, CoreTopologyListenerService listenerService )
     {
         return new GlobalTopologyState( logProvider, listenerService::notifyListeners, jobScheduler );
-    }
-
-    private LeaderInfo getLocalLeader( NamedDatabaseId namedDatabaseId )
-    {
-        return localLeadersByDatabaseId.getOrDefault( namedDatabaseId, LeaderInfo.INITIAL );
     }
 
     @Override
