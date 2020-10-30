@@ -375,6 +375,12 @@ class StandardAccessMode implements AccessMode
     }
 
     @Override
+    public boolean disallowsTraverseRelType( int relType )
+    {
+        return disallowsTraverseAllRelTypes || blacklistTraverseRelTypes.contains( relType );
+    }
+
+    @Override
     public boolean allowsReadPropertyAllLabels( int propertyKey )
     {
         return (readAllow.isAllPropertiesAllLabels() || readAllow.getNodePropertiesForAllLabels().contains( propertyKey )) &&

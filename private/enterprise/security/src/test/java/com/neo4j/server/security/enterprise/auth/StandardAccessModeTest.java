@@ -111,6 +111,10 @@ class StandardAccessModeTest
         assertThat( mode.allowsTraverseRelType( R1 ) ).isEqualTo( false );
         assertThat( mode.allowsTraverseRelType( R2 ) ).isEqualTo( false );
 
+        assertThat( mode.disallowsTraverseRelType( R1 ) ).isEqualTo( false );
+        assertThat( mode.disallowsTraverseRelType( R2 ) ).isEqualTo( false );
+        assertThat( mode.disallowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( false );
+
         // READ {PROP} ON NODES
         assertThat( mode.allowsReadPropertyAllLabels( PROP1 ) ).isEqualTo( false );
         assertThat( mode.allowsReadPropertyAllLabels( PROP2 ) ).isEqualTo( false );
@@ -264,6 +268,10 @@ class StandardAccessModeTest
         assertThat( mode.allowsTraverseRelType( R2 ) ).isEqualTo( true );
         assertThat( mode.allowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( true );
         assertThat( mode.allowsTraverseAllRelTypes() ).isEqualTo( true );
+
+        assertThat( mode.disallowsTraverseRelType( R1 ) ).isEqualTo( false );
+        assertThat( mode.disallowsTraverseRelType( R2 ) ).isEqualTo( false );
+        assertThat( mode.disallowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( false );
     }
 
     @Test
@@ -279,6 +287,30 @@ class StandardAccessModeTest
         assertThat( mode.allowsTraverseRelType( R2 ) ).isEqualTo( false );
         assertThat( mode.allowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( false );
         assertThat( mode.allowsTraverseAllRelTypes() ).isEqualTo( false );
+
+        assertThat( mode.disallowsTraverseRelType( R1 ) ).isEqualTo( false );
+        assertThat( mode.disallowsTraverseRelType( R2 ) ).isEqualTo( false );
+        assertThat( mode.disallowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( false );
+
+    }
+
+    @Test
+    void shouldDenyTraverseAllRelType() throws Exception
+    {
+        // WHEN
+        // DENY TRAVERSE ON GRAPH neo4j RELATIONSHIPS *
+        var privilege = new ResourcePrivilege( DENY, TRAVERSE, new Resource.GraphResource(), RelTypeSegment.ALL, DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+
+        // THEN
+        assertThat( mode.allowsTraverseRelType( R1 ) ).isEqualTo( false );
+        assertThat( mode.allowsTraverseRelType( R2 ) ).isEqualTo( false );
+        assertThat( mode.allowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( false );
+        assertThat( mode.allowsTraverseAllRelTypes() ).isEqualTo( false );
+
+        assertThat( mode.disallowsTraverseRelType( R1 ) ).isEqualTo( true );
+        assertThat( mode.disallowsTraverseRelType( R2 ) ).isEqualTo( true );
+        assertThat( mode.disallowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( true );
     }
 
     @Test
@@ -296,6 +328,10 @@ class StandardAccessModeTest
         assertThat( mode.allowsTraverseRelType( R2 ) ).isEqualTo( true );
         assertThat( mode.allowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( false );
         assertThat( mode.allowsTraverseAllRelTypes() ).isEqualTo( false );
+
+        assertThat( mode.disallowsTraverseRelType( R1 ) ).isEqualTo( true );
+        assertThat( mode.disallowsTraverseRelType( R2 ) ).isEqualTo( false );
+        assertThat( mode.disallowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( false );
     }
 
     // READ {PROP} ON NODES
@@ -860,6 +896,10 @@ class StandardAccessModeTest
         assertThat( mode.allowsTraverseRelType( R2 ) ).isEqualTo( true );
         assertThat( mode.allowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( true );
         assertThat( mode.allowsTraverseAllRelTypes() ).isEqualTo( true );
+
+        assertThat( mode.disallowsTraverseRelType( R1 ) ).isEqualTo( false );
+        assertThat( mode.disallowsTraverseRelType( R2 ) ).isEqualTo( false );
+        assertThat( mode.disallowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( false );
     }
 
     @Test
@@ -875,6 +915,10 @@ class StandardAccessModeTest
         assertThat( mode.allowsTraverseRelType( R2 ) ).isEqualTo( false );
         assertThat( mode.allowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( false );
         assertThat( mode.allowsTraverseAllRelTypes() ).isEqualTo( false );
+
+        assertThat( mode.disallowsTraverseRelType( R1 ) ).isEqualTo( false );
+        assertThat( mode.disallowsTraverseRelType( R2 ) ).isEqualTo( false );
+        assertThat( mode.disallowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( false );
     }
 
     @Test
@@ -892,6 +936,10 @@ class StandardAccessModeTest
         assertThat( mode.allowsTraverseRelType( R2 ) ).isEqualTo( true );
         assertThat( mode.allowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( false );
         assertThat( mode.allowsTraverseAllRelTypes() ).isEqualTo( false );
+
+        assertThat( mode.disallowsTraverseRelType( R1 ) ).isEqualTo( true );
+        assertThat( mode.disallowsTraverseRelType( R2 ) ).isEqualTo( false );
+        assertThat( mode.disallowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( false );
     }
 
     // MATCH {PROP} ON NODES
@@ -1946,6 +1994,8 @@ class StandardAccessModeTest
         assertThat( mode.allowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( true );
 
         assertThat( mode.allowsTraverseRelType( R1 ) ).isEqualTo( true );
+        assertThat( mode.disallowsTraverseRelType( R1 ) ).isEqualTo( false );
+        assertThat( mode.disallowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( false );
 
         // READ {PROP} ON NODES
         assertThat( mode.allowsReadPropertyAllLabels( PROP1 ) ).isEqualTo( true );
@@ -2017,6 +2067,9 @@ class StandardAccessModeTest
         assertThat( mode.allowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( false );
 
         assertThat( mode.allowsTraverseRelType( R1 ) ).isEqualTo( false );
+
+        assertThat( mode.disallowsTraverseRelType( R1 ) ).isEqualTo( true );
+        assertThat( mode.disallowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( true );
 
         // READ {PROP} ON NODES
         assertThat( mode.allowsReadPropertyAllLabels( PROP1 ) ).isEqualTo( false );
@@ -2278,6 +2331,10 @@ class StandardAccessModeTest
 
         assertThat( mode.allowsTraverseRelType( R1 ) ).isFalse();
         assertThat( mode.allowsTraverseRelType( R2 ) ).isFalse();
+
+        assertThat( mode.disallowsTraverseRelType( R1 ) ).isEqualTo( false );
+        assertThat( mode.disallowsTraverseRelType( R2 ) ).isEqualTo( false );
+        assertThat( mode.disallowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( false );
 
         // READ {PROP} ON NODES
         assertThat( mode.allowsReadPropertyAllLabels( PROP1 ) ).isFalse();
