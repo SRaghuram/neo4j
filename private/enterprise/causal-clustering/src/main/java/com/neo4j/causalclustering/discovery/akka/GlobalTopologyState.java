@@ -86,7 +86,9 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
                 currentCoreTopology = DatabaseCoreTopology.empty( databaseId );
             }
             this.coresByServerId = extractServerInfos( coreTopologiesByDatabase );
-            topologyLogger.logTopologyChange( "Core topology", newCoreTopology, currentCoreTopology );
+            topologyLogger.logChange( "core topology", newCoreTopology, currentCoreTopology );
+            this.coresByServerId = extractServerInfos( coreTopologiesByDatabase );
+            topologyLogger.logChange( "Core topology", newCoreTopology, currentCoreTopology );
             callback.accept( databaseId, newCoreTopology.members( this::resolveRaftMemberForServer ) );
         }
 
@@ -110,7 +112,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
                 currentReadReplicaTopology = DatabaseReadReplicaTopology.empty( databaseId );
             }
             this.readReplicasByServerId = extractServerInfos( readReplicaTopologiesByDatabase );
-            topologyLogger.logTopologyChange( "Read replica topology", newReadReplicaTopology, currentReadReplicaTopology );
+            topologyLogger.logChange( "read replica topology", newReadReplicaTopology, currentReadReplicaTopology );
         }
 
         if ( hasNoMembers( newReadReplicaTopology ) )

@@ -52,8 +52,8 @@ import static org.neo4j.logging.LogAssertions.assertThat;
 @SuppressWarnings( "unused" )
 class TopologyLoggerTest
 {
-    private static final String CORE_TOPOLOGY_DESCRIPTION = "Core topology";
-    private static final String RR_TOPOLOGY_DESCRIPTION = "Read replica topology";
+    private static final String CORE_TOPOLOGY_DESCRIPTION = "core topology";
+    private static final String RR_TOPOLOGY_DESCRIPTION = "read replica topology";
     private static final int MEMBERS_PER_ROLE = 3;
     private static final TopologyChangePair<DatabaseCoreTopology> coreChangeFactory = TopologyLoggerTest::newOldCoreTopology;
     private static final TopologyChangePair<DatabaseReadReplicaTopology> rrChangeFactory = TopologyLoggerTest::newOldReplicaTopology;
@@ -85,7 +85,7 @@ class TopologyLoggerTest
 
         namedDatabaseIds.stream()
                         .map( db -> topologyChangePair.create( topologyService, serverId( roleOffset ), db ) )
-                        .forEach( pair -> topologyLogger.logTopologyChange( topologyDescription, pair.first(), pair.other() ) );
+                        .forEach( pair -> topologyLogger.logChange( topologyDescription, pair.first(), pair.other() ) );
 
         // when the timer is fired
         assertThat( logger ).doesNotHaveAnyLogs();
@@ -94,7 +94,7 @@ class TopologyLoggerTest
         // then those topology changes should be logged
         var sortedRemainingMembers = new TreeSet<>( Comparator.comparing( ServerId::uuid ) );
         sortedRemainingMembers.addAll( serverIds( 1, 3, roleOffset ) );
-        var expectedMessage = String.format( "%s for all databases is now: %s" +
+        var expectedMessage = String.format( "The %s for all databases is now: %s" +
                                              System.lineSeparator() +
                                              "Lost servers :%s" +
                                              System.lineSeparator() +
@@ -136,7 +136,7 @@ class TopologyLoggerTest
                         .limit( 2 )
                         .peek( namedDatabaseId -> loggedDatabaseIds.add( namedDatabaseId.databaseId() ) )
                         .map( namedDatabaseId -> topologyChangePair.create( topologyService, serverId( roleOffset ), namedDatabaseId ) )
-                        .forEach( topology -> topologyLogger.logTopologyChange( topologyDescription, topology.first(), topology.other() ) );
+                        .forEach( topology -> topologyLogger.logChange( topologyDescription, topology.first(), topology.other() ) );
 
         // then nothing should be logged
         assertThat( logger ).doesNotHaveAnyLogs();
@@ -146,11 +146,11 @@ class TopologyLoggerTest
                         .skip( 2 )
                         .limit( 2 )
                         .map( namedDatabaseId -> topologyChangePair.create( topologyService, serverId( roleOffset + 1 ), namedDatabaseId ) )
-                        .forEach( topology -> topologyLogger.logTopologyChange( topologyDescription, topology.first(), topology.other() ) );
+                        .forEach( topology -> topologyLogger.logChange( topologyDescription, topology.first(), topology.other() ) );
 
         // then first batchKey should be flushed
         var sortedRemainingMembers = serverIds( roleOffset + 1, roleOffset + 3 );
-        var expectedMessage = String.format( "%s for databases %s and %s is now: %s" +
+        var expectedMessage = String.format( "The %s for databases %s and %s is now: %s" +
                                              System.lineSeparator() +
                                              "Lost servers :%s" +
                                              System.lineSeparator() +
@@ -182,12 +182,12 @@ class TopologyLoggerTest
 
         // when timer is fired after topology change for one database
         var newOldTopology = topologyChangePair.create( topologyService, serverId( roleOffset ), namedDatabaseIds.first() );
-        topologyLogger.logTopologyChange( topologyDescription, newOldTopology.first(), newOldTopology.other() );
+        topologyLogger.logChange( topologyDescription, newOldTopology.first(), newOldTopology.other() );
         timerService.getTimer().invoke();
 
         // then log should contain one explicit database name
         var sortedRemainingMembers = serverIds( 1, 3, roleOffset );
-        var expectedMessage = String.format( "%s for database %s is now: %s" +
+        var expectedMessage = String.format( "The %s for database %s is now: %s" +
                                          System.lineSeparator() +
                                          "Lost servers :%s" +
                                          System.lineSeparator() +
@@ -220,12 +220,12 @@ class TopologyLoggerTest
         // when timer is fired after topology change for all database
         namedDatabaseIds.stream()
                         .map( namedDatabaseId -> topologyChangePair.create( topologyService, serverId( roleOffset ), namedDatabaseId ) )
-                        .forEach( pair -> topologyLogger.logTopologyChange( topologyDescription, pair.first(), pair.other() ) );
+                        .forEach( pair -> topologyLogger.logChange( topologyDescription, pair.first(), pair.other() ) );
         timerService.getTimer().invoke();
 
         // then log should contain changes for "all databases"
         var sortedRemainingMembers = serverIds( 1, 3, roleOffset );
-        var expectedMessage = String.format( "%s for all databases is now: %s" +
+        var expectedMessage = String.format( "The %s for all databases is now: %s" +
                                              System.lineSeparator() +
                                              "Lost servers :%s" +
                                              System.lineSeparator() +
@@ -258,12 +258,12 @@ class TopologyLoggerTest
         namedDatabaseIds.stream()
                         .filter( namedDatabaseId -> !namedDatabaseId.equals( namedDatabaseIds.first() ) )
                         .map( namedDatabaseId -> topologyChangePair.create( topologyService, serverId( roleOffset ), namedDatabaseId ) )
-                        .forEach( pair -> topologyLogger.logTopologyChange( topologyDescription, pair.first(), pair.other() ) );
+                        .forEach( pair -> topologyLogger.logChange( topologyDescription, pair.first(), pair.other() ) );
         timerService.getTimer().invoke();
 
         // then log should contain changes for "all databases except..."
         var sortedRemainingMembers = serverIds( 1, 3, roleOffset );
-        var expectedMessage = String.format( "%s for all databases except for %s is now: %s" +
+        var expectedMessage = String.format( "The %s for all databases except for %s is now: %s" +
                                              System.lineSeparator() +
                                              "Lost servers :%s" +
                                              System.lineSeparator() +
@@ -298,14 +298,14 @@ class TopologyLoggerTest
         namedDatabaseIds.stream().limit( 2 )
                                 .map( namedDatabaseId -> topologyChangePair.create( topologyService, serverId( roleOffset ), namedDatabaseId ) )
                                 .forEach( pair -> {
-                                    topologyLogger.logTopologyChange( topologyDescription, pair.first(), pair.other() );
+                                    topologyLogger.logChange( topologyDescription, pair.first(), pair.other() );
                                     changedDatabases.add( pair.first().databaseId() );
                                 } );
         timerService.getTimer().invoke();
 
         // then log should contain explicit names for changed databases
         var sortedRemainingMembers = serverIds( 1, 3, roleOffset );
-        var expectedMessage = String.format( "%s for databases %s and %s is now: %s" +
+        var expectedMessage = String.format( "The %s for databases %s and %s is now: %s" +
                                              System.lineSeparator() +
                                              "Lost servers :%s" +
                                              System.lineSeparator() +
@@ -340,12 +340,12 @@ class TopologyLoggerTest
         // when timer is fired after topology change for 8 out of 15 databases
         namedDatabaseIds.stream().limit( NBR_CHANGED_DATABASES )
                         .map( namedDatabaseId -> topologyChangePair.create( topologyService, serverId( roleOffset ), namedDatabaseId ) )
-                        .forEach( pair -> topologyLogger.logTopologyChange( topologyDescription, pair.first(), pair.other() ) );
+                        .forEach( pair -> topologyLogger.logChange( topologyDescription, pair.first(), pair.other() ) );
         timerService.getTimer().invoke();
 
         // then log should contain number of databases changed
         var sortedRemainingMembers = serverIds( 1, 3, roleOffset );
-        var expectedMessage = String.format( "%s for %d databases is now: %s" +
+        var expectedMessage = String.format( "The %s for %d databases is now: %s" +
                                              System.lineSeparator() +
                                              "Lost servers :%s" +
                                              System.lineSeparator() +
@@ -381,17 +381,17 @@ class TopologyLoggerTest
 
         // when
         // First batch starts timer for batch time
-        topologyLogger.logTopologyChange( CORE_TOPOLOGY_DESCRIPTION, batch1.first(), batch1.other() );
+        topologyLogger.logChange( CORE_TOPOLOGY_DESCRIPTION, batch1.first(), batch1.other() );
         // Half the batch time passes
         scheduler.forward( batchTime.dividedBy( 2 ) );
         // Second batch should reset timer and cause logging of first batch
-        topologyLogger.logTopologyChange( CORE_TOPOLOGY_DESCRIPTION, batch2Change1.first(), batch2Change1.other() );
+        topologyLogger.logChange( CORE_TOPOLOGY_DESCRIPTION, batch2Change1.first(), batch2Change1.other() );
 
         // then
         var sortedRemainingMembers = topologyService.allCoreServers().keySet().stream()
                                                     .filter( server -> !Objects.equals( server, serverId( 0 ) ) )
                                                     .collect( sortedSetCollector( ServerId::uuid ) );
-        var expectedMessage = String.format( "%s for database %s is now: %s" +
+        var expectedMessage = String.format( "The %s for database %s is now: %s" +
                                              System.lineSeparator() +
                                              "Lost servers :%s" +
                                              System.lineSeparator() +
@@ -408,7 +408,7 @@ class TopologyLoggerTest
 
         // when
         // Additional log in second batch
-        topologyLogger.logTopologyChange( CORE_TOPOLOGY_DESCRIPTION, batch2Change2.first(), batch2Change2.other() );
+        topologyLogger.logChange( CORE_TOPOLOGY_DESCRIPTION, batch2Change2.first(), batch2Change2.other() );
         // Second half (plus 1 milli) of original batch time passes and the internal timer elapses
         scheduler.forward( batchTime.dividedBy( 2 ).plusMillis( 1 ) );
 
@@ -424,7 +424,7 @@ class TopologyLoggerTest
         sortedRemainingMembers = topologyService.allCoreServers().keySet().stream()
                                                 .filter( server -> !Objects.equals( server, serverId( 1 ) ) )
                                                 .collect( sortedSetCollector( ServerId::uuid ) );
-        expectedMessage = String.format( "%s for all databases except for %s is now: %s" +
+        expectedMessage = String.format( "The %s for all databases except for %s is now: %s" +
                                          System.lineSeparator() +
                                          "Lost servers :%s" +
                                          System.lineSeparator() +
