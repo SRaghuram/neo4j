@@ -7,7 +7,9 @@ package com.neo4j.server.security.enterprise.auth;
 
 import java.util.List;
 
+import org.neo4j.internal.kernel.api.security.FunctionSegment;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
+import org.neo4j.internal.kernel.api.security.ProcedureSegment;
 import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
@@ -301,11 +303,37 @@ public class ResourcePrivilege
             return List.of( String.format( "%s%s ALL DBMS PRIVILEGES ON DBMS %s %s", optionalRevoke, privilegeType.prefix, preposition, role ) );
 
         case EXECUTE:
-            return List.of( String.format(
-                    "%s%s EXECUTE PROCEDURE %s ON DBMS %s %s", optionalRevoke, privilegeType.prefix, segment.toString(), preposition, role ) );
+            if ( segment instanceof ProcedureSegment )
+            {
+                return List.of(String.format(
+                        "%s%s EXECUTE PROCEDURE %s ON DBMS %s %s", optionalRevoke, privilegeType.prefix, segment.toString(), preposition, role ) );
+            }
+            else if ( segment instanceof FunctionSegment )
+            {
+                return List.of(String.format(
+                        "%s%s EXECUTE FUNCTION %s ON DBMS %s %s", optionalRevoke, privilegeType.prefix, segment.toString(), preposition, role ) );
+            }
+            else
+            {
+                throw new RuntimeException( String.format( "Failed to convert ResourcePrivilege to grant: wrong qualifier for action '%s', found '%s'",
+                        action.toString(), segment.toString() ) );
+            }
         case EXECUTE_BOOSTED:
-            return List.of( String.format(
-                    "%s%s EXECUTE BOOSTED PROCEDURE %s ON DBMS %s %s", optionalRevoke, privilegeType.prefix, segment.toString(), preposition, role ) );
+            if ( segment instanceof ProcedureSegment )
+            {
+                return List.of( String.format( "%s%s EXECUTE BOOSTED PROCEDURE %s ON DBMS %s %s", optionalRevoke, privilegeType.prefix, segment.toString(),
+                        preposition, role ) );
+            }
+            else if ( segment instanceof FunctionSegment )
+            {
+                return List.of( String.format( "%s%s EXECUTE BOOSTED FUNCTION %s ON DBMS %s %s", optionalRevoke, privilegeType.prefix, segment.toString(),
+                        preposition, role ) );
+            }
+            else
+            {
+                throw new RuntimeException( String.format( "Failed to convert ResourcePrivilege to grant: wrong qualifier for action '%s', found '%s'",
+                        action.toString(), segment.toString() ) );
+            }
         case EXECUTE_ADMIN:
             return List.of( String.format( "%s%s EXECUTE ADMIN PROCEDURES ON DBMS %s %s", optionalRevoke, privilegeType.prefix, preposition, role ) );
         default:

@@ -628,6 +628,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       // WHEN
       execute(s"SHOW PRIVILEGES AS ${optionalRevoke}COMMANDS").columnAs[String]("command").toSet should be(Set(
         s"${optionalRevoke}GRANT ACCESS ON DEFAULT DATABASE $preposition `PUBLIC`",
+        s"${optionalRevoke}GRANT EXECUTE FUNCTION * ON DBMS $preposition `PUBLIC`",
         s"${optionalRevoke}GRANT EXECUTE PROCEDURE * ON DBMS $preposition `PUBLIC`",
 
         s"${optionalRevoke}GRANT ACCESS ON DATABASE * $preposition `reader`",
@@ -718,6 +719,26 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       ))
     }
 
+    test(s"should show EXECUTE privileges as ${optionalRevoke.toLowerCase}commands (differs on segment and not action like others)") {
+      // GIVEN
+      val executeCommands = executePrivileges.keys.toSeq
+      execute("CREATE ROLE custom")
+      execute("GRANT EXECUTE ADMIN PROCEDURES ON DBMS TO custom") // not included in 'executePrivileges' but part of 'dbmsPrivileges'
+      executeCommands.foreach(c => {
+        execute(s"GRANT $c * ON DBMS TO custom")
+        execute(s"DENY $c math.* ON DBMS TO custom")
+      })
+
+      // WHEN
+      val result = execute(s"SHOW ROLE custom PRIVILEGES AS ${optionalRevoke}COMMANDS")
+
+      // THEN
+      val expected = executeCommands.map(c => s"${optionalRevoke}GRANT $c * ON DBMS $preposition `custom`") ++
+                     executeCommands.map(c => s"${optionalRevoke}DENY $c math.* ON DBMS $preposition `custom`") :+
+                     s"${optionalRevoke}GRANT EXECUTE ADMIN PROCEDURES ON DBMS $preposition `custom`"
+      result.columnAs[String]("command").toSet should be(expected.toSet)
+    }
+
     test(s"should show user privileges as parameterized ${optionalRevoke.toLowerCase}commands") {
       // GIVEN
       setupUserWithCustomRole("user")
@@ -728,6 +749,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       execute(s"SHOW USER user PRIVILEGES AS ${optionalRevoke}COMMANDS").columnAs[String]("command").toSet should be(Set(
         s"${optionalRevoke}GRANT ACCESS ON DATABASE * $preposition $$role",
         s"${optionalRevoke}GRANT ACCESS ON DEFAULT DATABASE $preposition $$role",
+        s"${optionalRevoke}GRANT EXECUTE FUNCTION * ON DBMS $preposition $$role",
         s"${optionalRevoke}GRANT EXECUTE PROCEDURE * ON DBMS $preposition $$role",
         s"${optionalRevoke}DENY EXECUTE PROCEDURE * ON DBMS $preposition $$role",
         s"${optionalRevoke}DENY MATCH {*} ON GRAPH * NODE * $preposition $$role"
@@ -742,6 +764,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       execute(s"SHOW USER $$user PRIVILEGES AS ${optionalRevoke}COMMANDS", Map("user" -> "user")).columnAs[String]("command").toSet should be(Set(
         s"${optionalRevoke}GRANT ACCESS ON DATABASE * $preposition $$role",
         s"${optionalRevoke}GRANT ACCESS ON DEFAULT DATABASE $preposition $$role",
+        s"${optionalRevoke}GRANT EXECUTE FUNCTION * ON DBMS $preposition $$role",
         s"${optionalRevoke}GRANT EXECUTE PROCEDURE * ON DBMS $preposition $$role"
       ))
     }
@@ -751,14 +774,15 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       setupUserWithCustomRole()
 
       // WHEN
-      executeOnSystem("joe", "soap", s"SHOW USER PRIVILEGES AS ${optionalRevoke}COMMANDS", resultHandler = (row, idx) => {
+      executeOnSystem("joe", "soap", s"SHOW USER PRIVILEGES AS ${optionalRevoke}COMMANDS YIELD command ORDER BY command", resultHandler = (row, idx) => {
         idx match {
           case 0 => row.get("command") should be(s"${optionalRevoke}GRANT ACCESS ON DATABASE * $preposition $$role")
           case 1 => row.get("command") should be(s"${optionalRevoke}GRANT ACCESS ON DEFAULT DATABASE $preposition $$role")
-          case 2 => row.get("command") should be(s"${optionalRevoke}GRANT EXECUTE PROCEDURE * ON DBMS $preposition $$role")
+          case 2 => row.get("command") should be(s"${optionalRevoke}GRANT EXECUTE FUNCTION * ON DBMS $preposition $$role")
+          case 3 => row.get("command") should be(s"${optionalRevoke}GRANT EXECUTE PROCEDURE * ON DBMS $preposition $$role")
           case _ => fail()
         }
-      }) should be(3)
+      }) should be(4)
     }
 
     test(s"should show multiple parameterized user privileges as parameterized ${optionalRevoke.toLowerCase}commands") {
@@ -771,6 +795,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       execute(s"SHOW USER foo, $$bar, $$baz PRIVILEGES AS ${optionalRevoke}COMMANDS", Map("bar" -> "bar", "baz" -> "baz")).columnAs[String]("command").toSet should be(Set(
         s"${optionalRevoke}GRANT ACCESS ON DATABASE * $preposition $$role",
         s"${optionalRevoke}GRANT ACCESS ON DEFAULT DATABASE $preposition $$role",
+        s"${optionalRevoke}GRANT EXECUTE FUNCTION * ON DBMS $preposition $$role",
         s"${optionalRevoke}GRANT EXECUTE PROCEDURE * ON DBMS $preposition $$role"
       ))
     }
@@ -831,6 +856,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       // THEN
       execute(s"SHOW USER bar PRIVILEGES AS ${optionalRevoke}COMMANDS").columnAs[String]("command").toSet should be(Set(
         s"${optionalRevoke}GRANT ACCESS ON DEFAULT DATABASE $preposition $$role",
+        s"${optionalRevoke}GRANT EXECUTE FUNCTION * ON DBMS $preposition $$role",
         s"${optionalRevoke}GRANT EXECUTE PROCEDURE * ON DBMS $preposition $$role"
       ))
     }
