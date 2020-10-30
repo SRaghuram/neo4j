@@ -83,7 +83,7 @@ class BoltSnapshotQueryExecutionIT
         createData( db );
         // Resolve the default database once here to have it cached so it won't interfere with the tests.
         DefaultDatabaseResolver defaultDatabaseResolver = db.getDependencyResolver().resolveDependency( DefaultDatabaseResolver.class );
-        defaultDatabaseResolver.defaultDatabase();
+        defaultDatabaseResolver.defaultDatabase( null );
         prepareCursorContext();
         connectDriver();
     }

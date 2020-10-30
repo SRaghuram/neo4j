@@ -102,10 +102,15 @@ public class MultiRealmAuthManager extends EnterpriseAuthManager
             ShiroAuthToken token = new ShiroAuthToken( authToken );
             assertValidScheme( token );
 
+            // this is only used when login fails
+            Object principal = token.getPrincipal();
+            String tokenUsername = principal != null ? principal.toString() : "";
             try
             {
                 ShiroSubject shiroSubject = (ShiroSubject) securityManager.login( null, token );
-                securityContext = new StandardEnterpriseLoginContext( this, shiroSubject, defaultDatabaseResolver.defaultDatabase() );
+                Object shiroPrincipal = shiroSubject.getPrincipal();
+                String defaultDatabase = defaultDatabaseResolver.defaultDatabase( shiroPrincipal == null ? null : shiroPrincipal.toString() );
+                securityContext = new StandardEnterpriseLoginContext( this, shiroSubject, defaultDatabase );
                 AuthenticationResult authenticationResult = securityContext.subject().getAuthenticationResult();
                 if ( authenticationResult == AuthenticationResult.SUCCESS )
                 {
@@ -122,7 +127,7 @@ public class MultiRealmAuthManager extends EnterpriseAuthManager
                 {
                     String errorMessage = ((StandardEnterpriseLoginContext.NeoShiroSubject) securityContext.subject())
                             .getAuthenticationFailureMessage();
-                    securityLog.error( "[%s]: failed to log in: %s", escape( token.getPrincipal().toString() ), errorMessage );
+                    securityLog.error( "[%s]: failed to log in: %s", escape( tokenUsername ), errorMessage );
                 }
                 // No need to keep full Shiro authentication info around on the subject
                 ((StandardEnterpriseLoginContext.NeoShiroSubject) securityContext.subject()).clearAuthenticationInfo();
@@ -141,9 +146,9 @@ public class MultiRealmAuthManager extends EnterpriseAuthManager
             {
                 // NOTE: We only get this with single (internal) realm authentication
                 securityContext = new StandardEnterpriseLoginContext( this, new ShiroSubject( securityManager, AuthenticationResult.TOO_MANY_ATTEMPTS ),
-                        defaultDatabaseResolver.defaultDatabase() );
+                        defaultDatabaseResolver.defaultDatabase( tokenUsername ) );
                 securityLog.error( "[%s]: failed to log in: too many failed attempts",
-                        escape( token.getPrincipal().toString() ) );
+                        escape( tokenUsername ) );
             }
             catch ( AuthenticationException e )
             {
@@ -151,7 +156,7 @@ public class MultiRealmAuthManager extends EnterpriseAuthManager
                 {
                     Throwable cause = e.getCause().getCause();
                     securityLog.error( "[%s]: failed to log in: auth server timeout%s",
-                            escape( token.getPrincipal().toString() ),
+                            escape( tokenUsername ),
                             cause != null && cause.getMessage() != null ? " (" + cause.getMessage() + ")" : "" );
                     throw new AuthProviderTimeoutException( e.getCause().getMessage(), e.getCause() );
                 }
@@ -159,18 +164,18 @@ public class MultiRealmAuthManager extends EnterpriseAuthManager
                 {
                     Throwable cause = e.getCause().getCause();
                     securityLog.error( "[%s]: failed to log in: auth server connection refused%s",
-                            escape( token.getPrincipal().toString() ),
+                            escape( tokenUsername ),
                             cause != null && cause.getMessage() != null ? " (" + cause.getMessage() + ")" : "" );
                     throw new AuthProviderFailedException( e.getCause().getMessage(), e.getCause() );
                 }
                 securityContext = new StandardEnterpriseLoginContext( this, new ShiroSubject( securityManager, AuthenticationResult.FAILURE ),
-                        defaultDatabaseResolver.defaultDatabase() );
+                        defaultDatabaseResolver.defaultDatabase( tokenUsername ) );
                 Throwable cause = e.getCause();
                 Throwable causeCause = e.getCause() != null ? e.getCause().getCause() : null;
                 String errorMessage = String.format( "invalid principal or credentials%s%s",
                         cause != null && cause.getMessage() != null ? " (" + cause.getMessage() + ")" : "",
                         causeCause != null && causeCause.getMessage() != null ? " (" + causeCause.getMessage() + ")" : "" );
-                securityLog.error( "[%s]: failed to log in: %s", escape( token.getPrincipal().toString() ), errorMessage );
+                securityLog.error( "[%s]: failed to log in: %s", escape( tokenUsername ), errorMessage );
             }
 
             return securityContext;

@@ -30,8 +30,8 @@ import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
 import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.EnterpriseSystemGraphComponent;
-import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.dbms.QuarantineOperator;
+import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.dbms.procedures.ClusteredDatabaseStateProcedure;
@@ -235,7 +235,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
                 .orElseThrow()
                 .databaseFacade();
         var dbmsModel = new ClusterSystemGraphDbmsModel( systemDbSupplier );
-        defaultDatabaseResolver = makeDefaultDatabaseResolver( globalModule );
         quarantineOperator = new QuarantineOperator( logProvider, databaseManager.databaseIdRepository(), storageFactory );
         reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager,
                 databaseEventService, storageFactory, reconciledTxTracker, dbmsModel, quarantineOperator );

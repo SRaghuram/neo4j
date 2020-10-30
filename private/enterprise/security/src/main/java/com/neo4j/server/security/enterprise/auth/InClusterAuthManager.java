@@ -48,7 +48,7 @@ public class InClusterAuthManager extends EnterpriseAuthManager
             assertValidScheme( authToken );
             String username = extractUsername( authToken );
             Set<String> roles = extractRoles( authToken );
-            String defaultDatabaseForUser = defaultDatabaseResolver.defaultDatabase( );
+            String defaultDatabaseForUser = defaultDatabaseResolver.defaultDatabase( username );
 
             var loginContext = new InClusterLoginContext( username, roles, defaultDatabaseForUser, () -> privilegeResolver.getPrivileges( roles, username ) );
 

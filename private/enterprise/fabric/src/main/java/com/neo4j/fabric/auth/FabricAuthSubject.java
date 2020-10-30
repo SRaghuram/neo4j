@@ -45,12 +45,6 @@ public class FabricAuthSubject implements AuthSubject
         return wrappedAuthSubject.username();
     }
 
-    @Override
-    public String defaultDatabase()
-    {
-        return wrappedAuthSubject.defaultDatabase();
-    }
-
     public Map<String,Object> getInterceptedAuthToken()
     {
         return interceptedAuthToken;

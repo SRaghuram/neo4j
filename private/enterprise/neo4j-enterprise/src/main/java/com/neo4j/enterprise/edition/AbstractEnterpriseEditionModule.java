@@ -123,7 +123,9 @@ public interface AbstractEnterpriseEditionModule
 
     default EnterpriseDefaultDatabaseResolver makeDefaultDatabaseResolver( GlobalModule globalModule )
     {
-        return new EnterpriseDefaultDatabaseResolver( globalModule.getGlobalConfig(), systemSupplier( globalModule.getGlobalDependencies() ) );
+        var authCacheExecutor = getAuthCacheExecutor( globalModule );
+        CaffeineCacheFactory cacheFactory = new ExecutorBasedCaffeineCacheFactory( authCacheExecutor );
+        return new EnterpriseDefaultDatabaseResolver( globalModule.getGlobalConfig(), cacheFactory, systemSupplier( globalModule.getGlobalDependencies() ) );
     }
 
     private Executor getAuthCacheExecutor( GlobalModule globalModule )

@@ -38,7 +38,7 @@ class CountNodeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", matchLabelQuery,
+    executeOnDBMSDefault("joe", "soap", matchLabelQuery,
       requiredOperator = Some("NodeCountFromCountStore"), resultHandler = (row, _) => {
         row.get("count") should be(3) // commited (:A) and (:A:B) nodes and one in TX, but not the commited (:B) node (not matched)
       }, executeBefore = createNodeFunction) should be(1)
@@ -49,7 +49,7 @@ class CountNodeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", matchLabelQuery,
+    executeOnDBMSDefault("joe", "soap", matchLabelQuery,
       requiredOperator = Some("NodeCountFromCountStore"), resultHandler = (row, _) => {
         row.get("count") should be(3) // commited (:A) and (:A:B) nodes and one in TX, but not the commited (:B) node (not matched)
       }, executeBefore = createNodeFunction) should be(1)
@@ -60,7 +60,7 @@ class CountNodeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("GRANT TRAVERSE ON GRAPH * NODES B TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", matchLabelQuery,
+    executeOnDBMSDefault("joe", "soap", matchLabelQuery,
       requiredOperator = Some("NodeCountFromCountStore"), resultHandler = (row, _) => {
         row.get("count") should be(2) // commited (:A:B) and one in TX, but not the commited (:A) node (not granted) and (:B) node (not matched)
       }, executeBefore = createNodeFunction) should be(1)
@@ -72,7 +72,7 @@ class CountNodeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("DENY TRAVERSE ON GRAPH * NODES A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", matchLabelQuery,
+    executeOnDBMSDefault("joe", "soap", matchLabelQuery,
       requiredOperator = Some("NodeCountFromCountStore"), resultHandler = (row, _) => {
         row.get("count") should be(1) // one in TX, but not the commited (:A), (:A:B) nodes (denied) and (:B) node (not matched)
       }, executeBefore = createNodeFunction) should be(1)
@@ -84,7 +84,7 @@ class CountNodeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("DENY TRAVERSE ON GRAPH * NODES B TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", matchLabelQuery,
+    executeOnDBMSDefault("joe", "soap", matchLabelQuery,
       requiredOperator = Some("NodeCountFromCountStore"), resultHandler = (row, _) => {
         row.get("count") should be(2) // commited (:A) and one in TX, but not the commited (:A:B) node (denied) and (:B) node (not matched and denied)
       }, executeBefore = createNodeFunction) should be(1)
@@ -97,7 +97,7 @@ class CountNodeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", matchAllQuery,
+    executeOnDBMSDefault("joe", "soap", matchAllQuery,
       requiredOperator = Some("NodeCountFromCountStore"), resultHandler = (row, _) => {
         row.get("count") should be(4) // commited nodes and one in TX
       }, executeBefore = createNodeFunction) should be(1)
@@ -108,7 +108,7 @@ class CountNodeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", matchAllQuery,
+    executeOnDBMSDefault("joe", "soap", matchAllQuery,
       requiredOperator = Some("NodeCountFromCountStore"), resultHandler = (row, _) => {
         row.get("count") should be(3) // commited (:A) and (:A:B) node and one in TX, but not the commited (:B) node (not granted)
       }, executeBefore = createNodeFunction) should be(1)
@@ -120,7 +120,7 @@ class CountNodeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("DENY TRAVERSE ON GRAPH * NODES A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", matchAllQuery,
+    executeOnDBMSDefault("joe", "soap", matchAllQuery,
       requiredOperator = Some("NodeCountFromCountStore"), resultHandler = (row, _) => {
         row.get("count") should be(2) // commited (:B) node and one in TX, but not the commited (:A) and (:A:B) nodes (denied)
       }, executeBefore = createNodeFunction) should be(1)
@@ -133,7 +133,7 @@ class CountNodeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", matchLabelQueryWithUpdate,
+    executeOnDBMSDefault("joe", "soap", matchLabelQueryWithUpdate,
       resultHandler = (row, _) => {
         row.get("count") should be(3) // commited (:A) and (:A:B) nodes and one in TX, but not the commited (:B) node (not matched)
       }) should be(1)
@@ -144,7 +144,7 @@ class CountNodeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", matchLabelQueryWithUpdate,
+    executeOnDBMSDefault("joe", "soap", matchLabelQueryWithUpdate,
       resultHandler = (row, _) => {
         row.get("count") should be(3) // commited (:A) and (:A:B) nodes and one in TX, but not the commited (:B) node (not matched)
       }) should be(1)
@@ -155,7 +155,7 @@ class CountNodeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("GRANT TRAVERSE ON GRAPH * NODES B TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", matchLabelQueryWithUpdate,
+    executeOnDBMSDefault("joe", "soap", matchLabelQueryWithUpdate,
       resultHandler = (row, _) => {
         row.get("count") should be(2) // commited (:A:B) and one in TX, but not the commited (:A) node (not granted) and (:B) node (not matched)
       }) should be(1)
@@ -167,7 +167,7 @@ class CountNodeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("DENY TRAVERSE ON GRAPH * NODES A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", matchLabelQueryWithUpdate,
+    executeOnDBMSDefault("joe", "soap", matchLabelQueryWithUpdate,
       resultHandler = (row, _) => {
         row.get("count") should be(1) // one in TX, but not the commited (:A), (:A:B) nodes (denied) and (:B) node (not matched)
       }) should be(1)
@@ -179,7 +179,7 @@ class CountNodeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("DENY TRAVERSE ON GRAPH * NODES B TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", matchLabelQueryWithUpdate,
+    executeOnDBMSDefault("joe", "soap", matchLabelQueryWithUpdate,
       resultHandler = (row, _) => {
         row.get("count") should be(2) // commited (:A) and one in TX, but not the commited (:A:B) node (denied) and (:B) node (not matched and denied)
       }) should be(1)
@@ -192,7 +192,7 @@ class CountNodeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", matchAllQueryWithUpdate,
+    executeOnDBMSDefault("joe", "soap", matchAllQueryWithUpdate,
       resultHandler = (row, _) => {
         row.get("count") should be(4) // commited nodes and one in TX
       }) should be(1)
@@ -203,7 +203,7 @@ class CountNodeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", matchAllQueryWithUpdate,
+    executeOnDBMSDefault("joe", "soap", matchAllQueryWithUpdate,
       resultHandler = (row, _) => {
         row.get("count") should be(3) // commited (:A) and (:A:B) node and one in TX, but not the commited (:B) node (not granted)
       }) should be(1)
@@ -215,7 +215,7 @@ class CountNodeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("DENY TRAVERSE ON GRAPH * NODES A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", matchAllQueryWithUpdate,
+    executeOnDBMSDefault("joe", "soap", matchAllQueryWithUpdate,
       resultHandler = (row, _) => {
         row.get("count") should be(2) // commited (:B) node and one in TX, but not the commited (:A) and (:A:B) nodes (denied)
       }) should be(1)

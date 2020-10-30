@@ -5,8 +5,6 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import java.util
-
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.graphdb.RelationshipType
@@ -248,60 +246,6 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
     executeOnDBMSDefault("joe", "soap", query, resultHandler = (_, _) => {
       fail("Should be empty because all properties are denied on everything")
     }) should be(0)
-  }
-
-  test("Counting queries should work with restricted user") {
-    // The two queries are used by the browser
-    val countingNodesQuery = "MATCH () RETURN { name:'nodes', data:count(*) } AS result"
-    val countingRelsQuery = "MATCH ()-[]->() RETURN { name:'relationships', data: count(*)} AS result"
-
-    // Given
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (:Person)-[:WROTE]->(:Letter)<-[:HAS_STAMP]-(:Stamp)")
-
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE USER tim SET PASSWORD '123' CHANGE NOT REQUIRED")
-    execute("CREATE ROLE role")
-    execute("GRANT ROLE role TO tim")
-    execute("GRANT ACCESS ON DATABASE * TO role")
-    execute("GRANT MATCH {*} ON GRAPH * ELEMENTS * TO role")
-    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIP WROTE TO role")
-
-    // RELS
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    // When & Then
-
-    // unrestricted:
-    execute(countingRelsQuery).toList should be(List(Map("result" -> Map("data" -> 2, "name" -> "relationships"))))
-
-    // restricted
-    executeOnDBMSDefault("tim", "123", countingRelsQuery,
-      resultHandler = (row, _) => {
-        val result = row.get("result").asInstanceOf[util.Map[String, AnyRef]]
-        result.get("data") should be (1L)
-        result.get("name") should be ("relationships")
-      }
-    ) should be(1)
-
-    // Given
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY TRAVERSE ON GRAPH * NODES Person TO role")
-
-    // NODES
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    // When & Then
-
-    // unrestricted:
-    execute(countingNodesQuery).toList should be(List(Map("result" -> Map("data" -> 3, "name" -> "nodes"))))
-
-    // restricted
-    executeOnDBMSDefault("tim", "123", countingNodesQuery,
-      resultHandler = (row, _) => {
-        val result = row.get("result").asInstanceOf[util.Map[String, AnyRef]]
-        result.get("data") should be (2L)
-        result.get("name") should be ("nodes")
-      }
-    ) should be(1)
   }
 
   test("should see label and type but not properties when returning path with only full traverse privilege") {

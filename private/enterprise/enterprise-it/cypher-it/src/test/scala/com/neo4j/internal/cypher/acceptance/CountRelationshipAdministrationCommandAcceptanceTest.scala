@@ -30,7 +30,7 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
 
     //THEN
-    executeOnDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
       row.get("count(r)") should be(0)
     }) should be(1)
   }
@@ -45,7 +45,7 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
       row.get("count(r)") should be(1)
     }) should be(1)
   }
@@ -60,7 +60,7 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
       row.get("count(r)") should be(2)
     }) should be(1)
   }
@@ -76,7 +76,7 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
       row.get("count(r)") should be(0)
     }) should be(1)
   }
@@ -90,7 +90,7 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     execute("GRANT MATCH {*} ON GRAPH * NODES A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH ()-[r:LOVES]->() RETURN count(r)", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH ()-[r:LOVES]->() RETURN count(r)", resultHandler = (row, _) => {
       row.get("count(r)") should be(0)
     }) should be(1)
   }
@@ -105,7 +105,7 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH ()-[r:LOVES]->() RETURN count(r)", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH ()-[r:LOVES]->() RETURN count(r)", resultHandler = (row, _) => {
       row.get("count(r)") should be(1)
     }) should be(1)
   }
@@ -121,7 +121,7 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH ()-[r:LOVES]->() RETURN count(r)", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH ()-[r:LOVES]->() RETURN count(r)", resultHandler = (row, _) => {
       row.get("count(r)") should be(2)
     }) should be(1)
   }
@@ -137,7 +137,7 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
       row.get("count(r)") should be(0)
     }) should be(1)
   }
@@ -263,7 +263,7 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     execute(countQuery).toList should be(List(Map("count" -> 2)))
 
     // THEN
-    executeOnDefault("joe", "soap", countQuery, requiredOperator = Some("RelationshipCountFromCountStore"), resultHandler = (row, _) => {
+    executeOnDBMSDefault("joe", "soap", countQuery, requiredOperator = Some("RelationshipCountFromCountStore"), resultHandler = (row, _) => {
       row.get("count") should be(3)
     }, executeBefore = tx => tx.execute("CREATE (:A)-[:R]->(:A)<-[:R]-(:B)")) should be(1)
 
@@ -295,7 +295,7 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     execute(countingRelsQuery).toList should be(List(Map("result" -> Map("data" -> 2, "name" -> "relationships"))))
 
     // restricted
-    executeOnDefault("tim", "123", countingRelsQuery,
+    executeOnDBMSDefault("tim", "123", countingRelsQuery,
       resultHandler = (row, _) => {
         val result = row.get("result").asInstanceOf[util.Map[String, AnyRef]]
         result.get("data") should be(1L)
@@ -315,7 +315,7 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     execute(countingNodesQuery).toList should be(List(Map("result" -> Map("data" -> 3, "name" -> "nodes"))))
 
     // restricted
-    executeOnDefault("tim", "123", countingNodesQuery,
+    executeOnDBMSDefault("tim", "123", countingNodesQuery,
       resultHandler = (row, _) => {
         val result = row.get("result").asInstanceOf[util.Map[String, AnyRef]]
         result.get("data") should be(2L)
@@ -335,7 +335,7 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     val testCounts: PartialFunction[AnyRef, Unit] = {
       case (query: String, (expectedCount: Int, expectedRows: Int)) =>
         withClue(s"$query:") {
-          executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+          executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
             withClue("result should be:") {
               row.get("count") should be(expectedCount)
             }

@@ -167,7 +167,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
   private val create_drop_database_is_blocked = config.get(GraphDatabaseInternalSettings.block_create_drop_database)
   private val start_stop_database_is_blocked = config.get(GraphDatabaseInternalSettings.block_start_stop_database)
   private val operator_name = config.get(GraphDatabaseInternalSettings.upgrade_username)
-  private val default_database = config.get(GraphDatabaseSettings.default_database)
 
   override def name: String = "enterprise administration-commands"
 
@@ -221,21 +220,19 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // SHOW USERS
     case ShowUsers(source, symbols, yields, returns) => (context, parameterMapping) =>
-      val defaultDatabaseKey = internalKey("defaultDatabase")
       SystemCommandExecutionPlan("ShowUsers", normalExecutionEngine,
         s"""MATCH (u:User)
           |OPTIONAL MATCH (u)-[:HAS_ROLE]->(r:Role)
           |WITH u, r.name as roleNames ORDER BY roleNames
           |WITH u, collect(roleNames) as roles
-          |OPTIONAL MATCH (d:Database)
-          |WHERE d.name = u.defaultDatabase AND d.status = "online"
+          |MATCH (systemDefaultDatabase:Database)
+          |WHERE systemDefaultDatabase.default = true
           |WITH u.name as user, roles + 'PUBLIC' as roles, u.passwordChangeRequired AS passwordChangeRequired,
           |u.suspended AS suspended,
-          |u.defaultDatabase as requestedDefaultDatabase,
-          |coalesce(d.name, $$`$defaultDatabaseKey`) as currentDefaultDatabase
+          |coalesce(u.defaultDatabase, systemDefaultDatabase.name) as defaultDatabase
           ${AdministrationShowCommandUtils.generateReturnClause(symbols, yields, returns, Seq("user"))}
           |""".stripMargin,
-        VirtualValues.map(Array(defaultDatabaseKey), Array(Values.stringValue(default_database))),
+        VirtualValues.EMPTY_MAP,
         source = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
       )
 
@@ -244,7 +241,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       val currentUserKey = internalKey("currentUser")
       val currentUserRolesKey = internalKey("currentUserRoles")
       val currentUserPwChangeKey = internalKey("currentUserPwChange")
-      val defaultDatabaseKey = internalKey("defaultDatabase")
 
       // securityContext.subject.username() is "" if the securityContext is AUTH_DISABLED (both for community and enterprise)
       // so test for this and return 0 rows in this case
@@ -253,20 +249,18 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
            |WHERE user <> ""
            |OPTIONAL MATCH (u:User)
            |WHERE u.name = $$`$currentUserKey`
-           |OPTIONAL MATCH (d:Database)
-           |WHERE d.name = u.defaultDatabase AND d.status = "online"
+           |MATCH (systemDefaultDatabase:Database)
+           |WHERE systemDefaultDatabase.default = true
            |WITH user, roles, passwordChangeRequired, coalesce(u.suspended, false) AS suspended,
-           |u.defaultDatabase as requestedDefaultDatabase,
-           |coalesce(d.name, $$`$defaultDatabaseKey`) as currentDefaultDatabase
+           |coalesce(u.defaultDatabase, systemDefaultDatabase.name) as defaultDatabase
            |${AdministrationShowCommandUtils.generateReturnClause(symbols, yields, returns, Seq("user"))}
            |""".stripMargin,
         VirtualValues.EMPTY_MAP,
         parameterGenerator = (_, securityContext) => VirtualValues.map(
-          Array(currentUserKey, currentUserRolesKey, currentUserPwChangeKey, defaultDatabaseKey),
+          Array(currentUserKey, currentUserRolesKey, currentUserPwChangeKey),
           Array(Values.utf8Value(securityContext.subject().username()),
             Values.stringArray(securityContext.roles().asScala.toArray: _*),
-            Values.booleanValue(securityContext.subject.getAuthenticationResult == AuthenticationResult.PASSWORD_CHANGE_REQUIRED),
-            Values.stringValue(default_database)
+            Values.booleanValue(securityContext.subject.getAuthenticationResult == AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
           )),
       )
 

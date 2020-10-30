@@ -465,12 +465,24 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     result.head("name") shouldBe "neo4j"
   }
 
+  test("should show default DBMS database even when it is stopped") {
+    // GIVEN
+    setup()
+    execute(s"STOP DATABASE ${DEFAULT_DATABASE_NAME}")
+
+    // WHEN
+    val result = execute("SHOW DEFAULT DBMS DATABASE")
+
+    // THEN
+    result.head("name") shouldBe "neo4j"
+  }
+
   test("should show default DBMS database for user with custom default database") {
     // GIVEN
     setup()
     execute("CREATE DATABASE foo")
     execute("GRANT ACCESS ON DATABASE foo TO PUBLIC")
-    execute("CREATE USER user SET PASSWORD '123' CHANGE NOT REQUIRED DEFAULT DATABASE foo")
+    execute("CREATE USER user SET PASSWORD '123' CHANGE NOT REQUIRED SET DEFAULT DATABASE foo")
 
     // WHEN
     executeOnSystem("user", "123", "SHOW DEFAULT DBMS DATABASE", resultHandler = (row, _) => {
@@ -496,7 +508,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     setup()
     execute("CREATE DATABASE foo")
     execute("GRANT ACCESS ON DATABASE foo TO PUBLIC")
-    execute("CREATE USER user SET PASSWORD '123' CHANGE NOT REQUIRED DEFAULT DATABASE foo")
+    execute("CREATE USER user SET PASSWORD '123' CHANGE NOT REQUIRED SET DEFAULT DATABASE foo")
 
     // WHEN
     executeOnSystem("user", "123", "SHOW DEFAULT DATABASE", resultHandler = (row, _) => {
@@ -895,7 +907,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     setup(config)
     execute("CREATE DATABASE foo WAIT")
     execute("GRANT ACCESS ON DATABASE foo TO PUBLIC")
-    execute("CREATE USER bar SET PASSWORD '123' CHANGE NOT REQUIRED DEFAULT DATABASE foo")
+    execute("CREATE USER bar SET PASSWORD '123' CHANGE NOT REQUIRED SET DEFAULT DATABASE foo")
 
     // WHEN
     executeOnSystem("bar", "123", "SHOW DATABASE foo", resultHandler = (row, _) => {
@@ -914,47 +926,56 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     }) should be (1)
   }
 
-  test("should default to 'system default database' when 'current default database' is stopped in SHOW USERS") {
+  test("should show default database when default database is stopped in SHOW USERS") {
     // GIVEN
     val config = Config.defaults()
     config.set[java.lang.Boolean](GraphDatabaseSettings.auth_enabled, true)
     setup(config)
     execute("CREATE DATABASE foo WAIT")
     execute("GRANT ACCESS ON DATABASE foo TO PUBLIC")
-    execute("CREATE USER bar SET PASSWORD '123' DEFAULT DATABASE foo")
+    execute("CREATE USER bar SET PASSWORD '123' SET DEFAULT DATABASE foo")
     execute("STOP DATABASE foo")
 
     // WHEN
     val result = execute("SHOW USERS WHERE user = 'bar'")
 
     // THEN
-    result.toSet should be(Set(user("bar", requestedDefaultDatabase = "foo", currentDefaultDatabase = "neo4j")))
+    result.toSet should be(Set(user("bar", defaultDatabase = "foo")))
   }
 
-  test("should update 'current default database' when 'requested default database' is created") {
+  test("should retain user default database when database is created") {
     // GIVEN
+    val config = Config.defaults()
+    config.set[java.lang.Boolean](GraphDatabaseSettings.auth_enabled, true)
+    setup(config)
     val username = "foo"
-    execute(s"CREATE USER $username SET PASSWORD $$password DEFAULT DATABASE $$database", Map("password" -> "pass", "database" -> "bar"))
-
-    // WHEN
-    execute("CREATE")
+    execute(s"CREATE USER $username SET PASSWORD $$password SET DEFAULT DATABASE $$database", Map("password" -> "pass", "database" -> "bar"))
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user(username, requestedDefaultDatabase = "bar", currentDefaultDatabase = DEFAULT_DATABASE_NAME))
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user(username, defaultDatabase = "bar"))
+
+    // WHEN
+    execute("CREATE DATABASE bar WAIT")
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user(username, defaultDatabase = "bar"))
     testUserLogin(username, "pass", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
-  test("should default to 'default database' when 'requested default database' is dropped") {
+  test("should retain user default database when database is dropped") {
     // GIVEN
+    val config = Config.defaults()
+    config.set[java.lang.Boolean](GraphDatabaseSettings.auth_enabled, true)
+    setup(config)
     val username = "foo"
     execute("CREATE DATABASE bar")
-    execute(s"CREATE USER $username SET PASSWORD $$password DEFAULT DATABASE $$database", Map("password" -> "pass", "database" -> "bar"))
+    execute(s"CREATE USER $username SET PASSWORD $$password SET DEFAULT DATABASE $$database", Map("password" -> "pass", "database" -> "bar"))
 
     // WHEN
     execute("DROP DATABASE bar")
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user(username, requestedDefaultDatabase = "bar", currentDefaultDatabase = DEFAULT_DATABASE_NAME))
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user(username, defaultDatabase = "bar"))
     testUserLogin(username, "pass", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
@@ -1008,7 +1029,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     // The new default database should be started when the system is restarted
-    result2.toSet should be(Set(db("foo", default = true)))
+    result2.toSet should be(Set(db("foo", default = true, systemDefault = true)))
   }
 
   test("should show database using mixed case name") {
@@ -1031,7 +1052,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val result = execute("SHOW DATABASES")
 
     // THEN
-    result.toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true), db(SYSTEM_DATABASE_NAME)))
+    result.toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should show custom default and system databases") {
@@ -1044,7 +1065,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val result = execute("SHOW DATABASES")
 
     // THEN
-    result.toSet should be(Set(db("foo", default = true), db(SYSTEM_DATABASE_NAME)))
+    result.toSet should be(Set(db("foo", default = true, systemDefault = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should show databases for switch of default database") {
@@ -1057,17 +1078,17 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val result = execute("SHOW DATABASES")
 
     // THEN
-    result.toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true), db("foo"), db(SYSTEM_DATABASE_NAME)))
+    result.toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true), db("foo"), db(SYSTEM_DATABASE_NAME)))
 
     // GIVEN
     config.set(default_database, "foo")
     initSystemGraph(config)
 
-    // WHEN
+    // WHENtt
     val result2 = execute("SHOW DATABASES")
 
     // THEN
-    result2.toSet should be(Set(db(DEFAULT_DATABASE_NAME), db("foo", default = true), db(SYSTEM_DATABASE_NAME)))
+    result2.toSet should be(Set(db(DEFAULT_DATABASE_NAME), db("foo", default = true, systemDefault = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should show default database") {
@@ -1289,7 +1310,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true)))
     executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(publicPrivileges("joe"))
@@ -1414,7 +1435,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true)))
     executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
 
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -1541,7 +1562,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute(s"CREATE OR REPLACE DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toList should be(List(db(DEFAULT_DATABASE_NAME, default = true)))
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toList should be(List(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true)))
     execute("SHOW DATABASES").toList.size should equal(2)
   }
 
@@ -1667,7 +1688,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // WHEN
     execute("DROP DATABASE baz")
-    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true), db(SYSTEM_DATABASE_NAME)))
+    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true), db(SYSTEM_DATABASE_NAME)))
 
     // THEN
     the[DatabaseNotFoundException] thrownBy {
@@ -1798,7 +1819,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute(s"CREATE DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
-    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true), db(SYSTEM_DATABASE_NAME)))
+    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should drop custom default database") {
@@ -1817,7 +1838,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("CREATE DATABASE foo")
 
     // THEN
-    execute("SHOW DATABASES").toSet should be(Set(db("foo", default = true), db(SYSTEM_DATABASE_NAME)))
+    execute("SHOW DATABASES").toSet should be(Set(db("foo", default = true, systemDefault = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   // Tests for starting databases
@@ -2110,7 +2131,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
-      db(DEFAULT_DATABASE_NAME, status = offlineStatus, default = true), db(SYSTEM_DATABASE_NAME)))
+      db(DEFAULT_DATABASE_NAME, status = offlineStatus, default = true, systemDefault = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should stop custom default database") {
@@ -2123,7 +2144,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("STOP DATABASE foo")
 
     // THEN
-    execute("SHOW DATABASES").toSet should be(Set(db("foo", status = offlineStatus, default = true),
+    execute("SHOW DATABASES").toSet should be(Set(db("foo", status = offlineStatus, default = true, systemDefault = true),
       db(SYSTEM_DATABASE_NAME)))
   }
 
@@ -2135,7 +2156,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // WHEN
     execute(s"STOP DATABASE $DEFAULT_DATABASE_NAME")
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, status = offlineStatus, default = true)))
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, status = offlineStatus, default = true, systemDefault = true)))
 
     // THEN
     the[DatabaseShutdownException] thrownBy {

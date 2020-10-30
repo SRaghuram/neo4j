@@ -363,12 +363,6 @@ class InternalClusterAuthenticationTest
                 {
                     return username;
                 }
-
-                @Override
-                public String defaultDatabase()
-                {
-                    return null;
-                }
             };
         }
 

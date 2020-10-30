@@ -339,7 +339,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
-      db(DEFAULT_DATABASE_NAME, default = true),
+      db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true),
       db("foo", onlineStatus),
       db(SYSTEM_DATABASE_NAME))
     )
@@ -372,7 +372,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
-      db(DEFAULT_DATABASE_NAME, default = true),
+      db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true),
       db("foo", onlineStatus),
       db("bar", offlineStatus),
       db(SYSTEM_DATABASE_NAME))
@@ -383,7 +383,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
-      db(DEFAULT_DATABASE_NAME, default = true),
+      db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true),
       db("foo", onlineStatus),
       db("bar", onlineStatus),
       db(SYSTEM_DATABASE_NAME))
@@ -409,7 +409,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
-      db(DEFAULT_DATABASE_NAME, default = true),
+      db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true),
       db("foo", offlineStatus),
       db("bar", offlineStatus),
       db(SYSTEM_DATABASE_NAME))
@@ -420,7 +420,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
-      db(DEFAULT_DATABASE_NAME, default = true),
+      db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true),
       db("foo", offlineStatus),
       db("bar", onlineStatus),
       db(SYSTEM_DATABASE_NAME))
@@ -443,7 +443,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
-      db(DEFAULT_DATABASE_NAME, default = true),
+      db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true),
       db("foo", onlineStatus),
       db(SYSTEM_DATABASE_NAME))
     )
@@ -468,7 +468,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
-      db(DEFAULT_DATABASE_NAME, default = true),
+      db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true),
       db("foo", offlineStatus),
       db("bar", offlineStatus),
       db(SYSTEM_DATABASE_NAME))
@@ -479,7 +479,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
-      db(DEFAULT_DATABASE_NAME, default = true),
+      db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true),
       db("foo", offlineStatus),
       db("bar", onlineStatus),
       db(SYSTEM_DATABASE_NAME))
@@ -497,7 +497,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"STOP database $DEFAULT_DATABASE_NAME")
 
     // Confirm database status
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, offlineStatus, default = true)))
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, offlineStatus, default = true, systemDefault = true)))
     execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, offlineStatus)))
 
     // WHEN: Grant on default database
@@ -514,7 +514,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     } should have message PERMISSION_DENIED_START
 
     // THEN: new status on default
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, onlineStatus, default = true)))
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, onlineStatus, default = true, systemDefault = true)))
     execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, offlineStatus)))
 
     // WHEN: switch default database and stop both databases
@@ -525,7 +525,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // Confirm database status
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, offlineStatus)))
-    execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, offlineStatus, default = true)))
+    execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, offlineStatus, default = true, systemDefault = true)))
 
     // THEN: confirm privilege
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(granted(startDatabase).database(DEFAULT).role("role").map))
@@ -539,7 +539,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN: new status on new default, but not the old
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, offlineStatus)))
-    execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, onlineStatus, default = true)))
+    execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, onlineStatus, default = true, systemDefault = true)))
   }
 
   test("should fail to start database with all database privilege") {
@@ -573,7 +573,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
-      db(DEFAULT_DATABASE_NAME, default = true),
+      db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true),
       db("foo", offlineStatus),
       db(SYSTEM_DATABASE_NAME))
     )
@@ -596,7 +596,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
-      db(DEFAULT_DATABASE_NAME, default = true),
+      db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true),
       db("foo", offlineStatus),
       db(SYSTEM_DATABASE_NAME))
     )
@@ -627,7 +627,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
-      db(DEFAULT_DATABASE_NAME, default = true),
+      db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true),
       db("foo", offlineStatus),
       db("bar", onlineStatus),
       db(SYSTEM_DATABASE_NAME))
@@ -638,7 +638,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
-      db(DEFAULT_DATABASE_NAME, default = true),
+      db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true),
       db("foo", offlineStatus),
       db("bar", offlineStatus),
       db(SYSTEM_DATABASE_NAME))
@@ -661,7 +661,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
-      db(DEFAULT_DATABASE_NAME, default = true),
+      db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true),
       db("foo", onlineStatus),
       db("bar", onlineStatus),
       db(SYSTEM_DATABASE_NAME))
@@ -672,7 +672,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
-      db(DEFAULT_DATABASE_NAME, default = true),
+      db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true),
       db("foo", onlineStatus),
       db("bar", offlineStatus),
       db(SYSTEM_DATABASE_NAME))
@@ -696,7 +696,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
-      db(DEFAULT_DATABASE_NAME, default = true),
+      db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true),
       db("foo", onlineStatus),
       db("bar", onlineStatus),
       db(SYSTEM_DATABASE_NAME))
@@ -707,7 +707,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
-      db(DEFAULT_DATABASE_NAME, default = true),
+      db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true),
       db("foo", onlineStatus),
       db("bar", offlineStatus),
       db(SYSTEM_DATABASE_NAME))
@@ -723,7 +723,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"CREATE database $newDefaultDatabase")
 
     // Confirm database status
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, onlineStatus, default = true)))
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, onlineStatus, default = true, systemDefault = true)))
     execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, onlineStatus)))
 
     // WHEN: Grant on default database
@@ -740,7 +740,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     } should have message PERMISSION_DENIED_STOP
 
     // THEN: new status on default
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, offlineStatus, default = true)))
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, offlineStatus, default = true, systemDefault = true)))
     execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, onlineStatus)))
 
     // WHEN: switch default database and start both databases
@@ -751,7 +751,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // Confirm database status
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, onlineStatus)))
-    execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, onlineStatus, default = true)))
+    execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, onlineStatus, default = true, systemDefault = true)))
 
     // THEN: confirm privilege
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(granted(stopDatabase).database(DEFAULT).role("role").map))
@@ -765,7 +765,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN: new status on new default, but not the old
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, onlineStatus)))
-    execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, offlineStatus, default = true)))
+    execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, offlineStatus, default = true, systemDefault = true)))
   }
 
   test("should fail to stop database with all database privilege") {
@@ -848,7 +848,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"CREATE database $newDefaultDatabase")
 
     // Confirm default database
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true)))
     execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase)))
     execute(s"SHOW DEFAULT DATABASE").toSet should be(Set(defaultDb(DEFAULT_DATABASE_NAME)))
 

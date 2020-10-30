@@ -201,16 +201,16 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(GraphDatabaseSettings.auth_enabled -> TRUE)
 
   def user(username: String, roles: Seq[String] = Seq.empty, suspended: Boolean = false,
-           passwordChangeRequired: Boolean = true, requestedDefaultDatabase:String = null, currentDefaultDatabase: String = DEFAULT_DATABASE_NAME): Map[String, Any] = {
+           passwordChangeRequired: Boolean = true, defaultDatabase: String = DEFAULT_DATABASE_NAME): Map[String, Any] = {
     val rolesWithPublic = roles.sorted :+ PredefinedRoles.PUBLIC
     Map("user" -> username, "roles" -> rolesWithPublic, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired,
-      "requestedDefaultDatabase" -> requestedDefaultDatabase, "currentDefaultDatabase" -> currentDefaultDatabase)
+      "defaultDatabase" -> defaultDatabase)
   }
 
-  def adminUser(username: String, passwordChangeRequired: Boolean = true, requestedDefaultDatabase:String = null, currentDefaultDatabase: String = DEFAULT_DATABASE_NAME): Map[String, Any] = {
+  def adminUser(username: String, passwordChangeRequired: Boolean = true, defaultDatabase: String = DEFAULT_DATABASE_NAME): Map[String, Any] = {
     val rolesWithPublic = Seq(PredefinedRoles.ADMIN, PredefinedRoles.PUBLIC)
     Map("user" -> username, "roles" -> rolesWithPublic, "suspended" -> false, "passwordChangeRequired" -> passwordChangeRequired,
-      "requestedDefaultDatabase" -> requestedDefaultDatabase, "currentDefaultDatabase" -> currentDefaultDatabase)
+      "defaultDatabase" -> defaultDatabase)
   }
 
   def db(name: String, status: String = onlineStatus, default: Boolean = false, systemDefault: Boolean = false): Map[String, Any] =
@@ -388,6 +388,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     "DROP USER" -> adminAction("drop_user"),
     "SHOW USER" -> adminAction("show_user"),
     "SET USER STATUS" -> adminAction("set_user_status"),
+    "SET USER DEFAULT DATABASE" -> adminAction("set_user_default_database"),
     "SET PASSWORDS" -> adminAction("set_passwords"),
     "ALTER USER" -> adminAction("alter_user"),
     "USER MANAGEMENT" -> adminAction("user_management"),

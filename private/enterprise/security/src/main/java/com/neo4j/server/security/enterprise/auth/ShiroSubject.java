@@ -17,7 +17,6 @@ public class ShiroSubject extends DelegatingSubject
 {
     private AuthenticationResult authenticationResult;
     private ShiroAuthenticationInfo authenticationInfo;
-    private String defaultDatabase;
 
     public ShiroSubject( SecurityManager securityManager, AuthenticationResult authenticationResult )
     {
@@ -32,7 +31,6 @@ public class ShiroSubject extends DelegatingSubject
         super( principals, authenticated, host, session, sessionCreationEnabled, securityManager );
         this.authenticationResult = authenticationResult;
         this.authenticationInfo = authenticationInfo;
-        this.defaultDatabase = authenticationInfo.getDefaultDatabase();
     }
 
     public AuthenticationResult getAuthenticationResult()
@@ -48,11 +46,6 @@ public class ShiroSubject extends DelegatingSubject
     public ShiroAuthenticationInfo getAuthenticationInfo()
     {
         return authenticationInfo;
-    }
-
-    public String getDefaultDatabase()
-    {
-        return defaultDatabase;
     }
 
     public void clearAuthenticationInfo()

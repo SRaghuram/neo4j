@@ -66,7 +66,7 @@ public class SetDefaultDatabaseIT
     void shouldBeNoopWhenAlreadyDefault() throws Exception
     {
         // GIVEN
-        assertDefaultDatabase( "neo4j", cluster );
+        assertSystemDefaultDatabase( "neo4j", cluster );
 
         cluster.systemTx( ( db, tx ) ->
         {
@@ -83,7 +83,7 @@ public class SetDefaultDatabaseIT
     void shouldChangeDatabaseWhenOldDefaultStopped() throws Exception
     {
         // GIVEN
-        assertDefaultDatabase( "neo4j", cluster );
+        assertSystemDefaultDatabase( "neo4j", cluster );
         CausalClusteringTestHelpers.createDatabase( "foo", cluster );
         CausalClusteringTestHelpers.stopDatabase( "neo4j", cluster );
         CausalClusteringTestHelpers.assertDatabaseEventuallyInStateSeenByAll( "foo", cluster.allMembers(), STARTED );
@@ -105,7 +105,7 @@ public class SetDefaultDatabaseIT
         } );
 
         // THEN
-        assertDefaultDatabase( "foo", cluster );
+        assertSystemDefaultDatabase( "foo", cluster );
 
         // Check that we really get the new default when we connect over bolt
         String boltAddress = cluster.randomCoreMember( true ).get().boltAdvertisedAddress();
@@ -118,7 +118,7 @@ public class SetDefaultDatabaseIT
     void shouldChangeDatabaseWhenOldDefaultDropped() throws Exception
     {
         // GIVEN
-        assertDefaultDatabase( "neo4j", cluster );
+        assertSystemDefaultDatabase( "neo4j", cluster );
         CausalClusteringTestHelpers.createDatabase( "foo", cluster );
         CausalClusteringTestHelpers.dropDatabase( "neo4j", cluster );
         CausalClusteringTestHelpers.assertDatabaseEventuallyInStateSeenByAll( "foo", cluster.allMembers(), STARTED );
@@ -135,14 +135,14 @@ public class SetDefaultDatabaseIT
         } );
 
         // THEN
-        assertDefaultDatabase( "foo", cluster );
+        assertSystemDefaultDatabase( "foo", cluster );
     }
 
     @Test
     void shouldChangeDatabaseWhenNewDefaultStopped() throws Exception
     {
         // GIVEN
-        assertDefaultDatabase( "neo4j", cluster );
+        assertSystemDefaultDatabase( "neo4j", cluster );
         CausalClusteringTestHelpers.stopDatabase( "neo4j", cluster );
         CausalClusteringTestHelpers.assertDatabaseEventuallyInStateSeenByAll( "neo4j", cluster.allMembers(), STOPPED );
         CausalClusteringTestHelpers.createDatabase( "foo", cluster, true );
@@ -160,14 +160,14 @@ public class SetDefaultDatabaseIT
         } );
 
         // THEN
-        assertDefaultDatabase( "foo", cluster );
+        assertSystemDefaultDatabase( "foo", cluster );
     }
 
     @Test
     void shouldNotChangeDatabaseWhenOldDefaultOnline() throws Exception
     {
         // GIVEN
-        assertDefaultDatabase( "neo4j", cluster );
+        assertSystemDefaultDatabase( "neo4j", cluster );
         CausalClusteringTestHelpers.createDatabase( "foo", cluster );
         CausalClusteringTestHelpers.assertDatabaseEventuallyStarted( "foo", cluster );
 
@@ -179,14 +179,14 @@ public class SetDefaultDatabaseIT
         } );
 
         // THEN
-        assertDefaultDatabase( "neo4j", cluster );
+        assertSystemDefaultDatabase( "neo4j", cluster );
     }
 
     @Test
     void shouldFailWhenNewDefaultNotCreated() throws Exception
     {
         // GIVEN
-        assertDefaultDatabase( "neo4j", cluster );
+        assertSystemDefaultDatabase( "neo4j", cluster );
 
         cluster.systemTx( ( db, tx ) ->
         {
@@ -196,14 +196,14 @@ public class SetDefaultDatabaseIT
         } );
 
         // THEN
-        assertDefaultDatabase( "neo4j", cluster );
+        assertSystemDefaultDatabase( "neo4j", cluster );
     }
 
     @Test
     void shouldFailWhenNewDefaultDropped() throws Exception
     {
         // GIVEN
-        assertDefaultDatabase( "neo4j", cluster );
+        assertSystemDefaultDatabase( "neo4j", cluster );
         CausalClusteringTestHelpers.createDatabase( "foo", cluster );
         CausalClusteringTestHelpers.assertDatabaseEventuallyStarted( "foo", cluster );
         CausalClusteringTestHelpers.dropDatabase( "foo", cluster );
@@ -217,14 +217,14 @@ public class SetDefaultDatabaseIT
         } );
 
         // THEN
-        assertDefaultDatabase( "neo4j", cluster );
+        assertSystemDefaultDatabase( "neo4j", cluster );
     }
 
     @Test
     void shouldFailIfNotOnSystemDatabase() throws Exception
     {
         // GIVEN
-        assertDefaultDatabase( "neo4j", cluster );
+        assertSystemDefaultDatabase( "neo4j", cluster );
 
         cluster.coreTx( "neo4j", ( db, tx ) ->
         {
@@ -234,14 +234,14 @@ public class SetDefaultDatabaseIT
         } );
 
         // THEN
-        assertDefaultDatabase( "neo4j", cluster );
+        assertSystemDefaultDatabase( "neo4j", cluster );
     }
 
     @Test
     void shouldFailWithWrongParameters() throws Exception
     {
         // GIVEN
-        assertDefaultDatabase( "neo4j", cluster );
+        assertSystemDefaultDatabase( "neo4j", cluster );
 
         cluster.coreTx( "neo4j", ( db, tx ) ->
         {
@@ -265,14 +265,14 @@ public class SetDefaultDatabaseIT
         } );
 
         // THEN
-        assertDefaultDatabase( "neo4j", cluster );
+        assertSystemDefaultDatabase( "neo4j", cluster );
     }
 
-    private void assertDefaultDatabase( String databaseName, Cluster cluster ) throws Exception
+    private void assertSystemDefaultDatabase( String databaseName, Cluster cluster ) throws Exception
     {
         List<ShowDatabasesResultRow> rows = CausalClusteringTestHelpers.showDatabases( cluster );
         Set<String> defaultDbs = rows.stream()
-                                     .filter( ShowDatabasesResultRow::isDefault )
+                                     .filter( ShowDatabasesResultRow::isSystemDefault )
                                      .map( ShowDatabasesResultRow::name )
                                      .collect( Collectors.toSet() );
         assertThat( defaultDbs ).containsOnly( databaseName );

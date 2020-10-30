@@ -53,8 +53,10 @@ public final class ShowDatabasesHelpers
         private final String currentStatus;
         private final String error;
         private final boolean isDefault;
+        private final boolean isSystemDefault;
 
-        ShowDatabasesResultRow( String name, String address, String role, String requestedStatus, String currentStatus, String error, boolean isDefault )
+        ShowDatabasesResultRow( String name, String address, String role, String requestedStatus, String currentStatus, String error, boolean isDefault,
+                                boolean isSystemDefault )
         {
             this.name = name;
             this.address = address;
@@ -63,11 +65,12 @@ public final class ShowDatabasesHelpers
             this.currentStatus = currentStatus;
             this.error = error;
             this.isDefault = isDefault;
+            this.isSystemDefault = isSystemDefault;
         }
 
         static ShowDatabasesResultRow fromResult( Map<String,Object> result )
         {
-            var columnNames = List.of( "name", "address", "role", "requestedStatus", "currentStatus", "error", "default" );
+            var columnNames = List.of( "name", "address", "role", "requestedStatus", "currentStatus", "error", "default", "systemDefault" );
 
             List<String> missingKeys = columnNames.stream().map( col -> Pair.of( col, result.get( col ) ) )
                             .filter( p -> Objects.isNull( p.other() ) )
@@ -90,8 +93,9 @@ public final class ShowDatabasesHelpers
             var currentStatus = resultStrings.get( "currentStatus" );
             var error = resultStrings.get( "error" );
             boolean isDefault = Boolean.parseBoolean( resultStrings.get( "default" ) );
+            boolean isSystemDefault = Boolean.parseBoolean( resultStrings.get( "systemDefault" ) );
 
-            return new ShowDatabasesResultRow( name, address, role, requestedStatus, currentStatus, error, isDefault );
+            return new ShowDatabasesResultRow( name, address, role, requestedStatus, currentStatus, error, isDefault, isSystemDefault );
         }
 
         public String name()
@@ -127,6 +131,11 @@ public final class ShowDatabasesHelpers
         public boolean isDefault()
         {
             return isDefault;
+        }
+
+        public boolean isSystemDefault()
+        {
+            return isSystemDefault;
         }
 
         @Override

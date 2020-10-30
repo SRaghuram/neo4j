@@ -134,7 +134,14 @@ public class EnterpriseSecurityComponentVersion_8_43D1 extends SupportedEnterpri
     @Override
     boolean supportsUpdateAction( PrivilegeAction action )
     {
-        return previous.supportsUpdateAction( action );
+        switch ( action )
+        {
+        case SET_USER_DEFAULT_DATABASE:
+            return true;
+
+        default:
+            return previous.supportsUpdateAction( action );
+        }
     }
 
     @Override
