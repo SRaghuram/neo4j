@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
-import com.neo4j.causalclustering.common.CausalClusteringTestHelpers;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.test.causalclustering.ClusterConfig;
@@ -45,6 +44,7 @@ import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.forceReelection;
 import static com.neo4j.configuration.CausalClusteringSettings.election_failure_detection_window;
 import static com.neo4j.configuration.CausalClusteringSettings.leader_failure_detection_window;
 import static java.util.concurrent.CompletableFuture.allOf;
@@ -227,7 +227,7 @@ class TokenReplicationStressIT
             try
             {
                 SECONDS.sleep( 5 );
-                CausalClusteringTestHelpers.forceReelection( cluster, DEFAULT_DATABASE_NAME );
+                forceReelection( cluster, DEFAULT_DATABASE_NAME );
                 count++;
             }
             catch ( Throwable t )

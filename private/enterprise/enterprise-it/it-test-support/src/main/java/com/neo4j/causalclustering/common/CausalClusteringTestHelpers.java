@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -88,6 +89,7 @@ import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.function.Function.identity;
+import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
@@ -176,7 +178,23 @@ public final class CausalClusteringTestHelpers
 
     public static CoreClusterMember switchLeader( Cluster cluster, String databaseName ) throws Exception
     {
-        return switchLeaderTo( cluster, databaseName, null );
+        var leader = cluster.awaitLeader( databaseName );
+        return await( () ->
+        {
+            try
+            {
+                var followers = cluster.coreMembers().stream().filter( c -> c.serverId() != leader.serverId() ).collect( toSet() );
+                for ( CoreClusterMember follower : followers )
+                {
+                    transferLeaderTo( databaseName, leader, follower );
+                    return await( () -> cluster.getMemberWithAnyRole( databaseName, Role.LEADER ), not( leader::equals ), 15, SECONDS );
+                }
+            }
+            catch ( IOException | TimeoutException ignore )
+            {
+            }
+            return null;
+        }, Objects::nonNull, 2, MINUTES );
     }
 
     public static CoreClusterMember switchLeaderTo( Cluster cluster, CoreClusterMember desiredLeader ) throws Exception
@@ -186,44 +204,39 @@ public final class CausalClusteringTestHelpers
 
     public static CoreClusterMember switchLeaderTo( Cluster cluster, String databaseName, CoreClusterMember desiredLeader ) throws Exception
     {
-        return await( () -> switchLeaderTo0( cluster, databaseName, desiredLeader ), Objects::nonNull, 2, MINUTES );
+        return await( () ->
+        {
+            try
+            {
+                var leader = cluster.awaitLeader( databaseName );
+                if ( leader.serverId().equals( desiredLeader.serverId() ) )
+                {
+                    return leader;
+                }
+                transferLeaderTo( databaseName, leader, desiredLeader );
+                return await( () -> cluster.getMemberWithAnyRole( databaseName, Role.LEADER ), desiredLeader::equals, 15, SECONDS );
+            }
+            catch ( TimeoutException | IOException ignore )
+            {
+                return null;
+            }
+        }, Objects::nonNull, 2, MINUTES );
     }
 
-    private static CoreClusterMember switchLeaderTo0( Cluster cluster, String databaseName, CoreClusterMember desiredLeader )
+    private static void transferLeaderTo( String databaseName, CoreClusterMember currentLeader, CoreClusterMember desiredLeader ) throws IOException
     {
-        try
-        {
-            var leader = cluster.awaitLeader( databaseName );
-            var databaseId = leader.databaseId( databaseName );
-            var raftMachine = leader.resolveDependency( databaseName, RaftMachine.class );
-            var followers = cluster.coreMembers().stream().filter( member -> !member.equals( leader ) ).collect( Collectors.toList() );
-            if ( desiredLeader != null )
-            {
-                if ( leader.equals( desiredLeader ) )
-                {
-                    return desiredLeader;
-                }
-                assertTrue( followers.contains( desiredLeader ), "Desired leader is not one of the followers" );
-            }
-            else
-            {
-                desiredLeader = followers.get( 0 ); // maybe randomize
-            }
-            // this here is the magic, where in the name of the current leader the desired leader is proposed as a new leader
-            var raftLeader = leader.raftMemberIdFor( databaseId );
-            var raftDesiredLeader = desiredLeader.raftMemberIdFor( databaseId );
-            raftMachine.handle( new RaftMessages.LeadershipTransfer.Proposal( raftLeader, raftDesiredLeader, Set.of() ) );
-            return await( () -> cluster.getMemberWithAnyRole( DEFAULT_DATABASE_NAME, Role.LEADER ), desiredLeader::equals, 15, SECONDS );
-        }
-        catch ( Exception e )
-        {
-            return null;
-        }
+        var databaseId = currentLeader.databaseId( databaseName );
+        var raftMachine = currentLeader.resolveDependency( databaseName, RaftMachine.class );
+
+        // this here is the magic, where in the name of the current leader the desired leader is proposed as a new leader
+        var raftLeader = currentLeader.raftMemberIdFor( databaseId );
+        var raftDesiredLeader = desiredLeader.raftMemberIdFor( databaseId );
+        raftMachine.handle( new RaftMessages.LeadershipTransfer.Proposal( raftLeader, raftDesiredLeader, Set.of() ) );
     }
 
     public static void forceReelection( Cluster cluster, String databaseName ) throws Exception
     {
-        runWithLeaderDisabled( cluster, databaseName, ( leader, others ) -> null );
+        switchLeader( cluster, databaseName );
     }
 
     public static <T> T runWithLeaderDisabled( Cluster cluster, DisabledRaftAction<T> disabledMemberAction ) throws Exception

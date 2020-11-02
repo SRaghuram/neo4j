@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core;
 
+import com.neo4j.causalclustering.common.CausalClusteringTestHelpers;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.RaftMonitors;
 import com.neo4j.causalclustering.core.consensus.log.monitoring.RaftLogCommitIndexMonitor;
@@ -105,11 +106,11 @@ class CCIdReuseBySwitchAndRollbackIT
         barrier.await();
         // Do a leader switch, so that instance B is now leader
         // Instance B performs a transaction that creates a relationship, which will also be R (assert this)
-        var instanceB = switchLeader( cluster, monitors, null );
+        var instanceB = updateAndSwitchLeader( cluster, monitors );
         doIdMaintenance( allMembers );
         createRelationship( instanceB, node, null, id -> assertEquals( relationship, id ) );
         // Now do a leader switch back to instance A
-        switchLeader( cluster, monitors, instanceA );
+        updateAndSwitchLeaderTo( cluster, monitors, instanceA );
         // Let T continue and fail, which will then mark R as deleted when it's rolling back     <---- this is the bug, right there
         barrier.release();
         assertThrows( Exception.class, t::get );
@@ -134,12 +135,19 @@ class CCIdReuseBySwitchAndRollbackIT
         db.getDependencyResolver().resolveDependency( IdController.class ).maintenance( true );
     }
 
-    private CoreClusterMember switchLeader( Cluster cluster,
+    private CoreClusterMember updateAndSwitchLeader( Cluster cluster,
+            List<RaftLogCommitIndexMonitor> monitors ) throws Exception
+    {
+        assertEventually( "Members could not catch up", () -> allMonitorsHaveSameIndex( monitors ), same -> same, 30, TimeUnit.SECONDS );
+        return CausalClusteringTestHelpers.switchLeader( cluster );
+    }
+
+    private void updateAndSwitchLeaderTo( Cluster cluster,
             List<RaftLogCommitIndexMonitor> monitors,
             CoreClusterMember expectedNewLeader ) throws Exception
     {
         assertEventually( "Members could not catch up", () -> allMonitorsHaveSameIndex( monitors ), same -> same, 30, TimeUnit.SECONDS );
-        return switchLeaderTo( cluster, expectedNewLeader );
+        switchLeaderTo( cluster, expectedNewLeader );
     }
 
     private void deleteRelationship( CoreClusterMember instance, long relationship )
