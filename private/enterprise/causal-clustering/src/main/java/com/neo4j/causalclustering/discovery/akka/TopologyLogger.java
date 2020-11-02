@@ -27,7 +27,7 @@ import org.neo4j.util.VisibleForTesting;
 import static java.lang.String.format;
 import static java.lang.System.lineSeparator;
 
-public class TopologyLogger extends TopologyStateLogger<Topology<?>>
+public class TopologyLogger extends BatchingMultiDatabaseLogger<Topology<?>>
 {
     public TopologyLogger( TimerService timerService, LogProvider logProvider, Class<?> loggingClass,
             Supplier<Set<DatabaseId>> allDatabaseSupplier )
@@ -43,9 +43,9 @@ public class TopologyLogger extends TopologyStateLogger<Topology<?>>
     }
 
     @Override
-    protected Optional<TopologyChange> computeTopologyChange( String topologyDescription,
-                                                            Topology<?> newTopology,
-                                                            Topology<?> oldTopology )
+    protected Optional<ChangeKey> computeChange( String topologyDescription,
+                                                 Topology<?> newTopology,
+                                                 Topology<?> oldTopology )
     {
         var currentServers = Collections.unmodifiableSet( newTopology.servers().keySet() );
 
@@ -97,11 +97,11 @@ public class TopologyLogger extends TopologyStateLogger<Topology<?>>
         {
             return format( "is now: %s", currentMembers.isEmpty() ? "empty" : serversToStableString( currentMembers ) ) +
                             lineSeparator() +
-                            (lostMembers.isEmpty() ? "No servers where lost" :
-                             format( "Lost servers :%s", serversToStableString( lostMembers ) )) +
+                            ( lostMembers.isEmpty() ? "No servers where lost" :
+                             format( "Lost servers: %s", serversToStableString( lostMembers ) ) ) +
                             lineSeparator() +
-                            (newMembers.isEmpty() ? "No new servers" :
-                             format( "New servers: %s%s", TopologyStateLogger.newPaddedLine(), serverInfosToStableString( newMembers ) ));
+                            ( newMembers.isEmpty() ? "No new servers" :
+                             format( "New servers: %s%s", BatchingMultiDatabaseLogger.newPaddedLine(), serverInfosToStableString( newMembers ) ) );
         }
 
         @Override

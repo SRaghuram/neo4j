@@ -44,13 +44,13 @@ import static java.util.Collections.emptyMap;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
-import static org.neo4j.internal.helpers.Strings.printMap;
 
 public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateSink, BootstrapStateUpdateSink, DatabaseStateUpdateSink, RaftMappingUpdateSink
 {
     private final Log log;
     private final BiConsumer<DatabaseId,Set<RaftMemberId>> callback;
     private final TopologyLogger topologyLogger;
+    private final DatabaseStateLogger stateLogger;
     private volatile Map<ServerId,CoreServerInfo> coresByServerId;
     private volatile Map<ServerId,ReadReplicaInfo> readReplicasByServerId;
     private volatile Map<DatabaseId,LeaderInfo> remoteDbLeaderMap;
@@ -71,6 +71,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         this.callback = listener;
         this.raftMappingState = new RaftMappingState( log );
         this.topologyLogger = new TopologyLogger( timerService, logProvider, getClass(), this::getAllDatabases );
+        this.stateLogger = new DatabaseStateLogger( timerService, logProvider, getClass(), this::getAllDatabases );
     }
 
     @Override
@@ -87,8 +88,6 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
             }
             this.coresByServerId = extractServerInfos( coreTopologiesByDatabase );
             topologyLogger.logChange( "core topology", newCoreTopology, currentCoreTopology );
-            this.coresByServerId = extractServerInfos( coreTopologiesByDatabase );
-            topologyLogger.logChange( "Core topology", newCoreTopology, currentCoreTopology );
             callback.accept( databaseId, newCoreTopology.members( this::resolveRaftMemberForServer ) );
         }
 
@@ -135,33 +134,21 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     @Override
     public void onDbStateUpdate( ReplicatedDatabaseState newState )
     {
-        var role = newState.containsCoreStates() ? "core" : "read_replica";
+        var changeDescription = newState.containsCoreStates() ? "core" : "read replica";
+        changeDescription  += " replicated states";
         var statesByDatabase = newState.containsCoreStates() ? coreStatesByDatabase : readReplicaStatesByDatabase;
         var databaseId = newState.databaseId();
         var previousState = statesByDatabase.put( databaseId, newState );
 
         if ( !Objects.equals( previousState, newState ) )
         {
-            StringBuilder stringBuilder =
-                    new StringBuilder( format( "The %s replicated states for database %s changed", role, databaseId ) ).append( lineSeparator() );
             if ( previousState == null )
             {
-                stringBuilder.append( "previous state was empty" );
+                previousState = newState.containsCoreStates() ?
+                                ReplicatedDatabaseState.ofCores( databaseId, Map.of() ) :
+                                ReplicatedDatabaseState.ofReadReplicas( databaseId, Map.of() );
             }
-            else
-            {
-                stringBuilder.append( "previous state was:" ).append( newPaddedLine() ).append( printMap( previousState.memberStates(), newPaddedLine() ) );
-            }
-            stringBuilder.append( lineSeparator() );
-            if ( newState.isEmpty() )
-            {
-                stringBuilder.append( "current state is empty" );
-            }
-            else
-            {
-                stringBuilder.append( "current state is:" ).append( newPaddedLine() ).append( printMap( newState.memberStates(), newPaddedLine() ) );
-            }
-            log.info( stringBuilder.toString() );
+            stateLogger.logChange( changeDescription, newState, previousState );
         }
 
         if ( newState.isEmpty() )

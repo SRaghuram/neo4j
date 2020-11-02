@@ -1,11 +1,8 @@
 /*
- *
- *  * Copyright (c) 2002-2020 "Neo4j,"
- *  * Neo4j Sweden AB [http://neo4j.com]
- *  * This file is a commercial add-on to Neo4j Enterprise Edition.
- *
+ * Copyright (c) 2002-2020 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-
 package com.neo4j.causalclustering.discovery.akka;
 
 import com.neo4j.causalclustering.core.consensus.schedule.Timeout;
@@ -39,7 +36,7 @@ import static java.lang.String.format;
 import static java.lang.System.lineSeparator;
 import static org.neo4j.internal.helpers.Strings.printMap;
 
-public abstract class TopologyStateLogger<T>
+public abstract class BatchingMultiDatabaseLogger<T>
 {
     protected static final Duration BATCH_TIME = Duration.ofMillis( 1000 );
     protected static final String BATCH_TIMER_NAME = "BATCH_LOG_TIMER";
@@ -53,10 +50,10 @@ public abstract class TopologyStateLogger<T>
     protected volatile ChangeKey batchKey;
     protected volatile List<DatabaseId> batchedDatabaseIds;
 
-    protected TopologyStateLogger( TimerService timerService, LogProvider logProvider, Class<?> loggingClass,
-                         Supplier<Set<DatabaseId>> allDatabaseSupplier, Duration batchTime, ChangeKey emptyBatchKey )
+    protected BatchingMultiDatabaseLogger( TimerService timerService, LogProvider logProvider, Class<?> loggingClass,
+                                           Supplier<Set<DatabaseId>> allDatabaseSupplier, Duration batchTime, ChangeKey emptyBatchKey )
     {
-        this.timer = timerService.create( () -> BATCH_TIMER_NAME, Group.TOPOLOGY_LOGGER, unused -> flushTopologyChange() );
+        this.timer = timerService.create( () -> BATCH_TIMER_NAME, Group.TOPOLOGY_LOGGER, unused -> flushChange() );
         this.allDatabaseSupplier = allDatabaseSupplier;
         this.log = logProvider.getLog( loggingClass );
         this.emptyKey = emptyBatchKey;
@@ -67,7 +64,7 @@ public abstract class TopologyStateLogger<T>
 
     public void logChange( String changeDescription, T newInfo, T oldInfo )
     {
-        var change = computeTopologyChange( changeDescription, newInfo, oldInfo );
+        var change = computeChange( changeDescription, newInfo, oldInfo );
         change.ifPresent( content -> handleTopologyChange( content, extractDatabaseId( newInfo ) ) );
     }
 
@@ -75,24 +72,24 @@ public abstract class TopologyStateLogger<T>
     {
         if ( !Objects.equals( batchKey, changeKey ) )
         {
-            flushTopologyChange();
+            flushChange();
             batchKey = changeKey;
             timer.set( batchTimeout );
         }
         batchedDatabaseIds.add( databaseId );
     }
 
-    protected abstract Optional<? extends ChangeKey> computeTopologyChange( String changeDescription, T newInfo, T oldInfo );
+    protected abstract Optional<ChangeKey> computeChange( String changeDescription, T newInfo, T oldInfo );
 
     protected abstract DatabaseId extractDatabaseId( T info );
 
-    private void flushTopologyChange()
+    private void flushChange()
     {
         ChangeKey currentChangeKey;
         List<DatabaseId> databaseIds;
         synchronized ( this )
         {
-            // Bail out early if there are no topology changes to log
+            // Bail out early if there are no changes to log
             if ( batchKey.equals( emptyKey ) )
             {
                 return;
