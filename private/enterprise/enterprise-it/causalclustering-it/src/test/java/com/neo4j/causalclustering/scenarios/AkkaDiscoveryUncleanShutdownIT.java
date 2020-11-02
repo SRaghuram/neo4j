@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.common.ClusterOverviewHelper;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.test.causalclustering.ClusterConfig;
@@ -28,6 +29,7 @@ import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -75,6 +77,28 @@ class AkkaDiscoveryUncleanShutdownIT
     private Cluster cluster;
     private List<CoreClusterMember> runningCores;
     private Set<Integer> removedCoreIds;
+
+    @ParameterizedTest( name = "first_core_to_start={0}" )
+    @ValueSource( ints = {0, 1, 2} )
+    void shouldHandleOneCoreStartingBeforeAllTheOthers( int coreToStartFirst ) throws Exception
+    {
+        // given
+        var clusterConfig = newClusterConfig( 2 );
+        cluster = clusterFactory.createCluster( clusterConfig );
+
+        // when
+        var started = CompletableFuture.runAsync( cluster.getCoreMemberByIndex( coreToStartFirst )::start );
+        Thread.sleep( Duration.ofMinutes( 2 ).toMillis() );
+        Cluster.startMembers( cluster.coreMembers().stream().filter( c -> c.index() != coreToStartFirst ).toArray( ClusterMember[]::new ) );
+        Cluster.startMembers( cluster.readReplicas().toArray( ClusterMember[]::new ) );
+
+        // then
+        assertThat( started ).succeedsWithin( Duration.ofMinutes( 1 ) );
+        runningCores = List.copyOf( cluster.coreMembers() );
+        removedCoreIds = new HashSet<>();
+        assertOverviews();
+        checkClusterHealthy();
+    }
 
     @ParameterizedTest( name = "minimum_core_cluster_size_at_runtime={0}" )
     @ValueSource( ints = {2, 3} )

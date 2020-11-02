@@ -25,10 +25,12 @@ import com.neo4j.causalclustering.identity.RaftMemberId;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 import org.neo4j.kernel.database.DatabaseId;
 
 import static com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.RAFT_ID_PUBLISHER;
+import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
 
 /**
  * Keeps a mapping from the RaftGroupId to the RaftMemberId which was first in publishing it.
@@ -59,7 +61,13 @@ public class RaftIdActor extends BaseReplicatedDataActor<LWWMap<RaftGroupId,Raft
     @Override
     protected void sendInitialDataToReplicator( DiscoveryMember memberSnapshot )
     {
-        var localRaftIdsMap = memberSnapshot.databaseMemberships().entrySet().stream()
+        Predicate<Map.Entry<DatabaseId,RaftMemberId>> isRaftIdPublishable = entry ->
+                memberSnapshot.databaseStates().containsKey( entry.getKey() )
+                && memberSnapshot.databaseStates().get( entry.getKey() ).operatorState() != INITIAL;
+
+        var localRaftIdsMap = memberSnapshot.databaseMemberships().entrySet()
+                                            .stream()
+                                            .filter( isRaftIdPublishable )
                                             .reduce( LWWMap.create(), this::addRaftId, LWWMap::merge );
 
         if ( !localRaftIdsMap.isEmpty() )
