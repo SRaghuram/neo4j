@@ -46,7 +46,7 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
     override def remove(key: Long): AbstractArgumentStateMap.StateController[STATE] =
       super[ConcurrentHashMap].remove(key)
 
-    override def entries(): util.Iterator[Map.Entry[Long, AbstractArgumentStateMap.StateController[STATE]]] = {
+    override def valuesIterator(): util.Iterator[AbstractArgumentStateMap.StateController[STATE]] = {
       entrySet().iterator()
     }
 

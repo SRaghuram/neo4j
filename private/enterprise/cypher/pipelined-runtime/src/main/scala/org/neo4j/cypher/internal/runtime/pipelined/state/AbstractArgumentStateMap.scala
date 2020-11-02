@@ -59,9 +59,9 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     def getFirstValue(): V
 
     /**
-     * @return an iterator over all entries
+     * @return an iterator over all values
      */
-    def entries(): java.util.Iterator[java.util.Map.Entry[Long, V]]
+    def valuesIterator(): java.util.Iterator[V]
   }
 
   /**
@@ -133,11 +133,11 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   }
 
   override def takeCompleted(n: Int): IndexedSeq[STATE] = {
-    val iterator = controllers.entries()
+    val iterator = controllers.valuesIterator()
     val builder = new ArrayBuffer[STATE]
 
     while(iterator.hasNext && builder.size < n) {
-      val controller = iterator.next().getValue
+      val controller = iterator.next()
       val completedState = controller.takeCompleted()
       if (completedState != null) {
         DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, completedState.argumentRowId)
@@ -205,7 +205,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   }
 
   override def peekCompleted(): Iterator[STATE] = {
-    controllers.entries().asScala.map(_.getValue).map[STATE](_.peekCompleted).filter(_ != null)
+    controllers.valuesIterator().asScala.map[STATE](_.peekCompleted).filter(_ != null)
   }
 
   override def peek(argumentId: Long): STATE = {
@@ -218,10 +218,10 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   }
 
   override def hasCompleted: Boolean = {
-    val iterator = controllers.entries()
+    val iterator = controllers.valuesIterator()
 
     while(iterator.hasNext) {
-      val controller = iterator.next().getValue
+      val controller = iterator.next()
       if (controller.hasCompleted) {
         return true
       }
@@ -230,10 +230,10 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   }
 
   override def someArgumentStateIsCompletedOr(statePredicate: STATE => Boolean): Boolean = {
-    val iterator = controllers.entries()
+    val iterator = controllers.valuesIterator()
 
     while(iterator.hasNext) {
-      val controller = iterator.next().getValue
+      val controller = iterator.next()
       if (controller.hasCompleted || statePredicate(controller.peek)) {
         return true
       }
@@ -247,10 +247,10 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   }
 
   override def exists(statePredicate: STATE => Boolean): Boolean = {
-    val iterator = controllers.entries()
+    val iterator = controllers.valuesIterator()
 
     while(iterator.hasNext) {
-      val controller = iterator.next().getValue
+      val controller = iterator.next()
       val state = controller.peek
       if (state != null && statePredicate(state)) {
         return true

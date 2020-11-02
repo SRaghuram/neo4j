@@ -14,7 +14,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.StandardArgumentStateMap.StandardCompletedStateController
 import org.neo4j.cypher.internal.runtime.pipelined.state.StandardArgumentStateMap.StandardStateController
-import org.neo4j.kernel.impl.util.collection.HeapTrackingOrderedAppendMap
+import org.neo4j.kernel.impl.util.collection.HeapTrackingOrderedChunkedList
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 
@@ -34,27 +34,32 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: A
   extends AbstractArgumentStateMap[STATE, AbstractArgumentStateMap.StateController[STATE]](memoryTracker) {
 
   class OrderedControllers(memoryTracker: MemoryTracker) extends Controllers[AbstractArgumentStateMap.StateController[STATE]] {
-    // Using a LinkedHashMap to get insertion iteration order, which will be argument-row-id order.
-    val inner = new java.util.LinkedHashMap[Long, AbstractArgumentStateMap.StateController[STATE]]()
+    val orderedAppendMap = new HeapTrackingOrderedChunkedList[AbstractArgumentStateMap.StateController[STATE]](memoryTracker)
 
     override def forEach(fun: (Long, AbstractArgumentStateMap.StateController[STATE]) => Unit): Unit =
-      inner.forEach((k,v) => fun(k,v))
+      orderedAppendMap.foreach((l, v) => fun(l, v))
 
-    override def entries(): util.Iterator[Map.Entry[Long, AbstractArgumentStateMap.StateController[STATE]]] =
-      inner.entrySet().iterator()
+    override def valuesIterator(): util.Iterator[AbstractArgumentStateMap.StateController[STATE]] =
+      orderedAppendMap.iterator()
 
     override def remove(key: Long): AbstractArgumentStateMap.StateController[STATE] =
-      inner.remove(key)
+      orderedAppendMap.remove(key)
 
     override def put(key: Long,
-                     value: AbstractArgumentStateMap.StateController[STATE]): AbstractArgumentStateMap.StateController[STATE] =
-      inner.put(key, value)
+                     value: AbstractArgumentStateMap.StateController[STATE]): AbstractArgumentStateMap.StateController[STATE] = {
+      assert(orderedAppendMap.lastKey + 1 == key)
+      orderedAppendMap.add(value)
+
+      value
+    }
 
     override def get(key: Long): AbstractArgumentStateMap.StateController[STATE] =
-      inner.get(key)
+      orderedAppendMap.get(key)
 
-    override def getFirstValue(): AbstractArgumentStateMap.StateController[STATE] =
-      inner.entrySet().iterator().next().getValue
+    /**
+     * @return the first value or null if no value exists
+     */
+    override def getFirstValue(): AbstractArgumentStateMap.StateController[STATE] = orderedAppendMap.getFirst()
   }
 
   override protected val controllers = new OrderedControllers(memoryTracker)
