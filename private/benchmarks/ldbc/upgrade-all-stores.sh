@@ -7,8 +7,8 @@
 
 set -eu
 
-old_neo4j_version="41"
-new_neo4j_version="42"
+old_neo4j_version="42"
+new_neo4j_version="43"
 set -e
 set -u
 
