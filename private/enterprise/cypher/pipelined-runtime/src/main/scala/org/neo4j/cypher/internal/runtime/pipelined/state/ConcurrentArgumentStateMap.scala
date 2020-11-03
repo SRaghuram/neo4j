@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
 import java.util
-import java.util.Map
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
@@ -47,7 +46,7 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
       super[ConcurrentHashMap].remove(key)
 
     override def valuesIterator(): util.Iterator[AbstractArgumentStateMap.StateController[STATE]] = {
-      entrySet().iterator()
+      values().iterator()
     }
 
     override def getFirstValue(): AbstractArgumentStateMap.StateController[STATE] = {

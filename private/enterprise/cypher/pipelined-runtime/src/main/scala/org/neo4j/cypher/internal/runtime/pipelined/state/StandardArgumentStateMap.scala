@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
 import java.util
-import java.util.Map
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
@@ -34,7 +33,8 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: A
   extends AbstractArgumentStateMap[STATE, AbstractArgumentStateMap.StateController[STATE]](memoryTracker) {
 
   class OrderedControllers(memoryTracker: MemoryTracker) extends Controllers[AbstractArgumentStateMap.StateController[STATE]] {
-    val orderedAppendMap = new HeapTrackingOrderedChunkedList[AbstractArgumentStateMap.StateController[STATE]](memoryTracker)
+    val orderedAppendMap: HeapTrackingOrderedChunkedList[AbstractArgumentStateMap.StateController[STATE]] =
+      HeapTrackingOrderedChunkedList.createOrderedMap(memoryTracker)
 
     override def forEach(fun: (Long, AbstractArgumentStateMap.StateController[STATE]) => Unit): Unit =
       orderedAppendMap.foreach((l, v) => fun(l, v))
@@ -48,9 +48,9 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: A
     override def put(key: Long,
                      value: AbstractArgumentStateMap.StateController[STATE]): AbstractArgumentStateMap.StateController[STATE] = {
       assert(orderedAppendMap.lastKey + 1 == key)
+      val oldValue = orderedAppendMap.get(key)
       orderedAppendMap.add(value)
-
-      value
+      oldValue
     }
 
     override def get(key: Long): AbstractArgumentStateMap.StateController[STATE] =
