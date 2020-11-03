@@ -29,8 +29,6 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.DENY;
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
-import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ACCESS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DATABASE_MANAGEMENT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE_BOOSTED;
@@ -42,16 +40,9 @@ public class PrivilegeResolver
     public static final String EXECUTE_BOOSTED_FROM_CONFIG = "execute_boosted_from_config";
 
     private final SystemGraphRealm systemGraphRealm;
-    private final String upgradeUsername;
     private final Boolean restrictUpgrade;
     private final Boolean blackCreateDrop;
     private final Boolean blockStartStop;
-    private final ResourcePrivilege accessOnSystem;
-    private final ResourcePrivilege executeBoostedUpgrade;
-    private final ResourcePrivilege executeRoutingTable;
-    private final ResourcePrivilege createDropDatabase;
-    private final ResourcePrivilege startDatabase;
-    private final ResourcePrivilege stopDatabase;
 
     private final ResourcePrivilege denyExecuteUpgrade;
     private final ResourcePrivilege denyStartDatabase;
@@ -66,7 +57,6 @@ public class PrivilegeResolver
     public PrivilegeResolver( SystemGraphRealm systemGraphRealm, Config config )
     {
         this.systemGraphRealm = systemGraphRealm;
-        this.upgradeUsername = config.get( GraphDatabaseInternalSettings.upgrade_username );
         this.restrictUpgrade = config.get( GraphDatabaseInternalSettings.restrict_upgrade );
         this.roleToBoostAll = config.get( GraphDatabaseSettings.default_allowed );
         this.roleToBoostMapping = config.get( GraphDatabaseSettings.procedure_roles );
@@ -91,23 +81,6 @@ public class PrivilegeResolver
             denyStartDatabase = new ResourcePrivilege( DENY, START_DATABASE, new DatabaseResource(), Segment.ALL, ResourcePrivilege.SpecialDatabase.ALL );
             // DENY STOP DATABASE for all databases
             denyStopDatabase = new ResourcePrivilege( DENY, STOP_DATABASE, new DatabaseResource(), Segment.ALL, ResourcePrivilege.SpecialDatabase.ALL );
-
-            // Privileges for the operator user
-
-            // ACCESS ON DATABASE system
-            accessOnSystem = new ResourcePrivilege( GRANT, ACCESS, new DatabaseResource(), Segment.ALL, SYSTEM_DATABASE_NAME );
-            // EXECUTE BOOSTED PROCEDURE dbms.upgrade* ON DBMS
-            executeBoostedUpgrade = new ResourcePrivilege( GRANT, EXECUTE_BOOSTED, new DatabaseResource(), segment, ResourcePrivilege.SpecialDatabase.ALL );
-            // EXECUTE dbms.*.getRoutingTable ON DBMS
-            ProcedureSegment routingProc = new ProcedureSegment( "dbms.*.getRoutingTable" );
-            executeRoutingTable = new ResourcePrivilege( GRANT, EXECUTE, new DatabaseResource(), routingProc, ResourcePrivilege.SpecialDatabase.ALL );
-            // CRETE & DROP DATABASE ON DBMS
-            createDropDatabase = new ResourcePrivilege( GRANT, DATABASE_MANAGEMENT, new DatabaseResource(), Segment.ALL,
-                    ResourcePrivilege.SpecialDatabase.ALL );
-            // START DATABASE for all databases
-            startDatabase = new ResourcePrivilege( GRANT, START_DATABASE, new DatabaseResource(), Segment.ALL, ResourcePrivilege.SpecialDatabase.ALL );
-            // STOP DATABASE for all databases
-            stopDatabase = new ResourcePrivilege( GRANT, STOP_DATABASE, new DatabaseResource(), Segment.ALL, ResourcePrivilege.SpecialDatabase.ALL );
         }
         catch ( InvalidArgumentsException e )
         {
@@ -151,17 +124,7 @@ public class PrivilegeResolver
 
     private Set<ResourcePrivilege> getUserPrivileges( String username )
     {
-        if ( restrictUpgrade && upgradeUsername.equals( username ) )
-        {
-            HashSet<ResourcePrivilege> privileges = new HashSet<>();
-            privileges.add( accessOnSystem );
-            privileges.add( executeBoostedUpgrade );
-            privileges.add( executeRoutingTable );
-            privileges.add( createDropDatabase );
-            privileges.add( startDatabase );
-            privileges.add( stopDatabase );
-            return privileges;
-        }
+        // TODO should this go away?
         return Collections.emptySet();
     }
 

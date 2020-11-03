@@ -27,7 +27,6 @@ import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationPlugin
 import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationPlugin;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent;
-import com.neo4j.server.security.enterprise.systemgraph.FlatfileRealm;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import org.apache.shiro.cache.CacheManager;
 import org.apache.shiro.realm.Realm;
@@ -238,11 +237,6 @@ public class EnterpriseSecurityModule extends SecurityModule
                     new LoopbackAuthManager( strategy, getOperatorUserRepository( config, logProvider, fileSystem ), securityLog, logAuthSuccess );
         }
 
-        if ( config.get( GraphDatabaseInternalSettings.restrict_upgrade ) )
-        {
-            orderedActiveRealms.add( 0, new FlatfileRealm( strategy, config.get( GraphDatabaseInternalSettings.upgrade_username ),
-                                                           getOperatorUserRepository( config, logProvider, fileSystem ) ) );
-        }
         return new MultiRealmAuthManager( privilegeResolver, orderedActiveRealms, createCacheManager( config, cacheFactory ),
                                           securityLog, config, defaultDatabaseResolver );
     }

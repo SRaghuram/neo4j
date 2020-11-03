@@ -33,12 +33,10 @@ import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.dbms.database.AbstractSystemGraphComponent;
 import org.neo4j.dbms.database.KnownSystemComponentVersions;
 import org.neo4j.dbms.database.SystemGraphComponent;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.Segment;
@@ -158,27 +156,6 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
                 }
             }
         } );
-    }
-
-    @Override
-    protected void assertSystemGraphIntegrity( GraphDatabaseService system )
-    {
-        if ( config.get( GraphDatabaseInternalSettings.restrict_upgrade ) )
-        {
-            String upgradeUser = config.get( GraphDatabaseInternalSettings.upgrade_username );
-
-            try ( Transaction tx = system.beginTx() )
-            {
-                Node node = tx.findNode( USER_LABEL, "name", upgradeUser );
-                if ( node != null )
-                {
-                    throw new IllegalStateException( String.format( "The user specified by %s (%s) already exists in the system graph. " +
-                                                                    "Change the username or delete the user before restricting upgrade.",
-                                                                    GraphDatabaseInternalSettings.upgrade_username.name(),
-                                                                    upgradeUser) );
-                }
-            }
-        }
     }
 
     public void assertUpdateWithAction( Transaction tx, PrivilegeAction action, SpecialDatabase specialDatabase, Segment segment )

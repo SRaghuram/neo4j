@@ -36,7 +36,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.graphdb.security.AuthProviderFailedException;
 import org.neo4j.graphdb.security.AuthProviderTimeoutException;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
@@ -56,8 +55,6 @@ public class MultiRealmAuthManager extends EnterpriseAuthManager
     private final CacheManager cacheManager;
     private final SecurityLog securityLog;
     private final boolean logSuccessfulLogin;
-    private final String upgradeUsername;
-    private final boolean restrictUpgrade;
 
     private final PrivilegeResolver privilegeResolver;
     private final DefaultDatabaseResolver defaultDatabaseResolver;
@@ -67,9 +64,6 @@ public class MultiRealmAuthManager extends EnterpriseAuthManager
     {
         this.realms = realms;
         this.cacheManager = cacheManager;
-
-        this.upgradeUsername = config.get( GraphDatabaseInternalSettings.upgrade_username );
-        this.restrictUpgrade = config.get( GraphDatabaseInternalSettings.restrict_upgrade );
 
         securityManager = new DefaultSecurityManager( realms );
         this.securityLog = securityLog;
@@ -315,15 +309,6 @@ public class MultiRealmAuthManager extends EnterpriseAuthManager
             }
         }
         return infoList;
-    }
-
-    boolean shouldGetPublicRole( Object principal )
-    {
-        if ( restrictUpgrade )
-        {
-            return !principal.equals( upgradeUsername );
-        }
-        return true;
     }
 
     Set<ResourcePrivilege> getPermissions( Set<String> roles, String username )

@@ -13,7 +13,6 @@ import org.neo4j.cli.AbstractCommand;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.ConfigUtils;
-import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.cypher.internal.security.SystemGraphCredential;
@@ -28,7 +27,7 @@ import static picocli.CommandLine.Parameters;
 
 @Command(
         name = "set-operator-password",
-        description = "Sets the password of the operator user as defined by %n'unsupported.dbms.upgrade_procedure_username'. ",
+        description = "Sets the password of the loopback operator user. ",
         hidden = true
 )
 public class SetOperatorPasswordCommand extends AbstractCommand
@@ -46,7 +45,6 @@ public class SetOperatorPasswordCommand extends AbstractCommand
     {
         Config config = loadNeo4jConfig();
         FileSystemAbstraction fileSystem = ctx.fs();
-        String username = config.get( GraphDatabaseInternalSettings.upgrade_username );
 
         Path file = EnterpriseSecurityModule.getOperatorUserRepositoryFile( config );
         if ( fileSystem.fileExists( file ) )
@@ -60,7 +58,7 @@ public class SetOperatorPasswordCommand extends AbstractCommand
         {
             userRepository.start();
             userRepository.create(
-                    new User.Builder( username, SystemGraphCredential.createCredentialForPassword( UTF8.encode( password ), new SecureHasher() ) )
+                    new User.Builder( "LOOPBACK", SystemGraphCredential.createCredentialForPassword( UTF8.encode( password ), new SecureHasher() ) )
                             .withRequiredPasswordChange( false )
                             .build()
             );
@@ -70,7 +68,7 @@ public class SetOperatorPasswordCommand extends AbstractCommand
         {
             throw new RuntimeException( e );
         }
-        ctx.out().println( "Changed password for operator user '" + username + "'." );
+        ctx.out().println( "Changed password for operator user." );
     }
 
     Config loadNeo4jConfig()

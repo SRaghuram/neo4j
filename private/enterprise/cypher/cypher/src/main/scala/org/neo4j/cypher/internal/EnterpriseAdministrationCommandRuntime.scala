@@ -167,7 +167,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
   private val restrict_upgrade = config.get(GraphDatabaseInternalSettings.restrict_upgrade)
   private val create_drop_database_is_blocked = config.get(GraphDatabaseInternalSettings.block_create_drop_database)
   private val start_stop_database_is_blocked = config.get(GraphDatabaseInternalSettings.block_start_stop_database)
-  private val operator_name = config.get(GraphDatabaseInternalSettings.upgrade_username)
 
   override def name: String = "enterprise administration-commands"
 
@@ -264,8 +263,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     case CreateUser(source, userName, isEncryptedPassword, password, requirePasswordChange, suspendedOptional, defaultDatabase) => context =>
       val suspended = suspendedOptional.getOrElse(false)
       val sourcePlan: Option[ExecutionPlan] = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context))
-      val restrictedUsers = if (config.get(GraphDatabaseInternalSettings.restrict_upgrade)) Seq(config.get(GraphDatabaseInternalSettings.upgrade_username)) else Seq.empty
-      makeCreateUserExecutionPlan(userName, isEncryptedPassword, password, requirePasswordChange, suspended, defaultDatabase, restrictedUsers)(sourcePlan, normalExecutionEngine)
+      makeCreateUserExecutionPlan(userName, isEncryptedPassword, password, requirePasswordChange, suspended, defaultDatabase)(sourcePlan, normalExecutionEngine)
 
     // ALTER USER foo [SET [PLAINTEXT | ENCRYPTED] PASSWORD pw] [CHANGE [NOT] REQUIRED] [SET STATUS ACTIVE]
     case AlterUser(source, userName, isEncryptedPassword, password, requirePasswordChange, suspended, defaultDatabase) => context =>

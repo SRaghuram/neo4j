@@ -15,10 +15,9 @@ import picocli.CommandLine;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.Optional;
 
 import org.neo4j.cli.ExecutionContext;
-import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.security.User;
@@ -28,8 +27,6 @@ import org.neo4j.test.extension.EphemeralFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -43,8 +40,6 @@ class SetOperatorPasswordCommandIT
     private Path homeDir;
     private PrintStream out;
     private PrintStream err;
-
-    private String upgradeUsername = Config.defaults().get( GraphDatabaseInternalSettings.upgrade_username );
 
     @BeforeEach
     void setup()
@@ -68,7 +63,7 @@ class SetOperatorPasswordCommandIT
         executeCommand( "abc" );
         assertAuthIniFile( "abc" );
 
-        verify( out ).println( String.format( "Changed password for operator user '%s'.", upgradeUsername ) );
+        verify( out ).println( "Changed password for operator user." );
     }
 
     @Test
@@ -79,7 +74,7 @@ class SetOperatorPasswordCommandIT
         executeCommand( "muchBetter" );
         assertAuthIniFile( "muchBetter" );
 
-        verify( out, times( 2 ) ).println( String.format( "Changed password for operator user '%s'.", upgradeUsername ) );
+        verify( out, times( 2 ) ).println( "Changed password for operator user." );
     }
 
     @Test
@@ -90,19 +85,20 @@ class SetOperatorPasswordCommandIT
         executeCommand( "neo4j" );
         assertAuthIniFile( "neo4j" );
 
-        verify( out, times( 2 ) ).println( String.format( "Changed password for operator user '%s'.", upgradeUsername ) );
+        verify( out, times( 2 ) ).println( "Changed password for operator user." );
     }
 
     private void assertAuthIniFile( String password ) throws Throwable
     {
         Path authIniFile = getOperatorAuthFile();
-        assertTrue( fileSystem.fileExists( authIniFile ) );
+        assertThat( fileSystem.fileExists( authIniFile ) ).isTrue();
         FileUserRepository userRepository = new FileUserRepository( fileSystem, authIniFile, NullLogProvider.getInstance() );
         userRepository.start();
-        User operator = userRepository.getUserByName( upgradeUsername );
-        assertNotNull( operator );
-        assertTrue( operator.credentials().matchesPassword( password.getBytes( StandardCharsets.UTF_8 ) ) );
-        assertThat( operator.hasFlag( User.PASSWORD_CHANGE_REQUIRED ) ).isEqualTo( false );
+        assertThat( userRepository.numberOfUsers() ).isEqualTo( 1 );
+        Optional<User> operator = userRepository.getAllUsernames().stream().map( userRepository::getUserByName ).findFirst();
+        assertThat( operator.isPresent() ).isTrue();
+        assertThat( operator.get().credentials().matchesPassword( password.getBytes( StandardCharsets.UTF_8 ) ) ).isTrue();
+        assertThat( operator.get().hasFlag( User.PASSWORD_CHANGE_REQUIRED ) ).isFalse();
     }
 
     private Path getOperatorAuthFile()

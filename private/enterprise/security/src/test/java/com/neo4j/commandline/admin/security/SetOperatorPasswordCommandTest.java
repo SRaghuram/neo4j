@@ -14,10 +14,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.Optional;
 
 import org.neo4j.cli.ExecutionContext;
-import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.NullLogProvider;
@@ -28,9 +27,6 @@ import org.neo4j.test.extension.testdirectory.EphemeralTestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 @EphemeralTestDirectoryExtension
@@ -66,8 +62,7 @@ class SetOperatorPasswordCommandTest
                 "USAGE%n" + "%n" +
                 "set-operator-password [--expand-commands] [--verbose] <password>%n" +
                 "%n" + "DESCRIPTION%n" + "%n" +
-                "Sets the password of the operator user as defined by%n" +
-                "'unsupported.dbms.upgrade_procedure_username'.%n" +
+                "Sets the password of the loopback operator user.%n" +
                 "%n" + "PARAMETERS%n" + "%n" +
                 "      <password>%n" + "%n" + "OPTIONS%n" + "%n" +
                 "      --verbose           Enable verbose output.%n" +
@@ -78,7 +73,7 @@ class SetOperatorPasswordCommandTest
     void shouldSetOperatorPassword() throws Throwable
     {
         // Given
-        assertFalse( fileSystem.fileExists( authOperatorFile ) );
+        assertThat( fileSystem.fileExists( authOperatorFile ) ).isFalse();
 
         // When
         CommandLine.populateCommand( command, "123" );
@@ -105,13 +100,14 @@ class SetOperatorPasswordCommandTest
 
     private void assertAuthIniFile( String password ) throws Throwable
     {
-        assertTrue( fileSystem.fileExists( authOperatorFile ) );
+        assertThat( fileSystem.fileExists( authOperatorFile ) ).isTrue();
         FileUserRepository userRepository = new FileUserRepository( fileSystem, authOperatorFile,
                 NullLogProvider.getInstance() );
         userRepository.start();
-        User operator = userRepository.getUserByName( Config.defaults().get( GraphDatabaseInternalSettings.upgrade_username ) );
-        assertNotNull( operator );
-        assertTrue( operator.credentials().matchesPassword( password.getBytes( StandardCharsets.UTF_8 ) ) );
-        assertFalse( operator.hasFlag( User.PASSWORD_CHANGE_REQUIRED ) );
+        assertThat( userRepository.numberOfUsers() ).isEqualTo( 1 );
+        Optional<User> operator = userRepository.getAllUsernames().stream().map( userRepository::getUserByName ).findFirst();
+        assertThat( operator.isPresent() ).isTrue();
+        assertThat( operator.get().credentials().matchesPassword( password.getBytes( StandardCharsets.UTF_8 ) ) ).isTrue();
+        assertThat( operator.get().hasFlag( User.PASSWORD_CHANGE_REQUIRED ) ).isFalse();
     }
 }
