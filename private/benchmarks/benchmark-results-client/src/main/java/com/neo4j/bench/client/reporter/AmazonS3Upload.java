@@ -10,6 +10,7 @@ import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.transfer.TransferManager;
@@ -98,7 +99,8 @@ public class AmazonS3Upload implements AutoCloseable
         String bucketName = destination.getAuthority();
         String s3key = getS3Path( destination.getPath() );
         LOG.debug( format( "uploading file '%s' to bucket '%s' at key '%s'", source, bucketName, s3key ) );
-        PutObjectRequest putObjectRequest = new PutObjectRequest( bucketName, s3key, source.toFile() );
+        PutObjectRequest putObjectRequest = new PutObjectRequest( bucketName, s3key, source.toFile() )
+                .withCannedAcl( CannedAccessControlList.BucketOwnerFullControl );
         ObjectMetadata objectMetadata = new ObjectMetadata();
         objectMetadata.setContentLength( Files.size( source ) );
         amazonS3.putObject( putObjectRequest.withMetadata( objectMetadata ) );
@@ -140,7 +142,8 @@ public class AmazonS3Upload implements AutoCloseable
                                    objectMetadata.setContentLength( Files.size( sourcePath ) );
                                    PutObjectRequest putObjectRequest = new PutObjectRequest( bucketName,
                                                                                              destinationPath.toString(),
-                                                                                             sourcePath.toFile() );
+                                                                                             sourcePath.toFile() )
+                                           .withCannedAcl( CannedAccessControlList.BucketOwnerFullControl );
                                    return transferManager.upload( putObjectRequest.withMetadata( objectMetadata ) );
                                }
                                catch ( IOException e )
