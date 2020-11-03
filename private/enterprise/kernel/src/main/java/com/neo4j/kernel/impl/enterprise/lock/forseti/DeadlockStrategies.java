@@ -5,8 +5,6 @@
  */
 package com.neo4j.kernel.impl.enterprise.lock.forseti;
 
-import org.neo4j.util.FeatureToggles;
-
 public enum DeadlockStrategies implements ForsetiLockManager.DeadlockResolutionStrategy
 {
     /**
@@ -119,12 +117,6 @@ public enum DeadlockStrategies implements ForsetiLockManager.DeadlockResolutionS
 
     @Override
     public abstract boolean shouldAbort( ForsetiClient clientThatsAsking, ForsetiClient clientWereDeadlockedWith );
-
-    /**
-     * To aid in experimental testing of strategies on different real workloads, allow toggling which strategy to use.
-     */
-    public static final ForsetiLockManager.DeadlockResolutionStrategy DEFAULT =
-            FeatureToggles.flag( DeadlockStrategies.class, "strategy", ABORT_YOUNG );
 
     private static boolean isSameClient( ForsetiClient a, ForsetiClient b )
     {

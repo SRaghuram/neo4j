@@ -5,6 +5,7 @@
  */
 package com.neo4j.kernel.impl.enterprise.lock.forseti;
 
+import com.neo4j.configuration.EnterpriseInternalSettings;
 import org.eclipse.collections.api.set.primitive.LongSet;
 
 import java.util.Map;
@@ -279,7 +280,7 @@ public class ForsetiLockManager implements Locks
         private final SystemNanoClock clock;
         private final ConcurrentMap<Long,ForsetiLockManager.Lock>[] lockMaps;
         private final WaitStrategy[] waitStrategies;
-        private final DeadlockResolutionStrategy deadlockResolutionStrategy = DeadlockStrategies.DEFAULT;
+        private final DeadlockResolutionStrategy deadlockResolutionStrategy;
 
         ForsetiClientFlyweightPool( Config config, SystemNanoClock clock, ConcurrentMap<Long,Lock>[] lockMaps,
                 WaitStrategy[] waitStrategies )
@@ -289,6 +290,7 @@ public class ForsetiLockManager implements Locks
             this.clock = clock;
             this.lockMaps = lockMaps;
             this.waitStrategies = waitStrategies;
+            this.deadlockResolutionStrategy = config.get( EnterpriseInternalSettings.forseti_deadlock_resolution_strategy );
         }
 
         @Override
