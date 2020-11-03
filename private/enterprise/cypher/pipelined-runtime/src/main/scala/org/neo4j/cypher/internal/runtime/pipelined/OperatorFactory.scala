@@ -529,7 +529,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           WorkIdentity.fromPlan(plan),
           comparator)(id)
 
-      case plans.PartialSort(_, alreadySortedPrefix, stillToSortSuffix) =>
+      case plans.PartialSort(_, alreadySortedPrefix, stillToSortSuffix, skipSortingPrefixLength) =>
         val prefixComparator = MorselSorting.createComparator(alreadySortedPrefix.map(translateColumnOrder(slots, _)))
         val suffixComparator = MorselSorting.createComparator(stillToSortSuffix.map(translateColumnOrder(slots, _)))
         val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
@@ -537,7 +537,9 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           argumentStateMapId,
           WorkIdentity.fromPlan(plan),
           prefixComparator,
-          suffixComparator)(id)
+          suffixComparator,
+          skipSortingPrefixLength.map(converters.toCommandExpression(id, _))
+        )(id)
 
       case _: plans.PreserveOrder =>
         val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
@@ -550,7 +552,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           ordering,
           converters.toCommandExpression(id, limit)).reducer(argumentStateMapId, id)
 
-      case plans.PartialTop(_, alreadySortedPrefix, stillToSortSuffix, limit) =>
+      case plans.PartialTop(_, alreadySortedPrefix, stillToSortSuffix, limit, skipSortingPrefixLength) =>
         val prefixComparator = MorselSorting.createComparator(alreadySortedPrefix.map(translateColumnOrder(slots, _)))
         val suffixComparator = MorselSorting.createComparator(stillToSortSuffix.map(translateColumnOrder(slots, _)))
         val Seq(bufferAsmId, workCancellerAsmId) = executionGraphDefinition.argumentStateMaps.toSeq.collect {
@@ -568,8 +570,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           prefixComparator,
           suffixComparator,
           converters.toCommandExpression(id, limit),
+          skipSortingPrefixLength.map(converters.toCommandExpression(id, _)),
           id)
-
 
       case plans.TriadicBuild(_, sourceId, seenId, triadicSelectionId) =>
         val bufferAsmId = executionGraphDefinition.findArgumentStateMapForPlan(plan.id)

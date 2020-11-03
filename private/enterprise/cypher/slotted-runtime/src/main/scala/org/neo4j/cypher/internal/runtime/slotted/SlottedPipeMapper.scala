@@ -440,21 +440,24 @@ class SlottedPipeMapper(fallback: PipeMapper,
         TopNPipe(source, convertExpressions(limit),
           SlottedExecutionContextOrdering.asComparator(sortItems.map(translateColumnOrder(slots, _))))(id = id)
 
-      case PartialTop(_, _, stillToSortSuffix, _) if stillToSortSuffix.isEmpty => source
+      case PartialTop(_, _, stillToSortSuffix, _, _) if stillToSortSuffix.isEmpty => source
 
-      case PartialTop(_, alreadySortedPrefix, stillToSortSuffix, SignedDecimalIntegerLiteral("1")) =>
+      case PartialTop(_, alreadySortedPrefix, stillToSortSuffix, SignedDecimalIntegerLiteral("1"), _) =>
         PartialTop1Pipe(source, SlottedExecutionContextOrdering.asComparator(alreadySortedPrefix.map(translateColumnOrder(slots, _)).toList),
           SlottedExecutionContextOrdering.asComparator(stillToSortSuffix.map(translateColumnOrder(slots, _)).toList))(id = id)
 
-      case PartialTop(_, alreadySortedPrefix, stillToSortSuffix, limit) =>
-        PartialTopNPipe(source, convertExpressions(limit), SlottedExecutionContextOrdering.asComparator(alreadySortedPrefix.map(translateColumnOrder(slots, _)).toList),
+      case PartialTop(_, alreadySortedPrefix, stillToSortSuffix, limit, skipSortingPrefixLength) =>
+        PartialTopNPipe(source,
+          convertExpressions(limit),
+          skipSortingPrefixLength.map(convertExpressions),
+          SlottedExecutionContextOrdering.asComparator(alreadySortedPrefix.map(translateColumnOrder(slots, _)).toList),
           SlottedExecutionContextOrdering.asComparator(stillToSortSuffix.map(translateColumnOrder(slots, _)).toList))(id = id)
 
       case Limit(_, count, IncludeTies) =>
         (source, count) match {
           case (SortPipe(inner, comparator), SignedDecimalIntegerLiteral("1")) =>
             Top1WithTiesPipe(inner, comparator)(id = id)
-          case (PartialSortPipe(inner, prefixComparator, suffixComparator), SignedDecimalIntegerLiteral("1")) =>
+          case (PartialSortPipe(inner, prefixComparator, suffixComparator, None), SignedDecimalIntegerLiteral("1")) =>
             PartialTop1WithTiesPipe(inner, prefixComparator, suffixComparator)(id = id)
 
           case _ => throw new InternalException("Including ties is only supported for very specific plans")
@@ -471,8 +474,12 @@ class SlottedPipeMapper(fallback: PipeMapper,
       case Sort(_, sortItems) =>
         SortPipe(source, SlottedExecutionContextOrdering.asComparator(sortItems.map(translateColumnOrder(slots, _))))(id = id)
 
-      case PartialSort(_, alreadySortedPrefix, stillToSortSuffix) =>
-        PartialSortPipe(source, SlottedExecutionContextOrdering.asComparator(alreadySortedPrefix.map(translateColumnOrder(slots, _))), SlottedExecutionContextOrdering.asComparator(stillToSortSuffix.map(translateColumnOrder(slots, _))))(id = id)
+      case PartialSort(_, alreadySortedPrefix, stillToSortSuffix, skipSortingPrefixLength) =>
+        PartialSortPipe(source,
+          SlottedExecutionContextOrdering.asComparator(alreadySortedPrefix.map(translateColumnOrder(slots, _))),
+          SlottedExecutionContextOrdering.asComparator(stillToSortSuffix.map(translateColumnOrder(slots, _))),
+          skipSortingPrefixLength.map(convertExpressions)
+        )(id = id)
 
       case Eager(_) =>
         EagerSlottedPipe(source, slots)(id)

@@ -10,6 +10,7 @@ import java.util.Comparator
 import org.neo4j.collection.trackable.HeapTrackingArrayList
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.ReadableRow
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
@@ -29,13 +30,15 @@ import org.neo4j.memory.MemoryTracker
 class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
                           val workIdentity: WorkIdentity,
                           prefixComparator: Comparator[ReadableRow],
-                          suffixComparator: Comparator[ReadableRow])
+                          suffixComparator: Comparator[ReadableRow],
+                          skipSortingPrefixLengthExp: Option[Expression])
                          (val id: Id = Id.INVALID_ID) extends Operator {
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
                            state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = {
+    val skipSortingPrefixLength = skipSortingPrefixLengthExp.map(CountingState.evaluateCountValue(state, resources, _))
     val memoryTracker = stateFactory.newMemoryTracker(id.x)
     argumentStateCreator.createArgumentStateMap(
       argumentStateMapId,
@@ -43,7 +46,7 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
       memoryTracker,
       ordered = true
     )
-    new PartialSortState(stateFactory.newMemoryTracker(id.x), prefixComparator, suffixComparator, workIdentity)
+    new PartialSortState(stateFactory.newMemoryTracker(id.x), prefixComparator, suffixComparator, skipSortingPrefixLength, workIdentity)
   }
 
   override def toString: String = "PartialSortOperator"
@@ -81,11 +84,16 @@ class PartialSortTask(morselData: MorselData,
 class PartialSortState(memoryTracker: MemoryTracker,
                        prefixComparator: Comparator[ReadableRow],
                        suffixComparator: Comparator[ReadableRow],
+                       skipSortingPrefixLength: Option[Long],
                        workIdentity: WorkIdentity) extends DataInputOperatorState[MorselData] {
 
   private[this] val buffer: HeapTrackingArrayList[MorselRow] = HeapTrackingArrayList.newArrayList(16, memoryTracker)
   private[this] var lastSeen: MorselRow = _
   private[this] var outputIndex: Int = -1
+
+  // How many rows remain until we need to start sorting?
+  private[this] val initialSkip: Long = skipSortingPrefixLength.getOrElse(-1)
+  private[this] var remainingSkipSorting: Long = initialSkip
 
   private[this] var currentMorselHeapUsage: Long = 0
   // Memory for morsels is released in one go after all output rows for completed chunk have been written
@@ -107,6 +115,7 @@ class PartialSortState(memoryTracker: MemoryTracker,
 
     lastSeen = inputCursor.snapshot()
     memoryTracker.allocateHeap(lastSeen.shallowInstanceHeapUsage)
+    remainingSkipSorting = math.max(-1L, remainingSkipSorting - 1L)
 
     if (!hasOutputToWrite) // if there _is_ output, add it after we're done writing
       buffer.add(lastSeen)
@@ -116,6 +125,7 @@ class PartialSortState(memoryTracker: MemoryTracker,
     currentMorselHeapUsage = 0
     if (lastSeen != null)
       completeCurrentChunk()
+    remainingSkipSorting = initialSkip
   }
 
   def tryWriteOutstandingResults(outputCursor: MorselWriteCursor): Unit = {
@@ -138,7 +148,7 @@ class PartialSortState(memoryTracker: MemoryTracker,
   def hasOutputToWrite: Boolean = outputIndex >= 0
 
   private def completeCurrentChunk(): Unit = {
-    if (buffer.size() > 1)
+    if (buffer.size() > 1 && remainingSkipSorting == -1)
       buffer.sort(suffixComparator)
 
     outputIndex = 0

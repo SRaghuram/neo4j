@@ -72,6 +72,7 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
                          prefixComparator: Comparator[ReadableRow],
                          suffixComparator: Comparator[ReadableRow],
                          limitExpression: Expression,
+                         skipSortingPrefixLengthExp: Option[Expression],
                          id: Id) extends Operator {
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
@@ -81,27 +82,36 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
     val memoryTracker = stateFactory.newMemoryTracker(id.x)
     argumentStateCreator.createArgumentStateMap(bufferAsmId, new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id), memoryTracker, ordered = true)
     val limit = Math.min(CountingState.evaluateCountValue(state, resources, limitExpression), ArrayUtil.MAX_ARRAY_SIZE).toInt
+    val skipSortingPrefixLength = skipSortingPrefixLengthExp.map(CountingState.evaluateCountValue(state, resources, _))
     val workCancellerAsm = argumentStateCreator.createArgumentStateMap(
       workCancellerAsmId,
       new PartialTopWorkCanceller.Factory(stateFactory, id, limit),
       memoryTracker
     )
-    new PartialTopState(stateFactory.newMemoryTracker(id.x), limit, workCancellerAsm)
+    new PartialTopState(stateFactory.newMemoryTracker(id.x), limit, skipSortingPrefixLength, workCancellerAsm)
   }
 
   override def toString: String = "PartialTopOperator"
 
   private class PartialTopState(val memoryTracker: MemoryTracker,
-                                val limit: Int,
+                                limit: Int,
+                                skipSortingPrefixLength: Option[Long],
                                 val argumentStateMap: ArgumentStateMap[PartialTopWorkCanceller]) extends DataInputOperatorState[MorselData] {
 
-    var remainingLimit: Int = limit
+    private val initialSkip: Long = skipSortingPrefixLength.getOrElse(-1)
+
+    var remainingLimit: Int = _
+    // How many rows remain until we need to start sorting?
+    private var remainingSkipSorting: Long = _
+
     var lastSeen: MorselRow = _
     var topTable: DefaultComparatorTopTable[MorselRow] = _
     var resultsIterator: util.Iterator[MorselRow] = Collections.emptyIterator()
 
     private var activeMemoryTracker: MemoryTracker = _
     private var resultsMemoryTracker: MemoryTracker = _
+
+    resetSkipAndLimit()
 
     override def nextTasks(state: PipelinedQueryState,
                            input: MorselData,
@@ -121,11 +131,17 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
           activeMemoryTracker.releaseHeap(evictedRow.estimatedHeapUsage())
       }
       lastSeen = row
+
+      remainingSkipSorting = math.max(-1L, remainingSkipSorting - 1L)
     }
 
     def computeResults(): Unit = {
-      topTable.sort()
-      resultsIterator = topTable.iterator().asInstanceOf[util.Iterator[MorselRow]]
+      resultsIterator = if (remainingSkipSorting == -1) {
+        topTable.sort()
+        topTable.iterator()
+      } else {
+        topTable.unorderedIterator()
+      }
       resultsMemoryTracker = activeMemoryTracker
 
       topTable = null
@@ -138,6 +154,11 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
         resultsMemoryTracker.close()
         resultsMemoryTracker = null
       }
+    }
+
+    def resetSkipAndLimit(): Unit = {
+      remainingLimit = limit
+      remainingSkipSorting = initialSkip
     }
   }
 
@@ -172,7 +193,7 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
             completeCurrentChunk(0)
 
           // reset limit for the next argument id
-          taskState.remainingLimit = taskState.limit
+          taskState.resetSkipAndLimit()
         case _ =>
         // Do nothing
       }
