@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.pagecache.PageSwapper;
 import org.neo4j.io.pagecache.tracing.EvictionEvent;
@@ -31,6 +32,7 @@ class VerbosePageCacheTracerTest
     private final AssertableLogProvider logProvider = new AssertableLogProvider( true );
     private final Log log = logProvider.getLog( getClass() );
     private final FakeClock clock = Clocks.fakeClock();
+    private final Config config = Config.defaults();
 
     @Test
     void traceFileMap()
@@ -62,7 +64,7 @@ class VerbosePageCacheTracerTest
             flushEvent.done();
         }
         assertThat( logProvider ).containsMessages( "Start whole page cache flush." );
-        assertThat( logProvider ).containsMessages( "Page cache flush completed. Flushed 2B in 7 pages, 5 pages merged. Flush took: 0ns. " +
+        assertThat( logProvider ).containsMessages( "Page cache flush completed. Flushed 2B (2 bytes) in 7 pages, 5 pages merged. Flush took: 0ns (0 ns). " +
                 "Average speed: 2bytes/ns." );
     }
 
@@ -92,8 +94,8 @@ class VerbosePageCacheTracerTest
             flushEvent.done();
         }
         assertThat( logProvider ).containsMessages( "Start whole page cache flush." );
-        assertThat( logProvider ).containsMessages( "Page cache flush completed. Flushed 2B in 7 pages, 4 pages merged. Flush took: 2ms. " +
-                "Average speed: 0bytes/ns." );
+        assertThat( logProvider ).containsMessages( "Page cache flush completed. Flushed 2B (2 bytes) in 7 pages, 4 pages merged. " +
+                "Flush took: 2ms (2000000 ns). Average speed: 0bytes/ns." );
     }
 
     @Test
@@ -118,7 +120,8 @@ class VerbosePageCacheTracerTest
         }
         assertThat( logProvider ).containsMessages( "Flushing file: 'fileToFlush'." );
         assertThat( logProvider ).containsMessages(
-                "'fileToFlush' flush completed. Flushed 2.000MiB in 110 pages, 1 pages merged. Flush took: 1s. Average speed: 2.000MiB/s." );
+                "'fileToFlush' flush completed. Flushed 2.000MiB (2097152 bytes) in 110 pages, 1 pages merged. Flush took: 1s (1000000000 ns). " +
+                        "Average speed: 2.000MiB (2097152 bytes)/s (0bytes/ns)." );
     }
 
     @Test
@@ -157,6 +160,6 @@ class VerbosePageCacheTracerTest
 
     private VerbosePageCacheTracer createTracer()
     {
-        return new VerbosePageCacheTracer( log, clock );
+        return new VerbosePageCacheTracer( log, clock, config );
     }
 }

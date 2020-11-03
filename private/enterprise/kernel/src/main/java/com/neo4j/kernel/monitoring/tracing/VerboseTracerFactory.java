@@ -6,6 +6,7 @@
 package com.neo4j.kernel.monitoring.tracing;
 
 import org.neo4j.annotations.service.ServiceProvider;
+import org.neo4j.configuration.Config;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.monitoring.tracing.DefaultTracerFactory;
 import org.neo4j.logging.Log;
@@ -23,8 +24,8 @@ public class VerboseTracerFactory extends DefaultTracerFactory
     }
 
     @Override
-    public PageCacheTracer createPageCacheTracer( Monitors monitors, JobScheduler jobScheduler, SystemNanoClock clock, Log msgLog )
+    public PageCacheTracer createPageCacheTracer( Monitors monitors, JobScheduler jobScheduler, SystemNanoClock clock, Log msgLog, Config config )
     {
-        return new VerbosePageCacheTracer( msgLog, clock );
+        return new VerbosePageCacheTracer( msgLog, clock, config );
     }
 }

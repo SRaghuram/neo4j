@@ -7,9 +7,12 @@ package com.neo4j.kernel.monitoring.tracing;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.internal.helpers.TimeUtil;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.pagecache.PageSwapper;
@@ -23,26 +26,21 @@ import org.neo4j.time.SystemNanoClock;
 
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
-import static org.neo4j.util.FeatureToggles.flag;
-import static org.neo4j.util.FeatureToggles.getInteger;
 
 public class VerbosePageCacheTracer extends DefaultPageCacheTracer
 {
-    private static final boolean USE_RAW_REPORTING_UNITS =
-            flag( VerbosePageCacheTracer.class, "reportInRawUnits", false );
-    private static final int SPEED_REPORTING_TIME_THRESHOLD = getInteger( VerbosePageCacheTracer.class,
-            "speedReportingThresholdSeconds", 10 );
-
     private final Log log;
     private final SystemNanoClock clock;
     private final AtomicLong flushedPages = new AtomicLong();
     private final AtomicLong mergedPages = new AtomicLong();
     private final AtomicLong flushBytesWritten = new AtomicLong();
+    private final Duration speedReportingThresholdSeconds;
 
-    VerbosePageCacheTracer( Log log, SystemNanoClock clock )
+    VerbosePageCacheTracer( Log log, SystemNanoClock clock, Config config )
     {
         this.log = log;
         this.clock = clock;
+        this.speedReportingThresholdSeconds = config.get( GraphDatabaseInternalSettings.page_cache_tracer_speed_reporting_threshold );
     }
 
     @Override
@@ -76,27 +74,20 @@ public class VerbosePageCacheTracer extends DefaultPageCacheTracer
 
     private static String nanosToString( long nanos )
     {
-        if ( USE_RAW_REPORTING_UNITS )
-        {
-            return nanos + "ns";
-        }
-        return TimeUtil.nanosToString( nanos );
+        return format( "%s (%d ns)", TimeUtil.nanosToString( nanos ), nanos );
     }
 
     private static String flushSpeed( long bytesWrittenInTotal, long flushTimeNanos )
     {
-        if ( USE_RAW_REPORTING_UNITS )
-        {
-            return bytesInNanoSeconds( bytesWrittenInTotal, flushTimeNanos );
-        }
+        String bytesPerNano = bytesInNanoSeconds( bytesWrittenInTotal, flushTimeNanos );
         long seconds = TimeUnit.NANOSECONDS.toSeconds( flushTimeNanos );
         if ( seconds > 0 )
         {
-            return bytesToString( bytesWrittenInTotal / seconds ) + "/s";
+            return bytesToString( bytesWrittenInTotal / seconds ) + "/s" + " (" + bytesPerNano + ")";
         }
         else
         {
-            return bytesInNanoSeconds( bytesWrittenInTotal, flushTimeNanos );
+            return bytesPerNano;
         }
     }
 
@@ -108,11 +99,7 @@ public class VerbosePageCacheTracer extends DefaultPageCacheTracer
 
     private static String bytesToString( long bytes )
     {
-        if ( USE_RAW_REPORTING_UNITS )
-        {
-            return bytes + "bytes";
-        }
-        return ByteUnit.bytesToString( bytes );
+        return format( "%s (%d bytes)", ByteUnit.bytesToString( bytes ), bytes );
     }
 
     private final FlushEvent flushEvent = new FlushEvent()
@@ -237,7 +224,7 @@ public class VerbosePageCacheTracer extends DefaultPageCacheTracer
         @Override
         public FlushEvent beginFlush( long filePageId, long cachePageId, PageSwapper swapper, int pagesToFlush, int mergedPages )
         {
-            if ( lastReportingTime.hasTimedOut( SPEED_REPORTING_TIME_THRESHOLD, TimeUnit.SECONDS ) )
+            if ( lastReportingTime.hasTimedOut( speedReportingThresholdSeconds ) )
             {
                 long writtenBytes = flushBytesWritten.get();
                 log.info( format("'%s' flushing speed: %s.", fileName,

@@ -104,7 +104,7 @@ class PageCacheWarmerTest
         life = new LifeSupport();
         scheduler = life.add( createScheduler() );
         life.start();
-        tracers = new Tracers( "", log, null, null, Clocks.nanoClock() );
+        tracers = new Tracers( "", log, null, null, Clocks.nanoClock(), Config.defaults() );
         cacheTracer = tracers.getPageCacheTracer();
         cfg = PageCacheConfig.config().withTracer( cacheTracer );
         file = testDirectory.homePath().resolve( "a" );

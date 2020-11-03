@@ -8,6 +8,7 @@ package com.neo4j.kernel.stresstests.transaction.checkpoint.tracers;
 import java.time.Clock;
 
 import org.neo4j.annotations.service.ServiceProvider;
+import org.neo4j.configuration.Config;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.transaction.tracing.DatabaseTracer;
 import org.neo4j.kernel.monitoring.tracing.TracerFactory;
@@ -28,7 +29,7 @@ public class TimerTracerFactory implements TracerFactory
     }
 
     @Override
-    public PageCacheTracer createPageCacheTracer( Monitors monitors, JobScheduler jobScheduler, SystemNanoClock clock, Log log )
+    public PageCacheTracer createPageCacheTracer( Monitors monitors, JobScheduler jobScheduler, SystemNanoClock clock, Log log, Config config )
     {
         return PageCacheTracer.NULL;
     }
