@@ -80,7 +80,7 @@ public class CoreClusterMember implements ClusterMember
     private final int index;
     private final String boltSocketAddress;
     private final String intraClusterBoltSocketAddress;
-    private final int discoveryPort;
+    private final SocketAddress discoveryAddress;
     private final String raftListenAddress;
     private CoreGraphDatabase coreGraphDatabase;
     private GraphDatabaseFacade defaultDatabase;
@@ -112,8 +112,7 @@ public class CoreClusterMember implements ClusterMember
                               String advertisedAddress )
     {
         this.index = index;
-
-        this.discoveryPort = discoveryPort;
+        this.discoveryAddress = new SocketAddress( advertisedAddress, discoveryPort );
 
         boltSocketAddress = format( advertisedAddress, boltPort );
         intraClusterBoltSocketAddress = format( advertisedAddress, intraClusterBoltPort );
@@ -346,9 +345,9 @@ public class CoreClusterMember implements ClusterMember
         return clusterStateLayout.raftLogDirectory( databaseName );
     }
 
-    public int discoveryPort()
+    public SocketAddress discoveryAddress()
     {
-        return discoveryPort;
+        return discoveryAddress;
     }
 
     public NamedDatabaseId databaseId( String databaseName )

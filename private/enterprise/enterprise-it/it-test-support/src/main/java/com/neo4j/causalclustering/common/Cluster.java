@@ -58,11 +58,11 @@ import org.neo4j.function.ThrowingFunction;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.KernelTransaction;
-
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -77,6 +77,8 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.default_advertised_address;
+import static org.neo4j.configuration.GraphDatabaseSettings.default_listen_address;
 import static org.neo4j.function.Predicates.await;
 import static org.neo4j.function.Predicates.awaitEx;
 import static org.neo4j.function.Predicates.notNull;
@@ -98,8 +100,8 @@ public class Cluster implements ServerAddressResolver
     private final Map<String,IntFunction<String>> instanceReadReplicaParams;
     private final String recordFormat;
     private final DiscoveryServiceFactory discoveryServiceFactory;
-    private final String listenAddress;
-    private final String advertisedAddress;
+    private final String defaultListenAddress;
+    private final String defaultAdvertisedAddress;
 
     private final Map<Integer,CoreClusterMember> coreMembers = new ConcurrentHashMap<>();
     private final Map<Integer,ReadReplica> readReplicas = new ConcurrentHashMap<>();
@@ -119,18 +121,18 @@ public class Cluster implements ServerAddressResolver
         this.readReplicaParams = readReplicaParams;
         this.instanceReadReplicaParams = instanceReadReplicaParams;
         this.recordFormat = recordFormat;
-        listenAddress = useWildcard ? ipFamily.wildcardAddress() : ipFamily.localhostAddress();
-        advertisedAddress = ipFamily.localhostName();
-        List<SocketAddress> initialHosts = initialHosts( noOfCoreMembers, advertisedAddress );
+        defaultListenAddress = useWildcard ? ipFamily.wildcardAddress() : ipFamily.localhostAddress();
+        defaultAdvertisedAddress = ipFamily.localhostName();
+        var initialHosts = initialHosts( noOfCoreMembers, coreParams, instanceCoreParams );
         createCoreMembers( noOfCoreMembers, initialHosts, coreParams, instanceCoreParams, recordFormat );
         createReadReplicas( noOfReadReplicas, initialHosts, readReplicaParams, instanceReadReplicaParams, recordFormat );
     }
 
-    private static List<SocketAddress> initialHosts( int noOfCoreMembers, String advertisedAddress )
+    private List<SocketAddress> initialHosts( int noOfCoreMembers, Map<String,String> coreParams, Map<String,IntFunction<String>> instanceCoreParams )
     {
         return IntStream.range( 0, noOfCoreMembers )
-                .mapToObj( ignored -> PortAuthority.allocatePort() )
-                .map( port -> new SocketAddress( advertisedAddress, port ) )
+                .mapToObj( index -> getAdvertisedAddress( index, coreParams, instanceCoreParams ) )
+                .map( advertisedAddress -> new SocketAddress( advertisedAddress, PortAuthority.allocatePort() ) )
                 .collect( toList() );
     }
 
@@ -643,8 +645,7 @@ public class Cluster implements ServerAddressResolver
     private List<SocketAddress> extractInitialHosts( Map<Integer,CoreClusterMember> coreMembers )
     {
         return coreMembers.values().stream()
-                .map( CoreClusterMember::discoveryPort )
-                .map( port -> new SocketAddress( advertisedAddress, port ) )
+                .map( CoreClusterMember::discoveryAddress )
                 .collect( toList() );
     }
 
@@ -677,12 +678,14 @@ public class Cluster implements ServerAddressResolver
             Map<String,String> extraParams,
             Map<String,IntFunction<String>> instanceExtraParams )
     {
-        int txPort = PortAuthority.allocatePort();
-        int raftPort = PortAuthority.allocatePort();
-        int boltPort = PortAuthority.allocatePort();
-        int intraClusterBoltPort = PortAuthority.allocatePort();
-        int httpPort = PortAuthority.allocatePort();
-        int backupPort = PortAuthority.allocatePort();
+        var txPort = PortAuthority.allocatePort();
+        var raftPort = PortAuthority.allocatePort();
+        var boltPort = PortAuthority.allocatePort();
+        var intraClusterBoltPort = PortAuthority.allocatePort();
+        var httpPort = PortAuthority.allocatePort();
+        var backupPort = PortAuthority.allocatePort();
+        var listenAddress = getListenAddress( index, extraParams, instanceExtraParams );
+        var advertisedAddress = getAdvertisedAddress( index, extraParams, instanceExtraParams );
 
         return new CoreClusterMember(
                 index,
@@ -712,12 +715,14 @@ public class Cluster implements ServerAddressResolver
             String recordFormat,
             Monitors monitors )
     {
-        int boltPort = PortAuthority.allocatePort();
-        int intraClusterBoltPort = PortAuthority.allocatePort();
-        int httpPort = PortAuthority.allocatePort();
-        int txPort = PortAuthority.allocatePort();
-        int backupPort = PortAuthority.allocatePort();
-        int discoveryPort = PortAuthority.allocatePort();
+        var boltPort = PortAuthority.allocatePort();
+        var intraClusterBoltPort = PortAuthority.allocatePort();
+        var httpPort = PortAuthority.allocatePort();
+        var txPort = PortAuthority.allocatePort();
+        var backupPort = PortAuthority.allocatePort();
+        var discoveryPort = PortAuthority.allocatePort();
+        var listenAddress = getListenAddress( index, extraParams, instanceExtraParams );
+        var advertisedAddress = getAdvertisedAddress( index, extraParams, instanceExtraParams );
 
         return new ReadReplica(
                 parentDir,
@@ -739,6 +744,23 @@ public class Cluster implements ServerAddressResolver
                 ( Config config, GraphDatabaseDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory ) ->
                         new TestReadReplicaGraphDatabase( config, dependencies, discoveryServiceFactory, ReadReplicaEditionModule::new )
         );
+    }
+
+    private String getListenAddress( int index, Map<String,String> extraParams, Map<String,IntFunction<String>> instanceExtraParams )
+    {
+        return getAddress( index, extraParams, instanceExtraParams, default_listen_address, defaultListenAddress );
+    }
+
+    private String getAdvertisedAddress( int index, Map<String,String> extraParams, Map<String,IntFunction<String>> instanceExtraParams )
+    {
+        return getAddress( index, extraParams, instanceExtraParams, default_advertised_address, defaultAdvertisedAddress );
+    }
+
+    private String getAddress( int index, Map<String,String> extraParams, Map<String,IntFunction<String>> instanceExtraParams,
+            Setting<SocketAddress> addressSetting, String defaultAddress )
+    {
+        return instanceExtraParams.getOrDefault( addressSetting.name(),
+                ignored -> extraParams.getOrDefault( addressSetting.name(), defaultAddress ) ).apply( index );
     }
 
     public void startCoreMembers() throws InterruptedException, ExecutionException
