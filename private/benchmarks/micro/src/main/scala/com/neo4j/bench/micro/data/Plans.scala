@@ -24,10 +24,13 @@ import org.neo4j.cypher.internal.expressions.DecimalDoubleLiteral
 import org.neo4j.cypher.internal.expressions.DesugaredMapProjection
 import org.neo4j.cypher.internal.expressions.Equals
 import org.neo4j.cypher.internal.expressions.Expression
+import org.neo4j.cypher.internal.expressions.False
 import org.neo4j.cypher.internal.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.expressions.FunctionName
 import org.neo4j.cypher.internal.expressions.GreaterThan
 import org.neo4j.cypher.internal.expressions.GreaterThanOrEqual
+import org.neo4j.cypher.internal.expressions.HasLabels
+import org.neo4j.cypher.internal.expressions.HasTypes
 import org.neo4j.cypher.internal.expressions.In
 import org.neo4j.cypher.internal.expressions.LabelName
 import org.neo4j.cypher.internal.expressions.LessThan
@@ -50,6 +53,7 @@ import org.neo4j.cypher.internal.expressions.ReduceExpression
 import org.neo4j.cypher.internal.expressions.RelTypeName
 import org.neo4j.cypher.internal.expressions.SignedDecimalIntegerLiteral
 import org.neo4j.cypher.internal.expressions.StringLiteral
+import org.neo4j.cypher.internal.expressions.True
 import org.neo4j.cypher.internal.expressions.Variable
 import org.neo4j.cypher.internal.logical.plans.Bound
 import org.neo4j.cypher.internal.logical.plans.Bounds
@@ -57,6 +61,9 @@ import org.neo4j.cypher.internal.logical.plans.ExclusiveBound
 import org.neo4j.cypher.internal.logical.plans.InclusiveBound
 import org.neo4j.cypher.internal.logical.plans.InequalitySeekRange
 import org.neo4j.cypher.internal.logical.plans.InequalitySeekRangeWrapper
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.NestedPlanCollectExpression
+import org.neo4j.cypher.internal.logical.plans.NestedPlanExistsExpression
 import org.neo4j.cypher.internal.logical.plans.PointDistanceRange
 import org.neo4j.cypher.internal.logical.plans.PointDistanceSeekRangeWrapper
 import org.neo4j.cypher.internal.logical.plans.PrefixRange
@@ -261,4 +268,16 @@ object Plans {
   def astListLiteral(expressions: Seq[Expression]): Expression = ListLiteral(expressions)(Pos)
 
   def astPathExpression(step: NodePathStep): Expression = PathExpression(step)(Pos)
+
+  def astHasLabels(node: String, labels: String*): Expression = HasLabels(astVariable(node), labels.map(l => LabelName(l)(Pos)))(Pos)
+
+  def astHasTypes(relationship: String, types: String*): Expression = HasTypes(astVariable(relationship), types.map(t => RelTypeName(t)(Pos)))(Pos)
+
+  def astNestedExists(plan: LogicalPlan): Expression = NestedPlanExistsExpression(plan, "")(Pos)
+
+  def astNestedCollect(plan: LogicalPlan, projection: Expression): Expression = NestedPlanCollectExpression(plan, projection, "")(Pos)
+
+  def astTrue: Expression = True()(Pos)
+
+  def astFalse: Expression = False()(Pos)
 }
