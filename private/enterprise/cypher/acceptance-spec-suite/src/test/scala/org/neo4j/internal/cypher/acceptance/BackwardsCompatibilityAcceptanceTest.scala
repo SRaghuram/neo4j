@@ -328,7 +328,7 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
   test("create relationship existence constraint with IF NOT EXISTS should not work with CYPHER 3.5") {
     // WHEN
     val exception = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS(n.prop)")
+      executeSingle("CYPHER 3.5 CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS(r.prop)")
     }
     exception.getMessage should include("Creating relationship existence constraint using `IF NOT EXISTS` is not supported in this Cypher version.")
 
@@ -388,4 +388,38 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
   }
 
   // Additions 4.3
+
+  test("Node existence constraint using IS NOT NULL should not work with CYPHER 3.5 and 4.2") {
+    Seq("CYPHER 3.5", "CYPHER 4.2").foreach(version => {
+      withClue(version) {
+        // WHEN
+        val exception = the[SyntaxException] thrownBy {
+          executeSingle(s"$version CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NOT NULL")
+        }
+
+        // THEN
+        exception.getMessage should include("Creating node existence constraint using `IS NOT NULL` is not supported in this Cypher version.")
+      }
+    })
+
+    // THEN
+    graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
+  }
+
+  test("Relationship existence constraint using IS NOT NULL should not work with CYPHER 3.5 and 4.2") {
+    Seq("CYPHER 3.5", "CYPHER 4.2").foreach(version => {
+      withClue(version) {
+        // WHEN
+        val exception = the[SyntaxException] thrownBy {
+          executeSingle(s"$version CREATE CONSTRAINT ON ()-[r:Label]-() ASSERT r.prop IS NOT NULL")
+        }
+
+        // THEN
+        exception.getMessage should include("Creating relationship existence constraint using `IS NOT NULL` is not supported in this Cypher version.")
+      }
+    })
+
+    // THEN
+    graph.getMaybeRelationshipConstraint("Label", "prop").isEmpty should be(true)
+  }
 }

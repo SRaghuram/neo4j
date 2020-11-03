@@ -683,9 +683,9 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
         randomOptionsMap = Some(randomOptions._2)
         s"CREATE CONSTRAINT $escapedName ON (n:$escapedLabel) ASSERT (n.$escapedProperty) IS NODE KEY OPTIONS ${randomOptions._1}"
       case NodeExistsConstraints =>
-        s"CREATE CONSTRAINT $escapedName ON (n:$escapedLabel) ASSERT exists(n.$escapedProperty)"
+        s"CREATE CONSTRAINT $escapedName ON (n:$escapedLabel) ASSERT (n.$escapedProperty) IS NOT NULL"
       case RelExistsConstraints =>
-        s"CREATE CONSTRAINT $escapedName ON ()-[r:$escapedLabel]-() ASSERT exists(r.$escapedProperty)"
+        s"CREATE CONSTRAINT $escapedName ON ()-[r:$escapedLabel]-() ASSERT (r.$escapedProperty) IS NOT NULL"
       case unexpectedType =>
         throw new IllegalArgumentException(s"Unexpected constraint type for constraint create command: ${unexpectedType.prettyPrint}")
     }
@@ -747,7 +747,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     constraintOutputBrief(id, "constraint3", "NODE_PROPERTY_EXISTENCE", "NODE", List(label), List(prop2), None)
 
   private def defaultNodeExistsVerboseConstraintOutput(id: Long): Map[String, Any] = defaultNodeExistsBriefConstraintOutput(id) ++
-    constraintOutputVerbose(s"CREATE CONSTRAINT `constraint3` ON (n:`$label`) ASSERT exists(n.`$prop2`)")
+    constraintOutputVerbose(s"CREATE CONSTRAINT `constraint3` ON (n:`$label`) ASSERT (n.`$prop2`) IS NOT NULL")
 
   // rel exists constraint
 
@@ -757,7 +757,7 @@ class ShowSchemaCommandsAcceptanceTest extends ExecutionEngineFunSuite with Quer
     constraintOutputBrief(id, "constraint4", "RELATIONSHIP_PROPERTY_EXISTENCE", "RELATIONSHIP", List(relType), List(prop), None)
 
   private def defaultRelExistsVerboseConstraintOutput(id: Long): Map[String, Any] = defaultRelExistsBriefConstraintOutput(id) ++
-    constraintOutputVerbose(s"CREATE CONSTRAINT `constraint4` ON ()-[r:`$relType`]-() ASSERT exists(r.`$prop`)")
+    constraintOutputVerbose(s"CREATE CONSTRAINT `constraint4` ON ()-[r:`$relType`]-() ASSERT (r.`$prop`) IS NOT NULL")
 
   // Create statements help methods
 

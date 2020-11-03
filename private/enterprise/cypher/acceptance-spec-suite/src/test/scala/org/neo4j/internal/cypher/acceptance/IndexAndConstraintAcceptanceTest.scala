@@ -1334,7 +1334,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   // Node property existence
 
-  test("should create node property existence constraint") {
+  test("should create node property existence constraint (old syntax)") {
     // WHEN
     executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT EXISTS (n.name)")
 
@@ -1349,7 +1349,22 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     properties should be(Seq("name"))
   }
 
-  test("should create named node property existence constraint") {
+  test("should create node property existence constraint (new syntax)") {
+    // WHEN
+    executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT n.name IS NOT NULL")
+
+    // THEN
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("constraint_6ced8351")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("constraint_6ced8351")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
+  test("should create named node property existence constraint (old syntax)") {
     // WHEN
     executeSingle("CREATE CONSTRAINT my_constraint ON (n:Person) ASSERT EXISTS (n.name)")
 
@@ -1364,9 +1379,24 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     properties should be(Seq("name"))
   }
 
+  test("should create named node property existence constraint (new syntax)") {
+    // WHEN
+    executeSingle("CREATE CONSTRAINT my_constraint ON (n:Person) ASSERT n.name IS NOT NULL")
+
+    // THEN
+
+    // get by schema
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("my_constraint")
+
+    // get by name
+    val (label, properties) = graph.getConstraintSchemaByName("my_constraint")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
   test("should create node property existence constraint if not existing") {
     // WHEN
-    val result = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON (n:Person) ASSERT EXISTS (n.name)")
+    val result = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON (n:Person) ASSERT n.name IS NOT NULL")
 
     // THEN
     assertStats(result, existenceConstraintsAdded = 1)
@@ -1382,7 +1412,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   test("should create named node property existence constraint if not existing") {
     // WHEN
-    val result = executeSingle("CREATE CONSTRAINT myConstraint IF NOT EXISTS ON (n:Person) ASSERT EXISTS (n.name)")
+    val result = executeSingle("CREATE CONSTRAINT myConstraint IF NOT EXISTS ON (n:Person) ASSERT n.name IS NOT NULL")
 
     // THEN
     assertStats(result, existenceConstraintsAdded = 1)
@@ -1398,10 +1428,10 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   test("should not create node property existence constraint if already existing") {
     // GIVEN
-    executeSingle("CREATE CONSTRAINT existingConstraint ON (n:Person) ASSERT EXISTS (n.name)")
+    executeSingle("CREATE CONSTRAINT existingConstraint ON (n:Person) ASSERT n.name IS NOT NULL")
 
     // WHEN
-    val result = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON (n:Person) ASSERT EXISTS (n.name)")
+    val result = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON (n:Person) ASSERT n.name IS NOT NULL")
 
     // THEN
     assertStats(result, existenceConstraintsAdded = 0)
@@ -1417,15 +1447,17 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   test("should not create named node property existence constraint if already existing") {
     // GIVEN
-    executeSingle("CREATE CONSTRAINT existingConstraint ON (n:Person) ASSERT EXISTS (n.name)")
+    executeSingle("CREATE CONSTRAINT existingConstraint ON (n:Person) ASSERT n.name IS NOT NULL")
 
     // WHEN
-    val result = executeSingle("CREATE CONSTRAINT myConstraint IF NOT EXISTS ON (n:Person) ASSERT EXISTS (n.name)")
-    val result2 = executeSingle("CREATE CONSTRAINT existingConstraint IF NOT EXISTS ON (n:Person) ASSERT EXISTS (n.age)")
+    val result = executeSingle("CREATE CONSTRAINT myConstraint IF NOT EXISTS ON (n:Person) ASSERT n.name IS NOT NULL")
+    val result2 = executeSingle("CREATE CONSTRAINT existingConstraint IF NOT EXISTS ON (n:Person) ASSERT n.age IS NOT NULL")
+    val result3 = executeSingle("CREATE CONSTRAINT myConstraint IF NOT EXISTS ON (n:Person) ASSERT EXISTS(n.name)") // old syntax
 
     // THEN
     assertStats(result, existenceConstraintsAdded = 0)
     assertStats(result2, existenceConstraintsAdded = 0)
+    assertStats(result3, existenceConstraintsAdded = 0)
 
     // get by schema
     graph.getNodeConstraint("Person", Seq("name")).getName should be("existingConstraint")
@@ -1440,22 +1472,22 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     val errorMessage = "Failed to create node property existence constraint: `OR REPLACE` cannot be used together with this command."
 
     val error1 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint ON (n:Person) ASSERT exists(n.name)")
+      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint ON (n:Person) ASSERT n.name IS NOT NULL")
     }
     error1.getMessage should startWith (errorMessage)
 
     val error2 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT ON (n:Person) ASSERT exists(n.name)")
+      executeSingle("CREATE OR REPLACE CONSTRAINT ON (n:Person) ASSERT n.name IS NOT NULL")
     }
     error2.getMessage should startWith (errorMessage)
 
     val error3 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint IF NOT EXISTS ON (n:Person) ASSERT exists(n.name)")
+      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint IF NOT EXISTS ON (n:Person) ASSERT n.name IS NOT NULL")
     }
     error3.getMessage should startWith (errorMessage)
 
     val error4 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT IF NOT EXISTS ON (n:Person) ASSERT exists(n.name)")
+      executeSingle("CREATE OR REPLACE CONSTRAINT IF NOT EXISTS ON (n:Person) ASSERT n.name IS NOT NULL")
     }
     error4.getMessage should startWith (errorMessage)
   }
@@ -1463,7 +1495,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should fail to create node property existence constraint with OPTIONS") {
     // WHEN
     val error = the[SyntaxException] thrownBy {
-      executeSingle("CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT EXISTS(n.name) OPTIONS {}")
+      executeSingle("CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT n.name IS NOT NULL OPTIONS {}")
     }
     // THEN
     error.getMessage should startWith ("Failed to create node property existence constraint: `OPTIONS` cannot be used together with this command.")
@@ -1471,7 +1503,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   // Relationship property existence
 
-  test("should create relationship property existence constraint") {
+  test("should create relationship property existence constraint (old syntax)") {
     // WHEN
     executeSingle("CREATE CONSTRAINT ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
 
@@ -1486,7 +1518,22 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     properties should be(Seq("since"))
   }
 
-  test("should create named relationship property existence constraint") {
+  test("should create relationship property existence constraint (new syntax)") {
+    // WHEN
+    executeSingle("CREATE CONSTRAINT ON ()-[r:HasPet]-() ASSERT r.since Is NOT NULL")
+
+    // THEN
+
+    // get by schema
+    graph.getRelationshipConstraint("HasPet", "since").getName should be("constraint_6c4e7adb")
+
+    // get by name
+    val (relType, properties) = graph.getConstraintSchemaByName("constraint_6c4e7adb")
+    relType should be("HasPet")
+    properties should be(Seq("since"))
+  }
+
+  test("should create named relationship property existence constraint (old syntax)") {
     // WHEN
     executeSingle("CREATE CONSTRAINT my_constraint ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
 
@@ -1501,9 +1548,24 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     properties should be(Seq("since"))
   }
 
+  test("should create named relationship property existence constraint (new syntax)") {
+    // WHEN
+    executeSingle("CREATE CONSTRAINT my_constraint ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL")
+
+    // THEN
+
+    // get by schema
+    graph.getRelationshipConstraint("HasPet", "since").getName should be("my_constraint")
+
+    // get by name
+    val (relType, properties) = graph.getConstraintSchemaByName("my_constraint")
+    relType should be("HasPet")
+    properties should be(Seq("since"))
+  }
+
   test("should create relationship property existence constraint if not existing") {
     // WHEN
-    val result = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+    val result = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL")
 
     // THEN
     assertStats(result, existenceConstraintsAdded = 1)
@@ -1519,7 +1581,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   test("should create named relationship property existence constraint if not existing") {
     // WHEN
-    val result = executeSingle("CREATE CONSTRAINT myConstraint IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+    val result = executeSingle("CREATE CONSTRAINT myConstraint IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL")
 
     // THEN
     assertStats(result, existenceConstraintsAdded = 1)
@@ -1535,13 +1597,15 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   test("should not create relationship property existence constraint if already existing") {
     // GIVEN
-    executeSingle("CREATE CONSTRAINT existingConstraint ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+    executeSingle("CREATE CONSTRAINT existingConstraint ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL")
 
     // WHEN
-    val result = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+    val result = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL")
+    val result2 = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)") // old syntax
 
     // THEN
     assertStats(result, existenceConstraintsAdded = 0)
+    assertStats(result2, existenceConstraintsAdded = 0)
 
     // get by schema
     graph.getRelationshipConstraint("HasPet", "since").getName should be("existingConstraint")
@@ -1554,11 +1618,11 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   test("should not create named relationship property existence constraint if already existing") {
     // GIVEN
-    executeSingle("CREATE CONSTRAINT existingConstraint ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+    executeSingle("CREATE CONSTRAINT existingConstraint ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL")
 
     // WHEN
-    val result = executeSingle("CREATE CONSTRAINT myConstraint IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
-    val result2 = executeSingle("CREATE CONSTRAINT existingConstraint IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT EXISTS (r.age)")
+    val result = executeSingle("CREATE CONSTRAINT myConstraint IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL")
+    val result2 = executeSingle("CREATE CONSTRAINT existingConstraint IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT r.age IS NOT NULL")
 
     // THEN
     assertStats(result, existenceConstraintsAdded = 0)
@@ -1577,22 +1641,22 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     val errorMessage = "Failed to create relationship property existence constraint: `OR REPLACE` cannot be used together with this command."
 
     val error1 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL")
     }
     error1.getMessage should startWith (errorMessage)
 
     val error2 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+      executeSingle("CREATE OR REPLACE CONSTRAINT ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL")
     }
     error2.getMessage should startWith (errorMessage)
 
     val error3 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+      executeSingle("CREATE OR REPLACE CONSTRAINT myConstraint IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL")
     }
     error3.getMessage should startWith (errorMessage)
 
     val error4 = the[SyntaxException] thrownBy {
-      executeSingle("CREATE OR REPLACE CONSTRAINT IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
+      executeSingle("CREATE OR REPLACE CONSTRAINT IF NOT EXISTS ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL")
     }
     error4.getMessage should startWith (errorMessage)
   }
@@ -1600,7 +1664,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should fail to create relationship property existence constraint with OPTIONS") {
     // WHEN
     val error = the[SyntaxException] thrownBy {
-      executeSingle("CREATE CONSTRAINT ON ()-[r:HasPet]-() ASSERT EXISTS (r.since) OPTIONS {}")
+      executeSingle("CREATE CONSTRAINT ON ()-[r:HasPet]-() ASSERT r.since IS NOT NULL OPTIONS {}")
     }
     // THEN
     error.getMessage should startWith ("Failed to create relationship property existence constraint: `OPTIONS` cannot be used together with this command.")
@@ -1622,15 +1686,15 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     } should have message "An equivalent constraint already exists, 'Constraint( id=4, name='constraint_380bd7de', type='UNIQUENESS', schema=(:Label2 {prop}), ownedIndex=3 )'."
 
     // Node property existence constraint
-    executeSingle("CREATE CONSTRAINT ON (n:Label3) ASSERT EXISTS (n.prop)")
+    executeSingle("CREATE CONSTRAINT ON (n:Label3) ASSERT (n.prop) IS NOT NULL")
     the[CypherExecutionException] thrownBy {
-      executeSingle("CREATE CONSTRAINT ON (n:Label3) ASSERT EXISTS (n.prop)")
+      executeSingle("CREATE CONSTRAINT ON (n:Label3) ASSERT (n.prop) IS NOT NULL")
     } should have message "An equivalent constraint already exists, 'Constraint( id=5, name='constraint_5f73eda7', type='NODE PROPERTY EXISTENCE', schema=(:Label3 {prop}) )'."
 
     // Relationship property existence constraint
-    executeSingle("CREATE CONSTRAINT ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
+    executeSingle("CREATE CONSTRAINT ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
     the[CypherExecutionException] thrownBy {
-      executeSingle("CREATE CONSTRAINT ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
+      executeSingle("CREATE CONSTRAINT ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
     } should have message "An equivalent constraint already exists, 'Constraint( id=6, name='constraint_3e723b4d', type='RELATIONSHIP PROPERTY EXISTENCE', schema=-[:Type {prop}]- )'."
   }
 
@@ -1648,15 +1712,15 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     } should have message "An equivalent constraint already exists, 'Constraint( id=4, name='constraint2', type='UNIQUENESS', schema=(:Label2 {prop}), ownedIndex=3 )'."
 
     // Node property existence constraint
-    executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label3) ASSERT EXISTS (n.prop)")
+    executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label3) ASSERT (n.prop) IS NOT NULL")
     the[CypherExecutionException] thrownBy {
-      executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label3) ASSERT EXISTS (n.prop)")
+      executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label3) ASSERT (n.prop) IS NOT NULL")
     } should have message "An equivalent constraint already exists, 'Constraint( id=5, name='constraint3', type='NODE PROPERTY EXISTENCE', schema=(:Label3 {prop}) )'."
 
     // Relationship property existence constraint
-    executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
+    executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
     the[CypherExecutionException] thrownBy {
-      executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
+      executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
     } should have message "An equivalent constraint already exists, 'Constraint( id=6, name='constraint4', type='RELATIONSHIP PROPERTY EXISTENCE', schema=-[:Type {prop}]- )'."
   }
 
@@ -1674,15 +1738,15 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     } should have message "Constraint already exists: Constraint( id=4, name='constraint2', type='UNIQUENESS', schema=(:Label2 {prop}), ownedIndex=3 )"
 
     // Node property existence constraint
-    executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label3) ASSERT EXISTS (n.prop)")
+    executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label3) ASSERT (n.prop) IS NOT NULL")
     the[CypherExecutionException] thrownBy {
-      executeSingle("CREATE CONSTRAINT constraint7 ON (n:Label3) ASSERT EXISTS (n.prop)")
+      executeSingle("CREATE CONSTRAINT constraint7 ON (n:Label3) ASSERT (n.prop) IS NOT NULL")
     } should have message "Constraint already exists: Constraint( id=5, name='constraint3', type='NODE PROPERTY EXISTENCE', schema=(:Label3 {prop}) )"
 
     // Relationship property existence constraint
-    executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
+    executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
     the[CypherExecutionException] thrownBy {
-      executeSingle("CREATE CONSTRAINT constraint8 ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
+      executeSingle("CREATE CONSTRAINT constraint8 ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
     } should have message "Constraint already exists: Constraint( id=6, name='constraint4', type='RELATIONSHIP PROPERTY EXISTENCE', schema=-[:Type {prop}]- )"
   }
 
@@ -1700,15 +1764,15 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     } should have message "There already exists a constraint called 'constraint2'."
 
     // Node property existence constraint
-    executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label3) ASSERT EXISTS (n.prop1)")
+    executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label3) ASSERT (n.prop1) IS NOT NULL")
     the[CypherExecutionException] thrownBy {
-      executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label3) ASSERT EXISTS (n.prop2)")
+      executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label3) ASSERT (n.prop2) IS NOT NULL")
     } should have message "There already exists a constraint called 'constraint3'."
 
     // Relationship property existence constraint
-    executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Type]-() ASSERT EXISTS (r.prop1)")
+    executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Type]-() ASSERT (r.prop1) IS NOT NULL")
     the[CypherExecutionException] thrownBy {
-      executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Type]-() ASSERT EXISTS (r.prop2)")
+      executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Type]-() ASSERT (r.prop2) IS NOT NULL")
     } should have message "There already exists a constraint called 'constraint4'."
   }
 
@@ -1722,10 +1786,10 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     } should have message "Constraint already exists: Constraint( id=2, name='constraint_f6242497', type='NODE KEY', schema=(:Label {prop}), ownedIndex=1 )"
 
     // Node property existence constraint
-    executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT EXISTS (n.prop)")
+    executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NOT NULL")
 
     // Relationship property existence constraint (close as can get to same schema)
-    executeSingle("CREATE CONSTRAINT ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    executeSingle("CREATE CONSTRAINT ON ()-[r:Label]-() ASSERT (r.prop) IS NOT NULL")
   }
 
   test("creating named constraints on the same schema as existing named node key constraint") {
@@ -1738,10 +1802,10 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     } should have message "Constraint already exists: Constraint( id=2, name='constraint1', type='NODE KEY', schema=(:Label {prop}), ownedIndex=1 )"
 
     // Node property existence constraint
-    executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label) ASSERT EXISTS (n.prop)")
+    executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label) ASSERT (n.prop) IS NOT NULL")
 
     // Relationship property existence constraint (close as can get to same schema)
-    executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Label]-() ASSERT (r.prop) IS NOT NULL")
   }
 
   test("creating constraints on same name and schema as existing node key constraint") {
@@ -1755,12 +1819,12 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // Node property existence constraint
     the[CypherExecutionException] thrownBy {
-      executeSingle("CREATE CONSTRAINT constraint ON (n:Label) ASSERT EXISTS (n.prop)")
+      executeSingle("CREATE CONSTRAINT constraint ON (n:Label) ASSERT (n.prop) IS NOT NULL")
     } should have message "There already exists a constraint called 'constraint'."
 
     // Relationship property existence constraint (close as can get to same schema)
     the[CypherExecutionException] thrownBy {
-      executeSingle("CREATE CONSTRAINT constraint ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+      executeSingle("CREATE CONSTRAINT constraint ON ()-[r:Label]-() ASSERT (r.prop) IS NOT NULL")
     } should have message "There already exists a constraint called 'constraint'."
   }
 
@@ -1775,12 +1839,12 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // Node property existence constraint
     the[CypherExecutionException] thrownBy {
-      executeSingle("CREATE CONSTRAINT constraint ON (n:Label) ASSERT EXISTS (n.prop3)")
+      executeSingle("CREATE CONSTRAINT constraint ON (n:Label) ASSERT (n.prop3) IS NOT NULL")
     } should have message "There already exists a constraint called 'constraint'."
 
     // Relationship property existence constraint
     the[CypherExecutionException] thrownBy {
-      executeSingle("CREATE CONSTRAINT constraint ON ()-[r:Label]-() ASSERT EXISTS (r.prop4)")
+      executeSingle("CREATE CONSTRAINT constraint ON ()-[r:Label]-() ASSERT (r.prop4) IS NOT NULL")
     } should have message "There already exists a constraint called 'constraint'."
   }
 
@@ -1793,11 +1857,11 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     assertStats(resU, uniqueConstraintsAdded = 0)
 
     // Node property existence constraint
-    val resN = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT EXISTS (n.prop)")
+    val resN = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS NOT NULL")
     assertStats(resN, existenceConstraintsAdded = 0)
 
     // Relationship property existence constraint
-    val resR = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    val resR = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Label]-() ASSERT (r.prop) IS NOT NULL")
     assertStats(resR, existenceConstraintsAdded = 0)
   }
 
@@ -1811,11 +1875,11 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     } should have message "Constraint already exists: Constraint( id=2, name='constraint', type='NODE KEY', schema=(:Label {prop}), ownedIndex=1 )"
 
     // Node property existence constraint
-    val resN = executeSingle("CREATE CONSTRAINT constraint3 IF NOT EXISTS ON (n:Label) ASSERT EXISTS (n.prop)")
+    val resN = executeSingle("CREATE CONSTRAINT constraint3 IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS NOT NULL")
     assertStats(resN, existenceConstraintsAdded = 1)
 
     // Relationship property existence constraint
-    val resR = executeSingle("CREATE CONSTRAINT constraint4 IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    val resR = executeSingle("CREATE CONSTRAINT constraint4 IF NOT EXISTS ON ()-[r:Label]-() ASSERT (r.prop) IS NOT NULL")
     assertStats(resR, existenceConstraintsAdded = 1)
   }
 
@@ -1828,11 +1892,11 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     assertStats(resU, uniqueConstraintsAdded = 0)
 
     // Node property existence constraint
-    val resN = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT EXISTS (n.prop3)")
+    val resN = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT (n.prop3) IS NOT NULL")
     assertStats(resN, existenceConstraintsAdded = 0)
 
     // Relationship property existence constraint
-    val resR = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS (r.prop4)")
+    val resR = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Label]-() ASSERT (r.prop4) IS NOT NULL")
     assertStats(resR, existenceConstraintsAdded = 0)
   }
 
@@ -1846,10 +1910,10 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     } should have message "Constraint already exists: Constraint( id=2, name='constraint_952591e6', type='UNIQUENESS', schema=(:Label {prop}), ownedIndex=1 )"
 
     // Node property existence constraint
-    executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT EXISTS (n.prop)")
+    executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NOT NULL")
 
     // Relationship property existence constraint (close as can get to same schema)
-    executeSingle("CREATE CONSTRAINT ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    executeSingle("CREATE CONSTRAINT ON ()-[r:Label]-() ASSERT (r.prop) IS NOT NULL")
   }
 
   test("creating named constraints on the same schema as existing named uniqueness constraint") {
@@ -1862,10 +1926,10 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     } should have message "Constraint already exists: Constraint( id=2, name='constraint1', type='UNIQUENESS', schema=(:Label {prop}), ownedIndex=1 )"
 
     // Node property existence constraint
-    executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label) ASSERT EXISTS (n.prop)")
+    executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label) ASSERT (n.prop) IS NOT NULL")
 
     // Relationship property existence constraint (close as can get to same schema)
-    executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Label]-() ASSERT (r.prop) IS NOT NULL")
   }
 
   test("creating constraints on same name and schema as existing uniqueness constraint") {
@@ -1879,12 +1943,12 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // Node property existence constraint
     the[CypherExecutionException] thrownBy {
-      executeSingle("CREATE CONSTRAINT constraint ON (n:Label) ASSERT EXISTS (n.prop)")
+      executeSingle("CREATE CONSTRAINT constraint ON (n:Label) ASSERT (n.prop) IS NOT NULL")
     } should have message "There already exists a constraint called 'constraint'."
 
     // Relationship property existence constraint (close as can get to same schema)
     the[CypherExecutionException] thrownBy {
-      executeSingle("CREATE CONSTRAINT constraint ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+      executeSingle("CREATE CONSTRAINT constraint ON ()-[r:Label]-() ASSERT (r.prop) IS NOT NULL")
     } should have message "There already exists a constraint called 'constraint'."
   }
 
@@ -1899,12 +1963,12 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // Node property existence constraint
     the[CypherExecutionException] thrownBy {
-      executeSingle("CREATE CONSTRAINT constraint ON (n:Label) ASSERT EXISTS (n.prop3)")
+      executeSingle("CREATE CONSTRAINT constraint ON (n:Label) ASSERT (n.prop3) IS NOT NULL")
     } should have message "There already exists a constraint called 'constraint'."
 
     // Relationship property existence constraint
     the[CypherExecutionException] thrownBy {
-      executeSingle("CREATE CONSTRAINT constraint ON ()-[r:Label]-() ASSERT EXISTS (r.prop4)")
+      executeSingle("CREATE CONSTRAINT constraint ON ()-[r:Label]-() ASSERT (r.prop4) IS NOT NULL")
     } should have message "There already exists a constraint called 'constraint'."
   }
 
@@ -1917,11 +1981,11 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     assertStats(resK, nodekeyConstraintsAdded = 0)
 
     // Node property existence constraint
-    val resN = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT EXISTS (n.prop)")
+    val resN = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS NOT NULL")
     assertStats(resN, existenceConstraintsAdded = 0)
 
     // Relationship property existence constraint
-    val resR = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    val resR = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Label]-() ASSERT (r.prop) IS NOT NULL")
     assertStats(resR, existenceConstraintsAdded = 0)
   }
 
@@ -1935,11 +1999,11 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     } should have message "Constraint already exists: Constraint( id=2, name='constraint', type='UNIQUENESS', schema=(:Label {prop}), ownedIndex=1 )"
 
     // Node property existence constraint
-    val resN = executeSingle("CREATE CONSTRAINT constraint3 IF NOT EXISTS ON (n:Label) ASSERT EXISTS (n.prop)")
+    val resN = executeSingle("CREATE CONSTRAINT constraint3 IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS NOT NULL")
     assertStats(resN, existenceConstraintsAdded = 1)
 
     // Relationship property existence constraint
-    val resR = executeSingle("CREATE CONSTRAINT constraint4 IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    val resR = executeSingle("CREATE CONSTRAINT constraint4 IF NOT EXISTS ON ()-[r:Label]-() ASSERT (r.prop) IS NOT NULL")
     assertStats(resR, existenceConstraintsAdded = 1)
   }
 
@@ -1952,11 +2016,11 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     assertStats(resK, nodekeyConstraintsAdded = 0)
 
     // Node property existence constraint
-    val resN = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT EXISTS (n.prop3)")
+    val resN = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT (n.prop3) IS NOT NULL")
     assertStats(resN, existenceConstraintsAdded = 0)
 
     // Relationship property existence constraint
-    val resR = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS (r.prop4)")
+    val resR = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Label]-() ASSERT (r.prop4) IS NOT NULL")
     assertStats(resR, existenceConstraintsAdded = 0)
   }
 
@@ -1972,7 +2036,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS UNIQUE")
 
     // Relationship property existence constraint (close as can get to same schema)
-    executeSingle("CREATE CONSTRAINT ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    executeSingle("CREATE CONSTRAINT ON ()-[r:Label]-() ASSERT (r.prop) IS NOT NULL")
   }
 
   test("creating named constraints on the same schema as existing named node property existence constraint") {
@@ -1987,7 +2051,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label) ASSERT (n.prop) IS UNIQUE")
 
     // Relationship property existence constraint (close as can get to same schema)
-    executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Label]-() ASSERT (r.prop) IS NOT NULL")
   }
 
   test("creating constraints on same name and schema as existing node property existence constraint") {
@@ -2006,7 +2070,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // Relationship property existence constraint (close as can get to same schema)
     the[CypherExecutionException] thrownBy {
-      executeSingle("CREATE CONSTRAINT constraint ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+      executeSingle("CREATE CONSTRAINT constraint ON ()-[r:Label]-() ASSERT (r.prop) IS NOT NULL")
     } should have message "There already exists a constraint called 'constraint'."
   }
 
@@ -2026,7 +2090,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // Relationship property existence constraint
     the[CypherExecutionException] thrownBy {
-      executeSingle("CREATE CONSTRAINT constraint ON ()-[r:Label]-() ASSERT EXISTS (r.prop4)")
+      executeSingle("CREATE CONSTRAINT constraint ON ()-[r:Label]-() ASSERT (r.prop4) IS NOT NULL")
     } should have message "There already exists a constraint called 'constraint'."
   }
 
@@ -2043,7 +2107,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     assertStats(resU, uniqueConstraintsAdded = 0)
 
     // Relationship property existence constraint
-    val resR = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    val resR = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Label]-() ASSERT (r.prop) IS NOT NULL")
     assertStats(resR, existenceConstraintsAdded = 0)
   }
 
@@ -2061,7 +2125,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     assertStats(resU, uniqueConstraintsAdded = 1)
 
     // Relationship property existence constraint
-    val resR = executeSingle("CREATE CONSTRAINT constraint4 IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    val resR = executeSingle("CREATE CONSTRAINT constraint4 IF NOT EXISTS ON ()-[r:Label]-() ASSERT (r.prop) IS NOT NULL")
     assertStats(resR, existenceConstraintsAdded = 1)
   }
 
@@ -2078,7 +2142,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     assertStats(resU, uniqueConstraintsAdded = 0)
 
     // Relationship property existence constraint
-    val resR = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS (r.prop4)")
+    val resR = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON ()-[r:Label]-() ASSERT (r.prop4) IS NOT NULL")
     assertStats(resR, existenceConstraintsAdded = 0)
   }
 
@@ -2094,7 +2158,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS UNIQUE")
 
     // Node property existence constraint
-    executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT EXISTS (n.prop)")
+    executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NOT NULL")
   }
 
   test("creating named constraints on the same schema as existing named relationship property existence constraint") {
@@ -2109,7 +2173,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label) ASSERT (n.prop) IS UNIQUE")
 
     // Node property existence constraint
-    executeSingle("CREATE CONSTRAINT constraint4 ON (n:Label) ASSERT EXISTS (n.prop)")
+    executeSingle("CREATE CONSTRAINT constraint4 ON (n:Label) ASSERT (n.prop) IS NOT NULL")
   }
 
   test("should fail to create constraints on same name and schema as existing relationship property existence constraint") {
@@ -2128,7 +2192,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // Node property existence constraint
     the[CypherExecutionException] thrownBy {
-      executeSingle("CREATE CONSTRAINT constraint ON (n:Label) ASSERT EXISTS (n.prop)")
+      executeSingle("CREATE CONSTRAINT constraint ON (n:Label) ASSERT (n.prop) IS NOT NULL")
     } should have message "There already exists a constraint called 'constraint'."
   }
 
@@ -2148,7 +2212,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // Node property existence constraint
     the[CypherExecutionException] thrownBy {
-      executeSingle("CREATE CONSTRAINT constraint ON (n:Label) ASSERT EXISTS (n.prop4)")
+      executeSingle("CREATE CONSTRAINT constraint ON (n:Label) ASSERT (n.prop4) IS NOT NULL")
     } should have message "There already exists a constraint called 'constraint'."
   }
 
@@ -2165,7 +2229,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     assertStats(resU, uniqueConstraintsAdded = 0)
 
     // Node property existence constraint
-    val resN = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT EXISTS (n.prop)")
+    val resN = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS NOT NULL")
     assertStats(resN, existenceConstraintsAdded = 0)
   }
 
@@ -2183,7 +2247,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     assertStats(resU, uniqueConstraintsAdded = 1)
 
     // Node property existence constraint
-    val resN = executeSingle("CREATE CONSTRAINT constraint4 IF NOT EXISTS ON (n:Label) ASSERT EXISTS (n.prop)")
+    val resN = executeSingle("CREATE CONSTRAINT constraint4 IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS NOT NULL")
     assertStats(resN, existenceConstraintsAdded = 1)
   }
 
@@ -2200,7 +2264,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     assertStats(resU, uniqueConstraintsAdded = 0)
 
     // Node property existence constraint
-    val resN = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT EXISTS (n.prop4)")
+    val resN = executeSingle("CREATE CONSTRAINT constraint IF NOT EXISTS ON (n:Label) ASSERT (n.prop4) IS NOT NULL")
     assertStats(resN, existenceConstraintsAdded = 0)
   }
 
@@ -2635,10 +2699,10 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     executeSingle("CREATE CONSTRAINT constraint1 ON (n:Label) ASSERT (n.namedProp2) IS NODE KEY")
     executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop3) IS UNIQUE")
     executeSingle("CREATE CONSTRAINT constraint2 ON (n:Label) ASSERT (n.namedProp3) IS UNIQUE")
-    executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT EXISTS (n.prop4)")
-    executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label) ASSERT EXISTS (n.namedProp4)")
-    executeSingle("CREATE CONSTRAINT ON ()-[r:Type]-() ASSERT EXISTS (r.prop5)")
-    executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Type]-() ASSERT EXISTS (r.namedProp5)")
+    executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop4) IS NOT NULL")
+    executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label) ASSERT (n.namedProp4) IS NOT NULL")
+    executeSingle("CREATE CONSTRAINT ON ()-[r:Type]-() ASSERT (r.prop5) IS NOT NULL")
+    executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Type]-() ASSERT (r.namedProp5) IS NOT NULL")
     graph.awaitIndexesOnline()
 
     // THEN
@@ -2674,12 +2738,12 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // Node property existence constraint
     // THEN
-    val resN = executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT EXISTS (n.prop)")
+    val resN = executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NOT NULL")
     assertStats(resN, existenceConstraintsAdded = 1)
 
     // Relationship property existence constraint (close as can get to same schema)
     // THEN
-    val resR = executeSingle("CREATE CONSTRAINT ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    val resR = executeSingle("CREATE CONSTRAINT ON ()-[r:Label]-() ASSERT (r.prop) IS NOT NULL")
     assertStats(resR, existenceConstraintsAdded = 1)
   }
 
@@ -2704,12 +2768,12 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // Node property existence constraint
     // THEN
-    val resN = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON (n:Label) ASSERT EXISTS (n.prop)")
+    val resN = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON (n:Label) ASSERT (n.prop) IS NOT NULL")
     assertStats(resN, existenceConstraintsAdded = 1)
 
     // Relationship property existence constraint (close as can get to same schema)
     // THEN
-    val resR = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    val resR = executeSingle("CREATE CONSTRAINT IF NOT EXISTS ON ()-[r:Label]-() ASSERT (r.prop) IS NOT NULL")
     assertStats(resR, existenceConstraintsAdded = 1)
   }
 
@@ -2734,12 +2798,12 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // Node property existence constraint
     // THEN
-    val resN = executeSingle("CREATE CONSTRAINT my_constraint ON (n:Label) ASSERT EXISTS (n.prop)")
+    val resN = executeSingle("CREATE CONSTRAINT my_constraint ON (n:Label) ASSERT (n.prop) IS NOT NULL")
     assertStats(resN, existenceConstraintsAdded = 1)
 
     // Relationship property existence constraint (close as can get to same schema)
     // THEN
-    val resR = executeSingle("CREATE CONSTRAINT my_rel_constraint ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+    val resR = executeSingle("CREATE CONSTRAINT my_rel_constraint ON ()-[r:Label]-() ASSERT (r.prop) IS NOT NULL")
     assertStats(resR, existenceConstraintsAdded = 1)
   }
 
@@ -2765,14 +2829,14 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // Node property existence constraint
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE CONSTRAINT mine ON (n:Type) ASSERT EXISTS (n.prop)")
+      executeSingle("CREATE CONSTRAINT mine ON (n:Type) ASSERT (n.prop) IS NOT NULL")
       // THEN
     } should have message "There already exists an index called 'mine'."
 
     // Relationship property existence constraint
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE CONSTRAINT mine ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
+      executeSingle("CREATE CONSTRAINT mine ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
       // THEN
     } should have message "There already exists an index called 'mine'."
   }
@@ -2799,14 +2863,14 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // Node property existence constraint
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE CONSTRAINT mine IF NOT EXISTS ON (n:Type) ASSERT EXISTS (n.prop)")
+      executeSingle("CREATE CONSTRAINT mine IF NOT EXISTS ON (n:Type) ASSERT (n.prop) IS NOT NULL")
       // THEN
     } should have message "There already exists an index called 'mine'."
 
     // Relationship property existence constraint
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE CONSTRAINT mine IF NOT EXISTS ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
+      executeSingle("CREATE CONSTRAINT mine IF NOT EXISTS ON ()-[r:Type]-() ASSERT (r.prop) IS NOT NULL")
       // THEN
     } should have message "There already exists an index called 'mine'."
   }
@@ -2833,14 +2897,14 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // Node property existence constraint
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE CONSTRAINT mine ON (n:Label) ASSERT EXISTS (n.prop)")
+      executeSingle("CREATE CONSTRAINT mine ON (n:Label) ASSERT (n.prop) IS NOT NULL")
       // THEN
     } should have message "There already exists an index called 'mine'."
 
     // Relationship property existence constraint (close as can get to same schema)
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE CONSTRAINT mine ON ()-[r:Label]-() ASSERT EXISTS (r.prop)")
+      executeSingle("CREATE CONSTRAINT mine ON ()-[r:Label]-() ASSERT (r.prop) IS NOT NULL")
       // THEN
     } should have message "There already exists an index called 'mine'."
   }
