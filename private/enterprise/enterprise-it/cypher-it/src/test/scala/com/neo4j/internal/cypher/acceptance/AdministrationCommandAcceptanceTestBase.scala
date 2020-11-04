@@ -78,6 +78,12 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val PERMISSION_DENIED_SET_USER_STATUS: String = "Permission denied for SET USER STATUS." + helpfulCheckUserPrivilegeErrorText
   val PERMISSION_DENIED_SET_PASSWORDS_OR_USER_STATUS: String = "Permission denied for SET PASSWORDS and/or SET USER STATUS." + helpfulCheckUserPrivilegeErrorText
 
+  val roleName: String = "custom"
+  val username: String = "joe"
+  val password: String = "soap"
+  val databaseString: String = "foo"
+  val databaseString2: String = "bar"
+
   val neo4jUser: Map[String, Any] = adminUser("neo4j")
   val neo4jUserActive: Map[String, Any] = adminUser("neo4j", passwordChangeRequired = false)
   val onlineStatus: String = DatabaseStatus.Online.stringValue()
@@ -214,7 +220,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
       "currentStatus" -> status,
       "error" -> "")
 
-  def setupUserWithCustomRole(username: String = "joe", password: String = "soap", rolename: String = "custom", access: Boolean = true): Unit = {
+  def setupUserWithCustomRole(username: String = username, password: String = password, rolename: String = roleName, access: Boolean = true): Unit = {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute(s"CREATE USER $username SET PASSWORD '$password' CHANGE NOT REQUIRED")
     execute(s"CREATE ROLE $rolename IF NOT EXISTS")
@@ -222,13 +228,12 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     if (access) execute(s"GRANT ACCESS ON DATABASE * TO $rolename")
   }
 
-  def setupUserWithCustomAdminRole(username: String = "joe", password: String = "soap", rolename: String = "custom"): Unit = {
+  def setupUserWithCustomAdminRole(username: String = username, password: String = password, rolename: String = roleName): Unit = {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute(s"CREATE USER $username SET PASSWORD '$password' CHANGE NOT REQUIRED")
     execute(s"CREATE ROLE $rolename AS COPY OF admin")
     execute(s"GRANT ROLE $rolename TO $username")
   }
-
 
   case class RoleMapBuilder(map: Map[String, Any]) {
     def member(user: String): RoleMapBuilder = RoleMapBuilder(map + ("member" -> user))
