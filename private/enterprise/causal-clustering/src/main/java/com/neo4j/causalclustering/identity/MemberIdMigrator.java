@@ -9,10 +9,9 @@ import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 
 import java.io.IOException;
-import java.nio.file.Path;
-import java.util.Collection;
 import java.util.UUID;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.Neo4jLayout;
@@ -74,6 +73,10 @@ public class MemberIdMigrator extends LifecycleAdapter
         {
             readAndConvertMemberId( oldMemberIdStorage );
         }
+        else
+        {
+            checkOnlyRaftMemberIdsAreMissing();
+        }
     }
 
     private void readAndConvertMemberId( SimpleStorage<RaftMemberId> oldMemberIdStorage )
@@ -92,16 +95,47 @@ public class MemberIdMigrator extends LifecycleAdapter
                 generateNewMemberIdsFromOldMemberId( oldMemberId );
 
                 oldMemberIdStorage.removeState();
-                Path oldMemberIdDir = clusterStateLayout.oldMemberIdStateFile().getParent();
+                var oldMemberIdDir = clusterStateLayout.oldMemberIdStateFile().getParent();
                 fs.deleteFile( oldMemberIdDir );
 
-                log.info( format( "Existing MemberId was found on disk: %s, it has been removed and ServerId has been created with same value",
-                        oldMemberId.uuid() ) );
+                log.info( "Existing MemberId was found on disk: %s, it has been removed and ServerId and also RaftMemberIds has been created with same value",
+                        oldMemberId.uuid() );
             }
         }
         catch ( IOException ioe )
         {
             throw new RuntimeException( "MemberId storage was found on disk, but it could not be read correctly, migration to ServerId not possible", ioe );
+        }
+    }
+
+    private void checkOnlyRaftMemberIdsAreMissing()
+    {
+        var serverIdStorage = createServerIdStorage();
+        if ( serverIdStorage.exists() )
+        {
+            try
+            {
+                var newMemberIdStorage = storageFactory.createRaftMemberIdStorage( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
+                if ( newMemberIdStorage.exists() )
+                {
+                    return;
+                }
+                var serverId = serverIdStorage.readState();
+                if ( serverId == null )
+                {
+                    throw new IllegalStateException(
+                            "ServerId storage was found on disk, but it could not be read correctly. Migration to ServerId is not possible." );
+                }
+                var raftMemberId = new RaftMemberId( serverId.uuid() );
+                generateNewMemberIdsFromOldMemberId( raftMemberId );
+
+                log.info( "Existing ServerId was found on disk: %s, RaftMemberIds has been created with same value", serverId.uuid() );
+            }
+            catch ( IOException ioe )
+            {
+                throw new RuntimeException(
+                        "ServerId was found on disk, but RaftMemberIds could not be written correctly. Migration to ServerId is not possible.", ioe );
+            }
         }
     }
 
@@ -120,14 +154,14 @@ public class MemberIdMigrator extends LifecycleAdapter
 
     private void generateNewMemberIdsFromOldMemberId( RaftMemberId oldMemberId ) throws IOException
     {
-        Collection<String> databaseNames = clusterStateLayout.allRaftGroups();
+        var databaseNames = clusterStateLayout.allRaftGroups();
 
-        for ( String databaseName : databaseNames )
+        for ( var databaseName : databaseNames )
         {
-            SimpleStorage<RaftMemberId> newMemberIdStorage = storageFactory.createRaftMemberIdStorage( databaseName );
+            var newMemberIdStorage = storageFactory.createRaftMemberIdStorage( databaseName );
             if ( newMemberIdStorage.exists() )
             {
-                RaftMemberId newMemberId = newMemberIdStorage.readState();
+                var newMemberId = newMemberIdStorage.readState();
                 if ( !oldMemberId.equals( newMemberId ) )
                 {
                     throw new IllegalStateException(

@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 import org.neo4j.collection.RawIterator;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.identity.ServerId;
+import org.neo4j.dbms.identity.ServerIdentity;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
@@ -56,13 +57,13 @@ public class WaitProcedure extends CallableProcedure.BasicProcedure
     private static final String PARAM_TIMEOUT_S = "timeoutSeconds";
 
     private final Supplier<Set<ServerContext>> serverInfosProvider;
-    private final ServerId myself;
+    private final Supplier<ServerId> identity;
     private final Clock clock;
     private final CatchupClientFactory catchupClientFactory;
     private final Log log;
     private final InfoProvider infoProvider;
 
-    private WaitProcedure( Supplier<Set<ServerContext>> serverInfosProvider, ServerId myself, Clock clock,
+    private WaitProcedure( Supplier<Set<ServerContext>> serverInfosProvider, Supplier<ServerId> identity, Clock clock,
             CatchupClientFactory catchupClientFactory,
             LogProvider logProvider, InfoProvider infoProvider )
     {
@@ -82,24 +83,24 @@ public class WaitProcedure extends CallableProcedure.BasicProcedure
                 .mode( Mode.DBMS )
                 .build() );
         this.serverInfosProvider = serverInfosProvider;
-        this.myself = myself;
+        this.identity = identity;
         this.clock = clock;
         this.catchupClientFactory = catchupClientFactory;
         this.log = logProvider.getLog( getClass() );
         this.infoProvider = infoProvider;
     }
 
-    public static WaitProcedure clustered( TopologyService topologyService, ServerId myself, Clock clock,
+    public static WaitProcedure clustered( TopologyService topologyService, ServerIdentity identity, Clock clock,
             CatchupClientFactory catchupClientFactory, LogProvider logProvider, InfoProvider infoProvider )
     {
         return new WaitProcedure(
-                serverContextsProvider( topologyService ), myself, clock, catchupClientFactory, logProvider, infoProvider );
+                serverContextsProvider( topologyService ), identity::serverId, clock, catchupClientFactory, logProvider, infoProvider );
     }
 
     public static WaitProcedure standalone( ServerId myself, SocketAddress socketAddress, Clock clock, LogProvider logProvider,
             InfoProvider infoProvider )
     {
-        return new WaitProcedure( () -> Set.of( ServerContext.local( myself, socketAddress ) ), myself, clock, null, logProvider,
+        return new WaitProcedure( () -> Set.of( ServerContext.local( myself, socketAddress ) ), () -> myself, clock, null, logProvider,
                 infoProvider );
     }
 
@@ -205,7 +206,7 @@ public class WaitProcedure extends CallableProcedure.BasicProcedure
         {
             if ( !completedServers.contains( serverContext.serverId() ) )
             {
-                if ( !serverContext.serverId().equals( myself ) )
+                if ( !serverContext.serverId().equals( identity.get() ) )
                 {
                     serverRequests.add(
                             new RemoteServerRequest( txId, serverContext.serverId(), serverContext.boltAddress(), serverContext.catchupAddress(),

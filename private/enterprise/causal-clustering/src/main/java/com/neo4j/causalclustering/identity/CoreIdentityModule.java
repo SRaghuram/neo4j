@@ -16,6 +16,7 @@ import org.neo4j.dbms.identity.AbstractIdentityModule;
 import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.Neo4jLayout;
+import org.neo4j.io.state.SimpleStorage;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
@@ -27,21 +28,30 @@ public class CoreIdentityModule extends AbstractIdentityModule implements CoreSe
     private final Log log;
     private final Map<DatabaseId,RaftMemberId> raftMemberIds = new ConcurrentHashMap<>();
     private final ClusterStateStorageFactory storageFactory;
-    private final ServerId serverId;
+    private final SimpleStorage<ServerId> serverIdStorage;
+    private ServerId serverId;
 
     public CoreIdentityModule( LogProvider logProvider, FileSystemAbstraction fs, Neo4jLayout layout, MemoryTracker memoryTracker,
             ClusterStateStorageFactory storageFactory )
     {
         this.log = logProvider.getLog( getClass() );
         this.storageFactory = storageFactory;
+        this.serverIdStorage = createServerIdStorage( fs, layout.serverIdFile(), memoryTracker );
+    }
 
-        var serverIdStorage = createServerIdStorage( fs, layout.serverIdFile(), memoryTracker );
-        this.serverId = readOrGenerate( serverIdStorage, log, ServerId.class, ServerId::new, UUID::randomUUID );
+    @Override
+    public void init()
+    {
+        serverId = readOrGenerate( serverIdStorage, log, ServerId.class, ServerId::new, UUID::randomUUID );
     }
 
     @Override
     public ServerId serverId()
     {
+        if ( serverId == null )
+        {
+            throw new IllegalStateException( "ServerId is not yet created" );
+        }
         return serverId;
     }
 

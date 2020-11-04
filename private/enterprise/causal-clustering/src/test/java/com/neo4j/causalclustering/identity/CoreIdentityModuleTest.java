@@ -69,6 +69,7 @@ public class CoreIdentityModuleTest
 
         // when
         var identityModule = new CoreIdentityModule( nullLogProvider(), fs, neo4jLayout, memoryTracker, storageFactory );
+        identityModule.init();
 
         // then
         assertTrue( fs.fileExists( dataDir ) );
@@ -77,12 +78,14 @@ public class CoreIdentityModuleTest
 
         // when
         var secondIdentityModule = new CoreIdentityModule( nullLogProvider(), fs, neo4jLayout, memoryTracker, storageFactory );
+        secondIdentityModule.init();
 
         // then
         assertEquals( identityModule.serverId(), secondIdentityModule.serverId() );
 
         fs.deleteRecursively( dataDir );
         var thirdIdentityModule = new CoreIdentityModule( nullLogProvider(), fs, neo4jLayout, memoryTracker, storageFactory );
+        thirdIdentityModule.init();
 
         // then
         assertNotEquals( secondIdentityModule.serverId(), thirdIdentityModule.serverId() );

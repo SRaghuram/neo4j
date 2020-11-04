@@ -183,7 +183,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         globalProcedures.register( new QuarantineProcedure( quarantineOperator,
                 globalModule.getGlobalClock(), globalConfig.get( GraphDatabaseSettings.db_timezone ).getZoneId() ) );
         globalProcedures.register(
-                WaitProcedure.clustered( topologyService, identityModule.serverId(), globalModule.getGlobalClock(),
+                WaitProcedure.clustered( topologyService, identityModule, globalModule.getGlobalClock(),
                         catchupComponentsProvider.catchupClientFactory(), globalModule.getLogService().getInternalLogProvider(),
                         new InfoProvider( databaseManager, reconcilerModule.databaseStateService() ) ) );
     }

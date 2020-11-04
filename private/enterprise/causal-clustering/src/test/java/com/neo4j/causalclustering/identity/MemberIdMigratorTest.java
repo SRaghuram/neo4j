@@ -145,6 +145,29 @@ public class MemberIdMigratorTest
     }
 
     @Test
+    void shouldMigrateServerIdToRaftGroups() throws IOException
+    {
+        // given
+        var serverId = IdFactory.randomServerId();
+        serverIdStorage.writeState( serverId );
+
+        fs.mkdirs( clusterStateLayout.raftGroupDir( "A" ) );
+        fs.mkdirs( clusterStateLayout.raftGroupDir( "B" ) );
+        fs.mkdirs( clusterStateLayout.raftGroupDir( "C" ) );
+
+        // when
+        migrator.init();
+
+        // then
+        assertFalse( oldMemberIdStorage.exists() );
+        assertEquals( serverId.uuid(), serverIdStorage.readState().uuid() );
+
+        assertEquals( serverId.uuid(), storageFactory.createRaftMemberIdStorage( "A" ).readState().uuid() );
+        assertEquals( serverId.uuid(), storageFactory.createRaftMemberIdStorage( "B" ).readState().uuid() );
+        assertEquals( serverId.uuid(), storageFactory.createRaftMemberIdStorage( "C" ).readState().uuid() );
+    }
+
+    @Test
     void shouldContinueMemberIdMigrationInProgress() throws IOException
     {
         // given

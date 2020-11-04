@@ -12,7 +12,8 @@ import com.neo4j.causalclustering.catchup.v4.info.InfoResponse;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.identity.CoreServerIdentity;
+import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import org.junit.jupiter.api.Test;
 
@@ -61,7 +62,8 @@ class WaitProcedureTest
     private final TextValue targetDatabaseId = utf8Value( randomUUID().toString() );
     private final TextValue targetDatabaseName = utf8Value( "foo" );
     private final FakeClock fakeClock = Clocks.fakeClock();
-    private final ServerId myself = new ServerId( randomUUID() );
+    private final CoreServerIdentity identity = new InMemoryCoreServerIdentity();
+    private final ServerId myself = identity.serverId();
     private final ServerId other1 = new ServerId( randomUUID() );
     private final ServerId other2 = new ServerId( randomUUID() );
     private final ServerId replica1 = new ServerId( randomUUID() );
@@ -73,7 +75,7 @@ class WaitProcedureTest
 
         var topologyService = mock( CoreTopologyService.class );
         var procedure =
-                WaitProcedure.clustered( topologyService, IdFactory.randomServerId(), fakeClock,
+                WaitProcedure.clustered( topologyService, identity, fakeClock,
                         catchupClientFactory( InfoResponse.create( 0, null ) ), logProvider,
                         new InfoProvider( null, null ) );
 
@@ -98,7 +100,7 @@ class WaitProcedureTest
     @Test
     void toFewInputParams()
     {
-        var procedure = WaitProcedure.clustered( null, null, null, null, logProvider, null );
+        var procedure = WaitProcedure.clustered( null, identity, null, null, logProvider, null );
         var exception =
                 assertThrows( IllegalArgumentException.class,
                         () -> procedure.apply( null, new AnyValue[]{Values.intValue( 1 ), Values.stringValue( "id" )}, null ) );
@@ -118,7 +120,7 @@ class WaitProcedureTest
 
         var provider = mockReconciliationProvider( 1L, null );
 
-        var procedure = WaitProcedure.clustered( topologyService, myself, Clocks.systemClock(),
+        var procedure = WaitProcedure.clustered( topologyService, identity, Clocks.systemClock(),
                 catchupClientFactory( InfoResponse.create( remoteReconcilatedId, null ) ), logProvider, provider );
 
         // when
@@ -160,7 +162,7 @@ class WaitProcedureTest
         var reconciledTransactionTracker = mock( ReconciledTransactionTracker.class );
         when( reconciledTransactionTracker.getLastReconciledTransactionId() ).thenReturn( 1L );
 
-        var procedure = WaitProcedure.clustered( topologyService, myself, Clocks.systemClock(),
+        var procedure = WaitProcedure.clustered( topologyService, identity, Clocks.systemClock(),
                 catchupClientFactory( InfoResponse.create( 1, null ) ), logProvider, mockReconciliationProvider( 1L, null ) );
 
         // when
@@ -191,7 +193,7 @@ class WaitProcedureTest
         var reconciledTransactionTracker = mock( ReconciledTransactionTracker.class );
         when( reconciledTransactionTracker.getLastReconciledTransactionId() ).thenReturn( 1L );
 
-        var procedure = WaitProcedure.clustered( topologyService, myself, Clocks.systemClock(),
+        var procedure = WaitProcedure.clustered( topologyService, identity, Clocks.systemClock(),
                 catchupClientFactory( InfoResponse.create( -1, "Error" ) ), logProvider, mockReconciliationProvider( -1, "Error" ) );
 
         // when
@@ -230,7 +232,7 @@ class WaitProcedureTest
         var reconciledTransactionTracker = mock( ReconciledTransactionTracker.class );
         when( reconciledTransactionTracker.getLastReconciledTransactionId() ).thenReturn( 1L );
 
-        var procedure = WaitProcedure.clustered( topologyService, myself, Clocks.systemClock(),
+        var procedure = WaitProcedure.clustered( topologyService, identity, Clocks.systemClock(),
                 catchupClientFactory( InfoResponse.create( 1, "Error" ) ), logProvider, mockReconciliationProvider( 1, "Error" ) );
 
         // when

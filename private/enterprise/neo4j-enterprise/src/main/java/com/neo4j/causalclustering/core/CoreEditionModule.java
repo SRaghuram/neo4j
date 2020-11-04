@@ -135,6 +135,7 @@ import static com.neo4j.configuration.CausalClusteringInternalSettings.experimen
 import static com.neo4j.configuration.CausalClusteringSettings.status_throughput_window;
 import static com.neo4j.configuration.ServerGroupsSupplier.listen;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
+import static org.neo4j.kernel.lifecycle.LifecycleAdapter.onInit;
 import static org.neo4j.kernel.recovery.Recovery.recoveryFacade;
 
 /**
@@ -203,7 +204,9 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         // migration needs to happen as early as possible in the lifecycle
         var clusterStateMigrator = createClusterStateMigrator( globalModule, clusterStateLayout, storageFactory );
         globalLife.add( clusterStateMigrator );
-        globalLife.add( new MemberIdMigrator( logProvider, fileSystem, globalModule.getNeo4jLayout(), clusterStateLayout, storageFactory, memoryTracker ) );
+        var serverIdMigrator =
+                new MemberIdMigrator( logProvider, fileSystem, globalModule.getNeo4jLayout(), clusterStateLayout, storageFactory, memoryTracker );
+        globalLife.add( serverIdMigrator );
 
         temporaryDatabaseFactory = new EnterpriseTemporaryDatabaseFactory( globalModule.getPageCache(), globalModule.getFileSystem() );
 
@@ -212,10 +215,10 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
         watcherServiceFactory = layout -> createDatabaseFileSystemWatcher( globalModule.getFileWatcher(), layout, logService, fileWatcherFileNameFilter() );
 
-        identityModule = new CoreIdentityModule(
-                logProvider, fileSystem, globalModule.getNeo4jLayout(), memoryTracker, storageFactory );
+        identityModule = globalLife.add( new CoreIdentityModule(
+                logProvider, fileSystem, globalModule.getNeo4jLayout(), memoryTracker, storageFactory ) );
         globalDependencies.satisfyDependency( identityModule );
-        globalModule.getJobScheduler().setTopLevelGroupName( "Core " + identityModule.serverId() );
+        globalLife.add( onInit( () -> globalModule.getJobScheduler().setTopLevelGroupName( "Core " + identityModule.serverId() ) ) );
         this.discoveryServiceFactory = discoveryServiceFactory;
 
         sslPolicyLoader = SslPolicyLoader.create( globalConfig, logProvider );
@@ -297,7 +300,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         globalProcedures.register( new QuarantineProcedure( quarantineOperator,
                 globalModule.getGlobalClock(), globalConfig.get( GraphDatabaseSettings.db_timezone ).getZoneId() ) );
         globalProcedures.register(
-                WaitProcedure.clustered( topologyService, identityModule.serverId(), globalModule.getGlobalClock(),
+                WaitProcedure.clustered( topologyService, identityModule, globalModule.getGlobalClock(),
                                          catchupComponentsProvider.catchupClientFactory(), globalModule.getLogService().getInternalLogProvider(),
                                          new InfoProvider( databaseManager, reconcilerModule.databaseStateService() ) ) );
         globalProcedures.register( new ClusterSetDefaultDatabaseProcedure( databaseManager.databaseIdRepository(), topologyService ) );
