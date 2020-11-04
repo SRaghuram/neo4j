@@ -32,9 +32,9 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
       "DENY CREATE ON GRAPH * RELATIONSHIPS * TO custom" -> 1,
       "REVOKE DENY CREATE ON GRAPH * RELATIONSHIPS * FROM custom" -> 1,
 
-      "GRANT CREATE ON GRAPH * ELEMENTS * TO custom" -> 2,
-      "DENY CREATE ON GRAPH * ELEMENTS * TO custom" -> 2,
-      "REVOKE CREATE ON GRAPH * ELEMENTS * FROM custom" -> 4,
+      "GRANT DELETE ON GRAPH * ELEMENTS * TO custom" -> 2,
+      "DENY DELETE ON GRAPH * ELEMENTS * TO custom" -> 2,
+      "REVOKE DELETE ON GRAPH * ELEMENTS * FROM custom" -> 4,
     ))
   }
 
