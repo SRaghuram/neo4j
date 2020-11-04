@@ -5,6 +5,8 @@
  */
 package com.neo4j.bench.model.model;
 
+import java.util.Arrays;
+
 import static java.lang.String.format;
 
 public class BranchAndVersion
@@ -43,28 +45,47 @@ public class BranchAndVersion
         return !repository.isDefaultOwner( owner );
     }
 
-    public static boolean branchEqualsSeries( String version, String branch )
+    static boolean isValidSeriesBranch( String version, String branch )
     {
-        String seriesString = versionToBranch( version );
+        String seriesString = versionToSeries( version );
         return branch.equalsIgnoreCase( seriesString );
+    }
+
+    static boolean isValidDropBranch( String version, String branch )
+    {
+        return branch.equals( dropVersionToDropBranch( version ) );
     }
 
     public static void assertBranchEqualsSeries( String version, String branch )
     {
-        if ( !branchEqualsSeries( version, branch ) )
+        if ( !isValidSeriesBranch( version, branch ) && !isValidDropBranch( version, branch ) )
         {
-            throw new RuntimeException( format( "Branch (%s) must be same as series (%s) for non-personal branches",
-                                                branch, versionToBranch( version ) ) );
+            throw new RuntimeException( format( "Branch (%s) and version (%s) must be same as series (%s) for non-personal branches",
+                                                branch, version, versionToSeries( version ) ) );
         }
     }
 
-    private static String versionToBranch( String version )
+    private static String dropVersionToDropBranch( String version )
+    {
+        if ( !version.contains( "-drop" ) )
+        {
+            throw new RuntimeException( "expected drop version but got " + version );
+        }
+        return version.substring( 0, version.lastIndexOf( "." ) );
+    }
+
+    private static String versionToSeries( String version )
     {
         String[] split = version.split( "\\." );
         if ( split.length != 4 && split.length != 3 )
         {
             throw new RuntimeException( "Branch could not be converted to Version, wrong size expected x.z.y(-dropxz.y) but got " + version );
         }
-        return split[0] + "." + split[1];
+        if ( split.length == 3 || split[2].contains( "-drop" ) )
+        {
+            return split[0] + "." + split[1];
+        }
+        throw new RuntimeException(
+                "Branch could not be converted to Version, wrong size " + Arrays.toString( split ) + " expected x.z.y(-dropxz.y) but got " + version );
     }
 }

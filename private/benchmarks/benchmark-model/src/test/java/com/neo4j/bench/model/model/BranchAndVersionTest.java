@@ -126,14 +126,21 @@ public class BranchAndVersionTest
     @Test
     public void checksBranchEqualsSeries()
     {
-        assertTrue( BranchAndVersion.branchEqualsSeries( "1.2.3", "1.2" ) );
-        assertTrue( BranchAndVersion.branchEqualsSeries( "11.22.33", "11.22" ) );
+        assertTrue( BranchAndVersion.isValidSeriesBranch( "1.2.3", "1.2" ) );
+        assertTrue( BranchAndVersion.isValidSeriesBranch( "11.22.33", "11.22" ) );
 
-        assertFalse( BranchAndVersion.branchEqualsSeries( "1.2.3", "2.3" ) );
+        assertFalse( BranchAndVersion.isValidSeriesBranch( "1.2.3", "2.3" ) );
 
         BranchAndVersion.assertBranchEqualsSeries( "1.2.3", "1.2" );
         BranchAndVersion.assertBranchEqualsSeries( "11.22.33", "11.22" );
+
+        BranchAndVersion.assertBranchEqualsSeries( "1.2.3-drop08.0", "1.2.3-drop08" );
         BranchAndVersion.assertBranchEqualsSeries( "1.2.3-drop08.0", "1.2" );
+
+        assertTrue( BranchAndVersion.isValidDropBranch( "1.2.3-drop08.0", "1.2.3-drop08" ) );
+        assertTrue( BranchAndVersion.isValidSeriesBranch( "1.2.3-drop08.0", "1.2" ) );
+        assertFalse( BranchAndVersion.isValidSeriesBranch( "1.2.3-drop08.0", "1.2.3-drop08" ) );
+        assertFalse( BranchAndVersion.isValidDropBranch( "1.2.3-drop08.0", "1.2" ) );
 
         assertException( RuntimeException.class,
                                        () -> BranchAndVersion.assertBranchEqualsSeries( "1.2.3", "2.3" ) );
