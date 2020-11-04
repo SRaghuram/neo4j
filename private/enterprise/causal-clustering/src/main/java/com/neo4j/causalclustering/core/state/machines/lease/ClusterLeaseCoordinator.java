@@ -17,7 +17,6 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.api.LeaseClient;
 import org.neo4j.kernel.impl.api.LeaseException;
 import org.neo4j.kernel.impl.api.LeaseService;
-import org.neo4j.util.VisibleForTesting;
 
 import static com.neo4j.causalclustering.core.state.machines.lease.Lease.nextCandidateId;
 import static org.neo4j.kernel.api.exceptions.Status.Cluster.NotALeader;
@@ -44,14 +43,6 @@ public class ClusterLeaseCoordinator implements LeaseService
     private final LeaderLocator leaderLocator;
     private final ReplicatedLeaseStateMachine leaseStateMachine;
     private final NamedDatabaseId namedDatabaseId;
-
-    @VisibleForTesting
-    public ClusterLeaseCoordinator( RaftMemberId myself, Replicator replicator, LeaderLocator leaderLocator,
-            ReplicatedLeaseStateMachine leaseStateMachine,
-            NamedDatabaseId namedDatabaseId )
-    {
-        this( () -> myself, replicator, leaderLocator, leaseStateMachine, namedDatabaseId );
-    }
 
     public ClusterLeaseCoordinator( Supplier<RaftMemberId> myself, Replicator replicator, LeaderLocator leaderLocator,
             ReplicatedLeaseStateMachine leaseStateMachine, NamedDatabaseId namedDatabaseId )

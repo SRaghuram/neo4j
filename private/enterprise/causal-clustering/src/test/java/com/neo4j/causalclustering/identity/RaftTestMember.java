@@ -11,6 +11,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.neo4j.dbms.identity.ServerId;
+import org.neo4j.function.Suppliers.Lazy;
+
+import static org.neo4j.function.Suppliers.lazySingleton;
 
 public class RaftTestMember
 {
@@ -29,6 +32,11 @@ public class RaftTestMember
     public static RaftMemberId raftMember( int id )
     {
         return raftMemberIds.computeIfAbsent( id, k -> IdFactory.randomRaftMemberId() );
+    }
+
+    public static Lazy<RaftMemberId> lazyRaftMember( int id )
+    {
+        return lazySingleton( () -> raftMember( id ) );
     }
 
     public static LeaderInfo leader( int id, long term )

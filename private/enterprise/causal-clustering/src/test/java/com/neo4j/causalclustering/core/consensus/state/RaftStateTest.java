@@ -43,6 +43,7 @@ import static com.neo4j.causalclustering.core.consensus.outcome.OutcomeTestBuild
 import static com.neo4j.causalclustering.core.consensus.roles.Role.CANDIDATE;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.FOLLOWER;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
+import static com.neo4j.causalclustering.identity.RaftTestMember.lazyRaftMember;
 import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 import static java.util.Collections.emptySet;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -58,7 +59,7 @@ class RaftStateTest
 
         //given
         InFlightCache cache = new ConsecutiveInFlightCache();
-        RaftState raftState = new RaftState( raftMember( 0 ),
+        RaftState raftState = new RaftState( lazyRaftMember( 0 ),
                 new InMemoryStateStorage<>( new TermState() ), new FakeMembership(), new InMemoryRaftLog(),
                 new InMemoryStateStorage<>( new VoteState() ), cache, NullLogProvider.getInstance(),
                 new ExpiringSet<>( Duration.ofSeconds( 1 ), new FakeClock() ) );
@@ -95,7 +96,7 @@ class RaftStateTest
     void shouldRemoveFollowerStateAfterBecomingLeader() throws Exception
     {
         // given
-        RaftState raftState = new RaftState( raftMember( 0 ),
+        RaftState raftState = new RaftState( lazyRaftMember( 0 ),
                 new InMemoryStateStorage<>( new TermState() ),
                 new FakeMembership(), new InMemoryRaftLog(),
                 new InMemoryStateStorage<>( new VoteState() ),
@@ -118,7 +119,7 @@ class RaftStateTest
         var clock = new FakeClock();
         var leadershipTransfers = new ExpiringSet<RaftMemberId>( Duration.ofSeconds( 2 ), clock );
 
-        var raftState = new RaftState( raftMember( 0 ),
+        var raftState = new RaftState( lazyRaftMember( 0 ),
                 new InMemoryStateStorage<>( new TermState() ),
                 new FakeMembership(), new InMemoryRaftLog(),
                 new InMemoryStateStorage<>( new VoteState() ),
@@ -143,7 +144,7 @@ class RaftStateTest
         // given
         var timer = new ExpiringSet<RaftMemberId>( Duration.ofSeconds( 2 ), new FakeClock() );
 
-        var raftState = new RaftState( raftMember( 0 ),
+        var raftState = new RaftState( lazyRaftMember( 0 ),
                 new InMemoryStateStorage<>( new TermState() ),
                 new FakeMembership(), new InMemoryRaftLog(),
                 new InMemoryStateStorage<>( new VoteState() ),
@@ -175,7 +176,7 @@ class RaftStateTest
         // given
         var timer = new ExpiringSet<RaftMemberId>( Duration.ofSeconds( 2 ), new FakeClock() );
 
-        var raftState = new RaftState( raftMember( 0 ),
+        var raftState = new RaftState( lazyRaftMember( 0 ),
                 new InMemoryStateStorage<>( new TermState() ),
                 new FakeMembership(), new InMemoryRaftLog(),
                 new InMemoryStateStorage<>( new VoteState() ),

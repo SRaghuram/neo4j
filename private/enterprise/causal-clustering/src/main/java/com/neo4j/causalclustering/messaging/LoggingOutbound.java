@@ -11,19 +11,12 @@ import com.neo4j.causalclustering.logging.RaftMessageLogger;
 import org.neo4j.function.Suppliers.Lazy;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
-import static org.neo4j.function.Suppliers.lazySingleton;
-
 public class LoggingOutbound<MEMBER, MESSAGE extends RaftMessages.RaftMessage> implements Outbound<MEMBER, MESSAGE>
 {
     private final Outbound<MEMBER,MESSAGE> outbound;
     private final NamedDatabaseId databaseId;
     private final Lazy<MEMBER> me;
     private final RaftMessageLogger<MEMBER> raftMessageLogger;
-
-    public LoggingOutbound( Outbound<MEMBER,MESSAGE> outbound, NamedDatabaseId databaseId, MEMBER me, RaftMessageLogger<MEMBER> raftMessageLogger )
-    {
-        this( outbound, databaseId, lazySingleton( () -> me ), raftMessageLogger );
-    }
 
     public LoggingOutbound( Outbound<MEMBER,MESSAGE> outbound, NamedDatabaseId databaseId, Lazy<MEMBER> me,
             RaftMessageLogger<MEMBER> raftMessageLogger )

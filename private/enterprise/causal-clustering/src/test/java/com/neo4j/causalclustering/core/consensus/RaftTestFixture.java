@@ -41,6 +41,7 @@ import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
 
 import static java.lang.String.format;
+import static org.neo4j.function.Suppliers.lazySingleton;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 public class RaftTestFixture
@@ -79,7 +80,7 @@ public class RaftTestFixture
             };
 
             var inbound = new LoggingInbound( net.new Inbound( fixtureMember.member ), raftMessageLogger, coreIdentity( id ), fakeDatabaseIdRepository );
-            var outbound = new LoggingOutbound<>( net.new Outbound( id ), namedDatabaseId, fixtureMember.member, raftMessageLogger );
+            var outbound = new LoggingOutbound<>( net.new Outbound( id ), namedDatabaseId, lazySingleton( () -> fixtureMember.member ), raftMessageLogger );
 
             fixtureMember.raftMachine = new RaftMachineBuilder( fixtureMember.member, expectedClusterSize, RaftTestMemberSetBuilder.INSTANCE, clock )
                     .inbound( inbound )

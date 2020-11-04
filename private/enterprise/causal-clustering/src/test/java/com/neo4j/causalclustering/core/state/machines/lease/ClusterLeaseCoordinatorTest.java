@@ -15,12 +15,14 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
+import org.neo4j.function.Suppliers.Lazy;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.LeaseClient;
 import org.neo4j.kernel.impl.api.LeaseException;
 
 import static com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState.INITIAL_LEASE_STATE;
+import static com.neo4j.causalclustering.identity.RaftTestMember.lazyRaftMember;
 import static com.neo4j.causalclustering.identity.RaftTestMember.leader;
 import static com.neo4j.causalclustering.identity.RaftTestMember.raftMember;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,7 +37,7 @@ class ClusterLeaseCoordinatorTest
 {
     private final NamedDatabaseId namedDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
 
-    private final RaftMemberId myself = raftMember( 0 );
+    private final Lazy<RaftMemberId> myself = lazyRaftMember( 0 );
     private final RaftMemberId other = raftMember( 1 );
     private final LeaderInfo myselfAsLeader = leader( 0, 1 );
     private final LeaderInfo otherAsLeader = leader( 1, 1 );
@@ -153,7 +155,7 @@ class ClusterLeaseCoordinatorTest
     {
         // given
         when( leaderLocator.getLeaderInfo() ).thenReturn( Optional.of( myselfAsLeader ) );
-        ReplicatedLeaseRequest oldLease = new ReplicatedLeaseRequest( myself, 0, namedDatabaseId.databaseId() );
+        ReplicatedLeaseRequest oldLease = new ReplicatedLeaseRequest( myself.get(), 0, namedDatabaseId.databaseId() );
         ReplicationResult result = replicator.replicate( oldLease );
         assertEquals( true, result.stateMachineResult().consume() );
 

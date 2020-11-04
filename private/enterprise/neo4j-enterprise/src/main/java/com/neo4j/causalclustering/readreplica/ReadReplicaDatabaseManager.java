@@ -68,7 +68,7 @@ public class ReadReplicaDatabaseManager extends ClusteredMultiDatabaseManager
     {
         try
         {
-            deleteRaftId( databaseName );
+            deleteRaftGroupId( databaseName );
         }
         catch ( IOException e )
         {
@@ -80,7 +80,7 @@ public class ReadReplicaDatabaseManager extends ClusteredMultiDatabaseManager
      * When deleting a read replica we must subsequently clear out its raft id from the cluster state.
      * in extremis if some other IO failure occurs, the existence of a raft-id indicates that more cleanup may be required.
      */
-    private void deleteRaftId( String databaseName ) throws IOException
+    private void deleteRaftGroupId( String databaseName ) throws IOException
     {
         var raftGroupDir = clusterStateLayout.raftGroupDir( databaseName );
         var raftIdState = clusterStateLayout.raftGroupIdFile( databaseName );

@@ -107,11 +107,6 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
         handle( new RaftMessages.Timeout.Election( myself.get() ) );
     }
 
-    private RaftMemberId myself()
-    {
-        return myself.get();
-    }
-
     private void triggerHeartbeat() throws IOException
     {
         handle( new RaftMessages.Timeout.Heartbeat( myself.get() ) );
@@ -188,7 +183,7 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
 
     public RaftMemberId memberId()
     {
-        return myself();
+        return myself.get();
     }
 
     @Override
