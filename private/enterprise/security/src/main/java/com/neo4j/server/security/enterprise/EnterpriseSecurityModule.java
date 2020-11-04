@@ -197,7 +197,7 @@ public class EnterpriseSecurityModule extends SecurityModule
 
         if ( securityConfig.hasLdapProvider )
         {
-            realms.add( new LdapRealm( config, securityLog, secureHasher, securityConfig.ldapAuthentication, securityConfig.ldapAuthorization ) );
+            realms.add( new LdapRealm( config, logProvider, securityLog, secureHasher, securityConfig.ldapAuthentication, securityConfig.ldapAuthorization ) );
         }
 
         if ( !securityConfig.pluginAuthProviders.isEmpty() )

@@ -57,6 +57,8 @@ import org.neo4j.graphdb.security.AuthorizationExpiredException;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
+import org.neo4j.logging.Log;
+import org.neo4j.logging.LogProvider;
 import org.neo4j.server.security.auth.ShiroAuthToken;
 import org.neo4j.server.security.auth.ShiroAuthenticationInfo;
 import org.neo4j.string.SecureString;
@@ -91,6 +93,7 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
     private List<String> membershipAttributeNames;
     private Boolean useSystemAccountForAuthorization;
     private Map<String,Collection<String>> groupToRoleMapping;
+    private final Log log;
     private final SecurityLog securityLog;
     private final SecureHasher secureHasher;
 
@@ -99,10 +102,12 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
     private static final String VALUE_GROUP = "\\s*(.*)";
     private Pattern keyValuePattern = Pattern.compile( KEY_GROUP + KEY_VALUE_DELIMITER + VALUE_GROUP );
 
-    public LdapRealm( Config config, SecurityLog securityLog, SecureHasher secureHasher, boolean authenticationEnabled, boolean authorizationEnabled )
+    public LdapRealm( Config config, LogProvider logProvider, SecurityLog securityLog, SecureHasher secureHasher, boolean authenticationEnabled,
+                      boolean authorizationEnabled )
     {
         super();
         this.securityLog = securityLog;
+        this.log = logProvider.getLog( getClass() );
         this.secureHasher = secureHasher;
         this.authenticationEnabled = authenticationEnabled;
         this.authorizationEnabled = authorizationEnabled;
@@ -228,15 +233,19 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
         catch ( IOException e )
         {
             LdapUtils.closeContext( ctx );
-            securityLog.error( withRealm( "Failed to negotiate TLS connection with '%s': ",
-                    server( jndiLdapContextFactory ), e ) );
+            String errorMessage = withRealm( "Failed to negotiate TLS connection with '%s': ",
+                                             server( jndiLdapContextFactory ) );
+            securityLog.error( errorMessage );
+            log.debug( errorMessage, e );
             throw new CommunicationException( e.getMessage() );
         }
         catch ( Throwable t )
         {
             LdapUtils.closeContext( ctx );
-            securityLog.error( withRealm( "Unexpected failure to negotiate TLS connection with '%s': ",
-                    server( jndiLdapContextFactory ), t ) );
+            String errorMessage = withRealm( "Unexpected failure to negotiate TLS connection with '%s': ",
+                                             server( jndiLdapContextFactory ) );
+            securityLog.error( errorMessage );
+            log.debug( errorMessage, t );
             throw t;
         }
     }

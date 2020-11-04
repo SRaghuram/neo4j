@@ -38,6 +38,7 @@ import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
+import org.neo4j.logging.NullLogProvider;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anySet;
@@ -203,7 +204,7 @@ class LdapCachingTest
 
         TestRealm( Config config, SecurityLog securityLog, SecureHasher secureHasher )
         {
-            super( config, securityLog, secureHasher, true, true );
+            super( config, NullLogProvider.getInstance(), securityLog, secureHasher, true, true );
             setAuthenticationCachingEnabled( true );
             setAuthorizationCachingEnabled( true );
         }
