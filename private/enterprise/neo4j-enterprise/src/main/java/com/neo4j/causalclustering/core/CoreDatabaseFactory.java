@@ -219,7 +219,7 @@ class CoreDatabaseFactory
     CoreRaftContext createRaftContext( NamedDatabaseId namedDatabaseId, LifeSupport raftComponents, Monitors monitors, Dependencies dependencies,
             BootstrapContext bootstrapContext, DatabaseLogService logService, MemoryTracker memoryTracker )
     {
-        Lazy<RaftMemberId> raftMemberId = lazySingleton( () -> identityModule.raftMemberId( namedDatabaseId ) );
+        var raftMemberId = lazySingleton( () -> identityModule.raftMemberId( namedDatabaseId ) );
         var debugLog = logService.getInternalLogProvider();
 
         var raftGroupIdStorage = storageFactory.createRaftGroupIdStorage( namedDatabaseId.name(), debugLog );

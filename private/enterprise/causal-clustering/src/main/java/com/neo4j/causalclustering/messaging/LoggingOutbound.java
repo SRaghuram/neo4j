@@ -30,7 +30,7 @@ public class LoggingOutbound<MEMBER, MESSAGE extends RaftMessages.RaftMessage> i
     @Override
     public void send( MEMBER to, MESSAGE message, boolean block )
     {
-        if ( me.get() != null )
+        if ( me.isInitialised() )
         {
             raftMessageLogger.logOutbound( databaseId, me.get(), message, to );
             outbound.send( to, message );

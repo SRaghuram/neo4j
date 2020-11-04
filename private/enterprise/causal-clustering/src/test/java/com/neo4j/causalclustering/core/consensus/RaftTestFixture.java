@@ -34,6 +34,7 @@ import java.util.Set;
 
 import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.dbms.identity.ServerId;
+import org.neo4j.function.Suppliers.Lazy;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -80,7 +81,7 @@ public class RaftTestFixture
             };
 
             var inbound = new LoggingInbound( net.new Inbound( fixtureMember.member ), raftMessageLogger, coreIdentity( id ), fakeDatabaseIdRepository );
-            var outbound = new LoggingOutbound<>( net.new Outbound( id ), namedDatabaseId, lazySingleton( () -> fixtureMember.member ), raftMessageLogger );
+            var outbound = new LoggingOutbound<>( net.new Outbound( id ), namedDatabaseId, fixtureMember.lazyMember(), raftMessageLogger );
 
             fixtureMember.raftMachine = new RaftMachineBuilder( fixtureMember.member, expectedClusterSize, RaftTestMemberSetBuilder.INSTANCE, clock )
                     .inbound( inbound )
@@ -249,6 +250,13 @@ public class RaftTestFixture
         public RaftLog raftLog()
         {
             return raftLog;
+        }
+
+        public Lazy<RaftMemberId> lazyMember()
+        {
+            var lazyMember = lazySingleton( () -> member );
+            lazyMember.get();
+            return lazyMember;
         }
 
         @Override

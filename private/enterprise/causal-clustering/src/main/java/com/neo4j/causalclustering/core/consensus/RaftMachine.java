@@ -190,7 +190,7 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
     public String toString()
     {
         return "RaftMachine{" +
-               "myself=" + myself.get() +
+               "myself=" + myself +
                ", currentRole=" + currentRole +
                ", term=" + term() +
                ", votingMembers=" + votingMembers() +

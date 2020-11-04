@@ -72,6 +72,6 @@ public class GlobalSession
     @Override
     public String toString()
     {
-        return format( "GlobalSession{sessionId=%s, owner=%s}", sessionId, owner.get() );
+        return format( "GlobalSession{sessionId=%s, owner=%s}", sessionId, owner );
     }
 }

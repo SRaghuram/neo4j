@@ -209,10 +209,7 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
         }
         Set<RaftMemberId> superfluousMembers = new HashSet<>( votingMembers() );
         superfluousMembers.removeAll( targetMembers );
-        if ( myself.isInitialised() )
-        {
-            superfluousMembers.remove( myself.get() );
-        }
+        superfluousMembers.remove( myself.getIfPresent() );
 
         return superfluousMembers;
     }
