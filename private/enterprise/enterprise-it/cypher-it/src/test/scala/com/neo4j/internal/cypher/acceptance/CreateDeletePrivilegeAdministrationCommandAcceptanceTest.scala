@@ -444,6 +444,44 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
     } should have message s"Create node with labels 'Foo,Bar' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
   }
 
+  test("grant create on default graph") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute(s"GRANT CREATE ON DEFAULT GRAPH TO $roleName")
+
+    // WHEN
+    executeOnDefault(username, password, "CREATE (n)")
+
+    //THEN
+    execute("MATCH(n) RETURN count(n)").toSet should be(Set(Map("count(n)" -> 1)))
+  }
+
+  test("grant create on default graph, should not allow on other graph") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute(s"GRANT CREATE ON DEFAULT GRAPH TO $roleName")
+    execute(s"CREATE DATABASE $databaseString")
+
+    // WHEN, THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOn(databaseString, username, password, "CREATE (n)")
+    } should have message s"Create node with labels '' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
+  }
+
+  test("deny create on default graph, should allow on other graph") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute(s"GRANT CREATE ON GRAPH * TO $roleName")
+    execute(s"DENY CREATE ON DEFAULT GRAPH TO $roleName")
+    execute(s"CREATE DATABASE $databaseString")
+
+    // WHEN
+    executeOn(databaseString, username, password, "CREATE (n)")
+
+    // THEN
+    execute("MATCH(n) RETURN count(n)").toSet should be(Set(Map("count(n)" -> 1)))
+  }
+
   test("granting create relationship allows creation of relationships") {
     setupUserWithCustomRole()
     execute(s"GRANT CREATE ON GRAPH * RELATIONSHIPS * TO $roleName")
@@ -532,6 +570,50 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
       executeOnDefault(username, password, "MATCH (a:A) DELETE a")
       // THEN
     } should have message s"Delete node with labels 'A,B' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
+  }
+
+  test("grant delete on default graph") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute(s"GRANT TRAVERSE ON GRAPH * TO $roleName")
+    execute(s"GRANT DELETE ON DEFAULT GRAPH TO $roleName")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (n)")
+
+    // WHEN
+    executeOnDefault(username, password, "MATCH (n) DELETE n")
+
+    //THEN
+    execute("MATCH(n) RETURN count(n)").toSet should be(Set(Map("count(n)" -> 0)))
+  }
+
+  test("grant delete on default graph, should not allow on other graph") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute(s"GRANT TRAVERSE ON GRAPH * TO $roleName")
+    execute(s"GRANT CREATE ON DEFAULT GRAPH TO $roleName")
+    execute(s"CREATE DATABASE $databaseString")
+    selectDatabase(databaseString)
+    execute("CREATE (n)")
+
+    // WHEN, THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOn(databaseString, username, password, "MATCH (n) DELETE n")
+    } should have message s"Delete node with labels '' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
+  }
+
+  test("deny delete on default graph") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute(s"GRANT TRAVERSE ON GRAPH * TO $roleName")
+    execute(s"DENY DELETE ON DEFAULT GRAPH TO $roleName")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (n)")
+
+    // WHEN, THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault(username, password, "MATCH (n) DELETE n")
+    } should have message s"Delete node with labels '' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
   }
 
   test("should delete relationship when granted privilege") {
@@ -778,88 +860,6 @@ class CreateDeletePrivilegeAdministrationCommandAcceptanceTest extends Administr
 
     // THEN
     execute("MATCH ()-[r]->() RETURN r").toSet should have size 1
-  }
-
-  test("grant create on default graph") {
-    // GIVEN
-    setupUserWithCustomRole()
-    execute(s"GRANT CREATE ON DEFAULT GRAPH TO $roleName")
-
-    // WHEN
-    executeOnDefault(username, password, "CREATE (n)")
-
-    //THEN
-    execute("MATCH(n) RETURN count(n)").toSet should be(Set(Map("count(n)" -> 1)))
-  }
-
-  test("grant create on default graph, should not allow on other graph") {
-    // GIVEN
-    setupUserWithCustomRole()
-    execute(s"GRANT CREATE ON DEFAULT GRAPH TO $roleName")
-    execute(s"CREATE DATABASE $databaseString")
-
-    // WHEN, THEN
-    the[AuthorizationViolationException] thrownBy {
-      executeOn(databaseString, username, password, "CREATE (n)")
-    } should have message s"Create node with labels '' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
-  }
-
-  test("grant delete on default graph") {
-    // GIVEN
-    setupUserWithCustomRole()
-    execute(s"GRANT TRAVERSE ON GRAPH * TO $roleName")
-    execute(s"GRANT DELETE ON DEFAULT GRAPH TO $roleName")
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (n)")
-
-    // WHEN
-    executeOnDefault(username, password, "MATCH (n) DELETE n")
-
-    //THEN
-    execute("MATCH(n) RETURN count(n)").toSet should be(Set(Map("count(n)" -> 0)))
-  }
-
-  test("grant delete on default graph, should not allow on other graph") {
-    // GIVEN
-    setupUserWithCustomRole()
-    execute(s"GRANT TRAVERSE ON GRAPH * TO $roleName")
-    execute(s"GRANT CREATE ON DEFAULT GRAPH TO $roleName")
-    execute(s"CREATE DATABASE $databaseString")
-    selectDatabase(databaseString)
-    execute("CREATE (n)")
-
-    // WHEN, THEN
-    the[AuthorizationViolationException] thrownBy {
-      executeOn(databaseString, username, password, "MATCH (n) DELETE n")
-    } should have message s"Delete node with labels '' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
-  }
-
-  test("deny create on default graph, should allow on other graph") {
-    // GIVEN
-    setupUserWithCustomRole()
-    execute(s"GRANT CREATE ON GRAPH * TO $roleName")
-    execute(s"DENY CREATE ON DEFAULT GRAPH TO $roleName")
-    execute(s"CREATE DATABASE $databaseString")
-
-    // WHEN
-    executeOn(databaseString, username, password, "CREATE (n)")
-
-    // THEN
-    execute("MATCH(n) RETURN count(n)").toSet should be(Set(Map("count(n)" -> 1)))
-  }
-
-  test("deny delete on default graph") {
-    // GIVEN
-    setupUserWithCustomRole()
-    execute(s"GRANT TRAVERSE ON GRAPH * TO $roleName")
-    execute(s"DENY DELETE ON DEFAULT GRAPH TO $roleName")
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (n)")
-
-    // WHEN, THEN
-    the[AuthorizationViolationException] thrownBy {
-      executeOnDefault(username, password, "MATCH (n) DELETE n")
-    } should have message s"Delete node with labels '' is not allowed for user '$username' with roles [$PUBLIC, $roleName]."
   }
 
 }
