@@ -1452,36 +1452,31 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     graph.createIndex("Label", "prop1", "prop3")
     createNodesForComposite()
 
-    // Both properties have equality predicates but only the second property matches the ORDER BY
-    // Therefore only the second property can have switched order, not the first (which will always be ASC)
-    val indexOrderAscDesc = ProvidedOrder.asc(varFor("n.prop1")).desc(varFor("n.prop3"))
-    val indexOrderAscAsc = ProvidedOrder.asc(varFor("n.prop1")).asc(varFor("n.prop3"))
-
     def orderAscDesc(sort: String) = ProvidedOrder.asc(varFor(sort)).desc(varFor("n.prop3")).fromLeft
     def orderDescAsc(sort: String) = ProvidedOrder.desc(varFor(sort)).asc(varFor("n.prop3")).fromLeft
 
     Seq(
-      ("n.prop1, n.prop3",            "n.prop1 * 2, n.prop3 DESC", indexOrderAscDesc, orderAscDesc("n.prop1 * $autoint_2"), Seq(Map("n.prop1" -> 40, "n.prop3" -> "a"))),
-      ("n.prop1 AS foo, n.prop3",     "foo - 2,     n.prop3 DESC", indexOrderAscDesc, orderAscDesc("foo - $autoint_2"),     Seq(Map("foo" -> 40, "n.prop3" -> "a"))),
-      ("n.prop1 * 2, n.prop3",        "n.prop1 * 2, n.prop3 DESC", indexOrderAscDesc, orderAscDesc("n.prop1 * 2"),          Seq(Map("n.prop1 * 2" -> 80, "n.prop3" -> "a"))),
-      ("n.prop1 + 2 AS foo, n.prop3", "foo,         n.prop3 DESC", indexOrderAscDesc, orderAscDesc("foo"),                  Seq(Map("foo" -> 42, "n.prop3" -> "a"))),
+      ("n.prop1, n.prop3",            "n.prop1 * 2, n.prop3 DESC", orderAscDesc("n.prop1 * $autoint_2"), Seq(Map("n.prop1" -> 40, "n.prop3" -> "a"))),
+      ("n.prop1 AS foo, n.prop3",     "foo - 2,     n.prop3 DESC", orderAscDesc("foo - $autoint_2"),     Seq(Map("foo" -> 40, "n.prop3" -> "a"))),
+      ("n.prop1 * 2, n.prop3",        "n.prop1 * 2, n.prop3 DESC", orderAscDesc("n.prop1 * 2"),          Seq(Map("n.prop1 * 2" -> 80, "n.prop3" -> "a"))),
+      ("n.prop1 + 2 AS foo, n.prop3", "foo,         n.prop3 DESC", orderAscDesc("foo"),                  Seq(Map("foo" -> 42, "n.prop3" -> "a"))),
 
-      ("n.prop1, n.prop3",            "n.prop1 * 2 ASC, n.prop3 DESC", indexOrderAscDesc, orderAscDesc("n.prop1 * $autoint_2"), Seq(Map("n.prop1" -> 40, "n.prop3" -> "a"))),
-      ("n.prop1 AS foo, n.prop3",     "foo - 2 ASC,     n.prop3 DESC", indexOrderAscDesc, orderAscDesc("foo - $autoint_2"),     Seq(Map("foo" -> 40, "n.prop3" -> "a"))),
-      ("n.prop1 * 2, n.prop3",        "n.prop1 * 2 ASC, n.prop3 DESC", indexOrderAscDesc, orderAscDesc("n.prop1 * 2"),          Seq(Map("n.prop1 * 2" -> 80, "n.prop3" -> "a"))),
-      ("n.prop1 + 2 AS foo, n.prop3", "foo ASC,         n.prop3 DESC", indexOrderAscDesc, orderAscDesc("foo"),                  Seq(Map("foo" -> 42, "n.prop3" -> "a"))),
+      ("n.prop1, n.prop3",            "n.prop1 * 2 ASC, n.prop3 DESC", orderAscDesc("n.prop1 * $autoint_2"), Seq(Map("n.prop1" -> 40, "n.prop3" -> "a"))),
+      ("n.prop1 AS foo, n.prop3",     "foo - 2 ASC,     n.prop3 DESC", orderAscDesc("foo - $autoint_2"),     Seq(Map("foo" -> 40, "n.prop3" -> "a"))),
+      ("n.prop1 * 2, n.prop3",        "n.prop1 * 2 ASC, n.prop3 DESC", orderAscDesc("n.prop1 * 2"),          Seq(Map("n.prop1 * 2" -> 80, "n.prop3" -> "a"))),
+      ("n.prop1 + 2 AS foo, n.prop3", "foo ASC,         n.prop3 DESC", orderAscDesc("foo"),                  Seq(Map("foo" -> 42, "n.prop3" -> "a"))),
 
-      ("n.prop1, n.prop3",            "n.prop1 * 2 DESC, n.prop3 ASC", indexOrderAscAsc, orderDescAsc("n.prop1 * $autoint_2"), Seq(Map("n.prop1" -> 40, "n.prop3" -> "a"))),
-      ("n.prop1 AS foo, n.prop3",     "foo - 2 DESC,     n.prop3 ASC", indexOrderAscAsc, orderDescAsc("foo - $autoint_2"),     Seq(Map("foo" -> 40, "n.prop3" -> "a"))),
-      ("n.prop1 * 2, n.prop3",        "n.prop1 * 2 DESC, n.prop3 ASC", indexOrderAscAsc, orderDescAsc("n.prop1 * 2"),          Seq(Map("n.prop1 * 2" -> 80, "n.prop3" -> "a"))),
-      ("n.prop1 + 2 AS foo, n.prop3", "foo DESC,         n.prop3 ASC", indexOrderAscAsc, orderDescAsc("foo"),                  Seq(Map("foo" -> 42, "n.prop3" -> "a"))),
+      ("n.prop1, n.prop3",            "n.prop1 * 2 DESC, n.prop3 ASC", orderDescAsc("n.prop1 * $autoint_2"), Seq(Map("n.prop1" -> 40, "n.prop3" -> "a"))),
+      ("n.prop1 AS foo, n.prop3",     "foo - 2 DESC,     n.prop3 ASC", orderDescAsc("foo - $autoint_2"),     Seq(Map("foo" -> 40, "n.prop3" -> "a"))),
+      ("n.prop1 * 2, n.prop3",        "n.prop1 * 2 DESC, n.prop3 ASC", orderDescAsc("n.prop1 * 2"),          Seq(Map("n.prop1 * 2" -> 80, "n.prop3" -> "a"))),
+      ("n.prop1 + 2 AS foo, n.prop3", "foo DESC,         n.prop3 ASC", orderDescAsc("foo"),                  Seq(Map("foo" -> 42, "n.prop3" -> "a"))),
 
-      ("n.prop1, n.prop3",            "n.prop1 * 2 DESC, n.prop3", indexOrderAscAsc, orderDescAsc("n.prop1 * $autoint_2"), Seq(Map("n.prop1" -> 40, "n.prop3" -> "a"))),
-      ("n.prop1 AS foo, n.prop3",     "foo - 2 DESC,     n.prop3", indexOrderAscAsc, orderDescAsc("foo - $autoint_2"),     Seq(Map("foo" -> 40, "n.prop3" -> "a"))),
-      ("n.prop1 * 2, n.prop3",        "n.prop1 * 2 DESC, n.prop3", indexOrderAscAsc, orderDescAsc("n.prop1 * 2"),          Seq(Map("n.prop1 * 2" -> 80, "n.prop3" -> "a"))),
-      ("n.prop1 + 2 AS foo, n.prop3", "foo DESC,         n.prop3", indexOrderAscAsc, orderDescAsc("foo"),                  Seq(Map("foo" -> 42, "n.prop3" -> "a"))),
+      ("n.prop1, n.prop3",            "n.prop1 * 2 DESC, n.prop3", orderDescAsc("n.prop1 * $autoint_2"), Seq(Map("n.prop1" -> 40, "n.prop3" -> "a"))),
+      ("n.prop1 AS foo, n.prop3",     "foo - 2 DESC,     n.prop3", orderDescAsc("foo - $autoint_2"),     Seq(Map("foo" -> 40, "n.prop3" -> "a"))),
+      ("n.prop1 * 2, n.prop3",        "n.prop1 * 2 DESC, n.prop3", orderDescAsc("n.prop1 * 2"),          Seq(Map("n.prop1 * 2" -> 80, "n.prop3" -> "a"))),
+      ("n.prop1 + 2 AS foo, n.prop3", "foo DESC,         n.prop3", orderDescAsc("foo"),                  Seq(Map("foo" -> 42, "n.prop3" -> "a"))),
     ).foreach {
-      case (returnString, orderByString, orderIndex, orderSort, expected) =>
+      case (returnString, orderByString, orderSort, expected) =>
         withClue(s"RETURN $returnString ORDER BY $orderByString:") {
           val query = s"""MATCH (n:Label)
                          |WHERE n.prop1 = 40 AND n.prop3 = 'a'
@@ -1493,7 +1488,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
           // Then
           result.executionPlanDescription() should (includeSomewhere.aPlan("Sort").withOrder(orderSort) and
-            includeSomewhere.aPlan("NodeIndexSeek").withOrder(orderIndex))
+            includeSomewhere.aPlan("NodeIndexSeek"))
 
           result.toComparableResult should equal(expected)
         }
