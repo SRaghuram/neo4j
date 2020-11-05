@@ -17,8 +17,9 @@ import org.neo4j.memory.MemoryTracker
  * Not thread-safe of SingletonArgumentStateMap.
  */
 class StandardSingletonArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: ArgumentStateMapId,
-                                                                factory: ArgumentStateFactory[STATE])
-  extends AbstractSingletonArgumentStateMap[STATE, AbstractArgumentStateMap.StateController[STATE]] {
+                                                                factory: ArgumentStateFactory[STATE],
+                                                                memoryTracker: MemoryTracker)
+  extends AbstractSingletonArgumentStateMap[STATE, AbstractArgumentStateMap.StateController[STATE]](memoryTracker) {
 
   override protected var controller: AbstractArgumentStateMap.StateController[STATE] = _
 

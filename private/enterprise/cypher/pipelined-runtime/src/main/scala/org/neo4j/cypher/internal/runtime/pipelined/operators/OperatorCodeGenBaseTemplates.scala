@@ -239,10 +239,10 @@ trait CompiledStreamingOperatorTemplate[T <: Operator] {
             Int,
             ArgumentStateFactory[ArgumentState],
             MemoryTracker,
-              Boolean]("createArgumentStateMap"),
+            Boolean]("createArgumentStateMap"),
           constant(argumentStateVariant.argumentStateMapId.x),
           genArgumentStateFactory(argumentStateVariant),
-            getMemoryTracker(pipelineId.x),
+          getMemoryTracker(pipelineId.x),
           constant(argumentStateVariant.ordered))
       }: _*)
 

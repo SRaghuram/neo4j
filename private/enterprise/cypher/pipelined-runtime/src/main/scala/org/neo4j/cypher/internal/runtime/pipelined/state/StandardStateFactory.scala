@@ -50,7 +50,7 @@ class StandardStateFactory extends StateFactory {
                                                        orderPreservingInParallel: Boolean,
                                                        memoryTracker: MemoryTracker): ArgumentStateMap[S] =
     if (argumentSlotOffset == TopLevelArgument.SLOT_OFFSET) {
-      new StandardSingletonArgumentStateMap[S](argumentStateMapId, factory)
+      new StandardSingletonArgumentStateMap[S](argumentStateMapId, factory, memoryTracker)
     } else {
       new StandardArgumentStateMap[S](argumentStateMapId, argumentSlotOffset, factory, memoryTracker)
     }

@@ -12,7 +12,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
-import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.MemoryTracker
 
 /**
@@ -21,7 +20,7 @@ import org.neo4j.memory.MemoryTracker
  *
  * This is per definition an ordered argument state map.
  */
-abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: AbstractArgumentStateMap.StateController[STATE]]
+abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: AbstractArgumentStateMap.StateController[STATE]](memoryTracker: MemoryTracker)
   extends ArgumentStateMap[STATE] {
 
   override def argumentSlotOffset: Int = TopLevelArgument.SLOT_OFFSET
@@ -174,7 +173,7 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
   override def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int): Unit = {
     TopLevelArgument.assertTopLevelArgument(argument)
     DebugSupport.ASM.log("ASM %s init %03d", argumentStateMapId, argument)
-    controller = newStateController(argument, argumentMorsel, argumentRowIdsForReducers, initialCount, EmptyMemoryTracker.INSTANCE)
+    controller = newStateController(argument, argumentMorsel, argumentRowIdsForReducers, initialCount, memoryTracker)
   }
 
   override def increment(argument: Long): Unit = {

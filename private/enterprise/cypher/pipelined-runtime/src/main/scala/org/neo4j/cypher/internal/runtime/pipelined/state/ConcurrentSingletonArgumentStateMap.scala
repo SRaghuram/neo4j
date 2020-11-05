@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentStateMap.ConcurrentCompletedStateController
 import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentStateMap.ConcurrentStateController
+import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.MemoryTracker
 
 /**
@@ -18,7 +19,7 @@ import org.neo4j.memory.MemoryTracker
  */
 class ConcurrentSingletonArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: ArgumentStateMapId,
                                                                   factory: ArgumentStateFactory[STATE])
-  extends AbstractSingletonArgumentStateMap[STATE, AbstractArgumentStateMap.StateController[STATE]] {
+  extends AbstractSingletonArgumentStateMap[STATE, AbstractArgumentStateMap.StateController[STATE]](EmptyMemoryTracker.INSTANCE) {
 
   @volatile
   override protected var controller: AbstractArgumentStateMap.StateController[STATE] = _
