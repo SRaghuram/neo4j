@@ -5,8 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph.versions;
 
-import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 import com.neo4j.causalclustering.catchup.v4.metadata.DatabaseSecurityCommands;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -72,7 +72,7 @@ public class EnterpriseSecurityComponentVersion_1_36 extends KnownEnterpriseSecu
     }
 
     @Override
-    public void setUpDefaultPrivileges( Transaction tx )
+    public void setUpDefaultPrivileges( Transaction tx, PrivilegeStore privilegeStore )
     {
         if ( !nodesWithLabelExist( tx, databaseLabel ) )
         {
@@ -81,7 +81,7 @@ public class EnterpriseSecurityComponentVersion_1_36 extends KnownEnterpriseSecu
     }
 
     @Override
-    public void assignDefaultPrivileges( Node role, String predefinedRole )
+    public void grantDefaultPrivileges( Transaction tx, Node role, String predefinedRole, PrivilegeStore privilegeStore )
     {
         // Nothing to do, this graph model does not contain privileges
     }
@@ -112,7 +112,6 @@ public class EnterpriseSecurityComponentVersion_1_36 extends KnownEnterpriseSecu
         setVersionProperty( tx, latest.version );
         List<Node> roles = tx.findNodes( ROLE_LABEL ).stream().collect( Collectors.toList() );
         log.info( String.format( "Upgrading security model from %s with %d roles", this.description, roles.size() ) );
-        latest.setUpDefaultPrivileges( tx );
         List<String> rolesToSetup = new ArrayList<>();
         Map<String,Set<String>> rolesUsers = new HashMap<>();
         Set<Node> dbRoles = new HashSet<>();

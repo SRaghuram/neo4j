@@ -43,16 +43,16 @@ public class EnterpriseSecurityComponentVersion_4_41 extends SupportedEnterprise
     }
 
     @Override
-    public void setUpDefaultPrivileges( Transaction tx )
+    public void setUpDefaultPrivileges( Transaction tx, PrivilegeStore privilegeStore )
     {
-        super.setUpDefaultPrivileges( tx );
+        previous.setUpDefaultPrivileges( tx, privilegeStore );
         this.setVersionProperty( tx, version );
     }
 
     @Override
-    public void assignDefaultPrivileges( Node role, String predefinedRole )
+    public void grantDefaultPrivileges( Transaction tx, Node role, String predefinedRole, PrivilegeStore privilegeStore )
     {
-        super.assignDefaultPrivileges( role, predefinedRole );
+        previous.grantDefaultPrivileges( tx, role, predefinedRole, privilegeStore );
     }
 
     @Override

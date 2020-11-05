@@ -6,10 +6,10 @@
 package com.neo4j.server.security.enterprise.systemgraph.versions;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.neo4j.causalclustering.catchup.v4.metadata.DatabaseSecurityCommands;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
-import com.neo4j.causalclustering.catchup.v4.metadata.DatabaseSecurityCommands;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,32 +35,14 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.systemgraph.ComponentVersion;
 
-import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
-import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;
-import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
-import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
-import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
 
 public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownEnterpriseSecurityComponentVersion
 {
     static final Label SEGMENT_LABEL = Label.label( "Segment" );
+    static final Label RESOURCE_LABEL = Label.label( "Resource" );
     static final String DB_PARAM = "database";
-
-    private Node matchNodePriv;
-    private Node matchRelPriv;
-    private Node writeNodePriv;
-    private Node writeRelPriv;
-    private Node defaultAccessPriv;
-    private Node accessPriv;
-    private Node tokenPriv;
-    private Node indexPriv;
-    private Node constraintPriv;
-    private Node adminPriv;
-
-    Node allDb;
-    Node dbResource;
 
     protected SupportedEnterpriseSecurityComponentVersion( ComponentVersion componentVersion, Log log )
     {
@@ -74,126 +56,46 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
 
     public abstract PrivilegeBuilder makePrivilegeBuilder( ResourcePrivilege.GrantOrDeny privilegeType, String action );
 
-    @Override
-    public void setUpDefaultPrivileges( Transaction tx )
+    Node mergeSegment( Transaction tx, Node dbNode, Node qualifierNode )
     {
-        // Check for DatabaseAll node to see if the default privileges were already setup
-        if ( nodesWithLabelExist( tx, DATABASE_ALL_LABEL ) )
+        List<Node> segmentNodes = new ArrayList<>();
+        qualifierNode.getRelationships( Direction.INCOMING, QUALIFIED ).forEach( r -> segmentNodes.add( r.getOtherNode( qualifierNode ) ) );
+        for ( Node segment : segmentNodes )
         {
-            return;
+            List<Node> dbNodes = new ArrayList<>();
+            segment.getRelationships( Direction.OUTGOING, FOR ).forEach( r -> dbNodes.add( r.getOtherNode( segment ) ) );
+            for ( Node node : dbNodes )
+            {
+                if ( node.getId() == dbNode.getId() )
+                {
+                    // found correct segment
+                    return segment;
+                }
+            }
         }
 
-        // Create a DatabaseAll node
-        allDb = tx.createNode( DATABASE_ALL_LABEL );
-        allDb.setProperty( "name", "*" );
-
-        // Create a DatabaseDefault node
-        Node defaultDb = tx.createNode( DATABASE_DEFAULT_LABEL );
-        defaultDb.setProperty( "name", "DEFAULT" );
-
-        // Create initial qualifier nodes
-        Node labelQualifier = tx.createNode( Label.label( "LabelQualifierAll" ) );
-        labelQualifier.setProperty( "type", "node" );
-        labelQualifier.setProperty( "label", "*" );
-
-        Node relQualifier = tx.createNode( Label.label( "RelationshipQualifierAll" ) );
-        relQualifier.setProperty( "type", "relationship" );
-        relQualifier.setProperty( "label", "*" );
-
-        Node dbQualifier = tx.createNode( Label.label( "DatabaseQualifier" ) );
-        dbQualifier.setProperty( "type", "database" );
-        dbQualifier.setProperty( "label", "" );
-
-        // Create initial segments nodes and connect them with DatabaseAll and qualifiers
+        // No segment was found, create one
         Node labelSegment = tx.createNode( SEGMENT_LABEL );
-        labelSegment.createRelationshipTo( labelQualifier, QUALIFIED );
-        labelSegment.createRelationshipTo( allDb, FOR );
-
-        Node relSegment = tx.createNode( SEGMENT_LABEL );
-        relSegment.createRelationshipTo( relQualifier, QUALIFIED );
-        relSegment.createRelationshipTo( allDb, FOR );
-
-        Node dbSegment = tx.createNode( SEGMENT_LABEL );
-        dbSegment.createRelationshipTo( dbQualifier, QUALIFIED );
-        dbSegment.createRelationshipTo( allDb, FOR );
-
-        Node defaultDbSegment = tx.createNode( SEGMENT_LABEL );
-        defaultDbSegment.createRelationshipTo( dbQualifier, QUALIFIED );
-        defaultDbSegment.createRelationshipTo( defaultDb, FOR );
-
-        // Create initial resource nodes
-        Label resourceLabel = Label.label( "Resource" );
-
-        Node graphResource = tx.createNode( resourceLabel );
-        graphResource.setProperty( "type", Resource.Type.GRAPH.toString() );
-        graphResource.setProperty( "arg1", "" );
-        graphResource.setProperty( "arg2", "" );
-
-        Node allPropResource = tx.createNode( resourceLabel );
-        allPropResource.setProperty( "type", Resource.Type.ALL_PROPERTIES.toString() );
-        allPropResource.setProperty( "arg1", "" );
-        allPropResource.setProperty( "arg2", "" );
-
-        dbResource = tx.createNode( resourceLabel );
-        dbResource.setProperty( "type", Resource.Type.DATABASE.toString() );
-        dbResource.setProperty( "arg1", "" );
-        dbResource.setProperty( "arg2", "" );
-
-        // Create initial privilege nodes and connect them with resources and segments
-        matchNodePriv = tx.createNode( PRIVILEGE_LABEL );
-        matchRelPriv = tx.createNode( PRIVILEGE_LABEL );
-        writeNodePriv = tx.createNode( PRIVILEGE_LABEL );
-        writeRelPriv = tx.createNode( PRIVILEGE_LABEL );
-        defaultAccessPriv = tx.createNode( PRIVILEGE_LABEL );
-        accessPriv = tx.createNode( PRIVILEGE_LABEL );
-        tokenPriv = tx.createNode( PRIVILEGE_LABEL );
-        adminPriv = tx.createNode( PRIVILEGE_LABEL );
-        indexPriv = tx.createNode( PRIVILEGE_LABEL );
-        constraintPriv = tx.createNode( PRIVILEGE_LABEL );
-
-        setupPrivilegeNode( matchNodePriv, PrivilegeAction.MATCH.toString(), labelSegment, allPropResource );
-        setupPrivilegeNode( matchRelPriv, PrivilegeAction.MATCH.toString(), relSegment, allPropResource );
-        setupPrivilegeNode( writeNodePriv, PrivilegeAction.WRITE.toString(), labelSegment, graphResource );
-        setupPrivilegeNode( writeRelPriv, PrivilegeAction.WRITE.toString(), relSegment, graphResource );
-        setupPrivilegeNode( defaultAccessPriv, PrivilegeAction.ACCESS.toString(), defaultDbSegment, dbResource );
-        setupPrivilegeNode( accessPriv, PrivilegeAction.ACCESS.toString(), dbSegment, dbResource );
-        setupPrivilegeNode( tokenPriv, PrivilegeAction.TOKEN.toString(), dbSegment, dbResource );
-        setupPrivilegeNode( indexPriv, PrivilegeAction.INDEX.toString(), dbSegment, dbResource );
-        setupPrivilegeNode( constraintPriv, PrivilegeAction.CONSTRAINT.toString(), dbSegment, dbResource );
-        setupPrivilegeNode( adminPriv, PrivilegeAction.ADMIN.toString(), dbSegment, dbResource );
+        labelSegment.createRelationshipTo( qualifierNode, QUALIFIED );
+        labelSegment.createRelationshipTo( dbNode, FOR );
+        return labelSegment;
     }
 
-    @Override
-    public void assignDefaultPrivileges( Node role, String predefinedRole )
+    Node mergeNode( Transaction tx, Label label, Map<String,Object> properties )
     {
-        switch ( predefinedRole )
+        ResourceIterator<Node> nodes = tx.findNodes( label, properties );
+        Node node;
+        if ( nodes.hasNext() )
         {
-        case ADMIN:
-            role.createRelationshipTo( adminPriv, GRANTED );
-
-        case ARCHITECT:
-            role.createRelationshipTo( constraintPriv, GRANTED );
-            role.createRelationshipTo( indexPriv, GRANTED );
-
-        case PUBLISHER:
-            role.createRelationshipTo( tokenPriv, GRANTED );
-
-        case EDITOR:
-            // The segment part is ignored for this action
-            role.createRelationshipTo( writeNodePriv, GRANTED );
-            role.createRelationshipTo( writeRelPriv, GRANTED );
-
-        case READER:
-            role.createRelationshipTo( matchNodePriv, GRANTED );
-            role.createRelationshipTo( matchRelPriv, GRANTED );
-            role.createRelationshipTo( accessPriv, GRANTED );
-            break; // All of the above cases are cumulative
-
-        case PUBLIC:
-            role.createRelationshipTo( defaultAccessPriv, GRANTED );
-
-        default:
+            node = nodes.next();
         }
+        else
+        {
+            node = tx.createNode( label );
+            properties.forEach( node::setProperty );
+        }
+        nodes.close();
+        return node;
     }
 
     static void setupPrivilegeNode( Node privNode, String action, Node segmentNode, Node resourceNode )

@@ -6,9 +6,12 @@
 package com.neo4j.server.security.enterprise.systemgraph.versions;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
+import com.neo4j.server.security.enterprise.systemgraph.versions.PrivilegeStore.PRIVILEGE;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.graphdb.Label;
@@ -31,7 +34,6 @@ import static org.neo4j.server.security.systemgraph.ComponentVersion.LATEST_ENTE
 public class EnterpriseSecurityComponentVersion_5_42D4 extends SupportedEnterpriseSecurityComponentVersion
 {
     private final KnownEnterpriseSecurityComponentVersion previous;
-    private Node procedurePriv;
 
     public EnterpriseSecurityComponentVersion_5_42D4( Log log, KnownEnterpriseSecurityComponentVersion previous )
     {
@@ -40,31 +42,43 @@ public class EnterpriseSecurityComponentVersion_5_42D4 extends SupportedEnterpri
     }
 
     @Override
-    public void setUpDefaultPrivileges( Transaction tx )
+    public void setUpDefaultPrivileges( Transaction tx, PrivilegeStore privilegeStore )
     {
-        super.setUpDefaultPrivileges( tx );
+        previous.setUpDefaultPrivileges( tx, privilegeStore );
         this.setVersionProperty( tx, version );
 
+        Node allDb = mergeNode( tx, DATABASE_ALL_LABEL, Map.of( "name", "*" ) );
+
         // Create new privilege for execute procedures
-        Node procQualifier = tx.createNode( Label.label( "ProcedureQualifierAll" ) );
-        procQualifier.setProperty( "type", "procedure" );
-        procQualifier.setProperty( "label", "*" );
+        Node procQualifier = mergeNode( tx, Label.label( "ProcedureQualifierAll" ), Map.of(
+                "type", "procedure",
+                "label", "*"
+        ) );
 
-        Node procSegment = tx.createNode( SEGMENT_LABEL );
-        procSegment.createRelationshipTo( procQualifier, QUALIFIED );
-        procSegment.createRelationshipTo( allDb, FOR );
+        Node procSegment = mergeSegment( tx, allDb, procQualifier );
 
-        procedurePriv = tx.createNode( PRIVILEGE_LABEL );
+        Node dbResource = mergeNode( tx, RESOURCE_LABEL, Map.of(
+                "type", Resource.Type.DATABASE.toString(),
+                "arg1", "",
+                "arg2", ""
+        ) );
+
+        Node procedurePriv = tx.createNode( PRIVILEGE_LABEL );
         setupPrivilegeNode( procedurePriv, PrivilegeAction.EXECUTE.toString(), procSegment, dbResource );
+        privilegeStore.setPrivilege( PRIVILEGE.EXECUTE_ALL_PROCEDURES, procedurePriv );
     }
 
     @Override
-    public void assignDefaultPrivileges( Node role, String predefinedRole )
+    public void grantDefaultPrivileges( Transaction tx, Node role, String predefinedRole, PrivilegeStore privilegeStore )
     {
-        super.assignDefaultPrivileges( role, predefinedRole );
         if ( predefinedRole.equals( PUBLIC ) )
         {
-            role.createRelationshipTo( procedurePriv, GRANTED );
+            role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.ACCESS_DEFAULT ), GRANTED );
+            role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.EXECUTE_ALL_PROCEDURES ), GRANTED );
+        }
+        else
+        {
+            previous.grantDefaultPrivileges( tx, role, predefinedRole, privilegeStore );
         }
     }
 

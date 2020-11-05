@@ -5,11 +5,11 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph.versions;
 
+import com.neo4j.causalclustering.catchup.v4.metadata.DatabaseSecurityCommands;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
-import com.neo4j.causalclustering.catchup.v4.metadata.DatabaseSecurityCommands;
 import com.neo4j.server.security.enterprise.systemgraph.CustomSecurityInitializer;
 
 import java.util.ArrayList;
@@ -68,7 +68,7 @@ public class EnterpriseSecurityComponentVersion_0_35 extends KnownEnterpriseSecu
     }
 
     @Override
-    public void setUpDefaultPrivileges( Transaction tx )
+    public void setUpDefaultPrivileges( Transaction tx, PrivilegeStore privilegeStore )
     {
         throw unsupported();
     }
@@ -86,7 +86,7 @@ public class EnterpriseSecurityComponentVersion_0_35 extends KnownEnterpriseSecu
     }
 
     @Override
-    public void assignDefaultPrivileges( Node role, String predefinedRole )
+    public void grantDefaultPrivileges( Transaction tx, Node role, String predefinedRole, PrivilegeStore privilegeStore )
     {
         throw unsupported();
     }

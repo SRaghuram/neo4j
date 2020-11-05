@@ -12,6 +12,7 @@ import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion;
 import com.neo4j.server.security.enterprise.systemgraph.versions.PrivilegeBuilder;
+import com.neo4j.server.security.enterprise.systemgraph.versions.PrivilegeStore;
 import com.neo4j.server.security.enterprise.systemgraph.versions.SupportedEnterpriseSecurityComponentVersion;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterAll;
@@ -372,10 +373,14 @@ class SystemGraphComponentsTest
         }
 
         @Override
-        public void setUpDefaultPrivileges( Transaction tx )
+        public void setUpDefaultPrivileges( Transaction tx, PrivilegeStore privilegeStore )
         {
-            super.setUpDefaultPrivileges( tx );
             this.setVersionProperty( tx, version );
+        }
+
+        @Override
+        public void grantDefaultPrivileges( Transaction tx, Node role, String predefinedRole, PrivilegeStore privilegeStore )
+        {
         }
 
         @Override

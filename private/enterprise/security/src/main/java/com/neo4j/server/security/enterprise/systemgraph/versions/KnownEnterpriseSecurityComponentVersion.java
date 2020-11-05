@@ -6,9 +6,9 @@
 package com.neo4j.server.security.enterprise.systemgraph.versions;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.neo4j.causalclustering.catchup.v4.metadata.DatabaseSecurityCommands;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
-import com.neo4j.causalclustering.catchup.v4.metadata.DatabaseSecurityCommands;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -69,9 +69,9 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
     public abstract void assertUpdateWithAction( PrivilegeAction action, SpecialDatabase specialDatabase, Segment segment )
             throws UnsupportedOperationException;
 
-    public abstract void setUpDefaultPrivileges( Transaction tx );
+    public abstract void setUpDefaultPrivileges( Transaction tx, PrivilegeStore privilegeStore );
 
-    public abstract void assignDefaultPrivileges( Node role, String predefinedRole );
+    public abstract void grantDefaultPrivileges( Transaction tx, Node role, String predefinedRole, PrivilegeStore privilegeStore );
 
     public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest ) throws Exception
     {
@@ -101,13 +101,14 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
         log.info( String.format( "Initializing security model with %d roles", roles.size() ) );
 
         // Create default privileges
-        setUpDefaultPrivileges( tx );
+        PrivilegeStore privilegeStore = new PrivilegeStore();
+        setUpDefaultPrivileges( tx, privilegeStore );
 
         // Create the specified roles
         roles.forEach( roleName ->
         {
             Node role = newRole( tx, roleName );
-            assignDefaultPrivileges( role, roleName );
+            grantDefaultPrivileges( tx, role, roleName, privilegeStore );
         } );
 
         // Assign users to roles

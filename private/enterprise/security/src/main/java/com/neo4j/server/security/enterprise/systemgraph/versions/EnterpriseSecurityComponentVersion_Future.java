@@ -5,8 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph.versions;
 
-import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 import com.neo4j.causalclustering.catchup.v4.metadata.DatabaseSecurityCommands;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 
 import org.neo4j.dbms.database.SystemGraphComponent;
 import org.neo4j.graphdb.Node;
@@ -53,13 +53,13 @@ public class EnterpriseSecurityComponentVersion_Future extends KnownEnterpriseSe
     }
 
     @Override
-    public void setUpDefaultPrivileges( Transaction tx )
+    public void setUpDefaultPrivileges( Transaction tx, PrivilegeStore privilegeStore )
     {
         throw unsupported();
     }
 
     @Override
-    public void assignDefaultPrivileges( Node role, String predefinedRole )
+    public void grantDefaultPrivileges( Transaction tx, Node role, String predefinedRole, PrivilegeStore privilegeStore )
     {
         throw unsupported();
     }
