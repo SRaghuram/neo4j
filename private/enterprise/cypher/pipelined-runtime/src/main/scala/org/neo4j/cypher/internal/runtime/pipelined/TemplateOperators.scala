@@ -138,10 +138,12 @@ import org.neo4j.internal.schema.IndexOrder
 sealed trait ArgumentStateDescriptor {
   def ordered: Boolean
   def argumentStateMapId: ArgumentStateMapId
+  def operatorId: Id
 }
 
 case class StaticFactoryArgumentStateDescriptor(argumentStateMapId: ArgumentStateMapId,
                                                 factory: ArgumentStateFactory[_ <: ArgumentState],
+                                                operatorId: Id,
                                                 ordered: Boolean = false) extends ArgumentStateDescriptor
 case class DynamicFactoryArgumentStateDescriptor(argumentStateMapId: ArgumentStateMapId,
                                                  factoryFactory: ArgumentStateBufferFactoryFactory,
@@ -593,7 +595,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                     toSlot,
                     offsets.head,
                     ctx.compileExpression(expression, plan.id))(ctx.expressionCompiler),
-                  Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, DistinctSinglePrimitiveState.DistinctStateFactory)))
+                  Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, DistinctSinglePrimitiveState.DistinctStateFactory, plan.id)))
                 } else {
                   TemplateAndArgumentStateFactory(
                     new SerialDistinctOnRhsOfApplySinglePrimitiveOperatorTaskTemplate(ctx.inner,
@@ -602,7 +604,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                       toSlot,
                       offsets.head,
                       ctx.compileExpression(expression, plan.id))(ctx.expressionCompiler),
-                    Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, DistinctSinglePrimitiveState.DistinctStateFactory)))
+                    Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, DistinctSinglePrimitiveState.DistinctStateFactory, plan.id)))
                 }
               case DistinctAllPrimitive(offsets, _) =>
                 if (hasNoNestedArguments) {
@@ -612,7 +614,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                       argumentStateMapId,
                       offsets.sorted.toArray,
                       groupMapping)(ctx.expressionCompiler),
-                    Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, DistinctOperatorState.DistinctStateFactory)))
+                    Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, DistinctOperatorState.DistinctStateFactory, plan.id)))
                 } else {
                   TemplateAndArgumentStateFactory(
                     new SerialDistinctOnRhsOfApplyPrimitiveOperatorTaskTemplate(ctx.inner,
@@ -620,7 +622,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                       argumentStateMapId,
                       offsets.sorted.toArray,
                       groupMapping)(ctx.expressionCompiler),
-                    Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, DistinctOperatorState.DistinctStateFactory)))
+                    Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, DistinctOperatorState.DistinctStateFactory, plan.id)))
                 }
 
               case DistinctWithReferences =>
@@ -630,14 +632,14 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                       plan.id,
                       argumentStateMapId,
                       groupMapping)(ctx.expressionCompiler),
-                    Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, DistinctOperatorState.DistinctStateFactory)))
+                    Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, DistinctOperatorState.DistinctStateFactory, plan.id)))
                 } else {
                   TemplateAndArgumentStateFactory(
                     new SerialDistinctOnRhsOfApplyOperatorTaskTemplate(ctx.inner,
                       plan.id,
                       argumentStateMapId,
                       groupMapping)(ctx.expressionCompiler),
-                    Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, DistinctOperatorState.DistinctStateFactory)))
+                    Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, DistinctOperatorState.DistinctStateFactory, plan.id)))
                 }
             }
 
@@ -653,7 +655,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   ctx.innermost,
                   argumentStateMapId,
                   ctx.compileExpression(countExpression, plan.id))(ctx.expressionCompiler),
-                Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, SerialLimitStateFactory))
+                Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, SerialLimitStateFactory, plan.id))
               )
             } else {
               ctx.innermost.limits += argumentStateMapId
@@ -662,7 +664,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   plan.id,
                   argumentStateMapId,
                   ctx.compileExpression(countExpression, plan.id))(ctx.expressionCompiler),
-                Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, SerialLimitStateFactory))
+                Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, SerialLimitStateFactory, plan.id))
               )
             }
 
@@ -677,7 +679,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   ctx.innermost,
                   argumentStateMapId,
                   ctx.compileExpression(countExpression, plan.id))(ctx.expressionCompiler),
-                Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, SerialSkipStateFactory))
+                Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, SerialSkipStateFactory, plan.id))
               )
             } else {
               TemplateAndArgumentStateFactory(
@@ -685,7 +687,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   plan.id,
                   argumentStateMapId,
                   ctx.compileExpression(countExpression, plan.id))(ctx.expressionCompiler),
-                Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, SerialSkipStateFactory))
+                Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, SerialSkipStateFactory, plan.id))
               )
             }
 

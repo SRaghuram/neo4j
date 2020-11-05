@@ -220,7 +220,7 @@ trait CompiledStreamingOperatorTemplate[T <: Operator] {
 
 
     val argumentStateFields = argumentStates.map {
-      case StaticFactoryArgumentStateDescriptor(_, factory, _) =>
+      case StaticFactoryArgumentStateDescriptor(_, factory, _, _) =>
         staticConstant[ArgumentStateFactory[ArgumentState]](staticFieldName(ARGUMENT_STATE_FACTORY_FIELD_PREFIX, factory), factory)
       case DynamicFactoryArgumentStateDescriptor(_, factoryFactory, _, _) =>
         staticConstant[ArgumentStateBufferFactoryFactory](staticFieldName(ARGUMENT_STATE_FACTORY_FACTORY_FIELD_PREFIX, factoryFactory), factoryFactory)
@@ -242,7 +242,7 @@ trait CompiledStreamingOperatorTemplate[T <: Operator] {
             Boolean]("createArgumentStateMap"),
           constant(argumentStateVariant.argumentStateMapId.x),
           genArgumentStateFactory(argumentStateVariant),
-          getMemoryTracker(pipelineId.x),
+          getMemoryTracker(argumentStateVariant.operatorId.x),
           constant(argumentStateVariant.ordered))
       }: _*)
 
@@ -273,7 +273,7 @@ trait CompiledStreamingOperatorTemplate[T <: Operator] {
 
   private def genArgumentStateFactory(argumentStateFactoryVariant: ArgumentStateDescriptor): IntermediateRepresentation = {
     argumentStateFactoryVariant match {
-      case StaticFactoryArgumentStateDescriptor(_, factory, _) =>
+      case StaticFactoryArgumentStateDescriptor(_, factory, _, _) =>
         getStatic[ArgumentStateFactory[ArgumentState]](staticFieldName(ARGUMENT_STATE_FACTORY_FIELD_PREFIX, factory))
       case DynamicFactoryArgumentStateDescriptor(_, factoryFactory, operatorId, _) =>
         invoke(
