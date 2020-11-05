@@ -23,9 +23,9 @@ public class ReplicatedLabelTokenHolder extends ReplicatedTokenHolder
 {
     public ReplicatedLabelTokenHolder( NamedDatabaseId namedDatabaseId, TokenRegistry registry, Replicator replicator,
             IdGeneratorFactory idGeneratorFactory, Supplier<StorageEngine> storageEngineSupplier, PageCacheTracer pageCacheTracer,
-            MemoryTracker memoryTracker, LogEntryWriterFactory logEntryWriterFactory )
+            LogEntryWriterFactory logEntryWriterFactory )
     {
         super( namedDatabaseId, registry, replicator, idGeneratorFactory, IdType.LABEL_TOKEN, storageEngineSupplier,
-                TokenType.LABEL, TransactionState::labelDoCreateForName, pageCacheTracer, memoryTracker, logEntryWriterFactory );
+                TokenType.LABEL, TransactionState::labelDoCreateForName, pageCacheTracer, logEntryWriterFactory );
     }
 }

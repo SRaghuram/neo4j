@@ -23,9 +23,9 @@ public class ReplicatedPropertyKeyTokenHolder extends ReplicatedTokenHolder
 {
     public ReplicatedPropertyKeyTokenHolder( NamedDatabaseId namedDatabaseId, TokenRegistry registry, Replicator replicator,
             IdGeneratorFactory idGeneratorFactory, Supplier<StorageEngine> storageEngineSupplier, PageCacheTracer pageCacheTracer,
-            MemoryTracker memoryTracker, LogEntryWriterFactory logEntryWriterFactory )
+            LogEntryWriterFactory logEntryWriterFactory )
     {
         super( namedDatabaseId, registry, replicator, idGeneratorFactory, IdType.PROPERTY_KEY_TOKEN, storageEngineSupplier, TokenType.PROPERTY,
-                TransactionState::propertyKeyDoCreateForName, pageCacheTracer, memoryTracker, logEntryWriterFactory );
+                TransactionState::propertyKeyDoCreateForName, pageCacheTracer, logEntryWriterFactory );
     }
 }

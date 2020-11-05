@@ -46,13 +46,12 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
     private final ReplicatedTokenCreator tokenCreator;
     private final DatabaseId databaseId;
     private final PageCacheTracer pageCacheTracer;
-    private final MemoryTracker memoryTracker;
     private final LogEntryWriterFactory logEntryWriterFactory;
 
     ReplicatedTokenHolder( NamedDatabaseId namedDatabaseId, TokenRegistry tokenRegistry, Replicator replicator,
             IdGeneratorFactory idGeneratorFactory, IdType tokenIdType,
             Supplier<StorageEngine> storageEngineSupplier, TokenType type,
-            ReplicatedTokenCreator tokenCreator, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker,
+            ReplicatedTokenCreator tokenCreator, PageCacheTracer pageCacheTracer,
             LogEntryWriterFactory logEntryWriterFactory )
     {
         super( tokenRegistry );
@@ -64,7 +63,6 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
         this.tokenCreator = tokenCreator;
         this.databaseId = namedDatabaseId.databaseId();
         this.pageCacheTracer = pageCacheTracer;
-        this.memoryTracker = memoryTracker;
         this.logEntryWriterFactory = logEntryWriterFactory;
     }
 

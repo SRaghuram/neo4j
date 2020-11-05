@@ -24,10 +24,10 @@ public class ReplicatedRelationshipTypeTokenHolder extends ReplicatedTokenHolder
 {
     public ReplicatedRelationshipTypeTokenHolder( NamedDatabaseId namedDatabaseId, TokenRegistry registry,
             Replicator replicator, IdGeneratorFactory idGeneratorFactory,
-            Supplier<StorageEngine> storageEngineSupplier, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker,
+            Supplier<StorageEngine> storageEngineSupplier, PageCacheTracer pageCacheTracer,
             LogEntryWriterFactory logEntryWriterFactory )
     {
         super( namedDatabaseId, registry, replicator, idGeneratorFactory, RELATIONSHIP_TYPE_TOKEN, storageEngineSupplier, TokenType.RELATIONSHIP,
-                TransactionState::relationshipTypeDoCreateForName, pageCacheTracer, memoryTracker, logEntryWriterFactory );
+                TransactionState::relationshipTypeDoCreateForName, pageCacheTracer, logEntryWriterFactory );
     }
 }

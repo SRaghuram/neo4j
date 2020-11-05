@@ -47,7 +47,6 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 class ReplicatedTokenHolderTest
 {
@@ -62,7 +61,7 @@ class ReplicatedTokenHolderTest
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
         ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, registry, null, null, storageEngineSupplier,
-                PageCacheTracer.NULL, INSTANCE, logEntryWriterFactory );
+                PageCacheTracer.NULL, logEntryWriterFactory );
 
         // when
         tokenHolder.setInitialTokens( asList( new NamedToken( "name1", 1 ), new NamedToken( "name2", 2 ) ) );
@@ -86,8 +85,8 @@ class ReplicatedTokenHolderTest
         var replicationResult = ReplicationResult.applied( stateMachineResult );
         when( replicator.replicate( any() ) ).thenReturn( replicationResult );
 
-        var tokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, registry, replicator, factory, storageEngineSupplier, cacheTracer, INSTANCE,
-                                                          logEntryWriterFactory );
+        var tokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, registry, replicator, factory, storageEngineSupplier, cacheTracer,
+                logEntryWriterFactory );
         tokenHolder.createToken( "foo", false );
 
         verify( cacheTracer ).createPageCursorTracer( any() );
@@ -100,7 +99,7 @@ class ReplicatedTokenHolderTest
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
         ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, registry, null,
-                null, storageEngineSupplier, PageCacheTracer.NULL, INSTANCE, logEntryWriterFactory );
+                null, storageEngineSupplier, PageCacheTracer.NULL, logEntryWriterFactory );
         tokenHolder.setInitialTokens( asList( new NamedToken( "name1", 1 ), new NamedToken( "name2", 2 ) ) );
 
         // when
@@ -126,7 +125,7 @@ class ReplicatedTokenHolderTest
         int generatedTokenId = 1;
         ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, registry,
                 content -> ReplicationResult.applied( StateMachineResult.of( generatedTokenId ) ), idGeneratorFactory, storageEngineSupplier,
-                PageCacheTracer.NULL, INSTANCE, logEntryWriterFactory );
+                PageCacheTracer.NULL, logEntryWriterFactory );
 
         // when
         Integer tokenId = tokenHolder.getOrCreateId( "name1" );

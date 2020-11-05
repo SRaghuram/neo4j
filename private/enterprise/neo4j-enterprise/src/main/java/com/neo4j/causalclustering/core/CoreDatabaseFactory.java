@@ -260,8 +260,8 @@ class CoreDatabaseFactory
     }
 
     CoreEditionKernelComponents createKernelComponents( NamedDatabaseId namedDatabaseId, LifeSupport raftComponents, CoreRaftContext raftContext,
-                                                        CoreKernelResolvers kernelResolvers, DatabaseLogService logService,
-                                                        VersionContextSupplier versionContextSupplier, MemoryTracker memoryTracker )
+            CoreKernelResolvers kernelResolvers, DatabaseLogService logService,
+            VersionContextSupplier versionContextSupplier )
     {
         LogEntryWriterFactory logEntryWriterFactory = this.dbmsLogEntryWriterProvider.getEntryWriterFactory( namedDatabaseId );
         RaftGroup raftGroup = raftContext.raftGroup();
@@ -281,18 +281,18 @@ class CoreDatabaseFactory
                                                                                                                        replicator,
                                                                                                                        idContext.getIdGeneratorFactory(),
                                                                                                                        storageEngineSupplier, pageCacheTracer,
-                                                                                                                       memoryTracker, logEntryWriterFactory );
+                logEntryWriterFactory );
 
         TokenRegistry propertyKeyTokenRegistry = new TokenRegistry( TokenHolder.TYPE_PROPERTY_KEY );
         ReplicatedPropertyKeyTokenHolder propertyKeyTokenHolder = new ReplicatedPropertyKeyTokenHolder( namedDatabaseId, propertyKeyTokenRegistry, replicator,
                                                                                                         idContext.getIdGeneratorFactory(),
-                                                                                                        storageEngineSupplier, pageCacheTracer, memoryTracker,
-                                                                                                        logEntryWriterFactory );
+                                                                                                        storageEngineSupplier, pageCacheTracer,
+                logEntryWriterFactory );
 
         TokenRegistry labelTokenRegistry = new TokenRegistry( TokenHolder.TYPE_LABEL );
         ReplicatedLabelTokenHolder labelTokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, labelTokenRegistry, replicator,
                                                                                       idContext.getIdGeneratorFactory(), storageEngineSupplier, pageCacheTracer,
-                                                                                      memoryTracker, logEntryWriterFactory );
+                logEntryWriterFactory );
 
         ReplicatedDatabaseEventDispatch databaseEventDispatch = databaseEventService.getDatabaseEventDispatch( namedDatabaseId );
         StateMachineCommitHelper commitHelper = new StateMachineCommitHelper( raftContext.commandIndexTracker(), versionContextSupplier,
