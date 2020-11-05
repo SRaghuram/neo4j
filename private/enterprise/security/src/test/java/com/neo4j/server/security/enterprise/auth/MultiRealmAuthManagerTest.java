@@ -29,7 +29,6 @@ import org.neo4j.logging.LogAssert;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.systemgraph.SystemGraphRealmHelper;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;

@@ -6,12 +6,9 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
-import org.neo4j.kernel.impl.security.User;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.server.security.auth.ListSnapshot;
 import org.neo4j.server.security.auth.exception.ConcurrentModificationException;
