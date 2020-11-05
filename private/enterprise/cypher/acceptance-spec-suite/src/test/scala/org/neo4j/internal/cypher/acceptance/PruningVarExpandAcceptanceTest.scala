@@ -98,4 +98,69 @@ class PruningVarExpandAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     //then
     result.toList should be(empty)
   }
+
+  test("should handle ordered distinct") {
+    //given
+    executeSingle {
+      """CREATE (a:A)
+        |WITH a
+        |UNWIND range(1, 10) AS i
+        |CREATE (a)-[:REL]->()-[:REL]->(b:B)
+        |CREATE (a)-[:REL]->()-[:REL]->(b)
+        |""".stripMargin
+    }
+
+    val query =
+      """MATCH (a:A)-[*1..2]-(b:B)
+        |RETURN DISTINCT a, b
+        |ORDER BY a""".stripMargin
+
+    //when
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, planComparisonStrategy =
+      ComparePlansWithAssertion(plan => {
+        plan should {
+          includeSomewhere.aPlan("OrderedDistinct") onTopOf
+            includeSomewhere.aPlan("VarLengthExpand(Pruning)")
+        }
+      }
+      ))
+
+    //then
+    result.toList.size shouldBe 10
+  }
+
+  test("should handle ordered aggregation") {
+    //given
+
+    val aNode = createLabeledNode("A")
+
+    executeSingle {
+      """MATCH (a:A)
+        |WITH a
+        |UNWIND range(1, 10) AS i
+        |CREATE (a)-[:REL]->()-[:REL]->(b:B)
+        |CREATE (a)-[:REL]->()-[:REL]->(b)
+        |""".stripMargin
+    }
+
+    val query =
+      """MATCH (a:A)-[*1..2]-(b:B)
+        |RETURN a, count(DISTINCT b) as c
+        |ORDER BY a""".stripMargin
+
+    //when
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, planComparisonStrategy =
+      ComparePlansWithAssertion(plan => {
+        plan should {
+          includeSomewhere.aPlan("OrderedAggregation") onTopOf
+            includeSomewhere.aPlan("VarLengthExpand(Pruning)")
+        }
+      }
+      ))
+
+    //then
+    result.toList shouldBe List(
+      Map("a" -> aNode, "c" -> 10)
+    )
+  }
 }

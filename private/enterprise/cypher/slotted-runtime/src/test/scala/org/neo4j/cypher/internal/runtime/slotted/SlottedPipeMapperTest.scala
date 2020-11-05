@@ -724,7 +724,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
 
     // must be  at least 6 grouping expressions to trigger slotted bug
     val groupingExpressions = Map("x1" -> varFor("x"), "z" -> varFor("z"), "x2" -> varFor("x"), "x3" -> varFor("x"), "x4" -> varFor("x"), "x5" -> varFor("x"))
-    val plan = Aggregation(expand, groupingExpressions, aggregationExpression = Map.empty)
+    val plan = Aggregation(expand, groupingExpressions, aggregationExpressions = Map.empty)
 
     // when
     val pipe = build(plan).asInstanceOf[EagerAggregationPipe]

@@ -432,7 +432,7 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
     val countStar = Aggregation(optional,
       groupingExpressions = Map("x" -> varFor("x"),
         "x.propertyKey" -> prop("x", "propertyKey")),
-      aggregationExpression = Map("count(*)" -> CountStar()(pos)))
+      aggregationExpressions = Map("count(*)" -> CountStar()(pos)))
 
     // when
     val allocations = SlotAllocation.allocateSlots(countStar, semanticTable, breakFor(countStar), NO_EXPR_VARS, leveragedOrders).slotConfigurations
