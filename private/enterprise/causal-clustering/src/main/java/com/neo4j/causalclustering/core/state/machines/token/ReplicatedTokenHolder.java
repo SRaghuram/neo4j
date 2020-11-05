@@ -110,6 +110,10 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
         {
             return replicationResult.stateMachineResult().consume();
         }
+        catch ( TransientTransactionFailureException e )
+        {
+            throw e;
+        }
         catch ( Exception e )
         {
             // the ReplicatedTokenStateMachine does not produce exceptions as a result

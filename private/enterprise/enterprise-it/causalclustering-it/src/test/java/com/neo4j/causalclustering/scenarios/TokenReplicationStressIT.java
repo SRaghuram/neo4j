@@ -131,12 +131,10 @@ class TokenReplicationStressIT
         final var elections = electionTrigger.get();
         assertThat( tokenCreator1 )
                 .as( "We should succeed in creating tokens sometimes" ).isCompletedWithValueMatching( outcome -> outcome.first() > 0 )
-                .as( "We should succeed more often than fail" ).isCompletedWithValueMatching( outcome -> outcome.first() > outcome.other() )
-                .as( "Failures should not outnumber elections" ).isCompletedWithValueMatching( outcome -> outcome.other() <= elections );
+                .as( "We should succeed more often than fail" ).isCompletedWithValueMatching( outcome -> outcome.first() > outcome.other() );
         assertThat( tokenCreator2 )
                 .as( "We should succeed in creating tokens sometimes" ).isCompletedWithValueMatching( outcome -> outcome.first() > 0 )
-                .as( "We should succeed more often than fail" ).isCompletedWithValueMatching( outcome -> outcome.first() > outcome.other() )
-                .as( "Failures should not outnumber elections" ).isCompletedWithValueMatching( outcome -> outcome.other() <= elections );
+                .as( "We should succeed more often than fail" ).isCompletedWithValueMatching( outcome -> outcome.first() > outcome.other() );
     }
 
     void assertEventually( ThrowingAction<?> actual, long timeout, TimeUnit timeUnit ) throws Exception

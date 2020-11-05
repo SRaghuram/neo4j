@@ -13,7 +13,9 @@ import com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncodin
 import java.util.Collection;
 import java.util.function.Consumer;
 
+import org.neo4j.graphdb.TransientTransactionFailureException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.logging.Log;
@@ -70,8 +72,14 @@ public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedToken
 
         String name = tokenRequest.tokenName();
         Integer existingTokenId = internal ? tokenRegistry.getIdInternal( name ) : tokenRegistry.getId( name );
-
-        if ( existingTokenId == null )
+        var existingToken = tokenRegistry.getToken( newTokenId );
+        if ( existingToken != null )
+        {
+            log.warn( "Token id %d already exists for %s. Cannot be added to %s", newTokenId, existingToken, name );
+            callback.accept( StateMachineResult.of(
+                    new TransientTransactionFailureException( Status.Transaction.Outdated, "Token registry is out of date. Try again." ) ) );
+        }
+        else if ( existingTokenId == null )
         {
             log.info( format( "Applying %s with newTokenId=%d", tokenRequest, newTokenId ) );
             // The 'applyToStore' method applies EXTERNAL transactions, which will update the token holders for us.
