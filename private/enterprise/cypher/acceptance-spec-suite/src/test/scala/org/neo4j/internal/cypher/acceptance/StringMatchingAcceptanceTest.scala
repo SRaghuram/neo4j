@@ -181,12 +181,12 @@ class StringMatchingAcceptanceTest extends ExecutionEngineFunSuite with QuerySta
 
   test("should allow escaped backtick in exists constraint names") {
     // Constraint name without escaping: ``myconstraint
-    executeWith(Configs.All, "CREATE CONSTRAINT `````myconstraint` ON (n:Label) ASSERT exists(n.prop)")
+    executeWith(Configs.All, "CREATE CONSTRAINT `````myconstraint` ON (n:Label) ASSERT (n.prop) IS NOT NULL")
   }
 
   test("should allow escaped backtick in exists constraint tokens") {
       // Constraint property without escaping: `prop`
-    executeWith(Configs.All, "CREATE CONSTRAINT myconstraint ON (n:Label) ASSERT exists(n.```prop```)")
+    executeWith(Configs.All, "CREATE CONSTRAINT myconstraint ON (n:Label) ASSERT (n.```prop```) IS NOT NULL")
   }
 
   test("should allow escaped backtick in node key constraint names") {

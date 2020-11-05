@@ -15,7 +15,7 @@ class DataCollectorEnterpriseAcceptanceTest extends ExecutionEngineFunSuite with
 
   test("should retrieve node existence constraints") {
     // Given
-    execute("CREATE CONSTRAINT ON (n:User) ASSERT EXISTS (n.name)")
+    execute("CREATE CONSTRAINT ON (n:User) ASSERT (n.name) IS NOT NULL")
 
     // When
     val res = execute("CALL db.stats.retrieve('GRAPH COUNTS')")
@@ -58,7 +58,7 @@ class DataCollectorEnterpriseAcceptanceTest extends ExecutionEngineFunSuite with
 
   test("should retrieve relationship existence constraints") {
     // Given
-    execute("CREATE CONSTRAINT ON ()-[n:User]-() ASSERT EXISTS (n.name)")
+    execute("CREATE CONSTRAINT ON ()-[n:User]-() ASSERT (n.name) IS NOT NULL")
 
     // When
     val res = execute("CALL db.stats.retrieve('GRAPH COUNTS')")

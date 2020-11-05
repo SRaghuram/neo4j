@@ -35,7 +35,7 @@ class StartupConstraintSemanticsTest
     @Test
     void shouldNotAllowOpeningADatabaseWithPECInCommunityEdition()
     {
-        assertThatCommunityCannotStartOnEnterpriseOnlyConstraint( "CREATE CONSTRAINT ON (n:Draconian) ASSERT exists(n.required)",
+        assertThatCommunityCannotStartOnEnterpriseOnlyConstraint( "CREATE CONSTRAINT ON (n:Draconian) ASSERT (n.required) IS NOT NULL",
                 StandardConstraintSemantics.ERROR_MESSAGE_EXISTS );
     }
 

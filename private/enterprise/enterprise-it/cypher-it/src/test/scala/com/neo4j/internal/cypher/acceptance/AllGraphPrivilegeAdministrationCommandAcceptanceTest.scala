@@ -180,7 +180,7 @@ class AllGraphPrivilegeAdministrationCommandAcceptanceTest extends Administratio
 
     // not allowed to run database command
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault(username, password, "CREATE CONSTRAINT foo_constraint ON (n:Label) ASSERT exists(n.prop)")
+      executeOnDefault(username, password, "CREATE CONSTRAINT foo_constraint ON (n:Label) ASSERT n.prop IS NOT NULL")
     } should have message s"Schema operations are not allowed for user '$username' with roles [$PUBLIC, $roleName]."
 
      // not allowed to run dbms command

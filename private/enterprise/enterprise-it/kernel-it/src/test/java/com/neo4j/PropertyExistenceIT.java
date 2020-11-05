@@ -33,7 +33,7 @@ class PropertyExistenceIT
         {
             try ( Transaction transaction = database.beginTx() )
             {
-                transaction.execute( "CREATE CONSTRAINT ON (book:Book) ASSERT exists(book.isbn)" );
+                transaction.execute( "CREATE CONSTRAINT ON (book:Book) ASSERT (book.isbn) IS NOT NULL" );
                 transaction.commit();
             }
 

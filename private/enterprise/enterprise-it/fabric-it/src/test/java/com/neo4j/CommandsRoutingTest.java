@@ -181,11 +181,11 @@ class CommandsRoutingTest
     void testCreateConstraintFailOnFabric()
     {
         assertThat( catchThrowable(() -> inMegaTx( tx ->
-                tx.run( "CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT exists(n.name)" ).consume()
+                tx.run( "CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS NOT NULL" ).consume()
         ) ) ).hasMessageContaining( "Schema operations are not allowed for user '' with FULL restricted to ACCESS." );
 
         assertThat( catchThrowable( () -> inNeo4jTx( tx ->
-                tx.run( joinAsLines( "USE mega", "CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT exists(n.name)" ) ).consume()
+                tx.run( joinAsLines( "USE mega", "CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT (n.name) IS NOT NULL" ) ).consume()
         ) ) ).hasMessageContaining( "Schema operations are not allowed for user '' with FULL restricted to ACCESS." );
     }
 

@@ -296,7 +296,7 @@ class ExecutionResultTest
     {
         try ( Transaction transaction = db.beginTx() )
         {
-            Result create = transaction.execute( "CREATE CONSTRAINT ON (n:L) ASSERT exists(n.prop)" );
+            Result create = transaction.execute( "CREATE CONSTRAINT ON (n:L) ASSERT (n.prop) IS NOT NULL" );
             Result drop = transaction.execute( "DROP CONSTRAINT ON (n:L) ASSERT exists(n.prop)" );
 
             assertThat( create.getQueryStatistics().getConstraintsAdded(), equalTo( 1 ) );
@@ -312,7 +312,7 @@ class ExecutionResultTest
     {
         try ( Transaction transaction = db.beginTx() )
         {
-            Result create = transaction.execute( "CREATE CONSTRAINT my_constraint ON (n:L) ASSERT exists(n.prop)" );
+            Result create = transaction.execute( "CREATE CONSTRAINT my_constraint ON (n:L) ASSERT (n.prop) IS NOT NULL" );
             Result drop = transaction.execute( "DROP CONSTRAINT my_constraint" );
 
             assertThat( create.getQueryStatistics().getConstraintsAdded(), equalTo( 1 ) );
@@ -450,7 +450,7 @@ class ExecutionResultTest
         try ( Transaction transaction = db.beginTx() )
         {
             // Given
-            Result result = transaction.execute( "EXPLAIN CREATE CONSTRAINT my_constraint ON (n:L) ASSERT EXISTS (n.prop)" );
+            Result result = transaction.execute( "EXPLAIN CREATE CONSTRAINT my_constraint ON (n:L) ASSERT (n.prop) IS NOT NULL" );
 
             // When
             Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
@@ -461,7 +461,7 @@ class ExecutionResultTest
             assertThat( arguments.get( "planner-impl" ), equalTo( "ADMINISTRATION" ) );
             assertThat( arguments.get( "runtime" ), equalTo( "SCHEMA" ) );
             assertThat( arguments.get( "runtime-impl" ), equalTo( "SCHEMA" ) );
-            assertThat( arguments.get( "Details" ), equalTo( "CONSTRAINT my_constraint ON (n:L) ASSERT exists(n.prop)" ) );
+            assertThat( arguments.get( "Details" ), equalTo( "CONSTRAINT my_constraint ON (n:L) ASSERT (n.prop) IS NOT NULL" ) );
             transaction.commit();
         }
     }

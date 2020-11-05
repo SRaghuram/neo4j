@@ -21,7 +21,7 @@ class PropertyExistenceConstraintAcceptanceTest
 
   test("node: should enforce constraints on creation") {
     // GIVEN
-    execute("create constraint on (node:Label1) assert exists(node.key1)")
+    execute("create constraint on (node:Label1) assert node.key1 is not null")
 
     // WHEN
     val e = intercept[ConstraintViolationException](execute("create (node:Label1)"))
@@ -32,7 +32,7 @@ class PropertyExistenceConstraintAcceptanceTest
 
   test("relationship: should enforce constraints on creation") {
     // GIVEN
-    execute("create constraint on ()-[rel:KNOWS]-() assert exists(rel.since)")
+    execute("create constraint on ()-[rel:KNOWS]-() assert rel.since is not null")
 
     // WHEN
     val e = intercept[ConstraintViolationException](execute("create (p1:Person)-[:KNOWS]->(p2:Person)"))
@@ -43,7 +43,7 @@ class PropertyExistenceConstraintAcceptanceTest
 
   test("node: should enforce on removing property") {
     // GIVEN
-    execute("create constraint on (node:Label1) assert exists(node.key1)")
+    execute("create constraint on (node:Label1) assert node.key1 is not null")
 
     // WHEN
     execute("create (node1:Label1 {key1:'value1'})")
@@ -54,7 +54,7 @@ class PropertyExistenceConstraintAcceptanceTest
 
   test("relationship: should enforce on removing property") {
     // GIVEN
-    execute("create constraint on ()-[rel:KNOWS]-() assert exists(rel.since)")
+    execute("create constraint on ()-[rel:KNOWS]-() assert rel.since is not null")
 
     // WHEN
     execute("create (p1:Person)-[:KNOWS {since: 'yesterday'}]->(p2:Person)")
@@ -65,7 +65,7 @@ class PropertyExistenceConstraintAcceptanceTest
 
   test("node: should enforce on setting property to null") {
     // GIVEN
-    execute("create constraint on (node:Label1) assert exists(node.key1)")
+    execute("create constraint on (node:Label1) assert node.key1 is not null")
 
     // WHEN
     execute("create ( node1:Label1 {key1:'value1' } )")
@@ -76,7 +76,7 @@ class PropertyExistenceConstraintAcceptanceTest
 
   test("relationship: should enforce on setting property to null") {
     // GIVEN
-    execute("create constraint on ()-[rel:KNOWS]-() assert exists(rel.since)")
+    execute("create constraint on ()-[rel:KNOWS]-() assert rel.since is not null")
 
     // WHEN
     execute("create (p1:Person)-[:KNOWS {since: 'yesterday'}]->(p2:Person)")
@@ -87,7 +87,7 @@ class PropertyExistenceConstraintAcceptanceTest
 
   test("node: should allow to break constraint within statement") {
     // GIVEN
-    execute("create constraint on (node:Label1) assert exists(node.key1)")
+    execute("create constraint on (node:Label1) assert node.key1 is not null")
 
     // WHEN
     val res = execute("create (node:Label1) set node.key1 = 'foo' return node")
@@ -98,7 +98,7 @@ class PropertyExistenceConstraintAcceptanceTest
 
   test("relationship: should allow to break constraint within statement") {
     // GIVEN
-    execute("create constraint on ()-[rel:KNOWS]-() assert exists(rel.since)")
+    execute("create constraint on ()-[rel:KNOWS]-() assert rel.since is not null")
 
     // WHEN
     val res = execute("create (p1:Person)-[r:KNOWS]->(p2:Person) set r.since = 'yesterday' return r")
@@ -109,7 +109,7 @@ class PropertyExistenceConstraintAcceptanceTest
 
   test("node: should allow creation of non-conflicting data") {
     // GIVEN
-    execute("create constraint on (node:Label1) assert exists(node.key1)")
+    execute("create constraint on (node:Label1) assert node.key1 is not null")
 
     // WHEN
     execute("create (node {key1:'value1'} )")
@@ -123,7 +123,7 @@ class PropertyExistenceConstraintAcceptanceTest
 
   test("relationship: should allow creation of non-conflicting data") {
     // GIVEN
-    execute("create constraint on ()-[rel:KNOWS]-() assert exists(rel.since)")
+    execute("create constraint on ()-[rel:KNOWS]-() assert rel.since is not null")
 
     // WHEN
     execute("create (p1:Person {name: 'foo'})-[r:KNOWS {since: 'today'}]->(p2:Person {name: 'bar'})")
@@ -139,7 +139,7 @@ class PropertyExistenceConstraintAcceptanceTest
     execute("create (node:Label1)")
 
     // WHEN
-    val e = intercept[CypherExecutionException](execute("create constraint on (node:Label1) assert exists(node.key1)"))
+    val e = intercept[CypherExecutionException](execute("create constraint on (node:Label1) assert node.key1 is not null"))
 
     //THEN
     e.status should equal(Status.Schema.ConstraintCreationFailed)
@@ -150,7 +150,7 @@ class PropertyExistenceConstraintAcceptanceTest
     execute("create (p1:Person)-[:KNOWS]->(p2:Person)")
 
     // WHEN
-    val e = intercept[CypherExecutionException](execute("create constraint on ()-[rel:KNOWS]-() assert exists(rel.since)"))
+    val e = intercept[CypherExecutionException](execute("create constraint on ()-[rel:KNOWS]-() assert rel.since is not null"))
 
     //THEN
     e.status should equal(Status.Schema.ConstraintCreationFailed)
@@ -158,13 +158,13 @@ class PropertyExistenceConstraintAcceptanceTest
 
   test("node: should drop constraint") {
     // GIVEN
-    execute("create constraint on (node:Label1) assert exists(node.key1)")
+    execute("create constraint my_constraint on (node:Label1) assert node.key1 is not null")
 
     intercept[ConstraintViolationException](execute("create (node:Label1)"))
     numberOfNodes shouldBe 0
 
     // WHEN
-    execute("drop constraint on (node:Label1) assert exists(node.key1)")
+    execute("drop constraint my_constraint")
     execute("create (node:Label1)")
 
     // THEN
@@ -173,13 +173,13 @@ class PropertyExistenceConstraintAcceptanceTest
 
   test("relationship: should drop constraint") {
     // GIVEN
-    execute("create constraint on ()-[rel:KNOWS]-() assert exists(rel.since)")
+    execute("create constraint my_constraint on ()-[rel:KNOWS]-() assert rel.since is not null")
 
     intercept[ConstraintViolationException](execute("create (p1:Person)-[:KNOWS]->(p2:Person)"))
     numberOfRelationships shouldBe 0
 
     // WHEN
-    execute("drop constraint on ()-[rel:KNOWS]-() assert exists(rel.since)")
+    execute("drop constraint my_constraint")
     execute("create (p1:Person)-[:KNOWS]->(p2:Person)")
 
     // THEN
@@ -193,7 +193,7 @@ class PropertyExistenceConstraintAcceptanceTest
   }
 
   test("should use countStore short cut when constraint exist") {
-    execute("CREATE CONSTRAINT ON (n:X) ASSERT EXISTS(n.foo)")
+    execute("CREATE CONSTRAINT ON (n:X) ASSERT n.foo IS NOT NULL")
 
     val result = execute("MATCH (n:X) RETURN count(n.foo)")
 

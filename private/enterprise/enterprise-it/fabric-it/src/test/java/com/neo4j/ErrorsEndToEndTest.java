@@ -280,7 +280,7 @@ class ErrorsEndToEndTest
     {
         try ( var session = clientDriver.session() )
         {
-            session.run( "CREATE CONSTRAINT ON (book:Library) ASSERT exists(book.isbn)" );
+            session.run( "CREATE CONSTRAINT ON (book:Library) ASSERT (book.isbn) IS NOT NULL" );
         }
 
         try ( var session = clientDriver.session() )

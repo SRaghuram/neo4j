@@ -1359,7 +1359,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // Need schema permission to add constraint
     an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:A) ASSERT exists(n.name)")
+      executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:A) ASSERT n.name IS NOT NULL")
     }
   }
 

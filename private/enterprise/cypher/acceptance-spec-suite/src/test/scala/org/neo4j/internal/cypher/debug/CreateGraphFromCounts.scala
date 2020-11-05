@@ -40,11 +40,11 @@ trait CreateGraphFromCounts {
               case (Some(label), None) =>
                 // Node
                 val property = getSingleProperty(constraint.properties)
-                tx.execute(s"CREATE CONSTRAINT ON (n:$label) ASSERT EXISTS (n.$property)")
+                tx.execute(s"CREATE CONSTRAINT ON (n:$label) ASSERT (n.$property) IS NOT NULL")
               case (None, Some(relType)) =>
                 // Relationship
                 val property = getSingleProperty(constraint.properties)
-                tx.execute(s"CREATE CONSTRAINT ON ()-[n:$relType]-() ASSERT EXISTS (n.$property)")
+                tx.execute(s"CREATE CONSTRAINT ON ()-[n:$relType]-() ASSERT (n.$property) IS NOT NULL")
               case _ =>
                 throw new IllegalArgumentException(s"Expected either node or relationship existence constraint, but got: $constraint")
             }

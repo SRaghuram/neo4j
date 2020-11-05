@@ -10,7 +10,7 @@ import org.neo4j.cypher.ExecutionEngineFunSuite
 class ExecutionResultStatisticsTest extends ExecutionEngineFunSuite with EnterpriseGraphDatabaseTestSupport {
 
   test("correct statistics for added node property existence constraint") {
-    val result = execute("create constraint on (n:Person) assert exists(n.name)")
+    val result = execute("create constraint on (n:Person) assert (n.name) is not null")
     val stats = result.queryStatistics()
 
     assert(stats.existenceConstraintsAdded === 1)
@@ -18,7 +18,7 @@ class ExecutionResultStatisticsTest extends ExecutionEngineFunSuite with Enterpr
   }
 
   test("correct statistics for dropped node property existence constraint") {
-    execute("create constraint on (n:Person) assert exists(n.name)")
+    execute("create constraint on (n:Person) assert (n.name) is not null")
     val result = execute("drop constraint on (n:Person) assert exists(n.name)")
     val stats = result.queryStatistics()
 
@@ -27,7 +27,7 @@ class ExecutionResultStatisticsTest extends ExecutionEngineFunSuite with Enterpr
   }
 
   test("correct statistics for added relationship property existence constraint") {
-    val result = execute("create constraint on ()-[r:KNOWS]-() assert exists(r.since)")
+    val result = execute("create constraint on ()-[r:KNOWS]-() assert (r.since) is not null")
     val stats = result.queryStatistics()
 
     assert(stats.existenceConstraintsAdded === 1)
@@ -35,7 +35,7 @@ class ExecutionResultStatisticsTest extends ExecutionEngineFunSuite with Enterpr
   }
 
   test("correct statistics for dropped relationship property existence constraint") {
-    execute("create constraint on ()-[r:KNOWS]-() assert exists(r.since)")
+    execute("create constraint on ()-[r:KNOWS]-() assert (r.since) is not null")
     val result = execute("drop constraint on ()-[r:KNOWS]-() assert exists(r.since)")
     val stats = result.queryStatistics()
 

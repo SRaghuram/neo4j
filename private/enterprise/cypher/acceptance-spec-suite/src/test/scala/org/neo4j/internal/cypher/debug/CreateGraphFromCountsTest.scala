@@ -70,7 +70,7 @@ class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherCompa
       List(
         Map(
           "name" -> "constraint_89c8c370",
-          "description" -> "CONSTRAINT ON ( user:User ) ASSERT exists(user.name)",
+          "description" -> "CONSTRAINT ON ( user:User ) ASSERT (user.name) IS NOT NULL",
           "details" -> "Constraint( id=1, name='constraint_89c8c370', type='NODE PROPERTY EXISTENCE', schema=(:User {name}) )")
       )
     )
@@ -86,7 +86,7 @@ class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherCompa
       List(
         Map(
           "name" -> "constraint_36048d74",
-          "description" -> "CONSTRAINT ON ()-[ user:User ]-() ASSERT exists(user.name)",
+          "description" -> "CONSTRAINT ON ()-[ user:User ]-() ASSERT (user.name) IS NOT NULL",
           "details" -> "Constraint( id=1, name='constraint_36048d74', type='RELATIONSHIP PROPERTY EXISTENCE', schema=-[:User {name}]- )")
       )
     )

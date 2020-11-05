@@ -981,7 +981,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT exists(n.name)")
+      executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT n.name IS NOT NULL")
     } should have message "Creating new node label is not allowed for user 'joe' with roles [PUBLIC, custom]. See GRANT CREATE NEW NODE LABEL ON DATABASE..."
 
     // THEN
@@ -994,7 +994,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT exists(n.name)")
+      executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT n.name IS NOT NULL")
     } should have message "Schema operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
@@ -1006,7 +1006,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT exists(n.name)")
+      executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT n.name IS NOT NULL")
     } should have message "Schema operation 'create_constraint' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
@@ -1015,7 +1015,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     setupUserWithCustomRole()
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
     execute("GRANT CREATE CONSTRAINT ON DATABASE * TO custom")
-    executeOnDefault("joe", "soap", s"CREATE CONSTRAINT $constraintName ON (n:User) ASSERT exists(n.name)") should be(0)
+    executeOnDefault("joe", "soap", s"CREATE CONSTRAINT $constraintName ON (n:User) ASSERT n.name IS NOT NULL") should be(0)
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
@@ -1031,7 +1031,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOn("foo", "joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT exists(n.name)")
+      executeOn("foo", "joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT n.name IS NOT NULL")
     } should have message "Schema operation 'create_constraint' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
@@ -1044,7 +1044,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       execute("CREATE (:User {name: 'Me'})")
 
       // WHEN
-      executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT exists(n.name)") should be(0)
+      executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT n.name IS NOT NULL") should be(0)
 
       // THEN
       assert(graph.getMaybeNodeConstraint("User", Seq("name")).isDefined)
@@ -1063,7 +1063,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       ))
 
       // WHEN & THEN
-      executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT exists(n.name)") should be(0)
+      executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT n.name IS NOT NULL") should be(0)
     }
 
     test("Should allow constraint dropping for normal user with constraint drop privilege") {
@@ -1098,7 +1098,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       ))
 
       // WHEN
-      executeOnDefault("joe", "soap", s"CREATE CONSTRAINT $constraintName ON (u:User) ASSERT exists(u.name)") should be(0)
+      executeOnDefault("joe", "soap", s"CREATE CONSTRAINT $constraintName ON (u:User) ASSERT u.name IS NOT NULL") should be(0)
 
       // THEN
       graph.getMaybeNodeConstraint("User", Seq("name")).isDefined should be(true)
@@ -1116,7 +1116,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       execute("GRANT ALL PRIVILEGES ON DATABASE foo TO custom")
 
       // WHEN & THEN
-      executeOn("foo", "joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT exists(n.name)") should be(0)
+      executeOn("foo", "joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT n.name IS NOT NULL") should be(0)
     }
   }
 
@@ -1399,14 +1399,14 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     ))
 
     // WHEN: creating constraint on default
-    executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", s"CREATE CONSTRAINT neo_constraint ON (n:$labelString) ASSERT exists(n.$propString)") should be(0)
+    executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", s"CREATE CONSTRAINT neo_constraint ON (n:$labelString) ASSERT n.$propString IS NOT NULL") should be(0)
 
     // THEN
     graph.getMaybeNodeConstraint(labelString, Seq(propString)).isDefined should be(true)
 
     // WHEN: creating constraint on foo
     the[AuthorizationViolationException] thrownBy {
-      executeOn(newDefaultDatabase, "alice", "abc", s"CREATE CONSTRAINT foo_constraint ON (n:$labelString) ASSERT exists(n.$propString)")
+      executeOn(newDefaultDatabase, "alice", "abc", s"CREATE CONSTRAINT foo_constraint ON (n:$labelString) ASSERT n.$propString IS NOT NULL")
     } should have message "Schema operations are not allowed for user 'alice' with roles [PUBLIC, role]."
 
     // THEN

@@ -45,13 +45,13 @@ public enum SchemaHelper
                 @Override
                 public void createNodePropertyExistenceConstraint( GraphDatabaseService db, Transaction tx, String label, String property )
                 {
-                    tx.execute( format( "CREATE CONSTRAINT ON (n:`%s`) ASSERT exists(n.`%s`)", label, property ) );
+                    tx.execute( format( "CREATE CONSTRAINT ON (n:`%s`) ASSERT (n.`%s`) IS NOT NULL", label, property ) );
                 }
 
                 @Override
                 public void createRelPropertyExistenceConstraint( GraphDatabaseService db, Transaction tx, String type, String property )
                 {
-                    tx.execute( format( "CREATE CONSTRAINT ON ()-[r:`%s`]-() ASSERT exists(r.`%s`)", type, property ) );
+                    tx.execute( format( "CREATE CONSTRAINT ON ()-[r:`%s`]-() ASSERT (r.`%s`) IS NOT NULL", type, property ) );
                 }
 
                 @Override

@@ -347,7 +347,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertSuccess( adminSubject, "MATCH (n:A) USING INDEX n:A(number) WHERE n.number IS NOT NULL return n.number",
                 r -> assertKeyIs( r, "n.number", 3, 4 ) );
         assertSuccess( subject, "MATCH (n:A) WHERE n.number IS NOT NULL return n.number", r -> assertKeyIs( r, "n.number", 3 ) );
-        assertEmpty( adminSubject, "CREATE CONSTRAINT ON (a:A) ASSERT exists(a.number)" );
+        assertEmpty( adminSubject, "CREATE CONSTRAINT ON (a:A) ASSERT (a.number) IS NOT NULL" );
         assertSuccess( adminSubject, "MATCH (n:A) USING INDEX n:A(number) WHERE n.number IS NOT NULL return n.number",
                 r -> assertKeyIs( r, "n.number", 3, 4 ) );
         assertSuccess( subject, "MATCH (n:A) USING INDEX n:A(number) WHERE n.number IS NOT NULL return n.number", r -> assertKeyIs( r, "n.number", 3 ) );
@@ -356,7 +356,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     @Test
     void shouldRespectExistsConstraintsWithoutReadPrivileges() throws Throwable
     {
-        assertEmpty( adminSubject, "CREATE CONSTRAINT ON (a:A) ASSERT exists(a.number)" );
+        assertEmpty( adminSubject, "CREATE CONSTRAINT ON (a:A) ASSERT (a.number) IS NOT NULL" );
         assertEmpty( adminSubject, "CREATE (n:A) SET n.number = 4" );
 
         String role = "custom";

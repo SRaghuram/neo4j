@@ -130,7 +130,7 @@ public enum SchemaOperations implements SchemaOperation
                 {
                     try
                     {
-                        transaction.execute( String.format( "CREATE CONSTRAINT ON (n:%s) ASSERT exists(n.%s)", GraphOperations.randomLabel().name(),
+                        transaction.execute( String.format( "CREATE CONSTRAINT ON (n:%s) ASSERT (n.%s) IS NOT NULL", GraphOperations.randomLabel().name(),
                                 GraphOperations.randomKey() ) );
                     }
                     catch ( QueryExecutionException e )
@@ -158,8 +158,8 @@ public enum SchemaOperations implements SchemaOperation
                 {
                     try
                     {
-                        transaction.execute( String.format( "CREATE CONSTRAINT ON ()-[r:%s]-() ASSERT exists(r.%s)", GraphOperations.randomRelType().name(),
-                                GraphOperations.randomKey() ) );
+                        transaction.execute( String.format( "CREATE CONSTRAINT ON ()-[r:%s]-() ASSERT (r.%s) IS NOT NULL",
+                                GraphOperations.randomRelType().name(), GraphOperations.randomKey() ) );
                     }
                     catch ( QueryExecutionException e )
                     {

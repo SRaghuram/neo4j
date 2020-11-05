@@ -457,7 +457,7 @@ class BackupSchemaIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                transaction.execute( "CREATE CONSTRAINT ON (p:Person) ASSERT exists(p.name)" ).close();
+                transaction.execute( "CREATE CONSTRAINT ON (p:Person) ASSERT (p.name) IS NOT NULL" ).close();
                 transaction.commit();
             }
         }
@@ -489,7 +489,7 @@ class BackupSchemaIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                transaction.execute( "CREATE CONSTRAINT ON ()-[like:LIKES]-() ASSERT exists(like.name)" ).close();
+                transaction.execute( "CREATE CONSTRAINT ON ()-[like:LIKES]-() ASSERT (like.name) IS NOT NULL" ).close();
                 transaction.commit();
             }
         }

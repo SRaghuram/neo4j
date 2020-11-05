@@ -956,7 +956,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     } should have message s"Schema operations are not allowed for user 'Alice' with roles [PUBLIC, $role]."
 
     // constraint management
-    execute("CREATE CONSTRAINT my_constraint ON (n:Label) ASSERT exists(n.prop)")
+    execute("CREATE CONSTRAINT my_constraint ON (n:Label) ASSERT n.prop IS NOT NULL")
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("Alice", "secret", "DROP CONSTRAINT my_constraint")
     } should have message s"Schema operations are not allowed for user 'Alice' with roles [PUBLIC, $role]."
@@ -1000,7 +1000,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     graph.getMaybeIndex("Label", Seq("prop")).isDefined should be(true)
 
     // constraint management
-    execute("CREATE CONSTRAINT my_constraint ON (n:Label) ASSERT exists(n.prop)")
+    execute("CREATE CONSTRAINT my_constraint ON (n:Label) ASSERT n.prop IS NOT NULL")
     executeOnDefault("Alice", "secret", "DROP CONSTRAINT my_constraint") should be(0)
     graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
 
