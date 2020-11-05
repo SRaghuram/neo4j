@@ -44,6 +44,6 @@ RETURN DISTINCT   port.drniId AS p_drniId,
   otherEndParentDevice.drniId AS oepd_drniId,
   otherEndParentLocation.name AS oepl_name,
 otherEndParentLocation.drniId AS oepl_drniId
-ORDER BY p_drniId, p_name, p_lastModifiedDate
+ORDER BY p_name, p_drniId, p_lastModifiedDate
 SKIP 0
 LIMIT 25
