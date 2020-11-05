@@ -9,4 +9,4 @@
 
 override_dh_installinit:
 	# we want the service to be called neo4j, even if the package is neo4j-enterprise
-	dh_installinit --name=neo4j
+	dh_installinit --name=neo4j --no-start
