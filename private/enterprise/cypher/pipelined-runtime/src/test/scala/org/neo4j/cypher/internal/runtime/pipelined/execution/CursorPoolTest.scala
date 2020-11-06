@@ -11,10 +11,10 @@ import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
 import org.neo4j.internal.kernel.api.PropertyCursor
-import org.neo4j.internal.kernel.api.RelationshipIndexCursor
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.RelationshipTypeIndexCursor
+import org.neo4j.internal.kernel.api.RelationshipValueIndexCursor
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
 import org.neo4j.memory.LocalMemoryTracker
 import org.neo4j.memory.MemoryTracker
@@ -192,7 +192,7 @@ class CursorPoolTest extends CypherFunSuite {
 
     override def allocateFullAccessNodeLabelIndexCursor(cursorTracer: PageCursorTracer): NodeLabelIndexCursor = ???
 
-    override def allocateRelationshipIndexCursor(cursorTracer: PageCursorTracer): RelationshipIndexCursor = ???
+    override def allocateRelationshipValueIndexCursor(cursorTracer: PageCursorTracer): RelationshipValueIndexCursor = ???
 
     override def allocateRelationshipTypeIndexCursor(): RelationshipTypeIndexCursor = ???
   }

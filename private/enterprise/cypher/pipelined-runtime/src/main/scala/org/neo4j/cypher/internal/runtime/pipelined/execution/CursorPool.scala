@@ -16,10 +16,10 @@ import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
 import org.neo4j.internal.kernel.api.PropertyCursor
-import org.neo4j.internal.kernel.api.RelationshipIndexCursor
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.RelationshipTypeIndexCursor
+import org.neo4j.internal.kernel.api.RelationshipValueIndexCursor
 import org.neo4j.io.IOUtils
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
 import org.neo4j.memory.HeapEstimator
@@ -108,7 +108,7 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
 
   override def allocateFullAccessNodeLabelIndexCursor(cursorTracer: PageCursorTracer): NodeLabelIndexCursor = fail("FullAccessNodeLabelIndexCursor")
 
-  override def allocateRelationshipIndexCursor(cursorTracer: PageCursorTracer): RelationshipIndexCursor = fail("RelationshipIndexCursor")
+  override def allocateRelationshipValueIndexCursor(cursorTracer: PageCursorTracer): RelationshipValueIndexCursor = fail("RelationshipValueIndexCursor")
 
   override def allocateRelationshipTypeIndexCursor(): RelationshipTypeIndexCursor = fail("RelationshipTypeIndexCursor")
 
