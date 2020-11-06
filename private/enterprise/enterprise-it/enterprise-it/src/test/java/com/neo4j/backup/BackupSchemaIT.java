@@ -164,7 +164,7 @@ class BackupSchemaIT
                                                             .withClock( Clocks.nanoClock() )
                                                             .build();
 
-        executor.executeBackups( context );
+        executor.executeBackups( context.build() );
 
         return backupsDir;
     }

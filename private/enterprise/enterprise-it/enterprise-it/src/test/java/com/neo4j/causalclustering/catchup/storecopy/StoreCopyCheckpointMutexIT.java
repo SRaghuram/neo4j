@@ -86,7 +86,7 @@ class StoreCopyCheckpointMutexIT
      * In this way we make the test deterministic.
      * <p>
      * Without the bug-fix,
-     * this test fails during recovery that happens as part of {@link OnlineBackupExecutor#executeBackups(OnlineBackupContext.Builder)},
+     * this test fails during recovery that happens as part of {@link OnlineBackupExecutor#executeBackups(OnlineBackupContext)},
      * because labelscanstore gbptree can not be traversed correctly. More specifically a {@link TreeInconsistencyException} will be thrown.
      * <p>
      * Note: Native indexes also need to be copied under the mutex, that is why this test also has an index.
@@ -165,7 +165,7 @@ class StoreCopyCheckpointMutexIT
                                                  .withClock( Clocks.nanoClock() )
                                                  .build();
 
-        backupExecutor.executeBackups( context );
+        backupExecutor.executeBackups( context.build() );
     }
 
     private static void createSomeData( GraphDatabaseAPI db )

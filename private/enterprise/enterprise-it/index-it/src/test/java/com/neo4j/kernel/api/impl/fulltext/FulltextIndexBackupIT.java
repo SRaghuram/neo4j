@@ -237,7 +237,7 @@ class FulltextIndexBackupIT
                 .withConsistencyCheck( true )
                 .withConsistencyCheckPropertyOwners( true );
 
-        OnlineBackupExecutor.buildDefault().executeBackups( contextBuilder );
+        OnlineBackupExecutor.buildDefault().executeBackups( contextBuilder.build() );
 
         return backupDir;
     }

@@ -6,9 +6,9 @@
 package com.neo4j.causalclustering.stresstests;
 
 import com.neo4j.backup.impl.BackupExecutionException;
-import com.neo4j.backup.impl.ConsistencyCheckExecutionException;
 import com.neo4j.backup.impl.OnlineBackupContext;
 import com.neo4j.backup.impl.OnlineBackupExecutor;
+import com.neo4j.backup.impl.tools.ConsistencyCheckExecutionException;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseIdDownloadFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
@@ -66,7 +66,7 @@ class BackupHelper
      *
      * @param member The member to perform the backup against.
      * @return The optional backup.
-     * @throws BackupExecutionException if the backup fails for an unexpected reason during the backup phase.
+     * @throws BackupExecutionException           if the backup fails for an unexpected reason during the backup phase.
      * @throws ConsistencyCheckExecutionException if the backup fails during the consistency checking phase.
      */
     Optional<Path> backup( ClusterMember member ) throws Exception
@@ -82,7 +82,7 @@ class BackupHelper
                                                     .withBackupDirectory( backupDir )
                                                     .withReportsDirectory( backupDir );
 
-            OnlineBackupExecutor.buildDefault().executeBackups( contextBuilder );
+            OnlineBackupExecutor.buildDefault().executeBackups( contextBuilder.build() );
             log.info( String.format( "Created backup %s from %s", backupDir, member ) );
 
             successfulBackups.incrementAndGet();

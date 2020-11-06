@@ -3,10 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.backup.impl;
-
-import static com.neo4j.backup.impl.OnlineBackupCommand.STATUS_CONSISTENCY_CHECK_ERROR;
-import static com.neo4j.backup.impl.OnlineBackupCommand.STATUS_CONSISTENCY_CHECK_INCONSISTENT;
+package com.neo4j.backup.impl.tools;
 
 public class ConsistencyCheckExecutionException extends Exception
 {
@@ -23,8 +20,8 @@ public class ConsistencyCheckExecutionException extends Exception
         this.consistencyCheckFailedToExecute = consistencyCheckFailedToExecute;
     }
 
-    int getExitCode()
+    public boolean executionFailure()
     {
-        return consistencyCheckFailedToExecute ? STATUS_CONSISTENCY_CHECK_ERROR : STATUS_CONSISTENCY_CHECK_INCONSISTENT;
+        return consistencyCheckFailedToExecute;
     }
 }

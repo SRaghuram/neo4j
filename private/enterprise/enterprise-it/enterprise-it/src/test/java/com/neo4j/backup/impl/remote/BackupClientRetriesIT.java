@@ -3,16 +3,20 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.backup;
+package com.neo4j.backup.impl.remote;
 
-import com.neo4j.backup.impl.BackupSupportingClassesFactory;
-import com.neo4j.backup.impl.OnlineBackupContext;
-import com.neo4j.backup.impl.OnlineBackupExecutor;
+import com.neo4j.backup.impl.BackupOutputMonitor;
+import com.neo4j.causalclustering.catchup.CatchupClientBuilder;
+import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
+import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
+import com.neo4j.causalclustering.core.SupportedProtocolCreator;
+import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.protocol.ClientNettyPipelineBuilder;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
+import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.OnlineBackupSettings;
-import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
+import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -26,6 +30,7 @@ import org.junit.jupiter.api.parallel.Resources;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -40,17 +45,19 @@ import java.util.function.Consumer;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.HostnamePort;
-import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.internal.recordstorage.RecordStorageEngineFactory;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -59,100 +66,115 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.test.DbRepresentation;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.extension.ExtensionCallback;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.common.TransactionBackupServiceProvider.BACKUP_SERVER_NAME;
-import static com.neo4j.configuration.CausalClusteringSettings.catch_up_client_inactivity_timeout;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toList;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.hasSize;
-import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.graphdb.RelationshipType.withName;
 
-@TestDirectoryExtension
-@ExtendWith( {SuppressOutputExtension.class, RandomExtension.class } )
+@PageCacheExtension
+@EnterpriseDbmsExtension( configurationCallback = "enableBackup" )
+@ExtendWith( {SuppressOutputExtension.class, RandomExtension.class} )
 @ResourceLock( Resources.SYSTEM_OUT )
-class BackupRetriesIT
+class BackupClientRetriesIT
 {
     private static final String DB_NAME = DEFAULT_DATABASE_NAME;
 
     @Inject
     private static RandomRule random;
-
     @Inject
     private TestDirectory testDirectory;
     @Inject
-    private FileSystemAbstraction fs;
-
-    private LogProvider logProvider;
-    private Path backupsDir;
+    private PageCache pageCache;
+    @Inject
     private GraphDatabaseAPI db;
-    private StorageEngineFactory storageEngineFactory;
-    private DatabaseManagementService managementService;
+
+    private final Set<Channel> channels = ConcurrentHashMap.newKeySet();
+    private FileSystemAbstraction fs;
+    private LogProvider logProvider;
+    private DatabaseLayout backupLocation;
+    private CatchupClientFactory channelBreakingCatchupFactory;
+    private Monitors monitors;
+    private ThreadPoolJobScheduler scheduler;
+    private BackupClient backupClient;
+
+    @ExtensionCallback
+    void enableBackup( TestDatabaseManagementServiceBuilder builder )
+    {
+        builder.setConfig( OnlineBackupSettings.online_backup_enabled, true );
+    }
 
     @BeforeEach
     void setUp()
     {
+        fs = testDirectory.getFileSystem();
         logProvider = new Log4jLogProvider( System.out );
-        backupsDir = testDirectory.directory( "backups" );
+        backupLocation = DatabaseLayout.ofFlat( testDirectory.directory( "backups" ).resolve( DB_NAME ) );
+
+        scheduler = new ThreadPoolJobScheduler();
+        var config = Config.defaults();
+        var supportedProtocolCreator = new SupportedProtocolCreator( config, logProvider );
+        StorageEngineFactory storageEngineFactory = new RecordStorageEngineFactory();
+        var inactivityTimeout = Duration.ofSeconds( 30 );
+        channelBreakingCatchupFactory = CatchupClientBuilder
+                .builder()
+                .catchupProtocols( supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration() )
+                .modifierProtocols( supportedProtocolCreator.createSupportedModifierProtocols() )
+                .pipelineBuilder( new ChannelTrackingPipelineBuilderFactory( null, channels ) )
+                .inactivityTimeout( inactivityTimeout )
+                .scheduler( scheduler )
+                .config( config )
+                .bootstrapConfig( BootstrapConfiguration.clientConfig( config ) )
+                .commandReader( storageEngineFactory.commandReaderFactory() )
+                .handShakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
+                .clock( Clock.systemUTC() )
+                .debugLogProvider( logProvider ).build();
+        channelBreakingCatchupFactory.init();
+        channelBreakingCatchupFactory.start();
+        monitors = new Monitors();
+        backupClient =
+                new BackupClient( logProvider, channelBreakingCatchupFactory, fs, pageCache, PageCacheTracer.NULL, monitors, config,
+                        storageEngineFactory,
+                        Clocks.nanoClock() );
     }
 
     @AfterEach
     void tearDown()
     {
-        if ( db != null )
-        {
-            managementService.shutdown();
-        }
+        channelBreakingCatchupFactory.stop();
+        channelBreakingCatchupFactory.shutdown();
+        scheduler.shutdown();
     }
 
     @Test
     void shouldRetryBackupOfStandaloneDatabaseWhenItFails() throws Exception
     {
-        db = startDb();
         populate( db );
 
-        Set<Channel> channels = ConcurrentHashMap.newKeySet();
         ChannelBreakingStoreCopyClientMonitor channelBreakingMonitor = buildChannelBreakingStoreCopyMonitor( channels );
+        monitors.addMonitorListener( channelBreakingMonitor );
 
-        OnlineBackupExecutor executor = buildBackupExecutor( channels, channelBreakingMonitor );
-        var contextBuilder = backupContextBuilder();
-
-        executor.executeBackups( contextBuilder );
-
+        var storeId = new StoreFiles( fs, pageCache ).readStoreId( db.databaseLayout(), PageCursorTracer.NULL );
+        backupClient.fullStoreCopy( new RemoteInfo( backupAddress( db ), storeId, db.databaseId() ), backupLocation,
+                new BackupOutputMonitor( logProvider, Clocks.nanoClock() ) );
         // backup produced a correct store
-        assertEquals( DbRepresentation.of( db ), DbRepresentation.of( DatabaseLayout.ofFlat( backupsDir.resolve( DB_NAME ) ) ) );
+        assertEquals( DbRepresentation.of( db ), DbRepresentation.of( backupLocation ) );
 
-        // all used channels should be closed after backup is done
-        assertAll( "All channels should be closed after backup " + channels,
-                channels.stream().map( channel -> () -> assertFalse( channel.isActive() ) ) );
-
-        assertThat( "More than one channel should be used due to breaking " + channels,
-                channels, hasSize( greaterThan( 1 ) ) );
-    }
-
-    private GraphDatabaseAPI startDb()
-    {
-        Path databaseDirectory = testDirectory.homePath();
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( databaseDirectory )
-                .setUserLogProvider( logProvider )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, true )
-                .build();
-        GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
-        storageEngineFactory = db.getDependencyResolver().resolveDependency( StorageEngineFactory.class );
-        return db;
+        assertThat( channels ).withFailMessage( "More than one channel should be used due to breaking " + channels ).hasSizeGreaterThan( 1 );
     }
 
     private static void populate( GraphDatabaseService db )
@@ -237,38 +259,6 @@ class BackupRetriesIT
         return new ChannelBreakingStoreCopyClientMonitor( channels, storeFileBreakers, logProvider );
     }
 
-    private OnlineBackupExecutor buildBackupExecutor( Set<Channel> channels, StoreCopyClientMonitor channelBreakingMonitor )
-    {
-        Monitors monitors = new Monitors();
-        monitors.addMonitorListener( channelBreakingMonitor );
-
-        BackupSupportingClassesFactory backupSupportingClassesFactory = new ChannelTrackingBackupSupportingClassesFactory( logProvider, monitors, fs,
-                storageEngineFactory, channels );
-
-        return OnlineBackupExecutor.builder()
-                                   .withUserLogProvider( logProvider )
-                                   .withInternalLogProvider( logProvider )
-                                   .withProgressMonitorFactory( ProgressMonitorFactory.textual( System.out ) )
-                                   .withMonitors( monitors )
-                                   .withClock( Clocks.nanoClock() )
-                                   .withSupportingClassesFactory( backupSupportingClassesFactory )
-                                   .build();
-    }
-
-    private OnlineBackupContext.Builder backupContextBuilder()
-    {
-        Config config = Config.defaults();
-        config.set( catch_up_client_inactivity_timeout, Duration.ofSeconds( 30 ) );
-
-        return OnlineBackupContext.builder()
-                                  .withAddress( backupAddress( db ) )
-                                  .withDatabaseNamePattern( DB_NAME )
-                                  .withBackupDirectory( backupsDir )
-                                  .withReportsDirectory( testDirectory.directory( "reports" ) )
-                                  .withConfig( config );
-
-    }
-
     private static SocketAddress backupAddress( GraphDatabaseAPI db )
     {
         HostnamePort address = db.getDependencyResolver()
@@ -290,24 +280,6 @@ class BackupRetriesIT
         byte[] array = new byte[random.nextInt( oneMB, tenMB )];
         random.nextBytes( array );
         return Unpooled.wrappedBuffer( array );
-    }
-
-    private static class ChannelTrackingBackupSupportingClassesFactory extends BackupSupportingClassesFactory
-    {
-        final Set<Channel> channels;
-
-        ChannelTrackingBackupSupportingClassesFactory( LogProvider logProvider, Monitors monitors, FileSystemAbstraction fileSystemAbstraction,
-                StorageEngineFactory storageEngineFactory, Set<Channel> channels )
-        {
-            super( storageEngineFactory, fileSystemAbstraction, logProvider, monitors, Clocks.nanoClock() );
-            this.channels = channels;
-        }
-
-        @Override
-        protected NettyPipelineBuilderFactory createPipelineBuilderFactory( SslPolicy sslPolicy )
-        {
-            return new ChannelTrackingPipelineBuilderFactory( sslPolicy, channels );
-        }
     }
 
     private static class ChannelTrackingPipelineBuilderFactory extends NettyPipelineBuilderFactory

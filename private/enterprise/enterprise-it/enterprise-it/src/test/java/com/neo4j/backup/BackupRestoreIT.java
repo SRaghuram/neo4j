@@ -61,7 +61,6 @@ public class BackupRestoreIT
 {
     @Inject
     private TestDirectory testDirectory;
-
     private Path backupsDir1;
     private Path backupsDir2;
     private Path serverDir1;
@@ -102,7 +101,6 @@ public class BackupRestoreIT
         //drop database A
         dbmsService.dropDatabase( dbServiceA.databaseName() );
         dbmsService.shutdown();
-
         //then restore A
         final var restoreTarget = Neo4jLayout.of( serverDir1 ).databaseLayout( databaseA );
         executeRestoreCommand( Path.of( backupsDir1.toAbsolutePath().toString(), databaseA ), restoreTarget, false );
@@ -114,7 +112,6 @@ public class BackupRestoreIT
         final var exception =
                 assertThrows( BackupExecutionException.class, () ->
                         executeBackup( defaultBackupContextBuilder( backupsDir2, newDbServiceA, false ) ) );
-
         assertThat( exception.getCause() ).hasMessageContaining( "stored on the file system doesn't match with the server one" );
     }
 
@@ -184,8 +181,7 @@ public class BackupRestoreIT
                                                             .withMonitors( new Monitors() )
                                                             .withClock( Clocks.nanoClock() )
                                                             .build();
-
-        executor.executeBackups( contextBuilder );
+        executor.executeBackups( contextBuilder.build() );
     }
 
     private static void executeRestoreCommand( Path fromDatabasePath, DatabaseLayout targetLayout, boolean forceOverwrite ) throws IOException

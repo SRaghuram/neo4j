@@ -5,6 +5,7 @@
  */
 package com.neo4j.backup.impl;
 
+import com.neo4j.backup.impl.tools.ConsistencyCheckExecutionException;
 import com.neo4j.causalclustering.catchup.v4.metadata.IncludeMetadata;
 import com.neo4j.configuration.OnlineBackupSettings;
 import picocli.CommandLine.Mixin;
@@ -14,7 +15,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.neo4j.cli.AbstractCommand;
@@ -52,18 +52,18 @@ import static picocli.CommandLine.Help.Visibility.ALWAYS;
         name = "backup",
         header = "Perform an online backup from a running Neo4j enterprise server.",
         description = "Perform an online backup from a running Neo4j enterprise server. Neo4j's backup service must " +
-                "have been configured on the server beforehand.%n" +
-                "%n" +
-                "All consistency checks except 'cc-graph' can be quite expensive so it may be useful to turn them off" +
-                " for very large databases. Increasing the heap size can also be a good idea." +
-                " See 'neo4j-admin help' for details.%n" +
-                "%n" +
-                "For more information see: https://neo4j.com/docs/operations-manual/current/backup/"
+                      "have been configured on the server beforehand.%n" +
+                      "%n" +
+                      "All consistency checks except 'cc-graph' can be quite expensive so it may be useful to turn them off" +
+                      " for very large databases. Increasing the heap size can also be a good idea." +
+                      " See 'neo4j-admin help' for details.%n" +
+                      "%n" +
+                      "For more information see: https://neo4j.com/docs/operations-manual/current/backup/"
 )
 public class OnlineBackupCommand extends AbstractCommand
 {
-    protected static final int STATUS_CONSISTENCY_CHECK_ERROR = 2;
-    protected static final int STATUS_CONSISTENCY_CHECK_INCONSISTENT = 3;
+    private static final int STATUS_CONSISTENCY_CHECK_ERROR = 2;
+    private static final int STATUS_CONSISTENCY_CHECK_INCONSISTENT = 3;
 
     @Option( names = "--backup-dir", paramLabel = "<path>", required = true, description = "Directory to place backup in." )
     private Path backupDir;
@@ -114,22 +114,22 @@ public class OnlineBackupCommand extends AbstractCommand
         final var address = SettingValueParsers.SOCKET_ADDRESS.parse( from );
         final var configFile = ctx.confDir().resolve( Config.DEFAULT_CONFIG_FILE_NAME );
         final var config = buildConfig( configFile, additionalConfig, backupDir );
-        final var contextBuilder = OnlineBackupContext.builder()
-                                                      .withBackupDirectory( requireExisting( backupDir ) )
-                                                      .withReportsDirectory( consistencyCheckOptions.getReportDir() )
-                                                      .withAddress( address )
-                                                      .withDatabaseNamePattern( database )
-                                                      .withConfig( config )
-                                                      .withIncludeMetadata( Optional.ofNullable( includeMetadata ) )
-                                                      .withFallbackToFullBackup( fallbackToFull )
-                                                      .withConsistencyCheck( checkConsistency )
-                                                      .withConsistencyCheckGraph( consistencyCheckOptions.isCheckGraph() )
-                                                      .withConsistencyCheckIndexes( consistencyCheckOptions.isCheckIndexes() )
-                                                      .withConsistencyCheckIndexStructure( consistencyCheckOptions.isCheckIndexStructure() )
-                                                      .withConsistencyCheckPropertyOwners( consistencyCheckOptions.isCheckPropertyOwners() )
-                                                      .withConsistencyCheckLabelScanStore( consistencyCheckOptions.isCheckLabelScanStore() )
-                                                      .withConsistencyCheckRelationshipTypeScanStore(
-                                                              consistencyCheckOptions.isCheckRelationshipTypeScanStore() );
+        final var context = OnlineBackupContext.builder()
+                                               .withBackupDirectory( requireExisting( backupDir ) )
+                                               .withReportsDirectory( consistencyCheckOptions.getReportDir() )
+                                               .withAddress( address )
+                                               .withDatabaseNamePattern( database )
+                                               .withConfig( config )
+                                               .withIncludeMetadata( includeMetadata )
+                                               .withFallbackToFullBackup( fallbackToFull )
+                                               .withConsistencyCheck( checkConsistency )
+                                               .withConsistencyCheckGraph( consistencyCheckOptions.isCheckGraph() )
+                                               .withConsistencyCheckIndexes( consistencyCheckOptions.isCheckIndexes() )
+                                               .withConsistencyCheckIndexStructure( consistencyCheckOptions.isCheckIndexStructure() )
+                                               .withConsistencyCheckPropertyOwners( consistencyCheckOptions.isCheckPropertyOwners() )
+                                               .withConsistencyCheckLabelScanStore( consistencyCheckOptions.isCheckLabelScanStore() )
+                                               .withConsistencyCheckRelationshipTypeScanStore( consistencyCheckOptions.isCheckRelationshipTypeScanStore() )
+                                               .build();
 
         final var userLogProvider = Util.configuredLogProvider( config, ctx.out() );
         final var internalLogProvider = verbose ? userLogProvider : NullLogProvider.getInstance();
@@ -143,11 +143,12 @@ public class OnlineBackupCommand extends AbstractCommand
 
         try
         {
-            backupExecutor.executeBackups( contextBuilder );
+            backupExecutor.executeBackups( context );
         }
         catch ( ConsistencyCheckExecutionException e )
         {
-            throw new CommandFailedException( e.getMessage(), e, e.getExitCode() );
+            var exitCode = e.executionFailure() ? STATUS_CONSISTENCY_CHECK_ERROR : STATUS_CONSISTENCY_CHECK_INCONSISTENT;
+            throw new CommandFailedException( e.getMessage(), e, exitCode );
         }
         catch ( Exception e )
         {
@@ -176,18 +177,18 @@ public class OnlineBackupCommand extends AbstractCommand
     private Config buildConfig( Path configFile, Path additionalConfigFile, Path backupDirectory )
     {
         Config cfg = Config.newBuilder()
-                .fromFileNoThrow( configFile )
-                .fromFileNoThrow( additionalConfigFile )
-                .set( GraphDatabaseSettings.neo4j_home, backupDirectory )
-                .set( pagecache_memory, pagecacheMemory )
-                .set( pagecache_warmup_enabled, FALSE )
-                .set( OnlineBackupSettings.online_backup_enabled, FALSE )
-                // If the provided config is linked or simply copy-pasted from the server,
-                // SSL policies unrelated to the backup can be configured there.
-                // Such policies would be loaded eagerly and the operation would fail
-                // if there are not relevant directories and certificates in the backup directory.
-                .set( getSettingDisablingUnrelatedSslPolicies() )
-                .build();
+                           .fromFileNoThrow( configFile )
+                           .fromFileNoThrow( additionalConfigFile )
+                           .set( GraphDatabaseSettings.neo4j_home, backupDirectory )
+                           .set( pagecache_memory, pagecacheMemory )
+                           .set( pagecache_warmup_enabled, FALSE )
+                           .set( OnlineBackupSettings.online_backup_enabled, FALSE )
+                           // If the provided config is linked or simply copy-pasted from the server,
+                           // SSL policies unrelated to the backup can be configured there.
+                           // Such policies would be loaded eagerly and the operation would fail
+                           // if there are not relevant directories and certificates in the backup directory.
+                           .set( getSettingDisablingUnrelatedSslPolicies() )
+                           .build();
         ConfigUtils.disableAllConnectors( cfg );
 
         if ( verbose )

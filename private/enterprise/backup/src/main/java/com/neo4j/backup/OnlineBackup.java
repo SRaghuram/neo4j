@@ -5,9 +5,9 @@
  */
 package com.neo4j.backup;
 
-import com.neo4j.backup.impl.ConsistencyCheckExecutionException;
 import com.neo4j.backup.impl.OnlineBackupContext;
 import com.neo4j.backup.impl.OnlineBackupExecutor;
+import com.neo4j.backup.impl.tools.ConsistencyCheckExecutionException;
 import com.neo4j.configuration.OnlineBackupSettings;
 
 import java.io.OutputStream;
@@ -25,10 +25,9 @@ import static java.util.Objects.requireNonNull;
 import static org.neo4j.util.Preconditions.checkArgument;
 
 /**
- * This class encapsulates the information needed to perform an online backup against a running Neo4j instance
- * configured to act as a backup server. This class is not instantiable, instead factory methods are used to get
- * instances configured to contact a specific backup server against which all possible backup operations can be
- * performed.
+ * This class encapsulates the information needed to perform an online backup against a running Neo4j instance configured to act as a backup server. This class
+ * is not instantiable, instead factory methods are used to get instances configured to contact a specific backup server against which all possible backup
+ * operations can be performed.
  * <p>
  * All backup methods return the same instance, allowing for chaining calls.
  *
@@ -54,8 +53,8 @@ public final class OnlineBackup
     }
 
     /**
-     * Factory method for this class. The returned instance will perform backup operations against the
-     * hostname passed in as parameter, using the default backup port {@value OnlineBackupSettings#DEFAULT_BACKUP_PORT}.
+     * Factory method for this class. The returned instance will perform backup operations against the hostname passed in as parameter, using the default backup
+     * port {@value OnlineBackupSettings#DEFAULT_BACKUP_PORT}.
      *
      * @param hostnameOrIp hostname or IP address of the backup server.
      * @return an {@code OnlineBackup} instance ready to perform backup operations from the given remote server.
@@ -67,13 +66,12 @@ public final class OnlineBackup
     }
 
     /**
-     * Factory method for this class. The returned instance will perform backup operations against the
-     * hostname and port passed in as parameters.
+     * Factory method for this class. The returned instance will perform backup operations against the hostname and port passed in as parameters.
      *
      * @param hostnameOrIp hostname or IP address of the backup server.
-     * @param port port at which the remote backup server is listening. Value should positive and less than or equal to 65535.
+     * @param port         port at which the remote backup server is listening. Value should positive and less than or equal to 65535.
      * @return an {@code OnlineBackup} instance ready to perform backup operations from the given remote server.
-     * @throws NullPointerException if the hostname parameter is {@code null}.
+     * @throws NullPointerException     if the hostname parameter is {@code null}.
      * @throws IllegalArgumentException if the port parameter is not in the expected range.
      */
     public static OnlineBackup from( String hostnameOrIp, int port )
@@ -82,8 +80,8 @@ public final class OnlineBackup
     }
 
     /**
-     * Allow fallback to a full backup if an incremental backup fails.
-     * This configuration value is only applied when the target directory already contains a backup.
+     * Allow fallback to a full backup if an incremental backup fails. This configuration value is only applied when the target directory already contains a
+     * backup.
      * <p>
      * Default value is {@code true}.
      *
@@ -99,8 +97,7 @@ public final class OnlineBackup
     /**
      * Allow consistency check after a successful backup.
      * <p>
-     * Status of the consistency check will be available via {@link Result#isConsistent()}.
-     * Consistency check report will be written to the target directory.
+     * Status of the consistency check will be available via {@link Result#isConsistent()}. Consistency check report will be written to the target directory.
      * <p>
      * Default value is {@code true}.
      *
@@ -129,19 +126,18 @@ public final class OnlineBackup
     }
 
     /**
-     * Performs a backup of the specified database into the into target directory. The server contacted is the one
-     * configured in the factory method used to obtain this instance.
+     * Performs a backup of the specified database into the into target directory. The server contacted is the one configured in the factory method used to
+     * obtain this instance.
      * <p>
-     * After the backup is complete, a consistency check phase will take place, checking the database for consistency.
-     * If any errors are found, {@link Result#isConsistent()} will return {@code false} and the consistency check report will
-     * be written to the target directory. Consistency check can be turned on/off using {@link #withConsistencyCheck(boolean)}.
+     * After the backup is complete, a consistency check phase will take place, checking the database for consistency. If any errors are found, {@link
+     * Result#isConsistent()} will return {@code false} and the consistency check report will be written to the target directory. Consistency check can be
+     * turned on/off using {@link #withConsistencyCheck(boolean)}.
      * <p>
-     * If the target directory does not contain a database, a full backup will be performed, otherwise an incremental
-     * backup mechanism is used.
+     * If the target directory does not contain a database, a full backup will be performed, otherwise an incremental backup mechanism is used.
      * <p>
      * If the backup has become too far out of date for an incremental backup to succeed, a full backup is performed.
      *
-     * @param databaseName the name of the database to backup.
+     * @param databaseName    the name of the database to backup.
      * @param targetDirectory directory where the backup should be placed. Can contain a previous full backup.
      * @return the same {@code OnlineBackup} instance, possible to use for a new backup operation.
      */
@@ -184,7 +180,7 @@ public final class OnlineBackup
                                                .withReportsDirectory( targetDirectory )
                                                .withDatabaseNamePattern( databaseName )
                                                .withConsistencyCheckRelationshipTypeScanStore(
-                                                       config.get( RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store ) );
+                                                       config.get( RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store ) ).build();
 
         backupExecutor.executeBackups( context );
     }

@@ -10,10 +10,7 @@ import com.neo4j.configuration.OnlineBackupSettings;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -26,23 +23,23 @@ import org.neo4j.memory.MemoryTracker;
 public class OnlineBackupContext
 {
     private final SocketAddress address;
-    private final String databaseName;
-    private final Path backupDirectoryWithDBName;
+    private final DatabaseNamePattern databaseNamePattern;
+    private final Path backupDirectory;
     private final Path reportDir;
     private final boolean fallbackToFullBackup;
     private final boolean consistencyCheck;
     private final ConsistencyFlags consistencyFlags;
     private final Config config;
     private final MemoryTracker memoryTracker;
-    private final Optional<IncludeMetadata> includeMetadata;
+    private final IncludeMetadata includeMetadata;
 
-    private OnlineBackupContext( SocketAddress address, String databaseNamePattern, Path backupDirectoryWithDBName,
+    private OnlineBackupContext( SocketAddress address, DatabaseNamePattern databaseNamePattern, Path backupDirectory,
                                  Path reportDir, boolean fallbackToFullBackup, boolean consistencyCheck, ConsistencyFlags consistencyFlags, Config config,
-                                 MemoryTracker memoryTracker, Optional<IncludeMetadata> includeMetadata )
+                                 MemoryTracker memoryTracker, IncludeMetadata includeMetadata )
     {
         this.address = address;
-        this.databaseName = databaseNamePattern;
-        this.backupDirectoryWithDBName = backupDirectoryWithDBName;
+        this.databaseNamePattern = databaseNamePattern;
+        this.backupDirectory = backupDirectory;
         this.reportDir = reportDir;
         this.fallbackToFullBackup = fallbackToFullBackup;
         this.consistencyCheck = consistencyCheck;
@@ -62,14 +59,14 @@ public class OnlineBackupContext
         return address;
     }
 
-    public String getDatabaseName()
+    public DatabaseNamePattern getDatabaseNamePattern()
     {
-        return databaseName;
+        return databaseNamePattern;
     }
 
-    public Path getDatabaseBackupDir()
+    public Path getBackupDir()
     {
-        return backupDirectoryWithDBName;
+        return backupDirectory;
     }
 
     public boolean fallbackToFullBackupEnabled()
@@ -89,7 +86,7 @@ public class OnlineBackupContext
 
     public Optional<IncludeMetadata> getIncludeMetadata()
     {
-        return includeMetadata;
+        return Optional.ofNullable( includeMetadata );
     }
 
     Config getConfig()
@@ -113,7 +110,7 @@ public class OnlineBackupContext
         private DatabaseNamePattern databaseNamePattern;
         private Path backupDirectory;
         private Path reportsDirectory;
-        private Optional<IncludeMetadata> includeMetadata = Optional.empty();
+        private IncludeMetadata includeMetadata;
         private boolean fallbackToFullBackup = true;
         private Config config;
         private boolean consistencyCheck = true;
@@ -217,7 +214,7 @@ public class OnlineBackupContext
             return this;
         }
 
-        public Builder withIncludeMetadata( Optional<IncludeMetadata> includeMetadata )
+        public Builder withIncludeMetadata( IncludeMetadata includeMetadata )
         {
             this.includeMetadata = includeMetadata;
             return this;
@@ -238,34 +235,7 @@ public class OnlineBackupContext
             return address;
         }
 
-        private Builder copy()
-        {
-            return new Builder()
-                    .withAddress( address )
-                    .withDatabaseNamePattern( databaseNamePattern )
-                    .withBackupDirectory( backupDirectory )
-                    .withReportsDirectory( reportsDirectory )
-                    .withFallbackToFullBackup( fallbackToFullBackup )
-                    .withConfig( config )
-                    .withIncludeMetadata( includeMetadata )
-                    .withConsistencyCheck( consistencyCheck )
-                    .withConsistencyCheckGraph( consistencyCheckGraph )
-                    .withConsistencyCheckIndexes( consistencyCheckIndexes )
-                    .withConsistencyCheckIndexStructure( consistencyCheckIndexStructure )
-                    .withConsistencyCheckLabelScanStore( consistencyCheckLabelScanStore )
-                    .withConsistencyCheckRelationshipTypeScanStore( consistencyCheckRelationshipTypeScanStore )
-                    .withConsistencyCheckPropertyOwners( consistencyCheckPropertyOwners );
-        }
-
-        public List<OnlineBackupContext> build( Set<String> databaseNames )
-        {
-            return databaseNames.stream()
-                                .filter( databaseName -> getDatabaseNamePattern().matches( databaseName ) )
-                                .map( databaseName -> copy().withDatabaseNamePattern( databaseName ).build() )
-                                .collect( Collectors.toList() );
-        }
-
-        private OnlineBackupContext build()
+        public OnlineBackupContext build()
         {
             config = getConfig();
 
@@ -280,17 +250,12 @@ public class OnlineBackupContext
                 reportsDirectory = Paths.get( "." );
             }
 
-            if ( databaseNamePattern.containsPattern() )
-            {
-                throw new IllegalArgumentException( "Database name shouldn't contain wildcard" );
-            }
-
             SocketAddress socketAddress = buildAddress();
-            Path databaseBackupDirectory = backupDirectory.resolve( databaseNamePattern.getDatabaseName() );
+            Path databaseBackupDirectory = backupDirectory;
             ConsistencyFlags consistencyFlags = buildConsistencyFlags();
             var memoryTracker = EmptyMemoryTracker.INSTANCE;
 
-            return new OnlineBackupContext( socketAddress, databaseNamePattern.getDatabaseName(), databaseBackupDirectory, reportsDirectory,
+            return new OnlineBackupContext( socketAddress, databaseNamePattern, databaseBackupDirectory, reportsDirectory,
                                             fallbackToFullBackup, consistencyCheck, consistencyFlags, config, memoryTracker, includeMetadata );
         }
 

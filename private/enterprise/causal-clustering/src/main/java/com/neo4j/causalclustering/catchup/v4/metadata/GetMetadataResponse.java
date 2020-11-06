@@ -10,7 +10,7 @@ import java.util.Objects;
 
 public class GetMetadataResponse
 {
-    public final List<String> commands;
+    private final List<String> commands;
 
     public GetMetadataResponse( List<String> commands )
     {
@@ -30,6 +30,11 @@ public class GetMetadataResponse
         }
         GetMetadataResponse that = (GetMetadataResponse) o;
         return Objects.equals( commands, that.commands );
+    }
+
+    public List<String> commands()
+    {
+        return commands;
     }
 
     @Override

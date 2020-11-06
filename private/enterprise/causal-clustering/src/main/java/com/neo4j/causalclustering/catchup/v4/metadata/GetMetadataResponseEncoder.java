@@ -17,8 +17,8 @@ public class GetMetadataResponseEncoder extends MessageToByteEncoder<GetMetadata
     protected void encode( ChannelHandlerContext ctx, GetMetadataResponse msg, ByteBuf out ) throws Exception
     {
         final var channel = new NetworkWritableChannel( out );
-        channel.putLong( msg.commands.size() );
+        channel.putLong( msg.commands().size() );
 
-        msg.commands.forEach( command -> StringMarshal.marshal( out, command ) );
+        msg.commands().forEach( command -> StringMarshal.marshal( out, command ) );
     }
 }

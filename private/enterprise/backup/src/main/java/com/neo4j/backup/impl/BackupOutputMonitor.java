@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.time.Clocks;
 import org.neo4j.time.Stopwatch;
 import org.neo4j.time.SystemNanoClock;
 
@@ -19,14 +18,14 @@ import static org.neo4j.internal.helpers.Format.duration;
 /**
  * Monitor for events that should be displayed to neo4j-admin backup stdout
  */
-class BackupOutputMonitor implements StoreCopyClientMonitor
+public class BackupOutputMonitor implements StoreCopyClientMonitor
 {
     private final Log log;
     private final SystemNanoClock clock;
     private Stopwatch startTime;
     private Stopwatch partStartTime;
 
-    BackupOutputMonitor( LogProvider logProvider, SystemNanoClock clock )
+    public BackupOutputMonitor( LogProvider logProvider, SystemNanoClock clock )
     {
         log = logProvider.getLog( getClass() );
         this.clock = clock;

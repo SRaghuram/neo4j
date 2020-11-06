@@ -23,8 +23,8 @@ import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
 import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequest;
 import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponse;
-import com.neo4j.causalclustering.catchup.v4.metadata.GetMetadataResponse;
 import com.neo4j.causalclustering.catchup.v4.info.InfoResponse;
+import com.neo4j.causalclustering.catchup.v4.metadata.GetMetadataResponse;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 
 import java.io.IOException;
@@ -135,8 +135,8 @@ class BareClient implements CatchupResponseHandler
     @Override
     public void onGetMetadataResponse( GetMetadataResponse response )
     {
-        log.error( "This onGetMetadataResponse should have never been called with %s", response.commands );
-        callbackError( new IllegalArgumentException( String.format( "onGetMetadataResponse: %s", response.commands ) ) );
+        log.error( "This onGetMetadataResponse should have never been called with %s", response.commands() );
+        callbackError( new IllegalArgumentException( String.format( "onGetMetadataResponse: %s", response.commands() ) ) );
     }
 
     @Override

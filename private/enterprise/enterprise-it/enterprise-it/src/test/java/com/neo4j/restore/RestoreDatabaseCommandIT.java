@@ -5,7 +5,7 @@
  */
 package com.neo4j.restore;
 
-import com.neo4j.backup.impl.DatabaseIdStore;
+import com.neo4j.backup.impl.local.DatabaseIdStore;
 import com.neo4j.backup.impl.MetadataStore;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import org.junit.jupiter.api.BeforeEach;

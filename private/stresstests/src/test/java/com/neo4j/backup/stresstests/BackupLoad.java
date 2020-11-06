@@ -93,13 +93,14 @@ class BackupLoad extends Workload
 
     private static void executeBackup( String host, int port, Path targetDir, OutputStream outputStream ) throws Exception
     {
-        var contextBuilder = OnlineBackupContext.builder()
+        var context = OnlineBackupContext.builder()
                                                 .withAddress( host, port )
                                                 .withBackupDirectory( targetDir )
                                                 .withReportsDirectory( targetDir )
                                                 .withFallbackToFullBackup( true )
                                                 .withConsistencyCheck( true )
-                                                .withConsistencyCheckPropertyOwners( true );
+                                                .withConsistencyCheckPropertyOwners( true )
+                                                .build();
 
         LogProvider logProvider = new Log4jLogProvider( outputStream );
 
@@ -110,7 +111,7 @@ class BackupLoad extends Workload
                                                             .withClock( Clocks.nanoClock() )
                                                             .build();
 
-        executor.executeBackups( contextBuilder );
+        executor.executeBackups( context );
     }
 
     private static void flushToStandardOutput( ByteArrayOutputStream outputStream )

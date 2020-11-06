@@ -6,12 +6,11 @@
 package com.neo4j.backup;
 
 import com.neo4j.backup.impl.BackupExecutionException;
-import com.neo4j.backup.impl.ConsistencyCheckExecutionException;
-import com.neo4j.backup.impl.DatabaseIdStore;
-import com.neo4j.backup.impl.DefaultBackupStrategy;
 import com.neo4j.backup.impl.MetadataStore;
 import com.neo4j.backup.impl.OnlineBackupContext;
 import com.neo4j.backup.impl.OnlineBackupExecutor;
+import com.neo4j.backup.impl.local.DatabaseIdStore;
+import com.neo4j.backup.impl.tools.ConsistencyCheckExecutionException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
@@ -37,7 +36,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -73,7 +71,6 @@ import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory;
-import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.layout.DatabaseFile;
@@ -815,7 +812,7 @@ class BackupIT
                 .withConsistencyCheck( false ); // no consistency check after backup
 
         // backup does not fail
-        assertDoesNotThrow( () -> executeBackup( contextBuilder ) );
+        assertDoesNotThrow( () -> executeBackup( contextBuilder.build() ) );
 
         // no consistency check report files
         String[] reportFiles = findBackupInconsistenciesReports();
@@ -938,7 +935,7 @@ class BackupIT
         var contextBuilder = defaultBackupContextBuilder( backupAddress( db ) )
                 .withDatabaseNamePattern( unknownDbName );
 
-        var error = assertThrows( BackupExecutionException.class, () -> executeBackup( contextBuilder ) );
+        var error = assertThrows( BackupExecutionException.class, () -> executeBackup( contextBuilder.build() ) );
         assertThat( error.getMessage() ).contains( "Database '" + unknownDbName + "' does not exist" );
     }
 
@@ -958,10 +955,10 @@ class BackupIT
         final var internalLogProvider = new AssertableLogProvider();
 
         //when
-        var contextBuilder = defaultBackupContextBuilder( backupAddress( defaultDB ) )
-                .withDatabaseNamePattern( new DatabaseNamePattern( "*" ) );
+        var context = defaultBackupContextBuilder( backupAddress( defaultDB ) )
+                .withDatabaseNamePattern( new DatabaseNamePattern( "*" ) ).build();
 
-        executeBackup( contextBuilder,
+        executeBackup( context,
                        new Monitors(),
                        userLogProvider,
                        internalLogProvider
@@ -970,6 +967,8 @@ class BackupIT
         //then
         assertEquals( defaultDBRepresentation, getBackupDbRepresentation() );
         validateDatabaseRepresentation( natureDB );
+
+        userLogProvider.print( System.out );
 
         //then verify user and error logs
         validateSuccessfulResult( userLogProvider, defaultDB.databaseName() );
@@ -1005,7 +1004,7 @@ class BackupIT
                 .withDatabaseNamePattern( new DatabaseNamePattern( "n*" ) );
 
         final var exception = assertThrows( BackupExecutionException.class,
-                                            () -> executeBackup( contextBuilder,
+                                            () -> executeBackup( contextBuilder.build(),
                                                                  new Monitors(),
                                                                  userLogProvider,
                                                                  internalLogProvider
@@ -1041,7 +1040,7 @@ class BackupIT
         var contextBuilder = defaultBackupContextBuilder( backupAddress( db ) )
                 .withDatabaseNamePattern( new DatabaseNamePattern( pattern ) );
 
-        final var exception = assertThrows( BackupExecutionException.class, () -> executeBackup( contextBuilder ) );
+        final var exception = assertThrows( BackupExecutionException.class, () -> executeBackup( contextBuilder.build() ) );
         assertThat( getRootCause( exception ).getMessage() )
                 .contains( String.format( "Database name pattern=%s doesn't match any database on the remote server", pattern ) );
 
@@ -1062,7 +1061,7 @@ class BackupIT
         managementService.shutdownDatabase( natureDB );
 
         var contextBuilder = defaultBackupContextBuilder( backupAddress( defaultDB ) ).withDatabaseNamePattern( natureDB );
-        var exception = assertThrows( BackupExecutionException.class, () -> executeBackup( contextBuilder ) );
+        var exception = assertThrows( BackupExecutionException.class, () -> executeBackup( contextBuilder.build() ) );
 
         //then
         assertThat( getRootCause( exception ).getMessage() ).contains( "Database '" + natureDB + "' is stopped" );
@@ -1104,11 +1103,12 @@ class BackupIT
         final var internalLogProvider = new AssertableLogProvider();
 
         //when
-        var contextBuilder = defaultBackupContextBuilder( backupAddress( defaultDB ) )
-                .withIncludeMetadata( Optional.of( IncludeMetadata.all ) )
-                .withDatabaseNamePattern( new DatabaseNamePattern( "s*" ) );
+        var context = defaultBackupContextBuilder( backupAddress( defaultDB ) )
+                .withIncludeMetadata( IncludeMetadata.all )
+                .withDatabaseNamePattern( new DatabaseNamePattern( "s*" ) )
+                .build();
 
-        executeBackup( contextBuilder, new Monitors(), userLogProvider, internalLogProvider ) ;
+        executeBackup( context, new Monitors(), userLogProvider, internalLogProvider );
 
         //then validate backup
         validateDatabaseRepresentation( stocksDB );
@@ -1117,7 +1117,7 @@ class BackupIT
         //then validate logs
         validateSuccessfulResult( userLogProvider, stocksDB );
         validateSuccessfulResult( userLogProvider, SYSTEM_DATABASE_NAME );
-        LogAssertions.assertThat( userLogProvider ).forClass( DefaultBackupStrategy.class )
+        LogAssertions.assertThat( userLogProvider ).forClass( OnlineBackupExecutor.class )
                      .forLevel( WARN )
                      .containsMessages( "Include metadata parameter is invalid for backing up system database" );
     }
@@ -1133,7 +1133,7 @@ class BackupIT
 
         var contextBuilder = defaultBackupContextBuilder( backupAddress( defaultDB ) )
                 .withDatabaseNamePattern( new DatabaseNamePattern( "nature" ) )
-                .withIncludeMetadata( Optional.of( IncludeMetadata.all ) );
+                .withIncludeMetadata( IncludeMetadata.all ).build();
 
         //when
         executeBackup( contextBuilder );
@@ -1443,16 +1443,16 @@ class BackupIT
                 .withFallbackToFullBackup( fallbackToFull );
         LogProvider logProvider = new Log4jLogProvider( System.out );
 
-        executeBackup( contextBuilder, monitors, logProvider, logProvider );
+        executeBackup( contextBuilder.build(), monitors, logProvider, logProvider );
     }
 
-    private static void executeBackup( OnlineBackupContext.Builder contextBuilder ) throws Exception
+    private static void executeBackup( OnlineBackupContext context ) throws Exception
     {
         LogProvider logProvider = new Log4jLogProvider( System.out );
-        executeBackup( contextBuilder, new Monitors(), logProvider, logProvider );
+        executeBackup( context, new Monitors(), logProvider, logProvider );
     }
 
-    private static void executeBackup( OnlineBackupContext.Builder contextBuilder,
+    private static void executeBackup( OnlineBackupContext context,
                                        Monitors monitors,
                                        LogProvider userLog,
                                        LogProvider internalLog ) throws Exception
@@ -1464,7 +1464,7 @@ class BackupIT
                                                             .withClock( Clocks.nanoClock() )
                                                             .build();
 
-        executor.executeBackups( contextBuilder );
+        executor.executeBackups( context );
     }
 
     private OnlineBackupContext.Builder defaultBackupContextBuilder( SocketAddress address )
@@ -1476,7 +1476,6 @@ class BackupIT
                                   .withBackupDirectory( dir )
                                   .withReportsDirectory( dir )
                                   .withConfig( Config.defaults( experimental_catchup_protocol, true ) )
-                                  .withIncludeMetadata( Optional.empty() )
                                   .withConsistencyCheckRelationshipTypeScanStore( enable_relationship_type_scan_store.defaultValue() );
     }
 
@@ -1648,8 +1647,9 @@ class BackupIT
     private void checkDatabaseIdCorrectness( String databaseName )
     {
         final var backupToolsFolder = Neo4jLayout.ofFlat( backupsDir ).databaseLayout( databaseName ).backupToolsFolder();
-        var databaseId = new DatabaseIdStore( new DefaultFileSystemAbstraction(), new Log4jLogProvider( System.out ) )
-                .readDatabaseId( backupToolsFolder ).orElseThrow( () -> new IllegalStateException( "database id file should be presented" ) );
+        var databaseId = new DatabaseIdStore( fs, new Log4jLogProvider( System.out ) )
+                .readDatabaseId( backupToolsFolder );
+        assertThat( databaseId ).isNotNull();
         var expectedDatabaseId = ((GraphDatabaseFacade) managementService.database( databaseName )).databaseId().databaseId();
         assertEquals( expectedDatabaseId, databaseId );
     }

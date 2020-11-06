@@ -3,13 +3,12 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.backup.impl;
+package com.neo4j.backup.impl.local;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -50,7 +49,7 @@ public class DatabaseIdStore
         }
     }
 
-    public Optional<DatabaseId> readDatabaseId( Path folderPath )
+    public DatabaseId readDatabaseId( Path folderPath )
     {
         final var filePath = getDatabaseFilePath( folderPath );
         try ( StoreChannel channel = fs.read( filePath ) )
@@ -60,13 +59,13 @@ public class DatabaseIdStore
             byte[] bytes = new byte[UUID_BYTE_LENGTH];
             buffer.flip().get( bytes );
             final var uuid = UUID.fromString( new String( bytes, UTF_8 ) );
-            return Optional.of( DatabaseIdFactory.from( uuid ) );
+            return DatabaseIdFactory.from( uuid );
         }
         catch ( Exception exception )
         {
             log.error( "Error in reading database id from path={}", filePath, exception );
         }
-        return Optional.empty();
+        return null;
     }
 
     public static Path getDatabaseFilePath( Path folderPath )

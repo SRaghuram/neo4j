@@ -425,6 +425,6 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
                                                .withBackupDirectory( backupDir )
                                                .withReportsDirectory( backupDir );
 
-        OnlineBackupExecutor.buildDefault().executeBackups( context );
+        OnlineBackupExecutor.buildDefault().executeBackups( context.build());
     }
 }
