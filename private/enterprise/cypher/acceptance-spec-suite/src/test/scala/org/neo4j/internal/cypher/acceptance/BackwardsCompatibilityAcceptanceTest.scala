@@ -26,7 +26,7 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     exception.getMessage should include("The function toInt() is no longer supported. Please use toInteger() instead")
   }
 
-  // Removals in 4.0 and 4.1
+  // Removals earlier in 4.x
 
   test("query without removed syntax should work with CYPHER 3.5") {
     val result = executeSingle("CYPHER 3.5 RETURN reverse('emil') as backwards")
@@ -166,7 +166,7 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     }
   }
 
-  // Additions in 4.0 and 4.1
+  // Additions earlier in 4.x
 
   test("The USE clause should not work with CYPHER 3.5") {
     // WHEN
