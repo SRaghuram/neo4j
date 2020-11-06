@@ -25,11 +25,13 @@ import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.security.URLAccessRule;
+import org.neo4j.io.ByteUnit;
 import org.neo4j.kernel.impl.factory.DbmsInfo;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 
 import static java.lang.Boolean.FALSE;
+import static org.neo4j.configuration.GraphDatabaseSettings.memory_transaction_max_size;
 
 @PublicApi
 public class ClusterDatabaseManagementServiceBuilder extends EnterpriseDatabaseManagementServiceBuilder
@@ -54,6 +56,14 @@ public class ClusterDatabaseManagementServiceBuilder extends EnterpriseDatabaseM
         config.set( GraphDatabaseInternalSettings.ephemeral_lucene, FALSE );
         return new ClusterDatabaseManagementServiceFactory( getDbmsInfo( config ), getEditionFactory( config ) )
                 .build( augmentConfig( config ), dependencies );
+    }
+
+    @Override
+    protected Config augmentConfig( Config config )
+    {
+        var augmentedConfig = super.augmentConfig( config );
+        augmentedConfig.addListener( memory_transaction_max_size, ( before, after ) -> validateConfig( augmentedConfig ) );
+        return validateConfig( augmentedConfig );
     }
 
     @Override
@@ -164,5 +174,14 @@ public class ClusterDatabaseManagementServiceBuilder extends EnterpriseDatabaseM
     {
         super.loadPropertiesFromFile( path );
         return this;
+    }
+
+    private Config validateConfig( Config config )
+    {
+        if ( config.get( memory_transaction_max_size ) == 0L )
+        {
+            config.set( memory_transaction_max_size, ByteUnit.gibiBytes( 2 ) );
+        }
+        return config;
     }
 }

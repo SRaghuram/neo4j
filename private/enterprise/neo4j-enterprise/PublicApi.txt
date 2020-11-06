@@ -18,6 +18,7 @@ com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::ClusterDatabaseManag
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::ClusterDatabaseManagementServiceBuilder(java.nio.file.Path) void public
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::addDatabaseListener(org.neo4j.graphdb.event.DatabaseEventListener) com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder public
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::addURLAccessRule(java.lang.String, org.neo4j.graphdb.security.URLAccessRule) com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder public
+com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::augmentConfig(org.neo4j.configuration.Config) org.neo4j.configuration.Config protected
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::build() com.neo4j.dbms.api.ClusterDatabaseManagementService public
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::getDbmsInfo(org.neo4j.configuration.Config) org.neo4j.kernel.impl.factory.DbmsInfo protected
 com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::getEditionFactory(org.neo4j.configuration.Config) java.util.function.Function<org.neo4j.graphdb.factory.module.GlobalModule,org.neo4j.graphdb.factory.module.edition.AbstractEditionModule> protected
