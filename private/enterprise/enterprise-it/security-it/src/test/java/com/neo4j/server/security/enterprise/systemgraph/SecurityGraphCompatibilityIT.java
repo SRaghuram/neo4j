@@ -42,10 +42,11 @@ import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersio
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D4;
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D6;
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D7;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_43D1;
 
 class SecurityGraphCompatibilityIT extends SecurityGraphCompatibilityTestBase
 {
-    private static final String[] SUPPORTED_VERSIONS = {VERSION_40, VERSION_41D1, VERSION_41, VERSION_42D4, VERSION_42D6, VERSION_42D7};
+    private static final String[] SUPPORTED_VERSIONS = {VERSION_40, VERSION_41D1, VERSION_41, VERSION_42D4, VERSION_42D6, VERSION_42D7, VERSION_43D1};
 
     @ParameterizedTest
     @MethodSource( "supportedVersions" )

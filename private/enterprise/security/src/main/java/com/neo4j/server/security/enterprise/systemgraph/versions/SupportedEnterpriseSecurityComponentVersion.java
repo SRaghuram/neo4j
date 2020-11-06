@@ -40,8 +40,6 @@ import static org.neo4j.internal.helpers.collection.Iterables.single;
 
 public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownEnterpriseSecurityComponentVersion
 {
-    static final Label SEGMENT_LABEL = Label.label( "Segment" );
-    static final Label RESOURCE_LABEL = Label.label( "Resource" );
     static final String DB_PARAM = "database";
 
     protected SupportedEnterpriseSecurityComponentVersion( ComponentVersion componentVersion, Log log )

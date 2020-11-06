@@ -84,6 +84,7 @@ import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersio
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D4;
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D6;
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D7;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_43D1;
 
 @TestDirectoryExtension
 @TestInstance( PER_CLASS )
@@ -252,7 +253,8 @@ class SystemGraphComponentsTest
                 Arguments.arguments( VERSION_41, REQUIRES_UPGRADE ),
                 Arguments.arguments( VERSION_42D4, REQUIRES_UPGRADE ),
                 Arguments.arguments( VERSION_42D6, REQUIRES_UPGRADE ),
-                Arguments.arguments( VERSION_42D7, CURRENT )
+                Arguments.arguments( VERSION_42D7, REQUIRES_UPGRADE ),
+                Arguments.arguments( VERSION_43D1, CURRENT )
         );
     }
 

@@ -137,6 +137,7 @@ public class EnterpriseSecurityComponentVersion_3_41D1 extends SupportedEnterpri
     @Override
     public void grantDefaultPrivileges( Transaction tx, Node role, String predefinedRole, PrivilegeStore privilegeStore )
     {
+        // READ and TRAVERSE privileges has been merged into MATCH privileges
         switch ( predefinedRole )
         {
         case ADMIN:

@@ -40,6 +40,10 @@ public class PrivilegeStore
         CONSTRAINT,
         TOKEN,
         ADMIN,
+        START_DATABASE,
+        STOP_DATABASE,
+        TRANSACTIONS,
+        ALL_DBMS,
         SCHEMA,
         EXECUTE_ALL_FUNCTIONS,
         EXECUTE_ALL_PROCEDURES

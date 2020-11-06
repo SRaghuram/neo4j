@@ -37,10 +37,12 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
     static final Label DATABASE_ALL_LABEL = Label.label( "DatabaseAll" );
     static final Label DATABASE_DEFAULT_LABEL = Label.label( "DatabaseDefault" );
     static final Label DATABASE_LABEL = Label.label( "Database" );
+    static final Label PRIVILEGE_LABEL = Label.label( "Privilege" );
+    static final Label SEGMENT_LABEL = Label.label( "Segment" );
+    static final Label RESOURCE_LABEL = Label.label( "Resource" );
 
     public static final Label USER_LABEL = Label.label( "User" );
     public static final Label ROLE_LABEL = Label.label( "Role" );
-    static final Label PRIVILEGE_LABEL = Label.label( "Privilege" );
 
     public static final RelationshipType GRANTED = RelationshipType.withName( "GRANTED" );
     private static final RelationshipType USER_TO_ROLE = RelationshipType.withName( "HAS_ROLE" );

@@ -20,6 +20,7 @@ import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecur
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_5_42D4;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_6_42D6;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_7_42D7;
+import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_8_43D1;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_Future;
 import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion;
 import com.neo4j.server.security.enterprise.systemgraph.versions.NoEnterpriseSecurityComponentVersion;
@@ -72,21 +73,26 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         this.customSecurityInitializer = new CustomSecurityInitializer( config, log );
         this.log = log;
 
-        EnterpriseSecurityComponentVersion_2_40 version2 = new EnterpriseSecurityComponentVersion_2_40( log );
-        EnterpriseSecurityComponentVersion_3_41D1 version3 = new EnterpriseSecurityComponentVersion_3_41D1( log, version2 );
-        EnterpriseSecurityComponentVersion_4_41 version4 = new EnterpriseSecurityComponentVersion_4_41( log, version3 );
-        EnterpriseSecurityComponentVersion_5_42D4 version5 = new EnterpriseSecurityComponentVersion_5_42D4( log, version4 );
-        EnterpriseSecurityComponentVersion_6_42D6 version6 = new EnterpriseSecurityComponentVersion_6_42D6( log, version5 );
-        EnterpriseSecurityComponentVersion_7_42D7 version7 = new EnterpriseSecurityComponentVersion_7_42D7( log, version6 );
+        KnownEnterpriseSecurityComponentVersion version0 =
+                new EnterpriseSecurityComponentVersion_0_35( log, migrationRoleRepository, customSecurityInitializer );
+        KnownEnterpriseSecurityComponentVersion version1 = new EnterpriseSecurityComponentVersion_1_36( log, config );
+        KnownEnterpriseSecurityComponentVersion version2 = new EnterpriseSecurityComponentVersion_2_40( log );
+        KnownEnterpriseSecurityComponentVersion version3 = new EnterpriseSecurityComponentVersion_3_41D1( log, version2 );
+        KnownEnterpriseSecurityComponentVersion version4 = new EnterpriseSecurityComponentVersion_4_41( log, version3 );
+        KnownEnterpriseSecurityComponentVersion version5 = new EnterpriseSecurityComponentVersion_5_42D4( log, version4 );
+        KnownEnterpriseSecurityComponentVersion version6 = new EnterpriseSecurityComponentVersion_6_42D6( log, version5 );
+        KnownEnterpriseSecurityComponentVersion version7 = new EnterpriseSecurityComponentVersion_7_42D7( log, version6 );
+        KnownEnterpriseSecurityComponentVersion version8 = new EnterpriseSecurityComponentVersion_8_43D1( log, version7 );
 
-        knownSecurityComponentVersions.add( new EnterpriseSecurityComponentVersion_0_35( log, migrationRoleRepository, customSecurityInitializer ) );
-        knownSecurityComponentVersions.add( new EnterpriseSecurityComponentVersion_1_36( log, config ) );
+        knownSecurityComponentVersions.add( version0 );
+        knownSecurityComponentVersions.add( version1 );
         knownSecurityComponentVersions.add( version2 );
         knownSecurityComponentVersions.add( version3 );
         knownSecurityComponentVersions.add( version4 );
         knownSecurityComponentVersions.add( version5 );
         knownSecurityComponentVersions.add( version6 );
         knownSecurityComponentVersions.add( version7 );
+        knownSecurityComponentVersions.add( version8 );
         knownSecurityComponentVersions.add( new EnterpriseSecurityComponentVersion_Future( log, knownSecurityComponentVersions.latestSecurityGraphVersion() ) );
     }
 

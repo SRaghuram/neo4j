@@ -58,6 +58,7 @@ import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersio
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D4;
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D6;
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D7;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_43D1;
 
 @TestDirectoryExtension
 @TestInstance( PER_CLASS )
@@ -149,7 +150,8 @@ class EnterpriseSecurityGraphComponentTest
                 Arguments.of( VERSION_41, PredefinedRoles.roles, REQUIRES_UPGRADE ),
                 Arguments.of( VERSION_42D4, PredefinedRoles.roles, REQUIRES_UPGRADE ),
                 Arguments.of( VERSION_42D6, PredefinedRoles.roles, REQUIRES_UPGRADE ),
-                Arguments.of( VERSION_42D7, PredefinedRoles.roles, CURRENT )
+                Arguments.of( VERSION_42D7, PredefinedRoles.roles, REQUIRES_UPGRADE ),
+                Arguments.of( VERSION_43D1, PredefinedRoles.roles, CURRENT )
         );
     }
 
