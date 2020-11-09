@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state.machines.token;
 
+import com.neo4j.causalclustering.core.state.StateMachineResult;
 import com.neo4j.causalclustering.core.state.machines.DummyStateMachineCommitHelper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -13,10 +14,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.TransactionFailureException;
+import org.neo4j.graphdb.TransientTransactionFailureException;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.recordstorage.BatchContext;
 import org.neo4j.internal.recordstorage.CacheAccessBackDoor;
@@ -30,6 +33,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -61,8 +65,8 @@ import static com.neo4j.causalclustering.core.state.machines.token.StorageComman
 import static com.neo4j.causalclustering.core.state.machines.token.TokenType.LABEL;
 import static com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding.decodeLogIndexFromTxHeader;
 import static java.util.Collections.singletonList;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -115,7 +119,7 @@ class ReplicatedTokenStateMachineTest
         stateMachine.applyCommand( new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandBytes ), 1, r -> {} );
 
         // then
-        assertEquals( EXPECTED_TOKEN_ID, (int) registry.getId( "Person" ) );
+        assertThat( registry.getId( "Person" ) ).isEqualTo( EXPECTED_TOKEN_ID );
     }
 
     @Test
@@ -128,11 +132,13 @@ class ReplicatedTokenStateMachineTest
 
         // when
         var commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, true ), logEntryWriterFactory );
-        stateMachine.applyCommand( new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandBytes ), 1, r -> {} );
+        stateMachine.applyCommand( new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandBytes ), 1, r ->
+        {
+        } );
 
         // then
-        assertNull( registry.getId( "Person" ) );
-        assertEquals( EXPECTED_TOKEN_ID, (int) registry.getIdInternal( "Person" ) );
+        assertThat( registry.getId( "Person" ) ).isNull();
+        assertThat( registry.getIdInternal( "Person" ) ).isEqualTo( EXPECTED_TOKEN_ID );
     }
 
     @Test
@@ -156,7 +162,7 @@ class ReplicatedTokenStateMachineTest
         stateMachine.applyCommand( losingRequest, 2, r -> {} );
 
         // then
-        assertEquals( EXPECTED_TOKEN_ID, (int) registry.getId( "Person" ) );
+        assertThat( registry.getId( "Person" ) ).isEqualTo( EXPECTED_TOKEN_ID );
     }
 
     @Test
@@ -170,18 +176,81 @@ class ReplicatedTokenStateMachineTest
 
         var winningRequest =
                 new ReplicatedTokenRequest( databaseId, LABEL, "Person",
-                                            commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, true ), logEntryWriterFactory ) );
+                        commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, true ), logEntryWriterFactory ) );
         var losingRequest =
                 new ReplicatedTokenRequest( databaseId, LABEL, "Person",
-                                            commandsToBytes( tokenCommands( UNEXPECTED_TOKEN_ID, true ), logEntryWriterFactory ) );
+                        commandsToBytes( tokenCommands( UNEXPECTED_TOKEN_ID, true ), logEntryWriterFactory ) );
 
         // when
-        stateMachine.applyCommand( winningRequest, 1, r -> {} );
-        stateMachine.applyCommand( losingRequest, 2, r -> {} );
+        stateMachine.applyCommand( winningRequest, 1, r ->
+        {
+        } );
+        stateMachine.applyCommand( losingRequest, 2, r ->
+        {
+        } );
 
         // then
-        assertNull( registry.getId( "Person" ) );
-        assertEquals( EXPECTED_TOKEN_ID, (int) registry.getIdInternal( "Person" ) );
+        assertThat( registry.getId( "Person" ) ).isNull();
+        assertThat( registry.getIdInternal( "Person" ) ).isEqualTo( EXPECTED_TOKEN_ID );
+    }
+
+    @Test
+    void shouldFailIfTokenIdAlreadyExistsOnADifferentName() throws Exception
+    {
+        // given
+        var registry = new TokenRegistry( "Label" );
+        var stateMachine = newTokenStateMachine( registry );
+
+        stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
+
+        var winningRequest =
+                new ReplicatedTokenRequest( databaseId, LABEL, "Person1",
+                        commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, true ), logEntryWriterFactory ) );
+        var failedRequest =
+                new ReplicatedTokenRequest( databaseId, LABEL, "Person2",
+                        commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, true ), logEntryWriterFactory ) );
+
+        // when
+        stateMachine.applyCommand( winningRequest, 1, r ->
+        {
+        } );
+        var response = new StateMachineResponse();
+        stateMachine.applyCommand( failedRequest, 2, response );
+
+        // then
+        var failureException = assertThrows( TransientTransactionFailureException.class, () -> response.stateMachineResult.consume() );
+        assertThat( failureException.status() ).isEqualTo( Status.Transaction.Outdated );
+        assertThat( registry.getId( "Person" ) ).isNull();
+        assertThat( registry.getIdInternal( "Person" ) ).isEqualTo( EXPECTED_TOKEN_ID );
+    }
+
+    @Test
+    void shouldNotFailIfSameTokenAlreadyExistsWithSameName() throws Exception
+    {
+        // given
+        var registry = new TokenRegistry( "Label" );
+        var stateMachine = newTokenStateMachine( registry );
+
+        stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
+
+        var winningRequest =
+                new ReplicatedTokenRequest( databaseId, LABEL, "Person",
+                        commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, true ), logEntryWriterFactory ) );
+        var ignoredRequest =
+                new ReplicatedTokenRequest( databaseId, LABEL, "Person",
+                        commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, true ), logEntryWriterFactory ) );
+
+        // when
+        stateMachine.applyCommand( winningRequest, 1, r ->
+        {
+        } );
+        var callback = new StateMachineResponse();
+        stateMachine.applyCommand( ignoredRequest, 2, callback );
+
+        // then
+        assertThat( (Integer) callback.stateMachineResult.consume() ).isEqualTo( EXPECTED_TOKEN_ID );
+        assertThat( registry.getId( "Person" ) ).isNull();
+        assertThat( registry.getIdInternal( "Person" ) ).isEqualTo( EXPECTED_TOKEN_ID );
     }
 
     @Test
@@ -196,12 +265,13 @@ class ReplicatedTokenStateMachineTest
 
         // when
         var commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, false ), logEntryWriterFactory );
-        stateMachine.applyCommand( new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandBytes ), logIndex, r -> {} );
+        stateMachine.applyCommand( new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandBytes ), logIndex, r ->
+        {} );
 
         // then
         var transactions = commitProcess.transactionsToApply;
-        assertEquals( 1, transactions.size() );
-        assertEquals( logIndex, decodeLogIndexFromTxHeader( transactions.get( 0 ).additionalHeader() ) );
+        assertThat( transactions ).hasSize( 1 );
+        assertThat( decodeLogIndexFromTxHeader( transactions.get( 0 ).additionalHeader() ) ).isEqualTo( logIndex );
     }
 
     private static List<StorageCommand> tokenCommands( int expectedTokenId, boolean internal )
@@ -222,7 +292,7 @@ class ReplicatedTokenStateMachineTest
         var config = Config.defaults();
         var idFactory = new DefaultIdGeneratorFactory( fs, immediate() );
         var storeFactory = new StoreFactory( layout, config, idFactory, pageCache, fs, logProvider, PageCacheTracer.NULL );
-        assertNull( stores );
+        assertThat( stores ).isNull();
         stores = storeFactory.openAllNeoStores( true );
         var commitProcess = mock( TransactionCommitProcess.class );
         when( commitProcess.commit( any( TransactionToApply.class ), any( CommitEvent.class ), eq( EXTERNAL ) ) ).then( inv ->
@@ -287,6 +357,17 @@ class ReplicatedTokenStateMachineTest
         {
             transactionsToApply.add( batch.transactionRepresentation() );
             return -1;
+        }
+    }
+
+    private static class StateMachineResponse implements Consumer<StateMachineResult>
+    {
+        StateMachineResult stateMachineResult;
+
+        @Override
+        public void accept( StateMachineResult stateMachineResult )
+        {
+            this.stateMachineResult = stateMachineResult;
         }
     }
 }

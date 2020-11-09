@@ -66,33 +66,34 @@ public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedToken
             return;
         }
 
-        Collection<StorageCommand> commands = bytesToCommands( tokenRequest.commandBytes(), commandReaderFactory );
-        int newTokenId = extractTokenId( commands );
-        boolean internal = isInternal( commands );
+        var commands = bytesToCommands( tokenRequest.commandBytes(), commandReaderFactory );
+        var newTokenId = extractTokenId( commands );
+        var internal = isInternal( commands );
 
-        String name = tokenRequest.tokenName();
-        Integer existingTokenId = internal ? tokenRegistry.getIdInternal( name ) : tokenRegistry.getId( name );
-        var existingToken = tokenRegistry.getToken( newTokenId );
+        var name = tokenRequest.tokenName();
+        var existingTokenId = internal ? tokenRegistry.getIdInternal( name ) : tokenRegistry.getId( name );
+        if ( existingTokenId != null )
+        {
+            // This should be rare so a warning is in order.
+            log.warn( format( "Ignored %s (newTokenId=%d) since it already exists with existingTokenId=%d", tokenRequest, newTokenId, existingTokenId ) );
+            callback.accept( StateMachineResult.of( existingTokenId ) );
+            return;
+        }
+
+        var existingToken = internal ? tokenRegistry.getTokenInternal( newTokenId ) : tokenRegistry.getToken( newTokenId );
         if ( existingToken != null )
         {
             log.warn( "Token id %d already exists for %s. Cannot be added to %s", newTokenId, existingToken, name );
             callback.accept( StateMachineResult.of(
                     new TransientTransactionFailureException( Status.Transaction.Outdated, "Token registry is out of date. Try again." ) ) );
+            return;
         }
-        else if ( existingTokenId == null )
-        {
-            log.info( format( "Applying %s with newTokenId=%d", tokenRequest, newTokenId ) );
-            // The 'applyToStore' method applies EXTERNAL transactions, which will update the token holders for us.
-            // Thus there is no need for us to update the token registry directly.
-            applyToStore( commands, commandIndex );
-            callback.accept( StateMachineResult.of( newTokenId ) );
-        }
-        else
-        {
-            // This should be rare so a warning is in order.
-            log.warn( format( "Ignored %s (newTokenId=%d) since it already exists with existingTokenId=%d", tokenRequest, newTokenId, existingTokenId ) );
-            callback.accept( StateMachineResult.of( existingTokenId ) );
-        }
+
+        log.info( format( "Applying %s with newTokenId=%d", tokenRequest, newTokenId ) );
+        // The 'applyToStore' method applies EXTERNAL transactions, which will update the token holders for us.
+        // Thus there is no need for us to update the token registry directly.
+        applyToStore( commands, commandIndex );
+        callback.accept( StateMachineResult.of( newTokenId ) );
     }
 
     private void applyToStore( Collection<StorageCommand> commands, long logIndex )
@@ -112,19 +113,19 @@ public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedToken
 
     private int extractTokenId( Collection<StorageCommand> commands )
     {
-        StorageCommand.TokenCommand tokenCommand = getSingleTokenCommand( commands );
+        var tokenCommand = getSingleTokenCommand( commands );
         return tokenCommand.tokenId();
     }
 
     private boolean isInternal( Collection<StorageCommand> commands )
     {
-        StorageCommand.TokenCommand tokenCommand = getSingleTokenCommand( commands );
+        var tokenCommand = getSingleTokenCommand( commands );
         return tokenCommand.isInternal();
     }
 
     private StorageCommand.TokenCommand getSingleTokenCommand( Collection<StorageCommand> commands )
     {
-        StorageCommand command = single( commands );
+        var command = single( commands );
         if ( !( command instanceof StorageCommand.TokenCommand ) )
         {
             throw new IllegalArgumentException( "Was expecting a single token command, got " + command );
