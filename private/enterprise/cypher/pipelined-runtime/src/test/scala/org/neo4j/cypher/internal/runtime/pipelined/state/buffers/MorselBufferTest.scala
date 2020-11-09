@@ -54,7 +54,7 @@ class MorselBufferTest extends MorselUnitTest with MorselTestHelper {
         3, 15, 15, // <cancelled>
         4, 16, 16
       )
-    initiate(cancellerMap, 1 to 16)
+    initiate(cancellerMap, 0 to 16)
     x.filterCancelledArguments(morsel)
 
     // Then
@@ -106,7 +106,7 @@ class MorselBufferTest extends MorselUnitTest with MorselTestHelper {
         3, 15, 26, // <cancelled>
         4, 16, 27
       )
-    initiate(cancellerMap, 1 to 16)
+    initiate(cancellerMap, 0 to 16)
     x.filterCancelledArguments(morsel)
 
     // Then
@@ -132,7 +132,7 @@ class MorselBufferTest extends MorselUnitTest with MorselTestHelper {
         3, 13, 26,
         3, 13, 28
       )
-    initiate(cancellerMap, 1 to 28)
+    initiate(cancellerMap, 0 to 28)
     x.filterCancelledArguments(morsel)
 
     // Then
@@ -347,7 +347,7 @@ class MorselBufferTest extends MorselUnitTest with MorselTestHelper {
           .addRow(Longs(6, 51))
           .build()
 
-      initiate(cancellerMap, 1 to 6)
+      initiate(cancellerMap, 0 to 6)
       x.filterCancelledArguments(morsel)
 
       new ThenOutput(morsel, 2, 0)
