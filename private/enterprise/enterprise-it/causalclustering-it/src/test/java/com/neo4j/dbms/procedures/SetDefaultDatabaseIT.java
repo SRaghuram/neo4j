@@ -24,6 +24,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.Result;
 import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -73,7 +74,7 @@ public class SetDefaultDatabaseIT
         assertDefaultDatabase( "neo4j", cluster );
         CausalClusteringTestHelpers.createDatabase( "foo", cluster );
         CausalClusteringTestHelpers.stopDatabase( "neo4j", cluster );
-        CausalClusteringTestHelpers.assertDatabaseEventuallyStarted( "foo", cluster );
+        CausalClusteringTestHelpers.assertDatabaseEventuallyInStateSeenByAll( "foo", cluster.allMembers(), STARTED );
         CausalClusteringTestHelpers.assertDatabaseEventuallyInStateSeenByAll( "neo4j", cluster.allMembers(), STOPPED );
 
         cluster.systemTx( ( db, tx ) ->
@@ -97,7 +98,7 @@ public class SetDefaultDatabaseIT
         assertDefaultDatabase( "neo4j", cluster );
         CausalClusteringTestHelpers.createDatabase( "foo", cluster );
         CausalClusteringTestHelpers.dropDatabase( "neo4j", cluster );
-        CausalClusteringTestHelpers.assertDatabaseEventuallyStarted( "foo", cluster );
+        CausalClusteringTestHelpers.assertDatabaseEventuallyInStateSeenByAll( "foo", cluster.allMembers(), STARTED );
         CausalClusteringTestHelpers.assertDatabaseEventuallyDoesNotExist( "neo4j", cluster );
 
         cluster.systemTx( ( db, tx ) ->
