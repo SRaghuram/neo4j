@@ -443,7 +443,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         String varlenBasic = "MATCH (:A)-[:R*3]-(n:B) return n.number";
         String varlenMinMax = "MATCH (:A)-[:R*..3]-(n:B) return n.number";
-        String varlenPredicate = "MATCH p = (:A)-[:R*..3]-(n:B) WHERE ALL (n IN nodes(p) WHERE exists(n.number)) return n.number";
+        String varlenPredicate = "MATCH p = (:A)-[:R*..3]-(n:B) WHERE ALL (n IN nodes(p) WHERE n.number IS NOT NULL) return n.number";
 
         assertSuccess( adminSubject, varlenBasic, r -> assertKeyIs( r, "n.number", 2 ) );
         assertSuccess( adminSubject, varlenMinMax, r -> assertKeyIs( r, "n.number", 1, 2, 2 ) );
@@ -473,7 +473,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         String shortestBasic = "MATCH (a:A), (c:C), p = shortestPath((a)-[:R*]-(c)) return length(p) as length";
         String shortestWithProperty =
                 "MATCH (a:A), (c:C), p = shortestPath((a)-[:R*]-(c)) " +
-                "WHERE ALL (n in nodes(p) WHERE exists(n.number)) return length(p) as length";
+                "WHERE ALL (n in nodes(p) WHERE n.number IS NOT NULL) return length(p) as length";
 
         assertSuccess( adminSubject, shortestBasic, r -> assertKeyIs( r, "length", 2 ) );
         assertSuccess( adminSubject, shortestWithProperty, r -> assertKeyIs( r, "length", 2 ) );
@@ -524,7 +524,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertEmpty( adminSubject, "CREATE INDEX FOR (n:A) ON (n.foo)" );
         assertEmpty( adminSubject, "CALL db.awaitIndexes" );
 
-        String query = "CREATE (:A {foo: $param}) WITH 1 as bar MATCH (a:A) USING INDEX a:A(foo) WHERE EXISTS(a.foo) RETURN a.foo";
+        String query = "CREATE (:A {foo: $param}) WITH 1 as bar MATCH (a:A) USING INDEX a:A(foo) WHERE a.foo IS NOT NULL RETURN a.foo";
         assertSuccess( adminSubject, DEFAULT_DATABASE_NAME, query,Collections.singletonMap("param", 2L), r -> assertKeyIs( r, "a.foo", 1, 2 ) );
         assertSuccess( subject, DEFAULT_DATABASE_NAME, query, Collections.singletonMap("param", 3L), r -> assertKeyIs( r, "a.foo", 3 ) );
     }
@@ -564,18 +564,18 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertSuccess( findAll, "MATCH (n) RETURN n.foo", r -> assertKeyIs( r, "n.foo", 1, null, 5, null ) );
         assertSuccess( findSome, "MATCH (n) RETURN n.foo", r -> assertKeyIs( r, "n.foo", 1, 5 ) );
 
-        assertSuccess( adminSubject, "MATCH (n:A) WHERE exists(n.foo) AND exists(n.bar) RETURN n.foo", r -> assertKeyIs( r, "n.foo", 1, 5 ) );
-        assertSuccess( findAll, "MATCH (n:A) WHERE exists(n.foo) AND exists(n.bar) RETURN n.foo", r -> assertKeyIs( r, "n.foo", 5 ) );
-        assertSuccess( findSome, "MATCH (n:A) WHERE exists(n.foo) AND exists(n.bar) RETURN n.foo", r -> assertKeyIs( r, "n.foo", 5 ) );
+        assertSuccess( adminSubject, "MATCH (n:A) WHERE n.foo IS NOT NULL AND n.bar IS NOT NULL RETURN n.foo", r -> assertKeyIs( r, "n.foo", 1, 5 ) );
+        assertSuccess( findAll, "MATCH (n:A) WHERE n.foo IS NOT NULL AND n.bar IS NOT NULL RETURN n.foo", r -> assertKeyIs( r, "n.foo", 5 ) );
+        assertSuccess( findSome, "MATCH (n:A) WHERE n.foo IS NOT NULL AND n.bar IS NOT NULL RETURN n.foo", r -> assertKeyIs( r, "n.foo", 5 ) );
 
         assertEmpty( adminSubject, "CREATE INDEX FOR (n:A) ON (n.foo, n.bar)" );
         assertEmpty( adminSubject, "CALL db.awaitIndexes" );
 
-        assertSuccess( adminSubject, "MATCH (n:A) USING INDEX n:A(foo, bar) WHERE exists(n.foo) AND exists(n.bar) RETURN n.foo",
+        assertSuccess( adminSubject, "MATCH (n:A) USING INDEX n:A(foo, bar) WHERE n.foo IS NOT NULL AND n.bar IS NOT NULL RETURN n.foo",
                 r -> assertKeyIs( r, "n.foo", 1, 5 ) );
-        assertSuccess( findAll, "MATCH (n:A) USING INDEX n:A(foo, bar) WHERE exists(n.foo) AND exists(n.bar) RETURN n.foo",
+        assertSuccess( findAll, "MATCH (n:A) USING INDEX n:A(foo, bar) WHERE n.foo IS NOT NULL AND n.bar IS NOT NULL RETURN n.foo",
                 r -> assertKeyIs( r, "n.foo", 5 ) );
-        assertSuccess( findSome, "MATCH (n:A) USING INDEX n:A(foo, bar) WHERE exists(n.foo) AND exists(n.bar) RETURN n.foo",
+        assertSuccess( findSome, "MATCH (n:A) USING INDEX n:A(foo, bar) WHERE n.foo IS NOT NULL AND n.bar IS NOT NULL RETURN n.foo",
                 r -> assertKeyIs( r, "n.foo", 5 ) );
     }
 
@@ -692,7 +692,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         String varlenBasic = "MATCH p = (:A)-[:R*3]-(n:C) return length(p)";
         String varlenMinMax = "MATCH p = (:A)-[:R*..3]-(n:C) return length(p)";
-        String varlenPredicate = "MATCH p = (:A)-[:R*..3]-(n:C) WHERE ALL (n IN nodes(p) WHERE exists(n.number)) return length(p)";
+        String varlenPredicate = "MATCH p = (:A)-[:R*..3]-(n:C) WHERE ALL (n IN nodes(p) WHERE n.number IS NOT NULL) return length(p)";
 
         assertSuccess( adminSubject, varlenBasic, r -> assertKeyIs( r, "length(p)", 3 ) );
         assertSuccess( adminSubject, varlenMinMax, r -> assertKeyIs( r, "length(p)", 2, 3 ) );
@@ -722,7 +722,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         String shortestBasic = "MATCH (a:A), (c:C), p = shortestPath((a)-[:R*]-(c)) return length(p) as length";
         String shortestWithProperty =
                 "MATCH (a:A), (c:C), p = shortestPath((a)-[:R*]-(c)) " +
-                        "WHERE ALL (n in nodes(p) WHERE exists(n.number)) return length(p) as length";
+                        "WHERE ALL (n in nodes(p) WHERE n.number IS NOT NULL) return length(p) as length";
 
         assertSuccess( adminSubject, shortestBasic, r -> assertKeyIs( r, "length", 2 ) );
         assertSuccess( adminSubject, shortestWithProperty, r -> assertKeyIs( r, "length", 2 ) );

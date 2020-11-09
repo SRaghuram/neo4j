@@ -186,7 +186,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       """MATCH p = shortestPath((src:A)-[*]->(dst:D))
-        | WHERE NONE(r in relationships(p) WHERE exists(r.blocked))
+        | WHERE NONE(r in relationships(p) WHERE r.blocked IS NOT NULL)
         |RETURN nodes(p) AS nodes""".stripMargin)
       .columnAs[List[Node]]("nodes").toList
 
@@ -419,7 +419,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val query = """PROFILE CYPHER
                   |MATCH (a:X), (b:Y)
                   |MATCH p = shortestPath((a)-[rs:REL*]->(b))
-                  |WHERE ALL(r in relationships(p) WHERE NOT exists(r.blocked))
+                  |WHERE ALL(r in relationships(p) WHERE r.blocked IS NULL)
                   |RETURN nodes(p) AS nodes
                 """.stripMargin
 
@@ -434,7 +434,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val query = """PROFILE CYPHER
                   |MATCH (a:A), (b:D)
                   |MATCH p = shortestPath((a)-[rs:REL*]->(b))
-                  |WHERE ALL(n in nodes(p) WHERE NOT exists(n.blocked))
+                  |WHERE ALL(n in nodes(p) WHERE n.blocked IS NULL)
                   |RETURN nodes(p) as nodes
                 """.stripMargin
 
@@ -449,7 +449,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val query = """PROFILE CYPHER
                   |MATCH (a:A), (b:D)
                   |MATCH p = shortestPath((a)-[rs:REL*]->(b))
-                  |WHERE ALL(n in nodes(p) WHERE exists(n.name) OR exists(n.age))
+                  |WHERE ALL(n in nodes(p) WHERE n.name IS NOT NULL OR n.age IS NOT NULL)
                   |AND ALL(r in relationships(p) WHERE r.likesLevel > 10)
                   |RETURN nodes(p) as nodes
                 """.stripMargin
@@ -470,7 +470,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
                   |MATCH (a:X), (b:Y)
                   |MATCH p1 = shortestPath((a)-[rs1:REL*]->(b))
                   |MATCH p2 = shortestPath((a)-[rs2:REL*]->(b))
-                  |WHERE ALL(r in relationships(p1) WHERE NOT exists(r.blocked))
+                  |WHERE ALL(r in relationships(p1) WHERE r.blocked IS NULL)
                   |RETURN nodes(p1) AS nodes1, nodes(p2) as nodes2
                 """.stripMargin
 
@@ -487,7 +487,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
                   |MATCH (a:A), (b:D)
                   |MATCH p1 = shortestPath((a)-[rs1:REL*]->(b))
                   |MATCH p2 = shortestPath((a)-[rs2:REL*]->(b))
-                  |WHERE ALL(n in nodes(p2) WHERE exists(n.name) or n.age > 50)
+                  |WHERE ALL(n in nodes(p2) WHERE n.name IS NOT NULL or n.age > 50)
                   |RETURN nodes(p1) AS nodes1, nodes(p2) as nodes2
                 """.stripMargin
 
@@ -504,8 +504,8 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
                   |MATCH (a:A), (b:D)
                   |MATCH p1 = shortestPath((a)-[rs1:REL*]->(b))
                   |MATCH p2 = shortestPath((a)-[rs2:REL*]->(b))
-                  |WHERE ALL(n in nodes(p2) WHERE exists(n.name) or n.age > 50)
-                  |AND NONE(r in relationships(p1) WHERE exists(r.blocked) OR NOT exists(r.likesLevel))
+                  |WHERE ALL(n in nodes(p2) WHERE n.name IS NOT NULL or n.age > 50)
+                  |AND NONE(r in relationships(p1) WHERE r.blocked IS NOT NULL OR r.likesLevel IS NULL)
                   |RETURN nodes(p1) AS nodes1, nodes(p2) as nodes2
                 """.stripMargin
 
@@ -521,7 +521,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val query = """PROFILE CYPHER
                   |MATCH (a:X), (b:Y)
                   |MATCH p = shortestPath((a)-[r:REL*]->(b))
-                  |WHERE ALL(r in relationships(p) WHERE type(r) = type(relationships(p)[0]) AND NOT exists(r.blocked))
+                  |WHERE ALL(r in relationships(p) WHERE type(r) = type(relationships(p)[0]) AND r.blocked IS NULL)
                   |RETURN nodes(p) AS nodes
                 """.stripMargin
 
@@ -536,7 +536,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val query = """PROFILE CYPHER
                   |MATCH (a:A), (b:A)
                   |MATCH p = shortestPath((a)-[r:REL*]->(b))
-                  |WHERE ALL(n in nodes(p) WHERE labels(n) = labels(nodes(p)[0]) AND exists(n.age))
+                  |WHERE ALL(n in nodes(p) WHERE labels(n) = labels(nodes(p)[0]) AND n.age IS NOT NULL)
                   |RETURN nodes(p) as nodes
                 """.stripMargin
 
@@ -553,8 +553,8 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val query = """PROFILE CYPHER
                   |MATCH (a:A), (b:A)
                   |MATCH p = shortestPath((a)-[r:REL*]->(b))
-                  |WHERE ALL(n in nodes(p) WHERE labels(n) = labels(nodes(p)[0]) AND exists(n.age))
-                  |AND ALL(r in relationships(p) WHERE type(r) = type(relationships(p)[0]) AND exists(r.likesLevel))
+                  |WHERE ALL(n in nodes(p) WHERE labels(n) = labels(nodes(p)[0]) AND n.age IS NOT NULL)
+                  |AND ALL(r in relationships(p) WHERE type(r) = type(relationships(p)[0]) AND r.likesLevel IS NOT NULL)
                   |RETURN nodes(p) as nodes
                 """.stripMargin
 
@@ -571,7 +571,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val query = """PROFILE CYPHER
                   |MATCH (a:X), (b:Y)
                   |MATCH p = shortestPath((a)-[rs:REL*]->(b))
-                  |WHERE ALL(r in relationships(p) WHERE NOT exists(r.blocked) AND a:X) AND NOT exists(b.property)
+                  |WHERE ALL(r in relationships(p) WHERE r.blocked IS NULL AND a:X) AND b.property IS NULL
                   |RETURN nodes(p) AS nodes
                 """.stripMargin
 
@@ -586,7 +586,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val query = """PROFILE CYPHER
                   |MATCH (a:A), (b:D)
                   |MATCH p = shortestPath((a)-[:REL*]->(b))
-                  |WHERE ALL(n in nodes(p) WHERE exists(n.name) AND a.name = 'Donald Duck') AND b.name = 'Daisy Duck'
+                  |WHERE ALL(n in nodes(p) WHERE n.name IS NOT NULL AND a.name = 'Donald Duck') AND b.name = 'Daisy Duck'
                   |RETURN nodes(p) AS nodes
                 """.stripMargin
 
@@ -601,7 +601,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val query = """PROFILE CYPHER
                   |MATCH (a:A), (b:D)
                   |MATCH p = shortestPath((a)-[rs:REL*]->(b))
-                  |WHERE ALL(n in nodes(p) WHERE (exists(n.name) OR exists(n.age)) AND a.name = 'Donald Duck')
+                  |WHERE ALL(n in nodes(p) WHERE (n.name IS NOT NULL OR n.age IS NOT NULL) AND a.name = 'Donald Duck')
                   |AND ALL(r in relationships(p) WHERE r.likesLevel > 10)
                   |AND b.name = 'Daisy Duck'
                   |RETURN nodes(p) AS nodes
@@ -617,7 +617,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
 
     val query = """PROFILE CYPHER
                   |MATCH p = shortestPath((a:X)-[rs:REL*]->(b:Y))
-                  |WHERE ALL(r in rs WHERE NOT exists(r.blocked))
+                  |WHERE ALL(r in rs WHERE r.blocked IS NULL)
                   |RETURN nodes(p) AS nodes
                 """.stripMargin
 

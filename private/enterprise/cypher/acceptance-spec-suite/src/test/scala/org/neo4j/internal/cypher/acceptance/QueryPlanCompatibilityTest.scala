@@ -55,7 +55,7 @@ class QueryPlanCompatibilityTest extends ExecutionEngineFunSuite with CypherComp
         |WITH 'Joe' as name
         |UNWIND [42,43,44] as age
         |MATCH (n:Person) WHERE n.name STARTS WITH name AND n.age >= age
-        |OPTIONAL MATCH (n)-[r:KNOWS]->(m) WHERE exists(r.since)
+        |OPTIONAL MATCH (n)-[r:KNOWS]->(m) WHERE r.since IS NOT NULL
         |RETURN count(r)
       """.stripMargin
     val expectedPlan = generateExpectedPlan(query)

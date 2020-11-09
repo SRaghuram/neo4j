@@ -1123,7 +1123,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       execute("DENY READ {name} ON GRAPH * NODES B (*) TO custom")
 
       // THEN: check read-only
-      executeOnDBMSDefault("joe", "soap", "MATCH (a:A) WHERE exists(a.name) RETURN a.name AS name") should be(0)
+      executeOnDBMSDefault("joe", "soap", "MATCH (a:A) WHERE a.name IS NOT NULL RETURN a.name AS name") should be(0)
 
       // THEN: two part query
       executeOnDBMSDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (a:A:B) REMOVE a:B WITH 1 AS ignore MATCH (a:A) RETURN a.name AS name", resultHandler = (row, _) => {
@@ -1139,7 +1139,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       }) should be(1)
 
       // THEN: check read-only after removal of denied label
-      executeOnDBMSDefault("joe", "soap", "MATCH (a:A) WHERE exists(a.name) RETURN a.name AS name", resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", "MATCH (a:A) WHERE a.name IS NOT NULL RETURN a.name AS name", resultHandler = (row, _) => {
         row.get("name") should be("a")
       }) should be(1)
     }
@@ -1192,7 +1192,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       execute("DENY READ {name} ON GRAPH * NODES B (*) TO custom")
 
       // THEN: read-only check
-      executeOnDBMSDefault("joe", "soap", "MATCH (a:A) WHERE exists(a.name) RETURN a.name AS name", requiredOperator = Some("NodeIndexScan")) should be(0)
+      executeOnDBMSDefault("joe", "soap", "MATCH (a:A) WHERE a.name IS NOT NULL RETURN a.name AS name",
+        requiredOperator = Some("NodeIndexScan")) should be(0)
 
       // THEN
       val query =
@@ -1200,13 +1201,13 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
            |MATCH (a:A)
            |REMOVE a:B
            |WITH 1 AS ignore
-           |MATCH (a:A) WHERE exists(a.name)
+           |MATCH (a:A) WHERE a.name IS NOT NULL
            |RETURN a.name AS name""".stripMargin
 
       executeOnDBMSDefault("joe", "soap", query, requiredOperator = Some("NodeIndexScan")) should be(0)
 
       // THEN: read-only check
-      executeOnDBMSDefault("joe", "soap", "MATCH (a:A) WHERE exists(a.name) RETURN a.name AS name", resultHandler = (row, _) => {
+      executeOnDBMSDefault("joe", "soap", "MATCH (a:A) WHERE a.name IS NOT NULL RETURN a.name AS name", resultHandler = (row, _) => {
         row.get("name") should be("a")
       }, requiredOperator = Some("NodeIndexScan")) should be(1)
     }

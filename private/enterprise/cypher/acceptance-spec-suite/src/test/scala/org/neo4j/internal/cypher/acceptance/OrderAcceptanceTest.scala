@@ -35,7 +35,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   }
 
   test("should sort first unaliased and then aliased columns in the right order") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (a:A) WITH a, EXISTS(a.born) AS bday ORDER BY a.name, bday RETURN a.name, bday")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (a:A) WITH a, a.born IS NOT NULL AS bday ORDER BY a.name, bday RETURN a.name, bday")
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")
       .withOrder(ProvidedOrder.asc(prop("a", "name")).asc(varFor("bday")))
@@ -51,7 +51,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   }
 
   test("should sort first aliased and then unaliased columns in the right order") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (a:A) WITH a, EXISTS(a.born) AS bday ORDER BY bday, a.name RETURN a.name, bday")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (a:A) WITH a, a.born IS NOT NULL AS bday ORDER BY bday, a.name RETURN a.name, bday")
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")
       .withOrder(ProvidedOrder.asc(varFor("bday")).asc(prop("a", "name")))

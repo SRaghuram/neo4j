@@ -22,9 +22,8 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSu
 import org.neo4j.monitoring.Monitors
 import org.scalatest.matchers.Matcher
 
-import scala.collection.JavaConverters.iterableAsScalaIterableConverter
-import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 import scala.collection.JavaConverters.asScalaSetConverter
+import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 import scala.collection.mutable
 
 /*
@@ -474,7 +473,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
   test("Shortest path from first to last node with NONE predicate") {
     val results = executeUsingCostPlannerOnly(
       s"""PROFILE MATCH p = shortestPath((src:$topLeft)-[*]-(dst:$bottomRight))
-         |WHERE NONE(r in relationships(p) WHERE exists(r.blocked))
+         |WHERE NONE(r in relationships(p) WHERE r.blocked IS NOT NULL)
          |RETURN nodes(p) AS nodes""".stripMargin)
 
     val result = results.columnAs[Seq[Node]]("nodes").toList
@@ -486,7 +485,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
   test("Shortest path from first to last node with NONE predicate with a composite predicate") {
     val results = executeUsingCostPlannerOnly(
       s"""PROFILE MATCH p = shortestPath((src:$topLeft)-[*]-(dst:$bottomRight))
-         |WHERE NONE(r in relationships(p) WHERE exists(r.blocked) AND src:$bottomLeft) AND src:$topLeft
+         |WHERE NONE(r in relationships(p) WHERE r.blocked IS NOT NULL AND src:$bottomLeft) AND src:$topLeft
          |RETURN nodes(p) AS nodes""".stripMargin)
 
     val result = results.columnAs[Seq[Node]]("nodes").toList

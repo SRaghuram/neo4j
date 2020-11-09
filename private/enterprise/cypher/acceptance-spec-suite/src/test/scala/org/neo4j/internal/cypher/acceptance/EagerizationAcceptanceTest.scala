@@ -16,10 +16,10 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.PlanComparisonStrategy
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.TestConfiguration
+import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections
 import org.neo4j.internal.kernel.api.procs
-import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature
 import org.neo4j.kernel.api.ResourceTracker
@@ -586,7 +586,7 @@ class EagerizationAcceptanceTest
         |MATCH (a)-[t:T]->(b)
         |DELETE t
         |MERGE (a)-[t2:T]->(b)
-        |RETURN exists(t2.id)
+        |RETURN t2.id IS NOT NULL
       """.stripMargin
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
@@ -594,7 +594,7 @@ class EagerizationAcceptanceTest
     assertStats(result, relationshipsDeleted = 2, relationshipsCreated = 1)
 
     // Merge should not be able to match on deleted relationship
-    result.toList should equal(List(Map("exists(t2.id)" -> false), Map("exists(t2.id)" -> false)))
+    result.toList should equal(List(Map("t2.id IS NOT NULL" -> false), Map("t2.id IS NOT NULL" -> false)))
   }
 
   test("should introduce eagerness between MATCH and DELETE + DELETE and MERGE for relationship, direction reversed") {
@@ -625,13 +625,13 @@ class EagerizationAcceptanceTest
         |MATCH (a)-[t:T]->(b)
         |DELETE t
         |MERGE (a)-[t2:T2]->(b)
-        |RETURN exists(t2.id)
+        |RETURN t2.id IS NOT NULL
       """.stripMargin
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(2, optimalEagerCount = 1))
     assertStats(result, relationshipsDeleted = 2, relationshipsCreated = 1)
-    result.toList should equal(List(Map("exists(t2.id)" -> false), Map("exists(t2.id)" -> false)))
+    result.toList should equal(List(Map("t2.id IS NOT NULL" -> false), Map("t2.id IS NOT NULL" -> false)))
   }
 
   test("should introduce eagerness between DELETE and MERGE for relationships when there is a read matching the merge") {
@@ -644,13 +644,13 @@ class EagerizationAcceptanceTest
         |MATCH (a)-[t]->(b)
         |DELETE t
         |MERGE (a)-[t2:T2]->(b)
-        |RETURN exists(t2.id)
+        |RETURN t2.id IS NOT NULL
       """.stripMargin
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(2, optimalEagerCount = 1))
     assertStats(result, relationshipsDeleted = 2, relationshipsCreated = 1)
-    result.toList should equal(List(Map("exists(t2.id)" -> false), Map("exists(t2.id)" -> false)))
+    result.toList should equal(List(Map("t2.id IS NOT NULL" -> false), Map("t2.id IS NOT NULL" -> false)))
   }
 
   test("should introduce eagerness between DELETE and MERGE for relationships when there is a read matching the merge, direction reversed") {
@@ -2024,7 +2024,7 @@ class EagerizationAcceptanceTest
     relate(createNode(), createNode(), "prop" -> 42)
     relate(createNode(), createNode())
 
-    val query = "MATCH ()-[r]-() WHERE exists(r.prop) SET r.prop = 'foo' RETURN count(*)"
+    val query = "MATCH ()-[r]-() WHERE r.prop IS NOT NULL SET r.prop = 'foo' RETURN count(*)"
 
     val result = executeWith(Configs.InterpretedAndSlotted, query)
 
@@ -2036,7 +2036,7 @@ class EagerizationAcceptanceTest
     relate(createNode(), createNode(), "prop" -> 42)
     relate(createNode(), createNode())
 
-    val query = "MATCH ()-[r]-() WHERE exists(r.prop) SET r.prop = $null RETURN count(*)"
+    val query = "MATCH ()-[r]-() WHERE r.prop IS NOT NULL SET r.prop = $null RETURN count(*)"
     val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map("null" -> null),
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
 
@@ -2049,7 +2049,7 @@ class EagerizationAcceptanceTest
     relate(createNode(), createNode(), "prop" -> 42)
     relate(createNode(), createNode())
 
-    val query = "MATCH ()-[r]-() WHERE exists(r.prop) REMOVE r.prop  RETURN count(*)"
+    val query = "MATCH ()-[r]-() WHERE r.prop IS NOT NULL REMOVE r.prop  RETURN count(*)"
     val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map("null" -> null),
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
 
@@ -2075,7 +2075,7 @@ class EagerizationAcceptanceTest
     relate(createNode(), createNode(), "prop1" -> 42)
     relate(createNode(), createNode())
 
-    val query = "MATCH ()-[r]-() WHERE exists(r.prop1) SET r.prop2 = 'foo'"
+    val query = "MATCH ()-[r]-() WHERE r.prop1 IS NOT NULL SET r.prop2 = 'foo'"
 
     assertStats(executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(0)), propertiesWritten = 2)
@@ -2992,7 +2992,7 @@ class EagerizationAcceptanceTest
 
   test("matching node property using EXISTS and writing other node should be eager") {
     relate(createNode(Map("prop" -> "5")), createNode())
-    val query = "MATCH (n)-[r]-(m) WHERE exists(n.prop) SET m.prop='5' RETURN count(*)"
+    val query = "MATCH (n)-[r]-(m) WHERE n.prop IS NOT NULL SET m.prop='5' RETURN count(*)"
     val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     assertStats(result, propertiesWritten = 1)

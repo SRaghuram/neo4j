@@ -1536,7 +1536,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     createLabeledNode(Map("prop1" -> DurationValue.duration(0, 0, 1800, 0).asObject(), "prop2" -> "kangaroo"), "Awesome")
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-      "MATCH (n:Awesome) WHERE n.prop1 STARTS WITH 'f' AND exists(n.prop2) RETURN n.prop1, n.prop2",
+      "MATCH (n:Awesome) WHERE n.prop1 STARTS WITH 'f' AND n.prop2 IS NOT NULL RETURN n.prop1, n.prop2",
       executeBefore = createMe,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
@@ -1694,7 +1694,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     // When
     val query =
       """MATCH (n:User)
-        |WHERE exists(n.name) AND distance(n.city, point({x: 180, y: 5.58, crs: 'WGS-84'})) <= 5000
+        |WHERE n.name IS NOT NULL AND distance(n.city, point({x: 180, y: 5.58, crs: 'WGS-84'})) <= 5000
         |RETURN n.name, n.city
         |""".stripMargin
 
@@ -1773,7 +1773,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     )
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-      "MATCH (n:Awesome) WHERE n.prop1 > 44 AND exists(n.prop2) RETURN COUNT(n) as c",
+      "MATCH (n:Awesome) WHERE n.prop1 > 44 AND n.prop2 IS NOT NULL RETURN COUNT(n) as c",
       executeBefore = createMe,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN

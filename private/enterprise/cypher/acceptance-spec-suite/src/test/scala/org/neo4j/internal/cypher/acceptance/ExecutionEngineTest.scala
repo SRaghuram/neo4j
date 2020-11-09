@@ -318,7 +318,7 @@ return a""")
   test("shouldHandleCheckingThatANodeDoesNotHaveAProp") {
     val a = createNode()
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (a) where id(a) = 0 and not exists(a.propertyDoesntExist) return a")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (a) where id(a) = 0 and a.propertyDoesntExist IS NULL return a")
     result.toList should equal(List(Map("a" -> a)))
   }
 

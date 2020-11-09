@@ -89,7 +89,7 @@ class TriadicSelectionAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     val queryWithPredicates = """
                                 |MATCH (a:Person)-[:FRIEND]->(b:Person)-[:FRIEND]->(c:Person)
                                 |USING INDEX a:Person(name)
-                                |WHERE a.name = 'a' AND b.age = 39 AND exists(c.name) AND (a)-[:FRIEND]->(c)
+                                |WHERE a.name = 'a' AND b.age = 39 AND c.name IS NOT NULL AND (a)-[:FRIEND]->(c)
                                 |RETURN a.name AS l, b.name as m, c.name AS r""".stripMargin
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, queryWithPredicates, planComparisonStrategy = noTriadic)
 

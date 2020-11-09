@@ -55,7 +55,7 @@ trait IndexingTestSupport extends ExecutionEngineFunSuite with CypherComparisonS
   }
 
   protected def assertScanMatch(nodes: Node*): Unit = {
-    val query = s"MATCH (n:$LABEL) WHERE EXISTS(n.$PROPERTY) RETURN n"
+    val query = s"MATCH (n:$LABEL) WHERE n.$PROPERTY IS NOT NULL RETURN n"
     testRead(query, Map(), "NodeIndexScan", nodes)
   }
 

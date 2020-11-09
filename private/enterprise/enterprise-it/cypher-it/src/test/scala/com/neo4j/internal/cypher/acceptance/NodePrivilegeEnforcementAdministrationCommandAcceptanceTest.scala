@@ -1718,7 +1718,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     val queryMatch = "MATCH (n) RETURN n.foo ORDER BY n.foo"
     val queryEquals = "MATCH (n:A) WHERE n.foo = 5 RETURN n.foo ORDER BY n.foo"
     val queryRange = "MATCH (n:A) WHERE n.foo < 8 RETURN n.foo ORDER BY n.foo"
-    val queryExists = "MATCH (n:A) WHERE exists(n.foo) RETURN n.foo ORDER BY n.foo"
+    val queryExists = "MATCH (n:A) WHERE n.foo IS NOT NULL RETURN n.foo ORDER BY n.foo"
 
     val expectedMatch = List(1, 4, null, null, null)
     val expectedRangeExists = List(1, 4)
@@ -1765,9 +1765,9 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:A {foo: 1, prop: 6}), (:B {foo: 2, prop: 7}), (:C {foo: 3, prop: 8}), (:A:B {foo: 4, prop: 9}), (:A:C {foo: 5, prop: 10})")
 
-    val queryExists = "MATCH (n:A) WHERE exists(n.foo) AND exists(n.prop) RETURN n.foo, n.prop"
+    val queryExists = "MATCH (n:A) WHERE n.foo IS NOT NULL AND n.prop IS NOT NULL RETURN n.foo, n.prop"
     val queryEquals = "MATCH (n:A) WHERE n.foo = 5 AND n.prop = 10 RETURN n.foo, n.prop"
-    val queryRange = "MATCH (n:A) WHERE n.foo < 5 AND exists(n.prop) RETURN n.foo, n.prop"
+    val queryRange = "MATCH (n:A) WHERE n.foo < 5 AND n.prop IS NOT NULL RETURN n.foo, n.prop"
 
     val expectedRangeExists = (4, 9)
     val expectedEquals = () => fail("should get no rows")
@@ -1812,9 +1812,9 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:A {foo: 1, prop: 6}), (:B {foo: 2, prop: 7}), (:C {foo: 3, prop: 8}), (:A:B {foo: 4, prop: 9}), (:A:C {foo: 5, prop: 10})")
 
-    val queryExists = "MATCH (n:A) WHERE exists(n.foo) AND exists(n.prop) RETURN n.foo, n.prop ORDER BY n.foo"
+    val queryExists = "MATCH (n:A) WHERE n.foo IS NOT NULL AND n.prop IS NOT NULL RETURN n.foo, n.prop ORDER BY n.foo"
     val queryEquals = "MATCH (n:A) WHERE n.foo = 5 AND n.prop = 10 RETURN n.foo, n.prop ORDER BY n.foo"
-    val queryRange = "MATCH (n:A) WHERE n.foo < 5 AND exists(n.prop) RETURN n.foo, n.prop ORDER BY n.foo"
+    val queryRange = "MATCH (n:A) WHERE n.foo < 5 AND n.prop IS NOT NULL RETURN n.foo, n.prop ORDER BY n.foo"
 
     val expectedRangeExists = List((1, 6), (4, 9))
     val expectedEquals = (_: Int) => fail("should get no rows")
@@ -1910,10 +1910,10 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
         })
     }
 
-    // index with exists
+    // index with is not null
     Seq("user1" -> 2, "user2" -> 1, "user3" -> 1).foreach {
       case (user, count) =>
-        val query = "MATCH (n:A) WHERE exists(n.foo) RETURN count(n)"
+        val query = "MATCH (n:A) WHERE n.foo IS NOT NULL RETURN count(n)"
         executeOnDBMSDefault(user, "secret", query, resultHandler = (row, _) => {
           withClue(s"User '$user' should get count $count for query '$query'") {
             row.get("count(n)") should be(count)

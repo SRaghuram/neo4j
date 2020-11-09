@@ -32,7 +32,7 @@ class NaNAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSup
     executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:L) WHERE n.x < 0 RETURN n.x").toList should be(empty)
     executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:L) WHERE n.x <= 0 RETURN n.x").toList should be(empty)
     executeWith(Configs.All, "MATCH (n:L) WHERE n.x = 0.0/0.0 RETURN n.x").toList should be(empty)
-    executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:L) WHERE EXISTS(n.x) RETURN count(n.x)").toList should be(List(Map("count(n.x)" -> 1)))
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:L) WHERE n.x IS NOT NULL RETURN count(n.x)").toList should be(List(Map("count(n.x)" -> 1)))
     executeWith(Configs.All, "MATCH (n:L) WHERE n.x <> 0.0/0.0 RETURN count(n.x)").toList should be(List(Map("count(n.x)" -> 1)))
   }
 
@@ -47,7 +47,7 @@ class NaNAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSup
     executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:L) WHERE n.x < 0 RETURN n.x").toList should be(empty)
     executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:L) WHERE n.x <= 0 RETURN n.x").toList should be(empty)
     executeWith(Configs.All, "MATCH (n:L) WHERE n.x = 0.0/0.0 RETURN n.x").toList should be(empty)
-    executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:L) WHERE EXISTS(n.x) RETURN count(n.x)").toList should be(List(Map("count(n.x)" -> 1)))
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:L) WHERE n.x IS NOT NULL RETURN count(n.x)").toList should be(List(Map("count(n.x)" -> 1)))
     executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:L) WHERE n.x <> 0.0/0.0 RETURN count(n.x)").toList should be(List(Map("count(n.x)" -> 1)))
   }
 
