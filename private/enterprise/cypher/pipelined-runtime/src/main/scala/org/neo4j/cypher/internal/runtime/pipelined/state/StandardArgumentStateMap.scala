@@ -40,7 +40,7 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: A
       controllerList.foreach((l, v) => fun(l, v))
 
     override def valuesIterator(): util.Iterator[AbstractArgumentStateMap.StateController[STATE]] =
-      controllerList.iterator()
+      controllerList.valuesIterator()
 
     override def remove(key: Long): AbstractArgumentStateMap.StateController[STATE] =
       controllerList.remove(key)
