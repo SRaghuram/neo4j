@@ -42,7 +42,6 @@ import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.SessionExpiredException;
 import org.neo4j.driver.exceptions.TransientException;
 import org.neo4j.internal.helpers.collection.Iterators;
-import org.neo4j.test.extension.DisabledWithQueryRouting;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.forceReelection;
@@ -145,7 +144,6 @@ class BoltCausalClusteringIT
             } );
         }
 
-        @DisabledWithQueryRouting
         @Test
         void shouldNotBeAbleToWriteOnAReadSession() throws Exception
         {
@@ -154,10 +152,7 @@ class BoltCausalClusteringIT
                 try ( Driver driver = makeDriver( oldLeader.directURI() ); Session session = driver.session( builder().withDefaultAccessMode( READ ).build() ) )
                 {
                     var ex = assertThrows( ClientException.class, () -> session.run( "CREATE (n:Person {name: 'Jim'})" ).consume() );
-                    assertEquals(
-                            "No write operations are allowed directly on this database. Writes must pass through the leader. The role of this " +
-                            "server is: FOLLOWER",
-                            ex.getMessage() );
+                    assertEquals( "Writing in read access mode not allowed. Attempted write to internal graph 0 (neo4j)", ex.getMessage() );
                     return null;
                 }
             } );
