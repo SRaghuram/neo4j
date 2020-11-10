@@ -259,8 +259,8 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   test("floating point parameters should be coerced to int for procedures") {
     // In Javascript every number is a floating point value unless specifically cast otherwise. Thus we need to coerce.
     // Yes, even floats that are not ints like 0.5
-    executeWith(Configs.InterpretedAndSlotted, "CALL db.awaitIndexes($param)", params = Map("param" -> 300.0f))
-    executeWith(Configs.InterpretedAndSlotted, "CALL db.awaitIndexes($param)", params = Map("param" -> 300.5f))
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "CALL db.awaitIndexes($param)", params = Map("param" -> 300.0f))
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "CALL db.awaitIndexes($param)", params = Map("param" -> 300.5f))
   }
 
   test("floating point parameters should be coerced to int for functions") {
