@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.logical.plans.ConditionalApply
 import org.neo4j.cypher.internal.logical.plans.DirectedRelationshipByIdSeek
 import org.neo4j.cypher.internal.logical.plans.Distinct
 import org.neo4j.cypher.internal.logical.plans.EagerLogicalPlan
+import org.neo4j.cypher.internal.logical.plans.EmptyResult
 import org.neo4j.cypher.internal.logical.plans.ErrorPlan
 import org.neo4j.cypher.internal.logical.plans.Expand
 import org.neo4j.cypher.internal.logical.plans.FindShortestPaths
@@ -165,7 +166,8 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
            _: VarExpand |
            _: TriadicBuild |
            _: TriadicFilter |
-           _: PreserveOrder
+           _: PreserveOrder |
+           _: EmptyResult
       => breakOnFuseableOperator(lp, outerApplyPlanId, fuseIndex)
 
       // Void procedures preserve cardinality and are always non-breaking

@@ -569,7 +569,8 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
            _: NonFuseable |
            _: TriadicBuild |
            _: TriadicFilter |
-           _: PreserveOrder
+           _: PreserveOrder |
+           _: EmptyResult
       =>
 
       case p: ProjectingPlan =>

@@ -72,6 +72,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshi
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctPrimitiveOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctSinglePrimitiveOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.EmptyResultOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandIntoOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.FilterOperator
@@ -715,6 +716,10 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                                     lazyTypes,
                                     length.isSimple)
 
+      case _: plans.EmptyResult =>
+        val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStateBufferVariant].argumentStateMapId
+        EmptyResultOperator(WorkIdentity.fromPlan(plan)).reducer(argumentStateMapId, id)
+
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException otherwise)
         interpretedPipesFallbackPolicy.breakOn(plan)
@@ -947,7 +952,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                 .mapper(argumentSlotOffset, argumentStateMapId, expressions, id)
             }
 
-
+          case _: plans.EmptyResult =>
+            EmptyResultOperator(WorkIdentity.fromPlan(plan, "Pre")).mapper(argumentSlotOffset, bufferId)
         }
     }
   }
