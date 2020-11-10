@@ -35,6 +35,10 @@ object TextValueSpecificationTest extends Properties("TextValue") with Configura
     stringValue(x).length() == utf8Value(x.getBytes(StandardCharsets.UTF_8)).length()
   }
 
+  property("isEmpty") = forAll { x: String =>
+    stringValue(x).isEmpty() == utf8Value(x.getBytes(StandardCharsets.UTF_8)).isEmpty()
+  }
+
   property("hashCode") = forAll { x: String =>
     stringValue(x).hashCode() == utf8Value(x.getBytes(StandardCharsets.UTF_8)).hashCode()
   }
