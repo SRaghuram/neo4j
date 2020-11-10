@@ -26,6 +26,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.SystemNanoClock;
@@ -78,7 +79,7 @@ public final class OnlineBackupExecutor
 
         try ( BackupsLifecycle lifecycle = BackupsLifecycle.startLifecycle( storageEngineFactory, fs, internalLogProvider, clock, config, pageCacheTracer ) )
         {
-            var backupClient = backupClient( context, pageCacheTracer, lifecycle );
+            var backupClient = backupClient( context, pageCacheTracer, lifecycle, lifecycle.getJobScheduler() );
             var recoveryService = recoveryService( context, lifecycle );
 
             var dbNames = getAllDatabaseNames( backupClient, context );
@@ -149,10 +150,11 @@ public final class OnlineBackupExecutor
         return new BackupRecoveryService( fs, lifecycle.getPageCache(), context.getConfig(), context.getMemoryTracker() );
     }
 
-    private BackupClient backupClient( OnlineBackupContext context, PageCacheTracer pageCacheTracer, BackupsLifecycle lifecycle )
+    private BackupClient backupClient( OnlineBackupContext context, PageCacheTracer pageCacheTracer, BackupsLifecycle lifecycle,
+                                       JobScheduler jobScheduler )
     {
         return new BackupClient( internalLogProvider, lifecycle.getCatchupClientFactory(), fs, lifecycle.getPageCache(), pageCacheTracer, monitors,
-                                 context.getConfig(), storageEngineFactory, clock );
+                                 context.getConfig(), storageEngineFactory, clock, jobScheduler );
     }
 
     private BackupConsistencyChecker consistencyChecker( OnlineBackupContext context )

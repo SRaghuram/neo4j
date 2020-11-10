@@ -31,7 +31,6 @@ import java.util.function.BiFunction;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -43,10 +42,13 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.scheduler.Group;
+import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.time.SystemNanoClock;
 
+import static org.neo4j.internal.helpers.IncreasingTimeoutStrategy.exponential;
 import static org.neo4j.monitoring.PanicEventGenerator.NO_OP;
 
 public class BackupClient
@@ -57,19 +59,20 @@ public class BackupClient
 
     public BackupClient( LogProvider logProvider, CatchupClientFactory catchupClientFactory, FileSystemAbstraction fsa, PageCache pageCache,
                          PageCacheTracer pageCacheTracer, Monitors monitors,
-                         Config config, StorageEngineFactory storageEngineFactory, SystemNanoClock clock )
+                         Config config, StorageEngineFactory storageEngineFactory, SystemNanoClock clock, JobScheduler jobScheduler )
     {
         this.log = logProvider.getLog( getClass() );
         this.catchupClientFactory = catchupClientFactory;
-        var backoffStrategy =
-                new ExponentialBackoffStrategy( 1, config.get( CausalClusteringInternalSettings.store_copy_backoff_max_wait ).toMillis(),
-                                                TimeUnit.MILLISECONDS );
+        var backoffStrategy = exponential( 1, config.get( CausalClusteringInternalSettings.store_copy_backoff_max_wait ).toMillis(),
+                                           TimeUnit.MILLISECONDS );
         this.remoteStoreFactory = ( storeCopyClientMonitor, namedDatabaseId ) ->
         {
             var childMonitor = new Monitors( monitors );
             childMonitor.addMonitorListener( storeCopyClientMonitor );
             var txPullClient = new TxPullClient( catchupClientFactory, namedDatabaseId, () -> childMonitor, logProvider );
-            var storeCopyClient = new StoreCopyClient( catchupClientFactory, namedDatabaseId, () -> childMonitor, logProvider, backoffStrategy );
+            final var storeCopyExecutor = jobScheduler.executor( Group.STORE_COPY_CLIENT );
+            var storeCopyClient =
+                    new StoreCopyClient( catchupClientFactory, namedDatabaseId, () -> childMonitor, logProvider, storeCopyExecutor, backoffStrategy, clock );
             var transactionLogFactory = new TransactionLogCatchUpFactory();
             var databaseHealth = new DatabaseHealth( NO_OP, logProvider.getLog( BackupClient.class ) );
             return new RemoteStore( logProvider, fsa, pageCache,

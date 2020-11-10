@@ -86,6 +86,7 @@ com.neo4j.configuration.CausalClusteringSettings::status_auth_enabled org.neo4j.
 com.neo4j.configuration.CausalClusteringSettings::status_throughput_window org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
 com.neo4j.configuration.CausalClusteringSettings::store_copy_chunk_size org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
 com.neo4j.configuration.CausalClusteringSettings::store_copy_max_retry_time_per_request org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.CausalClusteringSettings::store_copy_parallelism org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
 com.neo4j.configuration.CausalClusteringSettings::term_state_size org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
 com.neo4j.configuration.CausalClusteringSettings::transaction_advertised_address org.neo4j.graphdb.config.Setting<org.neo4j.configuration.helpers.SocketAddress> public static final
 com.neo4j.configuration.CausalClusteringSettings::transaction_listen_address org.neo4j.graphdb.config.Setting<org.neo4j.configuration.helpers.SocketAddress> public static final

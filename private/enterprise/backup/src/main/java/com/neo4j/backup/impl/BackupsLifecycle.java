@@ -72,6 +72,11 @@ public class BackupsLifecycle implements AutoCloseable
         return pageCache;
     }
 
+    public JobScheduler getJobScheduler()
+    {
+        return jobScheduler;
+    }
+
     public void close() throws Exception
     {
         catchupClientFactory.stop();

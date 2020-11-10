@@ -78,10 +78,10 @@ class BackupClientIT
         lifecycle = BackupsLifecycle.startLifecycle( new RecordStorageEngineFactory(), testDirectory.getFileSystem(), NullLogProvider.nullLogProvider(),
                 Clocks.nanoClock(),
                 Config.defaults(), PageCacheTracer.NULL );
-        backupClient = new BackupClient( NullLogProvider.nullLogProvider(), lifecycle.getCatchupClientFactory(), testDirectory.getFileSystem(), pageCache,
-                PageCacheTracer.NULL, new Monitors(), Config.defaults(), new RecordStorageEngineFactory(), Clocks.nanoClock() );
-
         scheduler = new ThreadPoolJobScheduler();
+        backupClient = new BackupClient( NullLogProvider.nullLogProvider(), lifecycle.getCatchupClientFactory(), testDirectory.getFileSystem(), pageCache,
+                                         PageCacheTracer.NULL, new Monitors(), Config.defaults(), new RecordStorageEngineFactory(), Clocks.nanoClock(),
+                                         scheduler );
         catchupServer = CatchupServerBuilder.builder()
                 .catchupServerHandler( new MultiDatabaseCatchupServerHandler( defaultDatabaseAPI.getDependencyResolver().resolveDependency(
                         DatabaseManager.class ), defaultDatabaseAPI.getDependencyResolver().resolveDependency( DatabaseStateService.class ),

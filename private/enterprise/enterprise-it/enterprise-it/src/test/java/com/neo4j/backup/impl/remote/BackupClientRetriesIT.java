@@ -148,8 +148,8 @@ class BackupClientRetriesIT
         monitors = new Monitors();
         backupClient =
                 new BackupClient( logProvider, channelBreakingCatchupFactory, fs, pageCache, PageCacheTracer.NULL, monitors, config,
-                        storageEngineFactory,
-                        Clocks.nanoClock() );
+                                  storageEngineFactory,
+                                  Clocks.nanoClock(), scheduler );
     }
 
     @AfterEach

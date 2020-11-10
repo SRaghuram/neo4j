@@ -243,6 +243,11 @@ public class CausalClusteringSettings implements SettingsDeclaration
             newBuilder( "causal_clustering.command_applier_parallelism", INT, min( getRuntime().availableProcessors() * 2, 8 ) )
                     .addConstraint( min( 1 ) ).build();
 
+    @Description( "Limits amount of global threads for store copy." )
+    public static final Setting<Integer> store_copy_parallelism =
+            newBuilder( "causal_clustering.store_copy_parallelism", INT, min( getRuntime().availableProcessors() * 2, 8 ) )
+                    .addConstraint( min( 1 ) ).build();
+
     /**
      * Creates absolute path on the first filesystem root. This will be `/` on Unix but arbitrary on Windows. If filesystem roots cannot be listed then `//`
      * will be used - this will be resolved to `/` on Unix and `\\` (a UNC network path) on Windows. An absolute path is always needed for validation, even

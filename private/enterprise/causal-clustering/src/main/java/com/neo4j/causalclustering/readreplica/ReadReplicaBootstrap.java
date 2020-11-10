@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
-import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
@@ -31,6 +30,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StoreId;
 
+import static com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupComponents;
 import static java.lang.String.format;
 
 class ReadReplicaBootstrap
@@ -42,12 +42,12 @@ class ReadReplicaBootstrap
     private final DatabaseStartAborter databaseStartAborter;
     private final ClusterInternalDbmsOperator internalOperator;
     private final TopologyService topologyService;
-    private final Supplier<CatchupComponentsRepository.CatchupComponents> catchupComponentsSupplier;
+    private final Supplier<CatchupComponents> catchupComponentsSupplier;
     private final ReadReplicaDatabaseContext databaseContext;
 
     ReadReplicaBootstrap( ReadReplicaDatabaseContext databaseContext, UpstreamDatabaseStrategySelector selectionStrategy, LogProvider debugLogProvider,
-            LogProvider userLogProvider, TopologyService topologyService, Supplier<CatchupComponentsRepository.CatchupComponents> catchupComponentsSupplier,
-            ClusterInternalDbmsOperator internalOperator, DatabaseStartAborter databaseStartAborter, TimeoutStrategy syncRetryStrategy )
+                          LogProvider userLogProvider, TopologyService topologyService, Supplier<CatchupComponents> catchupComponentsSupplier,
+                          ClusterInternalDbmsOperator internalOperator, DatabaseStartAborter databaseStartAborter, TimeoutStrategy syncRetryStrategy )
     {
         this.databaseContext = databaseContext;
         this.catchupComponentsSupplier = catchupComponentsSupplier;
@@ -161,7 +161,7 @@ class ReadReplicaBootstrap
     private void syncStoreWithUpstream( ReadReplicaDatabaseContext databaseContext, ServerId source )
             throws IOException, StoreIdDownloadFailedException, StoreCopyFailedException, TopologyLookupException, DatabaseShutdownException
     {
-        CatchupComponentsRepository.CatchupComponents catchupComponents = catchupComponentsSupplier.get();
+        CatchupComponents catchupComponents = catchupComponentsSupplier.get();
 
         if ( databaseContext.isEmpty() )
         {
@@ -173,7 +173,9 @@ class ReadReplicaBootstrap
 
             debugLog.info( "Copying store from upstream server %s", source );
             databaseContext.delete();
-            catchupComponents.storeCopyProcess().replaceWithStoreFrom( new CatchupAddressProvider.SingleAddressProvider( fromAddress ), storeId );
+
+            final var provider = new CatchupAddressProvider.UpstreamStrategyBasedAddressProvider( topologyService, selectionStrategy );
+            catchupComponents.storeCopyProcess().replaceWithStoreFrom( provider, storeId );
 
             debugLog.info( "Restarting local database after copy.", source );
         }

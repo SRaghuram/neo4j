@@ -24,8 +24,10 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
+import org.neo4j.internal.helpers.IncreasingTimeoutStrategy;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.scheduler.Group;
 import org.neo4j.storageengine.api.StoreId;
 
 import static com.neo4j.causalclustering.catchup.storecopy.TerminationCondition.CONTINUE_INDEFINITELY;
@@ -62,8 +64,10 @@ class CatchupClientsWrapper
             SocketAddress socketAddress )
     {
         var monitors = RaftMonitors.create( module.getGlobalMonitors(), module.getGlobalDependencies() );
-        var backupStrategy = new ConstantTimeTimeoutStrategy( 5, TimeUnit.SECONDS );
-        this.storeCopyClient = new StoreCopyClient( catchupClientFactory, databaseId, () -> monitors, logProvider, backupStrategy );
+        final var timeoutStrategy = new IncreasingTimeoutStrategy( 100, 5000, TimeUnit.MILLISECONDS, i -> i + 100 );
+        final var storeCopyExecutor = module.getJobScheduler().executor( Group.STORE_COPY_CLIENT );
+        this.storeCopyClient = new StoreCopyClient( catchupClientFactory, databaseId, () -> monitors, logProvider, storeCopyExecutor, timeoutStrategy,
+                                                    module.getGlobalClock() );
         this.txPullClient = new TxPullClient( catchupClientFactory, databaseId, () -> monitors, logProvider );
         this.catchupAddressProvider = new CatchupAddressProvider.SingleAddressProvider( socketAddress );
         var log = logProvider.getLog( getClass() );

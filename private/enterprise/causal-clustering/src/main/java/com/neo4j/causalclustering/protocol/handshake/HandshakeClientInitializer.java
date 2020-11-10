@@ -5,8 +5,6 @@
  */
 package com.neo4j.causalclustering.protocol.handshake;
 
-import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
-import org.neo4j.internal.helpers.TimeoutStrategy;
 import com.neo4j.causalclustering.messaging.SimpleNettyChannel;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
@@ -20,6 +18,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.neo4j.internal.helpers.IncreasingTimeoutStrategy;
+import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -49,7 +49,7 @@ public class HandshakeClientInitializer extends ChannelInitializer<SocketChannel
         this.timeout = handshakeTimeout;
         this.protocolInstaller = protocolInstallerRepository;
         this.pipelineBuilderFactory = pipelineBuilderFactory;
-        this.handshakeDelay = new ExponentialBackoffStrategy( 1, 2000, MILLISECONDS );
+        this.handshakeDelay = IncreasingTimeoutStrategy.exponential( 1, 2000, MILLISECONDS );
     }
 
     @Override

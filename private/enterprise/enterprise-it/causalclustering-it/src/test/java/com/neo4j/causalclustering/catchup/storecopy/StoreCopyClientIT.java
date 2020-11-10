@@ -51,6 +51,7 @@ import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.Inject;
@@ -60,6 +61,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
+import org.neo4j.time.Clocks;
 
 import static java.lang.Math.toIntExact;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -71,6 +73,7 @@ import static org.neo4j.io.ByteUnit.kibiBytes;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 import static org.neo4j.logging.AssertableLogProvider.Level.WARN;
 import static org.neo4j.logging.LogAssertions.assertThat;
+import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @TestDirectoryExtension
 @ExtendWith( {SuppressOutputExtension.class, LifeExtension.class} )
@@ -128,7 +131,8 @@ class StoreCopyClientIT
 
         ConstantTimeTimeoutStrategy storeCopyBackoffStrategy = new ConstantTimeTimeoutStrategy( 1, TimeUnit.MILLISECONDS );
 
-        storeCopyClient = new StoreCopyClient( catchupClient, randomNamedDatabaseId(), Monitors::new, logProvider, storeCopyBackoffStrategy );
+        storeCopyClient = new StoreCopyClient( catchupClient, randomNamedDatabaseId(), Monitors::new, logProvider,
+                                               scheduler.executor( Group.STORE_COPY_CLIENT ), storeCopyBackoffStrategy, Clocks.nanoClock() );
     }
 
     @Test
@@ -299,7 +303,7 @@ class StoreCopyClientIT
     }
 
     @Test
-    void shouldLogConnectionRefusedMessage()
+    void shouldLogConnectionRefusedMessage() throws InterruptedException
     {
         InMemoryStoreStreamProvider clientStoreFileStream = new InMemoryStoreStreamProvider();
         int port = PortAuthority.allocatePort();
@@ -323,10 +327,14 @@ class StoreCopyClientIT
         assertThrows( StoreCopyFailedException.class, () ->
                 storeCopyClient.copyStoreFiles( addressProvider, serverHandler.getStoreId(), clientStoreFileStream, Once::new, targetLocation ) );
 
-        assertThat( assertableLogProvider ).forClass( StoreCopyClient.class ).forLevel( WARN )
-                .assertExceptionForLogMessage( "StoreCopyRequest failed exceptionally" )
-                .hasStackTraceContaining( "Connection refused: " )
-                .hasStackTraceContaining( "localhost/127.0.0.1:" + port );
+        assertEventually( () -> assertableLogProvider, asr ->
+        {
+            assertThat( assertableLogProvider ).forClass( StoreCopyClient.class ).forLevel( WARN )
+                                               .assertExceptionForLogMessage( "StoreCopyRequest failed exceptionally" )
+                                               .hasStackTraceContaining( "Connection refused: " )
+                                               .hasStackTraceContaining( "localhost/127.0.0.1:" + port );
+            return true;
+        }, 2000, TimeUnit.MILLISECONDS );
     }
 
     @Test
@@ -353,7 +361,11 @@ class StoreCopyClientIT
         assertThrows( StoreCopyFailedException.class, () ->
                 storeCopyClient.copyStoreFiles( addressProvider, serverHandler.getStoreId(), clientStoreFileStream, Once::new, targetLocation ) );
 
-        assertThat( assertableLogProvider ).containsMessages( "Unable to resolve address for" );
+        assertEventually( () -> assertableLogProvider, asr ->
+        {
+            assertThat( asr ).containsMessages( "Unable to resolve address for" );
+            return true;
+        }, 2000, TimeUnit.MILLISECONDS );
         assertThat( assertableLogProvider ).containsMessages( catchupAddressResolutionException.getMessage() );
     }
 

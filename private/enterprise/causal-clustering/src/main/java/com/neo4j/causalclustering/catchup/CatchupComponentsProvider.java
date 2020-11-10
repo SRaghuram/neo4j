@@ -20,7 +20,6 @@ import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
-import com.neo4j.dbms.database.DbmsLogEntryWriterProvider;
 
 import java.util.List;
 import java.util.Optional;
@@ -29,7 +28,8 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.graphdb.factory.module.GlobalModule;
-import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
+import org.neo4j.internal.helpers.IncreasingTimeoutStrategy;
+import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
@@ -38,6 +38,7 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.time.Clocks;
@@ -68,7 +69,7 @@ public final class CatchupComponentsProvider
     private final PageCache pageCache;
     private final FileSystemAbstraction fileSystem;
     private final StorageEngineFactory storageEngineFactory;
-    private final ExponentialBackoffStrategy storeCopyBackoffStrategy;
+    private final TimeoutStrategy storeCopyBackoffStrategy;
     private final DatabaseTracers databaseTracers;
     private final MemoryTracker otherMemoryGlobalTracker;
     private final SystemNanoClock clock;
@@ -95,8 +96,9 @@ public final class CatchupComponentsProvider
         this.clock = globalModule.getGlobalClock();
         this.copiedStoreRecovery = globalLife.add(
                 new CopiedStoreRecovery( pageCache, databaseTracers, fileSystem, globalModule.getStorageEngineFactory(), otherMemoryGlobalTracker ) );
-        this.storeCopyBackoffStrategy = new ExponentialBackoffStrategy( 1,
-                config.get( CausalClusteringInternalSettings.store_copy_backoff_max_wait ).toMillis(), TimeUnit.MILLISECONDS );
+        final var maximumWait = config.get( CausalClusteringInternalSettings.store_copy_backoff_max_wait ).toMillis();
+        this.storeCopyBackoffStrategy = new IncreasingTimeoutStrategy( 100, maximumWait, TimeUnit.MILLISECONDS,
+                                                                                             i -> i + 100 );
         this.availabilityGuard = globalModule.getGlobalAvailabilityGuard();
     }
 
@@ -171,8 +173,9 @@ public final class CatchupComponentsProvider
     {
         var databaseLogProvider = clusteredDatabaseContext.database().getInternalLogProvider();
         var monitors = clusteredDatabaseContext.monitors();
-        var storeCopyClient = new StoreCopyClient( catchupClientFactory, clusteredDatabaseContext.databaseId(), () -> monitors,
-                databaseLogProvider, storeCopyBackoffStrategy );
+        final var storeCopyExecutor = scheduler.executor( Group.STORE_COPY_CLIENT );
+        var storeCopyClient = new StoreCopyClient( catchupClientFactory, clusteredDatabaseContext.databaseId(), () -> monitors, databaseLogProvider,
+                                                   storeCopyExecutor, storeCopyBackoffStrategy, clock );
         var transactionLogFactory = new TransactionLogCatchUpFactory();
         var txPullClient = new TxPullClient( catchupClientFactory, clusteredDatabaseContext.databaseId(), () -> monitors, databaseLogProvider );
 

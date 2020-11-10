@@ -22,7 +22,6 @@ import org.junit.jupiter.api.parallel.Resources;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -34,7 +33,9 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Queue;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -49,13 +50,19 @@ import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.scheduler.Group;
 import org.neo4j.storageengine.api.StoreId;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
+import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.CatchupClientV4;
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.CatchupClientV5;
@@ -63,6 +70,7 @@ import static com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientRes
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV4;
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV5;
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
+import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyClient.TransactionIdHandler;
 import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.E_TOO_FAR_BEHIND;
 import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.SUCCESS;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.CATCHUP;
@@ -79,6 +87,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -86,12 +95,17 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.test.assertion.Assert.assertEventually;
 
-@ExtendWith( SuppressOutputExtension.class )
+@ExtendWith( {SuppressOutputExtension.class, LifeExtension.class} )
 @ResourceLock( Resources.SYSTEM_OUT )
 class StoreCopyClientTest
 {
+    @Inject
+    private LifeSupport life;
+
     private static final long LAST_CHECKPOINTED_TX = 11;
+    private Executor executor;
 
     public static List<ApplicationProtocol> protocols()
     {
@@ -132,8 +146,12 @@ class StoreCopyClientTest
     @BeforeEach
     void setup()
     {
+        final var scheduler = life.add( new ThreadPoolJobScheduler() );
+        this.executor = scheduler.executor( Group.TESTING );
         backOffStrategy = new ConstantTimeTimeoutStrategy( 1, TimeUnit.MILLISECONDS );
-        subject = new StoreCopyClient( catchupClientFactory, databaseIdRepository.defaultDatabase(), () -> monitors, logProvider, backOffStrategy );
+        subject =
+                new StoreCopyClient( catchupClientFactory, databaseIdRepository.defaultDatabase(), () -> monitors, logProvider, executor, backOffStrategy,
+                                     Clocks.nanoClock() );
     }
 
     private void mockClient( ApplicationProtocol protocol ) throws Exception
@@ -162,16 +180,13 @@ class StoreCopyClientTest
     {
         // given
         mockClient( protocol );
-        TimeoutStrategy.Timeout mockedTimeout = mock( TimeoutStrategy.Timeout.class );
-        TimeoutStrategy backoffStrategy = mock( TimeoutStrategy.class );
-        when( backoffStrategy.newTimeout() ).thenReturn( mockedTimeout );
 
         subject = new StoreCopyClient(
                 catchupClientFactory,
                 databaseIdRepository.getRaw( DEFAULT_DATABASE_NAME ),
                 () -> monitors,
                 logProvider,
-                backoffStrategy );
+                executor, backOffStrategy, Clocks.nanoClock() );
 
         var files = new Path[]{Path.of( "fileA.txt" )};
         PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( files, LAST_CHECKPOINTED_TX );
@@ -199,16 +214,47 @@ class StoreCopyClientTest
         when( catchupAddressProvider.primary( any( NamedDatabaseId.class ) ) ).thenReturn( new SocketAddress( "foo", 0 ) );
         when( catchupAddressProvider.allSecondaries( any( NamedDatabaseId.class ) ) ).thenReturn( addresses );
 
-        var inOrder = Mockito.inOrder( catchupAddressProvider, mockedTimeout );
+        var inOrder = inOrder( catchupAddressProvider );
 
         // when
         subject.copyStoreFiles( catchupAddressProvider, expectedStoreId, expectedStoreFileStream, continueIndefinitely(), targetLocation );
 
         // then
-        Mockito.verify( catchupClientFactory, atLeast( 3 ) ).getClient( any( SocketAddress.class ), any( Log.class ) );
-        inOrder.verify( catchupAddressProvider, times( 1 ) ).allSecondaries( any( NamedDatabaseId.class ) );
-        inOrder.verify( mockedTimeout, times( 1 ) ).increment();
-        inOrder.verify( catchupAddressProvider, times( 1 ) ).allSecondaries( any( NamedDatabaseId.class ) );
+        verify( catchupClientFactory, atLeast( 3 ) ).getClient( any( SocketAddress.class ), any( Log.class ) );
+        inOrder.verify( catchupAddressProvider, times( 4 ) ).allSecondaries( any( NamedDatabaseId.class ) );
+    }
+
+    @TestWithCatchupProtocols
+    void shouldHandleStoreCopyResponseAndLogActivity( ApplicationProtocol protocol ) throws Exception
+    {
+        // given
+        mockClient( protocol );
+
+        var transactionIdHandler = mock( TransactionIdHandler.class );
+        var addressRepository = mock( AddressRepository.class );
+        var monitor = mock( StoreCopyClientMonitor.class );
+        var listOfFiles = List.of( Path.of( "first.txt" ) );
+
+        var prepareStoreCopyResponse = PrepareStoreCopyResponse.success( serverFiles, LAST_CHECKPOINTED_TX );
+        var success = expectedStoreCopyFinishedResponse( SUCCESS );
+        clientResponses
+                .withPrepareStoreCopyResponse( prepareStoreCopyResponse )
+                .withStoreFilesResponse( success );
+        when( addressRepository.nextFreeAddress() ).thenReturn( Optional.of( new SocketAddress( "foo", 0 ) ) );
+
+        //when
+        subject.executeCopyFiles( expectedStoreId, expectedStoreFileStream, targetLocation, transactionIdHandler, listOfFiles, addressRepository,
+                                  monitor, 1, continueIndefinitely() );
+        //then
+        final var filePath = targetLocation.resolve( listOfFiles.get( 0 ).getFileName() ).toString();
+        assertEventually( () -> monitor, m ->
+        {
+            verify( monitor, atLeast( 1 ) ).startReceivingStoreFile( filePath );
+            return true;
+        }, 2000, TimeUnit.MILLISECONDS );
+        verify( monitor, atLeast( 1 ) ).startReceivingStoreFile( filePath );
+        verify( monitor, atLeast( 1 ) ).finishReceivingStoreFile( filePath );
+        verify( transactionIdHandler, atLeast( 1 ) ).handle( success );
     }
 
     @TestWithCatchupProtocols
@@ -246,7 +292,8 @@ class StoreCopyClientTest
         clientResponses.withStoreId( storeIdMap::get );
 
         StoreCopyClient subjectA = subject;
-        StoreCopyClient subjectB = new StoreCopyClient( catchupClientFactory, altDbName, () -> monitors, logProvider, backOffStrategy );
+        StoreCopyClient subjectB =
+                new StoreCopyClient( catchupClientFactory, altDbName, () -> monitors, logProvider, executor, backOffStrategy, Clocks.nanoClock() );
 
         // when client requests the remote store id for each database
         StoreId storeIdA = subjectA.fetchStoreId( expectedAdvertisedAddress );
@@ -270,7 +317,7 @@ class StoreCopyClientTest
                 databaseIdRepository.getRaw( DEFAULT_DATABASE_NAME ),
                 () -> monitors,
                 logProvider,
-                backoffStrategy );
+                executor, backOffStrategy, Clocks.nanoClock() );
 
         PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( serverFiles, LAST_CHECKPOINTED_TX );
         StoreCopyFinishedResponse success = expectedStoreCopyFinishedResponse( SUCCESS );

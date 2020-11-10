@@ -35,6 +35,7 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.SystemNanoClock;
 
+import static com.neo4j.configuration.CausalClusteringSettings.store_copy_parallelism;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 import static org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper.DEFAULT_FILENAME_PREDICATE;
 
@@ -49,6 +50,14 @@ public abstract class ClusteringEditionModule extends AbstractEditionModule
         reconciledTxTracker = new DefaultReconciledTransactionTracker( globalModule.getLogService() );
         configureThreadFactories( globalModule.getJobScheduler() );
         globalModule.getGlobalDependencies().satisfyDependency( new DatabaseOperationCounts.Counter() ); // for global metrics and multidbmanager
+        setGlobalStoreCopyParallelism( globalModule );
+    }
+
+    private void setGlobalStoreCopyParallelism( GlobalModule globalModule )
+    {
+        final var config = globalModule.getGlobalConfig();
+        final var storeCopyParallelism = config.get( store_copy_parallelism );
+        globalModule.getJobScheduler().setParallelism( Group.STORE_COPY_CLIENT, storeCopyParallelism );
     }
 
     protected void editionInvariants( GlobalModule globalModule, Dependencies dependencies )
