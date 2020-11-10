@@ -50,7 +50,7 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
       values().iterator()
     }
 
-    override def getFirstValue(): AbstractArgumentStateMap.StateController[STATE] = {
+    override def getFirstValue: AbstractArgumentStateMap.StateController[STATE] = {
       val iter = values.iterator()
 
       if(iter.hasNext) {

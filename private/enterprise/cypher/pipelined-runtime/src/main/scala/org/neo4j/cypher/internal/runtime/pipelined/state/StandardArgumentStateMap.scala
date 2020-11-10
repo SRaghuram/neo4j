@@ -59,7 +59,7 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: A
     /**
      * @return the first value or null if no value exists
      */
-    override def getFirstValue(): AbstractArgumentStateMap.StateController[STATE] = controllerList.getFirst()
+    override def getFirstValue: AbstractArgumentStateMap.StateController[STATE] = controllerList.getFirst
   }
 
   override protected val controllers = new OrderedControllers(memoryTracker)

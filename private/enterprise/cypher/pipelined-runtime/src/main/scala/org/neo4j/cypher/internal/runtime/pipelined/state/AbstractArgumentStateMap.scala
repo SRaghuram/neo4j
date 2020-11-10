@@ -11,7 +11,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
-import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.util.Preconditions
 
@@ -23,32 +22,32 @@ import scala.collection.mutable.ArrayBuffer
  */
 abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: AbstractArgumentStateMap.StateController[STATE]](memoryTracker: MemoryTracker)
   extends ArgumentStateMap[STATE] {
-  val scopedMemoryTracker = memoryTracker.getScopedMemoryTracker
+  private val scopedMemoryTracker = memoryTracker.getScopedMemoryTracker
 
   trait Controllers[V] {
     /**
      * Calls the given function on all entries in the map.
-     * @param fun
+     * @param fun the function
      */
     def forEach(fun: (Long, V) => Unit)
 
     /**
      * Adds an entry to the map.
-     * @param key
-     * @param value
+     * @param key the key
+     * @param value the value
      * @return
      */
     def put(key: Long, value: V): V
 
     /**
-     * @param key
+     * @param key the entry key
      * @return the value to which the given key is mapped
      */
     def get(key: Long): V
 
     /**
      * Removes the entry with given key and asserts that it is the first entry.
-     * @param key
+     * @param key the key
      * @return the value of the removed entry
      */
     def remove(key: Long): V
@@ -56,7 +55,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     /**
      * @return the first value or null if no value exists
      */
-    def getFirstValue(): V
+    def getFirstValue: V
 
     /**
      * @return an iterator over all values
@@ -152,7 +151,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     var i = 0
     while (i < builder.length) {
       val controller = controllers.remove(builder(i).argumentRowId)
-      scopedMemoryTracker.releaseHeap(controller.shallowSize + HeapEstimator.LONG_SIZE)
+      scopedMemoryTracker.releaseHeap(controller.shallowSize)
 
       i += 1
     }
@@ -186,13 +185,13 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   }
 
   override def takeOneIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {
-    val controller = controllers.getFirstValue()
+    val controller = controllers.getFirstValue
 
     if (controller != null) {
       val completedState = controller.takeCompleted()
       if (completedState != null) {
         controllers.remove(completedState.argumentRowId)
-        scopedMemoryTracker.releaseHeap(controller.shallowSize + HeapEstimator.LONG_SIZE)
+        scopedMemoryTracker.releaseHeap(controller.shallowSize)
         DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, completedState.argumentRowId)
         ArgumentStateWithCompleted(completedState, isCompleted = true)
       } else {
@@ -268,7 +267,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     val controller = controllers.remove(argument)
     if (controller != null) {
       val state = controller.take()
-      scopedMemoryTracker.releaseHeap(controller.shallowSize + HeapEstimator.LONG_SIZE)
+      scopedMemoryTracker.releaseHeap(controller.shallowSize)
       state
     } else {
       null.asInstanceOf[STATE]
@@ -279,7 +278,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     DebugSupport.ASM.log("ASM %s init %03d", argumentStateMapId, argument)
     val newController = newStateController(argument, argumentMorsel, argumentRowIdsForReducers, initialCount, memoryTracker)
     val previousValue = controllers.put(argument, newController)
-    scopedMemoryTracker.allocateHeap(newController.shallowSize + HeapEstimator.LONG_SIZE)
+    scopedMemoryTracker.allocateHeap(newController.shallowSize)
     Preconditions.checkState(previousValue == null, "ArgumentStateMap cannot re-initiate the same argument (argument: %d)", Long.box(argument))
   }
 
