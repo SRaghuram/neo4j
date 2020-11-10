@@ -844,6 +844,46 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiled, params(mapValue)) should equal(mapValue.keys())
   }
 
+  test("isEmpty on map") {
+    val compiled = compile(function("isEmpty", parameter(0)))
+
+    val mapValue = VirtualValues.map(Array("x", "y", "crs"),
+      Array(doubleValue(1.0), doubleValue(2.0), stringValue("cartesian")))
+    val emptyMapValue = VirtualValues.EMPTY_MAP
+    evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
+    evaluate(compiled, params(mapValue)) should equal(BooleanValue.FALSE)
+    evaluate(compiled, params(emptyMapValue)) should equal(BooleanValue.TRUE)
+  }
+
+  test("isEmpty on string") {
+    val compiled = compile(function("isEmpty", parameter(0)))
+
+    val stringValue = Values.stringValue("hallo")
+    val emptyStringValue = Values.EMPTY_STRING
+    evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
+    evaluate(compiled, params(stringValue)) should equal(BooleanValue.FALSE)
+    evaluate(compiled, params(emptyStringValue)) should equal(BooleanValue.TRUE)
+  }
+
+  test("isEmpty on list") {
+    val compiled = compile(function("isEmpty", parameter(0)))
+
+    val listValue = VirtualValues.list(intValue(1), intValue(2), intValue(3))
+    val emptyListValue = VirtualValues.EMPTY_LIST
+    evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
+    evaluate(compiled, params(listValue)) should equal(BooleanValue.FALSE)
+    evaluate(compiled, params(emptyListValue)) should equal(BooleanValue.TRUE)
+  }
+
+  test("isEmpty on other types") {
+    val compiled = compile(function("isEmpty", parameter(0)))
+
+    val int = intValue(1)
+    a[ParameterWrongTypeException] should be thrownBy {
+      evaluate(compiled, params(int))
+    }
+  }
+
   test("size function") {
     val compiled = compile(function("size", parameter(0)))
 
