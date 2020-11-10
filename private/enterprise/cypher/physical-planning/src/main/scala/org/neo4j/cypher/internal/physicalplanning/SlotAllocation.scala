@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.expressions.CachedProperty
 import org.neo4j.cypher.internal.expressions.Equals
 import org.neo4j.cypher.internal.expressions.Expression
+import org.neo4j.cypher.internal.expressions.PathExpression
 import org.neo4j.cypher.internal.expressions.RelationshipChain
 import org.neo4j.cypher.internal.ir.HasHeaders
 import org.neo4j.cypher.internal.ir.NoHeaders
@@ -571,6 +572,9 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
 
           case (newKey, internal.expressions.Variable(ident)) if newKey != ident =>
             slots.addAlias(newKey, ident)
+
+          case (key, _: PathExpression) =>
+            slots.newReference(key, nullable = true, CTPath)
 
           case (key, _) =>
             slots.newReference(key, nullable = true, CTAny)
