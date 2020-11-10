@@ -15,8 +15,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
 
   test("should not revoke other role management privileges when revoking role management") {
     // GIVEN
-    createRoleWithOnlyAdminPrivilege()
-    execute("CREATE ROLE custom AS COPY OF adminOnly")
+    execute("CREATE ROLE custom")
     execute("GRANT CREATE ROLE ON DBMS TO custom")
     execute("GRANT DROP ROLE ON DBMS TO custom")
     execute("GRANT ASSIGN ROLE ON DBMS TO custom")
@@ -29,7 +28,6 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(adminPrivilege).role("custom").map,
       granted(adminAction("create_role")).role("custom").map,
       granted(adminAction("drop_role")).role("custom").map,
       granted(adminAction("assign_role")).role("custom").map,
@@ -40,8 +38,7 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
 
   test("Should revoke sub-privilege even if role management exists") {
     // Given
-    createRoleWithOnlyAdminPrivilege()
-    execute("CREATE ROLE custom AS COPY OF adminOnly")
+    execute("CREATE ROLE custom")
     execute("GRANT CREATE ROLE ON DBMS TO custom")
     execute("GRANT DROP ROLE ON DBMS TO custom")
     execute("GRANT ASSIGN ROLE ON DBMS TO custom")
@@ -61,7 +58,6 @@ class RoleManagmentPrivilegesAcceptanceTest extends AdministrationCommandAccepta
 
     // Then
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(adminPrivilege).role("custom").map,
       granted(adminAction("role_management")).role("custom").map
     ))
   }

@@ -9,10 +9,8 @@ import com.neo4j.causalclustering.catchup.v4.metadata.DatabaseSecurityCommands;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -29,10 +27,6 @@ import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.systemgraph.ComponentVersion;
-import org.neo4j.util.Preconditions;
-
-import static java.lang.String.format;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION;
 
 /**
  * This is the EnterpriseSecurityComponent version for Neo4j 3.6
@@ -45,11 +39,13 @@ public class EnterpriseSecurityComponentVersion_1_36 extends KnownEnterpriseSecu
     private final RelationshipType forRole = RelationshipType.withName( "FOR_ROLE" );
     private final RelationshipType forDatabase = RelationshipType.withName( "FOR_DATABASE" );
     private Config config;
+    private final KnownEnterpriseSecurityComponentVersion previous;
 
-    public EnterpriseSecurityComponentVersion_1_36( Log log, Config config )
+    public EnterpriseSecurityComponentVersion_1_36( Log log, Config config, KnownEnterpriseSecurityComponentVersion previous )
     {
         super( ComponentVersion.ENTERPRISE_SECURITY_36, log );
         this.config = config;
+        this.previous = previous;
     }
 
     @Override
@@ -104,47 +100,41 @@ public class EnterpriseSecurityComponentVersion_1_36 extends KnownEnterpriseSecu
     }
 
     @Override
-    public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest ) throws Exception
+    public void upgradeSecurityGraph( Transaction tx, int fromVersion ) throws Exception
     {
-        Preconditions.checkState( latest.version == LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION,
-                format("Latest version should be %s but was %s", LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION, latest.version ));
-        createPublicRoleFromUpgrade( tx );
-        setVersionProperty( tx, latest.version );
-        List<Node> roles = tx.findNodes( ROLE_LABEL ).stream().collect( Collectors.toList() );
-        log.info( String.format( "Upgrading security model from %s with %d roles", this.description, roles.size() ) );
-        List<String> rolesToSetup = new ArrayList<>();
-        Map<String,Set<String>> rolesUsers = new HashMap<>();
-        Set<Node> dbRoles = new HashSet<>();
-        for ( Node role : roles )
+        if ( fromVersion < version )
         {
-            String roleName = (String) role.getProperty( "name" );
-            HashSet<String> users = new HashSet<>();
-            for ( Relationship r : role.getRelationships( Direction.INCOMING, forRole ) )
+            // This will upgrade directly to the 4.0 version
+            previous.upgradeSecurityGraph( tx, fromVersion );
+        }
+        else
+        {
+            List<Node> roles = tx.findNodes( ROLE_LABEL ).stream().collect( Collectors.toList() );
+            log.info( String.format( "Upgrading security model from %s with %d roles", this.description, roles.size() ) );
+            Set<Node> dbRoles = new HashSet<>();
+            for ( Node role : roles )
             {
-                Node dbRole = r.getOtherNode( role );
-                dbRoles.add( dbRole );
-                for ( Relationship r2 : dbRole.getRelationships( Direction.INCOMING, hasDbRole ) )
+                for ( Relationship r : role.getRelationships( Direction.INCOMING, forRole ) )
                 {
-                    Node user = r2.getOtherNode( dbRole );
-                    String username = (String) user.getProperty( "name" );
-                    users.add( username );
+                    Node dbRole = r.getOtherNode( role );
+                    dbRoles.add( dbRole );
+                    List<Relationship> dbRolesToUsers = new ArrayList<>();
+                    dbRole.getRelationships( Direction.INCOMING, hasDbRole ).forEach( dbRolesToUsers::add );
+                    for ( Relationship dbRoleToUser : dbRolesToUsers )
+                    {
+                        Node user = dbRoleToUser.getOtherNode( dbRole );
+                        user.createRelationshipTo( role, USER_TO_ROLE );
+                    }
                 }
             }
-            rolesToSetup.add( roleName );
-            rolesUsers.put( roleName, users );
-        }
-        for ( Node dbRole : dbRoles )
-        {
-            for ( Relationship r : dbRole.getRelationships() )
+            for ( Node dbRole : dbRoles )
             {
-                r.delete();
+                for ( Relationship r : dbRole.getRelationships() )
+                {
+                    r.delete();
+                }
+                dbRole.delete();
             }
-            dbRole.delete();
         }
-        for ( Node role : roles )
-        {
-            role.delete();
-        }
-        latest.initializePrivileges( tx, rolesToSetup, rolesUsers );
     }
 }

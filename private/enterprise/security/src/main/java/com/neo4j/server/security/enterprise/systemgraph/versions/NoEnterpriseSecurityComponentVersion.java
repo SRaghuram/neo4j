@@ -35,6 +35,12 @@ public class NoEnterpriseSecurityComponentVersion extends KnownEnterpriseSecurit
     }
 
     @Override
+    public void upgradeSecurityGraph( Transaction tx, int fromVersion )
+    {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public void assertUpdateWithAction( PrivilegeAction action, SpecialDatabase specialDatabase, Segment segment ) throws UnsupportedOperationException
     {
         throw new UnsupportedOperationException();

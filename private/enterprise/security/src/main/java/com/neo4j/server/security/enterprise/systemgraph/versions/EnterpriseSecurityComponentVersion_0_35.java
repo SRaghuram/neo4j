@@ -12,10 +12,7 @@ import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import com.neo4j.server.security.enterprise.systemgraph.CustomSecurityInitializer;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -26,10 +23,6 @@ import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.auth.ListSnapshot;
 import org.neo4j.server.security.systemgraph.ComponentVersion;
-import org.neo4j.util.Preconditions;
-
-import static java.lang.String.format;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION;
 
 /**
  * This is the EnterpriseSecurityComponent version for Neo4j 3.5
@@ -85,17 +78,19 @@ public class EnterpriseSecurityComponentVersion_0_35 extends KnownEnterpriseSecu
         throw unsupported();
     }
 
+    // INITIALIZATION
+
     @Override
     public void grantDefaultPrivileges( Transaction tx, Node role, String predefinedRole, PrivilegeStore privilegeStore )
     {
         throw unsupported();
     }
 
+    // UPGRADE
+
     @Override
-    public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest ) throws Exception
+    public void upgradeSecurityGraph( Transaction tx, int fromVersion ) throws Exception
     {
-        Preconditions.checkState( latest.version == LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION,
-                format("Latest version should be %s but was %s", LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION, latest.version ));
         roleRepository.start();
         log.info( String.format( "Upgrading security model from %s roles file with %d roles", this.description, roleRepository.numberOfRoles() ) );
         if ( roleRepository.getRoleByName( PredefinedRoles.PUBLIC ) != null )
@@ -108,26 +103,27 @@ public class EnterpriseSecurityComponentVersion_0_35 extends KnownEnterpriseSecu
         {
             throw logAndCreateException( "Automatic migration of users and roles into system graph failed because repository files are inconsistent. " );
         }
-        doMigrateRoles( tx, roleRepository, latest );
-        setVersionProperty( tx, latest.version );
+        doMigrateRoles( tx, roleRepository );
         customSecurityInitializer.initialize( tx );
     }
 
-    private void doMigrateRoles( Transaction tx, RoleRepository roleRepository, KnownEnterpriseSecurityComponentVersion latest ) throws Exception
+    private void doMigrateRoles( Transaction tx, RoleRepository roleRepository ) throws Exception
     {
         ListSnapshot<RoleRecord> roleRepo = roleRepository.getSnapshot();
 
-        if ( !roleRepo.values().isEmpty() && isEmpty() )
+        for ( RoleRecord roleRecord : roleRepo.values() )
         {
-            Map<String,Set<String>> roleUsers = new HashMap<>();
-            List<String> roles = new ArrayList<>();
-            for ( RoleRecord roleRecord : roleRepo.values() )
+            Node role = tx.createNode( ROLE_LABEL );
+            role.setProperty( "name", roleRecord.name() );
+            for ( String username : roleRecord.users() )
             {
-                String roleName = roleRecord.name();
-                roles.add( roleName );
-                roleUsers.put( roleName, roleRecord.users() );
+                // connect user and role
+                Node user = tx.findNode( USER_LABEL, "name", username );
+                if ( user != null )
+                {
+                    user.createRelationshipTo( role, USER_TO_ROLE );
+                }
             }
-            latest.initializePrivileges( tx, roles, roleUsers );
         }
 
         // Log what happened to the security log

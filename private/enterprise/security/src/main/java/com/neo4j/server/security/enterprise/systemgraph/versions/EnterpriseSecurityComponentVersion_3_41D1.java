@@ -15,15 +15,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.ProcedureSegment;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.systemgraph.ComponentVersion;
-import org.neo4j.util.Preconditions;
 
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
@@ -32,9 +34,7 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
-import static java.lang.String.format;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION;
 
 /**
  * This is the EnterpriseSecurityComponent version for Neo4j 4.1-drop1.
@@ -198,16 +198,73 @@ public class EnterpriseSecurityComponentVersion_3_41D1 extends SupportedEnterpri
     // UPGRADE
 
     @Override
-    public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest )
+    public void upgradeSecurityGraph( Transaction tx, int fromVersion ) throws Exception
     {
-        Preconditions.checkState( latest.version == LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION,
-                format("Latest version should be %s but was %s", LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION, latest.version ));
-        log.info( String.format( "Upgrading security model from %s by adding version information", this.description ) );
-        // Upgrade from 4.1.0-Drop01 to 4.1.x, which means add the Version node
-        setVersionProperty( tx, latest.version );
-        Node publicRole = tx.findNode( ROLE_LABEL, "name", PUBLIC );
-        grantExecuteProcedurePrivilegeTo( tx, publicRole );
-        grantExecuteFunctionPrivilegeTo( tx, publicRole );
+        if ( fromVersion < version )
+        {
+            previous.upgradeSecurityGraph( tx, fromVersion );
+            upgradeWriteFromAllPropertiesToGraphResource( tx );
+            upgradeFromSchemaPrivilegeToIndexAndConstraintPrivileges( tx );
+            createPublicRoleFromUpgrade( tx );
+        }
+    }
+
+    private void upgradeWriteFromAllPropertiesToGraphResource( Transaction tx )
+    {
+        Node graphResource = tx.findNode( Label.label( "Resource" ), "type", Resource.Type.GRAPH.toString() );
+        ResourceIterator<Node> writeNodes = tx.findNodes( PRIVILEGE_LABEL, "action", PrivilegeAction.WRITE.toString() );
+        while ( writeNodes.hasNext() )
+        {
+            Node writeNode = writeNodes.next();
+            Relationship writeResourceRel = writeNode.getSingleRelationship( APPLIES_TO, Direction.OUTGOING );
+            Node oldResource = writeResourceRel.getEndNode();
+            if ( !oldResource.getProperty( "type" ).equals( Resource.Type.GRAPH.toString() ) )
+            {
+                writeNode.createRelationshipTo( graphResource, APPLIES_TO );
+                writeResourceRel.delete();
+            }
+        }
+        writeNodes.close();
+    }
+
+    private void upgradeFromSchemaPrivilegeToIndexAndConstraintPrivileges( Transaction tx )
+    {
+        // migrate schema privilege to index + constraint privileges
+        Node schemaNode = tx.findNode( PRIVILEGE_LABEL, "action", "schema" );
+        if ( schemaNode == null )
+        {
+            return;
+        }
+        Relationship schemaSegmentRel = schemaNode.getSingleRelationship( SCOPE, Direction.OUTGOING );
+        Relationship schemaResourceRel = schemaNode.getSingleRelationship( APPLIES_TO, Direction.OUTGOING );
+
+        Node segment = schemaSegmentRel.getEndNode();
+        Node resource = schemaResourceRel.getEndNode();
+
+        Node indexNode = tx.findNode( PRIVILEGE_LABEL, "action", PrivilegeAction.INDEX.toString() );
+        if ( indexNode == null )
+        {
+            indexNode = tx.createNode( PRIVILEGE_LABEL );
+            setupPrivilegeNode( indexNode, PrivilegeAction.INDEX.toString(), segment, resource );
+        }
+        Node constraintNode = tx.findNode( PRIVILEGE_LABEL, "action", PrivilegeAction.CONSTRAINT.toString() );
+        if ( constraintNode == null )
+        {
+            constraintNode = tx.createNode( PRIVILEGE_LABEL );
+            setupPrivilegeNode( constraintNode, PrivilegeAction.CONSTRAINT.toString(), segment, resource );
+        }
+
+        for ( Relationship rel : schemaNode.getRelationships( GRANTED ) ) // incoming from roles
+        {
+            Node role = rel.getOtherNode( schemaNode );
+            role.createRelationshipTo( indexNode, GRANTED );
+            role.createRelationshipTo( constraintNode, GRANTED );
+            rel.delete();
+        }
+
+        schemaResourceRel.delete();
+        schemaSegmentRel.delete();
+        schemaNode.delete();
     }
 
     // RUNTIME

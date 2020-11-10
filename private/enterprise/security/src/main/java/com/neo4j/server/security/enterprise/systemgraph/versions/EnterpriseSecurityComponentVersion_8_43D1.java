@@ -11,12 +11,14 @@ import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import com.neo4j.server.security.enterprise.systemgraph.versions.PrivilegeStore.PRIVILEGE;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.logging.Log;
@@ -40,7 +42,11 @@ public class EnterpriseSecurityComponentVersion_8_43D1 extends SupportedEnterpri
     {
         previous.setUpDefaultPrivileges( tx, privilegeStore );
         this.setVersionProperty( tx, version );
+        createNewPrivileges( tx, privilegeStore );
+    }
 
+    private void createNewPrivileges( Transaction tx, PrivilegeStore privilegeStore )
+    {
         Node allDb = mergeNode( tx, DATABASE_ALL_LABEL, Map.of( "name", "*" ) );
 
         Node dbQualifier = mergeNode( tx, Label.label( "DatabaseQualifier" ), Map.of( "type", "database", "label", "" ) );
@@ -94,17 +100,41 @@ public class EnterpriseSecurityComponentVersion_8_43D1 extends SupportedEnterpri
     }
 
     @Override
+    public void upgradeSecurityGraph( Transaction tx, int fromVersion ) throws Exception
+    {
+        if ( fromVersion < version )
+        {
+            previous.upgradeSecurityGraph( tx, fromVersion );
+            this.setVersionProperty( tx, version );
+
+            // ADMIN privilege has been replaced by TRANSACTION_MANAGEMENT, START_DATABASE, STOP_DATABASE and DBMS_ACTIONS
+            Node adminPrivNode = tx.findNode( PRIVILEGE_LABEL, "action", PrivilegeAction.ADMIN.toString() );
+            if ( adminPrivNode != null )
+            {
+                PrivilegeStore privilegeStore = new PrivilegeStore();
+                createNewPrivileges( tx, privilegeStore );
+                Set<Node> rolesGrantedAdmin = new HashSet<>();
+                adminPrivNode.getRelationships( GRANTED ).forEach( r -> rolesGrantedAdmin.add( r.getOtherNode( adminPrivNode ) ) );
+                for ( Node role : rolesGrantedAdmin )
+                {
+                    role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.TRANSACTIONS ), GRANTED );
+                    role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.START_DATABASE ), GRANTED );
+                    role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.STOP_DATABASE ), GRANTED );
+                    role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.ALL_DBMS ), GRANTED );
+                }
+                for ( Relationship rel : adminPrivNode.getRelationships() )
+                {
+                    rel.delete();
+                }
+                adminPrivNode.delete();
+            }
+        }
+    }
+
+    @Override
     boolean supportsUpdateAction( PrivilegeAction action )
     {
-        switch ( action )
-        {
-        case SHOW_INDEX:
-        case SHOW_CONSTRAINT:
-            return true;
-
-        default:
-            return previous.supportsUpdateAction( action );
-        }
+        return previous.supportsUpdateAction( action );
     }
 
     @Override

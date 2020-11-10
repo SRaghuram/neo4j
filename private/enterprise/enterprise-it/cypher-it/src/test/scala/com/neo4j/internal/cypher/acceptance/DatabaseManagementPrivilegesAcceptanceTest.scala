@@ -13,8 +13,7 @@ class DatabaseManagementPrivilegesAcceptanceTest extends AdministrationCommandAc
 
   test("should not revoke other database management privileges when revoking database management") {
     // GIVEN
-    createRoleWithOnlyAdminPrivilege()
-    execute("CREATE ROLE custom AS COPY OF adminOnly")
+    execute("CREATE ROLE custom")
     execute("GRANT CREATE DATABASE ON DBMS TO custom")
     execute("GRANT DROP DATABASE ON DBMS TO custom")
     execute("GRANT DATABASE MANAGEMENT ON DBMS TO custom")
@@ -24,7 +23,6 @@ class DatabaseManagementPrivilegesAcceptanceTest extends AdministrationCommandAc
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(adminPrivilege).role("custom").map,
       granted(adminAction("create_database")).role("custom").map,
       granted(adminAction("drop_database")).role("custom").map
     ))

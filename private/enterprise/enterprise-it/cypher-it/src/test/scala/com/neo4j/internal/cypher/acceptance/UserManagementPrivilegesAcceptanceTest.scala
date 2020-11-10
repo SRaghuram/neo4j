@@ -14,8 +14,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
 
   test("should not revoke other user management privileges when revoking user management") {
     // GIVEN
-    createRoleWithOnlyAdminPrivilege()
-    execute("CREATE ROLE custom AS COPY OF adminOnly")
+    execute("CREATE ROLE custom")
     execute("GRANT CREATE USER ON DBMS TO custom")
     execute("GRANT DROP USER ON DBMS TO custom")
     execute("GRANT SHOW USER ON DBMS TO custom")
@@ -29,7 +28,6 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(adminPrivilege).role("custom").map,
       granted(adminAction("create_user")).role("custom").map,
       granted(adminAction("drop_user")).role("custom").map,
       granted(adminAction("show_user")).role("custom").map,
@@ -39,10 +37,9 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     ))
   }
 
-    test("should not revoke sub parts when revoking alter user") {
+  test("should not revoke sub parts when revoking alter user") {
     // GIVEN
-    createRoleWithOnlyAdminPrivilege()
-    execute("CREATE ROLE custom AS COPY OF adminOnly")
+    execute("CREATE ROLE custom")
     execute("GRANT SET USER STATUS ON DBMS TO custom")
     execute("GRANT SET PASSWORDS ON DBMS TO custom")
     execute("GRANT ALTER USER ON DBMS TO custom")
@@ -52,7 +49,6 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(adminPrivilege).role("custom").map,
       granted(adminAction("set_user_status")).role("custom").map,
       granted(adminAction("set_passwords")).role("custom").map,
     ))
@@ -60,8 +56,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
 
   test("Should revoke sub-privilege even if user management exists") {
     // Given
-    createRoleWithOnlyAdminPrivilege()
-    execute("CREATE ROLE custom AS COPY OF adminOnly")
+    execute("CREATE ROLE custom")
     execute("GRANT CREATE USER ON DBMS TO custom")
     execute("GRANT DROP USER ON DBMS TO custom")
     execute("GRANT SHOW USER ON DBMS TO custom")
@@ -79,7 +74,6 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
 
     // Then
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(adminPrivilege).role("custom").map,
       granted(adminAction("user_management")).role("custom").map
     ))
   }

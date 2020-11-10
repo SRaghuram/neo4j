@@ -386,6 +386,11 @@ class SystemGraphComponentsTest
         }
 
         @Override
+        public void upgradeSecurityGraph( Transaction tx, int fromVersion )
+        {
+        }
+
+        @Override
         public void assertUpdateWithAction( PrivilegeAction action, ResourcePrivilege.SpecialDatabase specialDatabase, Segment segment )
                 throws UnsupportedOperationException
         {

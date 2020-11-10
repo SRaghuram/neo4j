@@ -201,31 +201,23 @@ public abstract class SupportedEnterpriseSecurityComponentVersion extends KnownE
     void grantExecuteProcedurePrivilegeTo( Transaction tx, Node roleNode )
     {
         // Create new privilege for execute procedures
-        Node procQualifier = tx.createNode( Label.label( "ProcedureQualifierAll" ) );
-        procQualifier.setProperty( "type", "procedure" );
-        procQualifier.setProperty( "label", "*" );
-
+        Node procQualifier = mergeNode( tx, Label.label( "ProcedureQualifierAll" ), Map.of( "type", "procedure", "label", "*" ) );
         grantExecutePrivilegeTo( tx, roleNode, procQualifier );
     }
 
     void grantExecuteFunctionPrivilegeTo( Transaction tx, Node roleNode )
     {
         // Create new privilege for execute functions
-        Node funcQualifier = tx.createNode( Label.label( "FunctionQualifierAll" ) );
-        funcQualifier.setProperty( "type", "function" );
-        funcQualifier.setProperty( "label", "*" );
-
+        Node funcQualifier = mergeNode( tx, Label.label( "FunctionQualifierAll" ), Map.of( "type", "function", "label", "*" ) );
         grantExecutePrivilegeTo( tx, roleNode, funcQualifier );
     }
 
     private void grantExecutePrivilegeTo( Transaction tx, Node roleNode, Node qualifier )
     {
-        Node allDb = tx.findNode( DATABASE_ALL_LABEL, "name", "*" );
-        Node dbResource = tx.findNode( Label.label( "Resource" ), "type", Resource.Type.DATABASE.toString() );
+        Node allDb = mergeNode( tx, DATABASE_ALL_LABEL, Map.of( "name", "*" ) );
+        Node dbResource = mergeNode( tx, RESOURCE_LABEL, Map.of( "type", Resource.Type.DATABASE.toString(), "arg1", "", "arg2", "" ) );
 
-        Node segment = tx.createNode( SEGMENT_LABEL );
-        segment.createRelationshipTo( qualifier, QUALIFIED );
-        segment.createRelationshipTo( allDb, FOR );
+        Node segment = mergeSegment( tx, allDb, qualifier );
 
         Node privilege = tx.createNode( PRIVILEGE_LABEL );
         setupPrivilegeNode( privilege, PrivilegeAction.EXECUTE.toString(), segment, dbResource );

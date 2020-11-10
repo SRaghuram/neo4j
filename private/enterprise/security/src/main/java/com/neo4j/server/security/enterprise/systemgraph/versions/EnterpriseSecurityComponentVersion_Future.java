@@ -65,6 +65,12 @@ public class EnterpriseSecurityComponentVersion_Future extends KnownEnterpriseSe
     }
 
     @Override
+    public void upgradeSecurityGraph( Transaction tx, int fromVersion )
+    {
+        throw unsupported();
+    }
+
+    @Override
     public void assertUpdateWithAction( PrivilegeAction action, SpecialDatabase specialDatabase, Segment segment ) throws UnsupportedOperationException
     {
         throw unsupported();

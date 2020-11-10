@@ -199,7 +199,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
      // WHEN
     execute("SHOW USER neo4j PRIVILEGES YIELD * RETURN user, collect(role) as roles").toSet should be(
-      Set(Map("user" -> "neo4j", "roles" -> List("PUBLIC", "PUBLIC", "PUBLIC", "admin", "admin", "admin", "admin", "admin", "admin", "admin", "admin", "admin")))
+      Set(Map("user" -> "neo4j", "roles" -> List("PUBLIC", "PUBLIC", "PUBLIC", "admin", "admin", "admin", "admin", "admin", "admin", "admin", "admin", "admin", "admin", "admin", "admin")))
     )
   }
 
@@ -463,7 +463,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
   }
 
   test("should show privileges for specific user RETURN user, count(access) AS count") {
-    val expected = Set(Map("user" -> "neo4j", "count" -> 12))
+    val expected = Set(Map("user" -> "neo4j", "count" -> 15))
 
     // WHEN
     execute("SHOW USER neo4j PRIVILEGES YIELD user, access RETURN user, count(access) AS count")
@@ -471,7 +471,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
   }
 
   test("should show privileges for specific user RETURN count(access) AS count") {
-    val expected = Set(Map("count" -> 12))
+    val expected = Set(Map("count" -> 15))
 
     // WHEN
     execute("SHOW USER neo4j PRIVILEGES YIELD access RETURN count(access) AS count")
@@ -481,7 +481,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
   test("should show privileges for specific user RETURN user ORDER BY graph") {
     // WHEN
     execute("SHOW USER neo4j PRIVILEGES YIELD user, access, graph RETURN user ORDER BY graph")
-      .toList should be (List.fill(12)(Map("user" -> "neo4j")))
+      .toList should be (List.fill(15)(Map("user" -> "neo4j")))
   }
 
   test("should show privileges for current user RETURN user ORDER BY graph") {
@@ -1545,8 +1545,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     test("Should be able to run SHOW PRIVILEGES on multiple versions of the system graph with different but valid results") {
       // Given
       execute("CREATE ROLE custom AS COPY OF admin")
-      val expectedCurrent = defaultRolePrivilegesFor("admin", "custom")
-      val expected = translatePrivileges(expectedCurrent, expectedVersion)
+      val expected = defaultAdminPrivilegesFor("custom", expectedVersion)
 
       // When && Then
       execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)

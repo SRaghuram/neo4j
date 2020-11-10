@@ -10,15 +10,16 @@ import com.neo4j.causalclustering.catchup.v4.metadata.DatabaseSecurityCommands;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.neo4j.graphdb.ConstraintViolationException;
+import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
@@ -45,13 +46,12 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
     public static final Label ROLE_LABEL = Label.label( "Role" );
 
     public static final RelationshipType GRANTED = RelationshipType.withName( "GRANTED" );
-    private static final RelationshipType USER_TO_ROLE = RelationshipType.withName( "HAS_ROLE" );
+    public static final RelationshipType DENIED = RelationshipType.withName( "DENIED" );
+    public static final RelationshipType USER_TO_ROLE = RelationshipType.withName( "HAS_ROLE" );
     public static final RelationshipType SCOPE = RelationshipType.withName( "SCOPE" );
     static final RelationshipType APPLIES_TO = RelationshipType.withName( "APPLIES_TO" );
     static final RelationshipType QUALIFIED = RelationshipType.withName( "QUALIFIED" );
     public static final RelationshipType FOR = RelationshipType.withName( "FOR" );
-
-    private List<Node> roleNodes = new ArrayList<>();
 
     KnownEnterpriseSecurityComponentVersion( ComponentVersion componentVersion, Log log )
     {
@@ -71,14 +71,36 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
     public abstract void assertUpdateWithAction( PrivilegeAction action, SpecialDatabase specialDatabase, Segment segment )
             throws UnsupportedOperationException;
 
+    /**
+     * Create the privileges used for the default roles.
+     * This method recursively calls to older versions and then adds new/changed privileges.
+     *
+     * @param tx open transaction to perform the upgrade in
+     * @param privilegeStore the nodes representing the privileges are stored here
+     */
     public abstract void setUpDefaultPrivileges( Transaction tx, PrivilegeStore privilegeStore );
 
+    /**
+     * Grant the default privileges to a role.
+     * The privileges granted are determined by the name of the role.
+     * This has to be called after {@link #setUpDefaultPrivileges(Transaction, PrivilegeStore)}
+     * so the privileges have been created.
+     *
+     * @param tx open transaction
+     * @param role the node representing this role
+     * @param predefinedRole the name of this role, used to determine which default privileges to grant
+     * @param privilegeStore the nodes representing the privileges are stored here
+     */
     public abstract void grantDefaultPrivileges( Transaction tx, Node role, String predefinedRole, PrivilegeStore privilegeStore );
 
-    public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest ) throws Exception
-    {
-        throw unsupported();
-    }
+    /**
+     * Upgrade the security graph to this version.
+     * This method recursively calls older versions and performs the upgrades in steps.
+     *
+     * @param tx open transaction to perform the upgrade in
+     * @param fromVersion the detected version, upgrade will be performed rolling from this
+     */
+    public abstract void upgradeSecurityGraph( Transaction tx, int fromVersion ) throws Exception;
 
     public Set<ResourcePrivilege> getPrivilegeForRoles( Transaction tx, List<String> roleNames, Cache<String,Set<ResourcePrivilege>> privilegeCache )
     {
@@ -92,11 +114,6 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
 
     // should only be called with lower-case database name
     public abstract DatabaseSecurityCommands getBackupCommands( Transaction tx, String databaseName, boolean saveUsers, boolean saveRoles );
-
-    public boolean isEmpty()
-    {
-        return roleNodes.isEmpty();
-    }
 
     public void initializePrivileges( Transaction tx, List<String> roles, Map<String,Set<String>> roleUsers ) throws InvalidArgumentsException
     {
@@ -122,6 +139,27 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
             {
                 addRoleToUser( tx, role, userName );
                 log.info( "Assigned %s role to user '%s'.", roleName, userName );
+            }
+        }
+
+        // remove unassigned privilege nodes
+        deleteUnused( tx, PRIVILEGE_LABEL );
+        deleteUnused( tx, SEGMENT_LABEL );
+        deleteUnused( tx, RESOURCE_LABEL );
+    }
+
+    private void deleteUnused( Transaction tx, Label label )
+    {
+        try ( ResourceIterator<Node> nodes = tx.findNodes( label ) )
+        {
+            while ( nodes.hasNext() )
+            {
+                Node next = nodes.next();
+                if ( next.getDegree( Direction.INCOMING ) == 0 )
+                {
+                    next.getRelationships().forEach( Relationship::delete );
+                    next.delete();
+                }
             }
         }
     }
@@ -156,15 +194,14 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
     {
         Node node = tx.createNode( ROLE_LABEL );
         node.setProperty( "name", roleName );
-        roleNodes.add( node );
         return node;
     }
 
-    Node createPublicRoleFromUpgrade( Transaction tx )
+    void createPublicRoleFromUpgrade( Transaction tx )
     {
         try
         {
-            return newRole( tx, PUBLIC );
+            newRole( tx, PUBLIC );
         }
         catch ( ConstraintViolationException e )
         {

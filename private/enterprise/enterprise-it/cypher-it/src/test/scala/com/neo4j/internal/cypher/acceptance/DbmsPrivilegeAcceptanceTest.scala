@@ -104,8 +104,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should not revoke other dbms privileges when revoking all dbms privileges") {
     // GIVEN
-    createRoleWithOnlyAdminPrivilege()
-    execute("CREATE ROLE custom AS COPY OF adminOnly")
+    execute("CREATE ROLE custom")
     allDbmsPrivileges("GRANT", includingCompound = true)
 
     // WHEN
@@ -113,7 +112,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(adminPrivilege).role("custom").map,
       granted(adminAction("create_role")).role("custom").map,
       granted(adminAction("drop_role")).role("custom").map,
       granted(adminAction("assign_role")).role("custom").map,
@@ -140,8 +138,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("Should revoke sub-privilege even if all dbms privilege exists") {
     // Given
-    createRoleWithOnlyAdminPrivilege()
-    execute("CREATE ROLE custom AS COPY OF adminOnly")
+    execute("CREATE ROLE custom")
     allDbmsPrivileges("GRANT", includingCompound = true)
 
     // When
@@ -150,53 +147,9 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // Then
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(adminPrivilege).role("custom").map,
+      granted(allDbmsPrivilege).role("custom").map,
       granted(adminAction("dbms_actions")).role("custom").map
     ))
-  }
-
-  test("Should do nothing when revoking a non-existing subset of a compound (mostly dbms) admin privilege") {
-    // Given
-    setup()
-    // When using setup() within version tests the privileges are not automatically initialized, so we need to do that explicitly
-    initializeEnterpriseSecurityGraphComponent(defaultConfig, CURRENT_VERSION, verbose = false)
-
-    createRoleWithOnlyAdminPrivilege("custom")
-
-    // When
-    // Now try to revoke each sub-privilege (that we have syntax for) in turn
-    //TODO: ADD ANY NEW SUB-PRIVILEGES HERE
-    Seq(
-      "CREATE ROLE ON DBMS",
-      "DROP ROLE ON DBMS",
-      "SHOW ROLE ON DBMS",
-      "ASSIGN ROLE ON DBMS",
-      "REMOVE ROLE ON DBMS",
-      "ROLE MANAGEMENT ON DBMS",
-      "CREATE USER ON DBMS",
-      "DROP USER ON DBMS",
-      "SHOW USER ON DBMS",
-      "ALTER USER ON DBMS",
-      "SET PASSWORDS ON DBMS",
-      "SET USER STATUS ON DBMS",
-      "USER MANAGEMENT ON DBMS",
-      "CREATE DATABASE ON DBMS",
-      "DROP DATABASE ON DBMS",
-      "DATABASE MANAGEMENT ON DBMS",
-      "SHOW PRIVILEGE ON DBMS",
-      "ASSIGN PRIVILEGE ON DBMS",
-      "REMOVE PRIVILEGE ON DBMS",
-      "PRIVILEGE MANAGEMENT ON DBMS",
-      "ALL DBMS PRIVILEGES ON DBMS",
-      "SHOW TRANSACTION (*) ON DATABASES *",
-      "TERMINATE TRANSACTION (*) ON DATABASES *",
-      "TRANSACTION MANAGEMENT ON DATABASES *",
-      "START ON DATABASES *",
-      "STOP ON DATABASES *"
-    ).foreach(queryPart => execute(s"REVOKE $queryPart FROM custom"))
-
-    // Then
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(granted(adminPrivilege).role("custom").map))
   }
 
   // Enforcement tests

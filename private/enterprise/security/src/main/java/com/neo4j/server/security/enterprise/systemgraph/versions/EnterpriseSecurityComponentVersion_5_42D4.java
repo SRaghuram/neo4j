@@ -22,11 +22,8 @@ import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.systemgraph.ComponentVersion;
-import org.neo4j.util.Preconditions;
 
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
-import static java.lang.String.format;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION;
 
 /**
  * This is the EnterpriseSecurityComponent version for Neo4j 4.2-drop4.
@@ -83,13 +80,16 @@ public class EnterpriseSecurityComponentVersion_5_42D4 extends SupportedEnterpri
     }
 
     @Override
-    public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest )
+    public void upgradeSecurityGraph( Transaction tx, int fromVersion ) throws Exception
     {
-        Preconditions.checkState( latest.version == LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION,
-                format("Latest version should be %s but was %s", LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION, latest.version ));
-        setVersionProperty( tx, latest.version );
-        Node publicRole = tx.findNode( ROLE_LABEL, "name", PUBLIC );
-        grantExecuteFunctionPrivilegeTo( tx, publicRole );
+        if ( fromVersion < version )
+        {
+            previous.upgradeSecurityGraph( tx, fromVersion );
+            this.setVersionProperty( tx, version );
+            // GRANT EXECUTE PROCEDURE * ON DBMS TO PUBLIC
+            Node publicRole = mergeNode( tx, ROLE_LABEL, Map.of( "name", PUBLIC ) );
+            grantExecuteProcedurePrivilegeTo( tx, publicRole );
+        }
     }
 
     @Override

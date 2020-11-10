@@ -14,12 +14,10 @@ import com.neo4j.server.security.enterprise.systemgraph.versions.PrivilegeStore.
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.ProcedureSegment;
@@ -27,7 +25,6 @@ import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.systemgraph.ComponentVersion;
-import org.neo4j.util.Preconditions;
 
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
@@ -35,18 +32,19 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
-import static java.lang.String.format;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION;
 
 /**
  * This is the EnterpriseSecurityComponent version for Neo4j 4.0
  */
 public class EnterpriseSecurityComponentVersion_2_40 extends SupportedEnterpriseSecurityComponentVersion
 {
-    public EnterpriseSecurityComponentVersion_2_40( Log log )
+    private final KnownEnterpriseSecurityComponentVersion previous;
+
+    public EnterpriseSecurityComponentVersion_2_40( Log log, KnownEnterpriseSecurityComponentVersion previous )
     {
         super( ComponentVersion.ENTERPRISE_SECURITY_40, log );
+        this.previous = previous;
     }
 
     @Override
@@ -110,7 +108,7 @@ public class EnterpriseSecurityComponentVersion_2_40 extends SupportedEnterprise
 
         // Create initial privilege nodes and connect them with resources and segments
         Node traverseNodePriv = tx.createNode( PRIVILEGE_LABEL );
-        Node traverserRelPriv = tx.createNode( PRIVILEGE_LABEL );
+        Node traverseRelPriv = tx.createNode( PRIVILEGE_LABEL );
         Node readNodePriv = tx.createNode( PRIVILEGE_LABEL );
         Node readRelPriv = tx.createNode( PRIVILEGE_LABEL );
         Node writeNodePriv = tx.createNode( PRIVILEGE_LABEL );
@@ -121,7 +119,7 @@ public class EnterpriseSecurityComponentVersion_2_40 extends SupportedEnterprise
         Node adminPriv = tx.createNode( PRIVILEGE_LABEL );
 
         setupPrivilegeNode( traverseNodePriv, PrivilegeAction.TRAVERSE.toString(), labelSegment, graphResource );
-        setupPrivilegeNode( traverserRelPriv, PrivilegeAction.TRAVERSE.toString(), relSegment, graphResource );
+        setupPrivilegeNode( traverseRelPriv, PrivilegeAction.TRAVERSE.toString(), relSegment, graphResource );
         setupPrivilegeNode( readNodePriv, PrivilegeAction.READ.toString(), labelSegment, allPropResource );
         setupPrivilegeNode( readRelPriv, PrivilegeAction.READ.toString(), relSegment, allPropResource );
         setupPrivilegeNode( writeNodePriv, PrivilegeAction.WRITE.toString(), labelSegment, allPropResource );
@@ -132,7 +130,7 @@ public class EnterpriseSecurityComponentVersion_2_40 extends SupportedEnterprise
         setupPrivilegeNode( adminPriv, PrivilegeAction.ADMIN.toString(), dbSegment, dbResource );
 
         privilegeStore.setPrivilege( PRIVILEGE.TRAVERSE_NODE, traverseNodePriv );
-        privilegeStore.setPrivilege( PRIVILEGE.TRAVERSE_RELATIONSHIP, traverserRelPriv );
+        privilegeStore.setPrivilege( PRIVILEGE.TRAVERSE_RELATIONSHIP, traverseRelPriv );
         privilegeStore.setPrivilege( PRIVILEGE.READ_NODE_PROPERTY, readNodePriv );
         privilegeStore.setPrivilege( PRIVILEGE.READ_RELATIONSHIP_PROPERTY, readRelPriv );
         privilegeStore.setPrivilege( PRIVILEGE.WRITE_NODE, writeNodePriv );
@@ -155,7 +153,7 @@ public class EnterpriseSecurityComponentVersion_2_40 extends SupportedEnterprise
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.WRITE_NODE ), GRANTED );
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.WRITE_RELATIONSHIP ), GRANTED );
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.TRAVERSE_NODE ), GRANTED );
-            role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.WRITE_RELATIONSHIP ), GRANTED );
+            role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.TRAVERSE_RELATIONSHIP ), GRANTED );
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.READ_NODE_PROPERTY ), GRANTED );
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.READ_RELATIONSHIP_PROPERTY ), GRANTED );
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.ACCESS_ALL ), GRANTED );
@@ -167,7 +165,7 @@ public class EnterpriseSecurityComponentVersion_2_40 extends SupportedEnterprise
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.WRITE_NODE ), GRANTED );
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.WRITE_RELATIONSHIP ), GRANTED );
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.TRAVERSE_NODE ), GRANTED );
-            role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.WRITE_RELATIONSHIP ), GRANTED );
+            role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.TRAVERSE_RELATIONSHIP ), GRANTED );
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.READ_NODE_PROPERTY ), GRANTED );
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.READ_RELATIONSHIP_PROPERTY ), GRANTED );
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.ACCESS_ALL ), GRANTED );
@@ -178,7 +176,7 @@ public class EnterpriseSecurityComponentVersion_2_40 extends SupportedEnterprise
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.WRITE_NODE ), GRANTED );
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.WRITE_RELATIONSHIP ), GRANTED );
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.TRAVERSE_NODE ), GRANTED );
-            role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.WRITE_RELATIONSHIP ), GRANTED );
+            role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.TRAVERSE_RELATIONSHIP ), GRANTED );
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.READ_NODE_PROPERTY ), GRANTED );
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.READ_RELATIONSHIP_PROPERTY ), GRANTED );
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.ACCESS_ALL ), GRANTED );
@@ -188,7 +186,7 @@ public class EnterpriseSecurityComponentVersion_2_40 extends SupportedEnterprise
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.WRITE_NODE ), GRANTED );
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.WRITE_RELATIONSHIP ), GRANTED );
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.TRAVERSE_NODE ), GRANTED );
-            role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.WRITE_RELATIONSHIP ), GRANTED );
+            role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.TRAVERSE_RELATIONSHIP ), GRANTED );
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.READ_NODE_PROPERTY ), GRANTED );
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.READ_RELATIONSHIP_PROPERTY ), GRANTED );
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.ACCESS_ALL ), GRANTED );
@@ -196,7 +194,7 @@ public class EnterpriseSecurityComponentVersion_2_40 extends SupportedEnterprise
 
         case READER:
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.TRAVERSE_NODE ), GRANTED );
-            role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.WRITE_RELATIONSHIP ), GRANTED );
+            role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.TRAVERSE_RELATIONSHIP ), GRANTED );
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.READ_NODE_PROPERTY ), GRANTED );
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.READ_RELATIONSHIP_PROPERTY ), GRANTED );
             role.createRelationshipTo( privilegeStore.getPrivilege( PRIVILEGE.ACCESS_ALL ), GRANTED );
@@ -209,76 +207,21 @@ public class EnterpriseSecurityComponentVersion_2_40 extends SupportedEnterprise
     // UPGRADE
 
     @Override
-    public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest )
+    public void upgradeSecurityGraph( Transaction tx, int fromVersion ) throws Exception
     {
-        Preconditions.checkState( latest.version == LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION,
-                format("Latest version should be %s but was %s", LATEST_ENTERPRISE_SECURITY_COMPONENT_VERSION, latest.version ));
-        log.info( String.format( "Upgrading security model from %s by restructuring privileges", this.description ) );
-        // Upgrade from 4.0.x to 4.1.x, which means add the Version node, change global writes,split schema into index and constraint and add the public role
-        setVersionProperty( tx, latest.version );
-        upgradeWriteFromAllPropertiesToGraphResource( tx );
-        upgradeFromSchemaPrivilegeToIndexAndContraintPrivileges( tx );
-        Node publicRole = createPublicRoleFromUpgrade( tx );
-        grantExecuteProcedurePrivilegeTo( tx, publicRole );
-        grantExecuteFunctionPrivilegeTo( tx, publicRole );
-    }
-
-    private void upgradeWriteFromAllPropertiesToGraphResource( Transaction tx )
-    {
-        Node graphResource = tx.findNode( Label.label( "Resource" ), "type", Resource.Type.GRAPH.toString() );
-        ResourceIterator<Node> writeNodes = tx.findNodes( PRIVILEGE_LABEL, "action", PrivilegeAction.WRITE.toString() );
-        while ( writeNodes.hasNext() )
+        if ( fromVersion < version )
         {
-            Node writeNode = writeNodes.next();
-            Relationship writeResourceRel = writeNode.getSingleRelationship( APPLIES_TO, Direction.OUTGOING );
-            Node oldResource = writeResourceRel.getEndNode();
-            if ( !oldResource.getProperty( "type" ).equals( Resource.Type.GRAPH.toString() ) )
+            // this will create roles
+            previous.upgradeSecurityGraph( tx, fromVersion );
+            // Grant default privileges to the roles
+            PrivilegeStore privilegeStore = new PrivilegeStore();
+            setUpDefaultPrivileges( tx, privilegeStore );
+            List<Node> roles = tx.findNodes( ROLE_LABEL ).stream().collect( Collectors.toList() );
+            for ( Node role : roles )
             {
-                writeNode.createRelationshipTo( graphResource, APPLIES_TO );
-                writeResourceRel.delete();
+                grantDefaultPrivileges( tx, role, role.getProperty( "name" ).toString(), privilegeStore );
             }
         }
-        writeNodes.close();
-    }
-
-    private void upgradeFromSchemaPrivilegeToIndexAndContraintPrivileges( Transaction tx )
-    {
-        // migrate schema privilege to index + constraint privileges
-        Node schemaNode = tx.findNode( PRIVILEGE_LABEL, "action", "schema" );
-        if ( schemaNode == null )
-        {
-            return;
-        }
-        Relationship schemaSegmentRel = schemaNode.getSingleRelationship( SCOPE, Direction.OUTGOING );
-        Relationship schemaResourceRel = schemaNode.getSingleRelationship( APPLIES_TO, Direction.OUTGOING );
-
-        Node segment = schemaSegmentRel.getEndNode();
-        Node resource = schemaResourceRel.getEndNode();
-
-        Node indexNode = tx.findNode( PRIVILEGE_LABEL, "action", PrivilegeAction.INDEX.toString() );
-        if ( indexNode == null )
-        {
-            indexNode = tx.createNode( PRIVILEGE_LABEL );
-            setupPrivilegeNode( indexNode, PrivilegeAction.INDEX.toString(), segment, resource );
-        }
-        Node constraintNode = tx.findNode( PRIVILEGE_LABEL, "action", PrivilegeAction.CONSTRAINT.toString() );
-        if ( constraintNode == null )
-        {
-            constraintNode = tx.createNode( PRIVILEGE_LABEL );
-            setupPrivilegeNode( constraintNode, PrivilegeAction.CONSTRAINT.toString(), segment, resource );
-        }
-
-        for ( Relationship rel : schemaNode.getRelationships( GRANTED ) ) // incoming from roles
-        {
-            Node role = rel.getOtherNode( schemaNode );
-            role.createRelationshipTo( indexNode, GRANTED );
-            role.createRelationshipTo( constraintNode, GRANTED );
-            rel.delete();
-        }
-
-        schemaResourceRel.delete();
-        schemaSegmentRel.delete();
-        schemaNode.delete();
     }
 
     // RUNTIME

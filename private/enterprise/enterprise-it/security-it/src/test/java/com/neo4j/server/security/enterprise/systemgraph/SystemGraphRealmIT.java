@@ -7,8 +7,6 @@ package com.neo4j.server.security.enterprise.systemgraph;
 
 import com.neo4j.dbms.EnterpriseSystemGraphComponent;
 import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository;
-import org.neo4j.internal.kernel.api.security.LabelSegment;
-import org.neo4j.internal.kernel.api.security.RelTypeSegment;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
@@ -40,8 +38,11 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.FunctionSegment;
+import org.neo4j.internal.kernel.api.security.LabelSegment;
 import org.neo4j.internal.kernel.api.security.ProcedureSegment;
+import org.neo4j.internal.kernel.api.security.RelTypeSegment;
 import org.neo4j.internal.kernel.api.security.Segment;
+import org.neo4j.internal.kernel.api.security.UserSegment;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.security.auth.InMemoryUserRepository;
 import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
@@ -67,12 +68,15 @@ import static org.neo4j.cypher.security.BasicSystemGraphRealmTestHelper.createUs
 import static org.neo4j.dbms.database.AbstractSystemGraphComponent.SECURITY_USER_COMPONENT;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.CURRENT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ACCESS;
-import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CONSTRAINT;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DBMS_ACTIONS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.INDEX;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.MATCH;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.START_DATABASE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.STOP_DATABASE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRANSACTION_MANAGEMENT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.WRITE;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_PASSWORD;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
@@ -366,8 +370,14 @@ class SystemGraphRealmIT
                 new ResourcePrivilege( GRANT, INDEX, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
         ResourcePrivilege constraintNodePrivilege =
                 new ResourcePrivilege( GRANT, CONSTRAINT, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
-        ResourcePrivilege adminNodePrivilege =
-                new ResourcePrivilege( GRANT, ADMIN, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
+        ResourcePrivilege startDbPrivilege =
+                new ResourcePrivilege( GRANT, START_DATABASE, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
+        ResourcePrivilege stopDbPrivilege =
+                new ResourcePrivilege( GRANT, STOP_DATABASE, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
+        ResourcePrivilege transactionPrivilege =
+                new ResourcePrivilege( GRANT, TRANSACTION_MANAGEMENT, new Resource.DatabaseResource(), UserSegment.ALL, SpecialDatabase.ALL );
+        ResourcePrivilege dbmsPrivilege =
+                new ResourcePrivilege( GRANT, DBMS_ACTIONS, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
 
         assertThat( privilegesFor( realm, PredefinedRoles.READER ),
                 containsInAnyOrder( accessPrivilege, matchNodePrivilege, matchRelPrivilege ) );
@@ -387,7 +397,7 @@ class SystemGraphRealmIT
 
         assertThat( privilegesFor( realm, PredefinedRoles.ADMIN ),
                 containsInAnyOrder( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenNodePrivilege,
-                        indexNodePrivilege, constraintNodePrivilege, adminNodePrivilege ) );
+                        indexNodePrivilege, constraintNodePrivilege, startDbPrivilege, stopDbPrivilege, transactionPrivilege, dbmsPrivilege ) );
     }
 
     private Set<ResourcePrivilege> privilegesFor( SystemGraphRealm realm, String role )

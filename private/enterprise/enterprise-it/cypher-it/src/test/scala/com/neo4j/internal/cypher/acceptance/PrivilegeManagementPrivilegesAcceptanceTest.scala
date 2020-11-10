@@ -15,8 +15,7 @@ class PrivilegeManagementPrivilegesAcceptanceTest extends AdministrationCommandA
 
   test("should not revoke other privilege management privileges when revoking privilege management") {
     // GIVEN
-    createRoleWithOnlyAdminPrivilege()
-    execute("CREATE ROLE custom AS COPY OF adminOnly")
+    execute("CREATE ROLE custom")
     execute("GRANT SHOW PRIVILEGE ON DBMS TO custom")
     execute("GRANT ASSIGN PRIVILEGE ON DBMS TO custom")
     execute("GRANT REMOVE PRIVILEGE ON DBMS TO custom")
@@ -27,7 +26,6 @@ class PrivilegeManagementPrivilegesAcceptanceTest extends AdministrationCommandA
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(adminPrivilege).role("custom").map,
       granted(adminAction("show_privilege")).role("custom").map,
       granted(adminAction("assign_privilege")).role("custom").map,
       granted(adminAction("remove_privilege")).role("custom").map

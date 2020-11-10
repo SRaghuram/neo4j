@@ -75,8 +75,8 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
 
         KnownEnterpriseSecurityComponentVersion version0 =
                 new EnterpriseSecurityComponentVersion_0_35( log, migrationRoleRepository, customSecurityInitializer );
-        KnownEnterpriseSecurityComponentVersion version1 = new EnterpriseSecurityComponentVersion_1_36( log, config );
-        KnownEnterpriseSecurityComponentVersion version2 = new EnterpriseSecurityComponentVersion_2_40( log );
+        KnownEnterpriseSecurityComponentVersion version1 = new EnterpriseSecurityComponentVersion_1_36( log, config, version0 );
+        KnownEnterpriseSecurityComponentVersion version2 = new EnterpriseSecurityComponentVersion_2_40( log, version1 );
         KnownEnterpriseSecurityComponentVersion version3 = new EnterpriseSecurityComponentVersion_3_41D1( log, version2 );
         KnownEnterpriseSecurityComponentVersion version4 = new EnterpriseSecurityComponentVersion_4_41( log, version3 );
         KnownEnterpriseSecurityComponentVersion version5 = new EnterpriseSecurityComponentVersion_5_42D4( log, version4 );
@@ -146,7 +146,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
                 if ( currentVersion.migrationSupported() )
                 {
                     log.debug( "Upgrading security graph to latest version" );
-                    currentVersion.upgradeSecurityGraph( tx, knownSecurityComponentVersions.latestSecurityGraphVersion() );
+                    knownSecurityComponentVersions.latestSecurityGraphVersion().upgradeSecurityGraph( tx, currentVersion.version );
                 }
                 else
                 {

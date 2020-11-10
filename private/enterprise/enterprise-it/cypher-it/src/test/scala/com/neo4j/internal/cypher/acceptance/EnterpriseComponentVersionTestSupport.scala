@@ -71,41 +71,42 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
 
   def withAllSystemGraphVersions(expectToFail: String => Option[Class[_]])(block: => Any): Unit = withVersions(allSystemGraphVersions: _*)(expectToFail)(block)
 
-  def translatePrivileges(privileges: Set[Map[String, AnyRef]], version: String): Set[Map[String, AnyRef]] = version match {
-    case VERSION_40   => translatePrivilegesTo40(privileges)
-    case VERSION_41D1 => translatePrivilegesTo41(privileges)
-    case VERSION_41   => translatePrivilegesTo41(privileges)
-    case VERSION_42D4 => translatePrivilegesTo41(privileges)
-    case VERSION_42D6 => translatePrivilegesTo41(privileges)
-    case VERSION_42D7 => translatePrivilegesTo41(privileges)
-    case VERSION_43D1 => translatePrivilegesTo41(privileges)
-    case _            => throw new IllegalArgumentException(s"Unsupported version: $version")
-  }
-
-  def makeCombinedFrom(acc: Set[Map[String, AnyRef]], m: Map[String, AnyRef], combined: String, other: String): Set[Map[String, AnyRef]] = {
-    val read: Option[Map[String, AnyRef]] = acc.find(p => p("action") == other && p("segment") == m("segment"))
-    acc + read.map(r => r + ("action" -> combined)).getOrElse(m)
-    if (read.isDefined) {
-      acc - read.get + (m + ("action" -> combined))
-    } else {
-      acc + m
+  def defaultAdminPrivilegesFor(replace: String, version: String): Set[Map[String, AnyRef]] = {
+    val adminPrivileges = version match {
+      case VERSION_40 => Set(
+        granted(access).role("admin").map,
+        granted(read).role("admin").node("*").map,
+        granted(traverse).role("admin").node("*").map,
+        granted(read).role("admin").relationship("*").map,
+        granted(traverse).role("admin").relationship("*").map,
+        granted(write + ("resource" -> "all_properties")).role("admin").node("*").map,
+        granted(write + ("resource" -> "all_properties")).role("admin").relationship("*").map,
+        granted(nameManagement).role("admin").map,
+        granted(adminAction("schema")).role("admin").map,
+        granted(adminAction("admin")).role("admin").map
+      )
+      case VERSION_41D1 | VERSION_41 | VERSION_42D4 | VERSION_42D6 | VERSION_42D7 => Set(
+        granted(access).role("admin").map,
+        granted(matchPrivilege).role("admin").node("*").map,
+        granted(matchPrivilege).role("admin").relationship("*").map,
+        granted(write).role("admin").node("*").map,
+        granted(write).role("admin").relationship("*").map,
+        granted(nameManagement).role("admin").map,
+        granted(indexManagement).role("admin").map,
+        granted(constraintManagement).role("admin").map,
+        granted(adminAction("admin")).role("admin").map
+      )
+      case VERSION_43D1 => defaultRolePrivileges
+      case _            => throw new IllegalArgumentException(s"Unsupported version: $version")
     }
-  }
-
-  def translatePrivilegesTo41(privileges: Set[Map[String, AnyRef]]): Set[Map[String, AnyRef]] = privileges.foldLeft(Set.empty[Map[String, AnyRef]]) {
-    case (acc, m: Map[String, AnyRef]) if m("action") == "schema" => acc ++ Set(m + ("action" -> "index"), m + ("action" -> "constraint"))
-    case (acc, m: Map[String, AnyRef]) if m("action") == "write" => acc + (m + ("resource" -> "graph"))
-    case (acc, m: Map[String, AnyRef]) if m("action") == "traverse" => makeCombinedFrom(acc, m + ("resource" -> "all_properties"), "match", "read")
-    case (acc, m: Map[String, AnyRef]) if m("action") == "read" => makeCombinedFrom(acc, m, "match", "traverse")
-    case (acc, x) => acc + x
-  }
-
-  def translatePrivilegesTo40(privileges: Set[Map[String, AnyRef]]): Set[Map[String, AnyRef]] = privileges.foldLeft(Set.empty[Map[String, AnyRef]]) {
-    case (acc, m: Map[String, AnyRef]) if m("action") == "index" => makeCombinedFrom(acc, m, "schema", "constraint")
-    case (acc, m: Map[String, AnyRef]) if m("action") == "constraint" => makeCombinedFrom(acc, m, "schema", "index")
-    case (acc, m: Map[String, AnyRef]) if m("action") == "write" => acc + (m + ("resource" -> "all_properties"))
-    case (acc, m: Map[String, AnyRef]) if m("action") == "match" => acc ++ Set(m + ("action" -> "traverse", "resource" -> "graph"), m + ("action" -> "read"))
-    case (acc, x) => acc + x
+    adminPrivileges.foldLeft(Set.empty[Map[String, AnyRef]]) {
+      case (acc, row) if row("role") == "admin" =>
+        acc + row.map {
+          case (k, _) if k == "role" => (k, replace)
+          case (k, v) => (k, v)
+        }
+      case (acc, _) => acc
+    }
   }
 
   override protected def createDatabaseFactory(databaseRootDir: Path): TestDatabaseManagementServiceBuilder = {

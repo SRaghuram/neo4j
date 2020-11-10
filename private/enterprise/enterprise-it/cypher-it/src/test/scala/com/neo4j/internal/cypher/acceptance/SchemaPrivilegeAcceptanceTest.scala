@@ -490,8 +490,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     test("Should revoke compound TOKEN privileges from built-in roles") {
       // Given
       execute("CREATE ROLE custom AS COPY OF admin")
-      val expectedCurrent = defaultRolePrivilegesFor("admin", "custom")
-      val expected = translatePrivileges(expectedCurrent, expectedVersion)
+      val expected = defaultAdminPrivilegesFor("custom", expectedVersion)
 
       // When && Then
       execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)

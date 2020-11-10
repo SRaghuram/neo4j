@@ -44,6 +44,16 @@ public class EnterpriseSecurityComponentVersion_7_42D7 extends SupportedEnterpri
     }
 
     @Override
+    public void upgradeSecurityGraph( Transaction tx, int fromVersion ) throws Exception
+    {
+        if ( fromVersion < version )
+        {
+            previous.upgradeSecurityGraph( tx, fromVersion );
+            this.setVersionProperty( tx, version );
+        }
+    }
+
+    @Override
     boolean supportsUpdateAction( PrivilegeAction action )
     {
         switch ( action )

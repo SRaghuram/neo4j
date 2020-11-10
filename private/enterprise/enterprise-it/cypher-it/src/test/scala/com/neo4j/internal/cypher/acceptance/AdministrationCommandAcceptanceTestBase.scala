@@ -152,7 +152,10 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     granted(nameManagement).role("admin").map,
     granted(indexManagement).role("admin").map,
     granted(constraintManagement).role("admin").map,
-    granted(adminPrivilege).role("admin").map,
+    granted(startDatabase).role("admin").map,
+    granted(stopDatabase).role("admin").map,
+    granted(transaction("*")).role("admin").map,
+    granted(allDbmsPrivilege).role("admin").map,
   )
 
   def defaultRolePrivilegesFor(role: String, replace: String): Set[Map[String, AnyRef]] = {
@@ -175,7 +178,10 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     granted(nameManagement).role("admin").user("neo4j").map,
     granted(indexManagement).role("admin").user("neo4j").map,
     granted(constraintManagement).role("admin").user("neo4j").map,
-    granted(adminPrivilege).role("admin").user("neo4j").map,
+    granted(startDatabase).role("admin").user("neo4j").map,
+    granted(stopDatabase).role("admin").user("neo4j").map,
+    granted(transaction("*")).role("admin").user("neo4j").map,
+    granted(allDbmsPrivilege).role("admin").user("neo4j").map,
   )
 
   def asPrivilegesResult(row: Result.ResultRow): Map[String, AnyRef] =
@@ -354,8 +360,8 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val removeLabel: Map[String, String] = baseMap + ("action" -> "remove_label", "segment" -> "NODE(*)")
   val allGraphPrivileges: Map[String, String] = baseMap + ("resource" -> "graph", "action" -> "graph_actions")
 
+  val allDbmsPrivilege: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "dbms_actions")
   val allDatabasePrivilege: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "database_actions")
-  val adminPrivilege:  Map[String, String] = baseMap + ("resource" -> "database", "action" -> "admin")
 
   def showTransaction(username: String): Map[String, String] =
     baseMap + ("resource" -> "database", "segment" -> s"USER($username)", "action" -> "show_transaction")
@@ -387,7 +393,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     "ASSIGN PRIVILEGE" -> adminAction("assign_privilege"),
     "REMOVE PRIVILEGE" -> adminAction("remove_privilege"),
     "PRIVILEGE MANAGEMENT" -> adminAction("privilege_management"),
-    "ALL DBMS PRIVILEGES" -> adminAction("dbms_actions"),
+    "ALL DBMS PRIVILEGES" -> allDbmsPrivilege,
     "EXECUTE ADMIN PROCEDURES" -> adminAction("execute_admin")
   )
   val dbmsCommands: Iterable[String] = dbmsPrivileges.keys
@@ -610,18 +616,6 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     execute(s"REVOKE EXECUTE PROCEDURES * ON DBMS FROM ${PredefinedRoles.PUBLIC}")
     execute(s"REVOKE EXECUTE FUNCTION * ON DBMS FROM ${PredefinedRoles.PUBLIC}")
     execute("SHOW ROLE PUBLIC PRIVILEGES").toList should be(empty)
-  }
-
-  def createRoleWithOnlyAdminPrivilege(name: String = "adminOnly"): Unit = {
-    execute(s"CREATE ROLE $name AS COPY OF admin")
-    execute(s"REVOKE MATCH {*} ON GRAPH * FROM $name")
-    execute(s"REVOKE WRITE ON GRAPH * FROM $name")
-    execute(s"REVOKE ACCESS ON DATABASE * FROM $name")
-    execute(s"REVOKE ALL ON DATABASE * FROM $name")
-    execute(s"REVOKE NAME ON DATABASE * FROM $name")
-    execute(s"REVOKE INDEX ON DATABASE * FROM $name")
-    execute(s"REVOKE CONSTRAINT ON DATABASE * FROM $name")
-    execute(s"SHOW ROLE $name PRIVILEGES").toSet should be(Set(granted(adminPrivilege).role(name).map))
   }
 
   override protected def initTest() {

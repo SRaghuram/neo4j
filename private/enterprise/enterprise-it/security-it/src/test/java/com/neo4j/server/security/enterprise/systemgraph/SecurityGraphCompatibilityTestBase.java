@@ -6,6 +6,7 @@
 package com.neo4j.server.security.enterprise.systemgraph;
 
 import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository;
+import com.neo4j.server.security.enterprise.auth.RoleRecord;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -35,12 +37,22 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.EphemeralTestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.allow_single_automatic_upgrade;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
+import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_35;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_36;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_40;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41D1;
 
 @EphemeralTestDirectoryExtension
 abstract class SecurityGraphCompatibilityTestBase
@@ -50,7 +62,8 @@ abstract class SecurityGraphCompatibilityTestBase
     private TestDirectory directory;
 
     protected DatabaseManagementService dbms;
-    private EnterpriseSecurityGraphComponent enterpriseComponent;
+    EnterpriseSecurityGraphComponent enterpriseComponent;
+    RoleRepository roleRepository;
 
     GraphDatabaseAPI system;
     AuthManager authManager;
@@ -64,7 +77,7 @@ abstract class SecurityGraphCompatibilityTestBase
                 .build();
 
         UserRepository userRepository = new InMemoryUserRepository();
-        RoleRepository roleRepository = new InMemoryRoleRepository();
+        roleRepository = new InMemoryRoleRepository();
         Log securityLog = mock( Log.class );
         var communityComponent = new UserSecurityGraphComponent( securityLog, userRepository, userRepository, cfg );
         enterpriseComponent = new EnterpriseSecurityGraphComponent( securityLog, roleRepository, userRepository, cfg );
@@ -102,10 +115,50 @@ abstract class SecurityGraphCompatibilityTestBase
 
     void initEnterprise( String version ) throws Exception
     {
+        List<String> roles;
+        switch ( version )
+        {
+        case VERSION_35:
+            // Version 3.5 does not have roles in the system graph, we must assign all the default roles to a user in order for them to be migrated
+            roleRepository.create( new RoleRecord( ADMIN, INITIAL_USER_NAME ) );
+            roleRepository.create( new RoleRecord( ARCHITECT, INITIAL_USER_NAME ) );
+            roleRepository.create( new RoleRecord( PUBLISHER, INITIAL_USER_NAME ) );
+            roleRepository.create( new RoleRecord( EDITOR, INITIAL_USER_NAME ) );
+            roleRepository.create( new RoleRecord( READER, INITIAL_USER_NAME ) );
+            return;
+        case VERSION_36:
+        case VERSION_40:
+            // Versions older than 41 drop 01 should not have PUBLIC role
+            roles = List.of( ADMIN, ARCHITECT, PUBLISHER, EDITOR, READER );
+            break;
+        default:
+            roles = PredefinedRoles.roles;
+        }
+        initEnterprise( version, roles );
+    }
+
+    private void initEnterprise( String version, List<String> roles ) throws Exception
+    {
         KnownEnterpriseSecurityComponentVersion builder = enterpriseComponent.findSecurityGraphComponentVersion( version );
         try ( Transaction tx = system.beginTx() )
         {
-            builder.initializePrivileges( tx, PredefinedRoles.roles, Map.of( PredefinedRoles.ADMIN, Set.of( "neo4j" ) ) );
+            enterpriseComponent.initializeSystemGraphConstraints( tx );
+            tx.commit();
+        }
+        try ( Transaction tx = system.beginTx() )
+        {
+            builder.initializePrivileges( tx, roles, Map.of( ADMIN, Set.of( INITIAL_USER_NAME ) ) );
+            switch ( version )
+            {
+            case VERSION_36:
+            case VERSION_40:
+            case VERSION_41D1:
+                // Versions older than 41 drop 01 should not have a version set
+                break;
+            default:
+                // have to manually set the version property
+                builder.setVersionProperty( tx, builder.version );
+            }
             tx.commit();
         }
     }

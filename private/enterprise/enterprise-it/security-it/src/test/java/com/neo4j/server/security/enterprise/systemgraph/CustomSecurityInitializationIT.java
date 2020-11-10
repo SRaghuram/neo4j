@@ -138,7 +138,7 @@ class CustomSecurityInitializationIT
             Result result = tx.execute( "SHOW POPULATED ROLES WITH USERS" );
             result.stream().forEach( r -> roleUsers.add( r.get( "role" ) + "-" + r.get( "member" ) ) );
             result.close();
-            assertThat( roleUsers, containsInAnyOrder( "custom-neo4j", "testRole-neo4j" ) );
+            assertThat( roleUsers, containsInAnyOrder( "custom-neo4j", "testRole-neo4j", "PUBLIC-neo4j" ) );
         }
     }
 
@@ -169,7 +169,7 @@ class CustomSecurityInitializationIT
             Result result = tx.execute( "SHOW POPULATED ROLES WITH USERS" );
             result.stream().forEach( r -> roleUsers.add( r.get( "role" ) + "-" + r.get( "member" ) ) );
             result.close();
-            assertThat( roleUsers, containsInAnyOrder( "custom2-neo4j", "testRole2-neo4j" ) );
+            assertThat( roleUsers, containsInAnyOrder( "custom2-neo4j", "testRole2-neo4j", "PUBLIC-neo4j" ) );
         }
     }
 
@@ -334,7 +334,7 @@ class CustomSecurityInitializationIT
             Result result = tx.execute( "SHOW POPULATED ROLES WITH USERS" );
             result.stream().forEach( r -> roleUsers.add( r.get( "role" ) + "-" + r.get( "member" ) ) );
             result.close();
-            assertThat( roleUsers, containsInAnyOrder( "custom-neo4j", "testRole-neo4j" ) );
+            assertThat( roleUsers, containsInAnyOrder( "custom-neo4j", "testRole-neo4j", "PUBLIC-neo4j" ) );
         } );
     }
 
