@@ -143,7 +143,6 @@ class CartesianProductNotificationAcceptanceTest extends CypherFunSuite with Gra
       configuration,
       Clock.systemUTC(),
       monitors,
-      rewriterSequencer = RewriterStepSequencer.newValidating,
       updateStrategy = None,
       contextCreator = PlannerContextCreator
     )
