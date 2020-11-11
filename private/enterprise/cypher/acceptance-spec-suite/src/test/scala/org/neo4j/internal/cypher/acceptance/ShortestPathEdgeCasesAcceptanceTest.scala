@@ -90,7 +90,7 @@ class ShortestPathEdgeCasesAcceptanceTest extends ExecutionEngineFunSuite with C
                   |WHERE ALL(id IN wps WHERE id IN [n IN nodes(p) | n.id])
                   |WITH p, size(nodes(p)) as length order by length limit 1
                   |RETURN size(nodes(p)) as size""".stripMargin
-    val results = executeWith(Configs.InterpretedAndSlotted, query)
+    val results = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     results.toList should equal(List(Map("size" -> 7)))
   }
 

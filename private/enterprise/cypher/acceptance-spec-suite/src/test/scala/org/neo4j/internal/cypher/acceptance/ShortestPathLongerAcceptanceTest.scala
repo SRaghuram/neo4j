@@ -158,7 +158,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
 
   test("Shortest path from first to last node via top right") {
     val start = System.currentTimeMillis
-    val results = executeWith(Configs.InterpretedAndSlotted,
+    val results = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       s"""PROFILE MATCH p = shortestPath((src:$topLeft)-[*]-(dst:$bottomRight))
          |WHERE ANY(n in nodes(p) WHERE n:$topRight)
          |RETURN nodes(p) AS nodes""".stripMargin,
@@ -177,7 +177,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
 
   test("Shortest path from first to last node via bottom left") {
     val start = System.currentTimeMillis
-    val results = executeWith(Configs.InterpretedAndSlotted,
+    val results = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       s"""PROFILE MATCH p = shortestPath((src:$topLeft)-[*]-(dst:$bottomRight))
          |WHERE ANY(n in nodes(p) WHERE n:$bottomLeft)
          |RETURN nodes(p) AS nodes""".stripMargin,
@@ -196,7 +196,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
 
   test("Fallback expander should take on rel-type predicates") {
     val start = System.currentTimeMillis
-    val results = executeWith(Configs.InterpretedAndSlotted,
+    val results = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       s"""PROFILE MATCH p = shortestPath((src:$topLeft)-[rels*]-(dst:$bottomRight))
          |WHERE ALL(r in rels WHERE type(r) = "DOWN")
          |  AND ANY(n in nodes(p) WHERE n:$bottomLeft)
@@ -248,7 +248,8 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
     val results = executeUsingCostPlannerOnly(query)
 
     // Then
-    evaluateShortestPathResults(results, start, dim * 4 - 3, row(0) ++ row(dMax))
+    val expectedNodes = Set("00", s"0$dMax", s"${dMax}0", s"$dMax$dMax").map(nodesByName)
+    evaluateShortestPathResults(results, start, (dim - 1) * 4 + 1, expectedNodes)
     results.executionPlanDescription() should executeShortestPathFallbackWith(minRows = 1)
   }
 
@@ -606,7 +607,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
                   |WHERE ALL(id IN wps WHERE id IN [n IN nodes(p) | n.id])
                   |WITH p, size(nodes(p)) as length order by length DESC limit 1
                   |RETURN [n IN nodes(p) | n.id] as nodes""".stripMargin
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.toList should equal(List(Map("nodes" -> List(3, 2, 1, 11, 12, 13, 26, 27, 14))))
   }
@@ -704,19 +705,19 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
     val duration = System.currentTimeMillis() - startMs
     dprintln(results.executionPlanDescription())
 
-    val result = results.columnAs[scala.collection.GenTraversable[Node]]("nodes").toList
+    val result = results.columnAs[scala.collection.GenTraversable[Node]]("nodes").toList.head.toList
 
     dprintln(s"Query took ${duration/1000.0}s")
 
-    debugResults(result.head.toList)
+    debugResults(result)
 
-    result.head.toList.length should equal(pathLength)
+    result.length should equal(pathLength)
 
-    dprintln("Got results: " + result.head.toList.sortWith((a:Node, b:Node) => a.getId < b.getId))
+    dprintln("Got results: " + result.sortWith((a:Node, b:Node) => a.getId < b.getId))
     dprintln("Expect results: " + expectedNodes.toList.sortWith( (a:Node, b:Node) => a.getId < b.getId))
 
     assert(expectedNodes.forall { cell =>
-      result.head.toSet.contains(cell)
+      result.contains(cell)
     })
   }
 
