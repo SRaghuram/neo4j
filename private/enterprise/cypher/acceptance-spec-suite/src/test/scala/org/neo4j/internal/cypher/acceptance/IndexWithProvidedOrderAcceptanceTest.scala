@@ -1005,7 +1005,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
              |WHERE n.prop3 >= '' AND n.prop5 < 3.0
              |RETURN $returnString
              |ORDER BY $orderByString""".stripMargin
-        val result = executeWith(Configs.InterpretedAndSlotted, query, executeExpectedFailures = false)
+        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
         // Then
         result.executionPlanDescription() should includeSomewhere
