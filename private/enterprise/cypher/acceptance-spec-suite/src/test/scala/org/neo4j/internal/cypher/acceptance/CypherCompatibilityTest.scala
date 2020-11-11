@@ -117,19 +117,19 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   test("should not support old compilers") {
     runWithConfig() {
       db =>
-        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 1.9 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError") )
-        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 2.0 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError") )
-        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 2.1 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError") )
-        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 2.2 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError") )
-        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 2.3 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError") )
-        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 3.0 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError") )
-        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 3.1 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError") )
-        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 3.2 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError") )
-        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 3.3 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError") )
-        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 3.4 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError") )
-        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 3.6 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError") )
-        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 4.0 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError") )
-        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 4.1 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError") )
+        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 1.9 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.ArgumentError") )
+        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 2.0 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.ArgumentError") )
+        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 2.1 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.ArgumentError") )
+        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 2.2 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.ArgumentError") )
+        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 2.3 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.ArgumentError") )
+        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 3.0 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.ArgumentError") )
+        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 3.1 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.ArgumentError") )
+        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 3.2 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.ArgumentError") )
+        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 3.3 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.ArgumentError") )
+        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 3.4 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.ArgumentError") )
+        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 3.6 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.ArgumentError") )
+        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 4.0 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.ArgumentError") )
+        db.withTx(tx => intercept[QueryExecutionException](tx.execute("CYPHER 4.1 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.ArgumentError") )
     }
   }
 
