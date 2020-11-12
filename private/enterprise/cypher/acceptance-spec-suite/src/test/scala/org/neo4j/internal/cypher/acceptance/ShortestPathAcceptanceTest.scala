@@ -117,7 +117,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
 
     val queryWithComplexPredicate = "MATCH shortestPath((src:A)-[r*]->(dst:D)) WHERE ALL (x IN tail(r) WHERE x.foo = (head(r)).bar) RETURN r AS rels"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, queryWithComplexPredicate).columnAs[List[Node]]("rels").toList
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, queryWithComplexPredicate).columnAs[List[Node]]("rels").toList
 
     result should equal(List(List(r1, r4)))
   }
