@@ -182,20 +182,18 @@ class ReplicatedTokenStateMachineTest
                         commandsToBytes( tokenCommands( UNEXPECTED_TOKEN_ID, true ), logEntryWriterFactory ) );
 
         // when
-        stateMachine.applyCommand( winningRequest, 1, r ->
-        {
-        } );
-        stateMachine.applyCommand( losingRequest, 2, r ->
-        {
-        } );
+        stateMachine.applyCommand( winningRequest, 1, r -> {} );
+        var callback = new StateMachineResponse();
+        stateMachine.applyCommand( losingRequest, 2, callback );
 
         // then
+        assertThat( (Integer) callback.stateMachineResult.consume() ).isEqualTo( EXPECTED_TOKEN_ID );
         assertThat( registry.getId( "Person" ) ).isNull();
         assertThat( registry.getIdInternal( "Person" ) ).isEqualTo( EXPECTED_TOKEN_ID );
     }
 
     @Test
-    void shouldFailIfTokenIdAlreadyExistsOnADifferentName() throws Exception
+    void shouldFailIfTokenIdAlreadyOccupiedByADifferentToken() throws Exception
     {
         // given
         var registry = new TokenRegistry( "Label" );
@@ -211,9 +209,7 @@ class ReplicatedTokenStateMachineTest
                         commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, true ), logEntryWriterFactory ) );
 
         // when
-        stateMachine.applyCommand( winningRequest, 1, r ->
-        {
-        } );
+        stateMachine.applyCommand( winningRequest, 1, r -> {} );
         var response = new StateMachineResponse();
         stateMachine.applyCommand( failedRequest, 2, response );
 
@@ -225,7 +221,7 @@ class ReplicatedTokenStateMachineTest
     }
 
     @Test
-    void shouldNotFailIfSameTokenAlreadyExistsWithSameName() throws Exception
+    void shouldNotFailIfTokenAlreadyExistsWithSameNameAndId() throws Exception
     {
         // given
         var registry = new TokenRegistry( "Label" );
@@ -241,9 +237,7 @@ class ReplicatedTokenStateMachineTest
                         commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, true ), logEntryWriterFactory ) );
 
         // when
-        stateMachine.applyCommand( winningRequest, 1, r ->
-        {
-        } );
+        stateMachine.applyCommand( winningRequest, 1, r -> {} );
         var callback = new StateMachineResponse();
         stateMachine.applyCommand( ignoredRequest, 2, callback );
 
@@ -265,8 +259,7 @@ class ReplicatedTokenStateMachineTest
 
         // when
         var commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, false ), logEntryWriterFactory );
-        stateMachine.applyCommand( new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandBytes ), logIndex, r ->
-        {} );
+        stateMachine.applyCommand( new ReplicatedTokenRequest( databaseId, LABEL, "Person", commandBytes ), logIndex, r -> {} );
 
         // then
         var transactions = commitProcess.transactionsToApply;
