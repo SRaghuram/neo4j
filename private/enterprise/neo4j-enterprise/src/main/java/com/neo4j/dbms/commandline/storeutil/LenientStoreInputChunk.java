@@ -14,7 +14,6 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.CommonAbstractStore;
-import org.neo4j.kernel.impl.store.InvalidRecordException;
 import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.record.PrimitiveRecord;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
@@ -67,15 +66,8 @@ public abstract class LenientStoreInputChunk implements InputChunk
             }
             catch ( Exception e )
             {
-                if ( e instanceof InvalidRecordException && e.getMessage().endsWith( "not in use" ) )
-                {
-                    stats.unused.increment();
-                }
-                else
-                {
-                    stats.removed.increment();
-                    stats.brokenRecord( recordType(), id, e );
-                }
+                stats.removed.increment();
+                stats.brokenRecord( recordType(), id, e );
             }
             id++;
             return true;

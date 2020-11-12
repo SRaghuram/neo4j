@@ -40,7 +40,7 @@ class LenientNodeReader extends LenientStoreInputChunk
     @Override
     void readAndVisit( long id, InputEntityVisitor visitor, PageCursorTracer cursorTracer ) throws IOException
     {
-        nodeStore.getRecordByCursor( id, record, RecordLoad.NORMAL, cursor );
+        nodeStore.getRecordByCursor( id, record, RecordLoad.LENIENT_CHECK, cursor );
         if ( record.inUse() )
         {
             nodeStore.ensureHeavy( record, cursorTracer );

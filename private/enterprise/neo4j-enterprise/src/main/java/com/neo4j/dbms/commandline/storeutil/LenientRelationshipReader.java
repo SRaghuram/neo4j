@@ -38,7 +38,7 @@ class LenientRelationshipReader extends LenientStoreInputChunk
     @Override
     void readAndVisit( long id, InputEntityVisitor visitor, PageCursorTracer cursorTracer ) throws IOException
     {
-        relationshipStore.getRecordByCursor( id, record, RecordLoad.NORMAL, cursor );
+        relationshipStore.getRecordByCursor( id, record, RecordLoad.LENIENT_CHECK, cursor );
         if ( record.inUse() )
         {
             relationshipStore.ensureHeavy( record, cursorTracer );
