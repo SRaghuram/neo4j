@@ -107,8 +107,11 @@ public abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecor
                 // it may only be read as part of reading the primary unit.
                 record.clear();
                 // Return and try again
-                primaryCursor.setCursorException(
-                        "Expected record to be the first unit in the chain, but record header says it's not" );
+                if ( mode.failOnNonFirstUnit() )
+                {
+                    primaryCursor.setCursorException(
+                            "Expected record to be the first unit in the chain, but record header says it's not" );
+                }
                 return;
             }
 
