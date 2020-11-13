@@ -192,7 +192,7 @@ class CursorPoolTest extends CypherFunSuite {
 
     override def allocateFullAccessNodeLabelIndexCursor(cursorTracer: PageCursorTracer): NodeLabelIndexCursor = ???
 
-    override def allocateRelationshipValueIndexCursor(cursorTracer: PageCursorTracer): RelationshipValueIndexCursor = ???
+    override def allocateRelationshipValueIndexCursor(cursorTracer: PageCursorTracer, memoryTracker: MemoryTracker): RelationshipValueIndexCursor = ???
 
     override def allocateRelationshipTypeIndexCursor(): RelationshipTypeIndexCursor = ???
   }
