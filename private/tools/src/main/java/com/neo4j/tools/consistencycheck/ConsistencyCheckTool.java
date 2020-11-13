@@ -27,8 +27,7 @@ import org.neo4j.time.Stopwatch;
 
 import static java.lang.String.format;
 import static org.neo4j.configuration.Config.DEFAULT_CONFIG_FILE_NAME;
-import static org.neo4j.configuration.GraphDatabaseInternalSettings.experimental_consistency_checker;
-import static org.neo4j.configuration.GraphDatabaseInternalSettings.experimental_consistency_checker_stop_threshold;
+import static org.neo4j.configuration.GraphDatabaseInternalSettings.consistency_checker_stop_threshold;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 import static org.neo4j.internal.helpers.Format.duration;
@@ -113,8 +112,7 @@ public class ConsistencyCheckTool implements Callable<Object>
     {
         Config.Builder configBuilder = Config.newBuilder()
                 .set( neo4j_home, homeDirectory.toAbsolutePath() )
-                .setDefault( experimental_consistency_checker, true ) // default to using new checker
-                .set( experimental_consistency_checker_stop_threshold, 80 )
+                .set( consistency_checker_stop_threshold, 80 )
                 .fromFileNoThrow( configFile != null ? configFile : homeDirectory.resolve( DEFAULT_CONFIG_FILE_NAME ) );
         if ( databaseName != null )
         {

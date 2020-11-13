@@ -24,7 +24,6 @@ import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.consistency.checking.full.FullCheck;
 import org.neo4j.consistency.newchecker.NodeBasedMemoryLimiter;
 import org.neo4j.consistency.report.ConsistencySummaryStatistics;
-import org.neo4j.consistency.statistics.Statistics;
 import org.neo4j.consistency.store.DirectStoreAccess;
 import org.neo4j.counts.CountsStore;
 import org.neo4j.cursor.IOCursor;
@@ -285,7 +284,7 @@ class RebuildFromLogs
             DirectStoreAccess stores =
                     new DirectStoreAccess( nativeStores, labelScanStore, relationshipTypeScanStore, indexes, tokenHolders, indexStatisticsStore,
                             idGeneratorFactory );
-            FullCheck fullCheck = new FullCheck( ProgressMonitorFactory.textual( System.err ), Statistics.NONE,
+            FullCheck fullCheck = new FullCheck( ProgressMonitorFactory.textual( System.err ),
                     ConsistencyCheckService.defaultConsistencyCheckThreadsNumber(), ConsistencyFlags.DEFAULT, tuningConfiguration, false,
                     NodeBasedMemoryLimiter.DEFAULT );
 
