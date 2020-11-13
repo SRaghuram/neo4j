@@ -71,18 +71,18 @@ public class ReadReplica implements ClusterMember
             int txPort, int backupPort, int discoveryPort, DiscoveryServiceFactory discoveryServiceFactory,
             List<SocketAddress> coreMemberDiscoveryAddresses, Map<String,String> extraParams,
             Map<String,IntFunction<String>> instanceExtraParams, String recordFormat, Monitors monitors,
-            String advertisedAddress, String listenAddress, ReadReplicaGraphDatabaseFactory dbFactory )
+            String advertisedHost, String listenHost, ReadReplicaGraphDatabaseFactory dbFactory )
     {
         this.index = index;
 
-        boltSocketAddress = format( advertisedAddress, boltPort );
-        intraClusterBoltSocketAddress = format( advertisedAddress, intraClusterBoltPort);
+        boltSocketAddress = format( advertisedHost, boltPort );
+        intraClusterBoltSocketAddress = format( advertisedHost, intraClusterBoltPort);
 
         Config.Builder config = Config.newBuilder();
         config.set( GraphDatabaseSettings.mode, GraphDatabaseSettings.Mode.READ_REPLICA );
         config.set( CausalClusteringSettings.initial_discovery_members, coreMemberDiscoveryAddresses );
-        config.set( CausalClusteringSettings.discovery_listen_address, new SocketAddress( listenAddress, discoveryPort ) );
-        config.set( CausalClusteringSettings.discovery_advertised_address, new SocketAddress( advertisedAddress, discoveryPort ) );
+        config.set( CausalClusteringSettings.discovery_listen_address, new SocketAddress( listenHost, discoveryPort ) );
+        config.set( CausalClusteringSettings.discovery_advertised_address, new SocketAddress( advertisedHost, discoveryPort ) );
         config.set( GraphDatabaseSettings.store_internal_log_level, Level.DEBUG );
         config.set( GraphDatabaseSettings.record_format, recordFormat );
         config.set( GraphDatabaseSettings.pagecache_memory, "8m" );
@@ -95,23 +95,23 @@ public class ReadReplica implements ClusterMember
         config.setRaw( instanceExtras );
 
         config.set( BoltConnector.enabled, TRUE );
-        config.set( BoltConnector.listen_address, new SocketAddress( listenAddress, boltPort ) );
-        config.set( BoltConnector.advertised_address, new SocketAddress( advertisedAddress, boltPort ) );
-        config.set( GraphDatabaseSettings.routing_listen_address, new SocketAddress( listenAddress, intraClusterBoltPort ) );
-        config.set( GraphDatabaseSettings.routing_advertised_address, new SocketAddress( advertisedAddress, intraClusterBoltPort ) );
+        config.set( BoltConnector.listen_address, new SocketAddress( listenHost, boltPort ) );
+        config.set( BoltConnector.advertised_address, new SocketAddress( advertisedHost, boltPort ) );
+        config.set( GraphDatabaseSettings.routing_listen_address, new SocketAddress( listenHost, intraClusterBoltPort ) );
+        config.set( GraphDatabaseSettings.routing_advertised_address, new SocketAddress( advertisedHost, intraClusterBoltPort ) );
         config.set( BoltConnector.encryption_level, DISABLED );
         config.set( HttpConnector.enabled, TRUE );
-        config.set( HttpConnector.listen_address, new SocketAddress( listenAddress, httpPort ) );
-        config.set( HttpConnector.advertised_address, new SocketAddress( advertisedAddress, httpPort ) );
+        config.set( HttpConnector.listen_address, new SocketAddress( listenHost, httpPort ) );
+        config.set( HttpConnector.advertised_address, new SocketAddress( advertisedHost, httpPort ) );
 
         this.neo4jHome = parentDir.resolve( "read-replica-" + index );
         config.set( GraphDatabaseSettings.neo4j_home, neo4jHome.toAbsolutePath() );
 
-        config.set( CausalClusteringSettings.transaction_listen_address, new SocketAddress( listenAddress, txPort ) );
+        config.set( CausalClusteringSettings.transaction_listen_address, new SocketAddress( listenHost, txPort ) );
         config.set( CausalClusteringSettings.transaction_advertised_address, new SocketAddress( txPort ) );
         config.set( CausalClusteringSettings.cluster_topology_refresh, TOPOLOGY_REFRESH_INTERVAL );
         config.set( CausalClusteringInternalSettings.experimental_catchup_protocol, true );
-        config.set( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( listenAddress, backupPort ) );
+        config.set( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( listenHost, backupPort ) );
         config.set( GraphDatabaseSettings.transaction_logs_root_path, neo4jHome.resolve( "replica-tx-logs-" + index ).toAbsolutePath() );
         memberConfig = config.build();
 

@@ -100,8 +100,8 @@ public class Cluster implements ServerAddressResolver
     private final Map<String,IntFunction<String>> instanceReadReplicaParams;
     private final String recordFormat;
     private final DiscoveryServiceFactory discoveryServiceFactory;
-    private final String defaultListenAddress;
-    private final String defaultAdvertisedAddress;
+    private final String defaultListenHost;
+    private final String defaultAdvertisedHost;
 
     private final Map<Integer,CoreClusterMember> coreMembers = new ConcurrentHashMap<>();
     private final Map<Integer,ReadReplica> readReplicas = new ConcurrentHashMap<>();
@@ -121,8 +121,8 @@ public class Cluster implements ServerAddressResolver
         this.readReplicaParams = readReplicaParams;
         this.instanceReadReplicaParams = instanceReadReplicaParams;
         this.recordFormat = recordFormat;
-        defaultListenAddress = useWildcard ? ipFamily.wildcardAddress() : ipFamily.localhostAddress();
-        defaultAdvertisedAddress = ipFamily.localhostName();
+        defaultListenHost = useWildcard ? ipFamily.wildcardAddress() : ipFamily.localhostAddress();
+        defaultAdvertisedHost = ipFamily.localhostName();
         var initialHosts = initialHosts( noOfCoreMembers, coreParams, instanceCoreParams );
         createCoreMembers( noOfCoreMembers, initialHosts, coreParams, instanceCoreParams, recordFormat );
         createReadReplicas( noOfReadReplicas, initialHosts, readReplicaParams, instanceReadReplicaParams, recordFormat );
@@ -131,8 +131,8 @@ public class Cluster implements ServerAddressResolver
     private List<SocketAddress> initialHosts( int noOfCoreMembers, Map<String,String> coreParams, Map<String,IntFunction<String>> instanceCoreParams )
     {
         return IntStream.range( 0, noOfCoreMembers )
-                .mapToObj( index -> getAdvertisedAddress( index, coreParams, instanceCoreParams ) )
-                .map( advertisedAddress -> new SocketAddress( advertisedAddress, PortAuthority.allocatePort() ) )
+                .mapToObj( index -> getAdvertisedHost( index, coreParams, instanceCoreParams ) )
+                .map( advertisedHost -> new SocketAddress( advertisedHost, PortAuthority.allocatePort() ) )
                 .collect( toList() );
     }
 
@@ -655,10 +655,10 @@ public class Cluster implements ServerAddressResolver
     {
         for ( int i = 0; i < initialHosts.size(); i++ )
         {
-            int discoveryListenAddress = initialHosts.get( i ).getPort();
+            int discoveryListenPort = initialHosts.get( i ).getPort();
             CoreClusterMember coreClusterMember = createCoreClusterMember(
                     i,
-                    discoveryListenAddress,
+                    discoveryListenPort,
                     noOfCoreMembers,
                     initialHosts,
                     recordFormat,
@@ -684,8 +684,8 @@ public class Cluster implements ServerAddressResolver
         var intraClusterBoltPort = PortAuthority.allocatePort();
         var httpPort = PortAuthority.allocatePort();
         var backupPort = PortAuthority.allocatePort();
-        var listenAddress = getListenAddress( index, extraParams, instanceExtraParams );
-        var advertisedAddress = getAdvertisedAddress( index, extraParams, instanceExtraParams );
+        var listenHost = getListenHost( index, extraParams, instanceExtraParams );
+        var advertisedHost = getAdvertisedHost( index, extraParams, instanceExtraParams );
 
         return new CoreClusterMember(
                 index,
@@ -703,8 +703,8 @@ public class Cluster implements ServerAddressResolver
                 parentDir,
                 extraParams,
                 instanceExtraParams,
-                listenAddress,
-                advertisedAddress
+                listenHost,
+                advertisedHost
         );
     }
 
@@ -721,8 +721,8 @@ public class Cluster implements ServerAddressResolver
         var txPort = PortAuthority.allocatePort();
         var backupPort = PortAuthority.allocatePort();
         var discoveryPort = PortAuthority.allocatePort();
-        var listenAddress = getListenAddress( index, extraParams, instanceExtraParams );
-        var advertisedAddress = getAdvertisedAddress( index, extraParams, instanceExtraParams );
+        var listenHost = getListenHost( index, extraParams, instanceExtraParams );
+        var advertisedHost = getAdvertisedHost( index, extraParams, instanceExtraParams );
 
         return new ReadReplica(
                 parentDir,
@@ -739,28 +739,30 @@ public class Cluster implements ServerAddressResolver
                 instanceExtraParams,
                 recordFormat,
                 monitors,
-                advertisedAddress,
-                listenAddress,
+                advertisedHost,
+                listenHost,
                 ( Config config, GraphDatabaseDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory ) ->
                         new TestReadReplicaGraphDatabase( config, dependencies, discoveryServiceFactory, ReadReplicaEditionModule::new )
         );
     }
 
-    private String getListenAddress( int index, Map<String,String> extraParams, Map<String,IntFunction<String>> instanceExtraParams )
+    private String getListenHost( int index, Map<String,String> extraParams, Map<String,IntFunction<String>> instanceExtraParams )
     {
-        return getAddress( index, extraParams, instanceExtraParams, default_listen_address, defaultListenAddress );
+        return getHost( index, extraParams, instanceExtraParams, default_listen_address, defaultListenHost );
     }
 
-    private String getAdvertisedAddress( int index, Map<String,String> extraParams, Map<String,IntFunction<String>> instanceExtraParams )
+    private String getAdvertisedHost( int index, Map<String,String> extraParams, Map<String,IntFunction<String>> instanceExtraParams )
     {
-        return getAddress( index, extraParams, instanceExtraParams, default_advertised_address, defaultAdvertisedAddress );
+        return getHost( index, extraParams, instanceExtraParams, default_advertised_address, defaultAdvertisedHost );
     }
 
-    private String getAddress( int index, Map<String,String> extraParams, Map<String,IntFunction<String>> instanceExtraParams,
-            Setting<SocketAddress> addressSetting, String defaultAddress )
+    private String getHost( int index, Map<String,String> extraParams, Map<String,IntFunction<String>> instanceExtraParams,
+            Setting<SocketAddress> hostSetting, String defaultHost )
     {
-        return instanceExtraParams.getOrDefault( addressSetting.name(),
-                ignored -> extraParams.getOrDefault( addressSetting.name(), defaultAddress ) ).apply( index );
+        IntFunction<String> def = ignored -> extraParams.getOrDefault( hostSetting.name(), defaultHost );
+        return instanceExtraParams
+                .getOrDefault( hostSetting.name(), def )
+                .apply( index );
     }
 
     public void startCoreMembers() throws InterruptedException, ExecutionException
