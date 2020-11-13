@@ -1,0 +1,19 @@
+#
+# Copyright (c) 2002-2019 "Neo4j,"
+# Neo4j Sweden AB [http://neo4j.com]
+# This file is part of Neo4j internal tooling.
+#
+
+---
+  - hosts: machines
+    remote_user: neo
+    tasks:
+      - name: add git repo
+        apt_repository:
+          repo: ppa:git-core/ppa
+        become: True
+      - name: install git
+        apt:
+          name: git
+          state: latest
+        become: True
