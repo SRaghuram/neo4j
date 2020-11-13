@@ -31,7 +31,7 @@ import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
-import org.neo4j.kernel.impl.store.StoreAccess;
+import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.util.Listener;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -174,7 +174,7 @@ public class DatabaseRebuildTool
     private static class Store
     {
         private final GraphDatabaseAPI db;
-        private final StoreAccess access;
+        private final NeoStores neoStores;
         private final DatabaseLayout databaseLayout;
         private final DatabaseManagementService managementService;
 
@@ -182,8 +182,7 @@ public class DatabaseRebuildTool
         {
             managementService = dbBuilder.build();
             this.db = (GraphDatabaseAPI) managementService.database( databaseName );
-            this.access = new StoreAccess( db.getDependencyResolver()
-                    .resolveDependency( RecordStorageEngine.class ).testAccessNeoStores() ).initialize();
+            this.neoStores = db.getDependencyResolver().resolveDependency( RecordStorageEngine.class ).testAccessNeoStores();
             this.databaseLayout = db.databaseLayout();
         }
 
@@ -200,7 +199,7 @@ public class DatabaseRebuildTool
         // the database and let CC instantiate its own to run on. After that completes the db
         // should be restored. The commands has references to providers of things to accommodate for this.
         final AtomicReference<Store> store = new AtomicReference<>( new Store( dbBuilder, databaseName ) );
-        final Supplier<StoreAccess> storeAccess = () -> store.get().access;
+        final Supplier<NeoStores> storeAccess = () -> store.get().neoStores;
         final Supplier<GraphDatabaseAPI> dbAccess = () -> store.get().db;
 
         ConsoleInput consoleInput = life.add( new ConsoleInput( in, out, prompt ) );

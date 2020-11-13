@@ -15,12 +15,8 @@ import io.airlift.airline.Cli.CliBuilder;
 import java.io.PrintStream;
 import java.util.function.Supplier;
 
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.kernel.impl.store.LabelTokenStore;
-import org.neo4j.kernel.impl.store.PropertyKeyTokenStore;
+import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.RecordStore;
-import org.neo4j.kernel.impl.store.RelationshipTypeTokenStore;
-import org.neo4j.kernel.impl.store.StoreAccess;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.Record;
@@ -40,14 +36,13 @@ public class DumpRecordsCommand implements Command
 
     private interface Action
     {
-        void run( StoreAccess store, PrintStream out );
+        void run( NeoStores stores, PrintStream out );
     }
 
     private final Cli<Action> cli;
-    private final Supplier<StoreAccess> store;
+    private final Supplier<NeoStores> store;
 
-    @SuppressWarnings( "unchecked" )
-    public DumpRecordsCommand( Supplier<StoreAccess> store )
+    public DumpRecordsCommand( Supplier<NeoStores> store )
     {
         this.store = store;
         CliBuilder<Action> builder = Cli.<Action>builder( NAME )
@@ -83,13 +78,13 @@ public class DumpRecordsCommand implements Command
         @Arguments( title = "id", description = "Entity id", required = true )
         public long id;
 
-        protected abstract long firstPropId( StoreAccess access );
+        protected abstract long firstPropId( NeoStores stores );
 
         @Override
-        public void run( StoreAccess store, PrintStream out )
+        public void run( NeoStores stores, PrintStream out )
         {
-            long propId = firstPropId( store );
-            RecordStore<PropertyRecord> propertyStore = store.getPropertyStore();
+            long propId = firstPropId( stores );
+            RecordStore<PropertyRecord> propertyStore = stores.getPropertyStore();
             PropertyRecord record = propertyStore.newRecord();
             while ( propId != Record.NO_NEXT_PROPERTY.intValue() )
             {
@@ -106,9 +101,9 @@ public class DumpRecordsCommand implements Command
     public static class DumpNodePropertyChain extends DumpPropertyChain
     {
         @Override
-        protected long firstPropId( StoreAccess access )
+        protected long firstPropId( NeoStores stores )
         {
-            RecordStore<NodeRecord> nodeStore = access.getNodeStore();
+            RecordStore<NodeRecord> nodeStore = stores.getNodeStore();
             return nodeStore.getRecord( id, nodeStore.newRecord(), NORMAL, NULL ).getNextProp();
         }
     }
@@ -117,9 +112,9 @@ public class DumpRecordsCommand implements Command
     public static class DumpRelationshipPropertyChain extends DumpPropertyChain
     {
         @Override
-        protected long firstPropId( StoreAccess access )
+        protected long firstPropId( NeoStores stores )
         {
-            RecordStore<RelationshipRecord> relationshipStore = access.getRelationshipStore();
+            RecordStore<RelationshipRecord> relationshipStore = stores.getRelationshipStore();
             return relationshipStore.getRecord( id, relationshipStore.newRecord(), NORMAL, NULL ).getNextProp();
         }
     }
@@ -131,39 +126,39 @@ public class DumpRecordsCommand implements Command
         public long id;
 
         @Override
-        public void run( StoreAccess store, PrintStream out )
+        public void run( NeoStores stores, PrintStream out )
         {
-            RecordStore<NodeRecord> nodeStore = store.getNodeStore();
+            RecordStore<NodeRecord> nodeStore = stores.getNodeStore();
             NodeRecord node = nodeStore.getRecord( id, nodeStore.newRecord(), NORMAL, NULL );
             if ( node.isDense() )
             {
-                RecordStore<RelationshipGroupRecord> relationshipGroupStore = store.getRelationshipGroupStore();
+                RecordStore<RelationshipGroupRecord> relationshipGroupStore = stores.getRelationshipGroupStore();
                 RelationshipGroupRecord group = relationshipGroupStore.newRecord();
                 relationshipGroupStore.getRecord( node.getNextRel(), group, NORMAL, NULL );
                 do
                 {
                     out.println( "group " + group );
                     out.println( "out:" );
-                    printRelChain( store, out, group.getFirstOut() );
+                    printRelChain( stores, out, group.getFirstOut() );
                     out.println( "in:" );
-                    printRelChain( store, out, group.getFirstIn() );
+                    printRelChain( stores, out, group.getFirstIn() );
                     out.println( "loop:" );
-                    printRelChain( store, out, group.getFirstLoop() );
+                    printRelChain( stores, out, group.getFirstLoop() );
                     group = group.getNext() != -1 ?
                             relationshipGroupStore.getRecord( group.getNext(), group, NORMAL, NULL ) : null;
                 } while ( group != null );
             }
             else
             {
-                printRelChain( store, out, node.getNextRel() );
+                printRelChain( stores, out, node.getNextRel() );
             }
         }
 
-        private void printRelChain( StoreAccess access, PrintStream out, long firstRelId )
+        private void printRelChain( NeoStores stores, PrintStream out, long firstRelId )
         {
             for ( long rel = firstRelId; rel != Record.NO_NEXT_RELATIONSHIP.intValue(); )
             {
-                RecordStore<RelationshipRecord> relationshipStore = access.getRelationshipStore();
+                RecordStore<RelationshipRecord> relationshipStore = stores.getRelationshipStore();
                 RelationshipRecord record = relationshipStore.getRecord( rel, relationshipStore.newRecord(), NORMAL, NULL );
                 out.println( rel + "\t" + record );
                 if ( record.getFirstNode() == id )
@@ -182,10 +177,9 @@ public class DumpRecordsCommand implements Command
     public static class DumpRelationshipTypes implements Action
     {
         @Override
-        public void run( StoreAccess store, PrintStream out )
+        public void run( NeoStores stores, PrintStream out )
         {
-            for ( NamedToken token : ((RelationshipTypeTokenStore)
-                    store.getRelationshipTypeTokenStore()).getTokens( NULL ) )
+            for ( NamedToken token : stores.getRelationshipTypeTokenStore().getTokens( NULL ) )
             {
                 out.println( token );
             }
@@ -196,10 +190,9 @@ public class DumpRecordsCommand implements Command
     public static class DumpLabels implements Action
     {
         @Override
-        public void run( StoreAccess store, PrintStream out )
+        public void run( NeoStores stores, PrintStream out )
         {
-            for ( NamedToken token : ((LabelTokenStore)
-                    store.getLabelTokenStore()).getTokens( NULL ) )
+            for ( NamedToken token : stores.getLabelTokenStore().getTokens( NULL ) )
             {
                 out.println( token );
             }
@@ -210,10 +203,9 @@ public class DumpRecordsCommand implements Command
     public static class DumpPropertyKeys implements Action
     {
         @Override
-        public void run( StoreAccess store, PrintStream out )
+        public void run( NeoStores stores, PrintStream out )
         {
-            for ( NamedToken token : ((PropertyKeyTokenStore)
-                    store.getPropertyKeyTokenStore()).getTokens( NULL ) )
+            for ( NamedToken token : stores.getPropertyKeyTokenStore().getTokens( NULL ) )
             {
                 out.println( token );
             }
@@ -223,7 +215,7 @@ public class DumpRecordsCommand implements Command
     public static class Help extends io.airlift.airline.Help implements Action
     {
         @Override
-        public void run( StoreAccess store, PrintStream out )
+        public void run( NeoStores stores, PrintStream out )
         {
             run();
         }

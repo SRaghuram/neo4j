@@ -20,7 +20,6 @@ import org.neo4j.io.ByteUnit;
 import org.neo4j.kernel.api.Kernel;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.store.NeoStores;
-import org.neo4j.kernel.impl.store.StoreAccess;
 import org.neo4j.kernel.impl.store.format.standard.NodeRecordFormat;
 import org.neo4j.kernel.impl.store.format.standard.RelationshipRecordFormat;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -113,17 +112,7 @@ public class Warmup
 
     private static NeoStores getNeoStores( GraphDatabaseAPI db )
     {
-        return getStoreAccess( db ).getRawNeoStores();
-    }
-
-    private static StoreAccess getStoreAccess( GraphDatabaseAPI db )
-    {
-        return new StoreAccess( getRecordStoreEngine( db ).testAccessNeoStores() );
-    }
-
-    private static RecordStorageEngine getRecordStoreEngine( GraphDatabaseAPI db )
-    {
-        return db.getDependencyResolver().resolveDependency( RecordStorageEngine.class );
+        return db.getDependencyResolver().resolveDependency( RecordStorageEngine.class ).testAccessNeoStores();
     }
 
     private static KernelTransaction startTransaction( Kernel kernel )

@@ -50,7 +50,7 @@ import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.api.index.IndexProviderMap;
 import org.neo4j.kernel.impl.api.index.stats.IndexStatisticsStore;
 import org.neo4j.kernel.impl.store.MetaDataStore;
-import org.neo4j.kernel.impl.store.StoreAccess;
+import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.PhysicalLogVersionedStoreChannel;
@@ -280,7 +280,7 @@ class RebuildFromLogs
             PageCache pageCache = graphdb.getDependencyResolver().resolveDependency( PageCache.class );
             var pageCacheTracer = graphdb.getDependencyResolver().resolveDependency( Tracers.class ).getPageCacheTracer();
             RecordStorageEngine storageEngine = graphdb.getDependencyResolver().resolveDependency( RecordStorageEngine.class );
-            StoreAccess nativeStores = new StoreAccess( storageEngine.testAccessNeoStores() ).initialize();
+            NeoStores nativeStores = storageEngine.testAccessNeoStores();
             DirectStoreAccess stores =
                     new DirectStoreAccess( nativeStores, labelScanStore, relationshipTypeScanStore, indexes, tokenHolders, indexStatisticsStore,
                             idGeneratorFactory );
