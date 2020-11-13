@@ -239,7 +239,7 @@ abstract class BaseHighLimitRecordFormatV3_4_0<RECORD extends AbstractBaseRecord
         if ( record.hasSecondaryUnitId() )
         {
             long secondaryUnitId = record.getSecondaryUnitId();
-            long pageIdForSecondaryRecord = pageIdForRecord( secondaryUnitId, recordSize );
+            long pageIdForSecondaryRecord = pageIdForRecord( secondaryUnitId, recordsPerPage );
             int offsetForSecondaryId = offsetForId( secondaryUnitId, recordSize, recordsPerPage );
             if ( !cursor.next( pageIdForSecondaryRecord ) )
             {
