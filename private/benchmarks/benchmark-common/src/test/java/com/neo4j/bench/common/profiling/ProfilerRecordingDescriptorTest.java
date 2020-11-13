@@ -34,6 +34,6 @@ public class ProfilerRecordingDescriptorTest
         // when
         String filename = descriptor.sanitizedFilename();
         // then
-        assertTrue( filename.matches( "([A-Za-z0-9-_\\.%]*)" ) ); //this is filename regexp accepted by JVM parameters
+        assertTrue( filename.matches( "[\\w\\d-_.%]*" ) ); //this is filename regexp accepted by JVM parameters
     }
 }
