@@ -1008,7 +1008,8 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     Seq(
       "SHOW DEFAULT DATABASE",
       "SHOW DATABASES",
-      "SHOW DATABASE system"
+      "SHOW DATABASE system",
+      "CALL db.indexes()"
     ).foreach {
       query =>
         the[AuthorizationViolationException] thrownBy {
@@ -1016,6 +1017,21 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
           executeOnSystem("joe", "soap", query)
           // THEN
         } should have message String.format("Permission denied." + PASSWORD_CHANGE_REQUIRED_MESSAGE)
+    }
+  }
+
+  test("should not fail when calling procedure without credential check when credentials expired") {
+    setup()
+    setupUserWithCustomRole()
+    execute("ALTER USER joe SET PASSWORD CHANGE REQUIRED")
+
+    Seq(
+      "CALL db.labels"
+    ).foreach {
+      query =>
+          // WHEN
+          executeOnSystem("joe", "soap", query)
+          // THEN should have no authorization error
     }
   }
 
