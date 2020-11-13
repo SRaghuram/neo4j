@@ -25,6 +25,7 @@ import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 
 import static java.lang.System.currentTimeMillis;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.ALWAYS;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.CHECK;
@@ -157,6 +158,9 @@ class HighLimitRecordFormatTest extends AbstractRecordFormatTest
         if ( shouldFail )
         {
             assertThrows( CursorException.class, cursor::checkAndClearCursorException );
+            // Now even if it fails the offset must be at the end of the record
+            // The offset is recordSize since we only have one record per page in these tests
+            assertThat( cursor.getOffset() ).isEqualTo( recordSize );
         }
         else
         {

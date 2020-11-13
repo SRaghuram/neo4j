@@ -85,61 +85,66 @@ abstract class BaseHighLimitRecordFormatV3_0_6<RECORD extends AbstractBaseRecord
             throws IOException
     {
         int primaryStartOffset = primaryCursor.getOffset();
-        byte headerByte = primaryCursor.getByte();
-        boolean inUse = isInUse( headerByte );
-        boolean doubleRecordUnit = has( headerByte, HEADER_BIT_RECORD_UNIT );
-        record.setUseFixedReferences( false );
-        if ( doubleRecordUnit )
+        try
         {
-            boolean firstRecordUnit = has( headerByte, HEADER_BIT_FIRST_RECORD_UNIT );
-            if ( !firstRecordUnit )
+            byte headerByte = primaryCursor.getByte();
+            boolean inUse = isInUse( headerByte );
+            boolean doubleRecordUnit = has( headerByte, HEADER_BIT_RECORD_UNIT );
+            record.setUseFixedReferences( false );
+            if ( doubleRecordUnit )
             {
-                // This is a record unit and not even the first one, so you cannot go here directly and read it,
-                // it may only be read as part of reading the primary unit.
-                record.clear();
-                // Return and try again
-                if ( mode.failOnNonFirstUnit() )
+                boolean firstRecordUnit = has( headerByte, HEADER_BIT_FIRST_RECORD_UNIT );
+                if ( !firstRecordUnit )
                 {
-                    primaryCursor.setCursorException(
-                            "Expected record to be the first unit in the chain, but record header says it's not" );
+                    // This is a record unit and not even the first one, so you cannot go here directly and read it,
+                    // it may only be read as part of reading the primary unit.
+                    record.clear();
+                    // Return and try again
+                    if ( mode.failOnNonFirstUnit() )
+                    {
+                        primaryCursor.setCursorException(
+                                "Expected record to be the first unit in the chain, but record header says it's not" );
+                    }
+                    return;
                 }
-                return;
-            }
 
-            // This is a record that is split into multiple record units. We need a bit more clever
-            // data structures here. For the time being this means instantiating one object,
-            // but the trade-off is a great reduction in complexity.
-            long secondaryId = Reference.decode( primaryCursor );
-            long pageId = pageIdForRecord( secondaryId, recordsPerPage );
-            int offset = offsetForId( secondaryId, recordSize, recordsPerPage );
-            PageCursor secondaryCursor = primaryCursor.openLinkedCursor( pageId );
-            if ( (!secondaryCursor.next()) | offset < 0 )
+                // This is a record that is split into multiple record units. We need a bit more clever
+                // data structures here. For the time being this means instantiating one object,
+                // but the trade-off is a great reduction in complexity.
+                long secondaryId = Reference.decode( primaryCursor );
+                long pageId = pageIdForRecord( secondaryId, recordsPerPage );
+                int offset = offsetForId( secondaryId, recordSize, recordsPerPage );
+                PageCursor secondaryCursor = primaryCursor.openLinkedCursor( pageId );
+                if ( (!secondaryCursor.next()) | offset < 0 )
+                {
+                    // We must have made an inconsistent read of the secondary record unit reference.
+                    // No point in trying to read this.
+                    record.clear();
+                    primaryCursor.setCursorException( illegalSecondaryReferenceMessage( pageId ) );
+                    return;
+                }
+                secondaryCursor.setOffset( offset + HEADER_BYTE);
+                int primarySize = recordSize - (primaryCursor.getOffset() - primaryStartOffset);
+                // We *could* sanity check the secondary record header byte here, but we won't. If it is wrong, then we most
+                // likely did an inconsistent read, in which case we'll just retry. Otherwise, if the header byte is wrong,
+                // then there is little we can do about it here, since we are not allowed to throw exceptions.
+
+                int secondarySize = recordSize - HEADER_BYTE;
+                PageCursor composite = CompositePageCursor.compose(
+                        primaryCursor, primarySize, secondaryCursor, secondarySize );
+                doReadInternal( record, composite, recordSize, headerByte, inUse );
+                record.setSecondaryUnitIdOnLoad( secondaryId );
+            }
+            else
             {
-                // We must have made an inconsistent read of the secondary record unit reference.
-                // No point in trying to read this.
-                record.clear();
-                primaryCursor.setCursorException( illegalSecondaryReferenceMessage( pageId ) );
-                return;
+                record.setUseFixedReferences( isUseFixedReferences( headerByte ) );
+                doReadInternal( record, primaryCursor, recordSize, headerByte, inUse );
             }
-            secondaryCursor.setOffset( offset + HEADER_BYTE);
-            int primarySize = recordSize - (primaryCursor.getOffset() - primaryStartOffset);
-            // We *could* sanity check the secondary record header byte here, but we won't. If it is wrong, then we most
-            // likely did an inconsistent read, in which case we'll just retry. Otherwise, if the header byte is wrong,
-            // then there is little we can do about it here, since we are not allowed to throw exceptions.
-
-            int secondarySize = recordSize - HEADER_BYTE;
-            PageCursor composite = CompositePageCursor.compose(
-                    primaryCursor, primarySize, secondaryCursor, secondarySize );
-            doReadInternal( record, composite, recordSize, headerByte, inUse );
-            record.setSecondaryUnitIdOnLoad( secondaryId );
         }
-        else
+        finally
         {
-            record.setUseFixedReferences( isUseFixedReferences( headerByte ) );
-            doReadInternal( record, primaryCursor, recordSize, headerByte, inUse );
+            primaryCursor.setOffset( primaryStartOffset + recordSize );
         }
-
-        primaryCursor.setOffset( primaryStartOffset + recordSize );
     }
 
     private boolean isUseFixedReferences( byte headerByte )

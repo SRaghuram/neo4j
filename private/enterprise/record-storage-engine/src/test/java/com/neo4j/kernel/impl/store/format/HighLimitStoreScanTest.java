@@ -9,6 +9,7 @@ import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import org.eclipse.collections.api.factory.Sets;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -18,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.LongFunction;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
@@ -25,18 +27,25 @@ import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
+import org.neo4j.internal.recordstorage.RecordNodeCursor;
+import org.neo4j.internal.recordstorage.RecordRelationshipScanCursor;
+import org.neo4j.internal.recordstorage.RecordStorageReader;
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.kernel.impl.store.DynamicNodeLabels;
 import org.neo4j.kernel.impl.store.IdUpdateListener;
 import org.neo4j.kernel.impl.store.InvalidRecordException;
 import org.neo4j.kernel.impl.store.NeoStores;
+import org.neo4j.kernel.impl.store.NodeStore;
+import org.neo4j.kernel.impl.store.RecordStore;
 import org.neo4j.kernel.impl.store.RelationshipStore;
 import org.neo4j.kernel.impl.store.StoreFactory;
-import org.neo4j.kernel.impl.store.StoreType;
+import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
+import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.test.extension.Inject;
@@ -46,6 +55,7 @@ import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
@@ -93,7 +103,8 @@ class HighLimitStoreScanTest
     private RandomRule random;
 
     private NeoStores neoStores;
-    private RelationshipStore store;
+    private RelationshipStore relationshipStore;
+    private NodeStore nodeStore;
 
     @BeforeEach
     void startStore() throws IOException
@@ -104,10 +115,10 @@ class HighLimitStoreScanTest
         StoreFactory storeFactory =
                 new StoreFactory( databaseLayout, config, idGeneratorFactory, pageCache, directory.getFileSystem(), HighLimit.RECORD_FORMATS, nullLogProvider(),
                         PageCacheTracer.NULL, Sets.immutable.empty() );
-        neoStores = storeFactory.openNeoStores( true, StoreType.RELATIONSHIP );
+        neoStores = storeFactory.openAllNeoStores( true );
         neoStores.start( NULL );
-        // The implementation we're testing is in CommonAbstractStore so let's just grab one typical store and test on that
-        store = neoStores.getRelationshipStore();
+        relationshipStore = neoStores.getRelationshipStore();
+        nodeStore = neoStores.getNodeStore();
     }
 
     @AfterEach
@@ -121,13 +132,7 @@ class HighLimitStoreScanTest
     void shouldHandleScanningOverSecondaryUnitRecords( RecordReadVariant recordReadVariant )
     {
         // given a couple of records, where some require double record units
-        List<RelationshipRecord> records = new ArrayList<>();
-        createRandomRecords( records, 1_000 );
-        // delete some and then recreate some more, to get some more randomness in the locations of primary vs secondary ID
-        // otherwise they'll end up next to each always
-        deleteRandomRecords( records, records.size() / 2 );
-        createRandomRecords( records, 500 );
-        records.sort( Comparator.comparing( RelationshipRecord::getId ) );
+        List<RelationshipRecord> records = createRandomDoubleRecordUnitRecords( this::generateRandomRelationship, relationshipStore, 1_000 );
 
         // when opening a cursor for the purpose of scanning all ids
         // then the cursor should be able to see all records and ignore those ids that are secondary units (verify fail on non-scan too)
@@ -144,22 +149,76 @@ class HighLimitStoreScanTest
         }
     }
 
+    @Test
+    void shouldHandleScanningOverSecondaryUnitRecordsUsingRelationshipScanCursor()
+    {
+        // given
+        List<RelationshipRecord> records = createRandomDoubleRecordUnitRecords( this::generateRandomRelationship, relationshipStore, 1_000 );
+
+        // when/then
+        RecordStorageReader reader = new RecordStorageReader( neoStores );
+        try ( RecordRelationshipScanCursor scanCursor = reader.allocateRelationshipScanCursor( NULL ) )
+        {
+            scanCursor.scan();
+            Iterator<RelationshipRecord> expectedRelationships = records.iterator();
+            while ( scanCursor.next() )
+            {
+                assertThat( expectedRelationships ).hasNext();
+                assertEquals( expectedRelationships.next(), copyToRecord( scanCursor ) );
+            }
+            assertThat( expectedRelationships.hasNext() ).isFalse();
+        }
+    }
+
+    @Test
+    void shouldHandleScanningOverSecondaryUnitRecordsUsingNodeScanCursor()
+    {
+        // given
+        List<NodeRecord> records = createRandomDoubleRecordUnitRecords( this::generateRandomNode, nodeStore, 1_000 );
+
+        // when/then
+        RecordStorageReader reader = new RecordStorageReader( neoStores );
+        try ( RecordNodeCursor scanCursor = reader.allocateNodeCursor( NULL ) )
+        {
+            scanCursor.scan();
+            Iterator<NodeRecord> expectedRelationships = records.iterator();
+            while ( scanCursor.next() )
+            {
+                assertThat( expectedRelationships ).hasNext();
+                assertEquals( expectedRelationships.next(), copyToRecord( scanCursor ) );
+            }
+            assertThat( expectedRelationships.hasNext() ).isFalse();
+        }
+    }
+
+    private <T extends AbstractBaseRecord> List<T> createRandomDoubleRecordUnitRecords( LongFunction<T> generator, RecordStore<T> store, int count )
+    {
+        List<T> records = new ArrayList<>();
+        createRandomRecords( records, generator, store, count );
+        // delete some and then recreate some more, this to get some more randomness in the locations of primary vs secondary ID
+        // otherwise they'll end up next to each other always
+        deleteRandomRecords( records, store, records.size() / 2 );
+        createRandomRecords( records, generator, store, count / 2 );
+        records.sort( Comparator.comparing( AbstractBaseRecord::getId ) );
+        return records;
+    }
+
     private void scanAndVerifyAllRecords( List<RelationshipRecord> records, RecordLoad mode, RecordReadVariant recordReadVariant )
     {
         Iterator<RelationshipRecord> expectedRecords = records.iterator();
-        long startId = store.getNumberOfReservedLowIds();
-        long highId = store.getHighId();
-        PageCursor cursor = recordReadVariant.openCursor( store );
+        long startId = relationshipStore.getNumberOfReservedLowIds();
+        long highId = relationshipStore.getHighId();
+        PageCursor cursor = recordReadVariant.openCursor( relationshipStore );
         try
         {
             for ( long id = startId; id < highId; id++ )
             {
-                RelationshipRecord record = store.newRecord();
+                RelationshipRecord record = relationshipStore.newRecord();
                 // Even tho it's probably not a good thing to do a scan with NORMAL mode (which says that all IDs need to be in use),
                 // let's test it and just compensate for that in this test so that it can ignore those, even if reading unused records throws exception
                 try
                 {
-                    recordReadVariant.readRecord( store, record, id, mode, cursor );
+                    recordReadVariant.readRecord( relationshipStore, record, id, mode, cursor );
                 }
                 catch ( InvalidRecordException e )
                 {
@@ -187,23 +246,23 @@ class HighLimitStoreScanTest
         assertThat( expectedRecords.hasNext() ).isFalse();
     }
 
-    private void deleteRandomRecords( List<RelationshipRecord> records, int count )
+    private <T extends AbstractBaseRecord> void deleteRandomRecords( List<T> records, RecordStore<T> store, int count )
     {
         for ( int i = 0; i < count; i++ )
         {
-            RelationshipRecord record = random.among( records );
+            T record = random.among( records );
             records.remove( record );
             record.setInUse( false );
             store.updateRecord( record, FREE_DELETED_IMMEDIATELY, NULL );
         }
     }
 
-    private void createRandomRecords( List<RelationshipRecord> records, int count )
+    private <T extends AbstractBaseRecord> void createRandomRecords( List<T> records, LongFunction<T> generator, RecordStore<T> store, int count )
     {
         int numDoubleRecords = 0;
         for ( int i = 0; i < count || numDoubleRecords < 10; i++ )
         {
-            RelationshipRecord record = generateAndPrepareRandomRecord( store.nextId( NULL ) );
+            T record = generator.apply( store.nextId( NULL ) );
             store.prepareForCommit( record, NULL );
             if ( record.requiresSecondaryUnit() )
             {
@@ -217,7 +276,7 @@ class HighLimitStoreScanTest
         }
     }
 
-    private RelationshipRecord generateAndPrepareRandomRecord( long id )
+    private RelationshipRecord generateRandomRelationship( long id )
     {
         RelationshipRecord record = new RelationshipRecord( id );
         boolean inUse = random.nextBoolean();
@@ -230,6 +289,48 @@ class HighLimitStoreScanTest
             record.setCreated();
         }
         return record;
+    }
+
+    private NodeRecord generateRandomNode( long id )
+    {
+        NodeRecord record = new NodeRecord( id );
+        boolean inUse = random.nextBoolean();
+        if ( inUse )
+        {
+            boolean shouldRequireSecondaryUnit = random.nextInt( 4 ) == 0;
+            long max = shouldRequireSecondaryUnit ? 1L << 50 : 1L << 32;
+            record.initialize( true, random.nextLong( max ), random.nextBoolean(), random.nextLong( max ),
+                    DynamicNodeLabels.dynamicPointer( random.nextLong( max ) ) );
+            record.setCreated();
+        }
+        return record;
+    }
+
+    private NodeRecord copyToRecord( NodeRecord cursor )
+    {
+        NodeRecord readNode = nodeStore.newRecord();
+        readNode.initialize( cursor.inUse(), cursor.getNextProp(), cursor.isDense(), cursor.getNextRel(), cursor.getLabelField() );
+        readNode.setLabelField( cursor.getLabelField(), new ArrayList<>( cursor.getDynamicLabelRecords() ) );
+        copyAbstractRecordData( cursor, readNode );
+        return readNode;
+    }
+
+    private RelationshipRecord copyToRecord( RecordRelationshipScanCursor cursor )
+    {
+        RelationshipRecord readRelationship = relationshipStore.newRecord();
+        readRelationship.initialize( cursor.inUse(), cursor.getNextProp(), cursor.getFirstNode(), cursor.getSecondNode(),
+                cursor.type(), cursor.getFirstPrevRel(), cursor.getFirstNextRel(), cursor.getSecondPrevRel(),
+                cursor.getSecondNextRel(), cursor.isFirstInFirstChain(), cursor.isFirstInSecondChain() );
+        copyAbstractRecordData( cursor, readRelationship );
+        return readRelationship;
+    }
+
+    private static void copyAbstractRecordData( AbstractBaseRecord from, AbstractBaseRecord to )
+    {
+        to.setId( from.getId() );
+        to.setRequiresSecondaryUnit( from.requiresSecondaryUnit() );
+        to.setSecondaryUnitIdOnLoad( from.getSecondaryUnitId() );
+        to.setUseFixedReferences( from.isUseFixedReferences() );
     }
 
     enum RecordReadVariant
