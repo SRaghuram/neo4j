@@ -5,13 +5,14 @@
  */
 package com.neo4j.causalclustering.discovery;
 
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
+
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.neo4j.internal.helpers.DefaultTimeoutStrategy.constant;
 
 /**
  * Repeats the retriable supplier until the correct result has been retrieved or the limit of retries has been
@@ -28,7 +29,7 @@ public class RetryStrategy
      */
     public RetryStrategy( long delayInMillis, long retries )
     {
-        this( new ConstantTimeTimeoutStrategy( delayInMillis, TimeUnit.MILLISECONDS ), retries );
+        this( constant( delayInMillis, MILLISECONDS ), retries );
     }
 
     /**

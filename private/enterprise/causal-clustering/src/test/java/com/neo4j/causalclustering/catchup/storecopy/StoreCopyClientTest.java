@@ -46,7 +46,6 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -77,6 +76,7 @@ import static com.neo4j.causalclustering.protocol.application.ApplicationProtoco
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_3_0;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_4_0;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.CATCHUP_5_0;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -95,6 +95,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.internal.helpers.DefaultTimeoutStrategy.constant;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ExtendWith( {SuppressOutputExtension.class, LifeExtension.class} )
@@ -127,7 +128,7 @@ class StoreCopyClientTest
     // helpers
     private Path[] serverFiles = new Path[]{Path.of( "fileA.txt" ), Path.of( "fileB.bmp" )};
     private Path targetLocation = Path.of( "targetLocation" );
-    private ConstantTimeTimeoutStrategy backOffStrategy;
+    private TimeoutStrategy strategy;
     private MockCatchupClient catchupClient;
     private final MockClientResponses clientResponses = responses();
     private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
@@ -148,9 +149,9 @@ class StoreCopyClientTest
     {
         final var scheduler = life.add( new ThreadPoolJobScheduler() );
         this.executor = scheduler.executor( Group.TESTING );
-        backOffStrategy = new ConstantTimeTimeoutStrategy( 1, TimeUnit.MILLISECONDS );
+        strategy = constant( 1, MILLISECONDS );
         subject =
-                new StoreCopyClient( catchupClientFactory, databaseIdRepository.defaultDatabase(), () -> monitors, logProvider, executor, backOffStrategy,
+                new StoreCopyClient( catchupClientFactory, databaseIdRepository.defaultDatabase(), () -> monitors, logProvider, executor, strategy,
                                      Clocks.nanoClock() );
     }
 
@@ -186,7 +187,7 @@ class StoreCopyClientTest
                 databaseIdRepository.getRaw( DEFAULT_DATABASE_NAME ),
                 () -> monitors,
                 logProvider,
-                executor, backOffStrategy, Clocks.nanoClock() );
+                executor, strategy, Clocks.nanoClock() );
 
         var files = new Path[]{Path.of( "fileA.txt" )};
         PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( files, LAST_CHECKPOINTED_TX );
@@ -293,7 +294,7 @@ class StoreCopyClientTest
 
         StoreCopyClient subjectA = subject;
         StoreCopyClient subjectB =
-                new StoreCopyClient( catchupClientFactory, altDbName, () -> monitors, logProvider, executor, backOffStrategy, Clocks.nanoClock() );
+                new StoreCopyClient( catchupClientFactory, altDbName, () -> monitors, logProvider, executor, strategy, Clocks.nanoClock() );
 
         // when client requests the remote store id for each database
         StoreId storeIdA = subjectA.fetchStoreId( expectedAdvertisedAddress );
@@ -309,15 +310,15 @@ class StoreCopyClientTest
         // given
         mockClient( protocol );
         TimeoutStrategy.Timeout mockedTimeout = mock( TimeoutStrategy.Timeout.class );
-        TimeoutStrategy backoffStrategy = mock( TimeoutStrategy.class );
-        when( backoffStrategy.newTimeout() ).thenReturn( mockedTimeout );
+        TimeoutStrategy strategy = mock( TimeoutStrategy.class );
+        when( strategy.newTimeout() ).thenReturn( mockedTimeout );
 
         subject = new StoreCopyClient(
                 catchupClientFactory,
                 databaseIdRepository.getRaw( DEFAULT_DATABASE_NAME ),
                 () -> monitors,
                 logProvider,
-                executor, backOffStrategy, Clocks.nanoClock() );
+                executor, this.strategy, Clocks.nanoClock() );
 
         PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( serverFiles, LAST_CHECKPOINTED_TX );
         StoreCopyFinishedResponse success = expectedStoreCopyFinishedResponse( SUCCESS );

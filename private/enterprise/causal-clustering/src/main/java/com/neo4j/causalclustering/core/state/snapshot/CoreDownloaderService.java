@@ -33,7 +33,7 @@ public class CoreDownloaderService extends LifecycleAdapter
     private final CoreDownloader downloader;
     private final CommandApplicationProcess applicationProcess;
     private final Log log;
-    private final TimeoutStrategy backoffStrategy;
+    private final TimeoutStrategy strategy;
     private final DatabasePanicker panicker;
     private final Monitors monitors;
     private final DatabaseStartAborter databaseStartAborter;
@@ -46,8 +46,8 @@ public class CoreDownloaderService extends LifecycleAdapter
     private boolean stopped;
 
     public CoreDownloaderService( JobScheduler jobScheduler, CoreDownloader downloader, StoreDownloadContext context, CoreSnapshotService snapshotService,
-            ReplicatedDatabaseEventService databaseEventService, CommandApplicationProcess applicationProcess, LogProvider logProvider,
-            TimeoutStrategy backoffStrategy, DatabasePanicker panicker, Monitors monitors, DatabaseStartAborter databaseStartAborter )
+                                  ReplicatedDatabaseEventService databaseEventService, CommandApplicationProcess applicationProcess, LogProvider logProvider,
+                                  TimeoutStrategy strategy, DatabasePanicker panicker, Monitors monitors, DatabaseStartAborter databaseStartAborter )
     {
         this.jobScheduler = jobScheduler;
         this.downloader = downloader;
@@ -56,7 +56,7 @@ public class CoreDownloaderService extends LifecycleAdapter
         this.databaseEventService = databaseEventService;
         this.applicationProcess = applicationProcess;
         this.log = logProvider.getLog( getClass() );
-        this.backoffStrategy = backoffStrategy;
+        this.strategy = strategy;
         this.panicker = panicker;
         this.monitors = monitors;
         this.databaseStartAborter = databaseStartAborter;
@@ -73,7 +73,7 @@ public class CoreDownloaderService extends LifecycleAdapter
         {
             var jobMonitorParams = new JobMonitoringParams( Subject.SYSTEM, context.databaseId().name(), "Store copy" );
             currentJob = new PersistentSnapshotDownloader( addressProvider, applicationProcess, downloader, snapshotService, databaseEventService, context, log,
-                    backoffStrategy, panicker, monitors );
+                                                           strategy, panicker, monitors );
             jobHandle = jobScheduler.schedule( Group.DOWNLOAD_SNAPSHOT, jobMonitorParams, currentJob );
             return Optional.of( jobHandle );
         }

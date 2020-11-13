@@ -35,7 +35,6 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.database.DatabaseStartAbortedException;
 import org.neo4j.dbms.identity.ServerId;
-import org.neo4j.internal.helpers.IncreasingTimeoutStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -53,6 +52,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.internal.helpers.DefaultTimeoutStrategy.exponential;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
@@ -65,7 +65,7 @@ class ReadReplicaBootstrapTest
     private final SocketAddress addressA = new SocketAddress( "127.0.0.1", 123 );
     private final StoreId storeA = new StoreId( 0, 1, 2, 3, 4 );
     private final StoreId storeB = new StoreId( 5, 6, 7, 8, 9 );
-    private final TimeoutStrategy timeoutStrategy = IncreasingTimeoutStrategy.exponential( 100, 3000, TimeUnit.MILLISECONDS );
+    private final TimeoutStrategy timeoutStrategy = exponential( 100, 3000, TimeUnit.MILLISECONDS );
 
     private ReadReplicaBootstrap createBootstrap( TopologyService topologyService, CatchupComponentsRepository.CatchupComponents catchupComponents,
             ReadReplicaDatabaseContext databaseContext, DatabaseStartAborter aborter )

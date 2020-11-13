@@ -24,7 +24,7 @@ import java.util.Optional;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.identity.ServerIdentity;
-import org.neo4j.internal.helpers.IncreasingTimeoutStrategy;
+import org.neo4j.internal.helpers.DefaultTimeoutStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -34,6 +34,7 @@ import org.neo4j.ssl.config.SslPolicyLoader;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
+import static org.neo4j.internal.helpers.DefaultTimeoutStrategy.exponential;
 
 public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
 {
@@ -49,7 +50,7 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
             DiscoveryFirstStartupDetector firstStartupDetector,
             Monitors monitors, Clock clock, DatabaseStateService databaseStateService )
     {
-        TimeoutStrategy timeoutStrategy = IncreasingTimeoutStrategy.exponential( RESTART_RETRY_DELAY_MS, RESTART_RETRY_DELAY_MAX_MS, MILLISECONDS );
+        TimeoutStrategy timeoutStrategy = exponential( RESTART_RETRY_DELAY_MS, RESTART_RETRY_DELAY_MAX_MS, MILLISECONDS );
         Restarter restarter = new Restarter( timeoutStrategy, RESTART_FAILURES_BEFORE_UNHEALTHY );
 
         return new AkkaCoreTopologyService(

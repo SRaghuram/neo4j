@@ -24,7 +24,6 @@ import java.util.concurrent.Executors;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.StubDatabaseStateService;
-import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
@@ -39,13 +38,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.internal.helpers.DefaultTimeoutStrategy.constant;
 
 class CoreTopologyChangeListenerTest
 {
     private final NamedDatabaseId namedDatabaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
     private final CoreServerIdentity myIdentity = new InMemoryCoreServerIdentity();
     private final RetryStrategy catchupAddressRetryStrategy = new NoRetriesStrategy();
-    private final Restarter restarter = new Restarter( new ConstantTimeTimeoutStrategy( 1, MILLISECONDS ), 0 );
+    private final Restarter restarter = new Restarter( constant( 1, MILLISECONDS ), 0 );
     private final JobScheduler jobScheduler = new ThreadPoolJobScheduler( Executors.newSingleThreadExecutor() );
     private DatabaseStateService databaseStateService = new StubDatabaseStateService( dbId -> new EnterpriseDatabaseState( dbId, STARTED ) );
 

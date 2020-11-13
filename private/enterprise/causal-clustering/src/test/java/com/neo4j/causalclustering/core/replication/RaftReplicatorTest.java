@@ -28,7 +28,6 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.UUID;
 
-import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
@@ -55,6 +54,7 @@ import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.function.Suppliers.lazySingleton;
+import static org.neo4j.internal.helpers.DefaultTimeoutStrategy.constant;
 import static org.neo4j.monitoring.PanicEventGenerator.NO_OP;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -70,7 +70,7 @@ class RaftReplicatorTest
     private final LeaderInfo leaderInfo = new LeaderInfo( IdFactory.randomRaftMemberId(), 1 );
     private final GlobalSession session = new GlobalSession( UUID.randomUUID(), myself );
     private final LocalSessionPool sessionPool = new LocalSessionPool( session );
-    private final TimeoutStrategy noWaitTimeoutStrategy = new ConstantTimeTimeoutStrategy( 0, MILLISECONDS );
+    private final TimeoutStrategy timeoutStrategy = constant( 0, MILLISECONDS );
     private final Duration leaderAwaitDuration = Duration.ofMillis( 500 );
     private final DatabaseHealth health = new DatabaseHealth( NO_OP, NullLog.getInstance() );
     private DatabaseAvailabilityGuard availabilityGuard;
@@ -330,7 +330,7 @@ class RaftReplicatorTest
     private RaftReplicator getReplicator( CapturingOutbound<RaftMessages.RaftMessage> outbound, ProgressTracker progressTracker, Monitors monitors )
     {
         return new RaftReplicator( namedDatabaseId, leaderLocator, lazySingleton( () -> myself ), outbound, sessionPool, progressTracker,
-                noWaitTimeoutStrategy, 10, NullLogProvider.getInstance(), databaseManager, monitors, leaderAwaitDuration );
+                                   timeoutStrategy, 10, NullLogProvider.getInstance(), databaseManager, monitors, leaderAwaitDuration );
     }
 
     private ReplicatingThread replicatingThread( RaftReplicator replicator, ReplicatedInteger content )

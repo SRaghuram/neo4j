@@ -48,7 +48,7 @@ import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.time.SystemNanoClock;
 
-import static org.neo4j.internal.helpers.IncreasingTimeoutStrategy.exponential;
+import static org.neo4j.internal.helpers.DefaultTimeoutStrategy.exponential;
 import static org.neo4j.monitoring.PanicEventGenerator.NO_OP;
 
 public class BackupClient

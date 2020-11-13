@@ -18,7 +18,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.neo4j.internal.helpers.IncreasingTimeoutStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -26,6 +25,7 @@ import org.neo4j.logging.LogProvider;
 import static com.neo4j.causalclustering.protocol.handshake.ChannelAttribute.PROTOCOL_STACK;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.neo4j.internal.helpers.DefaultTimeoutStrategy.exponential;
 
 public class HandshakeClientInitializer extends ChannelInitializer<SocketChannel>
 {
@@ -49,7 +49,7 @@ public class HandshakeClientInitializer extends ChannelInitializer<SocketChannel
         this.timeout = handshakeTimeout;
         this.protocolInstaller = protocolInstallerRepository;
         this.pipelineBuilderFactory = pipelineBuilderFactory;
-        this.handshakeDelay = IncreasingTimeoutStrategy.exponential( 1, 2000, MILLISECONDS );
+        this.handshakeDelay = exponential( 1, 2000, MILLISECONDS );
     }
 
     @Override

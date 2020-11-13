@@ -49,11 +49,11 @@ public class StoreCopyClient
     private final NamedDatabaseId namedDatabaseId;
     private final Log log;
     private final Executor executor;
-    private final TimeoutStrategy backOffStrategy;
+    private final TimeoutStrategy strategy;
     private final Clock clock;
 
     public StoreCopyClient( CatchupClientFactory catchUpClientFactory, NamedDatabaseId namedDatabaseId, Supplier<Monitors> monitors, LogProvider logProvider,
-                            Executor executor, TimeoutStrategy backOffStrategy, Clock clock )
+                            Executor executor, TimeoutStrategy strategy, Clock clock )
     {
         this.catchUpClientFactory = catchUpClientFactory;
         this.monitors = monitors;
@@ -61,7 +61,7 @@ public class StoreCopyClient
         this.log = logProvider.getLog( getClass() );
         this.executor = executor;
         this.clock = clock;
-        this.backOffStrategy = backOffStrategy;
+        this.strategy = strategy;
     }
 
     public RequiredTransactions copyStoreFiles( CatchupAddressProvider catchupAddressProvider, StoreId expectedStoreId,
@@ -93,7 +93,7 @@ public class StoreCopyClient
                             TransactionIdHandler txIdHandler ) throws StoreCopyFailedException
     {
         final var inputPaths = Arrays.stream( prepareStoreCopyResponse.getPaths() ).collect( Collectors.toList() );
-        final var repository = new AddressRepository( addressProvider, namedDatabaseId, clock, backOffStrategy, log );
+        final var repository = new AddressRepository( addressProvider, namedDatabaseId, clock, strategy, log );
         var storeCopyClientMonitor = monitors.get().newMonitor( StoreCopyClientMonitor.class );
         storeCopyClientMonitor.startReceivingStoreFiles();
 

@@ -18,7 +18,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.internal.helpers.IncreasingTimeoutStrategy;
+import org.neo4j.internal.helpers.DefaultTimeoutStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -34,7 +34,7 @@ public class AddressRepositoryTest
 {
     final NamedDatabaseId databaseId = DatabaseIdFactory.from( "dbID", UUID.randomUUID() );
     CatchupAddressProvider addressProvider;
-    TimeoutStrategy timeoutStrategy = new IncreasingTimeoutStrategy( 100, 1000, TimeUnit.MILLISECONDS, i -> i + 100 );
+    TimeoutStrategy timeoutStrategy = new DefaultTimeoutStrategy( 100, 1000, TimeUnit.MILLISECONDS, i -> i + 100 );
 
     @BeforeEach
     void setUp()

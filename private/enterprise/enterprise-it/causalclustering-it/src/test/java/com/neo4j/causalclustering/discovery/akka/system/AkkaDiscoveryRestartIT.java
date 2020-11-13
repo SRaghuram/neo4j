@@ -33,7 +33,7 @@ import java.util.Random;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.identity.ServerIdentity;
-import org.neo4j.internal.helpers.IncreasingTimeoutStrategy;
+import org.neo4j.internal.helpers.DefaultTimeoutStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -46,6 +46,7 @@ import static com.neo4j.causalclustering.discovery.akka.system.AkkaDiscoverySyst
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.neo4j.internal.helpers.DefaultTimeoutStrategy.exponential;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
@@ -144,7 +145,7 @@ public class AkkaDiscoveryRestartIT
                 DiscoveryFirstStartupDetector firstStartupDetector,
                 Monitors monitors, Clock clock, DatabaseStateService databaseStateService )
         {
-            TimeoutStrategy timeoutStrategy = IncreasingTimeoutStrategy.exponential( RESTART_RETRY_DELAY_MS, RESTART_RETRY_DELAY_MAX_MS, MILLISECONDS );
+            TimeoutStrategy timeoutStrategy = exponential( RESTART_RETRY_DELAY_MS, RESTART_RETRY_DELAY_MAX_MS, MILLISECONDS );
             Restarter restarter = new Restarter( timeoutStrategy, RESTART_FAILURES_BEFORE_UNHEALTHY );
 
             return new TestAkkaCoreTopologyService(

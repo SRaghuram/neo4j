@@ -34,7 +34,6 @@ import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.DatabaseStartAbortedException;
 import org.neo4j.internal.helpers.Exceptions;
-import org.neo4j.internal.helpers.IncreasingTimeoutStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -47,6 +46,7 @@ import static java.lang.String.format;
 import static java.lang.Thread.currentThread;
 import static java.util.concurrent.CompletableFuture.delayedExecutor;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.neo4j.internal.helpers.DefaultTimeoutStrategy.exponential;
 
 /**
  * Responsible for controlling the lifecycles of *all* databases in this neo4j instance, via the {@link DatabaseManager}.
@@ -77,7 +77,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  */
 public class DbmsReconciler
 {
-    private final TimeoutStrategy backoffStrategy;
+    private final TimeoutStrategy strategy;
     private final ReconcilerExecutors executors;
     private final Map<String,CompletableFuture<ReconcilerStepResult>> waitingJobCache;
 
@@ -96,9 +96,9 @@ public class DbmsReconciler
         this.databaseManager = databaseManager;
 
         this.canRetry = config.get( GraphDatabaseSettings.reconciler_may_retry );
-        this.backoffStrategy = IncreasingTimeoutStrategy.exponential( config.get( GraphDatabaseSettings.reconciler_minimum_backoff ).toMillis(),
-                                                                      config.get( GraphDatabaseSettings.reconciler_maximum_backoff ).toMillis(),
-                                                                      MILLISECONDS );
+        this.strategy = exponential( config.get( GraphDatabaseSettings.reconciler_minimum_backoff ).toMillis(),
+                                     config.get( GraphDatabaseSettings.reconciler_maximum_backoff ).toMillis(),
+                                     MILLISECONDS );
 
         this.executors = new ReconcilerExecutors( scheduler, config );
         this.locks = new ReconcilerLocks();
@@ -301,7 +301,7 @@ public class DbmsReconciler
         }
         log.info( "Database '%s' is requested to transition %s", databaseName, EnterpriseDatabaseState.logFromTo( currentState, desiredState ) );
 
-        var backoff = backoffStrategy.newTimeout();
+        var backoff = strategy.newTimeout();
         var steps = getLifecycleTransitionSteps( currentState, desiredState );
         var executor = executors.executor( request, desiredState.databaseId() );
 

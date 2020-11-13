@@ -13,19 +13,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
-import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 
 import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.neo4j.internal.helpers.DefaultTimeoutStrategy.constant;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 class RestarterTest
 {
     private final Supplier<Boolean> alwaysSucceed = () -> true;
-    private final TimeoutStrategy constantTimeout = new ConstantTimeTimeoutStrategy( 200, MILLISECONDS );
+    private final TimeoutStrategy constantTimeout = constant( 200, MILLISECONDS );
 
     @Test
     void shouldStartHealthy()

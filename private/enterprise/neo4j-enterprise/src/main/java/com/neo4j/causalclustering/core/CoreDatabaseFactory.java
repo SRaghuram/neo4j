@@ -99,7 +99,7 @@ import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
 import org.neo4j.graphdb.factory.module.id.IdContextFactory;
 import org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder;
-import org.neo4j.internal.helpers.IncreasingTimeoutStrategy;
+import org.neo4j.internal.helpers.DefaultTimeoutStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -142,6 +142,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.neo4j.function.Suppliers.lazySingleton;
 import static org.neo4j.graphdb.factory.EditionLocksFactories.createLockFactory;
 import static org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder.defaultIdGeneratorFactoryProvider;
+import static org.neo4j.internal.helpers.DefaultTimeoutStrategy.exponential;
 import static org.neo4j.scheduler.Group.CLUSTER_STATUS_CHECK_SERVICE;
 
 class CoreDatabaseFactory
@@ -458,7 +459,7 @@ class CoreDatabaseFactory
     {
         Duration initialBackoff = config.get( CausalClusteringSettings.replication_retry_timeout_base );
         Duration upperBoundBackoff = config.get( CausalClusteringSettings.replication_retry_timeout_limit );
-        TimeoutStrategy progressRetryStrategy = IncreasingTimeoutStrategy.exponential( initialBackoff.toMillis(), upperBoundBackoff.toMillis(), MILLISECONDS );
+        TimeoutStrategy progressRetryStrategy = exponential( initialBackoff.toMillis(), upperBoundBackoff.toMillis(), MILLISECONDS );
         long availabilityTimeoutMillis = config.get( CausalClusteringSettings.replication_retry_timeout_base ).toMillis();
 
         Duration leaderAwaitDuration = config.get( CausalClusteringSettings.replication_leader_await_timeout );
@@ -475,10 +476,10 @@ class CoreDatabaseFactory
         SnapshotDownloader snapshotDownloader = new SnapshotDownloader( debugLog, catchupComponentsProvider.catchupClientFactory() );
         StoreDownloader storeDownloader = new StoreDownloader( catchupComponentsRepository, debugLog );
         CoreDownloader downloader = new CoreDownloader( snapshotDownloader, storeDownloader );
-        TimeoutStrategy backoffStrategy = IncreasingTimeoutStrategy.exponential( 1, 30, SECONDS );
+        TimeoutStrategy exponential = exponential( 1, 30, SECONDS );
 
         return new CoreDownloaderService( jobScheduler, downloader, downloadContext, snapshotService, databaseEventService, commandApplicationProcess, debugLog,
-                                          backoffStrategy, panicker, monitors, databaseStartAborter );
+                                          exponential, panicker, monitors, databaseStartAborter );
     }
 
     private DatabaseIdContext createIdContext( NamedDatabaseId namedDatabaseId )

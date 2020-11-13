@@ -30,15 +30,15 @@ class PersistentSnapshotDownloader implements Runnable
     private final CoreSnapshotService snapshotService;
     private final ReplicatedDatabaseEventService databaseEventService;
     private final Log log;
-    private final TimeoutStrategy backoffStrategy;
+    private final TimeoutStrategy strategy;
     private final DatabasePanicker panicker;
     private final CoreSnapshotMonitor coreSnapshotMonitor;
     private volatile State state;
     private volatile boolean stopped;
 
     PersistentSnapshotDownloader( CatchupAddressProvider addressProvider, CommandApplicationProcess applicationProcess, CoreDownloader downloader,
-            CoreSnapshotService snapshotService, ReplicatedDatabaseEventService databaseEventService, StoreDownloadContext context, Log log,
-            TimeoutStrategy backoffStrategy, DatabasePanicker panicker, Monitors monitors )
+                                  CoreSnapshotService snapshotService, ReplicatedDatabaseEventService databaseEventService, StoreDownloadContext context,
+                                  Log log, TimeoutStrategy strategy, DatabasePanicker panicker, Monitors monitors )
     {
         this.applicationProcess = applicationProcess;
         this.addressProvider = addressProvider;
@@ -47,7 +47,7 @@ class PersistentSnapshotDownloader implements Runnable
         this.databaseEventService = databaseEventService;
         this.context = context;
         this.log = log;
-        this.backoffStrategy = backoffStrategy;
+        this.strategy = strategy;
         this.panicker = panicker;
         this.coreSnapshotMonitor = monitors.newMonitor( CoreSnapshotMonitor.class );
         this.state = State.INITIATED;
@@ -156,7 +156,7 @@ class PersistentSnapshotDownloader implements Runnable
      */
     private CoreSnapshot downloadSnapshotAndStore( StoreDownloadContext context ) throws SnapshotFailedException, InterruptedException
     {
-        var backoff = backoffStrategy.newTimeout();
+        var backoff = strategy.newTimeout();
         while ( true )
         {
             // check if we were stopped before doing a potentially long running catchup operation

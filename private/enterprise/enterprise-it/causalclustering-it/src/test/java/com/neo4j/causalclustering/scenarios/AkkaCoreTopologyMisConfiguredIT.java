@@ -32,7 +32,6 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.DatabaseState;
 import org.neo4j.dbms.StubDatabaseStateService;
-import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
@@ -45,6 +44,7 @@ import org.neo4j.time.Clocks;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
+import static org.neo4j.internal.helpers.DefaultTimeoutStrategy.constant;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 class AkkaCoreTopologyMisConfiguredIT
@@ -98,7 +98,7 @@ class AkkaCoreTopologyMisConfiguredIT
                 logProvider,
                 logProvider,
                 new NoRetriesStrategy(),
-                new Restarter( new ConstantTimeTimeoutStrategy( 1, MILLISECONDS ), 2 ),
+                new Restarter( constant( 1, MILLISECONDS ), 2 ),
                 TestCoreDiscoveryMember::factory,
                 jobScheduler,
                 Clocks.systemClock(),

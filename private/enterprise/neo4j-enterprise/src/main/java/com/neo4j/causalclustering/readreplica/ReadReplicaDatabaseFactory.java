@@ -27,13 +27,11 @@ import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.identity.ServerId;
-import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -46,6 +44,8 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.SystemNanoClock;
 
 import static java.lang.String.format;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.neo4j.internal.helpers.DefaultTimeoutStrategy.constant;
 
 class ReadReplicaDatabaseFactory
 {
@@ -111,7 +111,7 @@ class ReadReplicaDatabaseFactory
         Supplier<CatchupComponents> catchupComponentsSupplier = () -> catchupComponentsRepository.componentsFor( namedDatabaseId ).orElseThrow(
                 () -> new IllegalStateException( format( "No per database catchup components exist for database %s.", namedDatabaseId.name() ) ) );
 
-        var backoffStrategy = new ConstantTimeTimeoutStrategy( 1, TimeUnit.SECONDS );
+        var backoffStrategy = constant( 1, SECONDS );
         ReadReplicaBootstrap bootstrap = new ReadReplicaBootstrap( databaseContext, upstreamDatabaseStrategySelector, internalLogProvider,
                 userLogProvider, topologyService, catchupComponentsSupplier, clusterInternalOperator, databaseStartAborter, backoffStrategy );
 

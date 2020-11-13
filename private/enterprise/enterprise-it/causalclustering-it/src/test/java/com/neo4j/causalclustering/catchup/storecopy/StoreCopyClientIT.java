@@ -38,7 +38,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
+import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
@@ -64,11 +64,13 @@ import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 import org.neo4j.time.Clocks;
 
 import static java.lang.Math.toIntExact;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.internal.helpers.DefaultTimeoutStrategy.constant;
 import static org.neo4j.io.ByteUnit.kibiBytes;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 import static org.neo4j.logging.AssertableLogProvider.Level.WARN;
@@ -129,7 +131,7 @@ class StoreCopyClientIT
 
         CatchupClientFactory catchupClient = life.add( CausalClusteringTestHelpers.getCatchupClient( logProvider, scheduler ) );
 
-        ConstantTimeTimeoutStrategy storeCopyBackoffStrategy = new ConstantTimeTimeoutStrategy( 1, TimeUnit.MILLISECONDS );
+        TimeoutStrategy storeCopyBackoffStrategy = constant( 1, MILLISECONDS );
 
         storeCopyClient = new StoreCopyClient( catchupClient, randomNamedDatabaseId(), Monitors::new, logProvider,
                                                scheduler.executor( Group.STORE_COPY_CLIENT ), storeCopyBackoffStrategy, Clocks.nanoClock() );

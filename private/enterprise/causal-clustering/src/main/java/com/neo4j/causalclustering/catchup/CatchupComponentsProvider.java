@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.graphdb.factory.module.GlobalModule;
-import org.neo4j.internal.helpers.IncreasingTimeoutStrategy;
+import org.neo4j.internal.helpers.DefaultTimeoutStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
@@ -97,7 +97,7 @@ public final class CatchupComponentsProvider
         this.copiedStoreRecovery = globalLife.add(
                 new CopiedStoreRecovery( pageCache, databaseTracers, fileSystem, globalModule.getStorageEngineFactory(), otherMemoryGlobalTracker ) );
         final var maximumWait = config.get( CausalClusteringInternalSettings.store_copy_backoff_max_wait ).toMillis();
-        this.storeCopyBackoffStrategy = new IncreasingTimeoutStrategy( 100, maximumWait, TimeUnit.MILLISECONDS,
+        this.storeCopyBackoffStrategy = new DefaultTimeoutStrategy( 100, maximumWait, TimeUnit.MILLISECONDS,
                                                                                              i -> i + 100 );
         this.availabilityGuard = globalModule.getGlobalAvailabilityGuard();
     }
