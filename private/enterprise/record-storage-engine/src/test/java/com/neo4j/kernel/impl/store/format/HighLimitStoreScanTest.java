@@ -6,13 +6,17 @@
 package com.neo4j.kernel.impl.store.format;
 
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
+import com.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
+import com.neo4j.kernel.impl.store.format.highlimit.v306.HighLimitV3_0_6;
+import com.neo4j.kernel.impl.store.format.highlimit.v310.HighLimitV3_1_0;
+import com.neo4j.kernel.impl.store.format.highlimit.v320.HighLimitV3_2_0;
+import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
 import org.eclipse.collections.api.factory.Sets;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -20,6 +24,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.LongFunction;
+import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
@@ -44,6 +49,7 @@ import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.impl.store.RecordStore;
 import org.neo4j.kernel.impl.store.RelationshipStore;
 import org.neo4j.kernel.impl.store.StoreFactory;
+import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
@@ -57,6 +63,8 @@ import org.neo4j.test.rule.TestDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
+import static org.neo4j.internal.helpers.ArrayUtil.concat;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 
@@ -106,14 +114,13 @@ class HighLimitStoreScanTest
     private RelationshipStore relationshipStore;
     private NodeStore nodeStore;
 
-    @BeforeEach
-    void startStore() throws IOException
+    void startStore( RecordFormats format ) throws IOException
     {
         DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( directory.directory( "db" ) );
         Config config = Config.defaults();
         IdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( directory.getFileSystem(), RecoveryCleanupWorkCollector.immediate() );
         StoreFactory storeFactory =
-                new StoreFactory( databaseLayout, config, idGeneratorFactory, pageCache, directory.getFileSystem(), HighLimit.RECORD_FORMATS, nullLogProvider(),
+                new StoreFactory( databaseLayout, config, idGeneratorFactory, pageCache, directory.getFileSystem(), format, nullLogProvider(),
                         PageCacheTracer.NULL, Sets.immutable.empty() );
         neoStores = storeFactory.openAllNeoStores( true );
         neoStores.start( NULL );
@@ -127,11 +134,12 @@ class HighLimitStoreScanTest
         neoStores.close();
     }
 
-    @EnumSource( RecordReadVariant.class )
+    @MethodSource( "formatsAndReadVariants" )
     @ParameterizedTest
-    void shouldHandleScanningOverSecondaryUnitRecords( RecordReadVariant recordReadVariant )
+    void shouldHandleScanningOverSecondaryUnitRecords( RecordFormats format, RecordReadVariant recordReadVariant ) throws IOException
     {
         // given a couple of records, where some require double record units
+        startStore( format );
         List<RelationshipRecord> records = createRandomDoubleRecordUnitRecords( this::generateRandomRelationship, relationshipStore, 1_000 );
 
         // when opening a cursor for the purpose of scanning all ids
@@ -149,10 +157,12 @@ class HighLimitStoreScanTest
         }
     }
 
-    @Test
-    void shouldHandleScanningOverSecondaryUnitRecordsUsingRelationshipScanCursor()
+    @MethodSource( "formats" )
+    @ParameterizedTest
+    void shouldHandleScanningOverSecondaryUnitRecordsUsingRelationshipScanCursor( RecordFormats format ) throws IOException
     {
         // given
+        startStore( format );
         List<RelationshipRecord> records = createRandomDoubleRecordUnitRecords( this::generateRandomRelationship, relationshipStore, 1_000 );
 
         // when/then
@@ -170,10 +180,12 @@ class HighLimitStoreScanTest
         }
     }
 
-    @Test
-    void shouldHandleScanningOverSecondaryUnitRecordsUsingNodeScanCursor()
+    @MethodSource( "formats" )
+    @ParameterizedTest
+    void shouldHandleScanningOverSecondaryUnitRecordsUsingNodeScanCursor( RecordFormats format ) throws IOException
     {
         // given
+        startStore( format );
         List<NodeRecord> records = createRandomDoubleRecordUnitRecords( this::generateRandomNode, nodeStore, 1_000 );
 
         // when/then
@@ -331,6 +343,25 @@ class HighLimitStoreScanTest
         to.setRequiresSecondaryUnit( from.requiresSecondaryUnit() );
         to.setSecondaryUnitIdOnLoad( from.getSecondaryUnitId() );
         to.setUseFixedReferences( from.isUseFixedReferences() );
+    }
+
+    private static Stream<Arguments> formats()
+    {
+        return Stream.of(
+                arguments( HighLimitV3_0_0.RECORD_FORMATS ),
+                arguments( HighLimitV3_0_6.RECORD_FORMATS ),
+                arguments( HighLimitV3_1_0.RECORD_FORMATS ),
+                arguments( HighLimitV3_2_0.RECORD_FORMATS ),
+                arguments( HighLimitV3_4_0.RECORD_FORMATS ),
+                arguments( HighLimit.RECORD_FORMATS ) );
+    }
+
+    private static Stream<Arguments> formatsAndReadVariants()
+    {
+        List<Arguments> arguments = new ArrayList<>();
+        formats().forEach( arg -> Stream.of( RecordReadVariant.values() ).forEach(
+                recordReadVariant -> arguments.add( arguments( concat( arg.get(), recordReadVariant ) ) ) ) );
+        return arguments.stream();
     }
 
     enum RecordReadVariant
