@@ -48,9 +48,9 @@ public class EnterpriseSecurityComponentVersion_4_41 extends SupportedEnterprise
     }
 
     @Override
-    public void grantDefaultPrivileges( Transaction tx, Node role, String predefinedRole, PrivilegeStore privilegeStore )
+    public void grantDefaultPrivileges( Node role, String predefinedRole, PrivilegeStore privilegeStore )
     {
-        previous.grantDefaultPrivileges( tx, role, predefinedRole, privilegeStore );
+        previous.grantDefaultPrivileges( role, predefinedRole, privilegeStore );
     }
 
     // UPGRADE

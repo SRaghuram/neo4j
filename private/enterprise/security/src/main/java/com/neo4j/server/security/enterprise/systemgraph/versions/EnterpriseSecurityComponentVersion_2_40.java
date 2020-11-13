@@ -142,7 +142,7 @@ public class EnterpriseSecurityComponentVersion_2_40 extends SupportedEnterprise
     }
 
     @Override
-    public void grantDefaultPrivileges( Transaction tx, Node role, String predefinedRole, PrivilegeStore privilegeStore )
+    public void grantDefaultPrivileges( Node role, String predefinedRole, PrivilegeStore privilegeStore )
     {
         switch ( predefinedRole )
         {
@@ -219,7 +219,7 @@ public class EnterpriseSecurityComponentVersion_2_40 extends SupportedEnterprise
             List<Node> roles = tx.findNodes( ROLE_LABEL ).stream().collect( Collectors.toList() );
             for ( Node role : roles )
             {
-                grantDefaultPrivileges( tx, role, role.getProperty( "name" ).toString(), privilegeStore );
+                grantDefaultPrivileges( role, role.getProperty( "name" ).toString(), privilegeStore );
             }
         }
     }

@@ -29,7 +29,7 @@ public class NoEnterpriseSecurityComponentVersion extends KnownEnterpriseSecurit
     }
 
     @Override
-    public void grantDefaultPrivileges( Transaction tx, Node role, String predefinedRole, PrivilegeStore privilegeStore )
+    public void grantDefaultPrivileges( Node role, String predefinedRole, PrivilegeStore privilegeStore )
     {
         throw new UnsupportedOperationException();
     }

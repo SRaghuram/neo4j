@@ -63,7 +63,7 @@ abstract class SecurityGraphCompatibilityTestBase
 
     protected DatabaseManagementService dbms;
     EnterpriseSecurityGraphComponent enterpriseComponent;
-    RoleRepository roleRepository;
+    private RoleRepository roleRepository;
 
     GraphDatabaseAPI system;
     AuthManager authManager;
@@ -177,6 +177,11 @@ abstract class SecurityGraphCompatibilityTestBase
         public void register( SystemGraphComponent component )
         {
             // Do nothing in tests
+        }
+
+        void override( SystemGraphComponent component )
+        {
+            super.register( component );
         }
     }
 

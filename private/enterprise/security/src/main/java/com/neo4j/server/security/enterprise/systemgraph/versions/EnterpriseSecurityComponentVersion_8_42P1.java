@@ -7,8 +7,10 @@ package com.neo4j.server.security.enterprise.systemgraph.versions;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
+import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.graphdb.Node;
@@ -18,15 +20,15 @@ import org.neo4j.logging.Log;
 import org.neo4j.server.security.systemgraph.ComponentVersion;
 
 /**
- * This is the EnterpriseSecurityComponent version for Neo4j 4.2-drop7.
+ * This is the EnterpriseSecurityComponent version for Neo4j 4.2.1
  */
-public class EnterpriseSecurityComponentVersion_7_42D7 extends SupportedEnterpriseSecurityComponentVersion
+public class EnterpriseSecurityComponentVersion_8_42P1 extends SupportedEnterpriseSecurityComponentVersion
 {
     private final KnownEnterpriseSecurityComponentVersion previous;
 
-    public EnterpriseSecurityComponentVersion_7_42D7( Log log, KnownEnterpriseSecurityComponentVersion previous )
+    public EnterpriseSecurityComponentVersion_8_42P1( Log log, KnownEnterpriseSecurityComponentVersion previous )
     {
-        super( ComponentVersion.ENTERPRISE_SECURITY_42D7, log );
+        super( ComponentVersion.ENTERPRISE_SECURITY_42P1, log );
         this.previous = previous;
     }
 
@@ -49,6 +51,7 @@ public class EnterpriseSecurityComponentVersion_7_42D7 extends SupportedEnterpri
         if ( fromVersion < version )
         {
             previous.upgradeSecurityGraph( tx, fromVersion );
+            mergeNode( tx, ROLE_LABEL, Map.of( "name", PredefinedRoles.PUBLIC ) );
             this.setVersionProperty( tx, version );
         }
     }
@@ -56,15 +59,7 @@ public class EnterpriseSecurityComponentVersion_7_42D7 extends SupportedEnterpri
     @Override
     boolean supportsUpdateAction( PrivilegeAction action )
     {
-        switch ( action )
-        {
-        case SHOW_INDEX:
-        case SHOW_CONSTRAINT:
-            return true;
-
-        default:
-            return previous.supportsUpdateAction( action );
-        }
+        return previous.supportsUpdateAction( action );
     }
 
     @Override

@@ -66,7 +66,7 @@ public class EnterpriseSecurityComponentVersion_5_42D4 extends SupportedEnterpri
     }
 
     @Override
-    public void grantDefaultPrivileges( Transaction tx, Node role, String predefinedRole, PrivilegeStore privilegeStore )
+    public void grantDefaultPrivileges( Node role, String predefinedRole, PrivilegeStore privilegeStore )
     {
         if ( predefinedRole.equals( PUBLIC ) )
         {
@@ -75,7 +75,7 @@ public class EnterpriseSecurityComponentVersion_5_42D4 extends SupportedEnterpri
         }
         else
         {
-            previous.grantDefaultPrivileges( tx, role, predefinedRole, privilegeStore );
+            previous.grantDefaultPrivileges( role, predefinedRole, privilegeStore );
         }
     }
 

@@ -27,6 +27,7 @@ import org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERS
 import org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D4
 import org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D6
 import org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D7
+import org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42P1
 import org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_43D1
 import org.neo4j.server.security.systemgraph.UserSecurityGraphComponent
 import org.neo4j.test.TestDatabaseManagementServiceBuilder
@@ -39,7 +40,7 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
   self: AdministrationCommandAcceptanceTestBase =>
 
   val CURRENT_VERSION: String = VERSION_43D1
-  val allSystemGraphVersions: Array[String] = Array(VERSION_40, VERSION_41D1, VERSION_41, VERSION_42D4, VERSION_42D6, VERSION_42D7, VERSION_43D1)
+  val allSystemGraphVersions: Array[String] = Array(VERSION_40, VERSION_41D1, VERSION_41, VERSION_42D4, VERSION_42D6, VERSION_42D7, VERSION_42P1, VERSION_43D1)
   var _configSupplier: () => Config = () => Config.defaults()
   var _version: Option[String] = None
   var _expectToFailWith: Option[Class[_]] = None
@@ -85,7 +86,7 @@ trait EnterpriseComponentVersionTestSupport extends MockitoSugar with FunSuiteLi
         granted(adminAction("schema")).role("admin").map,
         granted(adminAction("admin")).role("admin").map
       )
-      case VERSION_41D1 | VERSION_41 | VERSION_42D4 | VERSION_42D6 | VERSION_42D7 => Set(
+      case VERSION_41D1 | VERSION_41 | VERSION_42D4 | VERSION_42D6 | VERSION_42D7 | VERSION_42P1 => Set(
         granted(access).role("admin").map,
         granted(matchPrivilege).role("admin").node("*").map,
         granted(matchPrivilege).role("admin").relationship("*").map,

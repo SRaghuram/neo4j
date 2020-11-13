@@ -86,12 +86,11 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
      * This has to be called after {@link #setUpDefaultPrivileges(Transaction, PrivilegeStore)}
      * so the privileges have been created.
      *
-     * @param tx open transaction
      * @param role the node representing this role
      * @param predefinedRole the name of this role, used to determine which default privileges to grant
      * @param privilegeStore the nodes representing the privileges are stored here
      */
-    public abstract void grantDefaultPrivileges( Transaction tx, Node role, String predefinedRole, PrivilegeStore privilegeStore );
+    public abstract void grantDefaultPrivileges( Node role, String predefinedRole, PrivilegeStore privilegeStore );
 
     /**
      * Upgrade the security graph to this version.
@@ -127,7 +126,7 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
         roles.forEach( roleName ->
         {
             Node role = newRole( tx, roleName );
-            grantDefaultPrivileges( tx, role, roleName, privilegeStore );
+            grantDefaultPrivileges( role, roleName, privilegeStore );
         } );
 
         // Assign users to roles

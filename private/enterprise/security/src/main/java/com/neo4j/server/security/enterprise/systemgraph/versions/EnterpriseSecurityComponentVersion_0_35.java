@@ -81,7 +81,7 @@ public class EnterpriseSecurityComponentVersion_0_35 extends KnownEnterpriseSecu
     // INITIALIZATION
 
     @Override
-    public void grantDefaultPrivileges( Transaction tx, Node role, String predefinedRole, PrivilegeStore privilegeStore )
+    public void grantDefaultPrivileges( Node role, String predefinedRole, PrivilegeStore privilegeStore )
     {
         throw unsupported();
     }

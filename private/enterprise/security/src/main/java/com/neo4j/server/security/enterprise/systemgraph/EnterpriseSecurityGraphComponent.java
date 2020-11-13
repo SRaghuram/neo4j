@@ -20,6 +20,7 @@ import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecur
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_5_42D4;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_6_42D6;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_7_42D7;
+import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_8_42P1;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_8_43D1;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseSecurityComponentVersion_Future;
 import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion;
@@ -82,7 +83,8 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         KnownEnterpriseSecurityComponentVersion version5 = new EnterpriseSecurityComponentVersion_5_42D4( log, version4 );
         KnownEnterpriseSecurityComponentVersion version6 = new EnterpriseSecurityComponentVersion_6_42D6( log, version5 );
         KnownEnterpriseSecurityComponentVersion version7 = new EnterpriseSecurityComponentVersion_7_42D7( log, version6 );
-        KnownEnterpriseSecurityComponentVersion version8 = new EnterpriseSecurityComponentVersion_8_43D1( log, version7 );
+        KnownEnterpriseSecurityComponentVersion version8 = new EnterpriseSecurityComponentVersion_8_42P1( log, version7 );
+        KnownEnterpriseSecurityComponentVersion version9 = new EnterpriseSecurityComponentVersion_8_43D1( log, version8 );
 
         knownSecurityComponentVersions.add( version0 );
         knownSecurityComponentVersions.add( version1 );
@@ -93,6 +95,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         knownSecurityComponentVersions.add( version6 );
         knownSecurityComponentVersions.add( version7 );
         knownSecurityComponentVersions.add( version8 );
+        knownSecurityComponentVersions.add( version9 );
         knownSecurityComponentVersions.add( new EnterpriseSecurityComponentVersion_Future( log, knownSecurityComponentVersions.latestSecurityGraphVersion() ) );
     }
 

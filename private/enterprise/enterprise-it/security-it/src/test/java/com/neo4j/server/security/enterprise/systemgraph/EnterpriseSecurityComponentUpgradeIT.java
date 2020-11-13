@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.FunctionSegment;
 import org.neo4j.internal.kernel.api.security.LabelSegment;
@@ -30,6 +32,7 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
+import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.ROLE_LABEL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ACCESS;
@@ -53,22 +56,22 @@ import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersio
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D4;
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D6;
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D7;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42P1;
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_43D1;
 
 class EnterpriseSecurityComponentUpgradeIT extends SecurityGraphCompatibilityTestBase
 {
-    private static final String[] SUPPORTED_VERSIONS = {VERSION_35, VERSION_36, VERSION_40, VERSION_41D1, VERSION_41,
-                                                        VERSION_42D4, VERSION_42D6, VERSION_42D7, VERSION_43D1};
-
     @ParameterizedTest
-    @MethodSource( "supportedVersions" )
+    @MethodSource( "allVersions" )
     void shouldUpgrade( String version ) throws Exception
     {
         // GIVEN
         initEnterprise( version );
+        TestSystemGraphComponents testSystemGraphComponents = system.getDependencyResolver().resolveDependency( TestSystemGraphComponents.class );
+        testSystemGraphComponents.override( enterpriseComponent );
 
         // WHEN
-        enterpriseComponent.upgradeToCurrent( system );
+        testSystemGraphComponents.upgradeToCurrent( system );
 
         // THEN
         try ( Transaction tx = system.beginTransaction( KernelTransaction.Type.EXPLICIT, LoginContext.AUTH_DISABLED ) )
@@ -80,8 +83,43 @@ class EnterpriseSecurityComponentUpgradeIT extends SecurityGraphCompatibilityTes
         }
     }
 
+    @ParameterizedTest
+    @MethodSource( "versionsAffectedByPublicBug" )
+    void shouldRecreateMissingPublicRole( String version ) throws Exception
+    {
+        // GIVEN
+        initEnterprise( version );
+        TestSystemGraphComponents testSystemGraphComponents = system.getDependencyResolver().resolveDependency( TestSystemGraphComponents.class );
+        testSystemGraphComponents.override( enterpriseComponent );
+
+        try ( Transaction tx = system.beginTransaction( KernelTransaction.Type.EXPLICIT, LoginContext.AUTH_DISABLED ) )
+        {
+            // Remove PUBLIC role if it exists, simulating a bad previous upgrade
+            Node node = tx.findNode( ROLE_LABEL, "name", PredefinedRoles.PUBLIC );
+            if ( node != null )
+            {
+                node.getRelationships().forEach( Relationship::delete );
+                node.delete();
+            }
+            tx.commit();
+        }
+
+        // WHEN
+        testSystemGraphComponents.upgradeToCurrent( system );
+
+        // THEN
+        try ( Transaction tx = system.beginTransaction( KernelTransaction.Type.EXPLICIT, LoginContext.AUTH_DISABLED ) )
+        {
+            Node node = tx.findNode( ROLE_LABEL, "name", PredefinedRoles.PUBLIC );
+            assertThat( node ).withFailMessage( "Expected PUBLIC role to exist" ).isNotNull();
+            tx.commit();
+        }
+    }
+
     private void assertPrivilegesForRole( Transaction tx, String role, String fromVersion ) throws InvalidArgumentsException
     {
+        Node roleNode = tx.findNode( ROLE_LABEL, "name", role );
+        assertThat( roleNode ).withFailMessage( "Expected role %s to exist", role ).isNotNull();
         List<ResourcePrivilege> readPrivileges = new ArrayList<>();
         switch ( fromVersion )
         {
@@ -155,7 +193,6 @@ class EnterpriseSecurityComponentUpgradeIT extends SecurityGraphCompatibilityTes
             expected.add( stopDbPrivilege );
             expected.add( transactionPrivilege );
             expected.add( dbmsPrivilege );
-            assertThat( privileges ).containsExactlyInAnyOrderElementsOf( expected );
             break;
         case PredefinedRoles.ARCHITECT:
 
@@ -166,7 +203,6 @@ class EnterpriseSecurityComponentUpgradeIT extends SecurityGraphCompatibilityTes
             expected.add( tokenNodePrivilege );
             expected.add( indexNodePrivilege );
             expected.add( constraintNodePrivilege );
-            assertThat( privileges ).containsExactlyInAnyOrderElementsOf( expected );
             break;
         case PredefinedRoles.PUBLISHER:
             expected.add( accessPrivilege );
@@ -174,44 +210,42 @@ class EnterpriseSecurityComponentUpgradeIT extends SecurityGraphCompatibilityTes
             expected.add( writeNodePrivilege );
             expected.add( writeRelPrivilege );
             expected.add( tokenNodePrivilege );
-            assertThat( privileges ).containsExactlyInAnyOrderElementsOf( expected );
             break;
         case PredefinedRoles.EDITOR:
             expected.add( accessPrivilege );
             expected.addAll( readPrivileges );
             expected.add( writeNodePrivilege );
             expected.add( writeRelPrivilege );
-            assertThat( privileges ).containsExactlyInAnyOrderElementsOf( expected );
             break;
         case PredefinedRoles.READER:
             expected.add( accessPrivilege );
             expected.addAll( readPrivileges );
-            assertThat( privileges ).containsExactlyInAnyOrderElementsOf( expected );
             break;
         case PredefinedRoles.PUBLIC:
-            if ( fromVersion.equals( VERSION_35 ) || fromVersion.equals( VERSION_36 ) || fromVersion.equals( VERSION_40 ) )
+            if ( !fromVersion.equals( VERSION_35 ) && !fromVersion.equals( VERSION_36 ) && !fromVersion.equals( VERSION_40 ) )
             {
-                assertThat( privileges ).containsExactlyInAnyOrder(
-                        executeProcedurePrivilege,
-                        executeFunctionPrivilege
-                );
+                expected.add( defaultAccessPrivilege );
             }
-            else
-            {
-                assertThat( privileges ).containsExactlyInAnyOrder(
-                        defaultAccessPrivilege,
-                        executeProcedurePrivilege,
-                        executeFunctionPrivilege
-                );
-            }
+            expected.add( executeProcedurePrivilege );
+            expected.add( executeFunctionPrivilege );
             break;
         default:
             fail( "unexpected role: " + role );
         }
+        assertThat( privileges ).as( "Privileges for %s", role ).containsExactlyInAnyOrderElementsOf( expected );
     }
 
-    private static Stream<Arguments> supportedVersions()
+    private static Stream<Arguments> allVersions()
     {
-        return Arrays.stream( SUPPORTED_VERSIONS ).map( Arguments::of );
+        return Arrays.stream( new String[] {VERSION_35, VERSION_36, VERSION_40, VERSION_41D1, VERSION_41,
+                                            VERSION_42D4, VERSION_42D6, VERSION_42D7, VERSION_42P1, VERSION_43D1} )
+                     .map( Arguments::of );
+    }
+
+    private static Stream<Arguments> versionsAffectedByPublicBug()
+    {
+        return Arrays.stream( new String[] {VERSION_35, VERSION_36, VERSION_40, VERSION_41D1, VERSION_41,
+                                            VERSION_42D4, VERSION_42D6, VERSION_42D7} )
+                     .map( Arguments::of );
     }
 }

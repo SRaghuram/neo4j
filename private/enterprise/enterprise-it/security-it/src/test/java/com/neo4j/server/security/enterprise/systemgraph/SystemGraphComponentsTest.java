@@ -84,6 +84,7 @@ import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersio
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D4;
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D6;
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D7;
+import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42P1;
 import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_43D1;
 
 @TestDirectoryExtension
@@ -254,6 +255,7 @@ class SystemGraphComponentsTest
                 Arguments.arguments( VERSION_42D4, REQUIRES_UPGRADE ),
                 Arguments.arguments( VERSION_42D6, REQUIRES_UPGRADE ),
                 Arguments.arguments( VERSION_42D7, REQUIRES_UPGRADE ),
+                Arguments.arguments( VERSION_42P1, REQUIRES_UPGRADE ),
                 Arguments.arguments( VERSION_43D1, CURRENT )
         );
     }
@@ -381,7 +383,7 @@ class SystemGraphComponentsTest
         }
 
         @Override
-        public void grantDefaultPrivileges( Transaction tx, Node role, String predefinedRole, PrivilegeStore privilegeStore )
+        public void grantDefaultPrivileges( Node role, String predefinedRole, PrivilegeStore privilegeStore )
         {
         }
 

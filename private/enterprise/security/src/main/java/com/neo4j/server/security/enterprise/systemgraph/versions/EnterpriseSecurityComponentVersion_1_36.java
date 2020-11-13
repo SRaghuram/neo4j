@@ -38,7 +38,7 @@ public class EnterpriseSecurityComponentVersion_1_36 extends KnownEnterpriseSecu
     private final RelationshipType hasDbRole = RelationshipType.withName( "HAS_DB_ROLE" );
     private final RelationshipType forRole = RelationshipType.withName( "FOR_ROLE" );
     private final RelationshipType forDatabase = RelationshipType.withName( "FOR_DATABASE" );
-    private Config config;
+    private final Config config;
     private final KnownEnterpriseSecurityComponentVersion previous;
 
     public EnterpriseSecurityComponentVersion_1_36( Log log, Config config, KnownEnterpriseSecurityComponentVersion previous )
@@ -77,7 +77,7 @@ public class EnterpriseSecurityComponentVersion_1_36 extends KnownEnterpriseSecu
     }
 
     @Override
-    public void grantDefaultPrivileges( Transaction tx, Node role, String predefinedRole, PrivilegeStore privilegeStore )
+    public void grantDefaultPrivileges( Node role, String predefinedRole, PrivilegeStore privilegeStore )
     {
         // Nothing to do, this graph model does not contain privileges
     }
