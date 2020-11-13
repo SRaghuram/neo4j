@@ -576,7 +576,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
             .containingArgumentRegex(".*cache\\[n\\.prop2\\] <= .*".r)
             .onTopOf(aPlan("NodeIndexSeek")
               .withOrder(indexOrder)
-              .containingArgumentRegex("n:Label\\(prop1, prop2\\) WHERE prop1 >= .* AND exists\\(prop2\\), cache\\[n.prop1\\], cache\\[n.prop2\\]".r)
+              .containingArgumentRegex("n:Label\\(prop1, prop2\\) WHERE prop1 >= .* AND prop2 IS NOT NULL, cache\\[n.prop1\\], cache\\[n.prop2\\]".r)
             )
           )
 
@@ -618,7 +618,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
         withClue(orderByString) {
           result.executionPlanDescription() should (includeSomewhere
             .aPlan("NodeIndexSeek")
-            .containingArgumentRegex("n:Label\\(prop1, prop2\\) WHERE prop1 >= .* AND exists\\(prop2\\), cache\\[n.prop1\\], cache\\[n.prop2\\]".r)
+            .containingArgumentRegex("n:Label\\(prop1, prop2\\) WHERE prop1 >= .* AND prop2 IS NOT NULL, cache\\[n.prop1\\], cache\\[n.prop2\\]".r)
             and not(includeSomewhere.aPlan("Sort")))
 
           result.toList should equal(expected)
@@ -653,7 +653,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
         withClue(orderByString) {
           result.executionPlanDescription() should (includeSomewhere
             .aPlan("NodeIndexSeek")
-            .containingArgumentRegex("n:Label\\(prop1, prop2\\) WHERE prop1 >= .* AND exists\\(prop2\\), cache\\[n.prop1\\], cache\\[n.prop2\\]".r)
+            .containingArgumentRegex("n:Label\\(prop1, prop2\\) WHERE prop1 >= .* AND prop2 IS NOT NULL, cache\\[n.prop1\\], cache\\[n.prop2\\]".r)
             and not(includeSomewhere.aPlan("Sort")))
 
 
@@ -774,7 +774,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
               .containingArgumentRegex(".*cache\\[n\\.prop2\\] > .*".r)
               .onTopOf(aPlan("NodeIndexSeek")
                 .withOrder(orderIndex)
-                .containingArgumentRegex("n:Label\\(prop1, prop2\\) WHERE prop1 < .* AND exists\\(prop2\\), cache\\[n.prop1\\], cache\\[n.prop2\\]".r)
+                .containingArgumentRegex("n:Label\\(prop1, prop2\\) WHERE prop1 < .* AND prop2 IS NOT NULL, cache\\[n.prop1\\], cache\\[n.prop2\\]".r)
               )
             )
           )
@@ -946,7 +946,8 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
               .containingArgumentRegex(".*cache\\[n\\.prop2\\] > .*".r, ".*cache\\[n\\.prop3\\] >= .*".r, ".*cache\\[n\\.prop5\\] <= .*".r)
               .onTopOf(aPlan("NodeIndexSeek")
                 .withOrder(indexOrder)
-                .containingArgumentRegex("n:Label\\(prop1, prop2, prop3, prop5\\) WHERE prop1 < .* AND exists\\(prop2\\) AND exists\\(prop3\\) AND exists\\(prop5\\), cache\\[n.prop1\\], cache\\[n.prop2\\], cache\\[n.prop3\\], cache\\[n.prop5\\]".r)
+                .containingArgumentRegex(("n:Label\\(prop1, prop2, prop3, prop5\\) WHERE prop1 < .* AND prop2 IS NOT NULL AND prop3 IS NOT NULL AND prop5 IS NOT NULL, " +
+                  "cache\\[n.prop1\\], cache\\[n.prop2\\], cache\\[n.prop3\\], cache\\[n.prop5\\]").r)
               )
             )
           )
@@ -1018,7 +1019,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
                 .containingArgumentRegex(".*cache\\[n\\.prop5\\] < .*".r)
                 .onTopOf(aPlan("NodeIndexSeek")
                   .withOrder(indexOrder)
-                  .containingArgumentRegex("n:Label\\(prop3, prop5\\) WHERE prop3 >= .* AND exists\\(prop5\\), cache\\[n.prop3\\], cache\\[n.prop5\\]".r)
+                  .containingArgumentRegex("n:Label\\(prop3, prop5\\) WHERE prop3 >= .* AND prop5 IS NOT NULL, cache\\[n.prop3\\], cache\\[n.prop5\\]".r)
                 )
               )
             )
