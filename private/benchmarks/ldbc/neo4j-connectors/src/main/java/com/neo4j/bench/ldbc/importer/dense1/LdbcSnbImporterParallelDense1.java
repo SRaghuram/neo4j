@@ -149,7 +149,7 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                 .filter( path -> CsvFilesForMerge.PLACE.matcher( path.getFileName().toString() ).matches() )
                 .map( Path::toFile )
                 .collect( toList() );
-        File noNullPlaceIsPartOfPlaceFile = new File( csvDataDir, "no_null_" + CsvFilesForMerge.PLACE );
+        File noNullPlaceIsPartOfPlaceFile = new File( csvDataDir, "no_null_" + CsvFilesForMerge.PLACE.pattern().replace( CsvFilesForMerge.NUM_REGEX, "0" ) );
         placeIsPartOfPlaceNullReplacer.replaceNullsWithSelfReferencingRelationships(
                 placeIsPartOfPlaceFiles,
                 LdbcCli.CHARSET,
