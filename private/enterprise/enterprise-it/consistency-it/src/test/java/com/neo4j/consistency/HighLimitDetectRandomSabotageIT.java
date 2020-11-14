@@ -13,7 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import java.nio.file.Path;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.consistency.newchecker.DetectRandomSabotageIT;
+import org.neo4j.consistency.checker.DetectRandomSabotageIT;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 class HighLimitDetectRandomSabotageIT extends DetectRandomSabotageIT
