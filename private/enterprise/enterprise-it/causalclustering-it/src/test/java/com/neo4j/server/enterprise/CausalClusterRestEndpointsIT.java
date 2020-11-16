@@ -24,6 +24,10 @@ import java.util.concurrent.TimeoutException;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyDoesNotExist;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStarted;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.createDatabase;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.dropDatabase;
 import static com.neo4j.server.enterprise.ClusteringEndpointHelpers.clusterEndpointBase;
 import static com.neo4j.server.enterprise.ClusteringEndpointHelpers.legacyClusterEndpointBase;
 import static com.neo4j.server.enterprise.ClusteringEndpointHelpers.queryAvailabilityEndpoint;
@@ -69,7 +73,6 @@ import static org.hamcrest.core.IsNot.not;
 import static org.hamcrest.text.IsEmptyString.emptyOrNullString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
@@ -485,11 +488,11 @@ class CausalClusterRestEndpointsIT
     {
         writeSomeData( cluster, DEFAULT_DATABASE_NAME );
         assertEventually( allReplicaFieldValues( cluster, DataCreator::countNodes ),
-                          new HamcrestCondition<>( everyItem( greaterThan( 0L ) ) ), 3, MINUTES );
+                new HamcrestCondition<>( everyItem( greaterThan( 0L ) ) ), 3, MINUTES );
 
         var newDatabaseName = "foo";
-        createDatabase( newDatabaseName );
-        assertNotNull( cluster.awaitLeader( newDatabaseName ) );
+        createDatabase( newDatabaseName, cluster );
+        assertDatabaseEventuallyStarted( newDatabaseName, cluster );
 
         var systemDbUuid = databaseUuid( SYSTEM_DATABASE_NAME );
         var defaultDbUuid = databaseUuid( DEFAULT_DATABASE_NAME );
@@ -516,6 +519,37 @@ class CausalClusterRestEndpointsIT
             verifyCombinedStatusEndpointOnReadReplica( readReplica, DEFAULT_DATABASE_NAME, defaultDbUuid );
             verifyCombinedStatusEndpointOnReadReplica( readReplica, newDatabaseName, newDbUuid );
         }
+
+        dropDatabase( newDatabaseName, cluster );
+        assertDatabaseEventuallyDoesNotExist( newDatabaseName, cluster );
+    }
+
+    @Test
+    void newReplicaShouldHaveCorrectCombinedStatusEndpoint() throws Exception
+    {
+        var newDatabaseName = "foo";
+        createDatabase( newDatabaseName, cluster );
+        assertDatabaseEventuallyStarted( newDatabaseName, cluster );
+
+        var systemDbUuid = databaseUuid( SYSTEM_DATABASE_NAME );
+        var defaultDbUuid = databaseUuid( DEFAULT_DATABASE_NAME );
+        var newDbUuid = databaseUuid( newDatabaseName );
+
+        writeSomeData( cluster, DEFAULT_DATABASE_NAME );
+        writeSomeData( cluster, newDatabaseName );
+
+        var newReplica = cluster.addReadReplicaWithIndex( 9 );
+        newReplica.start();
+
+        assertEventually( combinedStatusEndpoint( newReplica ), statuses -> statuses.size() == 3, 1, MINUTES );
+        verifyCombinedStatusEndpointOnReadReplica( newReplica, SYSTEM_DATABASE_NAME, systemDbUuid );
+        verifyCombinedStatusEndpointOnReadReplica( newReplica, DEFAULT_DATABASE_NAME, defaultDbUuid );
+        verifyCombinedStatusEndpointOnReadReplica( newReplica, newDatabaseName, newDbUuid );
+
+        cluster.removeReadReplica( newReplica );
+
+        dropDatabase( newDatabaseName, cluster );
+        assertDatabaseEventuallyDoesNotExist( newDatabaseName, cluster );
     }
 
     private static void verifyCombinedStatusEndpointOnCore( ClusterMember core, String databaseName, UUID databaseUuid ) throws Exception
@@ -551,16 +585,5 @@ class CausalClusterRestEndpointsIT
         var managementService = cluster.awaitLeader( databaseName ).managementService();
         var db = (GraphDatabaseAPI) managementService.database( databaseName );
         return db.databaseId().databaseId().uuid();
-    }
-
-    private void createDatabase( String name ) throws TimeoutException
-    {
-        var systemDbLeader = cluster.awaitLeader( SYSTEM_DATABASE_NAME );
-        var systemDb = systemDbLeader.managementService().database( SYSTEM_DATABASE_NAME );
-        try ( var tx = systemDb.beginTx() )
-        {
-            tx.execute( "CREATE DATABASE `" + name + "`" );
-            tx.commit();
-        }
     }
 }

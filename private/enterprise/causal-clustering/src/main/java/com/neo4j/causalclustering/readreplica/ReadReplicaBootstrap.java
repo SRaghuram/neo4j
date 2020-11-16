@@ -6,10 +6,13 @@
 package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
+import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
+import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
+import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.core.state.snapshot.TopologyLookupException;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
@@ -44,10 +47,12 @@ class ReadReplicaBootstrap
     private final TopologyService topologyService;
     private final Supplier<CatchupComponents> catchupComponentsSupplier;
     private final ReadReplicaDatabaseContext databaseContext;
+    private final LastTxMonitor lastTxIdMonitor;
 
     ReadReplicaBootstrap( ReadReplicaDatabaseContext databaseContext, UpstreamDatabaseStrategySelector selectionStrategy, LogProvider debugLogProvider,
                           LogProvider userLogProvider, TopologyService topologyService, Supplier<CatchupComponents> catchupComponentsSupplier,
-                          ClusterInternalDbmsOperator internalOperator, DatabaseStartAborter databaseStartAborter, TimeoutStrategy syncRetryStrategy )
+                          ClusterInternalDbmsOperator internalOperator, DatabaseStartAborter databaseStartAborter, TimeoutStrategy syncRetryStrategy,
+                          CommandIndexTracker commandIndexTracker )
     {
         this.databaseContext = databaseContext;
         this.catchupComponentsSupplier = catchupComponentsSupplier;
@@ -58,6 +63,7 @@ class ReadReplicaBootstrap
         this.userLog = userLogProvider.getLog( getClass() );
         this.topologyService = topologyService;
         this.internalOperator = internalOperator;
+        this.lastTxIdMonitor = new LastTxMonitor( commandIndexTracker );
     }
 
     public void perform() throws Exception
@@ -161,7 +167,7 @@ class ReadReplicaBootstrap
     private void syncStoreWithUpstream( ReadReplicaDatabaseContext databaseContext, ServerId source )
             throws IOException, StoreIdDownloadFailedException, StoreCopyFailedException, TopologyLookupException, DatabaseShutdownException
     {
-        CatchupComponents catchupComponents = catchupComponentsSupplier.get();
+        CatchupComponentsRepository.CatchupComponents catchupComponents = catchupComponentsSupplier.get();
 
         if ( databaseContext.isEmpty() )
         {
@@ -173,9 +179,10 @@ class ReadReplicaBootstrap
 
             debugLog.info( "Copying store from upstream server %s", source );
             databaseContext.delete();
-
+            databaseContext.monitors().addMonitorListener( lastTxIdMonitor );
             final var provider = new CatchupAddressProvider.UpstreamStrategyBasedAddressProvider( topologyService, selectionStrategy );
             catchupComponents.storeCopyProcess().replaceWithStoreFrom( provider, storeId );
+            databaseContext.monitors().removeMonitorListener( lastTxIdMonitor );
 
             debugLog.info( "Restarting local database after copy.", source );
         }
@@ -196,6 +203,22 @@ class ReadReplicaBootstrap
             throw new IllegalStateException(
                     format( "This read replica cannot join the cluster. " + "The local version of %s is not empty and has a mismatching storeId: " +
                             "expected %s actual %s.", databaseContext.databaseId(), remoteStoreId, localStoreId ) );
+        }
+    }
+
+    private static final class LastTxMonitor extends StoreCopyClientMonitor.Adapter
+    {
+        private final CommandIndexTracker commandIndexTracker;
+
+        private LastTxMonitor( CommandIndexTracker commandIndexTracker )
+        {
+            this.commandIndexTracker = commandIndexTracker;
+        }
+
+        @Override
+        public void finishReceivingTransactions( long endTxId )
+        {
+            commandIndexTracker.setAppliedCommandIndex( endTxId );
         }
     }
 }

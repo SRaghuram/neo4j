@@ -113,7 +113,8 @@ class ReadReplicaDatabaseFactory
 
         var backoffStrategy = constant( 1, SECONDS );
         ReadReplicaBootstrap bootstrap = new ReadReplicaBootstrap( databaseContext, upstreamDatabaseStrategySelector, internalLogProvider,
-                userLogProvider, topologyService, catchupComponentsSupplier, clusterInternalOperator, databaseStartAborter, backoffStrategy );
+                userLogProvider, topologyService, catchupComponentsSupplier, clusterInternalOperator, databaseStartAborter, backoffStrategy,
+                commandIndexTracker );
 
         RaftIdCheck raftIdCheck = new RaftIdCheck( raftIdStorage, namedDatabaseId );
 

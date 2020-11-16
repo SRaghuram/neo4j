@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
+import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
@@ -78,7 +79,7 @@ class ReadReplicaBootstrapTest
             TimeoutStrategy timeoutStrategy )
     {
         return new ReadReplicaBootstrap( databaseContext, selectionStrategy, nullLogProvider(), nullLogProvider(), topologyService,
-                () -> catchupComponents, new ClusterInternalDbmsOperator( nullLogProvider() ), aborter, timeoutStrategy );
+                () -> catchupComponents, new ClusterInternalDbmsOperator( nullLogProvider() ), aborter, timeoutStrategy, new CommandIndexTracker() );
     }
 
     @Test
