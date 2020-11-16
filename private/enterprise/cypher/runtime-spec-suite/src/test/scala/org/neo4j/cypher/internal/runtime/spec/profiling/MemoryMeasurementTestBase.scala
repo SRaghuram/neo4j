@@ -779,6 +779,27 @@ abstract class MemoryMeasurementTestBase[CONTEXT <: RuntimeContext](
       tolerance = DEFAULT_TOLERANCE,
     )
   }
+
+  ignore("Distinct under apply (Argument State Map)") {
+    val n = DEFAULT_INPUT_SIZE.toInt
+    val nodes = nodeGraph(n, "A")
+
+    validateMaxAllocatedMemoryEstimate(
+      baselineQuery = passThoughQuery(nodes = Seq("a")),
+      measuredQuery = new LogicalQueryBuilder(this)
+        .produceResults("a1")
+        .apply()
+        .|.distinct("a as a1")
+        .|.expandAll("(a)-[]->()")
+        .|.argument("a")
+        .input(nodes = Seq("a"))
+        .build(),
+      input =finiteSeqColumnInput(nodes),
+      measuringStrategy = HeapDumpAtInputOffset(DEFAULT_INPUT_SIZE-1),
+      baselineStrategy = None,
+      tolerance = DEFAULT_TOLERANCE
+    )
+  }
 }
 
 /**
