@@ -29,12 +29,13 @@ import org.neo4j.memory.MemoryTracker
 class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: ArgumentStateMapId,
                                                        val argumentSlotOffset: Int,
                                                        factory: ArgumentStateFactory[STATE],
-                                                       memoryTracker: MemoryTracker)
+                                                       memoryTracker: MemoryTracker,
+                                                       morselSize: Int)
   extends AbstractArgumentStateMap[STATE, AbstractArgumentStateMap.StateController[STATE]](memoryTracker) {
 
   class OrderedControllers(memoryTracker: MemoryTracker) extends Controllers[AbstractArgumentStateMap.StateController[STATE]] {
     val controllerList: HeapTrackingLongEnumerationList[AbstractArgumentStateMap.StateController[STATE]] =
-      HeapTrackingLongEnumerationList.create(memoryTracker)
+      HeapTrackingLongEnumerationList.create(memoryTracker, morselSize)
 
     override def forEach(fun: (Long, AbstractArgumentStateMap.StateController[STATE]) => Unit): Unit =
       controllerList.foreach((l, v) => fun(l, v))
@@ -47,7 +48,7 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: A
 
     override def put(key: Long,
                      value: AbstractArgumentStateMap.StateController[STATE]): AbstractArgumentStateMap.StateController[STATE] = {
-      assert(controllerList.lastKey + 1 == key)
+      require(controllerList.lastKey + 1 == key)
       val oldValue = controllerList.get(key)
       controllerList.add(value)
       oldValue

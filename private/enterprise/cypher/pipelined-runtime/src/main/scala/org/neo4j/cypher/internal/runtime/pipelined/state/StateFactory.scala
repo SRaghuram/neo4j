@@ -42,7 +42,8 @@ trait StateFactory {
                                               argumentSlotOffset: Int,
                                               factory: ArgumentStateFactory[S],
                                               orderPreservingInParallel: Boolean,
-                                              memoryTracker: MemoryTracker): ArgumentStateMap[S]
+                                              memoryTracker: MemoryTracker,
+                                              morselSize: Int): ArgumentStateMap[S]
 
   /**
    * Obtain the query memory tracker (this call does not create a new object).

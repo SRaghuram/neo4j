@@ -161,8 +161,8 @@ class MorselBufferTest extends MorselUnitTest with MorselTestHelper {
     )
     def createCancellerMaps = {
       val cancellerMaps = Array(
-        new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(0), firstArgumentSlotOffset, CancellerFactory(Seq(1, 2).contains), EmptyMemoryTracker.INSTANCE),
-        new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(1), secondArgumentSlotOffset, CancellerFactory(Seq(1, 4, 6, 7).contains), EmptyMemoryTracker.INSTANCE))
+        new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(0), firstArgumentSlotOffset, CancellerFactory(Seq(1, 2).contains), EmptyMemoryTracker.INSTANCE, 1024),
+        new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(1), secondArgumentSlotOffset, CancellerFactory(Seq(1, 4, 6, 7).contains), EmptyMemoryTracker.INSTANCE, 1024))
       initiate(cancellerMaps(0), 0 to 4)
       initiate(cancellerMaps(1), 0 to 9)
       cancellerMaps
@@ -244,8 +244,8 @@ class MorselBufferTest extends MorselUnitTest with MorselTestHelper {
       )
     def createCancellerMaps = {
       val cancellerMaps = Array(
-        new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(0), thirdArgumentSlotOffset, CancellerFactory(Seq(1, 2, 5, 6, 7, 13).contains), EmptyMemoryTracker.INSTANCE),
-        new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(1), secondArgumentSlotOffset, CancellerFactory(Seq(3, 5, 7, 10).contains), EmptyMemoryTracker.INSTANCE))
+        new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(0), thirdArgumentSlotOffset, CancellerFactory(Seq(1, 2, 5, 6, 7, 13).contains), EmptyMemoryTracker.INSTANCE, 1024),
+        new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(1), secondArgumentSlotOffset, CancellerFactory(Seq(3, 5, 7, 10).contains), EmptyMemoryTracker.INSTANCE, 1024))
       initiate(cancellerMaps(0), 0 to 15)
       initiate(cancellerMaps(1), 0 to 10)
       cancellerMaps
@@ -309,8 +309,8 @@ class MorselBufferTest extends MorselUnitTest with MorselTestHelper {
     val reducer2 = new TestAccumulatingBuffer(secondArgumentSlotOffset)
 
     val cancellerMaps = Array(
-      new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(0), firstArgumentSlotOffset, CancellerFactory(Seq(1, 2).contains), EmptyMemoryTracker.INSTANCE),
-      new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(1), secondArgumentSlotOffset, CancellerFactory(Seq(1, 4, 6, 7).contains), EmptyMemoryTracker.INSTANCE))
+      new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(0), firstArgumentSlotOffset, CancellerFactory(Seq(1, 2).contains), EmptyMemoryTracker.INSTANCE, 1024),
+      new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(1), secondArgumentSlotOffset, CancellerFactory(Seq(1, 4, 6, 7).contains), EmptyMemoryTracker.INSTANCE, 1024))
 
     val x = new MorselBuffer(ID, tracker, ReadOnlyArray(reducer1, reducer2), ReadOnlyArray(cancellerMaps.map(_.argumentStateMapId):_*), id => cancellerMaps(id.x), null)
 
@@ -380,8 +380,8 @@ class MorselBufferTest extends MorselUnitTest with MorselTestHelper {
       val argumentSlotOffset = 0
       val reducer = new TestAccumulatingBuffer(argumentSlotOffset)
       val cancellerMaps = Array(
-        new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(0), argumentSlotOffset, CancellerFactory(cancelledByC1), EmptyMemoryTracker.INSTANCE),
-        new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(1), argumentSlotOffset, CancellerFactory(cancelledByC2), EmptyMemoryTracker.INSTANCE))
+        new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(0), argumentSlotOffset, CancellerFactory(cancelledByC1), EmptyMemoryTracker.INSTANCE, 1024),
+        new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(1), argumentSlotOffset, CancellerFactory(cancelledByC2), EmptyMemoryTracker.INSTANCE, 1024))
 
       val x = new MorselBuffer(ID, tracker, ReadOnlyArray(reducer), ReadOnlyArray(cancellerMaps.map(_.argumentStateMapId):_*), id => cancellerMaps(id.x), null)
 
@@ -399,10 +399,10 @@ class MorselBufferTest extends MorselUnitTest with MorselTestHelper {
       // Given
       val argumentSlotOffset = 0
       val reducer = new TestAccumulatingBuffer(argumentSlotOffset)
-      val cancellerMap1 = new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(0), argumentSlotOffset, CancellerFactory(cancelledByC1), EmptyMemoryTracker.INSTANCE)
+      val cancellerMap1 = new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(0), argumentSlotOffset, CancellerFactory(cancelledByC1), EmptyMemoryTracker.INSTANCE, 1024)
       val x1 = new MorselBuffer(ID, tracker, ReadOnlyArray(reducer), ReadOnlyArray(cancellerMap1.argumentStateMapId), _ => cancellerMap1, null)
 
-      val cancellerMap2 = new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(0), argumentSlotOffset, CancellerFactory(cancelledByC2), EmptyMemoryTracker.INSTANCE)
+      val cancellerMap2 = new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(0), argumentSlotOffset, CancellerFactory(cancelledByC2), EmptyMemoryTracker.INSTANCE, 1024)
       val x2 = new MorselBuffer(ID, tracker, ReadOnlyArray(reducer), ReadOnlyArray(cancellerMap2.argumentStateMapId), _ => cancellerMap2, null)
 
       // When
@@ -427,10 +427,10 @@ class MorselBufferTest extends MorselUnitTest with MorselTestHelper {
   }
 
   private def oddCancellerMap(argumentSlotOffset: Int): ArgumentStateMap[StaticCanceller] =
-    new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(0), argumentSlotOffset, CancellerFactory(_ % 2 == 1), EmptyMemoryTracker.INSTANCE)
+    new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(0), argumentSlotOffset, CancellerFactory(_ % 2 == 1), EmptyMemoryTracker.INSTANCE, 1024)
 
   private def evenCancellerMap(argumentSlotOffset: Int): ArgumentStateMap[StaticCanceller] =
-    new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(0), argumentSlotOffset, CancellerFactory(_ % 2 == 0), EmptyMemoryTracker.INSTANCE)
+    new StandardArgumentStateMap[StaticCanceller](ArgumentStateMapId(0), argumentSlotOffset, CancellerFactory(_ % 2 == 0), EmptyMemoryTracker.INSTANCE, 1024)
 
   class TestAccumulatingBuffer(override val argumentSlotOffset: Int) extends Buffers.AccumulatingBuffer {
 

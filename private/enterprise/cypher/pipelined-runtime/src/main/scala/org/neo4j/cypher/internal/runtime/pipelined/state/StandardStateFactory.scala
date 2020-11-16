@@ -48,11 +48,12 @@ class StandardStateFactory extends StateFactory {
                                                        argumentSlotOffset: Int,
                                                        factory: ArgumentStateFactory[S],
                                                        orderPreservingInParallel: Boolean,
-                                                       memoryTracker: MemoryTracker): ArgumentStateMap[S] =
+                                                       memoryTracker: MemoryTracker,
+                                                       morselSize: Int): ArgumentStateMap[S] =
     if (argumentSlotOffset == TopLevelArgument.SLOT_OFFSET) {
       new StandardSingletonArgumentStateMap[S](argumentStateMapId, factory, memoryTracker)
     } else {
-      new StandardArgumentStateMap[S](argumentStateMapId, argumentSlotOffset, factory, memoryTracker)
+      new StandardArgumentStateMap[S](argumentStateMapId, argumentSlotOffset, factory, memoryTracker, morselSize)
     }
 
   override def newMemoryTracker(operatorId: Int): MemoryTracker = EmptyMemoryTracker.INSTANCE

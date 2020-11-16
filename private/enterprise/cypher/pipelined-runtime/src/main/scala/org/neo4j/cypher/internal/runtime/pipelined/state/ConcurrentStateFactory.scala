@@ -46,7 +46,8 @@ class ConcurrentStateFactory extends StateFactory {
                                                        argumentSlotOffset: Int,
                                                        factory: ArgumentStateFactory[S],
                                                        orderPreservingInParallel: Boolean,
-                                                       memoryTracker: MemoryTracker): ArgumentStateMap[S] = {
+                                                       memoryTracker: MemoryTracker,
+                                                       morselSize: Int): ArgumentStateMap[S] = {
     if (argumentSlotOffset == TopLevelArgument.SLOT_OFFSET) {
       new ConcurrentSingletonArgumentStateMap[S](argumentStateMapId, factory)
     } else if (orderPreservingInParallel) {

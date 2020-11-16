@@ -247,7 +247,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
                                                                 memoryTracker: MemoryTracker,
                                                                 ordered: Boolean): ArgumentStateMap[S] = {
     val argumentSlotOffset = executionGraphDefinition.argumentStateMaps(argumentStateMapId.x).argumentSlotOffset
-    val asm = stateFactory.newArgumentStateMap(argumentStateMapId, argumentSlotOffset, factory, ordered, memoryTracker)
+    val asm = stateFactory.newArgumentStateMap(argumentStateMapId, argumentSlotOffset, factory, ordered, memoryTracker, queryState.morselSize)
     argumentStateMapHolder(argumentStateMapId.x) = asm
     asm
   }
