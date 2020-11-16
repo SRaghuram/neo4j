@@ -60,7 +60,7 @@ class NestedCollect extends AbstractCypherBenchmark {
   @Param(Array[String]())
   var user: String = _
 
-  override def description = "NestedCollect((a)-[r]->(b) WHERE b:J)"
+  override def description = "NestedCollect((a)-[r1]->(b) WHERE r1:J)"
 
   private val NODE_COUNT = 10000
   private val EXPECTED_COUNT = 10

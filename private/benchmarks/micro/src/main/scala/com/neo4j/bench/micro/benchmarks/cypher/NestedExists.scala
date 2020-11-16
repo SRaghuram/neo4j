@@ -58,7 +58,7 @@ class NestedExists extends AbstractCypherBenchmark {
   @Param(Array[String]())
   var user: String = _
 
-  override def description = "NestedExists((a)-[r]->(b) WHERE b:J)"
+  override def description = "NestedExists((a)-[r1]->(b) WHERE r1:J)"
 
   private val NODE_COUNT = 10000
   private val RELATIONSHIP_DEFINITIONS =
