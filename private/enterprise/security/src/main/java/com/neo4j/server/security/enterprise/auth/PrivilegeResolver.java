@@ -57,7 +57,7 @@ public class PrivilegeResolver
     public PrivilegeResolver( SystemGraphRealm systemGraphRealm, Config config )
     {
         this.systemGraphRealm = systemGraphRealm;
-        this.restrictUpgrade = config.get( GraphDatabaseInternalSettings.restrict_upgrade );
+        this.restrictUpgrade = config.get( GraphDatabaseInternalSettings.block_upgrade_procedures );
         this.roleToBoostAll = config.get( GraphDatabaseSettings.default_allowed );
         this.roleToBoostMapping = config.get( GraphDatabaseSettings.procedure_roles );
         this.blockCreateDrop = config.get( GraphDatabaseInternalSettings.block_create_drop_database );

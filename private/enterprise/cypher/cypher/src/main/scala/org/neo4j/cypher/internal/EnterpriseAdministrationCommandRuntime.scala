@@ -164,7 +164,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
   private val communityCommandRuntime: CommunityAdministrationCommandRuntime = CommunityAdministrationCommandRuntime(normalExecutionEngine, resolver, logicalToExecutable)
   private val config: Config = resolver.resolveDependency(classOf[Config])
   private val maxDBLimit: Long = config.get(EnterpriseEditionSettings.max_number_of_databases)
-  private val restrict_upgrade = config.get(GraphDatabaseInternalSettings.restrict_upgrade)
+  private val loopback_enabled = config.get(GraphDatabaseInternalSettings.enable_loopback_auth)
   private val create_drop_database_is_blocked = config.get(GraphDatabaseInternalSettings.block_create_drop_database)
   private val start_stop_database_is_blocked = config.get(GraphDatabaseInternalSettings.block_start_stop_database)
 
@@ -202,7 +202,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
      *  Check that the current user is not blocked from database management
      *  Should fail if the blocking setting is true and the user is not the operator
      */
-    case AssertNotBlocked(action: AdminAction) => context => {
+    case AssertNotBlocked(action: AdminAction) => _ => {
       val (blocked, actionString) = action match {
         case CreateDatabaseAction => (create_drop_database_is_blocked, "CREATE")
         case DropDatabaseAction => (create_drop_database_is_blocked, "DROP")
@@ -215,9 +215,9 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
       new PredicateExecutionPlan(
         (_, sc) => {
-          // if restrict_upgrade is true the PUBLIC role will have temporary DENY CREATE/DROP/START/STOP DATABASE privileges.
+          // When the operation is blocked from the config the PUBLIC role will have temporary DENY CREATE/DROP/START/STOP DATABASE privileges.
           // The loopback operator executes queries with AUTH_DISABLED and will pass this check.
-          !blocked || restrict_upgrade && sc.allowsAdminAction(new AdminActionOnResource(ActionMapper.asKernelAction(action), DatabaseScope.ALL, Segment.ALL))
+          !blocked || loopback_enabled && sc.allowsAdminAction(new AdminActionOnResource(ActionMapper.asKernelAction(action), DatabaseScope.ALL, Segment.ALL))
         },
         onViolation = (_, _) => new UnsupportedOperationException(errorMessage)
       )

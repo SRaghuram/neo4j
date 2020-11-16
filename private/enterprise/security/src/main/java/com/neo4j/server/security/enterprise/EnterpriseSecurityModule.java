@@ -231,7 +231,7 @@ public class EnterpriseSecurityModule extends SecurityModule
 
         inClusterAuthManager = new InClusterAuthManager( privilegeResolver, defaultDatabaseResolver, securityLog, logAuthSuccess );
 
-        if ( config.get( GraphDatabaseInternalSettings.restrict_upgrade ) )
+        if ( config.get( GraphDatabaseInternalSettings.enable_loopback_auth ) )
         {
             loopbackAuthManager =
                     new LoopbackAuthManager( strategy, getOperatorUserRepository( config, logProvider, fileSystem ), securityLog, logAuthSuccess );

@@ -88,7 +88,7 @@ class EnterpriseSecurityModuleTest
         when( config.get( GraphDatabaseSettings.auth_lock_time ) ).thenReturn( Duration.ofSeconds( 5 ) );
         when( config.get( GraphDatabaseInternalSettings.auth_store ) ).thenReturn( Path.of( "mock", "dir" ) );
         when( config.get( DatabaseManagementSystemSettings.auth_store_directory ) ).thenReturn( Path.of( "mock", "dir" ) );
-        when( config.get( GraphDatabaseInternalSettings.restrict_upgrade ) ).thenReturn( false );
+        when( config.get( GraphDatabaseInternalSettings.enable_loopback_auth ) ).thenReturn( false );
         when( config.get( GraphDatabaseSettings.procedure_roles ) ).thenReturn( "" );
         when( config.get( GraphDatabaseSettings.default_allowed ) ).thenReturn( "" );
     }

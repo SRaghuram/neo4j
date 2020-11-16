@@ -115,7 +115,8 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
                 sslPolicyConfig.enabled.name(), TRUE,
                 sslPolicyConfig.base_directory.name(), CERTIFICATES_DIR,
                 GraphDatabaseSettings.routing_enabled.name(), TRUE,
-                GraphDatabaseInternalSettings.restrict_upgrade.name(), TRUE
+                GraphDatabaseInternalSettings.block_upgrade_procedures.name(), TRUE,
+                GraphDatabaseInternalSettings.enable_loopback_auth.name(), TRUE
         );
         var readReplicaParams = Map.of(
                 CausalClusteringSettings.middleware_logging_level.name(), Level.DEBUG.toString(),
@@ -123,7 +124,8 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
                 sslPolicyConfig.enabled.name(), TRUE,
                 sslPolicyConfig.base_directory.name(), CERTIFICATES_DIR,
                 GraphDatabaseSettings.routing_enabled.name(), TRUE,
-                GraphDatabaseInternalSettings.restrict_upgrade.name(), TRUE
+                GraphDatabaseInternalSettings.block_upgrade_procedures.name(), TRUE,
+                GraphDatabaseInternalSettings.enable_loopback_auth.name(), TRUE
         );
 
         ClusterConfig clusterConfig = ClusterConfig.clusterConfig()

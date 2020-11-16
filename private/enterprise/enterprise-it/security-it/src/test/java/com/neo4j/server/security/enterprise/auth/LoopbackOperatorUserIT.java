@@ -406,7 +406,7 @@ class LoopbackOperatorUserIT
     @Test
     void shouldFailStartupWithNoOperatorPassword()
     {
-        assertThatThrownBy( () -> getEnterpriseManagementService( Map.of( GraphDatabaseInternalSettings.restrict_upgrade, true ) ) )
+        assertThatThrownBy( () -> getEnterpriseManagementService( Map.of( GraphDatabaseInternalSettings.enable_loopback_auth, true ) ) )
                 .hasRootCauseMessage( "No password has been set for the loopback operator. Run `neo4j-admin set-operator-password <password>`." );
     }
 
@@ -460,7 +460,8 @@ class LoopbackOperatorUserIT
     {
         setOperatorPassword();
         final Map<Setting<?>, Object> config =
-                Map.of( GraphDatabaseInternalSettings.restrict_upgrade, restrictUpgrade,
+                Map.of( GraphDatabaseInternalSettings.enable_loopback_auth, restrictUpgrade || blockDatabase,
+                        GraphDatabaseInternalSettings.block_upgrade_procedures, restrictUpgrade,
                         GraphDatabaseInternalSettings.block_create_drop_database, blockDatabase,
                         GraphDatabaseInternalSettings.block_start_stop_database, blockDatabase );
 
