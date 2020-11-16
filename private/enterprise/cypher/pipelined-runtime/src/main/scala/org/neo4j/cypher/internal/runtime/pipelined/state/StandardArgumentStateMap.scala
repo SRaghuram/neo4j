@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.StandardArgumentStateMap.StandardCompletedStateController
 import org.neo4j.cypher.internal.runtime.pipelined.state.StandardArgumentStateMap.StandardStateController
+import org.neo4j.internal.helpers.Numbers
 import org.neo4j.kernel.impl.util.collection.HeapTrackingLongEnumerationList
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
@@ -35,7 +36,7 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: A
 
   class OrderedControllers(memoryTracker: MemoryTracker) extends Controllers[AbstractArgumentStateMap.StateController[STATE]] {
     val controllerList: HeapTrackingLongEnumerationList[AbstractArgumentStateMap.StateController[STATE]] =
-      HeapTrackingLongEnumerationList.create(memoryTracker, morselSize)
+      HeapTrackingLongEnumerationList.create(memoryTracker, Numbers.ceilingPowerOfTwo(morselSize))
 
     override def forEach(fun: (Long, AbstractArgumentStateMap.StateController[STATE]) => Unit): Unit =
       controllerList.foreach((l, v) => fun(l, v))
