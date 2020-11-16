@@ -311,9 +311,9 @@ public class MultiRealmAuthManager extends EnterpriseAuthManager
         return infoList;
     }
 
-    Set<ResourcePrivilege> getPermissions( Set<String> roles, String username )
+    Set<ResourcePrivilege> getPermissions( Set<String> roles )
     {
-        return privilegeResolver.getPrivileges( roles, username );
+        return privilegeResolver.getPrivileges( roles );
     }
 
     @Override

@@ -46,7 +46,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         return neoShiroSubject;
     }
 
-    private StandardAccessMode mode( IdLookup resolver, String dbName, String username )
+    private StandardAccessMode mode( IdLookup resolver, String dbName )
     {
         boolean isAuthenticated = shiroSubject.isAuthenticated();
         boolean passwordChangeRequired = shiroSubject.getAuthenticationResult() == AuthenticationResult.PASSWORD_CHANGE_REQUIRED;
@@ -54,7 +54,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         StandardAccessModeBuilder accessModeBuilder =
                 new StandardAccessModeBuilder( isAuthenticated, passwordChangeRequired, roles, resolver, dbName, defaultDatabase );
 
-        Set<ResourcePrivilege> privileges = authManager.getPermissions( roles, username );
+        Set<ResourcePrivilege> privileges = authManager.getPermissions( roles );
         return mode( accessModeBuilder, privileges, dbName, defaultDatabase, neoShiroSubject.username(), roles );
     }
 
@@ -95,7 +95,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         {
             throw AccessMode.Static.CREDENTIALS_EXPIRED.onViolation( "Permission denied." );
         }
-        StandardAccessMode mode = mode( idLookup, dbName, neoShiroSubject.username() );
+        StandardAccessMode mode = mode( idLookup, dbName );
         return new EnterpriseSecurityContext( neoShiroSubject, mode, mode.roles(), mode.getAdminAccessMode() );
     }
 

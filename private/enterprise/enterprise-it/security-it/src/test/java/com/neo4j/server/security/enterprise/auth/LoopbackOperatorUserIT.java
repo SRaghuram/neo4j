@@ -385,8 +385,8 @@ class LoopbackOperatorUserIT
 
         try ( Session session = loginBolt() )
         {
-            Record userCount = session.run( "SHOW USERS YIELD user RETURN count(user) AS count" ).single();
-            assertThat( userCount.get( "count" ).asLong() ).isEqualTo( 1L );
+            Record user = session.run( "SHOW USERS" ).single();
+            assertThat( user.get( "user" ).asString() ).isEqualTo( INITIAL_USER_NAME );
         }
     }
 

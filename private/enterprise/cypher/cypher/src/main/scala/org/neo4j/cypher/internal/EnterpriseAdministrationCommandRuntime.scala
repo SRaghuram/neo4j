@@ -213,7 +213,12 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
       val errorMessage = s"$actionString DATABASE is not supported, for more info see https://aura.support.neo4j.com/hc/en-us/articles/360050567093"
 
-      new PredicateExecutionPlan((_, sc) => !blocked || restrict_upgrade && sc.allowsAdminAction(new AdminActionOnResource(ActionMapper.asKernelAction(action), DatabaseScope.ALL, Segment.ALL)),
+      new PredicateExecutionPlan(
+        (_, sc) => {
+          // if restrict_upgrade is true the PUBLIC role will have temporary DENY CREATE/DROP/START/STOP DATABASE privileges.
+          // The loopback operator executes queries with AUTH_DISABLED and will pass this check.
+          !blocked || restrict_upgrade && sc.allowsAdminAction(new AdminActionOnResource(ActionMapper.asKernelAction(action), DatabaseScope.ALL, Segment.ALL))
+        },
         onViolation = (_, _) => new UnsupportedOperationException(errorMessage)
       )
     }

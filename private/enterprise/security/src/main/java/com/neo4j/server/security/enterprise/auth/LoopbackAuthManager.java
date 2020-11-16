@@ -30,6 +30,7 @@ import org.neo4j.server.security.auth.ShiroAuthToken;
 import org.neo4j.server.security.auth.UserRepository;
 
 import static org.neo4j.kernel.api.security.AuthToken.invalidToken;
+import static org.neo4j.server.security.systemgraph.SystemGraphRealmHelper.IS_SUSPENDED;
 
 public class LoopbackAuthManager extends EnterpriseAuthManager
 {
@@ -78,11 +79,14 @@ public class LoopbackAuthManager extends EnterpriseAuthManager
             switch ( result )
             {
             case SUCCESS:
-            case PASSWORD_CHANGE_REQUIRED:
                 if ( logSuccessfulLogin )
                 {
                     securityLog.info( "Operator logged in" );
                 }
+                break;
+            case PASSWORD_CHANGE_REQUIRED:
+                // this should not be possible since the credentials are explicitly set to not be expired.
+                securityLog.error( "Operator user logged in with expired credentials" );
                 break;
             case FAILURE:
                 securityLog.error( "Operator user failed to log in" );
@@ -146,7 +150,7 @@ public class LoopbackAuthManager extends EnterpriseAuthManager
         }
         else
         {
-            user = users.get( 0 );
+            user = users.get( 0 ).augment().withRequiredPasswordChange( false ).withoutFlag( IS_SUSPENDED ).build();
         }
     }
 
@@ -168,7 +172,7 @@ public class LoopbackAuthManager extends EnterpriseAuthManager
         @Override
         public EnterpriseSecurityContext authorize( IdLookup idLookup, String dbName )
         {
-            if ( !(authResult.equals( AuthenticationResult.SUCCESS ) || authResult.equals( AuthenticationResult.PASSWORD_CHANGE_REQUIRED )) )
+            if ( !(authResult.equals( AuthenticationResult.SUCCESS )) )
             {
                 throw new AuthorizationViolationException( AuthorizationViolationException.PERMISSION_DENIED, Status.Security.Unauthorized );
             }

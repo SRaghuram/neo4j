@@ -41,7 +41,7 @@ public class PrivilegeResolver
 
     private final SystemGraphRealm systemGraphRealm;
     private final Boolean restrictUpgrade;
-    private final Boolean blackCreateDrop;
+    private final Boolean blockCreateDrop;
     private final Boolean blockStartStop;
 
     private final ResourcePrivilege denyExecuteUpgrade;
@@ -60,7 +60,7 @@ public class PrivilegeResolver
         this.restrictUpgrade = config.get( GraphDatabaseInternalSettings.restrict_upgrade );
         this.roleToBoostAll = config.get( GraphDatabaseSettings.default_allowed );
         this.roleToBoostMapping = config.get( GraphDatabaseSettings.procedure_roles );
-        this.blackCreateDrop = config.get( GraphDatabaseInternalSettings.block_create_drop_database );
+        this.blockCreateDrop = config.get( GraphDatabaseInternalSettings.block_create_drop_database );
         this.blockStartStop = config.get( GraphDatabaseInternalSettings.block_start_stop_database );
 
         try
@@ -89,14 +89,7 @@ public class PrivilegeResolver
 
     }
 
-    HashSet<ResourcePrivilege> getPrivileges( Set<String> roles, String username )
-    {
-        HashSet<ResourcePrivilege> privileges = getPrivilegesForRoles( roles );
-        privileges.addAll( getUserPrivileges( username ) );
-        return privileges;
-    }
-
-    private HashSet<ResourcePrivilege> getPrivilegesForRoles( Set<String> roles )
+    HashSet<ResourcePrivilege> getPrivileges( Set<String> roles )
     {
         HashSet<ResourcePrivilege> privileges = systemGraphRealm.getPrivilegesForRoles( roles );
         for ( String role : roles )
@@ -108,7 +101,7 @@ public class PrivilegeResolver
                 {
                     privileges.add( denyExecuteUpgrade );
                 }
-                if ( blackCreateDrop )
+                if ( blockCreateDrop )
                 {
                     privileges.add( denyCreateDropDatabase );
                 }
@@ -120,12 +113,6 @@ public class PrivilegeResolver
             }
         }
         return privileges;
-    }
-
-    private Set<ResourcePrivilege> getUserPrivileges( String username )
-    {
-        // TODO should this go away?
-        return Collections.emptySet();
     }
 
     private void initProcedurePrivilegesFromConfig() throws InvalidArgumentsException

@@ -50,7 +50,7 @@ public class InClusterAuthManager extends EnterpriseAuthManager
             Set<String> roles = extractRoles( authToken );
             String defaultDatabaseForUser = defaultDatabaseResolver.defaultDatabase( username );
 
-            var loginContext = new InClusterLoginContext( username, roles, defaultDatabaseForUser, () -> privilegeResolver.getPrivileges( roles, username ) );
+            var loginContext = new InClusterLoginContext( username, roles, defaultDatabaseForUser, () -> privilegeResolver.getPrivileges( roles ) );
 
             if ( logSuccessfulLogin )
             {
