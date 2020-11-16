@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.AntiConditionalApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AntiSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArgumentTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.AssertSameNodeTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CachePropertiesTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
@@ -62,6 +63,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexStartsWithSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeLockingUniqueIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NonParallelProfileRowsTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NonParallelProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalExpandAllTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalExpandIntoTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalFailureTestBase
@@ -79,7 +81,6 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ProfilePageCacheStatsTestBas
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileRowsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProjectEndpointsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProjectionTestBase
-import org.neo4j.cypher.internal.runtime.spec.tests.NonParallelProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.PruningVarLengthExpandTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultStressTestBase
@@ -208,4 +209,5 @@ class SlottedNestedPlanExpressionTest extends NestedPlanExpressionTestBase(ENTER
 class SlottedRollupApplyTest extends RollupApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedDropResultTest extends DropResultTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedTriadicSelectionTest extends TriadicSelectionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedAssertSameNodeTest extends AssertSameNodeTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 
