@@ -128,9 +128,19 @@
       "queryFile": "queries/Q25.cypher"
     },
     {
+      "name": "Q25_with_skip",
+      "description": "Wanted Improvement: Partial sort with SKIP knowledge should improve over normal Partial sort. Few distinct values in already sorted column. Skip first chunk.",
+      "queryFile": "queries/Q25_with_skip.cypher"
+    },
+    {
       "name": "Q26",
       "description": "Wanted Improvement: Partial sort should improve over normal Sort. Many distinct values in already sorted column.",
       "queryFile": "queries/Q26.cypher"
+    },
+    {
+      "name": "Q26_with_skip",
+      "description": "Wanted Improvement: Partial sort with SKIP knowledge should improve over normal Partial sort. Many distinct values in already sorted column. Skip half of the rows.",
+      "queryFile": "queries/Q26_with_skip.cypher"
     },
     {
       "name": "Q27",
@@ -138,9 +148,19 @@
       "queryFile": "queries/Q27.cypher"
     },
     {
+      "name": "Q27_with_skip",
+      "description": "Wanted Improvement: Partial top with SKIP knowledge should improve over normal Partial top. Few distinct values in already sorted column, limit half of second chunk.",
+      "queryFile": "queries/Q27_with_skip.cypher"
+    },
+    {
       "name": "Q28",
       "description": "Wanted Improvement: Partial top should improve over normal Top. Many distinct values in already sorted column, limit quarter of rows.",
       "queryFile": "queries/Q28.cypher"
+    },
+    {
+      "name": "Q28_with_skip",
+      "description": "Wanted Improvement: Partial top with SKIP knowledge should improve over normal Partial top. Many distinct values in already sorted column, limit quarter of rows after skipping half.",
+      "queryFile": "queries/Q28_with_skip.cypher"
     },
     {
       "name": "Q29",
