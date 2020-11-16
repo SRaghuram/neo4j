@@ -22,7 +22,6 @@ import scala.collection.mutable.ArrayBuffer
  */
 abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: AbstractArgumentStateMap.StateController[STATE]](memoryTracker: MemoryTracker)
   extends ArgumentStateMap[STATE] {
-  private val scopedMemoryTracker = memoryTracker.getScopedMemoryTracker
 
   trait Controllers[V] {
     /**
@@ -151,7 +150,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     var i = 0
     while (i < builder.length) {
       val controller = controllers.remove(builder(i).argumentRowId)
-      scopedMemoryTracker.releaseHeap(controller.shallowSize)
+      memoryTracker.releaseHeap(controller.shallowSize)
 
       i += 1
     }
@@ -191,7 +190,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
       val completedState = controller.takeCompleted()
       if (completedState != null) {
         controllers.remove(completedState.argumentRowId)
-        scopedMemoryTracker.releaseHeap(controller.shallowSize)
+        memoryTracker.releaseHeap(controller.shallowSize)
         DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, completedState.argumentRowId)
         ArgumentStateWithCompleted(completedState, isCompleted = true)
       } else {
@@ -267,7 +266,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     val controller = controllers.remove(argument)
     if (controller != null) {
       val state = controller.take()
-      scopedMemoryTracker.releaseHeap(controller.shallowSize)
+      memoryTracker.releaseHeap(controller.shallowSize)
       state
     } else {
       null.asInstanceOf[STATE]
@@ -278,7 +277,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     DebugSupport.ASM.log("ASM %s init %03d", argumentStateMapId, argument)
     val newController = newStateController(argument, argumentMorsel, argumentRowIdsForReducers, initialCount, memoryTracker)
     val previousValue = controllers.put(argument, newController)
-    scopedMemoryTracker.allocateHeap(newController.shallowSize)
+    memoryTracker.allocateHeap(newController.shallowSize)
     Preconditions.checkState(previousValue == null, "ArgumentStateMap cannot re-initiate the same argument (argument: %d)", Long.box(argument))
   }
 
