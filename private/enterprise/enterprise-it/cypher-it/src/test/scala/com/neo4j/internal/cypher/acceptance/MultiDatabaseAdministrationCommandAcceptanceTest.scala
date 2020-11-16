@@ -16,6 +16,7 @@ import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.default_database
+import org.neo4j.configuration.connectors.BoltConnector
 import org.neo4j.dbms.api.DatabaseExistsException
 import org.neo4j.dbms.api.DatabaseLimitReachedException
 import org.neo4j.dbms.api.DatabaseNotFoundException
@@ -23,6 +24,7 @@ import org.neo4j.exceptions.DatabaseAdministrationException
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.DatabaseShutdownException
+import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.internal.kernel.api.security.LoginContext
 import org.neo4j.kernel.DeadlockDetectedException
@@ -1020,18 +1022,25 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     }
   }
 
-  test("should not fail when calling procedure without credential check when credentials expired") {
-    setup()
-    setupUserWithCustomRole()
-    execute("ALTER USER joe SET PASSWORD CHANGE REQUIRED")
+  test("should not fail when calling procedure allows expired credentials") {
+    defaultConfig.set(BoltConnector.enabled.asInstanceOf[Setting[Any]], true)
+    try {
+      setup()
+      setupUserWithCustomRole()
+      execute("ALTER USER joe SET PASSWORD CHANGE REQUIRED")
 
-    Seq(
-      "CALL db.labels"
-    ).foreach {
-      query =>
-          // WHEN
-          executeOnSystem("joe", "soap", query)
-          // THEN should have no authorization error
+      Seq(
+        "CALL db.ping",
+        "CALL dbms.cluster.routing.getRoutingTable({}, \"neo4j\")",
+        "CALL dbms.routing.getRoutingTable({}, \"neo4j\")"
+      ).foreach {
+        query =>
+            // WHEN
+            executeOnSystem("joe", "soap", query)
+            // THEN should have no authorization error
+      }
+    } finally {
+      defaultConfig.set(BoltConnector.enabled.asInstanceOf[Setting[Any]], false)
     }
   }
 
