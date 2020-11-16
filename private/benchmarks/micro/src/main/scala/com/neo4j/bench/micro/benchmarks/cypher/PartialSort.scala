@@ -10,8 +10,10 @@ import java.util.Collections
 
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
+import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.data.Plans.IdGen
+import com.neo4j.bench.micro.data.Plans.astLiteralFor
 import com.neo4j.bench.micro.data.Plans.astParameter
 import com.neo4j.bench.micro.data.Plans.astProperty
 import com.neo4j.bench.micro.data.Plans.astVariable
@@ -49,9 +51,6 @@ class PartialSort extends AbstractCypherBenchmark {
   @Param(Array[String]())
   var runtime: String = _
 
-  /*
-  Compiled runtime does not support Order By of Temporal/Spatial types
-   */
   @ParamValues(
     allowed = Array(LNG, DBL, STR_SML),
     base = Array(LNG))
@@ -62,15 +61,21 @@ class PartialSort extends AbstractCypherBenchmark {
     allowed = Array("1", "10", "100", "1000", "10000", "100000", "1000000"),
     base = Array("1000"))
   @Param(Array[Int]())
-  var distinctCount = 1000
+  var distinctCount: Int = _
 
   @ParamValues(
     allowed = Array("PartialSort", "FullSort"),
     base = Array("PartialSort"))
   @Param(Array[String]())
-  var sortMode = "PartialSort"
+  var sortMode: String = _
 
-  override def description = "PartialSort, e.g., UNWIND {listOfMapValuesSortedByA} AS tuples RETURN tuples ORDER BY tuples.a, tuples.b"
+  @ParamValues(
+    allowed = Array("0", "5000", "50000", "500000"),
+    base = Array("0", "5000", "50000", "500000"))
+  @Param(Array[Int]())
+  var skipCount: Int = _
+
+  override def description = "PartialSort, e.g., UNWIND $listOfMapValuesSortedByA AS tuples RETURN tuples ORDER BY tuples.a, tuples.b"
 
   val EXPECTED_ROW_COUNT = 1000000
 
@@ -88,7 +93,12 @@ class PartialSort extends AbstractCypherBenchmark {
     val leaf = plans.UnwindCollection(plans.Argument()(IdGen), unwindVariableName, parameter)(IdGen)
     val projection = plans.Projection(leaf, Map(aVariableName -> astProperty(unwindVariable, "a"), bVariableName -> astProperty(unwindVariable, "b")))(IdGen)
     val sort = sortMode match {
-      case "PartialSort" => plans.PartialSort(projection, List(Ascending(aVariableName)), List(Ascending(bVariableName)))(IdGen)
+      case "PartialSort" =>
+        val skip = skipCount match {
+          case 0 => None
+          case x => Some(astLiteralFor(x, LNG))
+        }
+        plans.PartialSort(projection, List(Ascending(aVariableName)), List(Ascending(bVariableName)), skip)(IdGen)
       case "FullSort" => plans.Sort(projection, List(Ascending(aVariableName), Ascending(bVariableName)))(IdGen)
     }
 
@@ -148,5 +158,11 @@ class PartialSortThreadState {
   @TearDown
   def tearDown(): Unit = {
     tx.close()
+  }
+}
+
+object PartialSort {
+  def main(args: Array[String]): Unit = {
+    Main.run(classOf[PartialSort])
   }
 }

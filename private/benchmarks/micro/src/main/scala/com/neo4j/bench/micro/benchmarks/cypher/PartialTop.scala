@@ -10,8 +10,10 @@ import java.util.Collections
 
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
+import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.data.Plans.IdGen
+import com.neo4j.bench.micro.data.Plans.astLiteralFor
 import com.neo4j.bench.micro.data.Plans.astParameter
 import com.neo4j.bench.micro.data.Plans.astProperty
 import com.neo4j.bench.micro.data.Plans.astVariable
@@ -52,9 +54,6 @@ class PartialTop extends AbstractCypherBenchmark {
   @Param(Array[String]())
   var runtime: String = _
 
-  /*
-  Compiled runtime does not support Order By of Temporal/Spatial types
-   */
   @ParamValues(
     allowed = Array(LNG, DBL, STR_SML),
     base = Array(LNG))
@@ -71,15 +70,21 @@ class PartialTop extends AbstractCypherBenchmark {
     allowed = Array("1", "10", "100", "1000", "10000", "100000", "1000000"),
     base = Array("1000"))
   @Param(Array[Int]())
-  var distinctCount = 1000
+  var distinctCount: Int = _
 
   @ParamValues(
-    allowed = Array("PartialTop", "NormalTop"),
-    base = Array("PartialTop"))
+    allowed = Array("PartialTop", "NormalTop", "SkipAwarePartialTop"),
+    base = Array("SkipAwarePartialTop"))
   @Param(Array[String]())
-  var sortMode = "PartialTop"
+  var sortMode: String = _
 
-  override def description = "PartialTop, e.g., UNWIND {listOfMapValuesSortedByA} AS tuples RETURN tuples ORDER BY tuples.a, tuples.b LIMIT {limit}"
+  @ParamValues(
+    allowed = Array("0", "5000", "50000", "500000"),
+    base = Array("0", "500000"))
+  @Param(Array[Int]())
+  var skipCount: Int = _
+
+  override def description = "PartialTop, e.g., UNWIND $listOfMapValuesSortedByA AS tuples RETURN tuples ORDER BY tuples.a, tuples.b LIMIT $limit"
 
   val LIST_ITEM_COUNT = 1000000
 
@@ -99,6 +104,13 @@ class PartialTop extends AbstractCypherBenchmark {
     val limitParameter = astParameter("limit", symbols.CTInteger)
     val top = sortMode match {
       case "PartialTop" => plans.PartialTop(projection, List(Ascending(aVariableName)), List(Ascending(bVariableName)), limitParameter)(IdGen)
+      case "SkipAwarePartialTop" =>
+        // Since we increase the LIMIT also with growing SKIPs, we need to have two different modes to get comparable results when processing the same number of rows.
+        val skip = skipCount match {
+          case 0 => None
+          case x => Some(astLiteralFor(x, LNG))
+        }
+        plans.PartialTop(projection, List(Ascending(aVariableName)), List(Ascending(bVariableName)), limitParameter, skip)(IdGen)
       case "NormalTop" => plans.Top(projection, List(Ascending(unwindVariableName)), limitParameter)(IdGen)
     }
 
@@ -117,7 +129,7 @@ class PartialTop extends AbstractCypherBenchmark {
     val subscriber = new CountSubscriber(bh)
     val result = threadState.executablePlan.execute(params, tx = threadState.tx, subscriber = subscriber)
     result.consumeAll()
-    assertExpectedRowCount(limit.toInt, subscriber)
+    assertExpectedRowCount(limit.toInt + skipCount, subscriber)
   }
 }
 
@@ -152,7 +164,8 @@ class PartialTopThreadState {
 
     val paramsMap = mutable.Map[String, AnyRef](
       "list" -> list,
-      "limit" -> Long.box(benchmarkState.limit)).asJava
+      "limit" -> Long.box(benchmarkState.limit + benchmarkState.skipCount) // To obtain `limit` sorted rows, we need to set the top count to `limit + skip`
+    ).asJava
     benchmarkState.params = ValueUtils.asMapValue(paramsMap)
     executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
@@ -161,5 +174,11 @@ class PartialTopThreadState {
   @TearDown
   def tearDown(): Unit = {
     tx.close()
+  }
+}
+
+object PartialTop {
+  def main(args: Array[String]): Unit = {
+    Main.run(classOf[PartialTop])
   }
 }
