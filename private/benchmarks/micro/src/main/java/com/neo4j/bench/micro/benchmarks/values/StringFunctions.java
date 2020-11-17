@@ -152,6 +152,14 @@ public class StringFunctions extends AbstractValuesBenchmark
         return threadState.value1.compareTo( threadState.value2 );
     }
 
+    @Benchmark
+    @CompilerControl( CompilerControl.Mode.DONT_INLINE )
+    @BenchmarkMode( {Mode.AverageTime} )
+    public boolean isEmpty( ThreadState threadState )
+    {
+        return threadState.value1.isEmpty();
+    }
+
     public static void main( String... methods ) throws Exception
     {
         run( StringFunctions.class, methods );
