@@ -884,6 +884,11 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     }
   }
 
+  test("isEmpty with nested null") {
+    val compiled = compile(function("isEmpty", function("toString", parameter(0))))
+    evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
+  }
+
   test("size function") {
     val compiled = compile(function("size", parameter(0)))
 
