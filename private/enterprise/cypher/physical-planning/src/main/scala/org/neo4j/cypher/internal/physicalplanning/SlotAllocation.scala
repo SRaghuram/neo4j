@@ -27,6 +27,7 @@ import org.neo4j.cypher.internal.logical.plans.Apply
 import org.neo4j.cypher.internal.logical.plans.ApplyPlan
 import org.neo4j.cypher.internal.logical.plans.Argument
 import org.neo4j.cypher.internal.logical.plans.AssertSameNode
+import org.neo4j.cypher.internal.logical.plans.AssertingMultiNodeIndexSeek
 import org.neo4j.cypher.internal.logical.plans.CacheProperties
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
 import org.neo4j.cypher.internal.logical.plans.ConditionalApply
@@ -465,6 +466,12 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
   private def allocateLeaf(lp: LogicalPlan, nullable: Boolean, slots: SlotConfiguration): Unit =
     lp match {
       case MultiNodeIndexSeek(leafPlans) =>
+        leafPlans.foreach { p =>
+          allocateLeaf(p, nullable, slots)
+          allocations.set(p.id, slots)
+        }
+
+      case AssertingMultiNodeIndexSeek(_, leafPlans) =>
         leafPlans.foreach { p =>
           allocateLeaf(p, nullable, slots)
           allocations.set(p.id, slots)

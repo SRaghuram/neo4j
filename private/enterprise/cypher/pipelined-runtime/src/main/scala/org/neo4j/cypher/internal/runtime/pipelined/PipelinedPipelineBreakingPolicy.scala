@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.logical.plans.Anti
 import org.neo4j.cypher.internal.logical.plans.AntiConditionalApply
 import org.neo4j.cypher.internal.logical.plans.Apply
 import org.neo4j.cypher.internal.logical.plans.Argument
+import org.neo4j.cypher.internal.logical.plans.AssertingMultiNodeIndexSeek
 import org.neo4j.cypher.internal.logical.plans.CacheProperties
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
 import org.neo4j.cypher.internal.logical.plans.ConditionalApply
@@ -140,6 +141,7 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
            _: NodeIndexScan |
            _: NodeByIdSeek |
            _: MultiNodeIndexSeek |
+           _: AssertingMultiNodeIndexSeek |
            _: DirectedRelationshipByIdSeek |
            _: UndirectedRelationshipByIdSeek |
            _: NodeCountFromCountStore |

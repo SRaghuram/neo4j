@@ -36,6 +36,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.AntiSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArgumentTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArrayIndexSupport
+import org.neo4j.cypher.internal.runtime.spec.tests.AssertSameNodeTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CachePropertiesTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
@@ -432,7 +433,7 @@ class PipelinedLetSelectOrSemiApplyNoFusingTest extends LetSelectOrSemiApplyTest
 class PipelinedConditionalApplyTest extends ConditionalApplyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedConditionalApplyNoFusingTest extends ConditionalApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
-//ANTI ITIONAL APPLY
+//ANTI CONDITIONAL APPLY
 class PipelinedAntiConditionalApplyTest extends AntiConditionalApplyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedAntiConditionalApplyNoFusingTest extends AntiConditionalApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
@@ -451,6 +452,10 @@ class PipelinedDropResultNoFusingTest extends DropResultTestBase(NO_FUSING, PIPE
 // TRIADIC SELECTION
 class PipelinedTriadicSelectionTest extends TriadicSelectionTestBase(FUSING, PIPELINED, SIZE_HINT)
 class PipelinedTriadicSelectionNoFusingTest extends TriadicSelectionTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+
+// ASSERT SAME NODE
+class PipelinedAssertSameNodeTest extends AssertSameNodeTestBase(FUSING, PIPELINED, SIZE_HINT)
+class PipelinedAssertSameNodeNoFusingTest extends AssertSameNodeTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
 
 // GENERAL
 class PipelinedMiscTest extends MiscTestBase(FUSING, PIPELINED) with PipelinedSpecSuite

@@ -62,6 +62,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.AllOrderedAggregati
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AllOrderedDistinctOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AntiOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ArgumentOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.AssertingMultiNodeIndexSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CachePropertiesOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CartesianProductOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ConditionalApplyOperator
@@ -235,6 +236,22 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         new MultiNodeIndexSeekOperator(WorkIdentity.fromPlan(plan),
                                        argumentSize,
                                        nodeIndexSeekParameters)
+
+      case plans.AssertingMultiNodeIndexSeek(_, nodeIndexSeeks) =>
+        val argumentSize = physicalPlan.argumentSizes(id)
+        val nodeIndexSeekParameters: Seq[NodeIndexSeekParameters] = nodeIndexSeeks.map { p =>
+          val columnOffset = slots.getLongOffsetFor(p.idName)
+          val slottedIndexProperties = p.properties.map(SlottedIndexedProperty(p.idName, _, slots)).toArray
+          val queryIndex = indexRegistrator.registerQueryIndex(p.label, p.properties)
+          val kernelIndexOrder = asKernelIndexOrder(p.indexOrder)
+          val valueExpression = p.valueExpr.map(converters.toCommandExpression(id, _))
+          val indexSeekMode = IndexSeekModeFactory(unique = p.isInstanceOf[NodeUniqueIndexSeek], readOnly = readOnly).fromQueryExpression(p.valueExpr)
+          NodeIndexSeekParameters(columnOffset, slottedIndexProperties, queryIndex, kernelIndexOrder, valueExpression, indexSeekMode)
+        }
+
+        new AssertingMultiNodeIndexSeekOperator(WorkIdentity.fromPlan(plan),
+          argumentSize,
+          nodeIndexSeekParameters)
 
       case plans.NodeIndexScan(column, labelToken, properties, _, indexOrder) =>
         val argumentSize = physicalPlan.argumentSizes(id)

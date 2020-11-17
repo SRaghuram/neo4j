@@ -41,18 +41,6 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
                                  nodeIndexSeekParameters: Seq[NodeIndexSeekParameters])
   extends StreamingOperator {
 
-  class IndexSeeker(parameters: NodeIndexSeekParameters) extends NodeIndexSeeker {
-    override val indexMode: IndexSeekMode = parameters.indexSeekMode
-
-    override val valueExpr: QueryExpression[Expression] = parameters.valueExpression
-
-    override val propertyIds: Array[Int] = parameters.slottedIndexProperties.map(_.propertyKeyId)
-
-    val indexPropertyIndices: Array[Int] = parameters.slottedIndexProperties.zipWithIndex.filter(_._1.getValueFromIndex).map(_._2)
-    val indexPropertySlotOffsets: Array[Int] = parameters.slottedIndexProperties.flatMap(_.maybeCachedNodePropertySlot)
-    val needsValues: Boolean = indexPropertyIndices.nonEmpty
-  }
-
   private val indexSeekers: Array[IndexSeeker] = nodeIndexSeekParameters.map(new IndexSeeker(_)).toArray
   private val numberOfSeeks: Int = indexSeekers.length
 
@@ -267,5 +255,17 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
       () => read.nodeIndexSeek(index, nodeCursor, IndexQueryConstraints.constrained(indexOrder, needsValuesFromIndexSeek), predicates: _*)
     }
   }
+}
+
+class IndexSeeker(parameters: NodeIndexSeekParameters) extends NodeIndexSeeker {
+  override val indexMode: IndexSeekMode = parameters.indexSeekMode
+
+  override val valueExpr: QueryExpression[Expression] = parameters.valueExpression
+
+  override val propertyIds: Array[Int] = parameters.slottedIndexProperties.map(_.propertyKeyId)
+
+  val indexPropertyIndices: Array[Int] = parameters.slottedIndexProperties.zipWithIndex.filter(_._1.getValueFromIndex).map(_._2)
+  val indexPropertySlotOffsets: Array[Int] = parameters.slottedIndexProperties.flatMap(_.maybeCachedNodePropertySlot)
+  val needsValues: Boolean = indexPropertyIndices.nonEmpty
 }
 

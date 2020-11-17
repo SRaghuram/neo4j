@@ -97,13 +97,15 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
                             queryIndexId: Int,
                             indexOrder: IndexOrder,
                             argumentSize: SlotConfiguration.Size,
-                            override val valueExpr: QueryExpression[Expression],
-                            override val indexMode: IndexSeekMode = IndexSeek)
-  extends StreamingOperator with NodeIndexSeeker {
+                            valueExpr: QueryExpression[Expression],
+                            indexMode: IndexSeekMode = IndexSeek)
+  extends StreamingOperator {
+
 
   private val indexPropertyIndices: Array[Int] = properties.zipWithIndex.filter(_._1.getValueFromIndex).map(_._2)
   private val indexPropertySlotOffsets: Array[Int] = properties.flatMap(_.maybeCachedNodePropertySlot)
-  private val needsValues: Boolean = indexPropertyIndices.nonEmpty
+  private val propertyIds: Array[Int] = properties.map(_.propertyKeyId)
+
 
   override protected def nextTasks(state: PipelinedQueryState,
                                    inputMorsel: MorselParallelizer,
@@ -111,107 +113,135 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
                                    resources: QueryResources,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
-    singletonIndexedSeq(new OTask(inputMorsel.nextCopy))
+    singletonIndexedSeq(
+      new NodeIndexSeekTask(
+        inputMorsel.nextCopy,
+        workIdentity,
+        offset,
+        indexPropertyIndices,
+        indexPropertySlotOffsets,
+        queryIndexId,
+        indexOrder,
+        argumentSize,
+        propertyIds,
+        valueExpr,
+        indexMode)
+    )
+  }
+}
+
+class NodeIndexSeekTask(inputMorsel: Morsel,
+                        val workIdentity: WorkIdentity,
+                        offset: Int,
+                        indexPropertyIndices: Array[Int],
+                        indexPropertySlotOffsets: Array[Int],
+                        queryIndexId: Int,
+                        indexOrder: IndexOrder,
+                        argumentSize: SlotConfiguration.Size,
+                        val propertyIds: Array[Int],
+                        val valueExpr: QueryExpression[Expression],
+                        val indexMode: IndexSeekMode = IndexSeek) extends InputLoopTask(inputMorsel) with NodeIndexSeeker {
+
+  protected var nodeCursor: NodeValueIndexCursor = _
+  private var cursorsToClose: Array[NodeValueIndexCursor] = _
+  private var exactSeekValues: Array[Value] = _
+
+  protected def onNode(node: Long): Unit = {
+    //hook for extending classes
   }
 
-  override val propertyIds: Array[Int] = properties.map(_.propertyKeyId)
+  protected def onExitInnerLoop(): Unit = {
+    //hook for extending classes
+  }
 
-  class OTask(inputMorsel: Morsel) extends InputLoopTask(inputMorsel) {
+  // INPUT LOOP TASK
+  override protected def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+    val queryState = state.queryStateForExpressionEvaluation(resources)
+    initExecutionContext.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
+    val indexQueries = computeIndexQueries(queryState, initExecutionContext)
+    val read = state.query.transactionalContext.transaction.dataRead
+    if (indexQueries.size == 1) {
+      nodeCursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
+      cursorsToClose = Array(nodeCursor)
+      seek(state.queryIndexes(queryIndexId), nodeCursor, read, indexQueries.head)
+    } else {
+      // If we should use ValuedNodeIndexCursors here at some point, remember to not free them into the same pool
+      cursorsToClose = indexQueries.filterNot(isImpossible).map(query => {
+        val cursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
+        read.nodeIndexSeek(state.queryIndexes(queryIndexId), cursor, IndexQueryConstraints.constrained(indexOrder, needsValues || indexOrder != IndexOrder.NONE), query: _*)
+        cursor
+      }).toArray
+      nodeCursor = orderedCursor(indexOrder, cursorsToClose)
+    }
 
-    override def workIdentity: WorkIdentity = NodeIndexSeekOperator.this.workIdentity
+    true
+  }
 
-    private var nodeCursor: NodeValueIndexCursor = _
-    private var cursorsToClose: Array[NodeValueIndexCursor] = _
-    private var exactSeekValues: Array[Value] = _
+  override final protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
+    while (outputRow.onValidRow && nodeCursor != null && nodeCursor.next()) {
+      val node = nodeCursor.nodeReference()
+      onNode(node)
+      outputRow.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
+      outputRow.setLongAt(offset, node)
+      var i = 0
+      while (i < indexPropertyIndices.length) {
+        val indexPropertyIndex = indexPropertyIndices(i)
+        val value =
+          if (exactSeekValues != null) {
+            exactSeekValues(indexPropertyIndex)
+          } else {
+            nodeCursor.propertyValue(indexPropertyIndex)
+          }
+        outputRow.setCachedPropertyAt(indexPropertySlotOffsets(i), value)
+        i += 1
+      }
+      outputRow.next()
+    }
+    onExitInnerLoop()
+  }
 
-    // INPUT LOOP TASK
+  override def setExecutionEvent(event: OperatorProfileEvent): Unit = {
+    if (nodeCursor != null) {
+      nodeCursor.setTracer(event)
+    }
+  }
 
-    override protected def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+  override protected def closeInnerLoop(resources: QueryResources): Unit = {
+    if (cursorsToClose != null) {
+      cursorsToClose.foreach(resources.cursorPools.nodeValueIndexCursorPool.free)
+      cursorsToClose = null
+    }
+    nodeCursor = null
+  }
 
-      val queryState = state.queryStateForExpressionEvaluation(resources)
-      initExecutionContext.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
-      val indexQueries = computeIndexQueries(queryState, initExecutionContext)
-      val read = state.query.transactionalContext.transaction.dataRead
-      if (indexQueries.size == 1) {
-        nodeCursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
-        cursorsToClose = Array(nodeCursor)
-        seek(state.queryIndexes(queryIndexId), nodeCursor, read, indexQueries.head)
+  // HELPERS
+  protected def orderedCursor(indexOrder: IndexOrder, cursors: Array[NodeValueIndexCursor]): NodeValueIndexCursor = indexOrder match {
+    case IndexOrder.NONE => CompositeValueIndexCursor.unordered(cursors)
+    case IndexOrder.ASCENDING => CompositeValueIndexCursor.ascending(cursors)
+    case IndexOrder.DESCENDING => CompositeValueIndexCursor.descending(cursors)
+  }
+  private def needsValues: Boolean = indexPropertyIndices.nonEmpty
+
+  private def seek[RESULT <: AnyRef](index: IndexReadSession,
+                                     nodeCursor: NodeValueIndexCursor,
+                                     read: Read,
+                                     predicates: Seq[IndexQuery]): Unit = {
+
+
+
+    if (isImpossible(predicates)) {
+      return // leave cursor un-initialized/empty
+    }
+
+    // We don't need property values from the index for an exact seek
+    exactSeekValues =
+      if (needsValues && predicates.forall(_.isInstanceOf[ExactPredicate])) {
+        predicates.map(_.asInstanceOf[ExactPredicate].value()).toArray
       } else {
-        // If we should use ValuedNodeIndexCursors here at some point, remember to not free them into the same pool
-        cursorsToClose = indexQueries.filterNot(isImpossible).map(query => {
-          val cursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
-          read.nodeIndexSeek(state.queryIndexes(queryIndexId), cursor, IndexQueryConstraints.constrained(indexOrder, needsValues || indexOrder != IndexOrder.NONE), query: _*)
-          cursor
-        }).toArray
-        nodeCursor = orderedCursor(indexOrder, cursorsToClose)
+        null
       }
-
-      true
-    }
-
-    private def orderedCursor(indexOrder: IndexOrder, cursors: Array[NodeValueIndexCursor]): NodeValueIndexCursor = indexOrder match {
-      case IndexOrder.NONE => CompositeValueIndexCursor.unordered(cursors)
-      case IndexOrder.ASCENDING => CompositeValueIndexCursor.ascending(cursors)
-      case IndexOrder.DESCENDING => CompositeValueIndexCursor.descending(cursors)
-    }
-
-    override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
-      while (outputRow.onValidRow && nodeCursor != null && nodeCursor.next()) {
-        outputRow.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
-        outputRow.setLongAt(offset, nodeCursor.nodeReference())
-        var i = 0
-        while (i < indexPropertyIndices.length) {
-          val indexPropertyIndex = indexPropertyIndices(i)
-          val value =
-            if (exactSeekValues != null) {
-              exactSeekValues(indexPropertyIndex)
-            } else {
-              nodeCursor.propertyValue(indexPropertyIndex)
-            }
-          outputRow.setCachedPropertyAt(indexPropertySlotOffsets(i), value)
-          i += 1
-        }
-        outputRow.next()
-      }
-    }
-
-    override def setExecutionEvent(event: OperatorProfileEvent): Unit = {
-      if (nodeCursor != null) {
-        nodeCursor.setTracer(event)
-      }
-    }
-
-    override protected def closeInnerLoop(resources: QueryResources): Unit = {
-      if (cursorsToClose != null) {
-        cursorsToClose.foreach(resources.cursorPools.nodeValueIndexCursorPool.free)
-        cursorsToClose = null
-      }
-      nodeCursor = null
-    }
-
-    // HELPERS
-
-    private def seek[RESULT <: AnyRef](index: IndexReadSession,
-                                       nodeCursor: NodeValueIndexCursor,
-                                       read: Read,
-                                       predicates: Seq[IndexQuery]): Unit = {
-
-
-
-      if (isImpossible(predicates)) {
-        return // leave cursor un-initialized/empty
-      }
-
-      // We don't need property values from the index for an exact seek
-      exactSeekValues =
-        if (needsValues && predicates.forall(_.isInstanceOf[ExactPredicate])) {
-          predicates.map(_.asInstanceOf[ExactPredicate].value()).toArray
-        } else {
-          null
-        }
-      val needsValuesFromIndexSeek = exactSeekValues == null && needsValues
-      read.nodeIndexSeek(index, nodeCursor, IndexQueryConstraints.constrained(indexOrder, needsValuesFromIndexSeek), predicates: _*)
-    }
+    val needsValuesFromIndexSeek = exactSeekValues == null && needsValues
+    read.nodeIndexSeek(index, nodeCursor, IndexQueryConstraints.constrained(indexOrder, needsValuesFromIndexSeek), predicates: _*)
   }
 }
 
