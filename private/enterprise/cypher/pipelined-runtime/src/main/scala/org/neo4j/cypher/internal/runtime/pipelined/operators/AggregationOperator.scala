@@ -347,6 +347,8 @@ abstract class BaseAggregationMapperOperatorTaskTemplate(val inner: OperatorTask
                                             serialExecutionOnly: Boolean,
                                             codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
 
+  override protected def isHead: Boolean = false
+
   override def toString: String = "AggregationMapperOperatorTaskTemplate"
 
   private val needToApplyUpdates = !Aggregator.allDirect(aggregators) || !serialExecutionOnly

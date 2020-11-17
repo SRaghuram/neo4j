@@ -489,7 +489,7 @@ class PipelinedProfileTimeNoFusingTest extends ProfileTimeTestBase(NO_FUSING, PI
                                        with NonParallelProfileTimeTestBase[EnterpriseRuntimeContext]
 class PipelinedProfileNoTimeTest extends ProfileNoTimeTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite {
   //this test differs in Pipelined and Parallel since we fuse differently
-  test("should partially profile time if fused pipelines and non-fused pipelines co-exist") {
+  test("should profile time of both fused and non-fused pipelines when they co-exist") {
     given { circleGraph(SIZE_HINT, "X") }
 
     // when
@@ -512,7 +512,7 @@ class PipelinedProfileNoTimeTest extends ProfileNoTimeTestBase(FUSING, PIPELINED
     queryProfile.operatorProfile(2).time() should not be OperatorProfile.NO_DATA // aggregation - not fused
     queryProfile.operatorProfile(3).time() should be(OperatorProfile.NO_DATA) // filter - fused
     queryProfile.operatorProfile(4).time() should be(OperatorProfile.NO_DATA) // expand - fused
-    queryProfile.operatorProfile(5).time() should be(OperatorProfile.NO_DATA) // node by label scan - fused
+    queryProfile.operatorProfile(5).time() should not be OperatorProfile.NO_DATA // node by label scan - fused
     // Should not attribute anything to the invalid id
     queryProfile.operatorProfile(Id.INVALID_ID.x) should be(NO_PROFILE)
   }
@@ -532,7 +532,8 @@ class PipelinedProfileMemoryTest extends ProfileMemoryTestBase(FUSING, PIPELINED
 class PipelinedProfileMemoryTrackingDisabledNoFusingTest extends ProfileMemoryTrackingDisabledTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
 class PipelinedProfileMemoryTrackingDisabledTest extends ProfileMemoryTrackingDisabledTestBase(FUSING, PIPELINED, SIZE_HINT)
 
-class PipelinedProfilePageCacheStatsNoFusingTest extends ProfilePageCacheStatsTestBase(NO_FUSING, PIPELINED)
+class PipelinedProfilePageCacheStatsNoFusingTest extends ProfilePageCacheStatsTestBase(canFuseOverPipelines = false, NO_FUSING, PIPELINED)
+class PipelinedProfilePageCacheStatsTest extends ProfilePageCacheStatsTestBase(canFuseOverPipelines = true, FUSING, PIPELINED)
 
 class PipelinedNestedPlanExpressionTest extends NestedPlanExpressionTestBase(FUSING, PIPELINED, SIZE_HINT)
 class PipelinedNestedPlanExpressionNoFusingTest extends NestedPlanExpressionTestBase(NO_FUSING, PIPELINED, SIZE_HINT)

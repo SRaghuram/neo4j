@@ -102,6 +102,8 @@ class SerialTopLevelSkipOperatorTaskTemplate(inner: OperatorTaskTemplate,
       )
     )
   }
+
+  override protected def isHead: Boolean = false
 }
 
 object SerialSkipState {
@@ -164,4 +166,6 @@ class SerialSkipOnRhsOfApplyOperatorTaskTemplate(inner: OperatorTaskTemplate,
       doIfInnerCantContinue(assign(countLeftVar, subtract(load(countLeftVar), constant(1))))
     )
   }
+
+  override protected def isHead: Boolean = false
 }

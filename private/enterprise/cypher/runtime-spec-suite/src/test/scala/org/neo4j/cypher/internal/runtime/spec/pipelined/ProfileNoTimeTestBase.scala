@@ -22,7 +22,7 @@ abstract class ProfileNoTimeTestBase[CONTEXT <: RuntimeContext](edition: Edition
   // We always get OperatorProfile.NO_DATA for page cache hits and misses in Pipelined
   protected val NO_PROFILE = new OperatorProfile.ConstOperatorProfile(0, 0, 0, 0, 0, OperatorProfile.NO_DATA)
 
-  test("should not profile time if completely fused") {
+  test("should profile time at first operator if completely fused") {
     given { nodeGraph(sizeHint) }
 
     val logicalQuery = new LogicalQueryBuilder(this)
@@ -36,12 +36,12 @@ abstract class ProfileNoTimeTestBase[CONTEXT <: RuntimeContext](edition: Edition
     // then
     val queryProfile = runtimeResult.runtimeResult.queryProfile()
     queryProfile.operatorProfile(0).time() should be(OperatorProfile.NO_DATA) // produce results
-    queryProfile.operatorProfile(1).time() should be(OperatorProfile.NO_DATA) // all node scan
+    queryProfile.operatorProfile(1).time() should not be OperatorProfile.NO_DATA // all node scan
     // Should not attribute anything to the invalid id
     queryProfile.operatorProfile(Id.INVALID_ID.x) should be(NO_PROFILE)
   }
 
-  test("should not profile time at the boundary between fused and not-fused") {
+  test("should profile time at the first fused operator after boundary between fused and not-fused") {
     given { circleGraph(sizeHint, "X") }
 
     val logicalQuery = new LogicalQueryBuilder(this)
@@ -59,9 +59,9 @@ abstract class ProfileNoTimeTestBase[CONTEXT <: RuntimeContext](edition: Edition
     val queryProfile = runtimeResult.runtimeResult.queryProfile()
     queryProfile.operatorProfile(0).time() should be(OperatorProfile.NO_DATA) // produce results
     queryProfile.operatorProfile(1).time() should be(OperatorProfile.NO_DATA) // filter
-    queryProfile.operatorProfile(2).time() should be(OperatorProfile.NO_DATA) // expand
-    queryProfile.operatorProfile(3).time() should be > 0L // nonFuseable
-    queryProfile.operatorProfile(4).time() should be > 0L // labelscan
+    queryProfile.operatorProfile(2).time() should not be OperatorProfile.NO_DATA // expand
+    queryProfile.operatorProfile(3).time() should not be OperatorProfile.NO_DATA // nonFuseable
+    queryProfile.operatorProfile(4).time() should not be OperatorProfile.NO_DATA // labelscan
     // Should not attribute anything to the invalid id
     queryProfile.operatorProfile(Id.INVALID_ID.x) should be(NO_PROFILE)
   }

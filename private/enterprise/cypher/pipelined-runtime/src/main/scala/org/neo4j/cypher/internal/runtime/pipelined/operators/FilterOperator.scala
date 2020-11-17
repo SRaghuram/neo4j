@@ -87,4 +87,6 @@ class FilterOperatorTemplate(val inner: OperatorTaskTemplate,
   override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
+
+  override protected def isHead: Boolean = false
 }

@@ -269,6 +269,8 @@ class VoidProcedureOperatorTemplate(val inner: OperatorTaskTemplate,
       inner.genSetExecutionEvent(event)
     )
   }
+
+  override protected def isHead: Boolean = false
 }
 
 class ProcedureOperatorTaskTemplate(inner: OperatorTaskTemplate,

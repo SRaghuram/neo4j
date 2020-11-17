@@ -163,6 +163,8 @@ class SerialTopLevelLimitOperatorTaskTemplate(inner: OperatorTaskTemplate,
       super.genOperateExit
     )
   }
+
+  override protected def isHead: Boolean = false
 }
 
 /**
@@ -197,6 +199,7 @@ class SerialLimitOnRhsOfApplyOperatorTaskTemplate(inner: OperatorTaskTemplate,
     )
   }
 
+  override protected def isHead: Boolean = false
 }
 
 object SerialTopLevelLimitOperatorTaskTemplate {

@@ -463,7 +463,14 @@ trait CompiledTaskWithMorselData extends CompiledTask with ContinuableOperatorTa
 }
 
 trait OperatorTaskTemplate {
+
   private var _doProfile = false
+
+  /**
+   * Returns true if this is the first operator in the pipeline.
+   */
+  protected def isHead: Boolean
+
   /**
    * The operator template that this template is wrapping around, or `null`.
    */
@@ -516,7 +523,7 @@ trait OperatorTaskTemplate {
   def genInitializeProfileEvents: IntermediateRepresentation = {
     block(
       setField(executionEventField,
-        invoke(QUERY_PROFILER, method[QueryProfiler, OperatorProfileEvent, Int, Boolean]("executeOperator"), constant(id.x), constant(false))),
+        invoke(QUERY_PROFILER, method[QueryProfiler, OperatorProfileEvent, Int, Boolean]("executeOperator"), constant(id.x), constant(isHead))),
       // note: We do not generate resources.setTracer(...) here, because that does not play nice with
       //       fused operators. Instead each template has to call setTracer when it allocates it's cursor.
       genSetExecutionEvent(loadField(executionEventField)),
@@ -682,6 +689,7 @@ object OperatorTaskTemplate {
     override def genCloseInput: IntermediateRepresentation = noop()
     override def genOutputBuffer: Option[IntermediateRepresentation] = None
     override def genInit: IntermediateRepresentation = noop()
+    override protected def isHead: Boolean = false
   }
 
   /**
@@ -758,7 +766,6 @@ trait ContinuableOperatorTaskWithMorselDataTemplate extends ContinuableOperatorT
 
 trait ContinuableOperatorTaskTemplate extends OperatorTaskTemplate {
 
-  protected def isHead: Boolean
   protected def genOperateHead: IntermediateRepresentation
   protected def genOperateMiddle: IntermediateRepresentation
 
@@ -925,6 +932,8 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
                                    var shouldCheckBreak: Boolean = false,
                                    val limits: mutable.ArrayBuffer[ArgumentStateMapId] = mutable.ArrayBuffer.empty)
                                   (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
+
+  override protected def isHead: Boolean = false
 
   // Reset configuration to the default settings
   def reset(): Unit = {

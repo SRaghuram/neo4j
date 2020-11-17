@@ -309,6 +309,8 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate,
   override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
+
+  override protected def isHead: Boolean = false
 }
 
 class CompiledQueryResultRecord(override val fields: Array[AnyValue]) extends QueryResult.Record

@@ -169,7 +169,7 @@ class SlottedProfileRowsTest extends ProfileRowsTestBase(ENTERPRISE.DEFAULT, Slo
 class SlottedProfileDbHitsTest extends LegacyDbHitsTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT, createsRelValueInExpand = false)
                                with ProcedureCallDbHitsTestBase[EnterpriseRuntimeContext]
                                with NestedPlanDbHitsTestBase[EnterpriseRuntimeContext]
-class SlottedProfilePageCacheStatsTest extends ProfilePageCacheStatsTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
+class SlottedProfilePageCacheStatsTest extends ProfilePageCacheStatsTestBase(canFuseOverPipelines = false, ENTERPRISE.DEFAULT, SlottedRuntime)
                                        with UpdatingProfilePageCacheStatsTestBase[EnterpriseRuntimeContext]
 class SlottedProfileMemoryTest extends ProfileMemoryTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
                                with FullSupportProfileMemoryTestBase[EnterpriseRuntimeContext]

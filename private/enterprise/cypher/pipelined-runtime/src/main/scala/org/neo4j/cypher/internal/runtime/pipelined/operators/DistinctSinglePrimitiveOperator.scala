@@ -286,6 +286,7 @@ class SerialTopLevelDistinctSinglePrimitiveOperatorTaskTemplate(inner: OperatorT
         method[DistinctSinglePrimitiveState, Unit, MemoryTracker]("setMemoryTracker"), memoryTracker)
 
   override protected def genMoreFields: Seq[Field] = Seq.empty
+  override protected def isHead: Boolean = false
 }
 
 class SerialDistinctOnRhsOfApplySinglePrimitiveOperatorTaskTemplate(inner: OperatorTaskTemplate,
@@ -323,4 +324,5 @@ class SerialDistinctOnRhsOfApplySinglePrimitiveOperatorTaskTemplate(inner: Opera
             method[DistinctSinglePrimitiveState, Unit, MemoryTracker]("setMemoryTracker"), memoryTracker)
         )
       })
+  override protected def isHead: Boolean = false
 }

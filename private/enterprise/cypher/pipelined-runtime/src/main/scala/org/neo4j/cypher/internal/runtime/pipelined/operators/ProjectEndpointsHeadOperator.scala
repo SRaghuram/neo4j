@@ -587,6 +587,7 @@ class ProjectEndpointsMiddleOperatorTemplate(inner: OperatorTaskTemplate,
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(vRELATIONSHIP_CURSOR)
 
+  override protected def isHead: Boolean = false
 }
 
 object ProjectEndpointsMiddleOperatorTemplate {
@@ -662,6 +663,8 @@ class VarLengthProjectEndpointsMiddleOperatorTemplate(inner: OperatorTaskTemplat
   }
 
   override def genLocalVariables: Seq[LocalVariable] = Seq.empty
+
+  override protected def isHead: Boolean = false
 }
 
 

@@ -22,6 +22,8 @@ import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanner
 import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.plandescription.Arguments.PipelineInfo
+import org.neo4j.cypher.internal.plandescription.rewrite.FusedPlanDescriptionArgumentRewriter
+import org.neo4j.cypher.internal.plandescription.rewrite.InternalPlanDescriptionRewriter
 import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ExecutionMode
@@ -397,6 +399,8 @@ class PipelinedRuntime private(parallelExecution: Boolean,
       }
       None
     }
+
+    override val internalPlanDescriptionRewriter: Option[InternalPlanDescriptionRewriter] = Some(new FusedPlanDescriptionArgumentRewriter)
   }
 
   class PipelinedRuntimeResult(executablePipelines: IndexedSeq[ExecutablePipeline],

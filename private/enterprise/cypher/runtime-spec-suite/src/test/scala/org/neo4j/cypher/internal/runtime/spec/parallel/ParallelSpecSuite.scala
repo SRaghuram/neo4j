@@ -385,7 +385,7 @@ class ParallelRuntimeProfileRowsTest extends ProfileRowsTestBase(FUSING, PARALLE
 class ParallelRuntimeProfileNoFusingTimeTest extends ProfileTimeTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 class ParallelRuntimeProfileNoTimeTest extends ProfileNoTimeTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite {
   //this test differs in Morsel and Parallel since we fuse differently
-  test("should partially profile time if fused pipelines and non-fused pipelines co-exist") {
+  test("should profile time in both fused pipelines and non-fused pipelines when they co-exist") {
     given { circleGraph(SIZE_HINT, "X") }
 
     // when
@@ -407,7 +407,7 @@ class ParallelRuntimeProfileNoTimeTest extends ProfileNoTimeTestBase(FUSING, PAR
     queryProfile.operatorProfile(1).time() should not be OperatorProfile.NO_DATA // sort - not fused
     queryProfile.operatorProfile(2).time() should not be OperatorProfile.NO_DATA // aggregation - not fused
     queryProfile.operatorProfile(3).time() should be(OperatorProfile.NO_DATA) // filter - fused
-    queryProfile.operatorProfile(4).time() should be(OperatorProfile.NO_DATA) // expand - fused
+    queryProfile.operatorProfile(4).time() should not be OperatorProfile.NO_DATA // expand - fused
     queryProfile.operatorProfile(5).time() should not be OperatorProfile.NO_DATA // node by label scan - not fused
     // Should not attribute anything to the invalid id
     queryProfile.operatorProfile(Id.INVALID_ID.x) should be(NO_PROFILE)

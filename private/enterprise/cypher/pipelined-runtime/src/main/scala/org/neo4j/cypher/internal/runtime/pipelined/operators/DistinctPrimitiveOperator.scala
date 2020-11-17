@@ -201,6 +201,7 @@ class SerialTopLevelDistinctPrimitiveOperatorTaskTemplate(inner: OperatorTaskTem
   override protected def createState: IntermediateRepresentation = invoke(loadField(distinctStateField),
     method[DistinctState, Unit, MemoryTracker]("setMemoryTracker"), memoryTracker)
   override protected def genMoreFields: Seq[Field] = Seq.empty
+  override protected def isHead: Boolean = false
 }
 
 class SerialDistinctOnRhsOfApplyPrimitiveOperatorTaskTemplate(inner: OperatorTaskTemplate,
@@ -239,5 +240,7 @@ class SerialDistinctOnRhsOfApplyPrimitiveOperatorTaskTemplate(inner: OperatorTas
   override def createState: IntermediateRepresentation = noop()
   override def genMoreFields: Seq[Field] =
     Seq(argumentMaps, field[Int](argumentSlotOffsetFieldName(argumentStateMapId), getArgumentSlotOffset(argumentStateMapId)))
+
+  override protected def isHead: Boolean = false
 }
 

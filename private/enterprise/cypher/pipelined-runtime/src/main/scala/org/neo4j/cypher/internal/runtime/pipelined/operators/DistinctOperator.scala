@@ -274,6 +274,8 @@ class SerialTopLevelDistinctOperatorTaskTemplate(inner: OperatorTaskTemplate,
     invoke(loadField(distinctStateField),
       method[DistinctState, Unit, MemoryTracker]("setMemoryTracker"), memoryTracker)
   override protected def genMoreFields: Seq[Field] = Seq.empty
+
+  override protected def isHead: Boolean = false
 }
 
 class SerialDistinctOnRhsOfApplyOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
@@ -312,4 +314,6 @@ class SerialDistinctOnRhsOfApplyOperatorTaskTemplate(override val inner: Operato
 
   override def genMoreFields: Seq[Field] =
    Seq(argumentMaps, field[Int](argumentSlotOffsetFieldName(argumentStateMapId), getArgumentSlotOffset(argumentStateMapId)))
+
+  override protected def isHead: Boolean = false
 }
