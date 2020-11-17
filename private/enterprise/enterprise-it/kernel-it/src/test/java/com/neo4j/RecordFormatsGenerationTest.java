@@ -18,8 +18,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
-import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.kernel.impl.store.format.FormatFamily;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
@@ -31,6 +32,7 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.kernel.impl.store.format.RecordFormats.NO_GENERATION;
 
 class RecordFormatsGenerationTest
 {
@@ -49,14 +51,17 @@ class RecordFormatsGenerationTest
         );
 
         // Verify that our list above is complete.
-        Set<RecordFormats> allActualFormats = Iterators.asSet( RecordFormatSelector.allFormats().iterator() );
+        Set<RecordFormats> allActualFormats = StreamSupport.stream( RecordFormatSelector.allFormats().spliterator(), false )
+                .filter( format -> format.generation() != NO_GENERATION )
+                .collect( Collectors.toSet() );
         Set<RecordFormats> allExpectedFormats = new HashSet<>( recordFormats );
         assertEquals( allExpectedFormats, allActualFormats );
 
         Map<FormatFamily,List<Integer>> generationsForFamilies = recordFormats
-                                                            .stream()
-                                                            .collect( groupingBy( RecordFormats::getFormatFamily,
-                                                                mapping( RecordFormats::generation, toList() ) ) );
+                .stream()
+                .filter( format -> format.generation() != NO_GENERATION )
+                .collect( groupingBy( RecordFormats::getFormatFamily,
+                        mapping( RecordFormats::generation, toList() ) ) );
         assertEquals( 2, generationsForFamilies.size() );
         for ( Map.Entry<FormatFamily,List<Integer>> familyListGeneration : generationsForFamilies.entrySet() )
         {

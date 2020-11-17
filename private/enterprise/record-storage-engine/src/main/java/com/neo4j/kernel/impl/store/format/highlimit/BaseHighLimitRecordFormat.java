@@ -133,12 +133,13 @@ public abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecor
                     return;
                 }
                 secondaryCursor.setOffset( offset + HEADER_BYTE);
-                int primarySize = recordSize - (primaryCursor.getOffset() - primaryStartOffset);
+                int unitSize = recordUnitSize( recordSize );
+                int primarySize = unitSize - (primaryCursor.getOffset() - primaryStartOffset);
                 // We *could* sanity check the secondary record header byte here, but we won't. If it is wrong, then we most
                 // likely did an inconsistent read, in which case we'll just retry. Otherwise, if the header byte is wrong,
                 // then there is little we can do about it here, since we are not allowed to throw exceptions.
 
-                int secondarySize = recordSize - HEADER_BYTE;
+                int secondarySize = unitSize - HEADER_BYTE;
                 PageCursor composite = CompositePageCursor.compose(
                         primaryCursor, primarySize, secondaryCursor, secondarySize );
                 doReadInternal( record, composite, recordSize, headerByte, inUse );
@@ -169,6 +170,45 @@ public abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecor
 
     protected abstract void doReadInternal(
             RECORD record, PageCursor cursor, int recordSize, long inUseByte, boolean inUse );
+
+    /**
+     * Ok, testing scenarios where the data set grows up to the point where records get so large that they require double record units
+     * is often very inconvenient and impractical, to the point where it's not actually done. Having this method here
+     * in combination with specific implementations of {@link #canUseFixedReferences(AbstractBaseRecord, int)} in a subclass of this format
+     * allow for crossing that double unit threshold much sooner. A necessary evil for the greater good of the product, I'm afraid.
+     * This method is only called if {@link #canUseFixedReferences(AbstractBaseRecord, int)} returns {@code false}.
+     * To explain unit size visually, here's an example:
+     *
+     * <pre>
+     * Record data to be stored
+     * ┌──────────────────────────┐
+     * │0x1234567890ABCDEF_123456 │
+     * └──────────────────────────┘
+     *
+     * Actual record size on disk
+     * ┌──────────────────────────────┐
+     * │                              │
+     * └──────────────────────────────┘
+     *
+     * Unit size (what this method returns)
+     * ┌─────────────────────┐
+     * │                     │
+     * └─────────────────────┘
+     *
+     * Storing the record data in two units
+     * (P = pointer to secondary unit)
+     * ┌─────────────────────┐--------┐ ┌─────────────────────┐--------┐
+     * │ P 0x1234567890ABCDEF│        | │_1234567890ABCDEF    │        |
+     * └─────────────────────┘--------┘ └─────────────────────┘--------┘
+     * </pre>
+     *
+     * @param recordSize the actual record size (for a single unit).
+     * @return the number of bytes that will be written into each unit.
+     */
+    protected int recordUnitSize( int recordSize )
+    {
+        return recordSize;
+    }
 
     @Override
     public void write( RECORD record, PageCursor primaryCursor, int recordSize, int recordsPerPage )
@@ -211,7 +251,7 @@ public abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecor
                 }
                 secondaryCursor.setOffset( offset );
                 secondaryCursor.putByte( (byte) (IN_USE_BIT | HEADER_BIT_RECORD_UNIT) );
-                int recordSizeWithoutHeader = recordSize - HEADER_BYTE;
+                int recordSizeWithoutHeader = recordUnitSize( recordSize ) - HEADER_BYTE;
                 PageCursor composite = CompositePageCursor.compose(
                         primaryCursor, recordSizeWithoutHeader, secondaryCursor, recordSizeWithoutHeader );
 
@@ -264,7 +304,7 @@ public abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecor
             if ( !record.isUseFixedReferences() )
             {
                 int requiredLength = HEADER_BYTE + requiredDataLength( record );
-                boolean requiresSecondaryUnit = requiredLength > recordSize;
+                boolean requiresSecondaryUnit = requiredLength > recordUnitSize( recordSize );
                 record.setRequiresSecondaryUnit( requiresSecondaryUnit );
                 if ( record.requiresSecondaryUnit() && !record.hasSecondaryUnitId() )
                 {
