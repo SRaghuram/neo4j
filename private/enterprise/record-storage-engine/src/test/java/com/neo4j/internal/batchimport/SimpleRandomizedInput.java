@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.ToIntBiFunction;
 
 import org.neo4j.csv.reader.Configuration;
 import org.neo4j.csv.reader.Extractors;
@@ -30,8 +29,6 @@ import org.neo4j.internal.batchimport.input.PropertySizeCalculator;
 import org.neo4j.internal.batchimport.input.ReadableGroups;
 import org.neo4j.internal.batchimport.input.csv.Header.Entry;
 import org.neo4j.internal.batchimport.input.csv.Type;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.values.storable.Value;
 
 import static java.lang.String.format;
 import static org.junit.Assert.assertEquals;

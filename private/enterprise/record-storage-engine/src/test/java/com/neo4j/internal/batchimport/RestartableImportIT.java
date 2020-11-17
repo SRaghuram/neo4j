@@ -5,16 +5,21 @@
  */
 package com.neo4j.internal.batchimport;
 
-import org.junit.jupiter.api.Test;
+import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
+import com.neo4j.kernel.impl.store.format.highlimit.HighLimitWithLowerInternalRepresentationThresholdsSmallFactory;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.internal.batchimport.BatchImporterFactory;
@@ -25,6 +30,8 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
+import org.neo4j.kernel.impl.store.format.RecordFormats;
+import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogInitializer;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
@@ -68,8 +75,17 @@ class RestartableImportIT
     @Inject
     private RandomRule random;
 
-    @Test
-    void shouldFinishDespiteUnfairShutdowns()
+    private static Stream<RecordFormats> formats()
+    {
+        return Stream.of(
+                Standard.LATEST_RECORD_FORMATS,
+                HighLimit.RECORD_FORMATS,
+                HighLimitWithLowerInternalRepresentationThresholdsSmallFactory.RECORD_FORMATS );
+    }
+
+    @MethodSource( "formats" )
+    @ParameterizedTest
+    void shouldFinishDespiteUnfairShutdowns( RecordFormats format )
     {
         assertTimeoutPreemptively( ofSeconds( 300 ), () ->
         {
@@ -77,7 +93,7 @@ class RestartableImportIT
             DatabaseLayout dbLayout = neo4jLayout.databaseLayout( DEFAULT_DATABASE_NAME );
             long startTime = System.currentTimeMillis();
             Path dbDirectory = dbLayout.databaseDirectory();
-            int timeMeasuringImportExitCode = startImportInSeparateProcess( dbDirectory ).waitFor();
+            int timeMeasuringImportExitCode = startImportInSeparateProcess( dbDirectory, format ).waitFor();
             long time = System.currentTimeMillis() - startTime;
             assertEquals( 0, timeMeasuringImportExitCode );
             fs.deleteRecursively( neo4jLayout.homeDirectory() );
@@ -87,7 +103,7 @@ class RestartableImportIT
             int exitCode;
             do
             {
-                process = startImportInSeparateProcess( dbDirectory );
+                process = startImportInSeparateProcess( dbDirectory, format );
                 long waitTime = max( time / 4, random.nextLong( time ) + time / 20 * restartCount );
                 boolean completedOnItsOwn = process.waitFor( waitTime, TimeUnit.MILLISECONDS );
                 if ( !completedOnItsOwn )
@@ -129,7 +145,9 @@ class RestartableImportIT
                 restartCount++;
             }
             while ( exitCode != 0 );
-            DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( dbLayout ).build();
+            DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( dbLayout )
+                    .setConfig( GraphDatabaseSettings.record_format, format.name() )
+                    .build();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             assertTrue( db.isAvailable( TimeUnit.SECONDS.toMillis( 30 ) ) );
             try
@@ -143,11 +161,11 @@ class RestartableImportIT
         } );
     }
 
-    private Process startImportInSeparateProcess( Path databaseDirectory ) throws IOException
+    private Process startImportInSeparateProcess( Path databaseDirectory, RecordFormats format ) throws IOException
     {
         long seed = random.seed();
         ProcessBuilder pb = new ProcessBuilder( getJavaExecutable().toString(), "-cp", getClassPath(),
-                getClass().getCanonicalName(), databaseDirectory.toAbsolutePath().toString(), Long.toString( seed ) );
+                getClass().getCanonicalName(), databaseDirectory.toAbsolutePath().toString(), Long.toString( seed ), format.storeVersion() );
         Path wd = Path.of( "target/test-classes" ).toAbsolutePath();
         Files.createDirectories( wd );
         File reportFile = testDirectory.createFile( "testReport" + seed ).toFile();
@@ -167,9 +185,10 @@ class RestartableImportIT
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
             Path databaseDirectory = Path.of( args[0] );
+            RecordFormats format = RecordFormatSelector.selectForVersion( args[2] );
             BatchImporterFactory factory = BatchImporterFactory.withHighestPriority();
             factory.instantiate( DatabaseLayout.ofFlat( databaseDirectory ), new DefaultFileSystemAbstraction(), null, PageCacheTracer.NULL, DEFAULT,
-                    NullLogService.getInstance(), ExecutionMonitors.invisible(), EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(),
+                    NullLogService.getInstance(), ExecutionMonitors.invisible(), EMPTY, Config.defaults(), format,
                     NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE )
                     .doImport( input( Long.parseLong( args[1] ) ) );
             // Create this file to communicate completion for real
