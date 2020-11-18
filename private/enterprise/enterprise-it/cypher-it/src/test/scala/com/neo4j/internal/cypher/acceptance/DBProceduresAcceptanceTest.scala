@@ -815,4 +815,10 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
     }) shouldBe 1
   }
+
+  test("should respect return clause") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    val query = "CALL dbms.listQueries() YIELD query RETURN left( query, 40 ) AS shortQuery, 1 as extra"
+    execute(query).toList should be(Seq(Map("shortQuery" -> "CALL dbms.listQueries() YIELD query RETU", "extra" -> 1)))
+  }
 }
