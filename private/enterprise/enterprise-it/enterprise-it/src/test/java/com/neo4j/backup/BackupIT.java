@@ -936,7 +936,7 @@ class BackupIT
                 .withDatabaseNamePattern( unknownDbName );
 
         var error = assertThrows( BackupExecutionException.class, () -> executeBackup( contextBuilder.build() ) );
-        assertThat( error.getMessage() ).contains( "Database '" + unknownDbName + "' does not exist" );
+        assertThat( error.getMessage() ).contains( "Failed to download database id for database '" + unknownDbName  + "'");
     }
 
     @TestWithRecordFormats

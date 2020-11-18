@@ -10,11 +10,13 @@ import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
 import com.neo4j.causalclustering.catchup.TransactionLogCatchUpFactory;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients;
+import com.neo4j.causalclustering.catchup.storecopy.DatabaseIdDownloadFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.GetStoreIdResponse;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClient;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
+import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
 import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdResponse;
 import com.neo4j.causalclustering.catchup.v4.databases.GetAllDatabaseIdsResponse;
@@ -133,38 +135,64 @@ public class BackupClient
     {
 
         log.info( "Begin preparing for backup for database '%s' from %s.", databaseName, address );
-        log.info( "Requesting database id for %s.", databaseName );
-        var namedDatabaseId = catchupClientFactory.getClient( address, log )
-                                                  .v3( client -> client.getDatabaseId( databaseName ) )
-                                                  .v4( client -> client.getDatabaseId( databaseName ) )
-                                                  .v5( client -> client.getDatabaseId( databaseName ) )
-                                                  .withResponseHandler( new CatchupResponseAdaptor<>()
-                                                  {
-                                                      @Override
-                                                      public void onGetDatabaseIdResponse( CompletableFuture<NamedDatabaseId> signal,
-                                                                                           GetDatabaseIdResponse response )
-                                                      {
-                                                          signal.complete( DatabaseIdFactory.from( databaseName, response.databaseId().uuid() ) );
-                                                      }
-                                                  } ).request();
-        log.info( "Received database id for database '%s'.", namedDatabaseId );
-
-        log.info( "Requesting store id for database '%s'.", databaseName );
-        StoreId remoteStoreId = catchupClientFactory.getClient( address, log )
-                                                    .v3( client -> client.getStoreId( namedDatabaseId ) )
-                                                    .v4( client -> client.getStoreId( namedDatabaseId ) )
-                                                    .v5( client -> client.getStoreId( namedDatabaseId ) )
-                                                    .withResponseHandler( new CatchupResponseAdaptor<>()
-                                                    {
-                                                        @Override
-                                                        public void onGetStoreIdResponse( CompletableFuture<StoreId> signal, GetStoreIdResponse response )
-                                                        {
-                                                            signal.complete( response.storeId() );
-                                                        }
-                                                    } ).request();
-        log.info( "Received database id for database '%s'.", namedDatabaseId );
-
+        var namedDatabaseId = getDatabaseId( address, databaseName );
+        var remoteStoreId = getStoreId( address, databaseName, namedDatabaseId );
         return new RemoteInfo( address, remoteStoreId, namedDatabaseId );
+    }
+
+    private StoreId getStoreId( SocketAddress address, String databaseName, NamedDatabaseId namedDatabaseId ) throws StoreIdDownloadFailedException
+    {
+        log.info( "Requesting store id for database '%s'.", databaseName );
+        try
+        {
+            StoreId remoteStoreId = catchupClientFactory.getClient( address, log )
+                                                        .v3( client -> client.getStoreId( namedDatabaseId ) )
+                                                        .v4( client -> client.getStoreId( namedDatabaseId ) )
+                                                        .v5( client -> client.getStoreId( namedDatabaseId ) )
+                                                        .withResponseHandler( new CatchupResponseAdaptor<>()
+                                                        {
+                                                            @Override
+                                                            public void onGetStoreIdResponse( CompletableFuture<StoreId> signal, GetStoreIdResponse response )
+                                                            {
+                                                                signal.complete( response.storeId() );
+                                                            }
+                                                        } ).request();
+            log.info( "Received database id for database '%s'.", namedDatabaseId );
+            return remoteStoreId;
+        }
+        catch ( Exception ex )
+        {
+            var msg = String.format( "Failed to download store id for database '%s' from '%s'", databaseName, address );
+            throw new StoreIdDownloadFailedException( msg, ex );
+        }
+    }
+
+    private NamedDatabaseId getDatabaseId( SocketAddress address, String databaseName ) throws Exception
+    {
+        log.info( "Requesting database id for %s.", databaseName );
+        try
+        {
+            var namedDatabaseId = catchupClientFactory.getClient( address, log )
+                                                      .v3( client -> client.getDatabaseId( databaseName ) )
+                                                      .v4( client -> client.getDatabaseId( databaseName ) )
+                                                      .v5( client -> client.getDatabaseId( databaseName ) )
+                                                      .withResponseHandler( new CatchupResponseAdaptor<>()
+                                                      {
+                                                          @Override
+                                                          public void onGetDatabaseIdResponse( CompletableFuture<NamedDatabaseId> signal,
+                                                                                               GetDatabaseIdResponse response )
+                                                          {
+                                                              signal.complete( DatabaseIdFactory.from( databaseName, response.databaseId().uuid() ) );
+                                                          }
+                                                      } ).request();
+            log.info( "Received database id for database '%s'.", namedDatabaseId );
+            return namedDatabaseId;
+        }
+        catch ( Exception ex )
+        {
+            var msg = String.format( "Failed to download database id for database '%s' from '%s'", databaseName, address );
+            throw new DatabaseIdDownloadFailedException( msg, ex );
+        }
     }
 
     public void updateStore( RemoteInfo info, DatabaseLayout databaseLayout, StoreCopyClientMonitor backupOutputMonitor )

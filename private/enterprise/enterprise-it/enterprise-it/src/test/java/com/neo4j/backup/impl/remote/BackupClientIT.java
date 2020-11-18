@@ -9,6 +9,7 @@ import com.neo4j.backup.impl.BackupOutputMonitor;
 import com.neo4j.backup.impl.BackupsLifecycle;
 import com.neo4j.causalclustering.catchup.CatchupServerBuilder;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
+import com.neo4j.causalclustering.catchup.storecopy.DatabaseIdDownloadFailedException;
 import com.neo4j.causalclustering.catchup.v4.metadata.IncludeMetadata;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
@@ -20,7 +21,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.util.concurrent.ExecutionException;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
@@ -124,7 +124,7 @@ class BackupClientIT
     @Test
     void shouldFailToPrepare()
     {
-        var exception = assertThrows( ExecutionException.class, () -> backupClient.prepareToBackup( address, "foo" ) );
+        var exception = assertThrows( DatabaseIdDownloadFailedException.class, () -> backupClient.prepareToBackup( address, "foo" ) );
         assertThat( exception.getCause() ).hasMessageContaining( "Database 'foo' does not exist" );
     }
 

@@ -16,4 +16,9 @@ public class DatabaseIdDownloadFailedException extends Exception
     {
         super( description );
     }
+
+    public DatabaseIdDownloadFailedException( String msg, Exception ex )
+    {
+        super( msg, ex );
+    }
 }

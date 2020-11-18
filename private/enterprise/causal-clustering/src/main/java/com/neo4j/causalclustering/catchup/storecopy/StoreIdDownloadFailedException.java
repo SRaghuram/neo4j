@@ -16,4 +16,9 @@ public class StoreIdDownloadFailedException extends Exception
     {
         super( message );
     }
+
+    public StoreIdDownloadFailedException( String msg, Exception ex )
+    {
+        super( msg, ex );
+    }
 }
