@@ -224,6 +224,8 @@ class PipelinedMultiNodeIndexSeekTest extends MultiNodeIndexSeekTestBase(FUSING,
 class PipelinedMultiNodeIndexSeekNoFusingTest extends MultiNodeIndexSeekTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedMultiNodeIndexSeekRewriterTest extends MultiNodeIndexSeekRewriterTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedMultiNodeIndexSeekRewriterNoFusingTest extends MultiNodeIndexSeekRewriterTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedAssertSameNodeRewriterTest extends AssertSameNodeRewriterTestBase(FUSING, PIPELINED) with PipelinedSpecSuite
+class PipelinedAssertSameNodeRewriterNoFusingTest extends AssertSameNodeRewriterTestBase(NO_FUSING, PIPELINED) with PipelinedSpecSuite
 
 // INDEX SCAN
 class PipelinedNodeIndexScanTest extends NodeIndexScanTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
