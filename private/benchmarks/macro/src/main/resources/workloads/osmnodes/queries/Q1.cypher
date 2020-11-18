@@ -1,3 +1,3 @@
 MATCH (n:OSMNode)
-WHERE exists(n.osm_id)
+WHERE n.osm_id IS NOT NULL
 RETURN count(n)

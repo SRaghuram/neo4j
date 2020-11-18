@@ -1,7 +1,7 @@
 MATCH (u:user {id: $p01})
 WITH u
 MATCH (u)-[:CONTACT]->(c:contact)-[:CONTACT]->(cr:role)
-  WHERE exists(cr.teamid)
+  WHERE cr.teamid IS NOT NULL
 WITH c, cr
 MATCH (:team {id: cr.teamid})-[:SCHEDULE]->(:calendar)-->(y:year)
   WHERE y.endat >= $p03 AND y.startat <= $p04

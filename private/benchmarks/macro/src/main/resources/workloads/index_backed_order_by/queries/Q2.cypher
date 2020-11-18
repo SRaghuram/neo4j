@@ -1,3 +1,3 @@
 MATCH (n:PROFILES)
-WHERE exists(n.pets)
+WHERE n.pets IS NOT NULL
 RETURN n.pets LIMIT 10000

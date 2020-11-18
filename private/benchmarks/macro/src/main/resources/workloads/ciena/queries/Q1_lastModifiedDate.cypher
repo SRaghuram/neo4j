@@ -1,8 +1,8 @@
 MATCH (port:PhysicalPort)
 WHERE NOT (1 IN port.latest)
-  AND exists(port.drniId)
-  AND exists(port.name)
-  AND exists(port.lastModifiedDate)
+  AND port.drniId IS NOT NULL
+  AND port.name IS NOT NULL
+  AND port.lastModifiedDate IS NOT NULL
 WITH port
 OPTIONAL MATCH (port)<-[:HAS]-(card:Card)
 WITH port, card

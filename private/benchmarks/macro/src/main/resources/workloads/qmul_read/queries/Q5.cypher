@@ -1,3 +1,3 @@
 MATCH (a:Person)
-  WHERE exists(a.email)
+  WHERE a.email IS NOT NULL
 RETURN count(a)

@@ -1,8 +1,8 @@
 MATCH (port:PhysicalPort)
 WHERE NOT (1 IN port.latest)
-  AND exists(port.drniId)
-  AND exists(port.name)
-  AND exists(port.lastModifiedDate)
+  AND port.drniId IS NOT NULL
+  AND port.name IS NOT NULL
+  AND port.lastModifiedDate IS NOT NULL
 WITH port
 OPTIONAL MATCH (port)<-[:HAS]-(card:Card)
 WITH port, card
@@ -20,7 +20,7 @@ WITH port, card, pluggable, parentDevice, parentLocation, physicalConnection, si
 MATCH (simplePort)<-[:HAS*1..9]-(otherEndParentDevice:Device)
 WITH port, card, pluggable, parentDevice, parentLocation, physicalConnection, simplePort, otherEndParentDevice
 MATCH (simplePort)<-[:HAS*1..9]-(device:Device)<-[:HAS]-(otherEndParentLocation:Location)
-WHERE exists(otherEndParentLocation.name)
+WHERE otherEndParentLocation.name IS NOT NULL
 WITH port, card, pluggable, parentDevice, parentLocation, physicalConnection, simplePort, otherEndParentDevice, otherEndParentLocation
 RETURN DISTINCT   port.drniId AS p_drniId,
                     port.name AS p_name,

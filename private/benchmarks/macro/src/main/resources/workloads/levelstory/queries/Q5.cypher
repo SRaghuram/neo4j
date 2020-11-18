@@ -64,5 +64,5 @@ RETURN
     updatedat:    r.updatedat,
     updatedby:    r.updatedby,
     tags:         r.tags,
-    related:      [x IN xs WHERE exists(x.object) | {id:x.id, object: x. object}]
+    related:      [x IN xs WHERE x.object IS NOT NULL | {id:x.id, object: x. object}]
   }) AS r

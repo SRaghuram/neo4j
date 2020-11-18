@@ -2,7 +2,7 @@ MATCH (device:Device)
 WHERE NOT (device:Model)
   AND $latest in device.latest
   AND NOT toInteger(8) in device.latest
-  AND exists(device.name)
+  AND device.name IS NOT NULL
 WITH device
 OPTIONAL MATCH (device)<-[:MANAGES_POWER_FOR]-(network:Network {name:'Device Power Zone'})
 WHERE NOT (network:Model)

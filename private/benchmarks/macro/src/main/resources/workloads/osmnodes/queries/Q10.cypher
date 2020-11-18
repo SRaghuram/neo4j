@@ -1,3 +1,3 @@
 MATCH (n:OSMNode)
-WHERE exists(n.location)
+WHERE n.location IS NOT NULL
 RETURN n.location ORDER BY n.location

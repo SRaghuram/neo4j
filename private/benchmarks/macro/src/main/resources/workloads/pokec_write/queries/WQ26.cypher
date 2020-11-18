@@ -1,5 +1,5 @@
 MATCH (n:PROFILES)
-WHERE exists(n.AGE)
+WHERE n.AGE IS NOT NULL
 WITH n
 LIMIT 50000
 WITH n.AGE AS age, collect(n) AS nodes

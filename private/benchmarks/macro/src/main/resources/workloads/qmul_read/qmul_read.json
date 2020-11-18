@@ -20,12 +20,12 @@
     },
     {
       "name": "Q5",
-      "description": "Low cardinality exists(prop)",
+      "description": "Low cardinality prop IS NOT NULL",
       "queryFile": "queries/Q5.cypher"
     },
     {
       "name": "Q6",
-      "description": "High cardinality exists(prop)",
+      "description": "High cardinality prop IS NOT NULL",
       "queryFile": "queries/Q6.cypher"
     },
     {
