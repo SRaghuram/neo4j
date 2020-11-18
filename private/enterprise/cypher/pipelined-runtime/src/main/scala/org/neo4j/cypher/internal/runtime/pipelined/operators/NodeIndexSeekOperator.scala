@@ -82,6 +82,7 @@ import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.kernel.api.IndexQuery
 import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
 import org.neo4j.internal.kernel.api.IndexQueryConstraints
+import org.neo4j.internal.kernel.api.IndexQueryConstraints.constrained
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
@@ -142,7 +143,7 @@ class NodeIndexSeekTask(inputMorsel: Morsel,
                         val valueExpr: QueryExpression[Expression],
                         val indexMode: IndexSeekMode = IndexSeek) extends InputLoopTask(inputMorsel) with NodeIndexSeeker {
 
-  protected var nodeCursor: NodeValueIndexCursor = _
+  private var nodeCursor: NodeValueIndexCursor = _
   private var cursorsToClose: Array[NodeValueIndexCursor] = _
   private var exactSeekValues: Array[Value] = _
 
@@ -160,20 +161,9 @@ class NodeIndexSeekTask(inputMorsel: Morsel,
     initExecutionContext.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
     val indexQueries = computeIndexQueries(queryState, initExecutionContext)
     val read = state.query.transactionalContext.transaction.dataRead
-    if (indexQueries.size == 1) {
-      nodeCursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
-      cursorsToClose = Array(nodeCursor)
-      seek(state.queryIndexes(queryIndexId), nodeCursor, read, indexQueries.head)
-    } else {
-      // If we should use ValuedNodeIndexCursors here at some point, remember to not free them into the same pool
-      cursorsToClose = indexQueries.filterNot(isImpossible).map(query => {
-        val cursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
-        read.nodeIndexSeek(state.queryIndexes(queryIndexId), cursor, IndexQueryConstraints.constrained(indexOrder, needsValues || indexOrder != IndexOrder.NONE), query: _*)
-        cursor
-      }).toArray
-      nodeCursor = orderedCursor(indexOrder, cursorsToClose)
-    }
-
+    val (cursor, closers) = computeCursor(indexQueries, read, state, resources, queryIndexId, indexOrder)
+    nodeCursor = cursor
+    cursorsToClose = closers
     true
   }
 
@@ -215,7 +205,27 @@ class NodeIndexSeekTask(inputMorsel: Morsel,
   }
 
   // HELPERS
-  protected def orderedCursor(indexOrder: IndexOrder, cursors: Array[NodeValueIndexCursor]): NodeValueIndexCursor = indexOrder match {
+  protected def computeCursor(indexQueries: Seq[Seq[IndexQuery]],
+                            read: Read,
+                            state: PipelinedQueryState,
+                            resources: QueryResources,
+                            queryIndex: Int,
+                            kernelIndexOrder: IndexOrder): (NodeValueIndexCursor, Array[NodeValueIndexCursor]) = {
+    if (indexQueries.size == 1) {
+      val cursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
+      read.nodeIndexSeek(state.queryIndexes(queryIndex), cursor, constrained(kernelIndexOrder, false), indexQueries.head: _*)
+      (cursor, Array(cursor))
+    } else {
+      val cursorsToClose = indexQueries.filterNot(isImpossible).map(query => {
+        val cursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
+        read.nodeIndexSeek(state.queryIndexes(queryIndex), cursor, constrained(kernelIndexOrder, false), query: _*)
+        cursor
+      }).toArray
+      (orderedCursor(kernelIndexOrder, cursorsToClose), cursorsToClose)
+    }
+  }
+
+  private def orderedCursor(indexOrder: IndexOrder, cursors: Array[NodeValueIndexCursor]): NodeValueIndexCursor = indexOrder match {
     case IndexOrder.NONE => CompositeValueIndexCursor.unordered(cursors)
     case IndexOrder.ASCENDING => CompositeValueIndexCursor.ascending(cursors)
     case IndexOrder.DESCENDING => CompositeValueIndexCursor.descending(cursors)

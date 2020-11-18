@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.pipelined.NodeIndexSeekParameters
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
@@ -17,7 +18,11 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIn
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.exceptions.MergeConstraintConflictException
+import org.neo4j.internal.kernel.api.IndexQuery
 import org.neo4j.internal.kernel.api.IndexQueryConstraints.constrained
+import org.neo4j.internal.kernel.api.NodeValueIndexCursor
+import org.neo4j.internal.kernel.api.Read
+import org.neo4j.internal.schema.IndexOrder
 
 class AssertingMultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
                                           argumentSize: SlotConfiguration.Size,
@@ -58,7 +63,6 @@ class AssertingMultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
     override protected def initializeInnerLoop(state: PipelinedQueryState,
                                                resources: QueryResources,
                                                initExecutionContext: ReadWriteRow): Boolean = {
-      nodeCursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
       val read = state.queryContext.transactionalContext.transaction.dataRead()
       val queryState = state.queryStateForExpressionEvaluation(resources)
 
@@ -71,33 +75,29 @@ class AssertingMultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
       while (i < numberOfSeeks) {
         val currentSeekParameters = nodeIndexSeekParameters(i)
         val seeker = new IndexSeeker(currentSeekParameters)
-        val indexQueries = seeker.computeIndexQueries(queryState, initExecutionContext)
-        if (indexQueries.size == 1) {
-          read.nodeIndexSeek(state.queryIndexes(currentSeekParameters.queryIndex), nodeCursor, constrained(currentSeekParameters.kernelIndexOrder, false), indexQueries.head: _*)
-        } else {
-          nodeCursor = orderedCursor(currentSeekParameters.kernelIndexOrder, indexQueries.filterNot(isImpossible).map(query => {
-            val cursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
-            read.nodeIndexSeek(state.queryIndexes(currentSeekParameters.queryIndex), cursor, constrained(currentSeekParameters.kernelIndexOrder, false), query: _*)
-            cursor
-          }).toArray)
-        }
-
-        var hasNext = nodeCursor.next()
-        if (i == 1) {
-          emptyRhs = !hasNext
-          if (hasNext) {
-            nodeId = nodeCursor.nodeReference()
-            hasNext = nodeCursor.next()
-          }
-        } else if (hasNext == emptyRhs) {
-          throw new MergeConstraintConflictException(s"Merge did not find a matching node $nodeId and can not create a new node due to conflicts with existing unique nodes")
-        }
-        //check that we get the same node back every time
-        while (hasNext) {
-          if (nodeId != nodeCursor.nodeReference()) {
+        val indexQueries: Seq[Seq[IndexQuery]] = seeker.computeIndexQueries(queryState, initExecutionContext)
+        val (nodeCursor, cursorsToClose) =
+          computeCursor(indexQueries, read, state, resources, currentSeekParameters.queryIndex, currentSeekParameters.kernelIndexOrder)
+        try {
+          var hasNext = nodeCursor.next()
+          if (i == 1) {
+            emptyRhs = !hasNext
+            if (hasNext) {
+              nodeId = nodeCursor.nodeReference()
+              hasNext = nodeCursor.next()
+            }
+          } else if (hasNext == emptyRhs) {
             throw new MergeConstraintConflictException(s"Merge did not find a matching node $nodeId and can not create a new node due to conflicts with existing unique nodes")
           }
-          hasNext = nodeCursor.next()
+          //check that we get the same node back every time
+          while (hasNext) {
+            if (nodeId != nodeCursor.nodeReference()) {
+              throw new MergeConstraintConflictException(s"Merge did not find a matching node $nodeId and can not create a new node due to conflicts with existing unique nodes")
+            }
+            hasNext = nodeCursor.next()
+          }
+        } finally {
+          cursorsToClose.foreach(resources.cursorPools.nodeValueIndexCursorPool.free)
         }
         i += 1
       }
