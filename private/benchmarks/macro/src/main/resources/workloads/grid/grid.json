@@ -53,6 +53,11 @@
       "queryFile": "queries/Q10.cypher"
     },
     {
+      "name": "Q10_small",
+      "description": "Like Q10, but half of the components",
+      "queryFile": "queries/Q10_small.cypher"
+    },
+    {
       "name": "Q11",
       "description": "Few disconnected components with no join possibilities and independent optional matches and ordering",
       "queryFile": "queries/Q11.cypher"
@@ -61,6 +66,11 @@
       "name": "Q12",
       "description": "Many dependent optional matches",
       "queryFile": "queries/Q12.cypher"
+    },
+    {
+      "name": "Q13",
+      "description": "Few disconnected components with join possibilities that decrease cardinality and optional matches that increase cardinality",
+      "queryFile": "queries/Q13.cypher"
     }
   ]
 }
