@@ -158,7 +158,7 @@ public class StoreCopyClient
             }
             else
             {
-                sleep( 100 );
+                sleep( 1 );
             }
             terminationConditions.get().assertContinue();
         }

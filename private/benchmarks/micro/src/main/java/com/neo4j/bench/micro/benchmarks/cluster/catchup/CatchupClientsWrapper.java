@@ -63,7 +63,7 @@ class CatchupClientsWrapper
             SocketAddress socketAddress )
     {
         var monitors = RaftMonitors.create( module.getGlobalMonitors(), module.getGlobalDependencies() );
-        final var timeoutStrategy = new DefaultTimeoutStrategy( 100, 5000, TimeUnit.MILLISECONDS, i -> i + 100 );
+        final var timeoutStrategy = new DefaultTimeoutStrategy( 0, 5000, TimeUnit.MILLISECONDS, i -> i + 1 );
         final var storeCopyExecutor = module.getJobScheduler().executor( Group.STORE_COPY_CLIENT );
         this.storeCopyClient = new StoreCopyClient( catchupClientFactory, databaseId, () -> monitors, logProvider, storeCopyExecutor, timeoutStrategy,
                                                     module.getGlobalClock() );
