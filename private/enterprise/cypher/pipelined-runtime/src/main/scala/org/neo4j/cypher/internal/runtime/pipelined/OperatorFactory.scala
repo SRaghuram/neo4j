@@ -890,7 +890,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       case _: plans.EmptyResult =>
         Some(new EmptyResultOperator(WorkIdentity.fromPlan(plan)))
 
-      case plans.Create(_, nodes, relationships) =>
+      case plans.Create(_, nodes, relationships) if !parallelExecution =>
         val nodesToCreate =
           nodes.map(n =>
             CreateNodeSlottedCommand(
