@@ -20,12 +20,16 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.KeyOffsets
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.SlotMapping
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.copyDataFromRow
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.fillKeyArray
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.util.collection.ProbeTable
 import org.neo4j.values.storable.LongArray
 import org.neo4j.values.storable.Values
+import org.neo4j.values.storable.Values.longValue
+import org.neo4j.values.virtual.NodeValue
+import org.neo4j.values.virtual.RelationshipValue
 
 case class NodeHashJoinSlottedPipe(lhsKeyOffsets: KeyOffsets,
                                    rhsKeyOffsets: KeyOffsets,
@@ -42,8 +46,7 @@ case class NodeHashJoinSlottedPipe(lhsKeyOffsets: KeyOffsets,
 
   private val width: Int = lhsOffsets.length
 
-  private val rhsLongMappings: Array[(Int, Int)] = rhsSlotMappings.longMappings
-  private val rhsRefMappings: Array[(Int, Int)] = rhsSlotMappings.refMappings
+  private val rhsMappings: Array[SlotMapping] = rhsSlotMappings.slotMapping
   private val rhsCachedPropertyMappings: Array[(Int, Int)] = rhsSlotMappings.cachedPropertyMappings
 
   override def buildProbeTable(lhsInput: ClosingIterator[CypherRow], queryState: QueryState): ProbeTable[LongArray, CypherRow] = {
@@ -75,7 +78,7 @@ case class NodeHashJoinSlottedPipe(lhsKeyOffsets: KeyOffsets,
           val lhs = matches.next()
           val newRow = SlottedRow(slots)
           newRow.copyAllFrom(lhs)
-          copyDataFromRow(rhsLongMappings, rhsRefMappings, rhsCachedPropertyMappings, newRow, currentRhsRow)
+          copyDataFromRow(rhsMappings, rhsCachedPropertyMappings, newRow, currentRhsRow)
           return Some(newRow)
         }
 
@@ -103,25 +106,28 @@ case class NodeHashJoinSlottedPipe(lhsKeyOffsets: KeyOffsets,
 
 object NodeHashJoinSlottedPipe {
 
+  case class SlotMapping(fromOffset: Int, toOffset: Int, fromIsLongSlot: Boolean, toIsLongSlot: Boolean)
+
   /**
    * Copies longs, refs, and cached properties from source row into target row.
    */
-  def copyDataFromRow(longMappings: Array[(Int, Int)],
-                      refMappings: Array[(Int, Int)],
+  def copyDataFromRow(slotMappings: Array[SlotMapping],
                       cachedPropertyMappings: Array[(Int, Int)],
                       target: WritableRow,
                       source: ReadableRow): Unit = {
 
     var i = 0
-    while (i < longMappings.length) {
-      val (from, to) = longMappings(i)
-      target.setLongAt(to, source.getLongAt(from))
-      i += 1
-    }
-    i = 0
-    while (i < refMappings.length) {
-      val (from, to) = refMappings(i)
-      target.setRefAt(to, source.getRefAt(from))
+    while (i < slotMappings.length) {
+      slotMappings(i) match {
+        case SlotMapping(fromOffset, toOffset, true, true) => target.setLongAt(toOffset, source.getLongAt(fromOffset))
+        case SlotMapping(fromOffset, toOffset, false, false) => target.setRefAt(toOffset, source.getRefAt(fromOffset))
+        case SlotMapping(fromOffset, toOffset, false, true) =>
+          target.setLongAt(toOffset, source.getRefAt(fromOffset) match {
+            case v: NodeValue => v.id()
+            case v: RelationshipValue => v.id()
+          })
+        case SlotMapping(fromOffset, toOffset, true, false) => target.setRefAt(toOffset, longValue(source.getLongAt(fromOffset)))
+      }
       i += 1
     }
     i = 0

@@ -159,6 +159,7 @@ import org.neo4j.cypher.internal.runtime.slotted.pipes.MergeCreateNodeSlottedPip
 import org.neo4j.cypher.internal.runtime.slotted.pipes.MergeCreateRelationshipSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.KeyOffsets
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.SlotMapping
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedSingleNodePipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeIndexScanSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeIndexSeekSlottedPipe
@@ -782,8 +783,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
 object SlottedPipeMapper {
 
   case class SlotMappings(
-    longMappings: Array[(Int, Int)],
-    refMappings: Array[(Int, Int)],
+    slotMapping: Array[SlotMapping],
     cachedPropertyMappings: Array[(Int, Int)],
   )
 
@@ -802,15 +802,14 @@ object SlottedPipeMapper {
    *  cachedPropertyMappings 2->3, 4->4
    * */
   def computeSlotMappings(fromSlots: SlotConfiguration, argumentSize: SlotConfiguration.Size, toSlots: SlotConfiguration): SlotMappings = {
-    val longMappings = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
-    val refMappings = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
+    val slotMappings = collection.mutable.ArrayBuffer.newBuilder[SlotMapping]
     val cachedPropertyMappings = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
 
     fromSlots.foreachSlotAndAliasesOrdered({
-      case SlotWithKeyAndAliases(VariableSlotKey(key), LongSlot(offset, _, _), _) if offset >= argumentSize.nLongs =>
-        longMappings += ((offset, toSlots.getLongOffsetFor(key)))
-      case SlotWithKeyAndAliases(VariableSlotKey(key), RefSlot(offset, _, _), _) if offset >= argumentSize.nReferences =>
-        refMappings += ((offset, toSlots.getReferenceOffsetFor(key)))
+      case SlotWithKeyAndAliases(VariableSlotKey(key), fromSlot, _) if fromSlot.offset >= argumentSize.nLongs =>
+        toSlots.get(key) match {
+          case Some(toSlot) => slotMappings += SlotMapping(fromSlot.offset, toSlot.offset, fromSlot.isLongSlot, toSlot.isLongSlot)
+        }
       case SlotWithKeyAndAliases(_: VariableSlotKey, _, _) => // do nothing, part of arguments
       case SlotWithKeyAndAliases(_: ApplyPlanSlotKey, _, _) => // do nothing, part of arguments
       case SlotWithKeyAndAliases(CachedPropertySlotKey(cnp), _, _) =>
@@ -820,7 +819,7 @@ object SlottedPipeMapper {
         }
     })
 
-    SlotMappings(longMappings.result().toArray, refMappings.result().toArray, cachedPropertyMappings.result().toArray)
+    SlotMappings(slotMappings.result().toArray,  cachedPropertyMappings.result().toArray)
   }
 
   /**

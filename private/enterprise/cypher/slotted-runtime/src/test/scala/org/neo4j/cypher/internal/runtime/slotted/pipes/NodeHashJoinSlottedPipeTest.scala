@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
 import org.neo4j.cypher.internal.runtime.slotted.pipes.HashJoinSlottedPipeTestHelper.RowL
 import org.neo4j.cypher.internal.runtime.slotted.pipes.HashJoinSlottedPipeTestHelper.mockPipeFor
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.KeyOffsets
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.SlotMapping
 import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.kernel.impl.util.collection
@@ -44,7 +45,7 @@ class NodeHashJoinSlottedPipeTest extends CypherFunSuite {
     val result = NodeHashJoinSlottedPipe(
       KeyOffsets.longs(0, 1), KeyOffsets.longs(0, 1),
       left, right, slots,
-      SlotMappings(Array(), Array(), Array())
+      SlotMappings(Array(), Array())
     )().createResults(queryState)
 
     // then
@@ -66,7 +67,7 @@ class NodeHashJoinSlottedPipeTest extends CypherFunSuite {
     val result = NodeHashJoinSlottedPipe(
       KeyOffsets.longs(0, 1), KeyOffsets.longs(0, 1),
       left, right, slots,
-      SlotMappings(Array(), Array(), Array())
+      SlotMappings(Array(), Array())
     )().createResults(queryState)
 
     // then
@@ -110,8 +111,7 @@ class NodeHashJoinSlottedPipeTest extends CypherFunSuite {
       right = rhsPipe,
       slots = output,
       rhsSlotMappings = SlotMappings(
-        longMappings = Array((1, 2)),
-        refMappings = Array(),
+        slotMapping = Array(SlotMapping(1, 2, true, true)),
         cachedPropertyMappings = Array()
       )
     )().createResults(QueryStateHelper.emptyWithValueSerialization)
@@ -135,7 +135,7 @@ class NodeHashJoinSlottedPipeTest extends CypherFunSuite {
     NodeHashJoinSlottedPipe(
       KeyOffsets.longs(0), KeyOffsets.longs(0),
       left, right, slots,
-      SlotMappings(Array((0,0)), Array(), Array())
+      SlotMappings(Array(SlotMapping(0, 0, true, true)), Array())
     )().createResults(queryState).toList
 
     // then
@@ -157,7 +157,7 @@ class NodeHashJoinSlottedPipeTest extends CypherFunSuite {
     val result = NodeHashJoinSlottedPipe(
       KeyOffsets.longs(0), KeyOffsets.longs(0),
       left, right, slots,
-      SlotMappings(Array((0,0)), Array(), Array())
+      SlotMappings(Array(SlotMapping(0,0, true, true)), Array())
     )().createResults(queryState)
     result.close()
 

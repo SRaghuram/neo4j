@@ -29,6 +29,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.SlotMapping
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.util.collection.ProbeTable
 import org.neo4j.memory.HeapEstimator
@@ -46,8 +47,7 @@ class ValueHashJoinOperator(val workIdentity: WorkIdentity,
                             rhsSlotMappings: SlotMappings)
                            (val id: Id = Id.INVALID_ID) extends Operator with AccumulatorsAndMorselInputOperatorState[Morsel, HashTable, Morsel] {
 
-  private val rhsLongMappings: Array[(Int, Int)] = rhsSlotMappings.longMappings
-  private val rhsRefMappings: Array[(Int, Int)] = rhsSlotMappings.refMappings
+  private val rhsMappings: Array[SlotMapping] = rhsSlotMappings.slotMapping
   private val rhsCachedPropertyMappings: Array[(Int, Int)] = rhsSlotMappings.cachedPropertyMappings
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
@@ -88,7 +88,7 @@ class ValueHashJoinOperator(val workIdentity: WorkIdentity,
       while (outputRow.onValidRow && lhsRows.hasNext) {
         val morsel = lhsRows.next()
         outputRow.copyFrom(morsel.readCursor(onFirstRow = true))
-        NodeHashJoinSlottedPipe.copyDataFromRow(rhsLongMappings, rhsRefMappings, rhsCachedPropertyMappings, outputRow, inputCursor)
+        NodeHashJoinSlottedPipe.copyDataFromRow(rhsMappings, rhsCachedPropertyMappings, outputRow, inputCursor)
         outputRow.next()
       }
     }

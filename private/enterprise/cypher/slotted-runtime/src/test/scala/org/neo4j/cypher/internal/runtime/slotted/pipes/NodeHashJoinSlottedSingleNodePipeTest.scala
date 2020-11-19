@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
 import org.neo4j.cypher.internal.runtime.slotted.pipes.HashJoinSlottedPipeTestHelper.RowL
 import org.neo4j.cypher.internal.runtime.slotted.pipes.HashJoinSlottedPipeTestHelper.mockPipeFor
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.SingleKeyOffset
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.SlotMapping
 import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.kernel.impl.util.collection.LongProbeTable
@@ -45,7 +46,7 @@ class NodeHashJoinSlottedSingleNodePipeTest extends CypherFunSuite {
       SingleKeyOffset(0, isReference = false),
       SingleKeyOffset(0, isReference = false),
       left, right, slots,
-      SlotMappings(Array(), Array(), Array())
+      SlotMappings(Array(), Array())
     )().createResults(queryState)
 
     // then
@@ -68,7 +69,7 @@ class NodeHashJoinSlottedSingleNodePipeTest extends CypherFunSuite {
       SingleKeyOffset(0, isReference = false),
       SingleKeyOffset(0, isReference = false),
       left, right, slots,
-      SlotMappings(Array(), Array(), Array())
+      SlotMappings(Array(), Array())
     )().createResults(queryState)
 
     // then
@@ -101,7 +102,7 @@ class NodeHashJoinSlottedSingleNodePipeTest extends CypherFunSuite {
       left = lhsPipe,
       right = rhsPipe,
       slots = slotConfig,
-      rhsSlotMappings = SlotMappings(Array(), Array(), Array())
+      rhsSlotMappings = SlotMappings(Array(), Array())
     )().createResults(QueryStateHelper.emptyWithValueSerialization)
 
     // If we got here it means we did not throw a stack overflow exception. ooo-eeh!
@@ -124,7 +125,7 @@ class NodeHashJoinSlottedSingleNodePipeTest extends CypherFunSuite {
       SingleKeyOffset(0, isReference = false),
       SingleKeyOffset(0, isReference = false),
       left, right, slots,
-      SlotMappings(Array((0,0)), Array(), Array())
+      SlotMappings(Array(SlotMapping(0, 0, true, true)), Array())
     )().createResults(queryState).toList
 
     // then
@@ -147,7 +148,7 @@ class NodeHashJoinSlottedSingleNodePipeTest extends CypherFunSuite {
       SingleKeyOffset(0, isReference = false),
       SingleKeyOffset(0, isReference = false),
       left, right, slots,
-      SlotMappings(Array((0,0)), Array(), Array())
+      SlotMappings(Array(SlotMapping(0,0, true, true)), Array())
     )().createResults(queryState)
     result.close()
 

@@ -39,6 +39,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.KeyOffsets
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.SlotMapping
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.copyDataFromRow
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.fillKeyArray
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -56,13 +57,10 @@ class NodeLeftOuterHashJoinOperator(val workIdentity: WorkIdentity,
                                     rhsSlotMappings: SlotMappings)
                                    (val id: Id = Id.INVALID_ID) extends Operator {
 
-  private val rhsLongMappings: Array[(Int, Int)] = rhsSlotMappings.longMappings
-  private val rhsRefMappings: Array[(Int, Int)] = rhsSlotMappings.refMappings
+  private val rhsMappings: Array[SlotMapping] = rhsSlotMappings.slotMapping
   private val rhsCachedPropertyMappings: Array[(Int, Int)] = rhsSlotMappings.cachedPropertyMappings
   private val rhsOffsets: Array[Int] = rhsKeyOffsets.offsets
   private val rhsIsReference: Array[Boolean] = rhsKeyOffsets.isReference
-  private val rhsLongDestinationMappings: Array[Int] = rhsLongMappings.map(_._2).sorted
-  private val rhsRefDestinationMappings: Array[Int] = rhsRefMappings.map(_._2).sorted
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
@@ -166,7 +164,7 @@ class NodeLeftOuterHashJoinOperator(val workIdentity: WorkIdentity,
 
     override def writeNext(outputRow: MorselWriteCursor): Unit = {
       val lhsRow = inner.next().readCursor(onFirstRow = true)
-      copyDataFromRow(rhsLongMappings, rhsRefMappings, rhsCachedPropertyMappings, outputRow, cursorToReadFrom)
+      copyDataFromRow(rhsMappings, rhsCachedPropertyMappings, outputRow, cursorToReadFrom)
       outputRow.copyFrom(lhsRow)
     }
   }
@@ -200,19 +198,10 @@ class NodeLeftOuterHashJoinOperator(val workIdentity: WorkIdentity,
     }
 
     private def nullRhsColumns(outputRow: MorselWriteCursor): Unit = {
-      var i = 0
-      while (i < rhsLongDestinationMappings.length) {
-        val to = rhsLongDestinationMappings(i)
-        outputRow.setLongAt(to, StatementConstants.NO_SUCH_ENTITY)
-        i += 1
+      rhsMappings.foreach {
+        case SlotMapping(_, toOffset, _, true) => outputRow.setLongAt(toOffset, StatementConstants.NO_SUCH_ENTITY)
+        case SlotMapping(_, toOffset, _, false) => outputRow.setRefAt(toOffset, Values.NO_VALUE)
       }
-      i = 0
-      while (i < rhsRefDestinationMappings.length) {
-        val to = rhsRefDestinationMappings(i)
-        outputRow.setRefAt(to, Values.NO_VALUE)
-        i += 1
-      }
-      i = 0
     }
 
     @scala.annotation.tailrec

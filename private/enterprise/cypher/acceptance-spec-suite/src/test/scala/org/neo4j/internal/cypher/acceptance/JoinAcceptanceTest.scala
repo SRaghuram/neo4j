@@ -88,7 +88,7 @@ class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
                   |USING JOIN ON refA
                   |RETURN a.name, b.name""".stripMargin
 
-    val expectSucceed = Configs.InterpretedAndSlotted
+    val expectSucceed = Configs.InterpretedAndSlottedAndPipelined
     executeWith(expectSucceed, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeLeftOuterHashJoin")))
   }
@@ -107,7 +107,7 @@ class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
                   |USING JOIN ON refA
                   |RETURN a.name, b.name""".stripMargin
 
-    val expectSucceed = Configs.InterpretedAndSlotted
+    val expectSucceed = Configs.InterpretedAndSlottedAndPipelined
     executeWith(expectSucceed, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeRightOuterHashJoin")))
   }
@@ -191,7 +191,7 @@ class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     val query =
     """
       |MATCH (b:Board)
-      |WITH b, 1 AS ignore
+      |WITH b, 1 AS test
       |MATCH
       |(b)-[b_fields_0_field11:fields]->(field11:Field),
       |(b)-[b_fields_1_field12:fields]->(field12:Field),

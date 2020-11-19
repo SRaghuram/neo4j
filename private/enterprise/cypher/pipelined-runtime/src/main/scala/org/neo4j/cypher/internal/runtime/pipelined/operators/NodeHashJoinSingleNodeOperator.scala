@@ -31,6 +31,7 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.SingleKeyOffset
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.SlotMapping
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.util.collection.LongProbeTable
 import org.neo4j.memory.HeapEstimator
@@ -45,8 +46,7 @@ class NodeHashJoinSingleNodeOperator(val workIdentity: WorkIdentity,
                                      rhsSlotMappings: SlotMappings)
                                     (val id: Id = Id.INVALID_ID) extends Operator with AccumulatorsAndMorselInputOperatorState[Morsel, HashTable, Morsel] {
 
-  private val rhsLongMappings: Array[(Int, Int)] = rhsSlotMappings.longMappings
-  private val rhsRefMappings: Array[(Int, Int)] = rhsSlotMappings.refMappings
+  private val rhsMappings: Array[SlotMapping] = rhsSlotMappings.slotMapping
   private val rhsCachedPropertyMappings: Array[(Int, Int)] = rhsSlotMappings.cachedPropertyMappings
 
   private val rhsOffset: Int = rhsKeyOffset.offset
@@ -90,7 +90,7 @@ class NodeHashJoinSingleNodeOperator(val workIdentity: WorkIdentity,
 
       while (outputRow.onValidRow && lhsRows.hasNext) {
         outputRow.copyFrom(lhsRows.next().readCursor(onFirstRow = true))
-        NodeHashJoinSlottedPipe.copyDataFromRow(rhsLongMappings, rhsRefMappings, rhsCachedPropertyMappings, outputRow, inputCursor)
+        NodeHashJoinSlottedPipe.copyDataFromRow(rhsMappings, rhsCachedPropertyMappings, outputRow, inputCursor)
         outputRow.next()
       }
     }

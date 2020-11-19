@@ -29,6 +29,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.KeyOffsets
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.SlotMapping
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.copyDataFromRow
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.fillKeyArray
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -46,8 +47,7 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
                            rhsSlotMappings: SlotMappings)
                           (val id: Id = Id.INVALID_ID) extends Operator with AccumulatorsAndMorselInputOperatorState[Morsel, HashTable, Morsel] {
 
-  private val rhsLongMappings: Array[(Int, Int)] = rhsSlotMappings.longMappings
-  private val rhsRefMappings: Array[(Int, Int)] = rhsSlotMappings.refMappings
+  private val rhsMappings: Array[SlotMapping] = rhsSlotMappings.slotMapping
   private val rhsCachedPropertyMappings: Array[(Int, Int)] = rhsSlotMappings.cachedPropertyMappings
   private val rhsOffsets: Array[Int] = rhsKeyOffsets.offsets
   private val rhsIsReference: Array[Boolean] = rhsKeyOffsets.isReference
@@ -91,7 +91,7 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
 
       while (outputRow.onValidRow && lhsRows.hasNext) {
         outputRow.copyFrom(lhsRows.next().readCursor(onFirstRow = true))
-        copyDataFromRow(rhsLongMappings, rhsRefMappings, rhsCachedPropertyMappings, outputRow, inputCursor)
+        copyDataFromRow(rhsMappings, rhsCachedPropertyMappings, outputRow, inputCursor)
         outputRow.next()
       }
     }

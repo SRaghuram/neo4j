@@ -21,6 +21,7 @@ import org.neo4j.cypher.internal.runtime.slotted.pipes.HashJoinSlottedPipeTestHe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.HashJoinSlottedPipeTestHelper.RowRL
 import org.neo4j.cypher.internal.runtime.slotted.pipes.HashJoinSlottedPipeTestHelper.mockPipeFor
 import org.neo4j.cypher.internal.runtime.slotted.pipes.HashJoinSlottedPipeTestHelper.testableResult
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.SlotMapping
 import org.neo4j.cypher.internal.util.symbols.CTInteger
 import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
@@ -43,7 +44,7 @@ class ValueHashJoinSlottedPipeTest extends CypherFunSuite {
     val right = mock[Pipe]
     val pipe = ValueHashJoinSlottedPipe(
       ReferenceFromSlot(0), ReferenceFromSlot(0), left, right, slotInfo,
-      SlotMappings(Array((0,0)), Array((1,1)), Array.empty)
+      SlotMappings(Array(SlotMapping(0, 0, true, true), SlotMapping(1, 1, false, false)), Array.empty)
     )()
 
     // when
@@ -66,7 +67,7 @@ class ValueHashJoinSlottedPipeTest extends CypherFunSuite {
 
     val pipe = ValueHashJoinSlottedPipe(
       ReferenceFromSlot(0), ReferenceFromSlot(0), left, right, slotInfo,
-      SlotMappings(Array((0,0)), Array((1,1)), Array.empty)
+      SlotMappings(Array(SlotMapping(0, 0, true, true), SlotMapping(1, 1, false, false)), Array.empty)
     )()
 
     // when
@@ -105,7 +106,10 @@ class ValueHashJoinSlottedPipeTest extends CypherFunSuite {
 
     val pipe = ValueHashJoinSlottedPipe(
       ReferenceFromSlot(1), ReferenceFromSlot(1), left, right, slotInfoForJoin,
-      SlotMappings(Array((0,0)), Array((0,0), (1,1), (1, 2)), Array.empty)
+      SlotMappings(
+        Array(SlotMapping(0, 0, true, true), SlotMapping(0, 0, false, false), SlotMapping(1, 1, false, false), SlotMapping(1, 2, false, false)),
+        Array.empty
+      )
     )()
 
     // when
@@ -130,7 +134,7 @@ class ValueHashJoinSlottedPipeTest extends CypherFunSuite {
     // when
     ValueHashJoinSlottedPipe(
       ReferenceFromSlot(0), ReferenceFromSlot(0), left, right, slots,
-      SlotMappings(Array(), Array((0,0)), Array.empty)
+      SlotMappings(Array(SlotMapping(0, 0, false, false)), Array.empty)
     )().createResults(queryState).toList
 
     // then
@@ -151,7 +155,7 @@ class ValueHashJoinSlottedPipeTest extends CypherFunSuite {
     // when
     val result = ValueHashJoinSlottedPipe(
       ReferenceFromSlot(0), ReferenceFromSlot(0), left, right, slots,
-      SlotMappings(Array(), Array((0,0)), Array.empty)
+      SlotMappings(Array(SlotMapping(0,0, false, false)), Array.empty)
     )().createResults(queryState)
     result.close()
 
