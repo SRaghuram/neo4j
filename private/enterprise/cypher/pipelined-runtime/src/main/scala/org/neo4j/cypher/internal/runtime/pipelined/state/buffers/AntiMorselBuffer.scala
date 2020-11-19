@@ -19,7 +19,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
-import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 
@@ -138,7 +137,7 @@ trait AntiArgumentState extends MorselAccumulator[Morsel] {
 }
 
 object AntiArgumentState {
-  class Factory(operatorId: Id) extends ArgumentStateFactory[AntiArgumentState] {
+  object Factory extends ArgumentStateFactory[AntiArgumentState] {
     override def newStandardArgumentState(argumentRowId: Long,
                                           argumentMorsel: MorselReadCursor,
                                           argumentRowIdsForReducers: Array[Long],

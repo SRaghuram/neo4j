@@ -116,7 +116,7 @@ class DistinctSinglePrimitiveOperator(argumentStateMapId: ArgumentStateMapId,
                           resources: QueryResources,
                           memoryTracker: MemoryTracker): OperatorTask = {
     new DistinctSinglePrimitiveOperatorTask(
-      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new DistinctSinglePrimitiveStateFactory, memoryTracker),
+      argumentStateCreator.createArgumentStateMap(argumentStateMapId, DistinctSinglePrimitiveStateFactory, memoryTracker),
       workIdentity,
       setInSlot,
       offset,
@@ -125,7 +125,7 @@ class DistinctSinglePrimitiveOperator(argumentStateMapId: ArgumentStateMapId,
 }
 
 object DistinctSinglePrimitiveOperator {
-  class DistinctSinglePrimitiveStateFactory extends ArgumentStateFactory[DistinctSinglePrimitiveState] {
+  object DistinctSinglePrimitiveStateFactory extends ArgumentStateFactory[DistinctSinglePrimitiveState] {
     override def newStandardArgumentState(argumentRowId: Long,
                                           argumentMorsel: MorselReadCursor,
                                           argumentRowIdsForReducers: Array[Long],

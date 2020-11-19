@@ -45,7 +45,7 @@ class TriadicBuildOperator(override val workIdentity: WorkIdentity,
     // We want to make sure that we don't accidentally create a second map, hence `createOrGetArgumentStateMap`.
     val triadicStateAsm = argumentStateCreator.createOrGetArgumentStateMap(
       triadicStateAsmId,
-      new operators.TriadicState.Factory,
+      operators.TriadicState.Factory,
       memoryTracker,
       ordered = true)
 

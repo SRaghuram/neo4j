@@ -60,7 +60,7 @@ class TriadicState(override val argumentRowId: Long,
 object TriadicState {
   private final val SHALLOW_SIZE: Long = HeapEstimator.shallowSizeOfInstance(classOf[TriadicState])
 
-  class Factory extends ArgumentStateFactory[TriadicState] {
+  object Factory extends ArgumentStateFactory[TriadicState] {
 
     override def completeOnConstruction: Boolean = true
 

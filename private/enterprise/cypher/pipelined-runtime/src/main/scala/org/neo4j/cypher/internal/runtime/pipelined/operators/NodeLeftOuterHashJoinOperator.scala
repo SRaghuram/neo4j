@@ -71,7 +71,7 @@ class NodeLeftOuterHashJoinOperator(val workIdentity: WorkIdentity,
     val memoryTracker = stateFactory.newMemoryTracker(id.x)
     argumentStateCreator.createArgumentStateMap(
       lhsArgumentStateMapId,
-      new LeftOuterJoinFactory(lhsKeyOffsets, memoryTracker), memoryTracker)
+      new LeftOuterJoinFactory(lhsKeyOffsets), memoryTracker)
     argumentStateCreator.createArgumentStateMap(
       rhsArgumentStateMapId,
       new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id), memoryTracker)
@@ -230,7 +230,7 @@ class NodeLeftOuterHashJoinOperator(val workIdentity: WorkIdentity,
 }
 
 object NodeLeftOuterHashJoinOperator {
-  class LeftOuterJoinFactory(lhsOffsets: KeyOffsets, memoryTracker: MemoryTracker) extends ArgumentStateFactory[HashTableAndSet] {
+  class LeftOuterJoinFactory(lhsOffsets: KeyOffsets) extends ArgumentStateFactory[HashTableAndSet] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], memoryTracker: MemoryTracker): StandardHashTableAndSet =
       new StandardHashTableAndSet(new StandardHashTable(argumentRowId, lhsOffsets, argumentRowIdsForReducers, memoryTracker, acceptNulls = true), memoryTracker)
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): ConcurrentHashTableAndSet = {

@@ -39,11 +39,11 @@ class OrderedDistinctOperator(argumentStateMapId: ArgumentStateMapId,
                           resources: QueryResources): OperatorTask = {
     val memoryTracker = stateFactory.newMemoryTracker(id.x)
     new OrderedDistinctOperatorTask(
-      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new OrderedDistinctStateFactory, memoryTracker),
+      argumentStateCreator.createArgumentStateMap(argumentStateMapId, OrderedDistinctStateFactory, memoryTracker),
       workIdentity)
   }
 
-  class OrderedDistinctStateFactory extends ArgumentStateFactory[OrderedDistinctState] {
+  object OrderedDistinctStateFactory extends ArgumentStateFactory[OrderedDistinctState] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], memoryTracker: MemoryTracker): OrderedDistinctState =
       new OrderedDistinctState(argumentRowId, argumentRowIdsForReducers, memoryTracker)
 

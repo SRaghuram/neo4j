@@ -121,7 +121,7 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
                           resources: QueryResources,
                           memoryTracker: MemoryTracker): OperatorTask = {
     new DistinctOperatorTask(
-      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new DistinctStateFactory, memoryTracker),
+      argumentStateCreator.createArgumentStateMap(argumentStateMapId, DistinctStateFactory, memoryTracker),
       workIdentity,
       groupings
     )
@@ -130,7 +130,7 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
 
 object DistinctOperator {
 
-  class DistinctStateFactory extends ArgumentStateFactory[DistinctState] {
+  object DistinctStateFactory extends ArgumentStateFactory[DistinctState] {
     override def newStandardArgumentState(argumentRowId: Long,
                                           argumentMorsel: MorselReadCursor,
                                           argumentRowIdsForReducers: Array[Long],

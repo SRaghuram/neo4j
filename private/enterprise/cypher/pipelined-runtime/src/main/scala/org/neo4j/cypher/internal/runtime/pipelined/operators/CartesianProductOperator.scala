@@ -38,7 +38,7 @@ class CartesianProductOperator(val workIdentity: WorkIdentity,
                            state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = {
     val memoryTracker = stateFactory.newMemoryTracker(id.x)
-    argumentStateCreator.createArgumentStateMap(lhsArgumentStateMapId, new LHSMorsel.Factory(stateFactory), memoryTracker)
+    argumentStateCreator.createArgumentStateMap(lhsArgumentStateMapId, LHSMorsel.Factory, memoryTracker)
     argumentStateCreator.createArgumentStateMap(rhsArgumentStateMapId, new ArgumentStateBuffer.Factory(stateFactory, id), memoryTracker)
     this
   }
@@ -107,7 +107,7 @@ object CartesianProductOperator {
      * This Factory creates [[LHSMorsel]] instances by detaching the morsel which is attached to the argument morsel. It has been attached in
      * the [[MorselAttachBuffer]].
      */
-    class Factory(stateFactory: StateFactory) extends ArgumentStateFactory[LHSMorsel] {
+    object Factory extends ArgumentStateFactory[LHSMorsel] {
       override def newStandardArgumentState(argumentRowId: Long,
                                             argumentMorsel: MorselReadCursor,
                                             argumentRowIdsForReducers: Array[Long],

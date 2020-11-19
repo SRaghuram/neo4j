@@ -121,7 +121,7 @@ case class TopOperator(workIdentity: WorkIdentity,
       val memoryTracker = stateFactory.newMemoryTracker(id.x)
       argumentStateCreator.createArgumentStateMap(
         argumentStateMapId,
-        new TopOperator.Factory(memoryTracker, comparator, limit),
+        new TopOperator.Factory(comparator, limit),
         memoryTracker
       )
       this
@@ -172,7 +172,7 @@ case class TopOperator(workIdentity: WorkIdentity,
 
 object TopOperator {
 
-  class Factory(memoryTracker: MemoryTracker, comparator: Comparator[ReadableRow], limit: Long) extends ArgumentStateFactory[TopTable] {
+  class Factory(comparator: Comparator[ReadableRow], limit: Long) extends ArgumentStateFactory[TopTable] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], memoryTracker: MemoryTracker): TopTable =
       if (limit <= 0) {
         ZeroTable(argumentRowId, argumentRowIdsForReducers)
