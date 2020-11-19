@@ -5,13 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.LenientCreateRelationship
-import org.neo4j.cypher.internal.runtime.Operations
-import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.interpreted.IsMap
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.makeValueNeoSafe
 import org.neo4j.cypher.internal.runtime.pipelined.MutableQueryStatistics
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
@@ -33,10 +27,7 @@ import org.neo4j.internal.kernel.api.Write
 import org.neo4j.kernel.api.StatementConstants.NO_SUCH_NODE
 import org.neo4j.kernel.api.StatementConstants.NO_SUCH_RELATIONSHIP
 import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.MapValue
-import org.neo4j.values.virtual.NodeValue
-import org.neo4j.values.virtual.RelationshipValue
 
 class CreateOperator(val workIdentity: WorkIdentity,
                      nodes: Array[CreateNodeSlottedCommand],

@@ -721,9 +721,6 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                                     lazyTypes,
                                     length.isSimple)
 
-      case plans.Create(_, nodes, relationships) =>
-        ???
-
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException otherwise)
         interpretedPipesFallbackPolicy.breakOn(plan)
