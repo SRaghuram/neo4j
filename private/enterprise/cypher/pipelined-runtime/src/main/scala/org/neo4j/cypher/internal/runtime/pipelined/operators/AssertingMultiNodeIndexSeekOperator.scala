@@ -77,7 +77,7 @@ class AssertingMultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
         val seeker = new IndexSeeker(currentSeekParameters)
         val indexQueries: Seq[Seq[IndexQuery]] = seeker.computeIndexQueries(queryState, initExecutionContext)
         val (nodeCursor, cursorsToClose) =
-          computeCursor(indexQueries, read, state, resources, currentSeekParameters.queryIndex, currentSeekParameters.kernelIndexOrder)
+          computeCursor(indexQueries, read, state, resources, currentSeekParameters.queryIndex, currentSeekParameters.kernelIndexOrder, needsValues = false)
         try {
           var hasNext = nodeCursor.next()
           if (i == 1) {

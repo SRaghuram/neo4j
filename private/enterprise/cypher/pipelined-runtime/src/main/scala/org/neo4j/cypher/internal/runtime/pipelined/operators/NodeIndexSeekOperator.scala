@@ -161,7 +161,7 @@ class NodeIndexSeekTask(inputMorsel: Morsel,
     initExecutionContext.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
     val indexQueries = computeIndexQueries(queryState, initExecutionContext)
     val read = state.query.transactionalContext.transaction.dataRead
-    val (cursor, closers) = computeCursor(indexQueries, read, state, resources, queryIndexId, indexOrder)
+    val (cursor, closers) = computeCursor(indexQueries, read, state, resources, queryIndexId, indexOrder, needsValues || indexOrder != IndexOrder.NONE)
     nodeCursor = cursor
     cursorsToClose = closers
     true
@@ -206,19 +206,20 @@ class NodeIndexSeekTask(inputMorsel: Morsel,
 
   // HELPERS
   protected def computeCursor(indexQueries: Seq[Seq[IndexQuery]],
-                            read: Read,
-                            state: PipelinedQueryState,
-                            resources: QueryResources,
-                            queryIndex: Int,
-                            kernelIndexOrder: IndexOrder): (NodeValueIndexCursor, Array[NodeValueIndexCursor]) = {
+                              read: Read,
+                              state: PipelinedQueryState,
+                              resources: QueryResources,
+                              queryIndex: Int,
+                              kernelIndexOrder: IndexOrder,
+                              needsValues: Boolean): (NodeValueIndexCursor, Array[NodeValueIndexCursor]) = {
     if (indexQueries.size == 1) {
       val cursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
-      read.nodeIndexSeek(state.queryIndexes(queryIndex), cursor, constrained(kernelIndexOrder, false), indexQueries.head: _*)
+      seek(state.queryIndexes(queryIndex), cursor, read, indexQueries.head)
       (cursor, Array(cursor))
     } else {
       val cursorsToClose = indexQueries.filterNot(isImpossible).map(query => {
         val cursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
-        read.nodeIndexSeek(state.queryIndexes(queryIndex), cursor, constrained(kernelIndexOrder, false), query: _*)
+        read.nodeIndexSeek(state.queryIndexes(queryIndex), cursor, constrained(kernelIndexOrder, needsValues), query: _*)
         cursor
       }).toArray
       (orderedCursor(kernelIndexOrder, cursorsToClose), cursorsToClose)
@@ -230,6 +231,7 @@ class NodeIndexSeekTask(inputMorsel: Morsel,
     case IndexOrder.ASCENDING => CompositeValueIndexCursor.ascending(cursors)
     case IndexOrder.DESCENDING => CompositeValueIndexCursor.descending(cursors)
   }
+
   private def needsValues: Boolean = indexPropertyIndices.nonEmpty
 
   private def seek[RESULT <: AnyRef](index: IndexReadSession,
