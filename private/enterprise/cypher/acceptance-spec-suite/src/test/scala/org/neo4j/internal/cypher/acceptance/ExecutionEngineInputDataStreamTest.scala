@@ -11,6 +11,7 @@ import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.QueryOptions
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.options.CypherExpressionEngineOption
+import org.neo4j.cypher.internal.options.CypherQueryOptions
 import org.neo4j.cypher.internal.options.CypherRuntimeOption
 import org.neo4j.cypher.internal.runtime.InputDataStreamTestSupport
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
@@ -203,8 +204,10 @@ class ExecutionEngineInputDataStreamTest
     VirtualValues.relationshipValue(id, start, end, Values.stringValue(label), ValueUtils.asMapValue(props))
 
   private val materializedEntities = QueryOptions.default.copy(
-    runtime = CypherRuntimeOption.slotted,
-    expressionEngine = CypherExpressionEngineOption.interpreted,
+    queryOptions = CypherQueryOptions.default.copy(
+      runtime = CypherRuntimeOption.slotted,
+      expressionEngine = CypherExpressionEngineOption.interpreted,
+    ),
     materializedEntitiesMode = true,
   )
 }
