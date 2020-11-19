@@ -24,16 +24,16 @@ public class ProfilerRecordingDescriptorTest
     public void escapeParametersInFilename()
     {
         // given
-        BenchmarkGroup benchmarkGroup = new BenchmarkGroup( "benchmarkGroup" );
-        Benchmark benchmark = Benchmark.benchmarkFor( "description", "simpleName", Benchmark.Mode.LATENCY, Collections.emptyMap() );
-        ProfilerRecordingDescriptor descriptor = ProfilerRecordingDescriptor
+        var benchmarkGroup = new BenchmarkGroup( "benchmarkGroup" );
+        var benchmark = Benchmark.benchmarkFor( "description", "simpleName", Benchmark.Mode.LATENCY, Collections.emptyMap() );
+        var descriptor = ProfilerRecordingDescriptor
                 .create( benchmarkGroup,
                          benchmark,
                          RunPhase.MEASUREMENT,
                          ParameterizedProfiler.defaultProfiler( ProfilerType.GC ),
                          new Parameters( ImmutableMap.of( "rel", "KNOWS | WORKS_AT" ) ) );
         // when
-        RecordingDescriptor recordingDescriptor = descriptor.recordingDescriptorFor( RecordingType.GC_LOG );
+        var recordingDescriptor = descriptor.recordingDescriptorFor( RecordingType.GC_LOG );
         var filename = recordingDescriptor.sanitizedFilename();
         // then
         assertTrue( filename.matches( "[\\w\\d-_.%]*" ) ); //this is filename regexp accepted by JVM parameters
