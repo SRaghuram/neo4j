@@ -36,7 +36,6 @@ import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.QueryIndexes
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
-import org.neo4j.cypher.internal.runtime.QueryStatistics
 import org.neo4j.cypher.internal.runtime.ThreadSafeResourceManager
 import org.neo4j.cypher.internal.runtime.createParameterArray
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
@@ -51,6 +50,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeTreeBuilder
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutablePipeline
 import org.neo4j.cypher.internal.runtime.pipelined.InterpretedPipesFallbackPolicy
+import org.neo4j.cypher.internal.runtime.pipelined.MutableQueryStatistics
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorFactory
 import org.neo4j.cypher.internal.runtime.pipelined.PipelineCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.PipelinedPipelineBreakingPolicy
@@ -74,6 +74,7 @@ import org.neo4j.cypher.result.QueryProfile
 import org.neo4j.cypher.result.RuntimeResult
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
 import org.neo4j.exceptions.CantCompileQueryException
+import org.neo4j.graphdb.QueryStatistics
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
@@ -280,7 +281,6 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                                  executionGraphDefinition,
                                  queryIndexRegistrator.result(),
                                  physicalPlan.nExpressionSlots,
-                                 physicalPlan.logicalPlan,
                                  physicalPlan.parameterMapping,
                                  query.resultColumns,
                                  executor,
@@ -319,7 +319,6 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                                executionGraphDefinition: ExecutionGraphDefinition,
                                queryIndexes: QueryIndexes,
                                nExpressionSlots: Int,
-                               logicalPlan: LogicalPlan,
                                parameterMapping: ParameterMapping,
                                fieldNames: Array[String],
                                queryExecutor: QueryExecutor,
