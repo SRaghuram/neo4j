@@ -27,6 +27,7 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.connectors.BoltConnectorInternalSettings;
 import org.neo4j.cypher.internal.cache.CaffeineCacheFactory;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.exceptions.KernelException;
@@ -88,7 +89,7 @@ class EnterpriseSecurityModuleTest
         when( config.get( GraphDatabaseSettings.auth_lock_time ) ).thenReturn( Duration.ofSeconds( 5 ) );
         when( config.get( GraphDatabaseInternalSettings.auth_store ) ).thenReturn( Path.of( "mock", "dir" ) );
         when( config.get( DatabaseManagementSystemSettings.auth_store_directory ) ).thenReturn( Path.of( "mock", "dir" ) );
-        when( config.get( GraphDatabaseInternalSettings.enable_loopback_auth ) ).thenReturn( false );
+        when( config.get( BoltConnectorInternalSettings.enable_loopback_auth ) ).thenReturn( false );
         when( config.get( GraphDatabaseSettings.procedure_roles ) ).thenReturn( "" );
         when( config.get( GraphDatabaseSettings.default_allowed ) ).thenReturn( "" );
     }

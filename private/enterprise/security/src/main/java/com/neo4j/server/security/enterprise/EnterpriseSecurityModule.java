@@ -44,8 +44,8 @@ import java.util.stream.Collectors;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.connectors.BoltConnectorInternalSettings;
 import org.neo4j.cypher.internal.cache.CaffeineCacheFactory;
 import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
@@ -231,7 +231,7 @@ public class EnterpriseSecurityModule extends SecurityModule
 
         inClusterAuthManager = new InClusterAuthManager( privilegeResolver, defaultDatabaseResolver, securityLog, logAuthSuccess );
 
-        if ( config.get( GraphDatabaseInternalSettings.enable_loopback_auth ) )
+        if ( config.get( BoltConnectorInternalSettings.enable_loopback_auth ) )
         {
             loopbackAuthManager =
                     new LoopbackAuthManager( strategy, getOperatorUserRepository( config, logProvider, fileSystem ), securityLog, logAuthSuccess );

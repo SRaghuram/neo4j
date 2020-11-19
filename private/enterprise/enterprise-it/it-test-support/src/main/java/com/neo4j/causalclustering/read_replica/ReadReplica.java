@@ -25,6 +25,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.BoltConnectorInternalSettings;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -101,7 +102,7 @@ public class ReadReplica implements ClusterMember
         config.set( BoltConnector.advertised_address, new SocketAddress( advertisedHost, boltPort ) );
         config.set( GraphDatabaseSettings.routing_listen_address, new SocketAddress( listenHost, intraClusterBoltPort ) );
         config.set( GraphDatabaseSettings.routing_advertised_address, new SocketAddress( advertisedHost, intraClusterBoltPort ) );
-        config.set( GraphDatabaseInternalSettings.loopback_listen_port, loopbackBoltPort );
+        config.set( BoltConnectorInternalSettings.loopback_listen_port, loopbackBoltPort );
         config.set( BoltConnector.encryption_level, DISABLED );
         config.set( HttpConnector.enabled, TRUE );
         config.set( HttpConnector.listen_address, new SocketAddress( listenHost, httpPort ) );

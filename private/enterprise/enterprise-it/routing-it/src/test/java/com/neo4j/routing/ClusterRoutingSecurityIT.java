@@ -40,6 +40,7 @@ import org.neo4j.bolt.v41.messaging.RoutingContext;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.connectors.BoltConnectorInternalSettings;
 import org.neo4j.configuration.ssl.SslPolicyConfig;
 import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.AuthToken;
@@ -116,7 +117,7 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
                 sslPolicyConfig.base_directory.name(), CERTIFICATES_DIR,
                 GraphDatabaseSettings.routing_enabled.name(), TRUE,
                 GraphDatabaseInternalSettings.block_upgrade_procedures.name(), TRUE,
-                GraphDatabaseInternalSettings.enable_loopback_auth.name(), TRUE
+                BoltConnectorInternalSettings.enable_loopback_auth.name(), TRUE
         );
         var readReplicaParams = Map.of(
                 CausalClusteringSettings.middleware_logging_level.name(), Level.DEBUG.toString(),
@@ -125,7 +126,7 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
                 sslPolicyConfig.base_directory.name(), CERTIFICATES_DIR,
                 GraphDatabaseSettings.routing_enabled.name(), TRUE,
                 GraphDatabaseInternalSettings.block_upgrade_procedures.name(), TRUE,
-                GraphDatabaseInternalSettings.enable_loopback_auth.name(), TRUE
+                BoltConnectorInternalSettings.enable_loopback_auth.name(), TRUE
         );
 
         ClusterConfig clusterConfig = ClusterConfig.clusterConfig()

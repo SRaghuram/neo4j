@@ -29,6 +29,7 @@ import org.neo4j.commandline.admin.security.SetInitialPasswordCommand;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.BoltConnectorInternalSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -53,10 +54,10 @@ import org.neo4j.test.extension.Inject;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
-import static org.neo4j.configuration.GraphDatabaseInternalSettings.DEFAULT_LOOPBACK_CONNECTOR_PORT;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
+import static org.neo4j.configuration.connectors.BoltConnectorInternalSettings.DEFAULT_LOOPBACK_CONNECTOR_PORT;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
 
 @ExtendWith( EphemeralFileSystemExtension.class )
@@ -406,7 +407,7 @@ class LoopbackOperatorUserIT
     @Test
     void shouldFailStartupWithNoOperatorPassword()
     {
-        assertThatThrownBy( () -> getEnterpriseManagementService( Map.of( GraphDatabaseInternalSettings.enable_loopback_auth, true ) ) )
+        assertThatThrownBy( () -> getEnterpriseManagementService( Map.of( BoltConnectorInternalSettings.enable_loopback_auth, true ) ) )
                 .hasRootCauseMessage( "No password has been set for the loopback operator. Run `neo4j-admin set-operator-password <password>`." );
     }
 
@@ -460,7 +461,7 @@ class LoopbackOperatorUserIT
     {
         setOperatorPassword();
         final Map<Setting<?>, Object> config =
-                Map.of( GraphDatabaseInternalSettings.enable_loopback_auth, restrictUpgrade || blockDatabase,
+                Map.of( BoltConnectorInternalSettings.enable_loopback_auth, restrictUpgrade || blockDatabase,
                         GraphDatabaseInternalSettings.block_upgrade_procedures, restrictUpgrade,
                         GraphDatabaseInternalSettings.block_create_drop_database, blockDatabase,
                         GraphDatabaseInternalSettings.block_start_stop_database, blockDatabase );
