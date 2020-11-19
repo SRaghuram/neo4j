@@ -27,9 +27,9 @@ import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.util.collection.ProbeTable
 import org.neo4j.values.storable.LongArray
 import org.neo4j.values.storable.Values
-import org.neo4j.values.storable.Values.longValue
-import org.neo4j.values.virtual.NodeValue
 import org.neo4j.values.virtual.RelationshipValue
+import org.neo4j.values.virtual.VirtualNodeValue
+import org.neo4j.values.virtual.VirtualValues.node
 
 case class NodeHashJoinSlottedPipe(lhsKeyOffsets: KeyOffsets,
                                    rhsKeyOffsets: KeyOffsets,
@@ -123,10 +123,11 @@ object NodeHashJoinSlottedPipe {
         case SlotMapping(fromOffset, toOffset, false, false) => target.setRefAt(toOffset, source.getRefAt(fromOffset))
         case SlotMapping(fromOffset, toOffset, false, true) =>
           target.setLongAt(toOffset, source.getRefAt(fromOffset) match {
-            case v: NodeValue => v.id()
+            case v: VirtualNodeValue => v.id()
             case v: RelationshipValue => v.id()
           })
-        case SlotMapping(fromOffset, toOffset, true, false) => target.setRefAt(toOffset, longValue(source.getLongAt(fromOffset)))
+        case SlotMapping(fromOffset, toOffset, true, false) =>
+          target.setRefAt(toOffset, node(source.getLongAt(fromOffset)))
       }
       i += 1
     }
