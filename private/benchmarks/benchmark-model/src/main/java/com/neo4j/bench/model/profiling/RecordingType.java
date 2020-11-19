@@ -26,6 +26,7 @@ public enum RecordingType
     TRACE_JVM( "jvm_log", ".jvm.log" ),
     NMT_SUMMARY( "nmt_summary", ".nmt.summary.csv" ),
     HEAP_DUMP( "heap_dump", ".hprof" ),
+    MEMORY_ESTIMATION("memory_estimation", "mem.json"),
     /**
      * See {@link NoOpProfiler} for explanation about why this recording type is required.
      */
