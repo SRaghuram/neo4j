@@ -287,7 +287,7 @@ case class SlottedRow(slots: SlotConfiguration) extends CypherRow {
   def getRefAtWithoutCheckingInitialized(offset: Int): AnyValue =
     refs(offset)
 
-  override def mergeWith(other: ReadableRow, entityById: EntityById): Unit = other match {
+  override def mergeWith(other: ReadableRow, entityById: EntityById, checkNullability: Boolean = true): Unit = other match {
     case slottedOther: SlottedRow =>
       slottedOther.slots.foreachSlot({
         case (VariableSlotKey(key), otherSlot @ LongSlot(offset, _, CTNode)) =>
@@ -309,7 +309,7 @@ case class SlottedRow(slots: SlotConfiguration) extends CypherRow {
             throw new InternalException(s"Tried to merge slot $otherSlot from $other but it is missing from $this." +
               "Looks like something needs to be fixed in slot allocation.")
           )
-          checkOnlyWhenAssertionsAreEnabled(checkCompatibleNullablility(key, otherSlot))
+          if(checkNullability) checkOnlyWhenAssertionsAreEnabled(checkCompatibleNullablility(key, otherSlot))
 
           val otherValue = slottedOther.getRefAtWithoutCheckingInitialized(offset)
           thisSlotSetter.apply(this, otherValue)

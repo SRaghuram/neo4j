@@ -59,7 +59,8 @@ class CypherRowAdapter extends CypherRow {
                    value3: AnyValue): Unit = ???
 
   override def mergeWith(other: ReadableRow,
-                         entityById: EntityById): Unit = ???
+                         entityById: EntityById,
+                         checkNullability: Boolean): Unit = ???
 
   override def copyAllFrom(input: ReadableRow): Unit = ???
 
