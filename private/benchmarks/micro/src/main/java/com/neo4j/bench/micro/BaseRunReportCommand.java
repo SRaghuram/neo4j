@@ -279,14 +279,7 @@ public abstract class BaseRunReportCommand implements Runnable
                                      errorPolicy,
                                      jvmFile,
                                      triggeredBy );
-        try
-        {
-            ParameterVerifier.performSanityChecks( neo4jBranchOwner, neo4jVersion, neo4jBranch );
-        }
-        catch ( IllegalAccessException e )
-        {
-            throw new RuntimeException( e );
-        }
+        ParameterVerifier.performSanityChecks( neo4jBranchOwner, neo4jVersion, neo4jBranch );
         doRun( runReportParams );
     }
 

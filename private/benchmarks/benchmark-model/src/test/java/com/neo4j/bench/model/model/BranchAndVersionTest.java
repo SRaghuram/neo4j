@@ -125,7 +125,7 @@ public class BranchAndVersionTest
     }
 
     @Test
-    public void checksBranchEqualsSeries() throws IllegalAccessException
+    public void checksBranchEqualsSeries()
     {
         BranchAndVersion.assertBranchEqualsSeries( "1.2.3", "1.2" );
         BranchAndVersion.assertBranchEqualsSeries( "11.22.33", "11.22" );
@@ -137,11 +137,11 @@ public class BranchAndVersionTest
 
         assertFalse( BranchAndVersion.isValidDropBranch( "1.2.3-drop08.0", "1.2" ) );
 
-        assertException( RuntimeException.class,
+        assertException( IllegalArgumentException.class,
                          () -> BranchAndVersion.assertBranchEqualsSeries( "1.2.3", "2.3" ) );
     }
 
-    public void checkIsValidSeriesBranch() throws IllegalAccessException
+    public void checkIsValidSeriesBranch()
     {
         assertTrue( BranchAndVersion.isValidSeriesBranch( "1.2.3", "1.2" ) );
         assertTrue( BranchAndVersion.isValidSeriesBranch( "11.22.33", "11.22" ) );

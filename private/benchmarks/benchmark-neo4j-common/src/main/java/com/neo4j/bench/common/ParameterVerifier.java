@@ -10,7 +10,7 @@ import com.neo4j.bench.model.model.Repository;
 
 public class ParameterVerifier
 {
-    public static void performSanityChecks( String neo4jBranchOwner, String neo4jVersion, String neo4jBranch ) throws IllegalAccessException
+    public static void performSanityChecks( String neo4jBranchOwner, String neo4jVersion, String neo4jBranch )
     {
         if ( !BranchAndVersion.isPersonalBranch( Repository.NEO4J, neo4jBranchOwner ) )
         {

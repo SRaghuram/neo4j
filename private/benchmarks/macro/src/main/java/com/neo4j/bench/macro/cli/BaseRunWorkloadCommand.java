@@ -270,14 +270,7 @@ public abstract class BaseRunWorkloadCommand implements Runnable
         Duration minMeasurementDuration = Duration.ofSeconds( minMeasurementSeconds );
         Duration maxMeasurementDuration = Duration.ofSeconds( maxMeasurementSeconds );
         JvmArgs jvmArgs = JvmArgs.parse( this.jvmArgs );
-        try
-        {
-            ParameterVerifier.performSanityChecks( neo4jBranchOwner, neo4jVersion, neo4jBranch );
-        }
-        catch ( IllegalAccessException e )
-        {
-            throw new RuntimeException( e );
-        }
+        ParameterVerifier.performSanityChecks( neo4jBranchOwner, neo4jVersion, neo4jBranch );
         List<String> queries = StringUtils.isBlank( queryNames )
                                ? Collections.emptyList()
                                : Arrays.asList( queryNames.split( "," ) );

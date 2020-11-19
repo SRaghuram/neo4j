@@ -182,7 +182,7 @@ public class Main
         runner.run();
     }
 
-    private void run() throws IOException, InterruptedException, IllegalAccessException
+    private void run() throws IOException, InterruptedException
     {
         File workingDir = new File( workingDirName );
         File storeDir = new File( workingDir, "store" );
@@ -317,7 +317,7 @@ public class Main
         return pbArgs.toArray( new String[0] );
     }
 
-    private void report( long start, long time, Neo4jConfig neo4jConfig, BenchmarkGroupBenchmarkMetrics metrics ) throws IllegalAccessException
+    private void report( long start, long time, Neo4jConfig neo4jConfig, BenchmarkGroupBenchmarkMetrics metrics )
     {
         ParameterVerifier.performSanityChecks( neo4jBranchOwner, neo4jVersion, neo4jBranch );
         BenchmarkTool tool = new BenchmarkTool( IMPORT_BENCH, toolCommit, IMPORT_OWNER, neo4jBranch );
