@@ -67,6 +67,8 @@ Apache Software License, Version 2.0
   Lucene Memory
   Lucene QueryParsers
   LZ4 and xxHash
+  magnolia
+  mercator
   Netty
   Netty/All-in-One
   Non-Blocking Reactive Foundation for the JVM

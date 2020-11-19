@@ -53,6 +53,8 @@ Apache Software License, Version 2.0
   Jetty :: XML utilities
   jPowerShell
   jProcesses
+  magnolia
+  mercator
   Metrics Core
   Metrics Integration with JMX
   Netty/All-in-One

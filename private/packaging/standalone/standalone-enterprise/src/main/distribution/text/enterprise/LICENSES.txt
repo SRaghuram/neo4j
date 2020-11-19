@@ -99,6 +99,8 @@ Apache Software License, Version 2.0
   Lucene Memory
   Lucene QueryParsers
   LZ4 and xxHash
+  magnolia
+  mercator
   Metrics Core
   Metrics Integration with JMX
   neo4j-driver

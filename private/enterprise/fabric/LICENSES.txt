@@ -70,6 +70,8 @@ Apache Software License, Version 2.0
   Lucene Memory
   Lucene QueryParsers
   LZ4 and xxHash
+  magnolia
+  mercator
   Neo4j Java Driver
   Netty
   Netty/All-in-One
