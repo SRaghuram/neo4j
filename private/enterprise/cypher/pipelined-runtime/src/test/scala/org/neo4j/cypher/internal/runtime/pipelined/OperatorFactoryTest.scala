@@ -249,7 +249,8 @@ class OperatorFactoryTest extends CypherFunSuite with AstConstructionTestSupport
         fallbackPolicy,
         slottedPipeBuilder = Some(fallbackPipeMapper),
         "Pipelined",
-        parallelExecution = false)
+        parallelExecution = false,
+       lenientCreateRelationship = false)
 
     val headOperator = factory.create(pipelineBuilder.headPlan, input)
     val middleOperators = factory.createMiddleOperators(pipelineBuilder.middlePlans, headOperator)

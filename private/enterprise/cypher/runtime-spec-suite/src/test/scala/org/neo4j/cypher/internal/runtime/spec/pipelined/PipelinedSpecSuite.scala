@@ -57,6 +57,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.FilterTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.InputTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LabelScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LeftOuterHashJoinTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.LenientCreateRelationshipTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LetAntiSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LetSelectOrAntiSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LetSelectOrSemiApplyTestBase
@@ -471,8 +472,10 @@ class PipelinedAssertSameNodeTest extends AssertSameNodeTestBase(FUSING, PIPELIN
 class PipelinedAssertSameNodeNoFusingTest extends AssertSameNodeTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
 
 //CREATE
-class PipelinedCreateTest extends CreateTestBase(FUSING, PIPELINED, SIZE_HINT)
-class PipelinedCreateNoFusingTest extends CreateTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+class PipelinedCreateTest extends CreateTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedCreateNoFusingTest extends CreateTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedLenientCreateRelationshipTest extends LenientCreateRelationshipTestBase(FUSING, PIPELINED) with PipelinedSpecSuite
+class PipelinedLenientCreateRelationshipNoFusingTest extends LenientCreateRelationshipTestBase(NO_FUSING, PIPELINED) with PipelinedSpecSuite
 
 // GENERAL
 class PipelinedMiscTest extends MiscTestBase(FUSING, PIPELINED) with PipelinedSpecSuite

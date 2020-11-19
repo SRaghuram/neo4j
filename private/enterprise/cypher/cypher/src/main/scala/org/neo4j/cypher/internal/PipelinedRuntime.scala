@@ -237,7 +237,8 @@ class PipelinedRuntime private(parallelExecution: Boolean,
       interpretedPipesFallbackPolicy,
       maybePipeMapper,
       name,
-      parallelExecution)
+      parallelExecution,
+      context.config.lenientCreateRelationship)
 
     DebugLog.logDiff("ExecutionGraphDefiner")
     //=======================================================

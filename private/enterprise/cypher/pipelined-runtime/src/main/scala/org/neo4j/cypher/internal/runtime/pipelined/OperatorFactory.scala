@@ -165,7 +165,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                       val interpretedPipesFallbackPolicy: InterpretedPipesFallbackPolicy,
                       val slottedPipeBuilder: Option[PipeMapper],
                       runtimeName: String,
-                      parallelExecution: Boolean) {
+                      parallelExecution: Boolean,
+                      lenientCreateRelationship: Boolean) {
 
   private val physicalPlan = executionGraphDefinition.physicalPlan
   private val aggregatorFactory = AggregatorFactory(physicalPlan)
@@ -908,7 +909,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             r.properties.map(p => converters.toCommandExpression(id, p)),
             r.idName, r.startNode, r.endNode
           ))
-        Some(new CreateOperator(WorkIdentity.fromPlan(plan), nodesToCreate.toArray, relationshipsToCreate.toArray))
+        Some(new CreateOperator(WorkIdentity.fromPlan(plan), nodesToCreate.toArray, relationshipsToCreate.toArray, lenientCreateRelationship))
 
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException)

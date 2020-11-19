@@ -19,6 +19,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateOperator.createNode
+import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateOperator.createRelationship
+import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateOperator.handleMissingNode
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateOperator.setNodeProperties
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateOperator.setRelationshipProperties
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -38,7 +40,8 @@ import org.neo4j.values.virtual.RelationshipValue
 
 class CreateOperator(val workIdentity: WorkIdentity,
                      nodes: Array[CreateNodeSlottedCommand],
-                     relationships: Array[CreateRelationshipSlottedCommand]) extends StatelessOperator {
+                     relationships: Array[CreateRelationshipSlottedCommand],
+                     lenientCreateRelationship: Boolean) extends StatelessOperator {
 
   override def operate(morsel: Morsel,
                        state: PipelinedQueryState,
@@ -65,7 +68,13 @@ class CreateOperator(val workIdentity: WorkIdentity,
         val startNodeId = command.startNodeIdGetter.applyAsLong(cursor)
         val endNodeId = command.endNodeIdGetter.applyAsLong(cursor)
         val typeId = command.relType.getOrCreateType(state.query)
-        val relationshipId = CreateOperator.createRelationship(startNodeId, typeId, endNodeId, write, resources.queryStatisticsTracker)
+        val relationshipId = if (startNodeId == NO_SUCH_NODE) {
+          handleMissingNode(command.relName, command.startName, lenientCreateRelationship)
+        } else if (endNodeId == NO_SUCH_NODE) {
+          handleMissingNode(command.relName, command.endName, lenientCreateRelationship)
+        } else {
+          createRelationship(startNodeId, typeId, endNodeId, write, resources.queryStatisticsTracker)
+        }
         command.properties.foreach(p => setRelationshipProperties(relationshipId, p(cursor, queryState), tokenWrite, write, resources.queryStatisticsTracker))
         cursor.setLongAt(command.relIdOffset, relationshipId)
         i += 1
@@ -101,22 +110,32 @@ object CreateOperator {
       })
   }
 
-  def createRelationship(source: Long, typ: Int, target: Long, write: Write, queryStatisticsTracker: MutableQueryStatistics): Long = {
-    val relId = write.relationshipCreate(source, typ, target)
-    queryStatisticsTracker.createRelationship()
-    relId
+  def handleMissingNode(relName: String, nodeName: String, lenientCreateRelationship: Boolean): Long =
+    if (lenientCreateRelationship) NO_SUCH_RELATIONSHIP
+    else throw new InternalException(LenientCreateRelationship.errorMsg(relName, nodeName))
+
+  def createRelationship(source: Long,
+                         typ: Int,
+                         target: Long,
+                         write: Write,
+                         queryStatisticsTracker: MutableQueryStatistics): Long = {
+      val relId = write.relationshipCreate(source, typ, target)
+      queryStatisticsTracker.createRelationship()
+      relId
   }
 
-  def setRelationshipProperties(node: Long,
+  def setRelationshipProperties(relationship: Long,
                                 properties: AnyValue,
                                 tokenWrite: TokenWrite,
                                 write: Write,
                                 queryStatisticsTracker: MutableQueryStatistics): Unit = {
-    safeCastToMap(properties).foreach((k: String, v: AnyValue) => {
-      val propertyKeyId = tokenWrite.propertyKeyGetOrCreateForName(k)
-      write.relationshipSetProperty(node, propertyKeyId, makeValueNeoSafe(v))
-      queryStatisticsTracker.setProperty()
-    })
+    if (relationship != NO_SUCH_RELATIONSHIP) {
+      safeCastToMap(properties).foreach((k: String, v: AnyValue) => {
+        val propertyKeyId = tokenWrite.propertyKeyGetOrCreateForName(k)
+        write.relationshipSetProperty(relationship, propertyKeyId, makeValueNeoSafe(v))
+        queryStatisticsTracker.setProperty()
+      })
+    }
   }
 
   private def safeCastToMap(value: AnyValue): MapValue = value match {

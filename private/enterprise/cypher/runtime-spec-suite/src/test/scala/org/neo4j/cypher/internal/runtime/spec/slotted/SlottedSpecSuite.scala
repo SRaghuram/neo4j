@@ -45,6 +45,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.InputTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.InputWithMaterializedEntitiesTest
 import org.neo4j.cypher.internal.runtime.spec.tests.LabelScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LeftOuterHashJoinTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.LenientCreateRelationshipTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LetAntiSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LetSelectOrAntiSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LetSelectOrSemiApplyTestBase
@@ -222,4 +223,6 @@ class SlottedTriadicSelectionTest extends TriadicSelectionTestBase(ENTERPRISE.DE
 class SlottedAssertSameNodeTest extends AssertSameNodeTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT) with EsotericAssertSameNodeTestBase[EnterpriseRuntimeContext]
 
 class SlottedCreateTest extends CreateTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedLenientCreateRelationshipTest extends LenientCreateRelationshipTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
+
 
