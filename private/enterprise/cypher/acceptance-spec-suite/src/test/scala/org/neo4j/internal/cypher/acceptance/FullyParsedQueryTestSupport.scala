@@ -33,7 +33,7 @@ trait FullyParsedQueryTestSupport {
   def parse(qs: String, options: QueryOptions = QueryOptions.default) =
     FullyParsedQuery(
       state = parsing.transform(
-        InitialState(qs, None, PlannerNameFor(options.planner.name)),
+        InitialState(qs, None, PlannerNameFor(options.queryOptions.planner.name)),
         ContextHelper.create()
       ),
       options = options
@@ -47,7 +47,7 @@ trait FullyParsedQueryTestSupport {
   def prepare(query: Statement, options: QueryOptions = QueryOptions.default) =
     FullyParsedQuery(
       state = semanticAnalysis.transform(
-        InitialState("", None, PlannerNameFor(options.planner.name)).withStatement(query),
+        InitialState("", None, PlannerNameFor(options.queryOptions.planner.name)).withStatement(query),
         ContextHelper.create()
       ),
       options = options
