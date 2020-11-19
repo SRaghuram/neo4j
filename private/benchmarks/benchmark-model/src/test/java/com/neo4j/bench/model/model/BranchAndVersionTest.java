@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
+import static com.neo4j.bench.model.model.BranchAndVersion.validate;
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -18,37 +19,37 @@ public class BranchAndVersionTest
     @Test
     public void shouldPassValidateWithExpectedParameters()
     {
-        BranchAndVersion.validate( Repository.MICRO_BENCH, Repository.MICRO_BENCH.defaultOwner(), "3.4" );
-        BranchAndVersion.validate( Repository.LDBC_BENCH, Repository.LDBC_BENCH.defaultOwner(), "3.4" );
-        BranchAndVersion.validate( Repository.MACRO_BENCH, Repository.MACRO_BENCH.defaultOwner(), "3.4" );
-        BranchAndVersion.validate( Repository.MICRO_BENCH, Repository.MICRO_BENCH.defaultOwner(), "4.2.0-drop07" );
-        BranchAndVersion.validate( Repository.LDBC_BENCH, Repository.LDBC_BENCH.defaultOwner(), "4.2.0-drop07" );
-        BranchAndVersion.validate( Repository.MACRO_BENCH, Repository.MACRO_BENCH.defaultOwner(), "4.2.0-drop07" );
-        BranchAndVersion.validate( Repository.ALGOS, Repository.ALGOS.defaultOwner(), "master" );
-        BranchAndVersion.validate( Repository.ALGOS_JMH, Repository.ALGOS_JMH.defaultOwner(), "master" );
-        BranchAndVersion.validate( Repository.QUALITY_TASK, Repository.QUALITY_TASK.defaultOwner(), "master" );
+        validate( Repository.MICRO_BENCH, Repository.MICRO_BENCH.defaultOwner(), "3.4" );
+        validate( Repository.LDBC_BENCH, Repository.LDBC_BENCH.defaultOwner(), "3.4" );
+        validate( Repository.MACRO_BENCH, Repository.MACRO_BENCH.defaultOwner(), "3.4" );
+        validate( Repository.MICRO_BENCH, Repository.MICRO_BENCH.defaultOwner(), "4.2.0-drop07" );
+        validate( Repository.LDBC_BENCH, Repository.LDBC_BENCH.defaultOwner(), "4.2.0-drop07" );
+        validate( Repository.MACRO_BENCH, Repository.MACRO_BENCH.defaultOwner(), "4.2.0-drop07" );
+        validate( Repository.ALGOS, Repository.ALGOS.defaultOwner(), "master" );
+        validate( Repository.ALGOS_JMH, Repository.ALGOS_JMH.defaultOwner(), "master" );
+        validate( Repository.QUALITY_TASK, Repository.QUALITY_TASK.defaultOwner(), "master" );
     }
 
     @Test
     public void shouldFailValidateWithUnexpectedParameters()
     {
         assertException( RuntimeException.class,
-                                       () -> BranchAndVersion.validate( Repository.MICRO_BENCH, Repository.MICRO_BENCH.defaultOwner(), "3.4-pie" ) );
+                                       () -> validate( Repository.MICRO_BENCH, Repository.MICRO_BENCH.defaultOwner(), "3.4-pie" ) );
 
         assertException( RuntimeException.class,
-                                       () -> BranchAndVersion.validate( Repository.LDBC_BENCH, Repository.LDBC_BENCH.defaultOwner(), "3.4-pie" ) );
+                                       () -> validate( Repository.LDBC_BENCH, Repository.LDBC_BENCH.defaultOwner(), "3.4-pie" ) );
 
         assertException( RuntimeException.class,
-                                       () -> BranchAndVersion.validate( Repository.LDBC_BENCH, "Robert", "3.4" ) );
+                                       () -> validate( Repository.LDBC_BENCH, "Robert", "3.4" ) );
 
         assertException( RuntimeException.class,
-                                       () -> BranchAndVersion.validate( Repository.ALGOS, Repository.ALGOS.defaultOwner(), "3.4.5" ) );
+                                       () -> validate( Repository.ALGOS, Repository.ALGOS.defaultOwner(), "3.4.5" ) );
 
         assertException( RuntimeException.class,
-                                       () -> BranchAndVersion.validate( Repository.ALGOS_JMH, Repository.ALGOS_JMH.defaultOwner(), "3.4.5" ) );
+                                       () -> validate( Repository.ALGOS_JMH, Repository.ALGOS_JMH.defaultOwner(), "3.4.5" ) );
 
         assertException( RuntimeException.class,
-                                       () -> BranchAndVersion.validate( Repository.QUALITY_TASK, Repository.QUALITY_TASK.defaultOwner(), "1.0" ) );
+                                       () -> validate( Repository.QUALITY_TASK, Repository.QUALITY_TASK.defaultOwner(), "1.0" ) );
     }
 
     @Test
@@ -124,13 +125,8 @@ public class BranchAndVersionTest
     }
 
     @Test
-    public void checksBranchEqualsSeries()
+    public void checksBranchEqualsSeries() throws IllegalAccessException
     {
-        assertTrue( BranchAndVersion.isValidSeriesBranch( "1.2.3", "1.2" ) );
-        assertTrue( BranchAndVersion.isValidSeriesBranch( "11.22.33", "11.22" ) );
-
-        assertFalse( BranchAndVersion.isValidSeriesBranch( "1.2.3", "2.3" ) );
-
         BranchAndVersion.assertBranchEqualsSeries( "1.2.3", "1.2" );
         BranchAndVersion.assertBranchEqualsSeries( "11.22.33", "11.22" );
 
@@ -138,12 +134,20 @@ public class BranchAndVersionTest
         BranchAndVersion.assertBranchEqualsSeries( "1.2.3-drop08.0", "1.2" );
 
         assertTrue( BranchAndVersion.isValidDropBranch( "1.2.3-drop08.0", "1.2.3-drop08" ) );
-        assertTrue( BranchAndVersion.isValidSeriesBranch( "1.2.3-drop08.0", "1.2" ) );
-        assertFalse( BranchAndVersion.isValidSeriesBranch( "1.2.3-drop08.0", "1.2.3-drop08" ) );
+
         assertFalse( BranchAndVersion.isValidDropBranch( "1.2.3-drop08.0", "1.2" ) );
 
         assertException( RuntimeException.class,
-                                       () -> BranchAndVersion.assertBranchEqualsSeries( "1.2.3", "2.3" ) );
+                         () -> BranchAndVersion.assertBranchEqualsSeries( "1.2.3", "2.3" ) );
+    }
+
+    public void checkIsValidSeriesBranch() throws IllegalAccessException
+    {
+        assertTrue( BranchAndVersion.isValidSeriesBranch( "1.2.3", "1.2" ) );
+        assertTrue( BranchAndVersion.isValidSeriesBranch( "11.22.33", "11.22" ) );
+        assertFalse( BranchAndVersion.isValidSeriesBranch( "1.2.3", "2.3" ) );
+        assertTrue( BranchAndVersion.isValidSeriesBranch( "1.2.3-drop08.0", "1.2" ) );
+        assertFalse( BranchAndVersion.isValidSeriesBranch( "1.2.3-drop08.0", "1.2.3-drop08" ) );
     }
 
     public static <EXCEPTION extends Throwable> EXCEPTION assertException( Class<EXCEPTION> exception, ThrowingRunnable fun )

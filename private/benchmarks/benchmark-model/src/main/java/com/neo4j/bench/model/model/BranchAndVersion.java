@@ -45,18 +45,18 @@ public class BranchAndVersion
         return !repository.isDefaultOwner( owner );
     }
 
-    static boolean isValidSeriesBranch( String version, String branch )
+    static boolean isValidSeriesBranch( String version, String branch ) throws IllegalAccessException
     {
         String seriesString = versionToSeries( version );
         return branch.equalsIgnoreCase( seriesString );
     }
 
-    static boolean isValidDropBranch( String version, String branch )
+    static boolean isValidDropBranch( String version, String branch ) throws IllegalAccessException
     {
         return branch.equals( dropVersionToDropBranch( version ) );
     }
 
-    public static void assertBranchEqualsSeries( String version, String branch )
+    public static void assertBranchEqualsSeries( String version, String branch ) throws IllegalAccessException
     {
         if ( !isValidSeriesBranch( version, branch ) && !isValidDropBranch( version, branch ) )
         {
@@ -65,21 +65,21 @@ public class BranchAndVersion
         }
     }
 
-    private static String dropVersionToDropBranch( String version )
+    private static String dropVersionToDropBranch( String version ) throws IllegalAccessException
     {
         if ( !version.contains( "-drop" ) )
         {
-            throw new RuntimeException( "expected drop version but got " + version );
+            throw new IllegalAccessException( "expected drop version but got " + version );
         }
         return version.substring( 0, version.lastIndexOf( "." ) );
     }
 
-    private static String versionToSeries( String version )
+    private static String versionToSeries( String version ) throws IllegalAccessException
     {
         String[] split = version.split( "\\." );
         if ( split.length != 4 && split.length != 3 )
         {
-            throw new RuntimeException( "Branch could not be converted to Version, wrong size expected x.z.y(-dropxz.y) but got " + version );
+            throw new IllegalAccessException( "Branch could not be converted to Version, wrong size expected x.z.y(-dropxz.y) but got " + version );
         }
         if ( split.length == 3 || split[2].contains( "-drop" ) )
         {
