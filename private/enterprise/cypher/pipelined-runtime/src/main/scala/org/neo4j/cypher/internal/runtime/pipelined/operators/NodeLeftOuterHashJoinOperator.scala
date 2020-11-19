@@ -256,7 +256,11 @@ object NodeLeftOuterHashJoinOperator {
 
     override def argumentRowIdsForReducers: Array[Long] = hashTable.argumentRowIdsForReducers
 
-    override def addRhsKey(key: Value): Unit = rhsKeys.add(key)
+    override def addRhsKey(key: Value): Unit = {
+      if (rhsKeys.add(key)) {
+        scopedMemoryTracker.allocateHeap(key.estimatedHeapUsage())
+      }
+    }
 
     override def keysWithoutRhsMatch: java.util.Iterator[Value] = {
       hashTable.keys.stream().filter(k => !rhsKeys.contains(k)).iterator()
