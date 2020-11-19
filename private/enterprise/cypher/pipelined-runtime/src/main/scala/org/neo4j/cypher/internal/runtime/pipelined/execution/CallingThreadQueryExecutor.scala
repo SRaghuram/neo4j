@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.runtime.InputDataStream
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutablePipeline
+import org.neo4j.cypher.internal.runtime.pipelined.MutableQueryStatistics
 import org.neo4j.cypher.internal.runtime.pipelined.Sleeper
 import org.neo4j.cypher.internal.runtime.pipelined.Worker
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerResourceProvider
@@ -67,7 +68,8 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
       }
 
     val transaction = queryContext.transactionalContext.transaction
-    val resources = new QueryResources(cursors: CursorFactory, transaction.pageCursorTracer(), transaction.memoryTracker(), -1, -1)
+    val queryStaticsTracker = new MutableQueryStatistics
+    val resources = new QueryResources(cursors: CursorFactory, transaction.pageCursorTracer(), transaction.memoryTracker(), -1, -1, queryStaticsTracker)
     val tracer = schedulerTracer.traceQuery()
     val tracker = stateFactory.newTracker(subscriber, queryContext, tracer)
     val queryState = PipelinedQueryState(queryContext,
@@ -110,6 +112,6 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
                                                          worker,
                                                          workerResourceProvider,
                                                          executionGraphSchedulingPolicy)
-    ProfiledQuerySubscription(executingQuery, queryProfile, stateFactory.memoryTracker)
+    ProfiledQuerySubscription(executingQuery, queryProfile, stateFactory.memoryTracker, queryStaticsTracker)
   }
 }

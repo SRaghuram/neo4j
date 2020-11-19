@@ -11,8 +11,10 @@ import org.neo4j.cypher.internal.runtime.InputDataStream
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutablePipeline
+import org.neo4j.cypher.internal.runtime.pipelined.MutableQueryStatistics
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
 import org.neo4j.cypher.result.QueryProfile
+import org.neo4j.graphdb.QueryStatistics
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
@@ -47,4 +49,4 @@ trait QueryExecutor {
   def assertAllReleased(): Unit
 }
 
-case class ProfiledQuerySubscription(executingQuery: ExecutingQuery, profile: QueryProfile, memoryTracker: QueryMemoryTracker)
+case class ProfiledQuerySubscription(executingQuery: ExecutingQuery, profile: QueryProfile, memoryTracker: QueryMemoryTracker, mutableQueryStatistics: MutableQueryStatistics)

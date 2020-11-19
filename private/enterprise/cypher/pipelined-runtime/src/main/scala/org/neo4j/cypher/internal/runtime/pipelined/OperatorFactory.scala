@@ -33,6 +33,7 @@ import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.isRefSlotAndNotAlias
+import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionSlotForPredicate
@@ -49,6 +50,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.DropResultPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekMode
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekModeFactory
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyType
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LockingUniqueIndexSeek
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeMapper
@@ -67,6 +69,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.AssertingMultiNodeI
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CachePropertiesOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CartesianProductOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ConditionalApplyOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipByIdSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctPrimitiveOperator
@@ -140,6 +143,8 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.findDistinctP
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.partitionGroupingExpressions
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColumnOrder
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipelineBreakingPolicy
+import org.neo4j.cypher.internal.runtime.slotted.pipes.CreateNodeSlottedCommand
+import org.neo4j.cypher.internal.runtime.slotted.pipes.CreateRelationshipSlottedCommand
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.KeyOffsets
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
@@ -715,6 +720,9 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                                     lazyTypes,
                                     length.isSimple)
 
+      case plans.Create(_, nodes, relationships) =>
+        ???
+
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException otherwise)
         interpretedPipesFallbackPolicy.breakOn(plan)
@@ -881,6 +889,26 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
       case _: plans.EmptyResult =>
         Some(new EmptyResultOperator(WorkIdentity.fromPlan(plan)))
+
+      case plans.Create(_, nodes, relationships) =>
+        val nodesToCreate =
+          nodes.map(n =>
+            CreateNodeSlottedCommand(
+              slots.getLongOffsetFor(n.idName),
+              n.labels.map(l => LazyLabel(l)(semanticTable)),
+              n.properties.map(p => converters.toCommandExpression(id, p))
+            )
+          ).toIndexedSeq
+        val relationshipsToCreate = relationships.map(r =>
+          CreateRelationshipSlottedCommand(
+            slots.getLongOffsetFor(r.idName),
+            SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor(slots(r.startNode)),
+            LazyType(r.relType.name),
+            SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor(slots(r.endNode)),
+            r.properties.map(p => converters.toCommandExpression(id, p)),
+            r.idName, r.startNode, r.endNode
+          ))
+        Some(new CreateOperator(WorkIdentity.fromPlan(plan), nodesToCreate.toArray, relationshipsToCreate.toArray))
 
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException)

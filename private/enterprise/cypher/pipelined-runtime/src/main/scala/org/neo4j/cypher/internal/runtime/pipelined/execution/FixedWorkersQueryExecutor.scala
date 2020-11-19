@@ -114,6 +114,6 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
 
     executionState.initializeState()
     workerManager.queryManager.addQuery(executingQuery)
-    ProfiledQuerySubscription(executingQuery, queryProfile, stateFactory.memoryTracker)
+    ProfiledQuerySubscription(executingQuery, queryProfile, stateFactory.memoryTracker, initializationResources.queryStatisticsTracker)
   }
 }

@@ -426,8 +426,9 @@ class PipelinedRuntime private(parallelExecution: Boolean,
     private var executingQuery: ExecutingQuery = _
     private var _queryProfile: QueryProfile = _
     private var _memoryTracker: QueryMemoryTracker = _
+    private var _queryStatisticsTracker: MutableQueryStatistics = _
 
-    override def queryStatistics(): runtime.QueryStatistics = queryContext.getOptStatistics.getOrElse(QueryStatistics())
+    override def queryStatistics(): QueryStatistics = _queryStatisticsTracker
 
     override def totalAllocatedMemory(): Long = {
       ensureQuerySubscription()
@@ -465,7 +466,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
         // throws an exception.
         subscriber.onResult(fieldNames.length)
 
-        val ProfiledQuerySubscription(sub, prof, memTrack) = queryExecutor.execute(
+        val ProfiledQuerySubscription(sub, prof, memTrack, queryStatisticsTracker) = queryExecutor.execute(
           executablePipelines,
           executionGraphDefinition,
           inputDataStream,
@@ -484,6 +485,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
         executingQuery = sub
         _queryProfile = prof
         _memoryTracker = memTrack
+        _queryStatisticsTracker = queryStatisticsTracker
       }
     }
   }

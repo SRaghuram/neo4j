@@ -41,6 +41,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.CachePropertiesTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ConditionalApplyTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.CreateTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DistinctTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DropResultTestBase
@@ -468,6 +469,10 @@ class PipelinedTriadicSelectionNoFusingTest extends TriadicSelectionTestBase(NO_
 // ASSERT SAME NODE
 class PipelinedAssertSameNodeTest extends AssertSameNodeTestBase(FUSING, PIPELINED, SIZE_HINT)
 class PipelinedAssertSameNodeNoFusingTest extends AssertSameNodeTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+
+//CREATE
+class PipelinedCreateTest extends CreateTestBase(FUSING, PIPELINED, SIZE_HINT)
+class PipelinedCreateNoFusingTest extends CreateTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
 
 // GENERAL
 class PipelinedMiscTest extends MiscTestBase(FUSING, PIPELINED) with PipelinedSpecSuite

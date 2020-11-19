@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.execution
 
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.interpreted.profiler.InterpretedProfileInformation
+import org.neo4j.cypher.internal.runtime.pipelined.MutableQueryStatistics
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.io.IOUtils
@@ -23,7 +24,8 @@ class QueryResources(cursorFactory: CursorFactory,
                      cursorTracer: PageCursorTracer,
                      tracker: MemoryTracker,
                      val workerId: Int,
-                     val nWorkers: Int) extends AutoCloseable {
+                     val nWorkers: Int,
+                     val queryStatisticsTracker: MutableQueryStatistics = new MutableQueryStatistics) extends AutoCloseable {
 
   val expressionCursors: ExpressionCursors = new ExpressionCursors(cursorFactory, cursorTracer, tracker)
   val cursorPools: CursorPools = new CursorPools(cursorFactory, cursorTracer, tracker)

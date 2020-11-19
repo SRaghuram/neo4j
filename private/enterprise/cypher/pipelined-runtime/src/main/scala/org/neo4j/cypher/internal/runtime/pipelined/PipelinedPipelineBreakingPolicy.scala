@@ -15,6 +15,7 @@ import org.neo4j.cypher.internal.logical.plans.AssertingMultiNodeIndexSeek
 import org.neo4j.cypher.internal.logical.plans.CacheProperties
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
 import org.neo4j.cypher.internal.logical.plans.ConditionalApply
+import org.neo4j.cypher.internal.logical.plans.Create
 import org.neo4j.cypher.internal.logical.plans.DirectedRelationshipByIdSeek
 import org.neo4j.cypher.internal.logical.plans.Distinct
 import org.neo4j.cypher.internal.logical.plans.EagerLogicalPlan
@@ -193,6 +194,10 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
            _: NonFuseable |
            _: EmptyResult
       => (false, fuseIndex)
+
+        //WRITE operators
+      case _: Create
+        => (false, fuseIndex)
 
       // 2 child operators
       case _: Apply
