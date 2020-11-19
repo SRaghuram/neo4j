@@ -149,7 +149,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
 
     //When
     val result = executeWith(
-      Configs.InterpretedAndSlotted,
+      Configs.InterpretedAndSlottedAndPipelined,
       "CREATE(c:C) WITH 1 AS single CALL db.labels() YIELD label RETURN label")
 
     // Then
@@ -258,7 +258,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     relate(createNode(), createNode(), "B")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       """
         |CREATE ()-[:C]->()
         |WITH 1 as single

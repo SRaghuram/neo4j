@@ -119,14 +119,14 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
   }
 
   test("point function should work with node with only valid properties") {
-    val result = executeWith(Configs.InterpretedAndSlotted, "CREATE (n {latitude: 12.78, longitude: 56.7}) RETURN point(n) as point",
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "CREATE (n {latitude: 12.78, longitude: 56.7}) RETURN point(n) as point",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 56.7, 12.78))))
   }
 
   test("point function should work with node with some invalid properties") {
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       "CREATE (n {latitude: 12.78, longitude: 56.7, banana: 'yes', some: 1.2, andAlso: [1,2]}) RETURN point(n) as point",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
@@ -134,7 +134,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
   }
 
   test("point function should fail gracefully with node with missing properties") {
-   failWithError(Configs.InterpretedAndSlotted, "CREATE (n {latitude: 12.78, y: 2}) RETURN point(n) as point",
+   failWithError(Configs.InterpretedAndSlottedAndPipelined, "CREATE (n {latitude: 12.78, y: 2}) RETURN point(n) as point",
      "A point must contain either 'x' and 'y' or 'latitude' and 'longitude'")
   }
 

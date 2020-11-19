@@ -314,7 +314,7 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
         |    WHERE NOT (user)-[:REVIEWED]->(:Movie)-[:BY]->(director) | id(b)] AS bonus
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.PipelinedSingleThreadedFull, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined + Configs.PipelinedSingleThreadedFull, query)
     result.toList should equal(List(
       Map("bonus" -> List())
     ))
@@ -334,7 +334,7 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
       |    WHERE size([(user)-[r:REVIEWED]->(:Movie)-[:BY]->(director) | r]) = 0 | id(b)] AS bonus
     """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     result.toList should equal(List(
       Map("bonus" -> List())
     ))

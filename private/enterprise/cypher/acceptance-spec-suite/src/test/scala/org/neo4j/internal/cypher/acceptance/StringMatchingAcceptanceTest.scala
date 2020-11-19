@@ -31,7 +31,7 @@ class StringMatchingAcceptanceTest extends ExecutionEngineFunSuite with QuerySta
   }
 
   test("should return null when END WITH is used on non-strings"){
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       """
         | CREATE ({name: 1})
         | WITH *
@@ -42,7 +42,7 @@ class StringMatchingAcceptanceTest extends ExecutionEngineFunSuite with QuerySta
   }
 
   test("should return null when CONTAINS is used on non-strings"){
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       """
         | CREATE ({name: 1})
         | WITH *
@@ -53,7 +53,7 @@ class StringMatchingAcceptanceTest extends ExecutionEngineFunSuite with QuerySta
   }
 
   test("should return null when CONTAINS is used on non-strings that contains integers") {
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       """
         | CREATE ({name: 1})
         | WITH *
@@ -64,7 +64,7 @@ class StringMatchingAcceptanceTest extends ExecutionEngineFunSuite with QuerySta
   }
 
   test("should return null when STARTS WITH is used on non-strings"){
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       """
         | CREATE ({name: 1})
         | WITH *
@@ -109,25 +109,25 @@ class StringMatchingAcceptanceTest extends ExecutionEngineFunSuite with QuerySta
 
   test("should allow escaped backtick in labels") {
     // Label without escaping: 123`abc
-    val result = executeWith(Configs.InterpretedAndSlotted, "CREATE (n:`123``abc`) RETURN labels(n)")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "CREATE (n:`123``abc`) RETURN labels(n)")
     result.toList should be(List(Map("labels(n)" -> List("123`abc"))))
   }
 
   test("should allow escaped backticks first and last in labels") {
     // Label without escaping: `123`
-    val result = executeWith(Configs.InterpretedAndSlotted, "CREATE (n:```123```) RETURN labels(n)")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "CREATE (n:```123```) RETURN labels(n)")
     result.toList should be(List(Map("labels(n)" -> List("`123`"))))
   }
 
   test("should allow escaped backtick in relationship types") {
     // Relationship type without escaping: 123`abc
-    val result = executeWith(Configs.InterpretedAndSlotted,"CREATE ()-[r:`123``abc`]->() RETURN type(r)")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,"CREATE ()-[r:`123``abc`]->() RETURN type(r)")
     result.toList should be(List(Map("type(r)" -> "123`abc")))
   }
 
   test("should allow escaped backtick first and last in relationship types") {
     // Relationship type without escaping: ``123abc`
-    val result = executeWith(Configs.InterpretedAndSlotted,"CREATE ()-[r:`````123abc```]->() RETURN type(r)")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,"CREATE ()-[r:`````123abc```]->() RETURN type(r)")
     result.toList should be(List(Map("type(r)" -> "``123abc`")))
   }
 

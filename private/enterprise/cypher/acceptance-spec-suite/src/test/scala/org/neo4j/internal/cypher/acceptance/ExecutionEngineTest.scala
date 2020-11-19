@@ -485,7 +485,7 @@ order by a.COL1""".format(a, b))
   }
 
   test("with should not forget original type") {
-    val result = executeWith(Configs.InterpretedAndSlotted, "create (a{x:8}) with a.x as foo return sum(foo)")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "create (a{x:8}) with a.x as foo return sum(foo)")
 
     result.toList should equal(List(Map("sum(foo)" -> 8)))
   }
@@ -744,7 +744,7 @@ order by a.COL1""".format(a, b))
     relate(a,b,"FOO")
 
     //WHEN
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       """MATCH (a), (b)
          WHERE id(a) = 0 AND id(b) = 1
          AND not (a)-[:FOO]->(b)
@@ -870,7 +870,7 @@ order by a.COL1""".format(a, b))
   }
 
   test("should not mind rewriting NOT queries") {
-    val result = executeWith(Configs.InterpretedAndSlotted, " create (a {x: 1}) return a.x is not null as A, a.y is null as B, a.x is not null as C, a.y is not null as D")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, " create (a {x: 1}) return a.x is not null as A, a.y is null as B, a.x is not null as C, a.y is not null as D")
     result.toList should equal(List(Map("A" -> true, "B" -> true, "C" -> true, "D" -> false)))
   }
 

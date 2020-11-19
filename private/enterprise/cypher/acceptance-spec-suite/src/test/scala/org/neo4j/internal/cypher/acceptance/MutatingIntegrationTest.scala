@@ -21,7 +21,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
   test("create a single node") {
     val before = graph.withTx( tx => tx.getAllNodes.asScala.size)
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "create (a)")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "create (a)")
 
     assertStats(result, nodesCreated = 1)
     graph.withTx( tx =>  {
@@ -32,7 +32,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
   test("create a single node with props and return it") {
     val before = graph.withTx( tx => tx.getAllNodes.asScala.size)
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "create (a {name : 'Andres'}) return a.name")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "create (a {name : 'Andres'}) return a.name")
 
     assertStats(result, nodesCreated = 1, propertiesWritten = 1)
     graph.withTx( tx => {
@@ -45,7 +45,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
   test("start with a node and create a new node with the same properties") {
     createNode("age" -> 15)
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (a) where id(a) = 0 with a create (b {age : a.age * 2}) return b.age")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (a) where id(a) = 0 with a create (b {age : a.age * 2}) return b.age")
 
     assertStats(result, nodesCreated = 1, propertiesWritten = 1)
 
@@ -127,7 +127,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
     createNode("Michael")
     createNode("Peter")
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n) with collect(n.name) as names create (m {name : names}) RETURN m.name")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) with collect(n.name) as names create (m {name : names}) RETURN m.name")
     assertStats(result,
       propertiesWritten = 1,
       nodesCreated = 1
@@ -137,7 +137,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
   }
 
   test("set a property to an empty collection") {
-    val result = executeWith(Configs.InterpretedAndSlotted, "create (n {x : []}) return n.x")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "create (n {x : []}) return n.x")
     assertStats(result,
       propertiesWritten = 1,
       nodesCreated = 1
@@ -146,7 +146,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
   }
 
   test("create node from map values") {
-    val result = executeWith(Configs.InterpretedAndSlotted, "create (n $a) return n.age, n.name", params = Map("a" -> Map("name" -> "Andres", "age" -> 66)))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "create (n $a) return n.age, n.name", params = Map("a" -> Map("name" -> "Andres", "age" -> 66)))
 
     result.toList should equal(List(Map("n.age" -> 66, "n.name" -> "Andres")))
   }
@@ -156,7 +156,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
     createNode()
 
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (a), (b) where id(a) = 0 AND id(b) = 1 create (a)-[r:REL $param]->(b) return r.name, r.age", params = Map("param" -> Map("name" -> "Andres", "age" -> 66)))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (a), (b) where id(a) = 0 AND id(b) = 1 create (a)-[r:REL $param]->(b) return r.name, r.age", params = Map("param" -> Map("name" -> "Andres", "age" -> 66)))
 
     result.toList should equal(List(Map("r.name" -> "Andres", "r.age" -> 66)))
   }
@@ -270,7 +270,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
 
   test("string literals should not be mistaken for variables") {
     //https://github.com/neo4j/community/issues/523
-    executeWith(Configs.InterpretedAndSlotted, "EXPLAIN create (tag1 {name:'tag2'}), (tag2 {name:'tag1'}) return [tag1,tag2] as tags")
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "EXPLAIN create (tag1 {name:'tag2'}), (tag2 {name:'tag1'}) return [tag1,tag2] as tags")
     val result = executeScalar[Seq[Node]]("create (tag1 {name:'tag2'}), (tag2 {name:'tag1'}) return [tag1,tag2] as tags")
     result should have size 2
   }
@@ -286,7 +286,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
     val q = "create (a $param) return a.arrayProp"
     val result =  executeScalar[Array[String]](q, "param" -> map)
 
-    assertStats(executeWith(Configs.InterpretedAndSlotted, q, params = Map("param"->map)), nodesCreated = 1, propertiesWritten = 1)
+    assertStats(executeWith(Configs.InterpretedAndSlottedAndPipelined, q, params = Map("param"->map)), nodesCreated = 1, propertiesWritten = 1)
     result.toList should equal(List("foo","bar"))
   }
 
@@ -310,7 +310,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
     val b = createNode(Map("prop" -> "end"))
 
     val query = "match (a), (b) where a.prop = 'start' AND b.prop = 'end' create p = (a)<-[:X]-(b) with p unwind nodes(p) as x return x.prop"
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.toList should equal(List(Map("x.prop" -> "start"), Map("x.prop" -> "end")))
   }
@@ -356,7 +356,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
   }
 
   test("should be able to create node with labels") {
-    val result = executeWith(Configs.InterpretedAndSlotted, "create (n:FOO:BAR) return labels(n) as l")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "create (n:FOO:BAR) return labels(n) as l")
 
     assertStats(result, nodesCreated = 1, labelsAdded = 2)
     result.toList should equal(List(Map("l" -> List("FOO", "BAR"))))

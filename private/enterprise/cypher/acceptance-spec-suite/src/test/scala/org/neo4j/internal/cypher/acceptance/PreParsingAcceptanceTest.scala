@@ -77,8 +77,8 @@ class PreParsingAcceptanceTest extends ExecutionEngineFunSuite with EnterpriseGr
   }
 
   test("should handle interpretedPipesFallback=all") {
-    val query1 = "CYPHER runtime=pipelined interpretedPipesFallback=all CREATE (n:L) RETURN n"
-    val query2 = "CYPHER runtime=pipelined CREATE (n:L) RETURN n"
+    val query1 = "CYPHER runtime=pipelined interpretedPipesFallback=all MATCH (n:L) DELETE n RETURN 1"
+    val query2 = "CYPHER runtime=pipelined MATCH (n:L) DELETE n RETURN 1"
 
     execute(query1).executionPlanDescription() should haveRuntime("PIPELINED")
     execute(query2).executionPlanDescription() shouldNot haveRuntime("PIPELINED")

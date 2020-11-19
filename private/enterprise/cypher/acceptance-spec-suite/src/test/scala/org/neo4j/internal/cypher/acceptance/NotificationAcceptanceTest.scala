@@ -127,12 +127,12 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
 
   test("Warn unsupported runtime with explain and runtime=pipelined") {
     val result = executeSingle(
-      "EXPLAIN CYPHER runtime=pipelined CREATE()", Map.empty)
+      "EXPLAIN CYPHER runtime=pipelined MATCH (n) DELETE n", Map.empty)
 
     result.notifications.toList should equal(List(
       RUNTIME_UNSUPPORTED.notification(graphdb.InputPosition.empty,
         NotificationDetail.Factory.message("Runtime unsupported",
-          "Pipelined does not yet support the plans including `Create`, use another runtime."))))
+          "Pipelined does not yet support the plans including `DeleteNode`, use another runtime."))))
   }
 
   test("warn once when a single index hint cannot be fulfilled") {

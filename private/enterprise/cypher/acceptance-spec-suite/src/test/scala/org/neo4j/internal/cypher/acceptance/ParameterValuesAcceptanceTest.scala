@@ -211,7 +211,7 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   test("match with missing parameter should return error for non-empty db") {
-    failWithError(Configs.InterpretedAndSlotted, "CREATE (n:Person) WITH n MATCH (n:Person {name:$name}) RETURN n", "Expected parameter(s): name")
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, "CREATE (n:Person) WITH n MATCH (n:Person {name:$name}) RETURN n", "Expected parameter(s): name")
   }
 
   test("match with multiple missing parameters should return error for empty db") {
@@ -219,7 +219,7 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   test("match with multiple missing parameters should return error for non-empty db") {
-    failWithError(Configs.InterpretedAndSlotted, "CREATE (n:Person) WITH n MATCH (n:Person {name:$name, age:$age}) RETURN n", "Expected parameter(s): name, age")
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, "CREATE (n:Person) WITH n MATCH (n:Person {name:$name, age:$age}) RETURN n", "Expected parameter(s): name, age")
   }
 
   test("match with misspelled parameter should return error for empty db") {
@@ -227,7 +227,7 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   test("match with misspelled parameter should return error for non-empty db") {
-    failWithError(Configs.InterpretedAndSlotted, "CREATE (n:Person) WITH n MATCH (n:Person {name:$name}) RETURN n", "Expected parameter(s): name", params = Map("nam" -> "Neo"))
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, "CREATE (n:Person) WITH n MATCH (n:Person {name:$name}) RETURN n", "Expected parameter(s): name", params = Map("nam" -> "Neo"))
   }
 
   test("name of missing parameters should only be returned once") {
@@ -239,7 +239,7 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   test("explain with missing parameter should NOT return error for non-empty db") {
-    executeWith(Configs.InterpretedAndSlotted, "EXPLAIN CREATE (n:Person) WITH n MATCH (n:Person {name:$name}) RETURN n")
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "EXPLAIN CREATE (n:Person) WITH n MATCH (n:Person {name:$name}) RETURN n")
   }
 
   test("merge and update using nested parameters list") {
