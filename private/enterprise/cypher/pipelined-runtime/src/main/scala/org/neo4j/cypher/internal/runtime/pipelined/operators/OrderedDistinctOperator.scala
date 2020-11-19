@@ -59,7 +59,6 @@ class OrderedDistinctOperator(argumentStateMapId: ArgumentStateMapId,
 
     private var prevOrderedGroupingKey: orderedGroupings.KeyType = _
     private var seen: DistinctSet[unorderedGroupings.KeyType] = _
-    memoryTracker.allocateHeap(OrderedDistinctState.SHALLOW_SIZE)
 
     override def filterOrProject(row: ReadWriteRow, queryState: QueryState): Boolean = {
       val orderedGroupingKey = orderedGroupings.computeGroupingKey(row, queryState)
@@ -82,14 +81,13 @@ class OrderedDistinctOperator(argumentStateMapId: ArgumentStateMapId,
     }
 
     override def close(): Unit = {
-      memoryTracker.releaseHeap(OrderedDistinctState.SHALLOW_SIZE)
       seen.close()
       seen = null
       super.close()
     }
     override def toString: String = s"OrderedDistinctState($argumentRowId)"
 
-    override def shallowSize: Long = OrderedDistinctState.SHALLOW_SIZE
+    override final def shallowSize: Long = OrderedDistinctState.SHALLOW_SIZE
   }
 
   object OrderedDistinctState {

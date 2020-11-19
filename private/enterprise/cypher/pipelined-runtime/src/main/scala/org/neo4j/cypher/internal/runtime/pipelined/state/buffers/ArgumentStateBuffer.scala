@@ -12,7 +12,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 
@@ -21,11 +20,9 @@ import org.neo4j.memory.MemoryTracker
  */
 class ArgumentStateBuffer(override val argumentRowId: Long,
                           inner: Buffer[Morsel],
-                          override val argumentRowIdsForReducers: Array[Long],
-                          memoryTracker: MemoryTracker)
+                          override val argumentRowIdsForReducers: Array[Long])
   extends MorselAccumulator[Morsel]
   with Buffer[Morsel] {
-  memoryTracker.allocateHeap(ArgumentStateBuffer.SHALLOW_SIZE)
 
   // MorselAccumulator
   override def update(morsel: Morsel, resources: QueryResources): Unit = put(morsel, resources)
@@ -41,7 +38,6 @@ class ArgumentStateBuffer(override val argumentRowId: Long,
   override def foreach(f: Morsel => Unit): Unit = inner.foreach(f)
 
   override def close(): Unit = {
-    memoryTracker.releaseHeap(ArgumentStateBuffer.SHALLOW_SIZE)
     inner.close()
   }
 
@@ -49,7 +45,7 @@ class ArgumentStateBuffer(override val argumentRowId: Long,
     s"${getClass.getSimpleName}(argumentRowId=$argumentRowId, inner=$inner)"
   }
 
-  override def shallowSize: Long = ArgumentStateBuffer.SHALLOW_SIZE
+  override def shallowSize: Long = ArgumentStateBuffer.SHALLOW_SIZE // NOTE: This is not final since it is overridden by ArgumentStreamArgumentStateBuffer
 }
 
 object ArgumentStateBuffer {
@@ -60,9 +56,9 @@ object ArgumentStateBuffer {
                                           argumentMorsel: MorselReadCursor,
                                           argumentRowIdsForReducers: Array[Long],
                                           memoryTracker: MemoryTracker): ArgumentStateBuffer =
-      new ArgumentStateBuffer(argumentRowId, stateFactory.newBuffer[Morsel](operatorId), argumentRowIdsForReducers, memoryTracker)
+      new ArgumentStateBuffer(argumentRowId, stateFactory.newBuffer[Morsel](operatorId), argumentRowIdsForReducers)
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
-      new ArgumentStateBuffer(argumentRowId, stateFactory.newBuffer[Morsel](operatorId), argumentRowIdsForReducers, EmptyMemoryTracker.INSTANCE)
+      new ArgumentStateBuffer(argumentRowId, stateFactory.newBuffer[Morsel](operatorId), argumentRowIdsForReducers)
   }
 }

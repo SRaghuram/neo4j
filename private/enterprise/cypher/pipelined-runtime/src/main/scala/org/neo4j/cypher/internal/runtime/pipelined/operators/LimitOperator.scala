@@ -62,7 +62,7 @@ object LimitOperator {
                                           argumentMorsel: MorselReadCursor,
                                           argumentRowIdsForReducers: Array[Long],
                                           memoryTracker: MemoryTracker): LimitState =
-      new StandardCountingState(argumentRowId, count, argumentRowIdsForReducers, memoryTracker) with LimitState
+      new StandardCountingState(argumentRowId, count, argumentRowIdsForReducers) with LimitState
 
     override def newConcurrentArgumentState(argumentRowId: Long,
                                             argumentMorsel: MorselReadCursor,
@@ -221,7 +221,7 @@ object SerialTopLevelLimitOperatorTaskTemplate {
                                           argumentMorsel: MorselReadCursor,
                                           argumentRowIdsForReducers: Array[Long],
                                           memoryTracker: MemoryTracker): LimitState =
-      new StandardSerialLimitState(argumentRowId, argumentRowIdsForReducers, memoryTracker)
+      new StandardSerialLimitState(argumentRowId, argumentRowIdsForReducers)
 
     override def newConcurrentArgumentState(argumentRowId: Long,
                                             argumentMorsel: MorselReadCursor,
@@ -233,9 +233,7 @@ object SerialTopLevelLimitOperatorTaskTemplate {
   }
 
   class StandardSerialLimitState(override val argumentRowId: Long,
-                                 override val argumentRowIdsForReducers: Array[Long],
-                                 memoryTracker: MemoryTracker) extends SerialCountingState with LimitState {
-    memoryTracker.allocateHeap(StandardSerialLimitState.SHALLOW_SIZE)
+                                 override val argumentRowIdsForReducers: Array[Long]) extends SerialCountingState with LimitState {
     private var countLeft: Long = -1L
 
     override protected def getCount: Long = countLeft
@@ -243,12 +241,7 @@ object SerialTopLevelLimitOperatorTaskTemplate {
     override def toString: String = s"StandardSerialTopLevelLimitState($argumentRowId, countLeft=$countLeft)"
     override def isCancelled: Boolean = getCount == 0
 
-    override def close(): Unit = {
-      memoryTracker.releaseHeap(StandardSerialLimitState.SHALLOW_SIZE)
-      super.close()
-    }
-
-    override def shallowSize: Long = StandardSerialLimitState.SHALLOW_SIZE
+    override final def shallowSize: Long = StandardSerialLimitState.SHALLOW_SIZE
   }
 
   object StandardSerialLimitState {
@@ -270,7 +263,7 @@ object SerialTopLevelLimitOperatorTaskTemplate {
     override def toString: String = s"VolatileSerialTopLevelLimitState($argumentRowId, countLeft=$countLeft)"
     override def isCancelled: Boolean = getCount == 0
 
-    override def shallowSize: Long = VolatileSerialLimitState.SHALLOW_SIZE
+    override final def shallowSize: Long = VolatileSerialLimitState.SHALLOW_SIZE
   }
 
   object VolatileSerialLimitState {

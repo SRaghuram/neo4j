@@ -12,7 +12,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
-import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 
@@ -22,18 +21,10 @@ import org.neo4j.memory.MemoryTracker
 case class AggregatedRowAccumulator(override val argumentRowId: Long,
                                     override val argumentRowIdsForReducers: Array[Long],
                                     argumentRow: MorselRow,
-                                    aggregatorRow: AggregatedRow,
-                                    memoryTracker: MemoryTracker) extends MorselAccumulator[AnyRef] {
-  memoryTracker.allocateHeap(AggregatedRowAccumulator.SHALLOW_SIZE)
-
+                                    aggregatorRow: AggregatedRow) extends MorselAccumulator[AnyRef] {
   override def update(data: AnyRef, resources: QueryResources): Unit = {}
 
-  override def close(): Unit = {
-    memoryTracker.releaseHeap(AggregatedRowAccumulator.SHALLOW_SIZE)
-    super.close()
-  }
-
-  override def shallowSize: Long = AggregatedRowAccumulator.SHALLOW_SIZE
+  override final def shallowSize: Long = AggregatedRowAccumulator.SHALLOW_SIZE
 }
 
 object AggregatedRowAccumulator {
@@ -60,7 +51,7 @@ object AggregatedRowAccumulator {
           new StandardAggregators(reducers)
         } else {
           new StandardDirectAggregators(reducers)
-        }, memoryTracker)
+        })
     }
 
     override def newConcurrentArgumentState(argumentRowId: Long,
@@ -70,7 +61,7 @@ object AggregatedRowAccumulator {
         argumentRowId,
         argumentRowIdsForReducers,
         argumentMorsel.snapshot(),
-        new ConcurrentAggregators(aggregators.map(_.newConcurrentReducer), numberOfWorkers),
-        EmptyMemoryTracker.INSTANCE)
+        new ConcurrentAggregators(aggregators.map(_.newConcurrentReducer), numberOfWorkers)
+      )
   }
 }

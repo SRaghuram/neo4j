@@ -82,8 +82,6 @@ class StandardAggregationMap(override val argumentRowId: Long,
                              override val argumentRowIdsForReducers: Array[Long],
                              override val argumentRow: MorselRow,
                              memoryTracker: MemoryTracker) extends AggregatedRowMap {
-  memoryTracker.allocateHeap(StandardAggregationMap.SHALLOW_SIZE)
-
   private[this] val reducerMap: HeapTrackingOrderedAppendMap[AnyValue, StandardAggregators] =
     HeapTrackingOrderedAppendMap.createOrderedMap[AnyValue, StandardAggregators](memoryTracker)
   private[this] val estimatedShallowSizeOfMapValue =
@@ -118,12 +116,11 @@ class StandardAggregationMap(override val argumentRowId: Long,
     reducerMap.autoClosingEntryIterator().asInstanceOf[java.util.Iterator[java.util.Map.Entry[AnyValue, AggregatedRow]]]
 
   override def close(): Unit = {
-    memoryTracker.releaseHeap(StandardAggregationMap.SHALLOW_SIZE)
     reducerMap.close()
     super.close()
   }
 
-  override def shallowSize: Long = StandardAggregationMap.SHALLOW_SIZE
+  override final def shallowSize: Long = StandardAggregationMap.SHALLOW_SIZE
 }
 
 object StandardAggregationMap {
@@ -199,7 +196,7 @@ class ConcurrentAggregationMap(override val argumentRowId: Long,
     new ConcurrentAggregators(reducers, numberOfWorkers)
   }
 
-  override def shallowSize: Long = ConcurrentAggregationMap.SHALLOW_SIZE
+  override final def shallowSize: Long = ConcurrentAggregationMap.SHALLOW_SIZE
 }
 
 object ConcurrentAggregationMap {

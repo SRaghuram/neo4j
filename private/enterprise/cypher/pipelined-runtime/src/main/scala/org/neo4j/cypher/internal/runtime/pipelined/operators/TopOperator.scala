@@ -175,14 +175,14 @@ object TopOperator {
   class Factory(memoryTracker: MemoryTracker, comparator: Comparator[ReadableRow], limit: Long) extends ArgumentStateFactory[TopTable] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], memoryTracker: MemoryTracker): TopTable =
       if (limit <= 0) {
-        ZeroTable(argumentRowId, argumentRowIdsForReducers, memoryTracker)
+        ZeroTable(argumentRowId, argumentRowIdsForReducers)
       } else {
         new StandardTopTable(argumentRowId, argumentRowIdsForReducers, memoryTracker, comparator, limit)
       }
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): TopTable =
       if (limit <= 0) {
-        ZeroTable(argumentRowId, argumentRowIdsForReducers, EmptyMemoryTracker.INSTANCE)
+        ZeroTable(argumentRowId, argumentRowIdsForReducers)
       } else {
         new ConcurrentTopTable(argumentRowId, argumentRowIdsForReducers, comparator, limit)
       }
@@ -207,9 +207,7 @@ object TopOperator {
   }
 
   case class ZeroTable(override val argumentRowId: Long,
-                       override val argumentRowIdsForReducers: Array[Long],
-                       memoryTracker: MemoryTracker) extends TopTable {
-    memoryTracker.allocateHeap(ZeroTable.SHALLOW_SIZE)
+                       override val argumentRowIdsForReducers: Array[Long]) extends TopTable {
     // expected to be called by reduce task
     override protected def getTopRows: util.Iterator[MorselRow] = util.Collections.emptyIterator()
 
@@ -219,12 +217,7 @@ object TopOperator {
     private def error() =
       throw new IllegalStateException("Top table method should never be called with LIMIT 0")
 
-    override def close(): Unit = {
-      memoryTracker.releaseHeap(ZeroTable.SHALLOW_SIZE)
-      super.close()
-    }
-
-    override def shallowSize: Long = ZeroTable.SHALLOW_SIZE
+    override final def shallowSize: Long = ZeroTable.SHALLOW_SIZE
   }
 
   object ZeroTable {
@@ -236,7 +229,6 @@ object TopOperator {
                          memoryTracker: MemoryTracker,
                          comparator: Comparator[ReadableRow],
                          limit: Long) extends TopTable {
-    memoryTracker.allocateHeap(StandardTopTable.SHALLOW_SIZE)
     private val topTable = new DefaultComparatorTopTable(comparator, limit, memoryTracker)
     private var totalTopHeapUsage = 0L
     private var morselCount = 0L
@@ -261,7 +253,6 @@ object TopOperator {
 
     override def close(): Unit = {
       memoryTracker.releaseHeap(totalTopHeapUsage)
-      memoryTracker.releaseHeap(StandardTopTable.SHALLOW_SIZE)
       totalTopHeapUsage = 0
       topTable.close()
     }
@@ -271,7 +262,7 @@ object TopOperator {
       topTable.iterator().asInstanceOf[util.Iterator[MorselRow]]
     }
 
-    override def shallowSize: Long = StandardTopTable.SHALLOW_SIZE
+    override final def shallowSize: Long = StandardTopTable.SHALLOW_SIZE
   }
 
   object StandardTopTable {
@@ -309,7 +300,7 @@ object TopOperator {
       }
     }
 
-    override def shallowSize = ConcurrentTopTable.SHALLOW_SIZE
+    override final def shallowSize: Long = ConcurrentTopTable.SHALLOW_SIZE
   }
 
   object ConcurrentTopTable {

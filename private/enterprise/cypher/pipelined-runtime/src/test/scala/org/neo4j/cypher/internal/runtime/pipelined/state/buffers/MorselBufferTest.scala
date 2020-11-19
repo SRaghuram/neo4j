@@ -461,18 +461,12 @@ class MorselBufferTest extends MorselUnitTest with MorselTestHelper {
       decrements(argumentRowId) = decrements.getOrElseUpdate(argumentRowId, 0) + 1
   }
 
-  class StaticCanceller(override val isCancelled: Boolean, val argumentRowId: Long, memoryTracker: MemoryTracker) extends WorkCanceller {
-    memoryTracker.allocateHeap(StaticCanceller.SHALLOW_SIZE)
+  class StaticCanceller(override val isCancelled: Boolean, val argumentRowId: Long) extends WorkCanceller {
     override def argumentRowIdsForReducers: Array[Long] = ???
 
     override def remaining: Long = if (isCancelled) 0L else Long.MaxValue
 
-    override def close(): Unit = {
-      memoryTracker.releaseHeap(StaticCanceller.SHALLOW_SIZE)
-      super.close()
-    }
-
-    override def shallowSize: Long = StaticCanceller.SHALLOW_SIZE
+    override final def shallowSize: Long = StaticCanceller.SHALLOW_SIZE
   }
 
   object StaticCanceller {
@@ -484,7 +478,7 @@ class MorselBufferTest extends MorselUnitTest with MorselTestHelper {
                                           argumentMorsel: MorselReadCursor,
                                           argumentRowIdsForReducers: Array[Long],
                                           memoryTracker: MemoryTracker): StaticCanceller =
-      new StaticCanceller(predicate(argumentRowId), argumentRowId, memoryTracker)
+      new StaticCanceller(predicate(argumentRowId), argumentRowId)
 
     override def newConcurrentArgumentState(argumentRowId: Long,
                                             argumentMorsel: MorselReadCursor,

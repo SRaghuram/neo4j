@@ -184,7 +184,7 @@ object DistinctOperator {
 
     override def toString: String = s"StandardDistinctState($argumentRowId)"
 
-    override def shallowSize: Long = StandardDistinctState.SHALLOW_SIZE
+    override final def shallowSize: Long = StandardDistinctState.SHALLOW_SIZE
   }
 
   object StandardDistinctState {
@@ -204,7 +204,7 @@ object DistinctOperator {
 
     override def toString: String = s"ConcurrentDistinctState($argumentRowId)"
 
-    override def shallowSize: Long = ConcurrentDistinctState.SHALLOW_SIZE
+    override final def shallowSize: Long = ConcurrentDistinctState.SHALLOW_SIZE
   }
 
   object ConcurrentDistinctState {

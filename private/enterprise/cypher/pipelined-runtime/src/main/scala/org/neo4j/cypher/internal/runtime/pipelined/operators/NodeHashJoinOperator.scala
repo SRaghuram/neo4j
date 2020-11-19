@@ -124,7 +124,7 @@ object NodeHashJoinOperator {
   }
 
   class StandardHashTable(override val argumentRowId: Long,
-                          lhsKeyOffsets: KeyOffsets,
+                          lhsKeyOffsets: KeyOffsets, // REV: Why not use the getters from SlotConfiguration instead of this? Also re-specialize the all primitive case
                           override val argumentRowIdsForReducers: Array[Long],
                           memoryTracker: MemoryTracker,
                           acceptNulls: Boolean = false) extends HashTable {
@@ -132,8 +132,6 @@ object NodeHashJoinOperator {
 
     private val lhsOffsets: Array[Int] = lhsKeyOffsets.offsets
     private val lhsIsReference: Array[Boolean] = lhsKeyOffsets.isReference
-
-    memoryTracker.allocateHeap(StandardHashTable.SHALLOW_SIZE)
 
     // This is update from LHS, i.e. we need to put stuff into a hash table
     override def update(morsel: Morsel, resources: QueryResources): Unit = {
@@ -163,12 +161,11 @@ object NodeHashJoinOperator {
     override def keys: util.Set[Value] = table.keySet()
 
     override def close(): Unit = {
-      memoryTracker.releaseHeap(StandardHashTable.SHALLOW_SIZE)
       table.close()
       super.close()
     }
 
-    override def shallowSize: Long = StandardHashTable.SHALLOW_SIZE
+    override final def shallowSize: Long = StandardHashTable.SHALLOW_SIZE
   }
 
   object StandardHashTable {
@@ -216,7 +213,7 @@ object NodeHashJoinOperator {
 
     override def keys: util.Set[Value] = table.keySet()
 
-    override def shallowSize: Long = ConcurrentHashTable.SHALLOW_SIZE
+    override final def shallowSize: Long = ConcurrentHashTable.SHALLOW_SIZE
   }
 
   object ConcurrentHashTable {

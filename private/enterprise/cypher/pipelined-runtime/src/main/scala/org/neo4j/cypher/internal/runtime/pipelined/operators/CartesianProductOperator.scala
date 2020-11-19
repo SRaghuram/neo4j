@@ -23,7 +23,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselAttachBuffer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 
@@ -88,10 +87,8 @@ object CartesianProductOperator {
 
   class LHSMorsel(override val argumentRowId: Long,
                   val lhsMorsel: Morsel,
-                  override val argumentRowIdsForReducers: Array[Long],
-                  memoryTracker: MemoryTracker)
+                  override val argumentRowIdsForReducers: Array[Long])
     extends MorselAccumulator[Morsel] {
-    memoryTracker.allocateHeap(LHSMorsel.SHALLOW_SIZE)
 
     override def update(morsel: Morsel, resources: QueryResources): Unit =
       throw new IllegalStateException("LHSMorsel is complete on construction, and cannot be further updated.")
@@ -100,12 +97,7 @@ object CartesianProductOperator {
       s"LHSMorsel(argumentRowId=$argumentRowId)"
     }
 
-    override def close(): Unit = {
-      memoryTracker.releaseHeap(LHSMorsel.SHALLOW_SIZE)
-      super.close()
-    }
-
-    override def shallowSize: Long = LHSMorsel.SHALLOW_SIZE
+    override final def shallowSize: Long = LHSMorsel.SHALLOW_SIZE
   }
 
   object LHSMorsel {
@@ -120,11 +112,11 @@ object CartesianProductOperator {
                                             argumentMorsel: MorselReadCursor,
                                             argumentRowIdsForReducers: Array[Long],
                                             memoryTracker: MemoryTracker): LHSMorsel =
-        new LHSMorsel(argumentRowId, argumentMorsel.morsel.detach(), argumentRowIdsForReducers, memoryTracker)
+        new LHSMorsel(argumentRowId, argumentMorsel.morsel.detach(), argumentRowIdsForReducers)
 
       override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor,
                                               argumentRowIdsForReducers: Array[Long]): LHSMorsel =
-        new LHSMorsel(argumentRowId, argumentMorsel.morsel.detach(), argumentRowIdsForReducers, EmptyMemoryTracker.INSTANCE)
+        new LHSMorsel(argumentRowId, argumentMorsel.morsel.detach(), argumentRowIdsForReducers)
 
       override def completeOnConstruction: Boolean = true
     }

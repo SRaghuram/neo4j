@@ -132,8 +132,6 @@ object NodeHashJoinSingleNodeOperator {
     private val lhsOffset: Int = lhsKeyOffset.offset
     private val lhsIsReference: Boolean = lhsKeyOffset.isReference
 
-    memoryTracker.allocateHeap(StandardHashTable.SHALLOW_SIZE)
-
     // This is update from LHS, i.e. we need to put stuff into a hash table
     override def update(morsel: Morsel, resources: QueryResources): Unit = {
       val cursor = morsel.readCursor()
@@ -159,11 +157,10 @@ object NodeHashJoinSingleNodeOperator {
 
     override def close(): Unit = {
       table.close()
-      memoryTracker.releaseHeap(StandardHashTable.SHALLOW_SIZE)
       super.close()
     }
 
-    override def shallowSize: Long = StandardHashTable.SHALLOW_SIZE
+    override final def shallowSize: Long = StandardHashTable.SHALLOW_SIZE
   }
 
   object StandardHashTable {
@@ -205,7 +202,7 @@ object NodeHashJoinSingleNodeOperator {
         lhsRows.iterator()
     }
 
-    override def shallowSize: Long = ConcurrentHashTable.SHALLOW_SIZE
+    override final def shallowSize: Long = ConcurrentHashTable.SHALLOW_SIZE
   }
 
   object ConcurrentHashTable {

@@ -121,7 +121,6 @@ object ValueHashJoinOperator {
                           state: PipelinedQueryState,
                           memoryTracker: MemoryTracker) extends HashTable {
     private val table = ProbeTable.createProbeTable[AnyValue, Morsel]( memoryTracker )
-    memoryTracker.allocateHeap(StandardHashTable.SHALLOW_SIZE)
 
     // This is update from LHS, i.e. we need to put stuff into a hash table
     override def update(morsel: Morsel, resources: QueryResources): Unit = {
@@ -141,12 +140,11 @@ object ValueHashJoinOperator {
     }
 
     override def close(): Unit = {
-      memoryTracker.releaseHeap(StandardHashTable.SHALLOW_SIZE)
       table.close()
       super.close()
     }
 
-    override def shallowSize = StandardHashTable.SHALLOW_SIZE
+    override final def shallowSize: Long = StandardHashTable.SHALLOW_SIZE
   }
 
   object StandardHashTable {
@@ -180,7 +178,7 @@ object ValueHashJoinOperator {
         lhsRows.iterator()
     }
 
-    override def shallowSize: Long = ConcurrentHashTable.SHALLOW_SIZE
+    override final def shallowSize: Long = ConcurrentHashTable.SHALLOW_SIZE
   }
 
   object ConcurrentHashTable {

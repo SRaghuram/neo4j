@@ -45,7 +45,6 @@ import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.api.StatementConstants
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
-import org.neo4j.memory.ScopedMemoryTracker
 import org.neo4j.values.storable.Value
 import org.neo4j.values.storable.Values
 
@@ -248,10 +247,9 @@ object NodeLeftOuterHashJoinOperator {
   }
 
   class StandardHashTableAndSet(val hashTable: HashTable, memoryTracker: MemoryTracker) extends HashTableAndSet {
-    private val scopedMemoryTracker = new ScopedMemoryTracker(memoryTracker)
+    private val scopedMemoryTracker = memoryTracker.getScopedMemoryTracker
     private val rhsKeys: MutableSet[Value] = HeapTrackingCollections.newSet[Value](scopedMemoryTracker)
 
-    scopedMemoryTracker.allocateHeap(StandardHashTableAndSet.SHALLOW_SIZE)
     override def update(data: Morsel, resources: QueryResources): Unit = hashTable.update(data, resources)
 
     override def argumentRowId: Long = hashTable.argumentRowId
@@ -268,7 +266,7 @@ object NodeLeftOuterHashJoinOperator {
       scopedMemoryTracker.close()
     }
 
-    override def shallowSize: Long = StandardHashTableAndSet.SHALLOW_SIZE
+    override final def shallowSize: Long = StandardHashTableAndSet.SHALLOW_SIZE
   }
 
   object StandardHashTableAndSet {
@@ -293,7 +291,7 @@ object NodeLeftOuterHashJoinOperator {
     override def close(): Unit = {
     }
 
-    override def shallowSize: Long = ConcurrentHashTableAndSet.SHALLOW_SIZE
+    override final def shallowSize: Long = ConcurrentHashTableAndSet.SHALLOW_SIZE
   }
 
   object ConcurrentHashTableAndSet {

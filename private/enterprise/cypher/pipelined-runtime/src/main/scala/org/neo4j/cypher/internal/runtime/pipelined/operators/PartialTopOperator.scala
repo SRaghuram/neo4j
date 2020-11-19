@@ -35,9 +35,8 @@ import org.neo4j.internal.helpers.ArrayUtil
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 
-class PartialTopWorkCanceller(override val argumentRowId: Long, limit: Int, memoryTracker: MemoryTracker) extends WorkCanceller {
+class PartialTopWorkCanceller(override val argumentRowId: Long, limit: Int) extends WorkCanceller {
   private var _remaining: Long = limit
-  memoryTracker.allocateHeap(PartialTopWorkCanceller.SHALLOW_SIZE)
 
   override def isCancelled: Boolean = _remaining <= 0
   override def remaining: Long = _remaining
@@ -48,12 +47,7 @@ class PartialTopWorkCanceller(override val argumentRowId: Long, limit: Int, memo
   override def toString: String =
     s"PartialTopWorkCanceller(argumentRowId=$argumentRowId, remaining=$remaining)"
 
-  override def shallowSize: Long = PartialTopWorkCanceller.SHALLOW_SIZE
-
-  override def close(): Unit = {
-    memoryTracker.releaseHeap(PartialTopWorkCanceller.SHALLOW_SIZE)
-    super.close()
-  }
+  override final def shallowSize: Long = PartialTopWorkCanceller.SHALLOW_SIZE
 }
 
 object PartialTopWorkCanceller {
@@ -64,7 +58,7 @@ object PartialTopWorkCanceller {
                                           argumentMorsel: MorselReadCursor,
                                           argumentRowIdsForReducers: Array[Long],
                                           memoryTracker: MemoryTracker): PartialTopWorkCanceller =
-      new PartialTopWorkCanceller(argumentRowId, limit, memoryTracker)
+      new PartialTopWorkCanceller(argumentRowId, limit)
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): PartialTopWorkCanceller =
       throw new IllegalStateException("PartialTop is not supported in parallel")

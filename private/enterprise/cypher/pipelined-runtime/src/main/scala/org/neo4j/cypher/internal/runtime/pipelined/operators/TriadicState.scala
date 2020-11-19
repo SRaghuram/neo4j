@@ -18,7 +18,6 @@ import org.neo4j.memory.MemoryTracker
 class TriadicState(override val argumentRowId: Long,
                    override val argumentRowIdsForReducers: Array[Long],
                    memoryTracker: MemoryTracker) extends ArgumentState {
-  memoryTracker.allocateHeap(TriadicState.SHALLOW_SIZE)
 
   private case class Chunk(sourceId: Long, seenIds: HeapTrackingLongHashSet)
 
@@ -48,7 +47,6 @@ class TriadicState(override val argumentRowId: Long,
   }
 
   override def close(): Unit = {
-    memoryTracker.releaseHeap(TriadicState.SHALLOW_SIZE)
     seenChunks.forEach(_.seenIds.close())
     seenChunks.close()
     super.close()
@@ -56,7 +54,7 @@ class TriadicState(override val argumentRowId: Long,
 
   override def toString: String = s"TriadicState($argumentRowId)"
 
-  override def shallowSize: Long = TriadicState.SHALLOW_SIZE
+  override final def shallowSize: Long = TriadicState.SHALLOW_SIZE
 }
 
 object TriadicState {

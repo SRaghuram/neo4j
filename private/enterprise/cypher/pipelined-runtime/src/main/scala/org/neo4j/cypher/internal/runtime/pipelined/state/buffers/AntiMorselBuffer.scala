@@ -143,7 +143,7 @@ object AntiArgumentState {
                                           argumentMorsel: MorselReadCursor,
                                           argumentRowIdsForReducers: Array[Long],
                                           memoryTracker: MemoryTracker): AntiArgumentState =
-      new StandardAntiArgumentState(argumentRowId, argumentMorsel.snapshot(), argumentRowIdsForReducers, memoryTracker)
+      new StandardAntiArgumentState(argumentRowId, argumentMorsel.snapshot(), argumentRowIdsForReducers)
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): AntiArgumentState =
       new ConcurrentAntiArgumentState(argumentRowId, argumentMorsel.snapshot(), argumentRowIdsForReducers)
@@ -151,9 +151,7 @@ object AntiArgumentState {
 
   class StandardAntiArgumentState(override val argumentRowId: Long,
                                   override val argumentRow: MorselRow,
-                                  override val argumentRowIdsForReducers: Array[Long],
-                                  memoryTracker: MemoryTracker) extends AntiArgumentState {
-    memoryTracker.allocateHeap(StandardAntiArgumentState.SHALLOW_SIZE)
+                                  override val argumentRowIdsForReducers: Array[Long]) extends AntiArgumentState {
 
     private var _didReceiveData: Boolean = false
 
@@ -162,15 +160,10 @@ object AntiArgumentState {
     override def update(data: Morsel, resources: QueryResources): Unit = _didReceiveData = true
 
     override def toString: String = {
-      s"StandardAntiArgumentState(argumentRowId=$argumentRowId, argumentRowIdsForReducers=[${argumentRowIdsForReducers.mkString(",")}], argumentMorsel=$argumentRow)"
+      s"StandardAntiArgumentState(argumentRowId=$argumentRowId, argu\\mentRowIdsForReducers=[${argumentRowIdsForReducers.mkString(",")}], argumentMorsel=$argumentRow)"
     }
 
-    override def close(): Unit = {
-      memoryTracker.releaseHeap(StandardAntiArgumentState.SHALLOW_SIZE)
-      super.close()
-    }
-
-    override def shallowSize: Long = StandardAntiArgumentState.SHALLOW_SIZE
+    override final def shallowSize: Long = StandardAntiArgumentState.SHALLOW_SIZE
   }
 
   object StandardAntiArgumentState {
@@ -192,7 +185,7 @@ object AntiArgumentState {
       s"ConcurrentAntiArgumentState(argumentRowId=$argumentRowId, argumentRowIdsForReducers=[${argumentRowIdsForReducers.mkString(",")}], argumentMorsel=$argumentRow)"
     }
 
-    override def shallowSize: Long = ConcurrentAntiArgumentState.SHALLOW_SIZE
+    override final def shallowSize: Long = ConcurrentAntiArgumentState.SHALLOW_SIZE
   }
 
   object ConcurrentAntiArgumentState {
