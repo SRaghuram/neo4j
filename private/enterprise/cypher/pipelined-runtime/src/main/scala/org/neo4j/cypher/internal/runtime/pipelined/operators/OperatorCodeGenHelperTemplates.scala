@@ -90,6 +90,8 @@ import org.neo4j.internal.kernel.api.NodeValueIndexCursor
 import org.neo4j.internal.kernel.api.PropertyCursor
 import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
+import org.neo4j.internal.kernel.api.TokenWrite
+import org.neo4j.internal.kernel.api.Write
 import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.memory.EmptyMemoryTracker
@@ -136,6 +138,8 @@ object OperatorCodeGenHelperTemplates {
 
   // Constructor parameters
   val DATA_READ_CONSTRUCTOR_PARAMETER: Parameter = param[Read]("dataRead")
+  val DATA_WRITE_CONSTRUCTOR_PARAMETER: Parameter = param[Write]("dataWrite")
+  val TOKEN_WRITE_CONSTRUCTOR_PARAMETER: Parameter = param[TokenWrite]("tokenWrite")
   val INPUT_MORSEL_CONSTRUCTOR_PARAMETER: Parameter = param[Morsel]("inputMorsel")
   val INPUT_MORSEL_DATA_CONSTRUCTOR_PARAMETER: Parameter = param[MorselData]("morselData")
   val ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER: Parameter = param[ArgumentStateMaps]("argumentStateMaps")

@@ -70,6 +70,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ_CONSTRUCTOR_PARAMETER
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_WRITE_CONSTRUCTOR_PARAMETER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.HAS_DEMAND
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.HAS_REMAINING_OUTPUT
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR
@@ -93,6 +94,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATE
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.SET_TRACER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.SHOULD_BREAK
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.TOKEN_WRITE_CONSTRUCTOR_PARAMETER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.UPDATE_DEMAND
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.UPDATE_OUTPUT_COUNTER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.WORK_IDENTITY_STATIC_FIELD_NAME
@@ -119,6 +121,8 @@ import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.Read
 import org.neo4j.memory.MemoryTracker
+import org.neo4j.internal.kernel.api.TokenWrite
+import org.neo4j.internal.kernel.api.Write
 import org.neo4j.values.AnyValue
 
 import scala.collection.mutable
@@ -134,10 +138,13 @@ trait CompiledStreamingOperator extends StreamingOperator {
                                    parallelism: Int,
                                    resources: QueryResources,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
-    singletonIndexedSeq(compiledNextTask(state.queryContext.transactionalContext.dataRead, inputMorsel.nextCopy, argumentStateMaps))
+    val tx = state.queryContext.transactionalContext.transaction
+    singletonIndexedSeq(compiledNextTask(tx.dataRead, tx.dataWrite, tx.tokenWrite, inputMorsel.nextCopy, argumentStateMaps))
   }
 
   protected def compiledNextTask(dataRead: Read,
+                                 dataWrite: Write,
+                                 tokenWrite: TokenWrite,
                                  inputMorsel: Morsel,
                                  argumentStateMaps: ArgumentStateMaps): ContinuableOperatorTaskWithMorsel
 }
@@ -152,16 +159,20 @@ trait CompiledStreamingOperatorWithMorselData extends Operator with DataInputOpe
   override def nextTasks(state: PipelinedQueryState,
                          input: MorselData,
                          argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
-    singletonIndexedSeq(compiledNextTask(state.queryContext.transactionalContext.dataRead, input, argumentStateMaps))
+    val tx = state.queryContext.transactionalContext.transaction
+    singletonIndexedSeq(compiledNextTask(tx.dataRead, tx.dataWrite, tx.tokenWrite, input.asInstanceOf[MorselData], argumentStateMaps))
   }
 
   def nextTasks(state: PipelinedQueryState,
                 input: Object,
                 argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
-    singletonIndexedSeq(compiledNextTask(state.queryContext.transactionalContext.dataRead, input.asInstanceOf[MorselData], argumentStateMaps))
+    val tx = state.queryContext.transactionalContext.transaction
+    singletonIndexedSeq(compiledNextTask(tx.dataRead, tx.dataWrite, tx.tokenWrite, input.asInstanceOf[MorselData], argumentStateMaps))
   }
 
   protected def compiledNextTask(dataRead: Read,
+                                 dataWrite: Write,
+                                 tokenWrite: TokenWrite,
                                  inputMorselData: MorselData,
                                  argumentStateMaps: ArgumentStateMaps): ContinuableOperatorTaskWithMorselData
 
@@ -171,14 +182,22 @@ object CompiledStreamingOperatorWithMorselTemplate extends CompiledStreamingOper
   override protected def genCompiledNextTask(taskClassHandle: ClassHandle): MethodDeclaration = {
     MethodDeclaration("compiledNextTask",
       returnType = typeRefOf[ContinuableOperatorTaskWithMorsel],
-      parameters = Seq(param[Read]("dataRead"),
+      parameters = Seq(
+        param[Read]("dataRead"),
+        param[Write]("dataWrite"),
+        param[TokenWrite]("tokenWrite"),
         param[Morsel]("inputMorsel"),
         param[ArgumentStateMaps]("argumentStateMaps")),
       body = newInstance(Constructor(taskClassHandle,
-        Seq(TypeReference.typeReference(classOf[Read]),
+        Seq(
+          TypeReference.typeReference(classOf[Read]),
+          TypeReference.typeReference(classOf[Write]),
+          TypeReference.typeReference(classOf[TokenWrite]),
           TypeReference.typeReference(classOf[Morsel]),
           TypeReference.typeReference(classOf[ArgumentStateMaps]))),
         load("dataRead"),
+        load("dataWrite"),
+        load("tokenWrite"),
         load("inputMorsel"),
         load("argumentStateMaps")))
   }
@@ -190,14 +209,22 @@ object CompiledStreamingOperatorWithMorselDataTemplate extends CompiledStreaming
   override protected def genCompiledNextTask(taskClassHandle: ClassHandle): MethodDeclaration = {
     MethodDeclaration("compiledNextTask",
       returnType = typeRefOf[ContinuableOperatorTaskWithMorselData],
-      parameters = Seq(param[Read]("dataRead"),
+      parameters = Seq(
+        param[Read]("dataRead"),
+        param[Write]("dataWrite"),
+        param[TokenWrite]("tokenWrite"),
         param[MorselData]("morselData"),
         param[ArgumentStateMaps]("argumentStateMaps")),
       body = newInstance(Constructor(taskClassHandle,
-        Seq(TypeReference.typeReference(classOf[Read]),
+        Seq(
+          TypeReference.typeReference(classOf[Read]),
+          TypeReference.typeReference(classOf[Write]),
+          TypeReference.typeReference(classOf[TokenWrite]),
           TypeReference.typeReference(classOf[MorselData]),
           TypeReference.typeReference(classOf[ArgumentStateMaps]))),
         load("dataRead"),
+        load("dataWrite"),
+        load("tokenWrite"),
         load("morselData"),
         load("argumentStateMaps")))
   }
@@ -727,6 +754,8 @@ object OperatorTaskTemplate {
 trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskTemplate {
   override protected def genConstructorParameters(): Seq[Parameter] = Seq(
     DATA_READ_CONSTRUCTOR_PARAMETER,
+    DATA_WRITE_CONSTRUCTOR_PARAMETER,
+    TOKEN_WRITE_CONSTRUCTOR_PARAMETER,
     INPUT_MORSEL_CONSTRUCTOR_PARAMETER,
     ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER
   )
