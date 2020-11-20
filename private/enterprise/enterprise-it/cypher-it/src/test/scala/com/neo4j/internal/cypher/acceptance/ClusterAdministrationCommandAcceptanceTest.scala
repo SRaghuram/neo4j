@@ -84,6 +84,7 @@ class ClusterAdministrationCommandAcceptanceTest extends CypherFunSuite with Eve
       // THEN
       r.getQueryStatistics.getSystemUpdates shouldBe 1
       r.columnAs[String]("state").forEachRemaining(state => state shouldBe "CaughtUp")
+      tx.commit()
     }
     cluster.coreTx(SYSTEM_DATABASE_NAME, Role.LEADER, work, 3, TimeUnit.MINUTES, "joe", "soap")
 
@@ -104,6 +105,7 @@ class ClusterAdministrationCommandAcceptanceTest extends CypherFunSuite with Eve
       // THEN
       r.getQueryStatistics.getSystemUpdates shouldBe 2
       r.columnAs[String]("state").forEachRemaining(state => state shouldBe "CaughtUp")
+      tx.commit()
     })
 
     // THEN
@@ -126,6 +128,7 @@ class ClusterAdministrationCommandAcceptanceTest extends CypherFunSuite with Eve
         row.get("success") shouldBe true
       })
       r.length shouldBe 1
+      tx.commit()
     })
 
   }
@@ -140,6 +143,7 @@ class ClusterAdministrationCommandAcceptanceTest extends CypherFunSuite with Eve
       // THEN
       r.getQueryStatistics.getSystemUpdates shouldBe 1
       r.columnAs[String]("state").forEachRemaining(state => state shouldBe "CaughtUp")
+      tx.commit()
     })
 
     // THEN
@@ -168,6 +172,7 @@ class ClusterAdministrationCommandAcceptanceTest extends CypherFunSuite with Eve
       // THEN
       r.getQueryStatistics.getSystemUpdates shouldBe 1
       r.columnAs[String]("state").forEachRemaining(state => state shouldBe "CaughtUp")
+      tx.commit()
     })
 
     // THEN
@@ -187,6 +192,7 @@ class ClusterAdministrationCommandAcceptanceTest extends CypherFunSuite with Eve
         row.get("success") shouldBe true
       })
       r.length shouldBe 1
+      tx.commit()
     })
 
   }
@@ -203,6 +209,7 @@ class ClusterAdministrationCommandAcceptanceTest extends CypherFunSuite with Eve
           row.get("requestedStatus") shouldBe "online"
           row.get("currentStatus") shouldBe "online"
         })
+        tx.commit()
       })
     }
 
@@ -212,6 +219,7 @@ class ClusterAdministrationCommandAcceptanceTest extends CypherFunSuite with Eve
       // THEN
       r.getQueryStatistics.getSystemUpdates shouldBe 1
       r.columnAs[String]("state").forEachRemaining(state => state shouldBe "CaughtUp")
+      tx.commit()
     })
 
     // THEN

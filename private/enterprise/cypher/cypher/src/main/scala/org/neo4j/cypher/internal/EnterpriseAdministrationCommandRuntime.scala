@@ -1005,7 +1005,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         },
         nameFields.nameKey,
         waitForCompletion.timeout,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
+        fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping),
         parameterConverter = (t, p) => {
           // For START / STOP / DROP database, lookup the database UUID from the DatabaseIdRepository
           // For CREATE, it won't be there but we pass it through the SystemUpdateCountingQueryContext when
