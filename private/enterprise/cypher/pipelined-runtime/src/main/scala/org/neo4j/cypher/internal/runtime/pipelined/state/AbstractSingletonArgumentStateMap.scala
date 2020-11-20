@@ -194,13 +194,8 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
     }
   }
 
-  override def toString: String = {
-    val sb = new StringBuilder
-    sb ++= "ArgumentStateMap(\n"
-    sb ++= s"0 -> ${if (hasController) controller else null}\n"
-    sb += ')'
-    sb.result()
-  }
+  override def toString: String =
+    s"ArgumentStateMap[$argumentStateMapId](0 -> ${if (hasController) controller else null})"
 }
 
 

@@ -178,7 +178,7 @@ class LHSAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[DATA]](va
 
   override val argumentSlotOffset: Int = lhsArgumentStateMap.argumentSlotOffset
 
-  override def toString: String = s"${getClass.getSimpleName}(planId:${lhsArgumentStateMapId.x}, $lhsArgumentStateMap)"
+  override def toString: String = s"${getClass.getSimpleName}($lhsArgumentStateMap)"
 
   override def put(data: IndexedSeq[PerArgument[DATA]], resources: QueryResources): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
@@ -232,7 +232,7 @@ class RHSStreamingSink(lhsArgumentStateMapId: ArgumentStateMapId,
 
   override val argumentSlotOffset: Int = rhsArgumentStateMap.argumentSlotOffset
 
-  override def toString: String = s"${getClass.getSimpleName}(planId:${rhsArgumentStateMapId.x}, $rhsArgumentStateMap)"
+  override def toString: String = s"${getClass.getSimpleName}($rhsArgumentStateMap)"
 
   override def put(data: IndexedSeq[PerArgument[Morsel]], resources: QueryResources): Unit = {
     if (DebugSupport.BUFFERS.enabled) {

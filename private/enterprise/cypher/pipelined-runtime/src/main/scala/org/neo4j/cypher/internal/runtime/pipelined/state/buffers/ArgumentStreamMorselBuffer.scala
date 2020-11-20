@@ -140,7 +140,7 @@ class ArgumentStreamMorselBuffer(id: BufferId,
   }
 
   override def toString: String =
-    s"ArgumentStreamMorselBuffer(planId: $argumentStateMapId)$argumentStateMap"
+    s"ArgumentStreamMorselBuffer($argumentStateMap)"
 }
 
 // --- Inner Buffer ---

@@ -83,7 +83,7 @@ abstract class BaseArgExistsMorselBuffer[PRODUCES <: AnyRef, S <: ArgumentState]
   }
 
   override def toString: String =
-    s"BaseArgExistsMorselBuffer(planId: $argumentStateMapId)$argumentStateMap"
+    s"BaseArgExistsMorselBuffer($argumentStateMap)"
 }
 
 // --- Messaging protocol ---
