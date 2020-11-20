@@ -123,14 +123,9 @@ object CreateOperator {
   def createNode(labels: Array[Int],
                  write: Write,
                  queryStatisticsTracker: MutableQueryStatistics): Long = {
-    val nodeId = write.nodeCreate()
+    val nodeId = write.nodeCreateWithLabels(labels)
     queryStatisticsTracker.createNode()
-    var i = 0
-    while (i < labels.length) {
-      write.nodeAddLabel(nodeId, labels(i))
-      queryStatisticsTracker.addLabel()
-      i += 1
-    }
+    queryStatisticsTracker.addLabels(labels.length)
     nodeId
   }
 

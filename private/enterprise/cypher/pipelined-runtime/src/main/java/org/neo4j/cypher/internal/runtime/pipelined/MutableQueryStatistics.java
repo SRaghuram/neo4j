@@ -41,6 +41,11 @@ public class MutableQueryStatistics implements QueryStatistics
         addedLabels++;
     }
 
+    public void addLabels( int n )
+    {
+        addedLabels += n;
+    }
+
     public void removeLabel()
     {
         removedLabels++;
