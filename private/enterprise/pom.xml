@@ -31,7 +31,6 @@
         <module>query-logging</module>
         <module>procedure-compiler-enterprise-tests</module>
         <module>metrics</module>
-        <module>deferred-locks</module>
         <module>server-enterprise</module>
         <module>backup</module>
         <module>security</module>

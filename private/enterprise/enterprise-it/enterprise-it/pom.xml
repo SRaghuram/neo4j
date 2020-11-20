@@ -141,12 +141,6 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-deferred-locks</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.neo4j</groupId>
             <artifactId>neo4j-backup</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
