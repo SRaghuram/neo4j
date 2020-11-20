@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.runtime.MemoizingMeasurable
 import org.neo4j.cypher.internal.runtime.NoOpQueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffer
@@ -33,8 +34,9 @@ class ConcurrentStateFactory extends StateFactory {
 
   override def newTracker(subscriber: QuerySubscriber,
                           queryContext: QueryContext,
-                          tracer: QueryExecutionTracer): QueryCompletionTracker =
-    new ConcurrentQueryCompletionTracker(subscriber, queryContext, tracer)
+                          tracer: QueryExecutionTracer,
+                          resouces: QueryResources): QueryCompletionTracker =
+    new ConcurrentQueryCompletionTracker(subscriber, queryContext, tracer, resouces)
 
   override def newIdAllocator(): IdAllocator = new ConcurrentIdAllocator
 

@@ -71,7 +71,8 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
     val stateFactory = new ConcurrentStateFactory
 
     val tracer = schedulerTracer.traceQuery()
-    val tracker = stateFactory.newTracker(subscriber, queryContext, tracer)
+    val initializationResources: QueryResources = workerResourceProvider.resourcesForWorker(0)
+    val tracker = stateFactory.newTracker(subscriber, queryContext, tracer, initializationResources)
 
     val queryState = PipelinedQueryState(queryContext,
                                 params,
@@ -86,7 +87,6 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
                                 inputDataStream,
                                 stateFactory.memoryTracker)
 
-    val initializationResources = workerResourceProvider.resourcesForWorker(0)
     val executionState = new TheExecutionState(executionGraphDefinition,
                                                executablePipelines,
                                                stateFactory,

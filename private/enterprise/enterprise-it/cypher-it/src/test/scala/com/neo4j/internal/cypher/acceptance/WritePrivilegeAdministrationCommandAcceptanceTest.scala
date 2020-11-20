@@ -1396,6 +1396,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     executeOnDBMSDefault("joe", "soap", "MATCH (n) RETURN labels(n)") should be(0)
   }
 
+  //org.neo4j.graphdb.security.AuthorizationViolationException: Create node with labels '' is not allowed for user 'joe' with roles [PUBLIC, custom]. had message "Create node with labels '' is not allowed for user 'joe' with roles [PUBLIC, custom]." instead of expected message
+  //                                                                                                                                                               "Create node with labels 'A' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   test("should create nodes when granted WRITE privilege to custom role for a specific graph") {
     // GIVEN
     execute("CREATE DATABASE foo")

@@ -14,6 +14,7 @@ import org.mockito.Mockito.when
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.QueryStatistics
 import org.neo4j.cypher.internal.runtime.QueryTransactionalContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.kernel.api.KernelTransaction
@@ -22,13 +23,15 @@ import org.neo4j.kernel.impl.query.QuerySubscriber
 class StandardQueryCompletionTrackerTest extends QueryCompletionTrackerTest(false) {
   override def newTracker(): QueryCompletionTracker = new StandardQueryCompletionTracker(subscriber,
     queryContext,
-    tracer)
+    tracer,
+    resources)
 }
 
 class ConcurrentQueryCompletionTrackerTest extends QueryCompletionTrackerTest(true) {
   override def newTracker(): QueryCompletionTracker = new ConcurrentQueryCompletionTracker(subscriber,
     queryContext,
-    tracer)
+    tracer,
+    resources)
 }
 
 abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends CypherFunSuite {
@@ -37,6 +40,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
   protected var queryContext: QueryContext = _
   protected var tracer: QueryExecutionTracer = _
   protected var transaction: KernelTransaction = _
+  protected var resources: QueryResources = _
   protected val stats = QueryStatistics()
 
   def newTracker(): QueryCompletionTracker
@@ -46,6 +50,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     queryContext = mock[QueryContext](RETURNS_DEEP_STUBS)
     tracer = mock[QueryExecutionTracer]
     transaction = mock[KernelTransaction]
+    resources = mock[QueryResources](RETURNS_DEEP_STUBS)
 
     val txContext = mock[QueryTransactionalContext]
     when(queryContext.getOptStatistics).thenReturn(Some(stats))

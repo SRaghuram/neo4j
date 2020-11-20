@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.QueryStatistics
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.FlowControl
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
 import org.neo4j.internal.kernel.api.exceptions.LocksNotFrozenException
 import org.neo4j.kernel.impl.query.QuerySubscriber
@@ -115,7 +116,8 @@ trait QueryCompletionTracker extends FlowControl {
  */
 class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
                                      queryContext: QueryContext,
-                                     tracer: QueryExecutionTracer) extends QueryCompletionTracker {
+                                     tracer: QueryExecutionTracer,
+                                     resources: QueryResources) extends QueryCompletionTracker {
   private var count = 0L
   private var throwable: Throwable = _
   private var demand = 0L
@@ -162,7 +164,7 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
           if (throwable != null) {
             subscriber.onError(throwable)
           } else if (!cancelled) {
-            subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
+            subscriber.onResultCompleted(resources.queryStatisticsTracker)
           }
         } catch {
           case NonFatalCypherError(reportError) =>
@@ -242,7 +244,8 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
  */
 class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
                                        queryContext: QueryContext,
-                                       tracer: QueryExecutionTracer) extends QueryCompletionTracker {
+                                       tracer: QueryExecutionTracer,
+                                       resources: QueryResources) extends QueryCompletionTracker {
 
   // Count of "things" that haven't been closed yet
   private val count = new AtomicLong(0)
@@ -343,7 +346,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
       } else if (_cancelledOrFailed) {
         // Nothing to do for now. Probably a subscriber.onCancelled callback later
       } else {
-        subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
+        subscriber.onResultCompleted(resources.queryStatisticsTracker)
       }
     } catch {
       case reportException: Exception =>

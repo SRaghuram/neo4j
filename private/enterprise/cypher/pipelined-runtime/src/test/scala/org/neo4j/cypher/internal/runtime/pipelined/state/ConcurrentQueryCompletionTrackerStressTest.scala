@@ -12,6 +12,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.pipelined.MutableQueryStatistics
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentQueryCompletionTrackerStressTest.POISON_PILL
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
@@ -84,7 +86,8 @@ class ConcurrentQueryCompletionTrackerStressTest extends CypherFunSuite with Tim
 
           val newQuery = new ConcurrentQueryCompletionTracker(querySubscriber,
             context,
-            executionTracer)
+            executionTracer,
+            mock[QueryResources](RETURNS_DEEP_STUBS))
 
           newQuery.increment()
           ongoingWork.put(newQuery)
