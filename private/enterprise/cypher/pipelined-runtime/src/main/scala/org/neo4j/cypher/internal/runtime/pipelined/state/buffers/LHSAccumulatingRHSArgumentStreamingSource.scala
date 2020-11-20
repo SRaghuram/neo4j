@@ -128,11 +128,14 @@ class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
     })
   }
 
+  override def toString: String = s"${getClass.getSimpleName}(lhs:$lhsArgumentStateMapId, rhs:$rhsArgumentStateMapId)"
+
   override def close(accumulator: MorselAccumulator[_], morselData: MorselData): Unit = {
     val argumentRowIdsForReducers = accumulator.argumentRowIdsForReducers
     val argumentRowId = accumulator.argumentRowId
 
-    val numberOfDecrements = morselData.argumentStream match {
+    val nbrOfMorsels = morselData.morsels.size
+    val nbrOfTrackerDecrements = morselData.argumentStream match {
       case _: EndOfStream =>
         val nullRhsAcc = rhsArgumentStateMap.peek(argumentRowId)
         checkOnlyWhenAssertionsAreEnabled(nullRhsAcc == null, "RHS accumulator should have already been removed in take()")
@@ -140,25 +143,27 @@ class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
         val lhsAccumulator = lhsArgumentStateMap.remove(argumentRowId)
         lhsAccumulator.close()
         // We still need to decrement away the extra increment that came from LHSSink.decrement()
-        morselData.morsels.size /*Count Type: RHS Put per Morsel*/ + 1 /*Count Type: Empty RHS*/
+        nbrOfMorsels /*Count Type: RHS Put per Morsel*/ + 1 /*Count Type: Empty RHS*/
       case _ =>
         // Count Type: RHS Put per Morsel
-        morselData.morsels.size
+        nbrOfMorsels
     }
 
     if (DebugSupport.BUFFERS.enabled) {
-      DebugSupport.BUFFERS.log(s"[close] $this -X- ${morselData.argumentStream} , $numberOfDecrements , $argumentRowIdsForReducers")
+      DebugSupport.BUFFERS.log(s"[close] $this -X- ${morselData.argumentStream} , $nbrOfTrackerDecrements , $argumentRowIdsForReducers")
     }
 
-    tracker.decrementBy(numberOfDecrements)
+    tracker.decrementBy(nbrOfTrackerDecrements)
 
-    var i = 0
-    while (i < numberOfDecrements) {
-      forAllArgumentReducers(downstreamArgumentReducers, argumentRowIdsForReducers, _.decrement(_))
-      i += 1
-    }
+    forAllArgumentReducers(downstreamArgumentReducers, argumentRowIdsForReducers,
+      (buffer, id) => {
+        var i = 0
+        while (i < nbrOfMorsels) {
+          buffer.decrement(id)
+          i += 1
+        }
+      })
   }
-
 }
 
 // The LHS does not need any reference counting, because no tasks
@@ -175,7 +180,7 @@ class LeftOuterLhsAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[
 
   override val argumentSlotOffset: Int = lhsArgumentStateMap.argumentSlotOffset
 
-  override def toString: String = s"${getClass.getSimpleName}(planId:${lhsArgumentStateMapId.x}, $lhsArgumentStateMap)"
+  override def toString: String = s"${getClass.getSimpleName}($lhsArgumentStateMap)"
 
   override def put(data: IndexedSeq[PerArgument[DATA]], resources: QueryResources): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
@@ -224,7 +229,7 @@ class LeftOuterRhsStreamingSink(val rhsArgumentStateMapId: ArgumentStateMapId,
 
   override val argumentSlotOffset: Int = rhsArgumentStateMap.argumentSlotOffset
 
-  override def toString: String = s"${getClass.getSimpleName}(planId:${rhsArgumentStateMapId.x}, $rhsArgumentStateMap)"
+  override def toString: String = s"${getClass.getSimpleName}($rhsArgumentStateMap)"
 
   override def put(data: IndexedSeq[PerArgument[Morsel]], resources: QueryResources): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
@@ -250,7 +255,7 @@ class LeftOuterRhsStreamingSink(val rhsArgumentStateMapId: ArgumentStateMapId,
 
   override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor, initialCount: Int): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
-      DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel with initial count $initialCount")
+    DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel with initial count $initialCount")
     }
     // Increment for an ArgumentID in RHS's accumulator
     val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, _.increment(_))
