@@ -90,4 +90,8 @@ object MorselSorting {
     // Copy from output morsel back to input morsel
     morsel.compactRowsFrom(tempMorsel)
   }
+
+  def createMorselIndexComparator(orderBy: Seq[ColumnOrder], morselCursor: MorselReadCursor): Comparator[Integer] = {
+    SlottedExecutionContextOrdering.composeComparator[Integer](MorselSorting.compareMorselIndexesByColumnOrder(morselCursor))(orderBy)
+  }
 }

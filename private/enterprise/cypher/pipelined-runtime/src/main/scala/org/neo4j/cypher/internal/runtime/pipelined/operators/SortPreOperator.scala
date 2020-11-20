@@ -42,9 +42,7 @@ class SortPreOperator(val workIdentity: WorkIdentity,
                                operatorExecutionEvent: OperatorProfileEvent): PreSortedOutput = {
 
       val cursorForComparators = morsel.readCursor()
-      val comparator: Comparator[Integer] = orderBy
-        .map(MorselSorting.compareMorselIndexesByColumnOrder(cursorForComparators))
-        .reduce((a, b) => a.thenComparing(b))
+      val comparator: Comparator[Integer] = MorselSorting.createMorselIndexComparator(orderBy, cursorForComparators)
 
       val preSorted = ArgumentStateMap.map(argumentSlotOffset,
         morsel,
