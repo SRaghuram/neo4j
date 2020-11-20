@@ -21,7 +21,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
   test("create a single node") {
     val before = graph.withTx( tx => tx.getAllNodes.asScala.size)
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "create (a)")
+    val result = executeWith(Configs.InterpretedAndSlotted, "create (a)")
 
     assertStats(result, nodesCreated = 1)
     graph.withTx( tx =>  {

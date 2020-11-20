@@ -62,6 +62,7 @@ object Configs {
   // adding it here should be a fast way to correct many tests, although some might still
   // fail for lack of some other operator or construct.
   val Create                : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
+  val ForEachApply          : TestConfiguration = InterpretedRuntime + SlottedRuntime
   val ProcedureCallWrite    : TestConfiguration = InterpretedRuntime + SlottedRuntime
   val UDF                   : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedSingleThreaded
   val NestedPlan            : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedSingleThreaded
