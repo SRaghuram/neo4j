@@ -19,7 +19,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.block
 import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
-import org.neo4j.codegen.api.IntermediateRepresentation.equal
 import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
@@ -30,11 +29,9 @@ import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.loop
 import org.neo4j.codegen.api.IntermediateRepresentation.method
-import org.neo4j.codegen.api.IntermediateRepresentation.noValue
 import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
-import org.neo4j.codegen.api.IntermediateRepresentation.ternary
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.codegen.api.Method
@@ -42,8 +39,6 @@ import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.expressions.SemanticDirection.BOTH
 import org.neo4j.cypher.internal.expressions.SemanticDirection.INCOMING
 import org.neo4j.cypher.internal.expressions.SemanticDirection.OUTGOING
-import org.neo4j.cypher.internal.physicalplanning.LongSlot
-import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
@@ -51,7 +46,6 @@ import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.ReadableRow
-import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
@@ -63,7 +57,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.getNodeIdFromSlot
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.loadTypes
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_NODE_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_TRAVERSAL_CURSOR
@@ -74,6 +67,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.allocateAndTraceCursor
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.cursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.freeCursor
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.getNodeIdFromSlot
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.singleNode
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
@@ -82,7 +76,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.Read
@@ -91,7 +84,6 @@ import org.neo4j.internal.kernel.api.TokenRead
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections
 import org.neo4j.kernel.impl.newapi.Cursors
 import org.neo4j.kernel.impl.newapi.Cursors.emptyTraversalCursor
-import org.neo4j.values.AnyValue
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -471,22 +463,6 @@ object ExpandAllOperatorTaskTemplate {
       }
     })
     newTokens.toArray
-  }
-
-  def getNodeIdFromSlot(slot: Slot, codeGen: OperatorExpressionCompiler): IntermediateRepresentation = slot match {
-    // NOTE: We do not save the local slot variable, since we are only using it with our own local variable within a local scope
-    case LongSlot(offset, _, _) =>
-      codeGen.getLongAt(offset)
-    case RefSlot(offset, false, _) =>
-      invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeFromAnyValue"), codeGen.getRefAt(offset))
-    case RefSlot(offset, true, _) =>
-      ternary(
-        equal(codeGen.getRefAt(offset), noValue),
-        constant(-1L),
-        invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeFromAnyValue"), codeGen.getRefAt(offset))
-      )
-    case _ =>
-      throw new InternalException(s"Do not know how to get a node id for slot $slot")
   }
 
   def loadTypes(types: Seq[Int], missingTypes: Seq[String], typeField: Field, missingTypeField: Field): IntermediateRepresentation = {

@@ -51,7 +51,8 @@ trait OperatorFusionPolicy {
                            doProfile: Boolean,
                            indexRegistrator: QueryIndexRegistrator,
                            parallelExecution: Boolean,
-                           codeGenerationMode: CodeGeneration.CodeGenerationMode): OperatorFuserFactory
+                           codeGenerationMode: CodeGeneration.CodeGenerationMode,
+                           lenientCreateRelationship: Boolean): OperatorFuserFactory
 }
 
 object OperatorFusionPolicy {
@@ -67,7 +68,8 @@ object OperatorFusionPolicy {
                                       doProfile: Boolean,
                                       indexRegistrator: QueryIndexRegistrator,
                                       parallelExecution: Boolean,
-                                      codeGenerationMode: CodeGeneration.CodeGenerationMode): OperatorFuserFactory = OperatorFuserFactory.NO_FUSION
+                                      codeGenerationMode: CodeGeneration.CodeGenerationMode,
+                                      lenientCreateRelationship: Boolean): OperatorFuserFactory = OperatorFuserFactory.NO_FUSION
     override def fusionOverPipelineLimit: Int = 0
   }
 }

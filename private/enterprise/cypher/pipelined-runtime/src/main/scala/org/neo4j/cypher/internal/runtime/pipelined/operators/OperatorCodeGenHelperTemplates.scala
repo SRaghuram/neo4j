@@ -48,6 +48,8 @@ import org.neo4j.cypher.internal.expressions.SemanticDirection.INCOMING
 import org.neo4j.cypher.internal.expressions.SemanticDirection.OUTGOING
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.LongSlot
+import org.neo4j.cypher.internal.physicalplanning.RefSlot
+import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
@@ -70,11 +72,13 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.ReadableRow
+import org.neo4j.cypher.internal.runtime.pipelined.MutableQueryStatistics
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.cypher.operations.CursorUtils
 import org.neo4j.cypher.operations.CypherCoercions
 import org.neo4j.cypher.operations.CypherFunctions
+import org.neo4j.exceptions.InternalException
 import org.neo4j.graphdb.Direction
 import org.neo4j.internal.kernel.api.Cursor
 import org.neo4j.internal.kernel.api.IndexQuery
@@ -151,6 +155,8 @@ object OperatorCodeGenHelperTemplates {
   // Fields
   val WORK_IDENTITY_STATIC_FIELD_NAME  = "_workIdentity"
   val DATA_READ: InstanceField = field[Read]("dataRead", load(DATA_READ_CONSTRUCTOR_PARAMETER.name))
+  val DATA_WRITE: InstanceField = field[Write]("dataWrite", load(DATA_WRITE_CONSTRUCTOR_PARAMETER.name))
+  val TOKEN_WRITE: InstanceField = field[TokenWrite]("tokenWrite", load(TOKEN_WRITE_CONSTRUCTOR_PARAMETER.name))
   val INPUT_CURSOR_FIELD_NAME = "inputCursor"
   val INPUT_CURSOR_FIELD: InstanceField =
     field[MorselReadCursor](INPUT_CURSOR_FIELD_NAME,
@@ -186,6 +192,11 @@ object OperatorCodeGenHelperTemplates {
         method[QueryResources, CursorPools]("cursorPools")))
   val CURSOR_POOL: IntermediateRepresentation =
     load(CURSOR_POOL_V)
+
+  val QUERY_STATS_TRACKER_V: LocalVariable = variable[MutableQueryStatistics]("queryStatistics",
+    invoke(QUERY_RESOURCES,
+      method[QueryResources, MutableQueryStatistics]("queryStatisticsTracker")))
+  val QUERY_STATS_TRACKER: IntermediateRepresentation = load(QUERY_STATS_TRACKER_V.name)
 
   val INPUT_MORSEL: IntermediateRepresentation =
     invoke(self(), method[ContinuableOperatorTaskWithMorsel, Morsel]("inputMorsel"))
@@ -634,5 +645,21 @@ object OperatorCodeGenHelperTemplates {
       ternary(equal(codeGen.getLongAt(offset), constant(-1L)), noValue, relProjector(offset))
     case LongSlot(offset, false, symbols.CTRelationship) =>
       relProjector(offset)
+  }
+
+  def getNodeIdFromSlot(slot: Slot, codeGen: OperatorExpressionCompiler): IntermediateRepresentation = slot match {
+    // NOTE: We do not save the local slot variable, since we are only using it with our own local variable within a local scope
+    case LongSlot(offset, _, _) =>
+      codeGen.getLongAt(offset)
+    case RefSlot(offset, false, _) =>
+      invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeFromAnyValue"), codeGen.getRefAt(offset))
+    case RefSlot(offset, true, _) =>
+      ternary(
+        equal(codeGen.getRefAt(offset), noValue),
+        constant(-1L),
+        invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeFromAnyValue"), codeGen.getRefAt(offset))
+      )
+    case _ =>
+      throw new InternalException(s"Do not know how to get a node id for slot $slot")
   }
 }

@@ -46,8 +46,9 @@ class TemplateOperatorPolicy(override val fusionOverPipelineEnabled: Boolean,
                                     doProfile: Boolean,
                                     indexRegistrator: QueryIndexRegistrator,
                                     parallelExecution: Boolean,
-                                    codeGenerationMode: CodeGeneration.CodeGenerationMode): OperatorFuserFactory =
-    new TemplateOperatorFuserFactory(physicalPlan, tokenContext, readOnly, doProfile, indexRegistrator, parallelExecution, fusionOverPipelineEnabled, codeGenerationMode)
+                                    codeGenerationMode: CodeGeneration.CodeGenerationMode,
+                                    lenientCreateRelationship: Boolean): OperatorFuserFactory =
+    new TemplateOperatorFuserFactory(physicalPlan, tokenContext, readOnly, doProfile, indexRegistrator, parallelExecution, fusionOverPipelineEnabled, codeGenerationMode, lenientCreateRelationship)
 
   override def toString: String = {
     s"${this.getClass.getSimpleName}(fusionOverPipelineEnabled=$fusionOverPipelineEnabled,readOnly=$readOnly,parallelExecution=$parallelExecution,fusionOverPipelineLimit=$fusionOverPipelineLimit)"

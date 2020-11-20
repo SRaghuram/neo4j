@@ -54,9 +54,20 @@ class TemplateOperatorFuserFactory(physicalPlan: PhysicalPlan,
                                    indexRegistrator: QueryIndexRegistrator,
                                    parallelExecution: Boolean,
                                    fusionOverPipelineEnabled: Boolean,
-                                   codeGenerationMode: CodeGeneration.CodeGenerationMode) extends OperatorFuserFactory {
+                                   codeGenerationMode: CodeGeneration.CodeGenerationMode,
+                                   lenientCreateRelationship: Boolean) extends OperatorFuserFactory {
   override def newOperatorFuser(headPlanId: Id, inputSlotConfiguration: SlotConfiguration): OperatorFuser =
-    new TemplateOperatorFuser(physicalPlan, tokenContext, readOnly, doProfile, indexRegistrator, parallelExecution, fusionOverPipelineEnabled, codeGenerationMode, headPlanId, inputSlotConfiguration)
+    new TemplateOperatorFuser(physicalPlan,
+                              tokenContext,
+                              readOnly,
+                              doProfile,
+                              indexRegistrator,
+                              parallelExecution,
+                              fusionOverPipelineEnabled,
+                              codeGenerationMode,
+                              headPlanId,
+                              inputSlotConfiguration,
+                              lenientCreateRelationship)
 }
 
 class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
@@ -68,7 +79,8 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
                             fusionOverPipelineEnabled: Boolean,
                             codeGenerationMode: CodeGeneration.CodeGenerationMode,
                             headPlanId: Id,
-                            inputSlotConfiguration: SlotConfiguration) extends TemplateOperators(readOnly, parallelExecution, fusionOverPipelineEnabled) with OperatorFuser {
+                            inputSlotConfiguration: SlotConfiguration,
+                            lenientCreateRelationship: Boolean) extends TemplateOperators(readOnly, parallelExecution, fusionOverPipelineEnabled) with OperatorFuser {
 
   private val slots = physicalPlan.slotConfigurations(headPlanId)
   generateSlotAccessorFunctions(slots)
@@ -106,7 +118,8 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
                                 executionGraphDefinition,
                                 currentTemplate,
                                 innermost,
-                                expressionCompiler)
+                                expressionCompiler,
+                                lenientCreateRelationship)
       val x = fixTemplate(ctx)
       x.template.setProfile(doProfile)
       argumentStates ++= x.argumentStateFactory

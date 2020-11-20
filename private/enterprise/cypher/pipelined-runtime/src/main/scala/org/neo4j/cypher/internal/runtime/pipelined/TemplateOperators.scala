@@ -48,6 +48,7 @@ import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.ProcedureCallMode
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ArgumentOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.BinaryOperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ByNameLookup
@@ -55,6 +56,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.ByTokenLookup
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CachePropertiesOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CompositeNodeIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ConditionalOperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateNodeFusedCommand
+import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateOperatorTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateRelationshipFusedCommand
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DelegateOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperatorState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctSinglePrimitiveState
@@ -125,6 +129,7 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.DistinctAllPr
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.DistinctWithReferences
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.findDistinctPhysicalOp
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
+import org.neo4j.cypher.internal.runtime.slotted.pipes.CreateNodeSlottedCommand
 import org.neo4j.cypher.internal.util.Many
 import org.neo4j.cypher.internal.util.One
 import org.neo4j.cypher.internal.util.Zero
@@ -178,7 +183,8 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                              executionGraphDefinition: ExecutionGraphDefinition,
                              inner: OperatorTaskTemplate,
                              innermost: DelegateOperatorTaskTemplate,
-                             expressionCompiler: OperatorExpressionCompiler) {
+                             expressionCompiler: OperatorExpressionCompiler,
+                             lenientCreateRelationship: Boolean) {
 
     def compileExpression(astExpression: Expression, id: Id): () => IntermediateExpression =
       () => expressionCompiler.compileExpression(astExpression, id)
@@ -790,6 +796,35 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
         case plan: plans.EmptyResult =>
           ctx: TemplateContext =>
             new EmptyResultOperatorTemplate(ctx.inner, plan.id)(ctx.expressionCompiler)
+
+        case plan@plans.Create(_, nodes, relationships) if !parallelExecution =>
+          ctx: TemplateContext =>
+            val nodeCommands = nodes.map(n =>
+              CreateNodeFusedCommand(
+                ctx.slots.getLongOffsetFor(n.idName),
+                n.labels.map(l => ctx.tokenContext.getOptLabelId(l.name) match {
+                  case Some(token) => Left(token)
+                  case None => Right(l.name)}
+                ),
+                n.properties.map(p => ctx.compileExpression(p, plan.id))
+              )
+            ).toIndexedSeq
+            val relCommands = relationships.map(r =>
+              CreateRelationshipFusedCommand(
+                ctx.slots.getLongOffsetFor(r.idName),
+                r.idName,
+                ctx.tokenContext.getOptRelTypeId(r.relType.name) match {
+                  case Some(token) => Left(token)
+                  case None => Right(r.relType.name)
+                },
+                r.startNode,
+                ctx.slots(r.startNode),
+                r.endNode,
+                ctx.slots(r.endNode),
+                r.properties.map(p => ctx.compileExpression(p, plan.id))
+              )
+            ).toIndexedSeq
+            new CreateOperatorTemplate(ctx.inner, plan.id, nodeCommands, relCommands, ctx.lenientCreateRelationship)(ctx.expressionCompiler)
 
         case _ =>
           None
