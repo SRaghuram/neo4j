@@ -27,6 +27,7 @@ import org.neo4j.internal.kernel.api.Write
 import org.neo4j.kernel.api.StatementConstants.NO_SUCH_NODE
 import org.neo4j.kernel.api.StatementConstants.NO_SUCH_RELATIONSHIP
 import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.Values.NO_VALUE
 import org.neo4j.values.virtual.MapValue
 
 class CreateOperator(val workIdentity: WorkIdentity,
@@ -94,11 +95,13 @@ object CreateOperator {
                         tokenWrite: TokenWrite,
                         write: Write,
                         queryStatisticsTracker: MutableQueryStatistics): Unit = {
-      safeCastToMap(properties).foreach((k: String, v: AnyValue) => {
+    safeCastToMap(properties).foreach((k: String, v: AnyValue) => {
+      if (!(v eq NO_VALUE)) {
         val propertyKeyId = tokenWrite.propertyKeyGetOrCreateForName(k)
-        write.nodeSetProperty(node,propertyKeyId, makeValueNeoSafe(v))
+        write.nodeSetProperty(node, propertyKeyId, makeValueNeoSafe(v))
         queryStatisticsTracker.setProperty()
-      })
+      }
+    })
   }
 
   def handleMissingNode(relName: String, nodeName: String, lenientCreateRelationship: Boolean): Long =
@@ -122,9 +125,11 @@ object CreateOperator {
                                 queryStatisticsTracker: MutableQueryStatistics): Unit = {
     if (relationship != NO_SUCH_RELATIONSHIP) {
       safeCastToMap(properties).foreach((k: String, v: AnyValue) => {
-        val propertyKeyId = tokenWrite.propertyKeyGetOrCreateForName(k)
-        write.relationshipSetProperty(relationship, propertyKeyId, makeValueNeoSafe(v))
-        queryStatisticsTracker.setProperty()
+        if (!(v eq NO_VALUE)) {
+          val propertyKeyId = tokenWrite.propertyKeyGetOrCreateForName(k)
+          write.relationshipSetProperty(relationship, propertyKeyId, makeValueNeoSafe(v))
+          queryStatisticsTracker.setProperty()
+        }
       })
     }
   }
