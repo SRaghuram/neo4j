@@ -147,7 +147,7 @@ class HighLimitIndexIT
         // then
         verifyIndex( schemaDescriptor, ( descriptor, session, tx ) ->
         {
-            try ( RelationshipValueIndexCursor cursor = tx.cursors().allocateRelationshipValueIndexCursor( NULL ) )
+            try ( RelationshipValueIndexCursor cursor = tx.cursors().allocateRelationshipValueIndexCursor( NULL, INSTANCE ) )
             {
                 tx.dataRead().relationshipIndexSeek( session, cursor, unconstrained(), IndexQuery.exists( propertyKeyId ) );
                 while ( cursor.next() )
