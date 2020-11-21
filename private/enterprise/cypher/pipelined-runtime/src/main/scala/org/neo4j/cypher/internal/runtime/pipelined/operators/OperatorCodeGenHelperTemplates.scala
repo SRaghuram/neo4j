@@ -97,6 +97,7 @@ import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.kernel.api.TokenWrite
 import org.neo4j.internal.kernel.api.Write
 import org.neo4j.internal.schema.IndexOrder
+import org.neo4j.kernel.api.KernelTransaction
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.MemoryTracker
@@ -108,6 +109,9 @@ import org.neo4j.values.virtual.ListValue
 import org.neo4j.values.virtual.NodeValue
 import org.neo4j.values.virtual.RelationshipValue
 
+class OperatorCodeGenHelperTemplates {
+  throw new UnsupportedOperationException
+}
 object OperatorCodeGenHelperTemplates {
   sealed trait CursorPoolsType {
     def name: String
@@ -141,9 +145,7 @@ object OperatorCodeGenHelperTemplates {
   val UNINITIALIZED_REF_SLOT_VALUE: IntermediateRepresentation = constant(null)
 
   // Constructor parameters
-  val DATA_READ_CONSTRUCTOR_PARAMETER: Parameter = param[Read]("dataRead")
-  val DATA_WRITE_CONSTRUCTOR_PARAMETER: Parameter = param[Write]("dataWrite")
-  val TOKEN_WRITE_CONSTRUCTOR_PARAMETER: Parameter = param[TokenWrite]("tokenWrite")
+  val TX_CONSTRUCTOR_PARAMETER: Parameter = param[KernelTransaction]("tx")
   val INPUT_MORSEL_CONSTRUCTOR_PARAMETER: Parameter = param[Morsel]("inputMorsel")
   val INPUT_MORSEL_DATA_CONSTRUCTOR_PARAMETER: Parameter = param[MorselData]("morselData")
   val ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER: Parameter = param[ArgumentStateMaps]("argumentStateMaps")
@@ -154,9 +156,10 @@ object OperatorCodeGenHelperTemplates {
 
   // Fields
   val WORK_IDENTITY_STATIC_FIELD_NAME  = "_workIdentity"
-  val DATA_READ: InstanceField = field[Read]("dataRead", load(DATA_READ_CONSTRUCTOR_PARAMETER.name))
-  val DATA_WRITE: InstanceField = field[Write]("dataWrite", load(DATA_WRITE_CONSTRUCTOR_PARAMETER.name))
-  val TOKEN_WRITE: InstanceField = field[TokenWrite]("tokenWrite", load(TOKEN_WRITE_CONSTRUCTOR_PARAMETER.name))
+  val DATA_READ: InstanceField = field[Read]("dataRead", invoke(load(TX_CONSTRUCTOR_PARAMETER.name), method[KernelTransaction, Read]("dataRead")))
+  val DATA_WRITE: InstanceField = field[Write]("dataWrite",
+    invokeStatic(method[OperatorCodeGenHelperTemplates, Write, KernelTransaction]("write"), load(TX_CONSTRUCTOR_PARAMETER.name)))
+  val TOKEN_WRITE: InstanceField = field[TokenWrite]("tokenWrite", invoke(load(TX_CONSTRUCTOR_PARAMETER.name), method[KernelTransaction, TokenWrite]("tokenWrite")))
   val INPUT_CURSOR_FIELD_NAME = "inputCursor"
   val INPUT_CURSOR_FIELD: InstanceField =
     field[MorselReadCursor](INPUT_CURSOR_FIELD_NAME,
@@ -662,4 +665,9 @@ object OperatorCodeGenHelperTemplates {
     case _ =>
       throw new InternalException(s"Do not know how to get a node id for slot $slot")
   }
+
+  /**
+   * This is here to simplify exception handling, tricking javac to accept checked exceptions without declaring
+   */
+  def write(tx: KernelTransaction): Write = tx.dataWrite()
 }
