@@ -25,6 +25,7 @@ object ENTERPRISE {
   //randomize morsel size evenly in [1, 5]
   lazy val MORSEL_SIZE = {
     ThreadLocalRandom.current().nextInt(1, 6)
+    5
   }
   val MORSEL_SIZE_FOR_SCHEDULING_TESTS = 2
 

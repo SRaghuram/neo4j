@@ -66,7 +66,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     x.decrement()
 
     // then
-    verify(subscriber).onResultCompleted(stats)
+    verify(subscriber).onResultCompleted(any[QueryStatistics])
     verify(subscriber, never()).onError(any())
     verify(tracer).stopQuery()
     verify(transaction, if (shouldThawLocks) times(1) else never()).thawLocks()
