@@ -2415,7 +2415,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
   //==================================================================================================
 
   private def coerceToPredicate(e: IntermediateExpression) = IntermediateExpression(
-    invokeStatic(method[CypherBoolean, Value, AnyValue]("coerceToBoolean"), e.ir), e.fields, e.variables, e.nullChecks, requireNullCheck = false)
+    invokeStatic(method[CypherBoolean, Value, AnyValue]("coerceToBoolean"), nullCheckIfRequired(e)), e.fields, e.variables, e.nullChecks, requireNullCheck = false)
 
   /**
     * Ok AND and ANDS are complicated.  At the core we try to find a single `FALSE` if we find one there is no need to look

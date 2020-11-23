@@ -1608,6 +1608,12 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compile(coerced), params(Values.TRUE)) should equal(Values.TRUE)
     evaluate(compile(coerced), params(list(stringValue("A")))) should equal(Values.TRUE)
     evaluate(compile(coerced), params(list(EMPTY_LIST))) should equal(Values.TRUE)
+    evaluate(compile(coerced), params(Values.NO_VALUE)) should equal(Values.NO_VALUE)
+  }
+
+  test("CoerceToPredicate with expression that needs null check") {
+    val coerced = CoerceToPredicate(function("isEmpty", parameter(0)))
+    evaluate(compile(coerced), params(Values.NO_VALUE)) should equal(Values.NO_VALUE)
   }
 
   test("ReferenceFromSlot") {
