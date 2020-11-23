@@ -906,6 +906,52 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     result.toList should be((3 to 45).map(i => Map("f.tic1" -> i)))
   }
 
+
+  test("Order by property with index when property is being written to") {
+    val query =
+      """MATCH (a:A) WHERE exists(a.age)
+        |SET a.age = -a.age
+        |RETURN a.age ORDER BY a.age
+        |""".stripMargin
+
+    graph.createIndex("A", "age")
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    result.executionPlanDescription() should includeSomewhere.aPlan("Sort")
+
+    result.toList.shouldEqual(List(
+      Map("a.age" -> -16),
+      Map("a.age" -> -14),
+      Map("a.age" -> -12),
+      Map("a.age" -> -10),
+      Map("a.age" -> -9),
+      Map("a.age" -> -4),
+    ))
+  }
+
+  test("Order by property that is already sorted when doing complicated write") {
+    val query =
+      """MATCH (a:A)
+        |WITH a ORDER BY a.born
+        |CALL {
+        |  MERGE (x:A) ON MATCH SET x.born = 2020 - x.age
+        |  RETURN count(*) AS dummy
+        |}
+        |RETURN a.born ORDER BY a.born
+        |""".stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    result.toList.shouldEqual(List(
+      Map("a.born" -> 2004),
+      Map("a.born" -> 2006),
+      Map("a.born" -> 2008),
+      Map("a.born" -> 2010),
+      Map("a.born" -> 2011),
+      Map("a.born" -> 2016),
+    ))
+  }
+
   private def makeJoeAndFriends(friendCount:Int = 10): Unit = {
     val joe = createLabeledNode(Map("name" -> s"Joe", "foo" -> 0, "start" -> true), "Person")
     val joseph = createLabeledNode(Map("name" -> s"Joseph", "foo" -> 1, "start" -> true), "Person")
