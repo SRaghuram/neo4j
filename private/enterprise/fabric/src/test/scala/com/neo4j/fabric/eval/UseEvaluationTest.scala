@@ -62,7 +62,7 @@ class UseEvaluationTest
     util.List.of(), Duration.ZERO, Duration.ZERO,
     new GlobalDriverConfig(Duration.ZERO, Duration.ZERO, 0, null),
     new FabricConfig.DataStream(300, 1000, 50, 10),
-    false
+    false, true
   )
 
   private val internalDbs = Set(dbId("neo4j", neo4jUuid), dbId("test", testUuid), dbId("mega", megaUuid))

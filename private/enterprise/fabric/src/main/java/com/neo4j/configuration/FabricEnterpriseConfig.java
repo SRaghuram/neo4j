@@ -50,9 +50,10 @@ public class FabricEnterpriseConfig extends FabricConfig
             Duration transactionTimeout,
             GlobalDriverConfig globalDriverConfig,
             DataStream dataStream,
-            boolean routingEnabled )
+            boolean routingEnabled,
+            boolean enabledByDefault )
     {
-        super( transactionTimeout, dataStream, routingEnabled );
+        super( transactionTimeout, dataStream, routingEnabled, enabledByDefault );
         this.database = database;
         this.fabricServers = fabricServers;
         this.routingTtl = routingTtl;
@@ -162,6 +163,7 @@ public class FabricEnterpriseConfig extends FabricConfig
         var dataStream = new DataStream( bufferLowWatermark, bufferSize, syncBatchSize, concurrency );
 
         boolean routingEnabled = config.get( GraphDatabaseSettings.routing_enabled );
+        boolean enabledByDefault = config.get( FabricSettings.enabled_by_default );
         if ( database.isPresent() )
         {
             var serverAddresses = config.get( FabricEnterpriseSettings.fabric_servers_setting );
@@ -173,13 +175,13 @@ public class FabricEnterpriseConfig extends FabricConfig
 
             var routingTtl = config.get( FabricEnterpriseSettings.routing_ttl_setting );
             var fabricConfig = new FabricEnterpriseConfig( database.get(), serverAddresses, routingTtl, transactionTimeout, externalGraphDriver, dataStream,
-                    routingEnabled );
+                    routingEnabled, enabledByDefault );
             config.addListener( FabricEnterpriseSettings.fabric_servers_setting, ( oldValue, newValue ) -> fabricConfig.setFabricServers( newValue ) );
             return fabricConfig;
         }
         else
         {
-            return new FabricEnterpriseConfig( null, List.of(), null, transactionTimeout, internalGraphDriver, dataStream, routingEnabled );
+            return new FabricEnterpriseConfig( null, List.of(), null, transactionTimeout, internalGraphDriver, dataStream, routingEnabled, enabledByDefault );
         }
     }
 

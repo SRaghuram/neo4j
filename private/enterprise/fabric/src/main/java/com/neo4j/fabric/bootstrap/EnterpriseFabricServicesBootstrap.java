@@ -115,10 +115,10 @@ public abstract class EnterpriseFabricServicesBootstrap extends FabricServicesBo
         }
 
         @Override
-        protected FabricDatabaseManager createFabricDatabaseManager()
+        protected FabricDatabaseManager createFabricDatabaseManager( FabricConfig fabricConfig )
         {
             var databaseManager = (DatabaseManager<DatabaseContext>) resolve( DatabaseManager.class );
-            return new FabricEnterpriseDatabaseManager.Single( getFabricConfig(), databaseManager, logService.getInternalLogProvider() );
+            return new FabricEnterpriseDatabaseManager.Single( (FabricEnterpriseConfig) fabricConfig, databaseManager, logService.getInternalLogProvider() );
         }
 
         @Override
@@ -182,10 +182,10 @@ public abstract class EnterpriseFabricServicesBootstrap extends FabricServicesBo
         }
 
         @Override
-        protected FabricDatabaseManager createFabricDatabaseManager()
+        protected FabricDatabaseManager createFabricDatabaseManager( FabricConfig fabricConfig )
         {
             var databaseManager = (DatabaseManager<DatabaseContext>) resolve( DatabaseManager.class );
-            return new FabricEnterpriseDatabaseManager.Cluster( databaseManager );
+            return new FabricEnterpriseDatabaseManager.Cluster( (FabricEnterpriseConfig) fabricConfig, databaseManager );
         }
 
         @Override

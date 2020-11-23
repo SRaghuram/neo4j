@@ -30,9 +30,9 @@ import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_UUID_PROPERT
 
 public abstract class FabricEnterpriseDatabaseManager extends FabricDatabaseManager
 {
-    FabricEnterpriseDatabaseManager( DatabaseManager<DatabaseContext> databaseManager )
+    FabricEnterpriseDatabaseManager( FabricEnterpriseConfig fabricConfig, DatabaseManager<DatabaseContext> databaseManager )
     {
-        super( databaseManager );
+        super( fabricConfig, databaseManager );
     }
 
     /**
@@ -45,7 +45,7 @@ public abstract class FabricEnterpriseDatabaseManager extends FabricDatabaseMana
 
         public Single( FabricEnterpriseConfig fabricConfig, DatabaseManager<DatabaseContext> databaseManager, LogProvider logProvider )
         {
-            super( databaseManager );
+            super( fabricConfig, databaseManager );
             this.fabricConfig = fabricConfig;
             this.log = logProvider.getLog( getClass() );
         }
@@ -146,9 +146,9 @@ public abstract class FabricEnterpriseDatabaseManager extends FabricDatabaseMana
      */
     public static class Cluster extends FabricEnterpriseDatabaseManager
     {
-        public Cluster( DatabaseManager<DatabaseContext> databaseManager )
+        public Cluster( FabricEnterpriseConfig fabricConfig, DatabaseManager<DatabaseContext> databaseManager )
         {
-            super( databaseManager );
+            super( fabricConfig, databaseManager );
         }
 
         @Override
