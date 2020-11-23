@@ -16,7 +16,6 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
-import scala.concurrent.java8.FuturesConvertersImpl;
 
 import java.util.Map;
 import java.util.stream.Collectors;
