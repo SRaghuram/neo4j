@@ -17,6 +17,7 @@ import java.util.Set;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
+import org.neo4j.kernel.database.DefaultDatabaseResolver;
 
 import static org.neo4j.kernel.api.security.AuthToken.invalidToken;
 
@@ -26,17 +27,17 @@ public class InClusterAuthManager extends EnterpriseAuthManager
     public static final String ROLES_KEY = "roles";
 
     private final PrivilegeResolver privilegeResolver;
+    private DefaultDatabaseResolver defaultDatabaseResolver;
     private final SecurityLog securityLog;
     private final boolean logSuccessfulLogin;
-    private final String defaultDatabase;
 
-    public InClusterAuthManager( PrivilegeResolver privilegeResolver,
-            SecurityLog securityLog, boolean logSuccessfulLogin, String defaultDatabase )
+    public InClusterAuthManager( PrivilegeResolver privilegeResolver, DefaultDatabaseResolver defaultDatabaseResolver,
+            SecurityLog securityLog, boolean logSuccessfulLogin )
     {
         this.privilegeResolver = privilegeResolver;
+        this.defaultDatabaseResolver = defaultDatabaseResolver;
         this.securityLog = securityLog;
         this.logSuccessfulLogin = logSuccessfulLogin;
-        this.defaultDatabase = defaultDatabase;
     }
 
     @Override
@@ -47,8 +48,9 @@ public class InClusterAuthManager extends EnterpriseAuthManager
             assertValidScheme( authToken );
             String username = extractUsername( authToken );
             Set<String> roles = extractRoles( authToken );
+            String defaultDatabaseForUser = defaultDatabaseResolver.defaultDatabase( );
 
-            var loginContext = new InClusterLoginContext( username, roles, defaultDatabase, () -> privilegeResolver.getPrivileges( roles, username ) );
+            var loginContext = new InClusterLoginContext( username, roles, defaultDatabaseForUser, () -> privilegeResolver.getPrivileges( roles, username ) );
 
             if ( logSuccessfulLogin )
             {

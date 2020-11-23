@@ -21,6 +21,9 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.TransientException;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -30,6 +33,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.driver.SessionConfig.forDatabase;
 
@@ -75,6 +79,59 @@ class MultiDatabaseBoltIT
             }
         } );
         assertThat( transientException.getMessage() ).isEqualTo( "Database 'testDatabase' is unavailable." );
+    }
+
+    @Test
+    void shouldNotSwitchDefaultDatabaseDuringConnection() throws IOException
+    {
+        try ( var driver = driverFactory.graphDatabaseDriver( boltAddress() );
+              var system = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
+        {
+            assertDatabasesFound( DEFAULT_DATABASE_NAME );
+            system.run( "CREATE DATABASE foo" ).consume();
+            assertDatabasesFound( "foo" );
+        }
+        try ( var driver = driverFactory.graphDatabaseDriver( boltAddress() );
+              var db = driver.session( forDatabase( DEFAULT_DATABASE_NAME ) ) )
+        {
+            db.run( "CREATE ({name: 'neo4j'})" ).consume();
+        }
+        try ( var driver = driverFactory.graphDatabaseDriver( boltAddress() );
+              var db = driver.session( forDatabase( "foo" ) ) )
+        {
+            db.run( "CREATE ({name: 'foo'})" ).consume();
+        }
+
+        try ( var driver = driverFactory.graphDatabaseDriver( boltAddress() ) )
+        {
+            try ( var db = driver.session() )
+            {
+                assertThat( db.run( "MATCH (a) RETURN a.name" ).single().get( "a.name" ).asString() ).isEqualTo( "neo4j" );
+            }
+
+            GraphDatabaseAPI system = (GraphDatabaseAPI) managementService.database( SYSTEM_DATABASE_NAME );
+            try ( Transaction tx = system.beginTx() )
+            {
+                Node neo4j = tx.findNode( Label.label( "Database" ), "name", "neo4j" );
+                neo4j.setProperty( "default", false );
+                Node foo = tx.findNode( Label.label( "Database" ), "name", "foo" );
+                foo.setProperty( "default", true );
+                tx.commit();
+            }
+
+            try ( var db = driver.session() )
+            {
+                assertThat( db.run( "MATCH (a) RETURN a.name" ).single().get( "a.name" ).asString() ).isEqualTo( "neo4j" );
+            }
+        }
+
+        try ( var driver = driverFactory.graphDatabaseDriver( boltAddress() ) )
+        {
+            try ( var db = driver.session() )
+            {
+                assertThat( db.run( "MATCH (a) RETURN a.name" ).single().get( "a.name" ).asString() ).isEqualTo( "foo" );
+            }
+        }
     }
 
     @Test

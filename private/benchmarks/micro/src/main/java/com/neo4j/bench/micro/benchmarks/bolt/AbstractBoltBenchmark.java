@@ -40,8 +40,6 @@ import org.neo4j.bolt.runtime.statemachine.BoltStateMachineFactory;
 import org.neo4j.bolt.runtime.statemachine.impl.BoltStateMachineFactoryImpl;
 import org.neo4j.bolt.security.auth.Authentication;
 import org.neo4j.bolt.security.auth.BasicAuthentication;
-import org.neo4j.bolt.txtracking.DefaultReconciledTransactionTracker;
-import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.bolt.v3.messaging.BoltResponseMessageWriterV3;
 import org.neo4j.bolt.v4.BoltProtocolV4;
 import org.neo4j.common.DependencyResolver;
@@ -49,6 +47,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.kernel.api.security.AuthManager;
+import org.neo4j.kernel.database.TestDefaultDatabaseResolver;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.monitoring.Monitors;
@@ -74,10 +73,11 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
         BoltGraphDatabaseManagementServiceSPI databaseManagementService = new BoltKernelDatabaseManagementServiceProvider( managementService,
                 new Monitors(), clock, config.get( GraphDatabaseSettings.bookmark_ready_timeout ) );
         return new BoltStateMachineFactoryImpl( databaseManagementService,
-                authentication,
-                clock,
-                config,
-                NullLogService.getInstance()
+                                                authentication,
+                                                clock,
+                                                config,
+                                                NullLogService.getInstance(),
+                                                new TestDefaultDatabaseResolver( config.get( GraphDatabaseSettings.default_database ) )
         );
     }
 

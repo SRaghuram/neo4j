@@ -56,6 +56,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.SecurityModule;
+import org.neo4j.kernel.database.DefaultDatabaseResolver;
 import org.neo4j.kernel.internal.event.GlobalTransactionEventListeners;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -82,6 +83,7 @@ public class EnterpriseSecurityModule extends SecurityModule
     private final EnterpriseSecurityGraphComponent enterpriseSecurityGraphComponent;
     private CaffeineCacheFactory cacheFactory;
     private final FileSystemAbstraction fileSystem;
+    private DefaultDatabaseResolver defaultDatabaseResolver;
     private final Dependencies dependencies;
     private final GlobalTransactionEventListeners transactionEventListeners;
     private EnterpriseAuthManager authManager;
@@ -98,7 +100,8 @@ public class EnterpriseSecurityModule extends SecurityModule
                                      GlobalTransactionEventListeners transactionEventListeners,
                                      EnterpriseSecurityGraphComponent enterpriseSecurityGraphComponent,
                                      CaffeineCacheFactory cacheFactory,
-                                     FileSystemAbstraction fileSystem )
+                                     FileSystemAbstraction fileSystem,
+                                     DefaultDatabaseResolver defaultDatabaseResolver )
     {
         this.securityLog = securityLog;
         this.config = config;
@@ -109,6 +112,7 @@ public class EnterpriseSecurityModule extends SecurityModule
         this.enterpriseSecurityGraphComponent = enterpriseSecurityGraphComponent;
         this.cacheFactory = cacheFactory;
         this.fileSystem = fileSystem;
+        this.defaultDatabaseResolver = defaultDatabaseResolver;
     }
 
     @Override
@@ -192,7 +196,7 @@ public class EnterpriseSecurityModule extends SecurityModule
 
         AuthenticationStrategy strategy = CommunitySecurityModule.createAuthenticationStrategy( config );
 
-                SystemGraphRealm internalRealm = createSystemGraphRealm( strategy, systemSupplier );
+        SystemGraphRealm internalRealm = createSystemGraphRealm( strategy, systemSupplier );
         realms.add( internalRealm );
 
         if ( securityConfig.hasLdapProvider )
@@ -217,16 +221,16 @@ public class EnterpriseSecurityModule extends SecurityModule
 
         // create inCluster auth manager
         var logAuthSuccess = config.get( SecuritySettings.security_log_successful_authentication );
-        var defaultDatabase = config.get( GraphDatabaseSettings.default_database );
 
-        inClusterAuthManager = new InClusterAuthManager( privilegeResolver, securityLog, logAuthSuccess, defaultDatabase );
+        inClusterAuthManager = new InClusterAuthManager( privilegeResolver, defaultDatabaseResolver, securityLog, logAuthSuccess );
 
         if ( config.get( GraphDatabaseInternalSettings.restrict_upgrade ) )
         {
             orderedActiveRealms.add( 0, new FlatfileRealm( strategy, config.get( GraphDatabaseInternalSettings.upgrade_username ),
                                                            getOperatorUserRepository( config, logProvider, fileSystem ) ) );
         }
-        return new MultiRealmAuthManager( privilegeResolver, orderedActiveRealms, createCacheManager( config, cacheFactory ), securityLog, config );
+        return new MultiRealmAuthManager( privilegeResolver, orderedActiveRealms, createCacheManager( config, cacheFactory ),
+                                          securityLog, config, defaultDatabaseResolver );
     }
 
     private SecurityConfig getValidatedSecurityConfig( Config config )

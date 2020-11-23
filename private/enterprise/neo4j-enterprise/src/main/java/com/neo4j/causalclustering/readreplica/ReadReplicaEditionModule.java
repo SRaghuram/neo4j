@@ -30,6 +30,7 @@ import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
 import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.EnterpriseSystemGraphComponent;
+import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.dbms.QuarantineOperator;
 import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
@@ -42,6 +43,7 @@ import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.procedure.enterprise.builtin.SettingsWhitelist;
 import com.neo4j.server.enterprise.EnterpriseNeoWebServer;
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseDefaultDatabaseResolver;
 
 import java.nio.file.Path;
 import java.time.Duration;
@@ -233,6 +235,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
                 .orElseThrow()
                 .databaseFacade();
         var dbmsModel = new ClusterSystemGraphDbmsModel( systemDbSupplier );
+        defaultDatabaseResolver = makeDefaultDatabaseResolver( globalModule );
         quarantineOperator = new QuarantineOperator( logProvider, databaseManager.databaseIdRepository(), storageFactory );
         reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager,
                 databaseEventService, storageFactory, reconciledTxTracker, dbmsModel, quarantineOperator );
@@ -279,7 +282,16 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     @Override
     public void createSecurityModule( GlobalModule globalModule )
     {
-        setSecurityProvider( makeEnterpriseSecurityModule( globalModule ) );
+        setSecurityProvider( makeEnterpriseSecurityModule( globalModule, defaultDatabaseResolver ) );
+    }
+
+    @Override
+    public void createDefaultDatabaseResolver( GlobalModule globalModule )
+    {
+        EnterpriseDefaultDatabaseResolver defaultDatabaseResolver = makeDefaultDatabaseResolver( globalModule );
+        var replicatedDatabaseEventService = globalModule.getGlobalDependencies().resolveDependency( ReplicatedDatabaseEventService.class );
+        replicatedDatabaseEventService.registerListener( NAMED_SYSTEM_DATABASE_ID, defaultDatabaseResolver );
+        setDefaultDatabaseResolver( defaultDatabaseResolver );
     }
 
     @Override

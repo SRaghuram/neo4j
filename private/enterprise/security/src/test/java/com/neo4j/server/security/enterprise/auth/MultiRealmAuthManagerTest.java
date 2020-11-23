@@ -23,6 +23,7 @@ import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
+import org.neo4j.kernel.database.TestDefaultDatabaseResolver;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogAssert;
@@ -36,6 +37,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.Strings.escape;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
@@ -72,7 +74,7 @@ class MultiRealmAuthManagerTest
         var privResolver = new PrivilegeResolver( realm, Config.defaults() );
 
         manager = new MultiRealmAuthManager( privResolver, Collections.singleton( realm ), new MemoryConstrainedCacheManager(),
-                new SecurityLog( logProvider.getLog( this.getClass() ) ), config );
+                new SecurityLog( logProvider.getLog( this.getClass() ) ), config, new TestDefaultDatabaseResolver( DEFAULT_DATABASE_NAME ) );
 
         manager.init();
         return manager;

@@ -32,6 +32,7 @@ import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.procedure.enterprise.builtin.SettingsWhitelist;
 import com.neo4j.server.enterprise.EnterpriseNeoWebServer;
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseDefaultDatabaseResolver;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -84,6 +85,7 @@ import org.neo4j.token.DelegatingTokenHolder;
 import org.neo4j.token.TokenHolders;
 
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.function.Predicates.any;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 import static org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper.DEFAULT_FILENAME_PREDICATE;
@@ -221,7 +223,15 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     @Override
     public void createSecurityModule( GlobalModule globalModule )
     {
-        setSecurityProvider( makeEnterpriseSecurityModule( globalModule ) );
+        setSecurityProvider( makeEnterpriseSecurityModule( globalModule, defaultDatabaseResolver ) );
+    }
+
+    @Override
+    public void createDefaultDatabaseResolver( GlobalModule globalModule )
+    {
+        EnterpriseDefaultDatabaseResolver defaultDatabaseResolver = makeDefaultDatabaseResolver( globalModule );
+        globalModule.getTransactionEventListeners().registerTransactionEventListener( SYSTEM_DATABASE_NAME, defaultDatabaseResolver );
+        setDefaultDatabaseResolver( defaultDatabaseResolver );
     }
 
     @Override

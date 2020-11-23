@@ -37,13 +37,13 @@ import java.util.Set;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.security.AuthProviderFailedException;
 import org.neo4j.graphdb.security.AuthProviderTimeoutException;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
+import org.neo4j.kernel.database.DefaultDatabaseResolver;
 import org.neo4j.server.security.auth.ShiroAuthToken;
 
 import static org.neo4j.internal.helpers.Strings.escape;
@@ -56,14 +56,14 @@ public class MultiRealmAuthManager extends EnterpriseAuthManager
     private final CacheManager cacheManager;
     private final SecurityLog securityLog;
     private final boolean logSuccessfulLogin;
-    private final String defaultDatabase;
     private final String upgradeUsername;
     private final boolean restrictUpgrade;
 
     private final PrivilegeResolver privilegeResolver;
+    private final DefaultDatabaseResolver defaultDatabaseResolver;
 
     public MultiRealmAuthManager( PrivilegeResolver privilegeResolver, Collection<Realm> realms, CacheManager cacheManager,
-            SecurityLog securityLog, Config config )
+                                  SecurityLog securityLog, Config config, DefaultDatabaseResolver defaultDatabaseResolver )
     {
         this.realms = realms;
         this.cacheManager = cacheManager;
@@ -74,8 +74,8 @@ public class MultiRealmAuthManager extends EnterpriseAuthManager
         securityManager = new DefaultSecurityManager( realms );
         this.securityLog = securityLog;
         this.logSuccessfulLogin = config.get( SecuritySettings.security_log_successful_authentication );
-        this.defaultDatabase = config.get( GraphDatabaseSettings.default_database );
         this.privilegeResolver = privilegeResolver;
+        this.defaultDatabaseResolver = defaultDatabaseResolver;
         securityManager.setSubjectFactory( new ShiroSubjectFactory() );
         ((ModularRealmAuthenticator) securityManager.getAuthenticator())
                 .setAuthenticationStrategy( new ShiroAuthenticationStrategy() );
@@ -104,8 +104,8 @@ public class MultiRealmAuthManager extends EnterpriseAuthManager
 
             try
             {
-                securityContext = new StandardEnterpriseLoginContext(
-                        this, (ShiroSubject) securityManager.login( null, token ), defaultDatabase );
+                ShiroSubject shiroSubject = (ShiroSubject) securityManager.login( null, token );
+                securityContext = new StandardEnterpriseLoginContext( this, shiroSubject, defaultDatabaseResolver.defaultDatabase() );
                 AuthenticationResult authenticationResult = securityContext.subject().getAuthenticationResult();
                 if ( authenticationResult == AuthenticationResult.SUCCESS )
                 {
@@ -141,7 +141,7 @@ public class MultiRealmAuthManager extends EnterpriseAuthManager
             {
                 // NOTE: We only get this with single (internal) realm authentication
                 securityContext = new StandardEnterpriseLoginContext( this, new ShiroSubject( securityManager, AuthenticationResult.TOO_MANY_ATTEMPTS ),
-                        defaultDatabase );
+                        defaultDatabaseResolver.defaultDatabase() );
                 securityLog.error( "[%s]: failed to log in: too many failed attempts",
                         escape( token.getPrincipal().toString() ) );
             }
@@ -163,8 +163,8 @@ public class MultiRealmAuthManager extends EnterpriseAuthManager
                             cause != null && cause.getMessage() != null ? " (" + cause.getMessage() + ")" : "" );
                     throw new AuthProviderFailedException( e.getCause().getMessage(), e.getCause() );
                 }
-                securityContext = new StandardEnterpriseLoginContext( this,
-                                                                      new ShiroSubject( securityManager, AuthenticationResult.FAILURE ), defaultDatabase );
+                securityContext = new StandardEnterpriseLoginContext( this, new ShiroSubject( securityManager, AuthenticationResult.FAILURE ),
+                        defaultDatabaseResolver.defaultDatabase() );
                 Throwable cause = e.getCause();
                 Throwable causeCause = e.getCause() != null ? e.getCause().getCause() : null;
                 String errorMessage = String.format( "invalid principal or credentials%s%s",
@@ -291,6 +291,7 @@ public class MultiRealmAuthManager extends EnterpriseAuthManager
             }
         }
         privilegeResolver.clearCacheForRoles();
+        defaultDatabaseResolver.clearCache();
     }
 
     Collection<AuthorizationInfo> getAuthorizationInfo( PrincipalCollection principalCollection )

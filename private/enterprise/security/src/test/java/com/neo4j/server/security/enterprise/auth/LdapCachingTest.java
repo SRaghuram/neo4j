@@ -30,19 +30,20 @@ import java.util.concurrent.TimeUnit;
 import javax.naming.NamingException;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.cache.CaffeineCacheFactory;
 import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
+import org.neo4j.kernel.database.TestDefaultDatabaseResolver;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 
 class LdapCachingTest
@@ -70,7 +71,7 @@ class LdapCachingTest
         var privResolver = new PrivilegeResolver( systemGraphRealm, Config.defaults() );
         authManager = new MultiRealmAuthManager( privResolver , Collections.singletonList( testRealm ),
                                                  new ShiroCaffeineCache.Manager( fakeTicker::read, 100, cacheFactory, 10, true ),
-                                                 securityLog, Config.defaults() );
+                                                 securityLog, Config.defaults(), new TestDefaultDatabaseResolver( DEFAULT_DATABASE_NAME )  );
         authManager.init();
         authManager.start();
     }
@@ -103,11 +104,11 @@ class LdapCachingTest
     {
         // Given
         EnterpriseLoginContext mike = authManager.login( authToken( "mike", "123" ) );
-        mike.authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        mike.authorize( token, DEFAULT_DATABASE_NAME );
         assertThat( testRealm.takeAuthorizationFlag() ).as( "Test realm did not receive a call" ).isEqualTo( true );
 
         // When
-        mike.authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        mike.authorize( token, DEFAULT_DATABASE_NAME );
 
         // Then
         assertThat( testRealm.takeAuthorizationFlag() ).as( "Test realm received a call" ).isEqualTo( false );
@@ -118,19 +119,19 @@ class LdapCachingTest
     {
         // Given
         EnterpriseLoginContext mike = authManager.login( authToken( "mike", "123" ) );
-        mike.authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        mike.authorize( token, DEFAULT_DATABASE_NAME );
         assertThat( testRealm.takeAuthorizationFlag() ).as( "Test realm did not receive a call" ).isEqualTo( true );
 
         // When
         fakeTicker.advance( 99, TimeUnit.MILLISECONDS );
-        mike.authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        mike.authorize( token, DEFAULT_DATABASE_NAME );
 
         // Then
         assertThat( testRealm.takeAuthorizationFlag() ).as( "Test realm received a call" ).isEqualTo( false );
 
         // When
         fakeTicker.advance( 2, TimeUnit.MILLISECONDS );
-        mike.authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        mike.authorize( token, DEFAULT_DATABASE_NAME );
 
         // Then
         assertThat( testRealm.takeAuthorizationFlag() ).as( "Test realm did not received a call" ).isEqualTo( true );

@@ -33,6 +33,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.io.IOUtils;
+import org.neo4j.kernel.database.DefaultDatabaseResolver;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.scheduler.Group;
 import org.neo4j.snapshot.TestTransactionVersionContextSupplier;
@@ -58,7 +59,7 @@ class BoltSnapshotQueryExecutionIT
     private TestTransactionVersionContextSupplier testContextSupplier;
     private TestVersionContext testCursorContext;
     private Driver driver;
-    private GraphDatabaseService db;
+    private GraphDatabaseAPI db;
     private DatabaseManagementService managementService;
 
     @BeforeEach
@@ -78,8 +79,11 @@ class BoltSnapshotQueryExecutionIT
                 .removeExtensions( extension -> extension instanceof GlobalMetricsExtensionFactory ||
                                                 extension instanceof PageCacheWarmerExtensionFactory )
                 .build();
-        db = managementService.database( DEFAULT_DATABASE_NAME );
+        db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         createData( db );
+        // Resolve the default database once here to have it cached so it won't interfere with the tests.
+        DefaultDatabaseResolver defaultDatabaseResolver = db.getDependencyResolver().resolveDependency( DefaultDatabaseResolver.class );
+        defaultDatabaseResolver.defaultDatabase();
         prepareCursorContext();
         connectDriver();
     }
@@ -141,7 +145,7 @@ class BoltSnapshotQueryExecutionIT
 
     private URI boltURI()
     {
-        ConnectorPortRegister connectorPortRegister = ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( ConnectorPortRegister.class );
+        ConnectorPortRegister connectorPortRegister = db.getDependencyResolver().resolveDependency( ConnectorPortRegister.class );
         HostnamePort boltHostNamePort = connectorPortRegister.getLocalAddress( "bolt" );
         return URI.create( "bolt://" + boltHostNamePort.getHost() + ":" + boltHostNamePort.getPort() );
     }

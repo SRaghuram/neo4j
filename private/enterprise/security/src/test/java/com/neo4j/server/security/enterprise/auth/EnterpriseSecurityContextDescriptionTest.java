@@ -24,6 +24,7 @@ import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
+import org.neo4j.kernel.database.TestDefaultDatabaseResolver;
 import org.neo4j.kernel.impl.api.security.OverriddenAccessMode;
 import org.neo4j.kernel.impl.api.security.RestrictedAccessMode;
 import org.neo4j.server.security.auth.ShiroAuthenticationInfo;
@@ -33,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 
 class EnterpriseSecurityContextDescriptionTest
@@ -53,7 +55,7 @@ class EnterpriseSecurityContextDescriptionTest
 
         var privResolver = new PrivilegeResolver( realm, Config.defaults() );
         authManager = new MultiRealmAuthManager( privResolver, Collections.singleton( realm ), new MemoryConstrainedCacheManager(), mock( SecurityLog.class ),
-                                                 Config.defaults() );
+                                                 Config.defaults(), new TestDefaultDatabaseResolver( DEFAULT_DATABASE_NAME ) );
         authManager.start();
         principals = new SimplePrincipalCollection( "mats", "SystemGraphRealm" );
     }

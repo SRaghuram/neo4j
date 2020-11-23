@@ -10,26 +10,34 @@ import com.neo4j.causalclustering.readreplica.ReadReplicaEditionModule;
 import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseDefaultDatabaseResolver;
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent;
 
 import java.util.concurrent.Executor;
+import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.cache.CaffeineCacheFactory;
 import org.neo4j.cypher.internal.cache.ExecutorBasedCaffeineCacheFactory;
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerManager;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphComponents;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
+import org.neo4j.kernel.database.DefaultDatabaseResolver;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
 
 import static org.neo4j.scheduler.JobMonitoringParams.systemJob;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 public interface AbstractEnterpriseEditionModule
 {
@@ -74,7 +82,7 @@ public interface AbstractEnterpriseEditionModule
         return enterpriseComponent;
     }
 
-    default SecurityProvider makeEnterpriseSecurityModule( GlobalModule globalModule )
+    default SecurityProvider makeEnterpriseSecurityModule( GlobalModule globalModule, DefaultDatabaseResolver defaultDatabaseResolver )
     {
         Config config = globalModule.getGlobalConfig();
         LogProvider userLogProvider = globalModule.getLogService().getUserLogProvider();
@@ -92,7 +100,8 @@ public interface AbstractEnterpriseEditionModule
                     globalModule.getTransactionEventListeners(),
                     securityComponent,
                     cacheFactory,
-                    globalModule.getFileSystem()
+                    globalModule.getFileSystem(),
+                    defaultDatabaseResolver
             );
             securityModule.setup();
             globalModule.getGlobalLife().add( securityModule.authManager() );
@@ -100,6 +109,21 @@ public interface AbstractEnterpriseEditionModule
             return securityModule;
         }
         return EnterpriseNoAuthSecurityProvider.INSTANCE;
+    }
+
+    private Supplier<GraphDatabaseService> systemSupplier( DependencyResolver dependencies )
+    {
+        return () ->
+        {
+            DatabaseManager<?> databaseManager = dependencies.resolveDependency( DatabaseManager.class );
+            return databaseManager.getDatabaseContext( NAMED_SYSTEM_DATABASE_ID ).orElseThrow(
+                    () -> new RuntimeException( "No database called `" + SYSTEM_DATABASE_NAME + "` was found." ) ).databaseFacade();
+        };
+    }
+
+    default EnterpriseDefaultDatabaseResolver makeDefaultDatabaseResolver( GlobalModule globalModule )
+    {
+        return new EnterpriseDefaultDatabaseResolver( globalModule.getGlobalConfig(), systemSupplier( globalModule.getGlobalDependencies() ) );
     }
 
     private Executor getAuthCacheExecutor( GlobalModule globalModule )

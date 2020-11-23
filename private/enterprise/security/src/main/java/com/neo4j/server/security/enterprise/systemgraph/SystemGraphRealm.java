@@ -6,6 +6,7 @@
 package com.neo4j.server.security.enterprise.systemgraph;
 
 import com.neo4j.configuration.SecuritySettings;
+import org.neo4j.kernel.database.DefaultDatabaseResolver;
 import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ShiroAuthorizationInfoProvider;

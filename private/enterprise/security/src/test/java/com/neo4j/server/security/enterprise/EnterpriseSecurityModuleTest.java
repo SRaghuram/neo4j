@@ -36,6 +36,7 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
+import org.neo4j.kernel.database.TestDefaultDatabaseResolver;
 import org.neo4j.kernel.internal.event.GlobalTransactionEventListeners;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Log;
@@ -48,6 +49,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
 import static org.neo4j.logging.LogAssertions.assertThat;
 
@@ -324,6 +326,6 @@ class EnterpriseSecurityModuleTest
     private EnterpriseSecurityModule createModule( LogProvider logProvider, Config config )
     {
         return new EnterpriseSecurityModule( logProvider, mockSecurityLog, config, mockDependencies, mockEventListeners, mockSecurityComponent,
-                caffeineCacheFactory, new EphemeralFileSystemAbstraction() );
+                caffeineCacheFactory, new EphemeralFileSystemAbstraction(), new TestDefaultDatabaseResolver( "neo4j" ) );
     }
 }

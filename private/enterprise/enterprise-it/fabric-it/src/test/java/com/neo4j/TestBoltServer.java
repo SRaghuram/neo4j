@@ -24,6 +24,7 @@ import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.DefaultDatabaseResolver;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.memory.MemoryPools;
@@ -48,6 +49,7 @@ public class TestBoltServer
     private BoltServer boltServer;
 
     BoltGraphDatabaseManagementServiceSPI boltGraphDatabaseManagementService = mock( BoltGraphDatabaseManagementServiceSPI.class );
+    DefaultDatabaseResolver defaultDatabaseResolver = mock( DefaultDatabaseResolver.class );
 
     public TestBoltServer()
     {
@@ -102,7 +104,8 @@ public class TestBoltServer
                                      dependencies,
                                      authManager,
                                      authManager,
-                                     new MemoryPools()
+                                     new MemoryPools(),
+                                     defaultDatabaseResolver
         );
 
         try

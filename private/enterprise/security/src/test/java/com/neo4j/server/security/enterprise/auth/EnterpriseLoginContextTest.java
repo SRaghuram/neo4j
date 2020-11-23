@@ -30,6 +30,7 @@ import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
+import org.neo4j.kernel.database.TestDefaultDatabaseResolver;
 import org.neo4j.server.security.auth.ShiroAuthenticationInfo;
 
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
@@ -76,7 +77,7 @@ class EnterpriseLoginContextTest
         createPrivileges();
         var privResolver = new PrivilegeResolver( realm, Config.defaults() );
         authManager = new MultiRealmAuthManager( privResolver, Collections.singleton( realm ), new MemoryConstrainedCacheManager(), mock( SecurityLog.class ),
-                                                 Config.defaults() );
+                                                 Config.defaults(), new TestDefaultDatabaseResolver( DEFAULT_DATABASE_NAME ) );
         authManager.start();
 
     }

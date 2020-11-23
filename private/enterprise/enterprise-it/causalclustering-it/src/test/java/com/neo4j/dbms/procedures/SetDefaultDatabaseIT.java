@@ -15,13 +15,19 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.SessionConfig;
 import org.neo4j.graphdb.Result;
+import org.neo4j.driver.Transaction;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
@@ -29,6 +35,7 @@ import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
+import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
 
 @ClusterExtension
 @TestInstance( PER_METHOD )
@@ -48,6 +55,11 @@ public class SetDefaultDatabaseIT
                                          .withNumberOfReadReplicas( 0 );
         cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
+        cluster.systemTx( ( db, tx ) ->
+        {
+            tx.execute( "ALTER USER neo4j SET PASSWORD CHANGE NOT REQUIRED" );
+            tx.commit();
+        } );
     }
 
     @Test
@@ -76,6 +88,11 @@ public class SetDefaultDatabaseIT
         CausalClusteringTestHelpers.stopDatabase( "neo4j", cluster );
         CausalClusteringTestHelpers.assertDatabaseEventuallyInStateSeenByAll( "foo", cluster.allMembers(), STARTED );
         CausalClusteringTestHelpers.assertDatabaseEventuallyInStateSeenByAll( "neo4j", cluster.allMembers(), STOPPED );
+        cluster.coreTx( "foo", ( db, tx ) ->
+        {
+            tx.execute( "CREATE (a {dbName:'foo'})" ).close();
+            tx.commit();
+        } );
 
         cluster.systemTx( ( db, tx ) ->
         {
@@ -89,6 +106,12 @@ public class SetDefaultDatabaseIT
 
         // THEN
         assertDefaultDatabase( "foo", cluster );
+
+        // Check that we really get the new default when we connect over bolt
+        String boltAddress = cluster.randomCoreMember( true ).get().boltAdvertisedAddress();
+        withDriver( boltAddress, tx ->
+            assertThat( tx.run( "MATCH (n) RETURN n.dbName" ).single().asMap() ).isEqualTo( Map.of( "n.dbName", "foo" ) )
+        );
     }
 
     @Test
@@ -253,5 +276,19 @@ public class SetDefaultDatabaseIT
                                      .map( ShowDatabasesResultRow::name )
                                      .collect( Collectors.toSet() );
         assertThat( defaultDbs ).containsOnly( databaseName );
+    }
+
+    private void withDriver( String boltAddress, Consumer<Transaction> work )
+    {
+        var boltURI = URI.create( "bolt://" + boltAddress + "/" );
+        var sessionConfig = SessionConfig.defaultConfig();
+        try ( var driver = GraphDatabase.driver( boltURI, AuthTokens.basic( INITIAL_USER_NAME, INITIAL_USER_NAME ) );
+              var session = driver.session( sessionConfig );
+              var tx = session.beginTransaction() )
+        {
+            work.accept( tx );
+            tx.commit();
+        }
+
     }
 }
