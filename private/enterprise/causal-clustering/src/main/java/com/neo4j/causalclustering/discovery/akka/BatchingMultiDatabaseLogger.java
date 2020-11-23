@@ -36,6 +36,17 @@ import static java.lang.String.format;
 import static java.lang.System.lineSeparator;
 import static org.neo4j.internal.helpers.Strings.printMap;
 
+/**
+ * Batches logs that are equal for everything except for the database. This can be useful for example when an event happens to a server
+ * but is logged on database level. The changes are actually logged when the log content change or after a given time (BATCH_TIME), whichever comes first.
+ * In order to use, implementations are needed for the two abstract methods and an object that implements BatchingMultiDatabaseLogger.ChangeKey.
+ * Implementing instances are used by calling the logChange method for all detected possible changes.
+ * Actual log output will look like:
+ *      The [ChangeKey.title()] [info about which databases are batched] [ChangeKey.specification()]
+ *
+ * @param <T> An object represent the state or info that should be logged
+ */
+
 public abstract class BatchingMultiDatabaseLogger<T>
 {
     protected static final Duration BATCH_TIME = Duration.ofMillis( 1000 );
@@ -62,6 +73,12 @@ public abstract class BatchingMultiDatabaseLogger<T>
         this.batchTimeout = TimeoutFactory.fixedTimeout( batchTime.toMillis(), TimeUnit.MILLISECONDS );
     }
 
+    /**
+     * The public method that will actually be called for all changes. These changes will be batched.
+     * @param changeDescription a String representation of what is logged
+     * @param newInfo the new state of info
+     * @param oldInfo the state of info as it was before the log event
+     */
     public void logChange( String changeDescription, T newInfo, T oldInfo )
     {
         var change = computeChange( changeDescription, newInfo, oldInfo );
@@ -79,8 +96,24 @@ public abstract class BatchingMultiDatabaseLogger<T>
         batchedDatabaseIds.add( databaseId );
     }
 
+    /**
+     * Should calculate and return an object that represents the info that are common to all the entries that
+     * will be batched. Should return an empty Optional if there is no relevant differance between newInfo
+     * and oldInfo.
+     *
+     * @param changeDescription the title of the batched log message
+     * @param newInfo the new state of info
+     * @param oldInfo the state or info as it was before the log event
+     * @return an Optional of a ChangeKey that represent the common change that should be logged or an empty
+     *          Optional if no relevant change
+     */
     protected abstract Optional<ChangeKey> computeChange( String changeDescription, T newInfo, T oldInfo );
 
+    /**
+     * Should extract and return the DatabaseId that the current T are referring to
+     * @param info an object of typ T
+     * @return the DatabaseId for that instance of T
+     */
     protected abstract DatabaseId extractDatabaseId( T info );
 
     private void flushChange()
@@ -181,7 +214,16 @@ public abstract class BatchingMultiDatabaseLogger<T>
 
     protected interface ChangeKey
     {
+        /**
+         * The title of the change that will be logged
+         * @return a title
+         */
         String title();
+
+        /**
+         * The output of the common change that will be logged
+         * @return change specification
+         */
         String specification();
     }
 }
