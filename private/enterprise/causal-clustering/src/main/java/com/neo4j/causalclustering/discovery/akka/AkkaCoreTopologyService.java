@@ -372,7 +372,12 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     @Override
     public void onDatabaseStop( NamedDatabaseId namedDatabaseId )
     {
-        localLeadersByDatabaseId.remove( namedDatabaseId );
+        var removedInfo = localLeadersByDatabaseId.remove( namedDatabaseId );
+        if ( removedInfo != null )
+        {
+            log.info( "I am member %s. Removed leader info of member %s %s and term %s", memberId(), removedInfo.memberId(), namedDatabaseId,
+                      removedInfo.term() );
+        }
         var coreTopologyActor = coreTopologyActorRef;
         if ( coreTopologyActor != null )
         {

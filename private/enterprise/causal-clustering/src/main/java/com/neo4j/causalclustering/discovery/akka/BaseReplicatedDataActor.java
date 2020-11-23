@@ -110,6 +110,11 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
 
     protected <M> void modifyReplicatedData( Key<T> key, Function<T,T> modify, M message )
     {
+        if ( cluster.isTerminated() )
+        {
+            log().debug( "Aborted attempt to gossip data to other cluster members because Akka is shut down." );
+            return;
+        }
         Replicator.Update<T> update = new Replicator.Update<>( key, emptyData.get(), WRITE_CONSISTENCY, Optional.ofNullable( message ), modify );
 
         replicator.tell( update, self() );
