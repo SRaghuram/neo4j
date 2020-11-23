@@ -54,7 +54,7 @@ public class MutableQueryStatistics implements QueryStatistics
     @Override
     public int getNodesCreated()
     {
-        return createdNodes++;
+        return createdNodes;
     }
 
     @Override

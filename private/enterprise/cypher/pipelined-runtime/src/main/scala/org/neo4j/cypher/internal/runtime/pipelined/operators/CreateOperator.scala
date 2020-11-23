@@ -109,9 +109,10 @@ class CreateOperator(val workIdentity: WorkIdentity,
         } else if (endNodeId == NO_SUCH_NODE) {
           handleMissingNode(command.relName, command.endName, lenientCreateRelationship)
         } else {
-          createRelationship(startNodeId, typeId, endNodeId, write, resources.queryStatisticsTracker)
+          val newId = createRelationship(startNodeId, typeId, endNodeId, write, resources.queryStatisticsTracker)
+          command.properties.foreach(p => setRelationshipProperties(newId, p(cursor, queryState), tokenWrite, write, resources.queryStatisticsTracker))
+          newId
         }
-        command.properties.foreach(p => setRelationshipProperties(relationshipId, p(cursor, queryState), tokenWrite, write, resources.queryStatisticsTracker))
         cursor.setLongAt(command.relIdOffset, relationshipId)
         i += 1
       }
@@ -165,15 +166,13 @@ object CreateOperator {
                                 tokenWrite: TokenWrite,
                                 write: Write,
                                 queryStatisticsTracker: MutableQueryStatistics): Unit = {
-    if (relationship != NO_SUCH_RELATIONSHIP) {
-      safeCastToMap(properties).foreach((k: String, v: AnyValue) => {
-        if (!(v eq NO_VALUE)) {
-          val propertyKeyId = tokenWrite.propertyKeyGetOrCreateForName(k)
-          write.relationshipSetProperty(relationship, propertyKeyId, makeValueNeoSafe(v))
-          queryStatisticsTracker.setProperty()
-        }
-      })
-    }
+    safeCastToMap(properties).foreach((k: String, v: AnyValue) => {
+      if (!(v eq NO_VALUE)) {
+        val propertyKeyId = tokenWrite.propertyKeyGetOrCreateForName(k)
+        write.relationshipSetProperty(relationship, propertyKeyId, makeValueNeoSafe(v))
+        queryStatisticsTracker.setProperty()
+      }
+    })
   }
 
   private def safeCastToMap(value: AnyValue): MapValue = value match {
@@ -259,16 +258,18 @@ class CreateOperatorTemplate(override val inner: OperatorTaskTemplate,
               )
             }
           } { //else
+            block(
             assign(relVar,
               invokeStatic(
                 method[CreateOperator, Long, Long, Int, Long, Write, MutableQueryStatistics]("createRelationship"),
                 load(startNodeVar), loadField(relTypeFields(offset)), load(endNodeVar), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
+            ),
+              properties.map(_ =>
+                invokeStatic(method[CreateOperator, Unit, Long, AnyValue, TokenWrite, Write, MutableQueryStatistics]("setRelationshipProperties"),
+                  load(relVar), nullCheckIfRequired(relPropertyMap(offset)), loadField(TOKEN_WRITE), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
+              ).getOrElse(noop())
             )
           },
-          properties.map(_ =>
-            invokeStatic(method[CreateOperator, Unit, Long, AnyValue, TokenWrite, Write, MutableQueryStatistics]("setRelationshipProperties"),
-              load(relVar), nullCheckIfRequired(relPropertyMap(offset)), loadField(TOKEN_WRITE), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
-          ).getOrElse(noop()),
           codeGen.setLongAt(offset, load(relVar))
         )
     }
