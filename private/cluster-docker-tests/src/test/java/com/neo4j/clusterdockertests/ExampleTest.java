@@ -21,7 +21,6 @@ import org.testcontainers.containers.Neo4jContainer;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Set;
-import java.util.concurrent.TimeoutException;
 
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.AuthTokens;
@@ -87,7 +86,7 @@ public class ExampleTest
     }
 
     @Test
-    void stopStartOneServerTest() throws Neo4jCluster.Neo4jTimeoutException, InterruptedException, TimeoutException
+    void stopStartOneServerTest() throws Neo4jCluster.Neo4jTimeoutException, InterruptedException
     {
         // when
         Set<Neo4jServer> stopped = cluster.stopRandomServers( 1 );
@@ -104,7 +103,7 @@ public class ExampleTest
     }
 
     @Test
-    void killStartOneServerTest() throws Neo4jCluster.Neo4jTimeoutException, InterruptedException, TimeoutException
+    void killStartOneServerTest() throws Neo4jCluster.Neo4jTimeoutException, InterruptedException
     {
         // when
         Set<Neo4jServer> stopped = cluster.killRandomServers( 1 );

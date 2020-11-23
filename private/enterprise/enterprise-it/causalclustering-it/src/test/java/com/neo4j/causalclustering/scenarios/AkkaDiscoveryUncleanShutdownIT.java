@@ -19,6 +19,8 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.platform.commons.logging.Logger;
+import org.junit.platform.commons.logging.LoggerFactory;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -27,6 +29,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -48,6 +52,7 @@ import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.test.assertion.Assert.assertEventuallyDoesNotThrow;
 
 @ClusterExtension
 @DriverExtension
@@ -58,6 +63,8 @@ class AkkaDiscoveryUncleanShutdownIT
     private static final Duration MAX_INTERVAL_BETWEEN_SHUTDOWNS = Duration.ofMinutes( 2 );
 
     private static final int CORES = 3;
+
+    private final Logger log = LoggerFactory.getLogger( this.getClass() );
 
     @Inject
     private ClusterFactory clusterFactory;
@@ -83,7 +90,7 @@ class AkkaDiscoveryUncleanShutdownIT
         assertOverviews();
         startCore( toRestart );
 
-        checkClusterHealthy();
+        assertEventuallyDoesNotThrow( "cluster healthcheck passes", this::checkClusterHealthy, 1, TimeUnit.MINUTES );
     }
 
     @Test
@@ -103,7 +110,7 @@ class AkkaDiscoveryUncleanShutdownIT
 
         startCore( toRestart );
 
-        checkClusterHealthy();
+        assertEventuallyDoesNotThrow( "cluster healthcheck passes", this::checkClusterHealthy, 1, TimeUnit.MINUTES );
     }
 
     private void startCluster( int minimumCoreClusterSizeAtRuntime ) throws Exception
@@ -207,7 +214,7 @@ class AkkaDiscoveryUncleanShutdownIT
         ClusterOverviewHelper.assertAllEventualOverviews( cluster, new HamcrestCondition<>( expected ), removedCoreIds, emptySet() );
     }
 
-    private void checkClusterHealthy() throws IOException, ExecutionException, InterruptedException
+    private void checkClusterHealthy() throws IOException, ExecutionException, InterruptedException, TimeoutException
     {
         try ( ClusterChecker clusterChecker = driverFactory.clusterChecker( cluster ) )
         {

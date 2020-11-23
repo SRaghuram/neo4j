@@ -34,6 +34,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -53,9 +54,9 @@ import org.neo4j.logging.Level;
 import org.neo4j.test.extension.Inject;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.assertion.Assert.assertEventuallyDoesNotThrow;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @NeedsCausalCluster
@@ -86,8 +87,7 @@ public class TestAkkaResilienceOne
     private static Neo4jContainer<?> configure( Neo4jContainer<?> input ) throws IOException
     {
         return DeveloperWorkflow.configureNeo4jContainerIfNecessary( input )
-                                .withNeo4jConfig( CausalClusteringSettings.middleware_logging_level.name(), Level.INFO.toString() )
-                                .withNeo4jConfig( CausalClusteringInternalSettings.middleware_akka_down_unreachable_on_new_joiner.name(), "true" );
+                                .withNeo4jConfig( CausalClusteringSettings.middleware_logging_level.name(), Level.INFO.toString() );
     }
 
     @BeforeAll
@@ -224,8 +224,6 @@ public class TestAkkaResilienceOne
         // TODO: replace this wait with an assertion based on queries or logs
         waitUntil( deadline );
         checkClusterState();
-        testServer.forEach( s -> log.info( s::getContainerLogs ) );
-        testServer.forEach( s -> log.info( s::getDebugLog ) );
     }
 
     private void waitUntil( Instant deadline ) throws InterruptedException
@@ -311,8 +309,6 @@ public class TestAkkaResilienceOne
         //   testSeed: fails on 4.1 and below because there is no Akka Cluster. A new cluster needs to be formed but the first seed won't create one.
         //   !testSeed: test fails on 4.1 and below. Akka cluster forms but cluster overview and show databases don't match on all cores
         checkClusterState();
-        testServer.forEach( s -> log.info( s::getContainerLogs ) );
-        testServer.forEach( s -> log.info( s::getDebugLog ) );
     }
 
     private void waitForAkkaRestart( Set<Neo4jServer> testServer, int akkaRestartMessageCountBefore )
@@ -321,7 +317,7 @@ public class TestAkkaResilienceOne
                 "Akka should restart",
                 () -> countInDebugLogs( testServer, akkaRestartMessage ),
                 equalityCondition( akkaRestartMessageCountBefore + 1 ),
-                2, TimeUnit.SECONDS
+                10, TimeUnit.SECONDS
         );
     }
 
@@ -343,28 +339,38 @@ public class TestAkkaResilienceOne
         //   testSeed: fails on 4.1 and below because no cluster will form
         //   !testSeed: A new 2-member cluster will form
         waitUntil( deadline );
-        cluster.startServers( others );
-        deadline = Instant.now().plus( Duration.ofSeconds( 60 ) );
+
+        // startServers will start the container but block until the processes join the cluster, so we run that asynchronously
+        // we wait for the log message that indicates the
+        var started = CompletableFuture.supplyAsync( () -> cluster.startServers( others ) );
+        assertEventually( "server containers started",
+                          () -> others.stream().allMatch( Neo4jServer::isContainerRunning ),
+                          TRUE, 3, TimeUnit.MINUTES );
+        var othersLogs = others.stream().collect( Collectors.toMap( s -> s, Neo4jServer::getDebugLogPosition ) );
+        deadline = Instant.now().plus( Duration.ofSeconds( 20 ) );
 
         // case:
         //   testSeed: the seed has a cluster (it was only paused) the other members should join it (they will be trying)
         //   !testSeed: The paused member should try and contact the 2-member cluster - but it's on a different Cluster incarnation, will it restart and join?
         waitUntil( deadline );
+        assertEventuallyDoesNotThrow( "Started servers attempt to join",
+                                      () -> othersLogs.forEach( ( server, debugLogPosition ) -> assertThat( server.getDebugLogFrom( debugLogPosition ) )
+                                              .contains( "Joining seed nodes" ) ),
+                                      2, TimeUnit.MINUTES );
+
         cluster.unpauseServers( testServer );
         deadline = Instant.now().plus( Duration.ofSeconds( 10 ) );
 
         // after unpausing we need a few seconds for the core to notice that it has been unpaused
         waitUntil( deadline );
-
+        started.join();
         // case:
         //   testSeed: test passes
         //   !testSeed: fails on 4.1 and below because - akka cluster is partitioned into a 2-member cluster and a 1-member cluster
         checkClusterState();
-        testServer.forEach( s -> log.info( s::getContainerLogs ) );
-        testServer.forEach( s -> log.info( s::getDebugLog ) );
     }
 
-    private Set<Neo4jServer> pickTheTestServer( boolean testSeed ) throws ExecutionException, InterruptedException
+    private Set<Neo4jServer> pickTheTestServer( boolean testSeed ) throws ExecutionException, InterruptedException, TimeoutException
     {
         Set<Neo4jServer> seed = Set.of( getSeed() );
         Set<Neo4jServer> notTheSeed = cluster.getAllServersExcept( seed );
@@ -372,7 +378,7 @@ public class TestAkkaResilienceOne
         return testSeed ? seed : notTheSeed.stream().limit( 1 ).collect( Collectors.toSet() );
     }
 
-    private Neo4jServer getSeed() throws ExecutionException, InterruptedException
+    private Neo4jServer getSeed() throws ExecutionException, InterruptedException, TimeoutException
     {
         URI firstAkkaSeed = getFirstAkkaSeed( clusterChecker );
         return cluster.getAllServers().stream().filter( s -> s.getDirectBoltUri().equals( firstAkkaSeed ) ).findFirst().get();
@@ -381,7 +387,7 @@ public class TestAkkaResilienceOne
     private void checkClusterState()
     {
         assertEventuallyDoesNotThrow(
-                "All servers should show the same akka state",
+                "All servers should show the same state",
                 () ->
                 {
                     var akkaState = AkkaState.verifyAllServersShowSameAkkaState( clusterChecker );
@@ -389,11 +395,11 @@ public class TestAkkaResilienceOne
                     assertThat( akkaState.getUnreachable() ).isEmpty();
                     clusterChecker.verifyClusterStateMatchesOnAllServers();
                 },
-                3, TimeUnit.MINUTES
+                6, TimeUnit.MINUTES
         );
     }
 
-    private static URI getFirstAkkaSeed( ClusterChecker checker ) throws ExecutionException, InterruptedException
+    private static URI getFirstAkkaSeed( ClusterChecker checker ) throws ExecutionException, InterruptedException, TimeoutException
     {
         var results = checker.runOnAllServers(
                 "CALL dbms.listConfig('initial_discovery_members') YIELD value WITH value AS initial_members " +

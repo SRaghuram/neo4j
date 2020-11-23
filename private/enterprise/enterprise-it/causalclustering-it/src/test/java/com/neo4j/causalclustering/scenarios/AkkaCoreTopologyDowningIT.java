@@ -227,8 +227,9 @@ class AkkaCoreTopologyDowningIT
     private TopologyServiceComponents createAndStart( Function<Config,RemoteMembersResolver> resolverFactory, int myPort, int... otherPorts ) throws Throwable
     {
         var initialDiscoMembers = IntStream.concat( IntStream.of( myPort ), IntStream.of( otherPorts ) )
-                .mapToObj( port -> new SocketAddress( "localhost", port ) )
-                .collect( Collectors.toList() );
+                                           .mapToObj( port -> new SocketAddress( "localhost", port ) )
+                                           .sorted( InitialDiscoveryMembersResolver.advertisedSockedAddressComparator )
+                                           .collect( Collectors.toList() );
 
         var boltAddress = new SocketAddress( "localhost", PortAuthority.allocatePort() );
 

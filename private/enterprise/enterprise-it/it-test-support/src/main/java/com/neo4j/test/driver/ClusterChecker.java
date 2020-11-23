@@ -7,6 +7,7 @@ package com.neo4j.test.driver;
 
 import java.io.IOException;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -17,6 +18,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -33,6 +35,7 @@ public final class ClusterChecker implements AutoCloseable
 {
     private final ExecutorService executorService;
     private final Map<URI,Driver> driverCache;
+    private static final Duration QUERY_TIMEOUT = Duration.ofMinutes( 5 );
 
     public static ClusterChecker fromBoltURIs( Collection<URI> directBoltAddresses, DriverSupplier driverFactory ) throws IOException
     {
@@ -56,11 +59,11 @@ public final class ClusterChecker implements AutoCloseable
         executorService = Executors.newWorkStealingPool( driverCache.size() );
     }
 
-    public void verifyConnectivity() throws ExecutionException, InterruptedException
+    public void verifyConnectivity() throws ExecutionException, InterruptedException, TimeoutException
     {
         executorService.submit(
                 () -> driverCache.values().parallelStream().forEach( Driver::verifyConnectivity )
-        ).get();
+        ).get( QUERY_TIMEOUT.getSeconds(), TimeUnit.SECONDS );
     }
 
     public int size()
@@ -68,7 +71,7 @@ public final class ClusterChecker implements AutoCloseable
         return driverCache.size();
     }
 
-    public List<Record> assertCypherResponseMatchesOnAllServers( String cypher ) throws ExecutionException, InterruptedException
+    public List<Record> assertCypherResponseMatchesOnAllServers( String cypher ) throws ExecutionException, InterruptedException, TimeoutException
     {
         var results = runOnAllServers( cypher );
         List<Record> firstResult = results.entrySet().stream().findFirst().get().getValue();
@@ -80,25 +83,25 @@ public final class ClusterChecker implements AutoCloseable
         return firstResult;
     }
 
-    public <T> Map<URI,T> runOnAllServers( TransactionWork<T> tx ) throws ExecutionException, InterruptedException
+    public <T> Map<URI,T> runOnAllServers( TransactionWork<T> tx ) throws ExecutionException, InterruptedException, TimeoutException
     {
         return executorService.submit(
                 () -> driverCache.entrySet()
                                  .parallelStream()
                                  .collect( Collectors.toMap( Map.Entry::getKey, runTx( tx ) ) )
-        ).get();
+        ).get( QUERY_TIMEOUT.getSeconds(), TimeUnit.SECONDS );
     }
 
-    public <T> Map<URI,List<Record>> runOnAllServers( String cypher ) throws ExecutionException, InterruptedException
+    public <T> Map<URI,List<Record>> runOnAllServers( String cypher ) throws ExecutionException, InterruptedException, TimeoutException
     {
         return executorService.submit(
                 () -> driverCache.entrySet()
                                  .parallelStream()
                                  .collect( Collectors.toMap( Map.Entry::getKey, runCypher( cypher ) ) )
-        ).get();
+        ).get( QUERY_TIMEOUT.getSeconds(), TimeUnit.SECONDS );
     }
 
-    public void verifyClusterStateMatchesOnAllServers() throws ExecutionException, InterruptedException
+    public void verifyClusterStateMatchesOnAllServers() throws ExecutionException, InterruptedException, TimeoutException
     {
         // Check cluster.overview and SHOW DATABASES are consistent with one another
         var clusterOverviewResult = assertCypherResponseMatchesOnAllServers(
@@ -165,7 +168,7 @@ public final class ClusterChecker implements AutoCloseable
     }
 
     @Override
-    public synchronized void close() throws ExecutionException, InterruptedException
+    public synchronized void close() throws ExecutionException, InterruptedException, TimeoutException
     {
         try
         {
@@ -173,7 +176,7 @@ public final class ClusterChecker implements AutoCloseable
             {
                 executorService.submit(
                         () -> driverCache.values().parallelStream().forEach( Driver::close )
-                ).get();
+                ).get( QUERY_TIMEOUT.getSeconds(), TimeUnit.SECONDS );
                 driverCache.clear();
             }
         }

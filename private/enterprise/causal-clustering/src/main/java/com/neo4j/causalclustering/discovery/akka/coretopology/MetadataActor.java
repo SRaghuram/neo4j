@@ -82,11 +82,8 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
     public void sendInitialDataToReplicator( DiscoveryMember memberSnapshot )
     {
         var databaseIds = memberSnapshot.databasesInState( STARTED );
-        if ( !databaseIds.isEmpty() )
-        {
-            startedDatabases.addAll( databaseIds );
-            sendCoreServerInfo();
-        }
+        startedDatabases.addAll( databaseIds );
+        sendCoreServerInfo();
     }
 
     private void removeDataFromReplicator( CleanupMessage message )

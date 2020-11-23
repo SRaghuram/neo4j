@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -159,7 +160,7 @@ final class AkkaState
                '}';
     }
 
-    public static AkkaState verifyAllServersShowSameAkkaState( ClusterChecker checker ) throws ExecutionException, InterruptedException
+    public static AkkaState verifyAllServersShowSameAkkaState( ClusterChecker checker ) throws ExecutionException, InterruptedException, TimeoutException
     {
         Map<URI,AkkaState> akkaStates = checker.runOnAllServers( getAkkaState );
         assertThat( akkaStates ).hasSize( checker.size() );
