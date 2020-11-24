@@ -292,4 +292,26 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     result.executionPlanDescription() should includeSomewhere.aPlan("CacheProperties")
     result.toSet should equal(expectedResult)
   }
+
+  test("should handle caching renamed variable") {
+    // Note, this test case builds on the assumption that cardinality will be lower after the aggregation which might change if we improve cardinality estimation.
+    createLabeledNode(Map("prop" -> 123), "A")
+    createLabeledNode("B")
+    val query =
+      """PROFILE
+        |MATCH (n:A)
+        |WITH n AS n2, count(n) AS count
+        |MATCH (n2), (m:B)
+        |WITH n2 AS n3
+        |MATCH (n3)
+        |RETURN n3.prop""".stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+
+    result.executionPlanDescription() should includeSomewhere
+      .aPlan("Projection").containingArgumentForProjection(Map("`n3.prop`" -> "cache[n3.prop]")).withDBHits(0)
+    result.executionPlanDescription() should includeSomewhere
+      .aPlan("CacheProperties").containingArgument("cache[n2.prop]").withDBHits(1)
+    result.toList shouldBe List(Map("n3.prop" -> 123))
+  }
 }
