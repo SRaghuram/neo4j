@@ -9,13 +9,10 @@ import com.neo4j.bench.client.queries.Query;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Supplier;
 
-import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class QueryRetrier
@@ -64,7 +61,7 @@ public class QueryRetrier
             }
             catch ( Throwable e )
             {
-                LOG.debug( format( "Error executing callable %s\n%s", supplier, stackTraceFor( e ) ) );
+                LOG.error( "Error executing callable {}", supplier, e );
                 backOff( retry++ );
                 lastException = e;
             }
@@ -81,7 +78,7 @@ public class QueryRetrier
 
             // add 10 to 'retry' so minimum sleep duration is 1 second
             long milliseconds = Math.round( Math.pow( 2, retry + 10 ) );
-            LOG.debug( format( "Will retry after %s seconds", MILLISECONDS.toSeconds( milliseconds ) ) );
+            LOG.warn( "Will retry after {}} seconds", MILLISECONDS.toSeconds( milliseconds ) );
             Thread.sleep( milliseconds );
         }
         catch ( InterruptedException e )
@@ -100,7 +97,7 @@ public class QueryRetrier
                 try
                 {
                     RESULT result = client.execute( query );
-                    query.nonFatalError().ifPresent( LOG::debug );
+                    query.nonFatalError().ifPresent( LOG::warn );
                     if ( verbose )
                     {
                         LOG.debug( "Query successfully executed: " + toString() );
@@ -120,13 +117,5 @@ public class QueryRetrier
                 return query.getClass().getSimpleName();
             }
         };
-    }
-
-    private String stackTraceFor( Throwable e )
-    {
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter( sw );
-        e.printStackTrace( pw );
-        return sw.toString();
     }
 }

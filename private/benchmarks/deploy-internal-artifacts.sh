@@ -58,10 +58,28 @@ for module_dir in "${dirs[@]}"; do
     cd "private/benchmarks/${module_dir}"
     module_name=$(basename "$module_dir")
     artifact_file="target/$module_name-$version.jar"
-    if [ "$module_dir" == "benchmark-model" ]; then
-      mvn --settings "$settings_file" deploy:deploy-file -Dfile="$artifact_file" -DpomFile=".flattened-pom.xml" -Durl="https://neo.jfrog.io/neo/benchmarking-public" -DrepositoryId="neo4j-internal-releases"
-    else
-      mvn --settings "$settings_file" deploy:deploy-file -Dfile="$artifact_file" -DpomFile=".flattened-pom.xml" -Durl="https://neo.jfrog.io/neo/benchmarking-local" -DrepositoryId="neo4j-internal-releases"
+
+    # check if shaded file exists, and attach it to deployment
+    files=
+    classifiers=
+    types=
+    if [[ -f "target/${module_name}.jar" ]]; then
+      files="target/${module_name}.jar"
+      classifiers="shaded"
+      types="jar"
     fi
+
+    url="https://neo.jfrog.io/neo/benchmarking-local"
+    # benchmarking model is public
+    if [ "$module_dir" == "benchmark-model" ]; then
+      url="https://neo.jfrog.io/neo/benchmarking-public"
+    fi
+
+    mvn --settings "$settings_file" deploy:deploy-file \
+      -Dfile="$artifact_file" -DpomFile=".flattened-pom.xml" \
+      ${files:+-Dfiles=$files} \
+      ${classifiers:+-Dclassifiers=$classifiers} \
+      ${types:+-Dtypes=$types} \
+      -Durl="$url" -DrepositoryId="neo4j-internal-releases"
   )
 done

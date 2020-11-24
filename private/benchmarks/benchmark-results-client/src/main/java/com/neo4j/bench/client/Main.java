@@ -24,6 +24,7 @@ public class Main
                 .withDefaultCommand( Help.class )
                 .withCommand( ReIndexStoreCommand.class )
                 .withCommand( CompareVersionsCommand.class )
+                .withCommand( ReportTestRun.class )
                 .withCommand( Help.class );
 
         builder.withGroup( "annotate" )
