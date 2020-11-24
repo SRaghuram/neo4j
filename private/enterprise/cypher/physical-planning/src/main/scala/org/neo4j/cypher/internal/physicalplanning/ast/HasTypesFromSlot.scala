@@ -5,6 +5,6 @@
  */
 package org.neo4j.cypher.internal.physicalplanning.ast
 
-import org.neo4j.cypher.internal.runtime.ast.RuntimeExpression
+import org.neo4j.cypher.internal.runtime.ast.BooleanRuntimeExpression
 
-case class HasTypesFromSlot(offset: Int, resolvedTypeTokens: Seq[Int], lateTypes: Seq[String]) extends RuntimeExpression
+case class HasTypesFromSlot(offset: Int, resolvedTypeTokens: Seq[Int], lateTypes: Seq[String]) extends BooleanRuntimeExpression

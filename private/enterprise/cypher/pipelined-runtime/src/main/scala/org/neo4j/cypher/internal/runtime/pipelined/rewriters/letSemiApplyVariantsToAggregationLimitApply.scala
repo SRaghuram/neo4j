@@ -79,7 +79,7 @@ case class letSemiApplyVariantsToAggregationLimitApply(cardinalities: Cardinalit
                                     rhs: LogicalPlan,
                                     idName: String): LogicalPlan = {
     val limit = Limit(rhs, SignedDecimalIntegerLiteral("1")(InputPosition.NONE), DoNotIncludeTies)(idGen)
-    val aggregation = Aggregation(limit, Map.empty, Map(idName -> NonEmpty()(InputPosition.NONE)))(idGen)
+    val aggregation = Aggregation(limit, Map.empty, Map(idName -> NonEmpty))(idGen)
     cardinalities.copy(lhs.id, limit.id)
     cardinalities.copy(lhs.id, aggregation.id)
     providedOrders.copy(rhs.id, limit.id)

@@ -5,6 +5,6 @@
  */
 package org.neo4j.cypher.internal.physicalplanning.ast
 
-import org.neo4j.cypher.internal.runtime.ast.RuntimeExpression
+import org.neo4j.cypher.internal.runtime.ast.BooleanRuntimeExpression
 
-case class IsPrimitiveNull(offset: Int) extends RuntimeExpression
+case class IsPrimitiveNull(offset: Int) extends BooleanRuntimeExpression

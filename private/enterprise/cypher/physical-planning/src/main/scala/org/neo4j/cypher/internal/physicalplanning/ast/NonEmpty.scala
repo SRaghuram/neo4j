@@ -5,12 +5,11 @@
  */
 package org.neo4j.cypher.internal.physicalplanning.ast
 
-import org.neo4j.cypher.internal.expressions.Expression
-import org.neo4j.cypher.internal.util.InputPosition
+import org.neo4j.cypher.internal.runtime.ast.BooleanRuntimeExpression
 
 /**
   * Special aggregating function for checking if rows are produced. Not exposed in Cypher.
   */
-case class NonEmpty()(val position: InputPosition) extends Expression {
+case object NonEmpty extends BooleanRuntimeExpression {
   override def asCanonicalStringVal: String = "nonEmpty()"
 }

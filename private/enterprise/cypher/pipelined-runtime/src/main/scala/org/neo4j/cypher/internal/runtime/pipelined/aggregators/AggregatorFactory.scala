@@ -35,8 +35,8 @@ case class AggregatorFactory(physicalPlan: PhysicalPlan) {
 
       case _: CountStar => (CountStarAggregator, Array(Null.NULL))
       case CollectAll(expr) => (CollectAllAggregator, Array(expr))
-      case NonEmpty() => (NonEmptyAggregator, Array(Null.NULL))
-      case IsEmpty() => (IsEmptyAggregator, Array(Null.NULL))
+      case NonEmpty => (NonEmptyAggregator, Array(Null.NULL))
+      case IsEmpty => (IsEmptyAggregator, Array(Null.NULL))
 
       case c: FunctionInvocation =>
         c.function match {
