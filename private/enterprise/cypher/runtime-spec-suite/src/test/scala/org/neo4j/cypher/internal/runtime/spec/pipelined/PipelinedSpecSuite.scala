@@ -66,6 +66,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementDisabledTest
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MiscTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MultiNodeIndexSeekTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NestedLeftOuterHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NestedPlanDbHitsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NestedPlanExpressionTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeByIdSeekTestBase
@@ -80,6 +81,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexStartsWithSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NonParallelProfileRowsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NonParallelProfileTimeTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NonParallelProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalExpandAllTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalExpandIntoTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalFailureTestBase
@@ -98,7 +100,6 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ProfileRowsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileTimeTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProjectEndpointsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProjectionTestBase
-import org.neo4j.cypher.internal.runtime.spec.tests.NonParallelProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.PruningVarLengthExpandTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultStressTestBase
@@ -347,8 +348,12 @@ class PipelinedNodeRightOuterHashJoinTest extends RightOuterHashJoinTestBase(FUS
 class PipelinedNodeRightOuterHashJoinNoFusingTest extends RightOuterHashJoinTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // NODE LEFT OUTER HASH JOIN
-class PipelinedNodeLeftOuterHashJoinTest extends LeftOuterHashJoinTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
-class PipelinedNodeLeftOuterHashJoinNoFusingTest extends LeftOuterHashJoinTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedNodeLeftOuterHashJoinTest extends LeftOuterHashJoinTestBase(FUSING, PIPELINED, SIZE_HINT)
+                                         with NestedLeftOuterHashJoinTestBase[EnterpriseRuntimeContext]
+                                         with PipelinedSpecSuite
+class PipelinedNodeLeftOuterHashJoinNoFusingTest extends LeftOuterHashJoinTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+                                                 with NestedLeftOuterHashJoinTestBase[EnterpriseRuntimeContext]
+                                                 with PipelinedSpecSuite
 
 // VALUE HASH JOIN
 class PipelinedValueHashJoinTest extends ValueHashJoinTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
