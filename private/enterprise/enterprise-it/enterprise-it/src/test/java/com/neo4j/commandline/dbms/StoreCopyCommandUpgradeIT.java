@@ -8,6 +8,7 @@ package com.neo4j.commandline.dbms;
 import com.neo4j.dbms.commandline.StoreCopyCommand;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.storeupgrade.StoreUpgradeIT;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
@@ -16,6 +17,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import picocli.CommandLine;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,6 +41,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.selectForStore;
 import static org.neo4j.logging.NullLogProvider.getInstance;
@@ -64,6 +67,14 @@ class StoreCopyCommandUpgradeIT extends AbstractCommandIT
                 Arguments.of( "standardEmpty40", "0.0.4FS-empty.zip", 0, Standard.LATEST_RECORD_FORMATS, 0 ),
                 Arguments.of( "standardData40", "0.0.4FS-data.zip", 174, Standard.LATEST_RECORD_FORMATS, 6 )
         );
+    }
+
+    @Override
+    @BeforeEach
+    void setUp() throws IOException
+    {
+        super.setUp();
+        appendConfigSetting( record_format, "standard" ); // Should be ignored
     }
 
     @ParameterizedTest( name = "{0}" )

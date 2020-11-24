@@ -40,6 +40,7 @@ import org.neo4j.util.VisibleForTesting;
 import static org.neo4j.configuration.GraphDatabaseInternalSettings.databases_root_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
+import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 import static org.neo4j.kernel.recovery.Recovery.isRecoveryRequired;
@@ -389,6 +390,7 @@ public class StoreCopyCommand extends AbstractCommand
                            .fromFileNoThrow( ctx.confDir().resolve( Config.DEFAULT_CONFIG_FILE_NAME ) )
                            .set( GraphDatabaseSettings.neo4j_home, ctx.homeDir() ).build();
         ConfigUtils.disableAllConnectors( cfg );
+        cfg.set( record_format, "" ); // Record format should be ignored to allow upgrade
         return cfg;
     }
 
