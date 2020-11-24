@@ -43,6 +43,11 @@ import org.neo4j.fabric.stream.Records;
 import org.neo4j.fabric.stream.StatementResult;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.database.NamedDatabaseId;
+import org.neo4j.logging.Level;
+import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.internal.LogService;
+import org.neo4j.logging.internal.SimpleLogService;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -108,8 +113,11 @@ class FabricQueryLoggingTest
 
         queryExecutionMonitor = new AssertableQueryExecutionMonitor.Monitor();
 
+        LogProvider systemOutLogProvider = new Log4jLogProvider( System.out, Level.DEBUG );
+        LogService logService = new SimpleLogService( systemOutLogProvider, systemOutLogProvider );
         testFabric = new TestFabricFactory()
                 .withFabricDatabase( "mega" )
+                .withLogService( logService )
                 .withAdditionalSettings( additionalSettings )
                 .addMocks( driverPool )
                 .withQueryExecutionMonitor( queryExecutionMonitor )
@@ -326,6 +334,7 @@ class FabricQueryLoggingTest
         );
 
         String query = joinAsLines(
+                "CYPHER debug=fabriclogrecords",
                 "UNWIND [0, 1] AS s",
                 "CALL { USE mega.graph(s) RETURN 2 AS y }",
                 "RETURN s, y ORDER BY s, y"
