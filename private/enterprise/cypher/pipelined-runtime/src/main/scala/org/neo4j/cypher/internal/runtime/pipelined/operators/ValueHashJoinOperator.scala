@@ -88,7 +88,7 @@ class ValueHashJoinOperator(val workIdentity: WorkIdentity,
       while (outputRow.onValidRow && lhsRows.hasNext) {
         val morsel = lhsRows.next()
         outputRow.copyFrom(morsel.readCursor(onFirstRow = true))
-        NodeHashJoinSlottedPipe.copyDataFromRow(rhsMappings, rhsCachedPropertyMappings, outputRow, inputCursor)
+        NodeHashJoinSlottedPipe.copyDataFromRow(rhsMappings, rhsCachedPropertyMappings, outputRow, inputCursor, state.query)
         outputRow.next()
       }
     }

@@ -91,7 +91,7 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
 
       while (outputRow.onValidRow && lhsRows.hasNext) {
         outputRow.copyFrom(lhsRows.next().readCursor(onFirstRow = true))
-        copyDataFromRow(rhsMappings, rhsCachedPropertyMappings, outputRow, inputCursor)
+        copyDataFromRow(rhsMappings, rhsCachedPropertyMappings, outputRow, inputCursor, state.query)
         outputRow.next()
       }
     }

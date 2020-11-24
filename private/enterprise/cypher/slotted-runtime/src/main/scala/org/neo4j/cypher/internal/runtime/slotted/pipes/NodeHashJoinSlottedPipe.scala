@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.PrefetchingIterator
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
@@ -29,7 +30,6 @@ import org.neo4j.values.storable.LongArray
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.RelationshipValue
 import org.neo4j.values.virtual.VirtualNodeValue
-import org.neo4j.values.virtual.VirtualValues.node
 
 case class NodeHashJoinSlottedPipe(lhsKeyOffsets: KeyOffsets,
                                    rhsKeyOffsets: KeyOffsets,
@@ -78,7 +78,7 @@ case class NodeHashJoinSlottedPipe(lhsKeyOffsets: KeyOffsets,
           val lhs = matches.next()
           val newRow = SlottedRow(slots)
           newRow.copyAllFrom(lhs)
-          copyDataFromRow(rhsMappings, rhsCachedPropertyMappings, newRow, currentRhsRow)
+          copyDataFromRow(rhsMappings, rhsCachedPropertyMappings, newRow, currentRhsRow, queryState.query)
           return Some(newRow)
         }
 
@@ -114,7 +114,8 @@ object NodeHashJoinSlottedPipe {
   def copyDataFromRow(slotMappings: Array[SlotMapping],
                       cachedPropertyMappings: Array[(Int, Int)],
                       target: WritableRow,
-                      source: ReadableRow): Unit = {
+                      source: ReadableRow,
+                      queryContext: QueryContext): Unit = {
 
     var i = 0
     while (i < slotMappings.length) {
@@ -127,7 +128,7 @@ object NodeHashJoinSlottedPipe {
             case v: RelationshipValue => v.id()
           })
         case SlotMapping(fromOffset, toOffset, true, false) =>
-          target.setRefAt(toOffset, node(source.getLongAt(fromOffset)))
+          target.setRefAt(toOffset, queryContext.nodeById(source.getLongAt(fromOffset)))
       }
       i += 1
     }

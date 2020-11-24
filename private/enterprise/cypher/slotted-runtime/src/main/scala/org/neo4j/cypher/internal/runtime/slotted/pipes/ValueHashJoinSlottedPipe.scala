@@ -44,7 +44,7 @@ case class ValueHashJoinSlottedPipe(leftSide: Expression,
     } yield {
       val newRow = SlottedRow(slots)
       newRow.copyAllFrom(lhs)
-      NodeHashJoinSlottedPipe.copyDataFromRow(rhsMappings, rhsCachedPropertyMappings, newRow, rhs)
+      NodeHashJoinSlottedPipe.copyDataFromRow(rhsMappings, rhsCachedPropertyMappings, newRow, rhs, state.query)
       newRow
     }
     result.closing(table)

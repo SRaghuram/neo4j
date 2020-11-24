@@ -13,6 +13,7 @@ import org.eclipse.collections.api.set.MutableSet
 import org.neo4j.collection.trackable.HeapTrackingCollections
 import org.neo4j.cypher.internal.NonFatalCypherError
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException
@@ -85,7 +86,7 @@ class NodeLeftOuterHashJoinOperator(val workIdentity: WorkIdentity,
       val input = operatorInput.takeAccumulatorAndPayload[Morsel, HashTableAndSet, MorselData]()
       if (input != null) {
         try {
-          singletonIndexedSeq(new OTask(input.acc, input.payload))
+          singletonIndexedSeq(new OTask(input.acc, input.payload, state.query))
         } catch {
           case NonFatalCypherError(t) =>
             throw SchedulingInputException(AccumulatorAndPayloadInput(input), t)
@@ -96,7 +97,7 @@ class NodeLeftOuterHashJoinOperator(val workIdentity: WorkIdentity,
     }
   }
 
-  class OTask(override val accumulator: HashTableAndSet, morselData: MorselData)
+  class OTask(override val accumulator: HashTableAndSet, morselData: MorselData, queryContext: QueryContext)
     extends InputLoopWithMorselDataTask(morselData)
     with ContinuableOperatorTaskWithDataAndAccumulator[Morsel, HashTableAndSet] {
 
@@ -115,7 +116,7 @@ class NodeLeftOuterHashJoinOperator(val workIdentity: WorkIdentity,
         lhsRows = LhsRows.EMPTY
       } else {
         val keyValue = Values.longArray(key)
-        lhsRows = new LhsRowsMatchingRhs(accumulator.hashTable.lhsRows(keyValue), inputCursor.snapshot())
+        lhsRows = new LhsRowsMatchingRhs(accumulator.hashTable.lhsRows(keyValue), inputCursor.snapshot(), queryContext)
         if (lhsRows.hasNext) {
           accumulator.addRhsKey(keyValue)
         }
@@ -151,7 +152,7 @@ class NodeLeftOuterHashJoinOperator(val workIdentity: WorkIdentity,
   }
 
   object LhsRows {
-    val EMPTY = new LhsRowsMatchingRhs(Collections.emptyIterator(), null)
+    val EMPTY = new LhsRowsMatchingRhs(Collections.emptyIterator(), null, null)
   }
 
   trait LhsRows {
@@ -159,12 +160,12 @@ class NodeLeftOuterHashJoinOperator(val workIdentity: WorkIdentity,
     def writeNext(outputRow: MorselWriteCursor): Unit
   }
 
-  class LhsRowsMatchingRhs(inner: util.Iterator[Morsel], cursorToReadFrom: ReadableRow) extends LhsRows {
+  class LhsRowsMatchingRhs(inner: util.Iterator[Morsel], cursorToReadFrom: ReadableRow, queryContext: QueryContext) extends LhsRows {
     override def hasNext: Boolean = inner.hasNext
 
     override def writeNext(outputRow: MorselWriteCursor): Unit = {
       val lhsRow = inner.next().readCursor(onFirstRow = true)
-      copyDataFromRow(rhsMappings, rhsCachedPropertyMappings, outputRow, cursorToReadFrom)
+      copyDataFromRow(rhsMappings, rhsCachedPropertyMappings, outputRow, cursorToReadFrom, queryContext)
       outputRow.copyFrom(lhsRow)
     }
   }

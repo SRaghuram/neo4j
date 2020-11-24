@@ -90,7 +90,7 @@ class NodeHashJoinSingleNodeOperator(val workIdentity: WorkIdentity,
 
       while (outputRow.onValidRow && lhsRows.hasNext) {
         outputRow.copyFrom(lhsRows.next().readCursor(onFirstRow = true))
-        NodeHashJoinSlottedPipe.copyDataFromRow(rhsMappings, rhsCachedPropertyMappings, outputRow, inputCursor)
+        NodeHashJoinSlottedPipe.copyDataFromRow(rhsMappings, rhsCachedPropertyMappings, outputRow, inputCursor, state.query)
         outputRow.next()
       }
     }

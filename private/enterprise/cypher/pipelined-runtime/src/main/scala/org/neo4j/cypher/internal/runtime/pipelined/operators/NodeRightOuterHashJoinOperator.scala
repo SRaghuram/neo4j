@@ -99,7 +99,7 @@ class NodeRightOuterHashJoinOperator(val workIdentity: WorkIdentity,
     override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
       while (outputRow.onValidRow && lhsRows.hasNext) {
         val lhsRow = lhsRows.next().readCursor(onFirstRow = true)
-        copyDataFromRow(lhsMappings, lhsCachedPropertyMappings, outputRow, lhsRow)
+        copyDataFromRow(lhsMappings, lhsCachedPropertyMappings, outputRow, lhsRow, state.query)
         outputRow.copyFrom(inputCursor)
         outputRow.next()
       }

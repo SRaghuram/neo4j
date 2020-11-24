@@ -309,7 +309,7 @@ case class SlottedRow(slots: SlotConfiguration) extends CypherRow {
             throw new InternalException(s"Tried to merge slot $otherSlot from $other but it is missing from $this." +
               "Looks like something needs to be fixed in slot allocation.")
           )
-          if(checkNullability) checkOnlyWhenAssertionsAreEnabled(checkCompatibleNullablility(key, otherSlot))
+          checkOnlyWhenAssertionsAreEnabled(!checkNullability || checkCompatibleNullablility(key, otherSlot))
 
           val otherValue = slottedOther.getRefAtWithoutCheckingInitialized(offset)
           thisSlotSetter.apply(this, otherValue)

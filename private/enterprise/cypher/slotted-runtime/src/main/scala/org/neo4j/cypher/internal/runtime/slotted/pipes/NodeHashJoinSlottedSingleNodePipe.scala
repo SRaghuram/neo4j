@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.ClosingIterator
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.PrefetchingIterator
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
@@ -57,7 +58,7 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsKeyOffset: SingleKeyOffset,
       return ClosingIterator.empty
     }
 
-    probeInput(rhsIterator, table)
+    probeInput(rhsIterator, table, state.query)
   }
 
   private def buildProbeTable(lhsInput: Iterator[CypherRow], queryState: QueryState): LongProbeTable[CypherRow] = {
@@ -74,7 +75,8 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsKeyOffset: SingleKeyOffset,
   }
 
   private def probeInput(rhsInput: Iterator[CypherRow],
-                         probeTable: LongProbeTable[CypherRow]): ClosingIterator[CypherRow] =
+                         probeTable: LongProbeTable[CypherRow],
+                         queryContext: QueryContext): ClosingIterator[CypherRow] =
     new PrefetchingIterator[CypherRow] {
       private var matches: util.Iterator[CypherRow] = util.Collections.emptyIterator()
       private var currentRhsRow: CypherRow = _
@@ -85,7 +87,7 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsKeyOffset: SingleKeyOffset,
           val lhs = matches.next()
           val newRow = SlottedRow(slots)
           newRow.copyAllFrom(lhs)
-          copyDataFromRow(rhsMappings, rhsCachedPropertyMappings, newRow, currentRhsRow)
+          copyDataFromRow(rhsMappings, rhsCachedPropertyMappings, newRow, currentRhsRow, queryContext)
           return Some(newRow)
         }
 
