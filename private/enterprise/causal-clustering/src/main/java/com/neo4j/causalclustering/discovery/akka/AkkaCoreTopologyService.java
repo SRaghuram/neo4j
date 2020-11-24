@@ -375,7 +375,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         var removedInfo = localLeadersByDatabaseId.remove( namedDatabaseId );
         if ( removedInfo != null )
         {
-            log.info( "I am member %s. Removed leader info of member %s %s and term %s", memberId(), removedInfo.memberId(), namedDatabaseId,
+            log.info( "I am member %s. Removed leader info of member %s %s and term %s", serverId(), removedInfo.memberId(), namedDatabaseId,
                       removedInfo.term() );
         }
         var coreTopologyActor = coreTopologyActorRef;
