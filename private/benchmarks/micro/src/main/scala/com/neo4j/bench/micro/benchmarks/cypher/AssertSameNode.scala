@@ -11,6 +11,7 @@ import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
+import com.neo4j.bench.micro.data.ConstantGenerator.ConstantGeneratorFactory
 import com.neo4j.bench.micro.data.DataGeneratorConfig
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
 import com.neo4j.bench.micro.data.LabelKeyDefinition
@@ -21,7 +22,6 @@ import com.neo4j.bench.micro.data.Plans.astPropertyKeyToken
 import com.neo4j.bench.micro.data.Plans.astVariable
 import com.neo4j.bench.micro.data.PropertyDefinition
 import com.neo4j.bench.micro.data.TypeParamValues.INT
-import com.neo4j.bench.micro.data.ValueGeneratorUtil.ascGeneratorFor
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.GetValue
@@ -35,6 +35,7 @@ import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.graphdb.Label
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.util.ValueUtils
+import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.MapValue
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
@@ -62,20 +63,20 @@ class AssertSameNode extends AbstractCypherBenchmark {
 
   override def description = "Assert Same Node"
 
-  val NODE_COUNT = 1000000
+  val NODE_COUNT = 1
   private val LABEL1 = Label.label("SampleLabel1")
   private val LABEL2 = Label.label("SampleLabel2")
   private val KEY = "key"
   val PARAM = "param"
-  private val EXPECTED_VALUE_COUNT = if (keyExist) 1 else 0
-  val initialKey = 0
+  private lazy val EXPECTED_VALUE_COUNT = if (keyExist) 1 else 0
+  val key = 0
   val propertyType = INT
 
   override protected def getConfig: DataGeneratorConfig =
     new DataGeneratorConfigBuilder()
       .withNodeCount(NODE_COUNT)
       .withLabels(LABEL1, LABEL2)
-      .withNodeProperties(new PropertyDefinition(KEY, ascGeneratorFor(propertyType, initialKey)))
+      .withNodeProperties(new PropertyDefinition(KEY, new ConstantGeneratorFactory(propertyType, key)))
       .withUniqueConstraints(new LabelKeyDefinition(LABEL1, KEY), new LabelKeyDefinition(LABEL2, KEY))
       .isReusableStore(true)
       .build()
@@ -129,9 +130,9 @@ class AssertSameNodeThreadState {
     // we need instance of to box primitive java types from values
 
     if (benchmarkState.keyExist) {
-      paramsMap.put(benchmarkState.PARAM, benchmarkState.initialKey.toString)
+      paramsMap.put(benchmarkState.PARAM, Values.of(benchmarkState.key))
     } else {
-      paramsMap.put(benchmarkState.PARAM, (benchmarkState.initialKey-1).toString)
+      paramsMap.put(benchmarkState.PARAM, Values.of(benchmarkState.key-1))
     }
     params = ValueUtils.asMapValue(paramsMap)
     executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
