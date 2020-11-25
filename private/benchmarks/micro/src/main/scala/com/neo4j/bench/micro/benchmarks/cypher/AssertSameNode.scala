@@ -22,6 +22,7 @@ import com.neo4j.bench.micro.data.Plans.astPropertyKeyToken
 import com.neo4j.bench.micro.data.Plans.astVariable
 import com.neo4j.bench.micro.data.PropertyDefinition
 import com.neo4j.bench.micro.data.TypeParamValues.INT
+import com.neo4j.bench.micro.data.ValueGeneratorFactory
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.GetValue
@@ -76,7 +77,7 @@ class AssertSameNode extends AbstractCypherBenchmark {
     new DataGeneratorConfigBuilder()
       .withNodeCount(NODE_COUNT)
       .withLabels(LABEL1, LABEL2)
-      .withNodeProperties(new PropertyDefinition(KEY, new ConstantGeneratorFactory(propertyType, key)))
+      .withNodeProperties(new PropertyDefinition(KEY, new ConstantGeneratorFactory(propertyType, key).asInstanceOf[ValueGeneratorFactory[_]]))
       .withUniqueConstraints(new LabelKeyDefinition(LABEL1, KEY), new LabelKeyDefinition(LABEL2, KEY))
       .isReusableStore(true)
       .build()

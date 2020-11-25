@@ -24,6 +24,7 @@ import com.neo4j.bench.micro.data.Plans.astProperty
 import com.neo4j.bench.micro.data.Plans.astVariable
 import com.neo4j.bench.micro.data.PropertyDefinition
 import com.neo4j.bench.micro.data.TypeParamValues.LNG
+import com.neo4j.bench.micro.data.ValueGeneratorFactory
 import com.neo4j.bench.micro.data.ValueGeneratorFun
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
@@ -94,7 +95,7 @@ class SetNodeProperty extends AbstractCypherBenchmark {
 
   lazy val properties: Array[PropertyDefinition] =
     Array.range(0, propertyCount)
-      .map(i => new PropertyDefinition(s"prop_$i", ConstantGenerator.constant(LNG, 0L)))
+      .map(i => new PropertyDefinition(s"prop_$i", ConstantGenerator.constant(LNG, 0L).asInstanceOf[ValueGeneratorFactory[_]]))
 
   override protected def getConfig: DataGeneratorConfig =
     new DataGeneratorConfigBuilder()
