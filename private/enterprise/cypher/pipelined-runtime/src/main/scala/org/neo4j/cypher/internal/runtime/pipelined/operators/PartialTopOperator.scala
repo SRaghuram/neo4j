@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.collection.DefaultComparatorTopTable
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.PartialSortPipe.NO_MORE_ROWS_TO_SKIP_SORTING
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ArgumentSlots
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
@@ -98,7 +99,7 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
                                 skipSortingPrefixLength: Option[Long],
                                 val argumentStateMap: ArgumentStateMap[PartialTopWorkCanceller]) extends DataInputOperatorState[MorselData] {
 
-    private val initialSkip: Long = skipSortingPrefixLength.getOrElse(-1)
+    private val initialSkip: Long = skipSortingPrefixLength.getOrElse(NO_MORE_ROWS_TO_SKIP_SORTING)
 
     var remainingLimit: Int = _
     // How many rows remain until we need to start sorting?
@@ -132,11 +133,11 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
       }
       lastSeen = row
 
-      remainingSkipSorting = math.max(-1L, remainingSkipSorting - 1L)
+      remainingSkipSorting = math.max(NO_MORE_ROWS_TO_SKIP_SORTING, remainingSkipSorting - 1)
     }
 
     def computeResults(): Unit = {
-      resultsIterator = if (remainingSkipSorting == -1) {
+      resultsIterator = if (remainingSkipSorting == NO_MORE_ROWS_TO_SKIP_SORTING) {
         topTable.sort()
         topTable.iterator()
       } else {

@@ -11,6 +11,7 @@ import org.neo4j.collection.trackable.HeapTrackingArrayList
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.PartialSortPipe.NO_MORE_ROWS_TO_SKIP_SORTING
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
@@ -92,7 +93,7 @@ class PartialSortState(memoryTracker: MemoryTracker,
   private[this] var outputIndex: Int = -1
 
   // How many rows remain until we need to start sorting?
-  private[this] val initialSkip: Long = skipSortingPrefixLength.getOrElse(-1)
+  private[this] val initialSkip: Long = skipSortingPrefixLength.getOrElse(NO_MORE_ROWS_TO_SKIP_SORTING)
   private[this] var remainingSkipSorting: Long = initialSkip
 
   private[this] var currentMorselHeapUsage: Long = 0
@@ -115,7 +116,7 @@ class PartialSortState(memoryTracker: MemoryTracker,
 
     lastSeen = inputCursor.snapshot()
     memoryTracker.allocateHeap(lastSeen.shallowInstanceHeapUsage)
-    remainingSkipSorting = math.max(-1L, remainingSkipSorting - 1L)
+    remainingSkipSorting = math.max(NO_MORE_ROWS_TO_SKIP_SORTING, remainingSkipSorting - 1)
 
     if (!hasOutputToWrite) // if there _is_ output, add it after we're done writing
       buffer.add(lastSeen)
@@ -148,7 +149,7 @@ class PartialSortState(memoryTracker: MemoryTracker,
   def hasOutputToWrite: Boolean = outputIndex >= 0
 
   private def completeCurrentChunk(): Unit = {
-    if (buffer.size() > 1 && remainingSkipSorting == -1)
+    if (buffer.size() > 1 && remainingSkipSorting == NO_MORE_ROWS_TO_SKIP_SORTING)
       buffer.sort(suffixComparator)
 
     outputIndex = 0
