@@ -44,6 +44,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration.LONG_READ_OPERATION_14_ENABLE_KEY;
 import static com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration.withoutWrites;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -54,6 +55,13 @@ import static org.hamcrest.number.OrderingComparison.greaterThanOrEqualTo;
 
 public class EndToEndIT extends BaseEndToEndIT
 {
+
+    /**
+     * These numbers should be large enough so JFR can manage to save method sampling events, otherwise flamegraphs generation will fail. With these values
+     * benchmarks take ~10 seconds on a Ryzen 4800H CPU.
+     */
+    private static final int WARMUP_COUNT = 15_000;
+    private static final int OPERATION_COUNT = WARMUP_COUNT * 2;
 
     @Test
     @Tag( "endtoend" )
@@ -147,9 +155,9 @@ public class EndToEndIT extends BaseEndToEndIT
                        // ldbc_read_threads
                        "8",
                        // ldbc_warmup_count
-                       "10",
+                       Integer.toString( WARMUP_COUNT ),
                        // ldbc_run_count
-                       "10",
+                       Integer.toString( OPERATION_COUNT ),
                        // ldbc_repetition_count (a.k.a fork count)
                        "1",
                        // ldbc_results_dir
@@ -251,8 +259,6 @@ public class EndToEndIT extends BaseEndToEndIT
     {
         int threadCount = 1;
         double timeCompressionRatio = 1.0;
-        int warmupCount = 10;
-        long operationCount = 10;
         int statusDisplayIntervalAsSeconds = 1;
         boolean calculateWorkloadStatistics = false;
         long spinnerSleepDurationAsMilli = 1L;
@@ -265,7 +271,7 @@ public class EndToEndIT extends BaseEndToEndIT
                 "LDBC-SNB",
                 Neo4jDb.class.getName(),
                 LdbcSnbInteractiveWorkload.class.getName(),
-                operationCount,
+                OPERATION_COUNT,
                 threadCount,
                 statusDisplayIntervalAsSeconds,
                 MILLISECONDS,
@@ -277,10 +283,12 @@ public class EndToEndIT extends BaseEndToEndIT
                 spinnerSleepDurationAsMilli,
                 printHelp,
                 ignoreScheduledStartTimes,
-                warmupCount,
+                WARMUP_COUNT,
                 skipCount
         );
         Map<String,String> readOnly = withoutWrites( DriverConfigUtils.ldbcSnbInteractive() );
+        // a single LdbcQuery14 can take even 90 seconds to finish, and other read queries should be enough to cover this test case
+        readOnly.put( LONG_READ_OPERATION_14_ENABLE_KEY, "false" );
         configuration = (ConsoleAndFileDriverConfiguration) configuration.applyArgs( readOnly );
         return configuration;
     }
