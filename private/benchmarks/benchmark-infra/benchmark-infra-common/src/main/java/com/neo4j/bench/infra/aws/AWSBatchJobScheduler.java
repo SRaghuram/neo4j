@@ -11,9 +11,6 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.batch.AWSBatch;
 import com.amazonaws.services.batch.AWSBatchClientBuilder;
-import com.amazonaws.services.batch.model.ComputeEnvironmentDetail;
-import com.amazonaws.services.batch.model.ComputeResource;
-import com.amazonaws.services.batch.model.DescribeComputeEnvironmentsRequest;
 import com.amazonaws.services.batch.model.DescribeJobsRequest;
 import com.amazonaws.services.batch.model.JobDetail;
 import com.amazonaws.services.batch.model.SubmitJobRequest;
@@ -53,10 +50,10 @@ public class AWSBatchJobScheduler implements JobScheduler
     /**
      * Create AWS batch job scheduler using default credentials chain, https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html.
      *
-     * @param region AWS region
-     * @param jobQueue job queue name in CloudFormation stack
+     * @param region        AWS region
+     * @param jobQueue      job queue name in CloudFormation stack
      * @param jobDefinition job definition name in CloudFormation stack
-     * @param stack CloudFormation stack name
+     * @param stack         CloudFormation stack name
      * @return AWS job scheduler
      */
     public static JobScheduler create(
@@ -72,12 +69,12 @@ public class AWSBatchJobScheduler implements JobScheduler
     /**
      * Create AWS batch job scheduler using provided AWS key and secret.
      *
-     * @param region AWS region
-     * @param awsKey AWS key
-     * @param awsSecret AWS secret
-     * @param jobQueue job queue name in CloudFormation stack
+     * @param region        AWS region
+     * @param awsKey        AWS key
+     * @param awsSecret     AWS secret
+     * @param jobQueue      job queue name in CloudFormation stack
      * @param jobDefinition job definition name in CloudFormation stack
-     * @param stack CloudFormation stack name
+     * @param stack         CloudFormation stack name
      * @return AWS job scheduler
      */
     public static JobScheduler create(
@@ -130,9 +127,7 @@ public class AWSBatchJobScheduler implements JobScheduler
                                                               .withCredentials( credentialsProvider )
                                                               .withRegion( region )
                                                               .build(),
-                                         // TODO this would only work when jobQueue is from CLI, not discovered from InfrastructureMatcher
-                                         //getJobQueueCustomName( jobQueue, credentialsProvider, region, stack ),
-                                         jobQueue,
+                                         getJobQueueCustomName( jobQueue, credentialsProvider, region, stack ),
                                          jobDefinition );
     }
 
@@ -151,11 +146,6 @@ public class AWSBatchJobScheduler implements JobScheduler
                                    .map( Output::getOutputValue )
                                    .findFirst()
                                    .orElseThrow( () -> new RuntimeException( format( "job queue %s not found in stack %s ", jobQueue, stack ) ) );
-    }
-
-    private static boolean hasAwsCredentials( String awsKey, String awsSecret )
-    {
-        return awsSecret != null && awsKey != null;
     }
 
     private final AWSBatch awsBatch;
