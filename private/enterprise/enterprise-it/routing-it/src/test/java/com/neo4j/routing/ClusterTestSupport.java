@@ -41,6 +41,7 @@ public abstract class ClusterTestSupport
 
     protected Driver fooLeaderDriver;
     protected Driver fooFollowerDriver;
+    protected Driver systemFollowerDriver;
 
     protected final List<Bookmark> bookmarks = new ArrayList<>();
 
@@ -54,6 +55,7 @@ public abstract class ClusterTestSupport
 
         fooLeaderDriver = getFooLeaderDriver();
         fooFollowerDriver = getFooFollowerDriver();
+        systemFollowerDriver = getFollowerDriver( "system" );
 
         run( fooLeaderDriver, "foo", AccessMode.WRITE, session ->
         {
@@ -127,7 +129,12 @@ public abstract class ClusterTestSupport
 
     protected Driver getFooFollowerDriver() throws TimeoutException
     {
-        var fooLeader = cluster.awaitLeader( "foo" );
+        return getFollowerDriver( "foo" );
+    }
+
+    protected Driver getFollowerDriver( String databaseName ) throws TimeoutException
+    {
+        var fooLeader = cluster.awaitLeader( databaseName );
         var fooFollower = getFollower( cluster, fooLeader );
         return coreDrivers.get( fooFollower.index() );
     }

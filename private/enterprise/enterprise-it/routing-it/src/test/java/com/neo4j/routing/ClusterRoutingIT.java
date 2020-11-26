@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.bolt.v41.messaging.RoutingContext;
@@ -37,6 +38,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 
 import static com.neo4j.test.routing.ResultSummaryTestUtils.plan;
 import static com.neo4j.test.routing.ResultSummaryTestUtils.stats;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -126,8 +128,35 @@ class ClusterRoutingIT extends ClusterTestSupport
     }
 
     @Test
-    void testWriteOnFollowerWithRoutingDisabled()
+    void testAdminCommandOnFollower()
     {
+        // admin command --> neo4j@follower(system) --> system@leader(system)
+        when( routingContext.isServerRoutingEnabled() ).thenReturn( true );
+        try
+        {
+            run( systemFollowerDriver, "neo4j", AccessMode.WRITE,
+                 session -> session.run( "CREATE DATABASE dummy WAIT" ).consume() );
+            var dbs = run( systemFollowerDriver, "neo4j", AccessMode.WRITE,
+                           session -> session.run( "SHOW DATABASE dummy" ).stream()
+                                             .map( r -> r.get( "name" ).asString() )
+                                             .collect( Collectors.toSet() ) );
+
+            assertThat( dbs ).containsExactly( "dummy" );
+        }
+        finally
+        {
+            run( systemFollowerDriver, "neo4j", AccessMode.WRITE,
+                 session -> session.run( "DROP DATABASE dummy IF EXISTS WAIT" ).consume() );
+        }
+    }
+
+    @Test
+    void testWriteOnFollowerWithRoutingDisallowed()
+    {
+        // update --> neo4j@follower(foo)
+
+        // When disallowing routing (from the client e.g. using bolt://) we should expect to get basic write-on-follower errors,
+        // same as if we did: update --> foo@follower(foo)
         when( routingContext.isServerRoutingEnabled() ).thenReturn( false );
         var createQuery = joinAsLines(
                 "USE foo",
@@ -138,6 +167,22 @@ class ClusterRoutingIT extends ClusterTestSupport
                 .withMessage( "No write operations are allowed directly on this database." +
                         " Writes must pass through the leader." +
                         " The role of this server is: FOLLOWER" );
+    }
+
+    @Test
+    void testAdminCommandOnSystemDbFollowerWithRoutingDisallowed()
+    {
+        // admin command --> neo4j@follower(system)
+
+        // When disallowing routing (from the client e.g. using bolt://) we should expect to get basic write-on-follower errors
+        // same as if we did: admin command --> system@follower(system)
+        when( routingContext.isServerRoutingEnabled() ).thenReturn( false );
+        var createQuery = joinAsLines(
+                "CREATE DATABASE dummy" );
+        assertThatExceptionOfType( ClientException.class )
+                .isThrownBy( () -> run( systemFollowerDriver, "neo4j", AccessMode.WRITE,
+                                        session -> session.writeTransaction( tx -> tx.run( createQuery ).list() ) ) )
+                .withMessage( "Failed to create the specified database 'dummy': Administration commands must be executed on the LEADER server." );
     }
 
     @Disabled

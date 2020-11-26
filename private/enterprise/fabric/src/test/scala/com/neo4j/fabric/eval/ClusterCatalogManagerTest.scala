@@ -23,6 +23,7 @@ import org.neo4j.fabric.config.FabricConfig
 import org.neo4j.fabric.eval.Catalog.ExternalGraph
 import org.neo4j.fabric.eval.Catalog.InternalGraph
 import org.neo4j.fabric.eval.DatabaseLookup
+import org.neo4j.fabric.executor.FabricException
 import org.neo4j.fabric.executor.Location
 import org.neo4j.kernel.database.DatabaseIdFactory
 import org.neo4j.kernel.database.NamedDatabaseId
@@ -61,7 +62,7 @@ class ClusterCatalogManagerTest extends FabricTest {
   private val remoteAddresses = Map(remoteId -> remoteAddress)
   private val databaseManagementService = MockitoSugar.mock[DatabaseManagementService]
 
-  def createManager(leaderMapping: Map[NamedDatabaseId, ServerId]) = new ClusterCatalogManager(
+  def createManager(leaderMapping: Map[NamedDatabaseId, ServerId], routingEnabled: Boolean) = new ClusterCatalogManager(
     databaseLookup = new DatabaseLookup {
       def databaseIds: Set[NamedDatabaseId] = internalDbs
       def databaseId(databaseName: NormalizedDatabaseName): Option[NamedDatabaseId] = internalDbs.find(_.name() == databaseName.name())
@@ -73,11 +74,12 @@ class ClusterCatalogManagerTest extends FabricTest {
       def leaderBoltAddress(databaseId: NamedDatabaseId): Option[SocketAddress] = leaderId(databaseId).flatMap(remoteAddresses.get)
     },
     fabricConfig = config,
+    routingEnabled = routingEnabled,
   )
 
   "catalog resolution" in {
 
-    val catalog = createManager(Map.empty).currentCatalog()
+    val catalog = createManager(Map.empty, routingEnabled = true).currentCatalog()
 
     catalog.resolve(CatalogName("mega", "extA"))
       .shouldEqual(external(mega0))
@@ -102,20 +104,20 @@ class ClusterCatalogManagerTest extends FabricTest {
 
     "when all leaders are local" - {
 
-      val manager = createManager(Map(
+      val leaderMapping = Map(
         intA -> myId,
         intB -> myId,
         mega -> myId,
-      ))
-
-      val catalog = manager.currentCatalog()
+      )
 
       "and writable required" - {
 
         val writable = true
-        
+
         "and can route" in {
-          
+
+          val manager = createManager(leaderMapping, routingEnabled = true)
+          val catalog = manager.currentCatalog()
           val canRoute = true
 
           manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute)
@@ -139,6 +141,8 @@ class ClusterCatalogManagerTest extends FabricTest {
 
         "and cannot route" in {
 
+          val manager = createManager(leaderMapping, routingEnabled = true)
+          val catalog = manager.currentCatalog()
           val canRoute = false
 
           manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute)
@@ -158,6 +162,30 @@ class ClusterCatalogManagerTest extends FabricTest {
 
           manager.locationOf(catalog.resolve(CatalogName("mega")), writable, canRoute)
             .shouldEqual(new Location.Local(5, megaUuid, "mega"))
+        }
+
+        "and routing is disabled" in {
+
+          val manager = createManager(leaderMapping, routingEnabled = false)
+          val catalog = manager.currentCatalog()
+
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute = true)
+                 .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
+
+          manager.locationOf(catalog.resolve(CatalogName("intA")), writable, canRoute = true)
+                 .shouldEqual(new Location.Local(3, intAUuid, "inta"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega")), writable, canRoute = true)
+                 .shouldEqual(new Location.Local(5, megaUuid, "mega"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute = false)
+                 .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
+
+          manager.locationOf(catalog.resolve(CatalogName("intA")), writable, canRoute = false)
+                 .shouldEqual(new Location.Local(3, intAUuid, "inta"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega")), writable, canRoute = false)
+                 .shouldEqual(new Location.Local(5, megaUuid, "mega"))
         }
       }
 
@@ -167,6 +195,8 @@ class ClusterCatalogManagerTest extends FabricTest {
 
         "and can route" in {
 
+          val manager = createManager(leaderMapping, routingEnabled = true)
+          val catalog = manager.currentCatalog()
           val canRoute = true
 
           manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute)
@@ -190,6 +220,8 @@ class ClusterCatalogManagerTest extends FabricTest {
 
         "and cannot route" in {
 
+          val manager = createManager(leaderMapping, routingEnabled = true)
+          val catalog = manager.currentCatalog()
           val canRoute = false
 
           manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute)
@@ -210,24 +242,49 @@ class ClusterCatalogManagerTest extends FabricTest {
           manager.locationOf(catalog.resolve(CatalogName("mega")), writable, canRoute)
             .shouldEqual(new Location.Local(5, megaUuid, "mega"))
         }
+
+        "and routing is disabled" in {
+
+          val manager = createManager(leaderMapping, routingEnabled = false)
+          val catalog = manager.currentCatalog()
+
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute = true)
+                 .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
+
+          manager.locationOf(catalog.resolve(CatalogName("intA")), writable, canRoute = true)
+                 .shouldEqual(new Location.Local(3, intAUuid, "inta"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega")), writable, canRoute = true)
+                 .shouldEqual(new Location.Local(5, megaUuid, "mega"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute = false)
+                 .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
+
+          manager.locationOf(catalog.resolve(CatalogName("intA")), writable, canRoute = false)
+                 .shouldEqual(new Location.Local(3, intAUuid, "inta"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega")), writable, canRoute = false)
+                 .shouldEqual(new Location.Local(5, megaUuid, "mega"))
+        }
       }
     }
 
     "when some leaders are remote" - {
 
-      val manager = createManager(Map(
+      val leaderMapping = Map(
         intA -> remoteId,
         intB -> remoteId,
         mega -> myId,
-      ))
-      val catalog = manager.currentCatalog()
+      )
 
       "and writable required" - {
 
         val writable = true
-        
+
         "and can route" in {
-          
+
+          val manager = createManager(leaderMapping, routingEnabled = true)
+          val catalog = manager.currentCatalog()
           val canRoute = true
 
           manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute)
@@ -251,6 +308,8 @@ class ClusterCatalogManagerTest extends FabricTest {
 
         "and cannot route" in {
 
+          val manager = createManager(leaderMapping, routingEnabled = true)
+          val catalog = manager.currentCatalog()
           val canRoute = false
 
           manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute)
@@ -271,6 +330,30 @@ class ClusterCatalogManagerTest extends FabricTest {
           manager.locationOf(catalog.resolve(CatalogName("mega")), writable, canRoute)
             .shouldEqual(new Location.Local(5, megaUuid, "mega"))
         }
+
+        "and routing is disabled" in {
+
+          val manager = createManager(leaderMapping, routingEnabled = false)
+          val catalog = manager.currentCatalog()
+
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute = true)
+                 .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
+
+          intercept[FabricException](manager.locationOf(catalog.resolve(CatalogName("intA")), writable, canRoute = true))
+            .getMessage.should(include("Unable to route write operation to leader for database 'inta'. Server-side routing is disabled."))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega")), writable, canRoute = true)
+                 .shouldEqual(new Location.Local(5, megaUuid, "mega"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute = false)
+                 .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
+
+          manager.locationOf(catalog.resolve(CatalogName("intA")), writable, canRoute = false)
+                 .shouldEqual(new Location.Local(3, intAUuid, "inta"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega")), writable, canRoute = false)
+                 .shouldEqual(new Location.Local(5, megaUuid, "mega"))
+        }
       }
 
       "and writable not required" - {
@@ -278,7 +361,9 @@ class ClusterCatalogManagerTest extends FabricTest {
         val writable = false
 
         "and can route" in {
-          
+
+          val manager = createManager(leaderMapping, routingEnabled = true)
+          val catalog = manager.currentCatalog()
           val canRoute = true
 
           manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute)
@@ -301,7 +386,9 @@ class ClusterCatalogManagerTest extends FabricTest {
         }
 
         "and cannot route" in {
-          
+
+          val manager = createManager(leaderMapping, routingEnabled = true)
+          val catalog = manager.currentCatalog()
           val canRoute = false
 
           manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute)
@@ -321,6 +408,30 @@ class ClusterCatalogManagerTest extends FabricTest {
 
           manager.locationOf(catalog.resolve(CatalogName("mega")), writable, canRoute)
             .shouldEqual(new Location.Local(5, megaUuid, "mega"))
+        }
+
+        "and routing is disabled" in {
+
+          val manager = createManager(leaderMapping, routingEnabled = true)
+          val catalog = manager.currentCatalog()
+
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute = true)
+                 .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
+
+          manager.locationOf(catalog.resolve(CatalogName("intA")), writable, canRoute = true)
+                 .shouldEqual(new Location.Local(3, intAUuid, "inta"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega")), writable, canRoute = true)
+                 .shouldEqual(new Location.Local(5, megaUuid, "mega"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable, canRoute = false)
+                 .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
+
+          manager.locationOf(catalog.resolve(CatalogName("intA")), writable, canRoute = false)
+                 .shouldEqual(new Location.Local(3, intAUuid, "inta"))
+
+          manager.locationOf(catalog.resolve(CatalogName("mega")), writable, canRoute = false)
+                 .shouldEqual(new Location.Local(5, megaUuid, "mega"))
         }
       }
     }

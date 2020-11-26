@@ -6,6 +6,13 @@
 package com.neo4j.fabric.eval
 
 import com.neo4j.configuration.FabricEnterpriseConfig
+import com.neo4j.fabric.eval.ClusterCatalogManager.LeaderIsLocal
+import com.neo4j.fabric.eval.ClusterCatalogManager.LeaderIsRemote
+import com.neo4j.fabric.eval.ClusterCatalogManager.LeaderNotFound
+import com.neo4j.fabric.eval.ClusterCatalogManager.LeaderStatus
+import com.neo4j.fabric.eval.ClusterCatalogManager.RoutingDisabled
+import com.neo4j.fabric.eval.ClusterCatalogManager.RoutingDisallowed
+import com.neo4j.fabric.eval.ClusterCatalogManager.RoutingPossible
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.configuration.helpers.SocketAddress
 import org.neo4j.dbms.api.DatabaseManagementService
@@ -18,53 +25,99 @@ import org.neo4j.kernel.database.NamedDatabaseId
 
 import scala.collection.JavaConverters.seqAsJavaListConverter
 
+object ClusterCatalogManager {
+  sealed trait RoutingMode
+  final case object RoutingPossible extends RoutingMode
+  final case object RoutingDisallowed extends RoutingMode
+  final case object RoutingDisabled extends RoutingMode
+
+  private sealed trait LeaderStatus
+  private final case object LeaderIsLocal extends LeaderStatus
+  private final case object LeaderIsRemote extends LeaderStatus
+  private final case object LeaderNotFound extends LeaderStatus
+}
+
 class ClusterCatalogManager(
   databaseLookup: DatabaseLookup,
-  databaseManagementService: DatabaseManagementService,                         
+  databaseManagementService: DatabaseManagementService,
   leaderLookup: LeaderLookup,
   fabricConfig: FabricEnterpriseConfig,
+  routingEnabled: Boolean,
 ) extends EnterpriseSingleCatalogManager(databaseLookup, databaseManagementService, fabricConfig) {
 
-  override def locationOf(graph: Catalog.Graph, requireWritable: Boolean, canRoute: Boolean): Location = (graph, requireWritable, canRoute) match {
+  override def locationOf(graph: Catalog.Graph, requireWritable: Boolean, canRoute: Boolean): Location = {
+    val routingMode = (canRoute, routingEnabled) match {
+      case (false, _)    => RoutingDisallowed
+      case (true, false) => RoutingDisabled
+      case (true, true)  => RoutingPossible
+    }
 
-    case (Catalog.InternalGraph(id, uuid, _, databaseName), true, true) =>
-      determineLeader(databaseName) match {
-        case LeaderIsLocal           => new Location.Local(id, uuid, databaseName.name())
-        case LeaderIsRemote(address) => new Location.Remote.Internal(id, uuid, internalRemoteUri(address), databaseName.name())
-      }
+    (graph, requireWritable) match {
 
-    case _ =>
-      super.locationOf(graph, requireWritable, canRoute)
+      case (Catalog.InternalGraph(id, uuid, _, databaseName), true) =>
+        val dbId = databaseId(databaseName)
+
+        (determineLeader(dbId), routingMode) match {
+          case (LeaderIsLocal, _) =>
+            new Location.Local(id, uuid, databaseName.name())
+
+          case (_, RoutingDisallowed) =>
+            // If routing is disallowed by the client we should attempt executing locally, regardless
+            // The rationale being that if topology info is somehow broken, admin should be able to do local things using bolt://
+            new Location.Local(id, uuid, databaseName.name())
+
+          case (LeaderIsRemote, RoutingPossible) =>
+            new Location.Remote.Internal(id, uuid, internalRemoteUri(leaderBoltAddress(dbId)), databaseName.name())
+
+          case (LeaderIsRemote, RoutingDisabled) =>
+            routingDisabledError(databaseName.name())
+
+          case (LeaderNotFound, _) =>
+            noLeaderAddressFailure(databaseName.name())
+        }
+
+      case _ =>
+        super.locationOf(graph, requireWritable, canRoute)
+    }
   }
 
   private def internalRemoteUri(socketAddress: SocketAddress): Location.RemoteUri =
     new Location.RemoteUri("bolt", Seq(socketAddress).asJava, null)
 
-  private sealed trait LeaderStatus
-  private final case object LeaderIsLocal extends LeaderStatus
-  private final case class LeaderIsRemote(socketAddress: SocketAddress) extends LeaderStatus
+  private def databaseId(databaseName: NormalizedDatabaseName) =
+    databaseLookup.databaseId(databaseName)
+                  .getOrElse(noDatabaseIdFailure(databaseName.name()))
 
-  private def determineLeader(databaseName: NormalizedDatabaseName): LeaderStatus = {
-    val dbId = databaseId(databaseName)
+  private def determineLeader(databaseId: NamedDatabaseId): LeaderStatus = {
     val myId = leaderLookup.serverId
-    leaderLookup.leaderId(dbId) match {
+    leaderLookup.leaderId(databaseId) match {
       case Some(`myId`) => LeaderIsLocal
-      case Some(_)      => LeaderIsRemote(leaderBoltAddress(dbId))
-      case None         => noLeaderAddress( databaseName.name())
+      case Some(_)      => LeaderIsRemote
+      case None         => LeaderNotFound
     }
   }
 
-  private def databaseId(databaseName: NormalizedDatabaseName) =
-    databaseLookup.databaseId(databaseName)
-      .getOrElse(routingFailed("Unable to get database id for database %s", databaseName.name()))
-
   private def leaderBoltAddress(databaseId: NamedDatabaseId) =
     leaderLookup.leaderBoltAddress(databaseId)
-      .getOrElse(noLeaderAddress( databaseId.name()))
+                .getOrElse(noLeaderAddressFailure(databaseId.name()))
 
-  private def noLeaderAddress(dbName: String): Nothing =
-    routingFailed("Unable to get bolt address of LEADER for database %s", dbName)
-  
-  private def routingFailed(msg: String, dbName: String): Nothing =
-    throw new FabricException(Status.Cluster.Routing, msg, dbName)
+  private def routingDisabledError(dbName: String): Nothing =
+    throw new FabricException(
+      Status.Cluster.NotALeader,
+      """Unable to route write operation to leader for database '%s'. Server-side routing is disabled.
+        |Either connect to the database directly using the driver (or interactively with the :use command),
+        |or enable server-side routing by setting `dbms.routing.enabled=true`""".stripMargin,
+      dbName)
+
+  private def noLeaderAddressFailure(dbName: String): Nothing =
+    throw new FabricException(
+      Status.Cluster.Routing,
+      "Unable to get bolt address of LEADER for database '%s'",
+      dbName)
+
+  private def noDatabaseIdFailure(dbName: String): Nothing =
+    throw new FabricException(
+      Status.Cluster.Routing,
+      "Unable to get database id for database '%s'",
+      dbName)
 }
