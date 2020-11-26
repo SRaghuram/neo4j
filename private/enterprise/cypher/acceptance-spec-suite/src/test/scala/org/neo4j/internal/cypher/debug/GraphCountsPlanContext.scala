@@ -242,4 +242,6 @@ class GraphCountsPlanContext(data: GraphCountData)(tc: TransactionalContextWrapp
   override def procedureSignature(name: QualifiedName): ProcedureSignature = ???
 
   override def functionSignature(name: QualifiedName): Option[UserFunctionSignature] = userDefinedFunctions.get(name)
+
+  override def relationshipTypeScanStoreEnabled: Boolean = false
 }
