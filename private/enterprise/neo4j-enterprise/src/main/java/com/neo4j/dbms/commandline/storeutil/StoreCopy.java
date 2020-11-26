@@ -110,10 +110,8 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.SystemNanoClock;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.token.api.NamedToken;
-import org.neo4j.token.api.NonUniqueTokenException;
 import org.neo4j.token.api.TokenConstants;
 import org.neo4j.token.api.TokenHolder;
-import org.neo4j.token.api.TokenNotFoundException;
 import org.neo4j.token.api.TokensLoader;
 
 import static java.lang.String.format;
@@ -121,7 +119,6 @@ import static org.eclipse.collections.impl.factory.Sets.immutable;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
 import static org.neo4j.internal.recordstorage.StoreTokens.allReadableTokens;
-import static org.neo4j.internal.recordstorage.StoreTokens.createReadOnlyTokenHolder;
 import static org.neo4j.kernel.extension.ExtensionFailureStrategies.ignore;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.findLatestFormatInFamily;
@@ -214,8 +211,8 @@ public class StoreCopy
                 propertyStore = neoStores.getPropertyStore();
                 relationshipStore = neoStores.getRelationshipStore();
                 recreatedTokens = Maps.mutable.empty();
-                tokenHolders = createTokenHolders( neoStores, cursorTracer );
                 stats = new StoreCopyStats( log );
+                tokenHolders = createTokenHolders( neoStores, cursorTracer );
 
                 storeCopyFilter = convertFilter( deleteNodesWithLabels, keepOnlyNodesWithLabels, skipLabels, skipProperties, skipNodeProperties,
                                                  keepOnlyNodeProperties, skipRelationshipProperties, keepOnlyRelationshipProperties, skipRelationships,
@@ -298,107 +295,7 @@ public class StoreCopy
 
     private TokenHolder createTokenHolder( String tokenType )
     {
-        return new TokenHolder()
-        {
-            private final TokenHolder delegate = createReadOnlyTokenHolder( tokenType );
-            private int createdTokenCounter; // Guarded by 'this'.
-
-            @Override
-            public synchronized void setInitialTokens( List<NamedToken> tokens ) throws NonUniqueTokenException
-            {
-                delegate.setInitialTokens( tokens );
-            }
-
-            @Override
-            public void addToken( NamedToken token ) throws NonUniqueTokenException
-            {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public int getOrCreateId( String name )
-            {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public void getOrCreateIds( String[] names, int[] ids )
-            {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public synchronized NamedToken getTokenById( int id )
-            {
-                try
-                {
-                    return delegate.getTokenById( id );
-                }
-                catch ( TokenNotFoundException e )
-                {
-                    stats.addCorruptToken( tokenType, id );
-                    String tokenName;
-                    do
-                    {
-                        createdTokenCounter++;
-                        tokenName = getTokenType() + "_" + createdTokenCounter;
-                    }
-                    while ( getIdByName( tokenName ) != TokenConstants.NO_TOKEN );
-                    NamedToken token = new NamedToken( tokenName, id );
-                    delegate.addToken( token );
-                    recreatedTokens.getIfAbsentPut( getTokenType(), ArrayList::new ).add( token );
-                    return token;
-                }
-            }
-
-            @Override
-            public synchronized int getIdByName( String name )
-            {
-                return delegate.getIdByName( name );
-            }
-
-            @Override
-            public synchronized boolean getIdsByNames( String[] names, int[] ids )
-            {
-                return delegate.getIdsByNames( names, ids );
-            }
-
-            @Override
-            public synchronized Iterable<NamedToken> getAllTokens()
-            {
-                return delegate.getAllTokens();
-            }
-
-            @Override
-            public synchronized String getTokenType()
-            {
-                return delegate.getTokenType();
-            }
-
-            @Override
-            public synchronized boolean hasToken( int id )
-            {
-                return delegate.hasToken( id );
-            }
-
-            @Override
-            public synchronized int size()
-            {
-                return delegate.size();
-            }
-
-            @Override
-            public void getOrCreateInternalIds( String[] names, int[] ids )
-            {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public synchronized NamedToken getInternalTokenById( int id ) throws TokenNotFoundException
-            {
-                return delegate.getInternalTokenById( id );
-            }
-        };
+        return new RecreatingTokenHolder( tokenType, stats, recreatedTokens );
     }
 
     private TokensLoader filterDuplicateTokens( TokensLoader loader )
