@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal
 
 import org.neo4j.codegen.api.CodeGeneration
 import org.neo4j.cypher.internal.InterpretedRuntime.InterpretedExecutionPlan
+import org.neo4j.cypher.internal.options.CypherRuntimeOption
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanner
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
@@ -26,6 +27,8 @@ import org.neo4j.exceptions.CantCompileQueryException
 
 object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with DebugPrettyPrinter {
   override def name: String = "slotted"
+
+  override def correspondingRuntimeOption: Option[CypherRuntimeOption] = Some(CypherRuntimeOption.slotted)
 
   val ENABLE_DEBUG_PRINTS = false // NOTE: false toggles all debug prints off, overriding the individual settings below
 

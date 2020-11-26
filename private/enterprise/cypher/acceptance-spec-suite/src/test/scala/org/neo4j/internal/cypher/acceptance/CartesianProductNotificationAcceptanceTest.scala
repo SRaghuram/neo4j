@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.compiler.CypherPlanner
 import org.neo4j.cypher.internal.compiler.CypherPlannerConfiguration
 import org.neo4j.cypher.internal.compiler.CypherPlannerFactory
 import org.neo4j.cypher.internal.compiler.StatsDivergenceCalculator
+import org.neo4j.cypher.internal.compiler.VolcanoModelExecution
 import org.neo4j.cypher.internal.compiler.defaultUpdateStrategy
 import org.neo4j.cypher.internal.compiler.phases.Compatibility4_3
 import org.neo4j.cypher.internal.compiler.phases.PlannerContext
@@ -33,7 +34,6 @@ import org.neo4j.cypher.internal.options.CypherDebugOptions
 import org.neo4j.cypher.internal.planner.spi.IDPPlannerName
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.planning.WrappedMonitors
-import org.neo4j.cypher.internal.rewriting.RewriterStepSequencer
 import org.neo4j.cypher.internal.rewriting.rewriters.GeneratingNamer
 import org.neo4j.cypher.internal.runtime.interpreted.CSVResources
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
@@ -108,7 +108,7 @@ class CartesianProductNotificationAcceptanceTest extends CypherFunSuite with Gra
       val parsed = compiler.parseQuery(query, query, logger, IDPPlannerName.name, CypherDebugOptions.default, None, tracer, innerVariableNamer, MapValue.EMPTY, compatibilityMode = Compatibility4_3)
       val kernelTransaction = tx.kernelTransaction()
       val statement = kernelTransaction.acquireStatement()
-      val context = PlannerContextCreator.create(tracer, logger, planContext(kernelTransaction, statement), parsed.queryText, CypherDebugOptions.default,
+      val context = PlannerContextCreator.create(tracer, logger, planContext(kernelTransaction, statement), parsed.queryText, CypherDebugOptions.default, VolcanoModelExecution,
                                                  None, monitors, metricsFactory, createQueryGraphSolver(), configuration, defaultUpdateStrategy, Clock.systemUTC(), new SequentialIdGen(),
                                                  simpleExpressionEvaluator, innerVariableNamer, MapValue.EMPTY)
 

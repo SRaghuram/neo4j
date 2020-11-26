@@ -614,4 +614,53 @@ class OptionalMatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStat
                  |WITH TomH as a
                  |MATCH (a)-[:ACTED_IN]->(m)<-[:DIRECTED]-(d) RETURN a,m,d LIMIT 10;""".stripMargin)
   }
+
+  test("Should switch order of CartesianProduct vs. Apply-Optional in grid query depending on runtime") {
+    // Create a 10x10 grid where also the first al#nd last nodes of each row and column are connected.
+    val rows = for {
+      x <- 0 until 10
+    } yield {
+      val row = for {
+        y <- 0 until 10
+      } yield createLabeledNode(Map("name" -> s"n($x,$y)"), "Person")
+      (row :+ row.head).sliding(2).foreach {
+        case Seq(a, b) => relate(a, b)
+      }
+      row
+    }
+    for {
+      i <- 0 until 10
+    } {
+      val column = rows.map(_(i))
+      (column :+ column.head).sliding(2).foreach {
+        case Seq(a, b) => relate(a, b)
+      }
+    }
+    graph.createIndex("Person", "name")
+
+    val query =
+      """MATCH (p0:Person { name:'n(0,0)' }),
+        |      (p1:Person { name:'n(0,1)' }),
+        |      (p2:Person { name:'n(0,2)' })
+        |OPTIONAL MATCH (p0)-->(p0_1)-->(p0_2)
+        |OPTIONAL MATCH (p1)-->(p1_1)-->(p1_2)
+        |OPTIONAL MATCH (p2)-->(p2_1)-->(p2_2)
+        |RETURN count(*)
+        |""".stripMargin
+
+    val resultSlotted = executeSingle(s"CYPHER runtime=slotted connectcomponentsplanner=idp $query")
+
+    // In slotted, Cartesian Product is more expensive. It should therefore be done early, and at least one optional match, planned with Apply-Optional,
+    // should be planned last.
+    resultSlotted.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults")
+      .onTopOf(aPlan("EagerAggregation")
+        .onTopOf(aPlan("Apply")))
+
+    val resultPipelined = executeSingle(s"CYPHER runtime=pipelined connectcomponentsplanner=idp $query")
+
+    // In pipelined, Cartesian Product is cheap. The last thing in the plan should therefore be a Cartesian Product.
+    resultPipelined.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults")
+      .onTopOf(aPlan("EagerAggregation")
+        .onTopOf(aPlan("CartesianProduct")))
+  }
 }

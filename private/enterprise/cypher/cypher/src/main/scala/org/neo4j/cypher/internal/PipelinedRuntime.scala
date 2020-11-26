@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.config.MemoryTrackingController
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.options.CypherInterpretedPipesFallbackOption
 import org.neo4j.cypher.internal.options.CypherOperatorEngineOption
+import org.neo4j.cypher.internal.options.CypherRuntimeOption
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefiner
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphVisualizer
@@ -90,6 +91,8 @@ object PipelinedRuntime {
 
 class PipelinedRuntime private(parallelExecution: Boolean,
                                override val name: String) extends CypherRuntime[EnterpriseRuntimeContext] with DebugPrettyPrinter {
+
+  override def correspondingRuntimeOption: Option[CypherRuntimeOption] = if (parallelExecution) Some(CypherRuntimeOption.parallel) else Some(CypherRuntimeOption.pipelined)
 
   private val runtimeName = RuntimeName(name)
 
