@@ -93,7 +93,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.PruningVarLengthExpandTestBa
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultStressTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipCountFromCountStoreTestBase
-import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipTypeScanTest
+import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipTypeScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RightOuterHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RollupApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SelectOrAntiSemiApplyTestBase
@@ -222,7 +222,7 @@ class SlottedDropResultTest extends DropResultTestBase(ENTERPRISE.DEFAULT, Slott
 class SlottedEmptyResultTest extends EmptyResultTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedTriadicSelectionTest extends TriadicSelectionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedAssertSameNodeTest extends AssertSameNodeTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT) with EsotericAssertSameNodeTestBase[EnterpriseRuntimeContext]
-class SlottedRelationshipTypeScanTest extends RelationshipTypeScanTest(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedRelationshipTypeScanTest extends RelationshipTypeScanTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 
 class SlottedCreateTest extends CreateTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedLenientCreateRelationshipTest extends LenientCreateRelationshipTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
