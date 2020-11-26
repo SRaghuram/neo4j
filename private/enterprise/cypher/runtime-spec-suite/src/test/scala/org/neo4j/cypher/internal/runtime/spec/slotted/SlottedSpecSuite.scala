@@ -99,6 +99,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.RollupApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SelectOrAntiSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SelectOrSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SemiApplyTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.SetPropertyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ShortestPathTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SkipTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SortTestBase
@@ -226,5 +227,6 @@ class SlottedRelationshipTypeScanTest extends RelationshipTypeScanTestBase(ENTER
 
 class SlottedCreateTest extends CreateTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedLenientCreateRelationshipTest extends LenientCreateRelationshipTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
+class SlottedSetPropertyTest extends SetPropertyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 
 
