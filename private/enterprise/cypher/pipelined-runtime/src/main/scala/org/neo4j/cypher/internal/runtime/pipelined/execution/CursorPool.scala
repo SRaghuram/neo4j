@@ -39,6 +39,8 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
     () => cursorFactory.allocateRelationshipTraversalCursor(pageCursorTracer), scopedMemoryTracker)
   private[this] val _relationshipScanCursorPool: CursorPool[RelationshipScanCursor] = CursorPool[RelationshipScanCursor](
     () => cursorFactory.allocateRelationshipScanCursor(pageCursorTracer), scopedMemoryTracker)
+  private[this] val _relationshipTypeIndexCursorPool: CursorPool[RelationshipTypeIndexCursor] = CursorPool[RelationshipTypeIndexCursor](
+    () => cursorFactory.allocateRelationshipTypeIndexCursor(), scopedMemoryTracker)
   private[this] val _nodeValueIndexCursorPool: CursorPool[NodeValueIndexCursor] = CursorPool[NodeValueIndexCursor](
     () => cursorFactory.allocateNodeValueIndexCursor(pageCursorTracer, memoryTracker), scopedMemoryTracker)
   private[this] val _nodeLabelIndexCursorPool: CursorPool[NodeLabelIndexCursor] = CursorPool[NodeLabelIndexCursor](
@@ -51,6 +53,7 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
   def nodeCursorPool: CursorPool[NodeCursor] = _nodeCursorPool
   def relationshipTraversalCursorPool: CursorPool[RelationshipTraversalCursor] = _relationshipTraversalCursorPool
   def relationshipScanCursorPool: CursorPool[RelationshipScanCursor] = _relationshipScanCursorPool
+  def relationshipTypeIndexCursorPool: CursorPool[RelationshipTypeIndexCursor] = _relationshipTypeIndexCursorPool
   def nodeValueIndexCursorPool: CursorPool[NodeValueIndexCursor] = _nodeValueIndexCursorPool
   def nodeLabelIndexCursorPool: CursorPool[NodeLabelIndexCursor] = _nodeLabelIndexCursorPool
   def propertyCursorPool: CursorPool[PropertyCursor] = _propertyCursorPool
@@ -60,6 +63,7 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
     _nodeCursorPool.setKernelTracer(tracer)
     _relationshipTraversalCursorPool.setKernelTracer(tracer)
     _relationshipScanCursorPool.setKernelTracer(tracer)
+    _relationshipTypeIndexCursorPool.setKernelTracer(tracer)
     _nodeValueIndexCursorPool.setKernelTracer(tracer)
     _nodeLabelIndexCursorPool.setKernelTracer(tracer)
     _propertyCursorPool.setKernelTracer(tracer)
@@ -69,6 +73,7 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
     IOUtils.closeAll(_nodeCursorPool,
       _relationshipTraversalCursorPool,
       _relationshipScanCursorPool,
+      _relationshipTypeIndexCursorPool,
       _nodeValueIndexCursorPool,
       _nodeLabelIndexCursorPool,
       _propertyCursorPool)
@@ -79,6 +84,7 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
     liveCounts.nodeCursorPool += _nodeCursorPool.getLiveCount
     liveCounts.relationshipTraversalCursorPool += _relationshipTraversalCursorPool.getLiveCount
     liveCounts.relationshipScanCursorPool += _relationshipScanCursorPool.getLiveCount
+    liveCounts.relationshipTypeIndexCursorPool += _relationshipTypeIndexCursorPool.getLiveCount
     liveCounts.nodeValueIndexCursorPool += _nodeValueIndexCursorPool.getLiveCount
     liveCounts.nodeLabelIndexCursorPool += _nodeLabelIndexCursorPool.getLiveCount
     liveCounts.propertyCursorPool += _propertyCursorPool.getLiveCount
@@ -110,7 +116,7 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
 
   override def allocateRelationshipValueIndexCursor(cursorTracer: PageCursorTracer, memoryTracker: MemoryTracker): RelationshipValueIndexCursor = fail("RelationshipValueIndexCursor")
 
-  override def allocateRelationshipTypeIndexCursor(): RelationshipTypeIndexCursor = fail("RelationshipTypeIndexCursor")
+  override def allocateRelationshipTypeIndexCursor(): RelationshipTypeIndexCursor = _relationshipTypeIndexCursorPool.allocate()
 
   private def fail(cursor: String) = throw new IllegalStateException(s"This cursor pool doesn't support allocating $cursor")
 }
@@ -119,6 +125,7 @@ class LiveCounts(var nodeCursorPool: Long = 0,
                  var relationshipGroupCursorPool: Long = 0,
                  var relationshipTraversalCursorPool: Long = 0,
                  var relationshipScanCursorPool: Long = 0,
+                 var relationshipTypeIndexCursorPool: Long = 0,
                  var nodeValueIndexCursorPool: Long = 0,
                  var nodeLabelIndexCursorPool: Long = 0,
                  var propertyCursorPool: Long = 0) {

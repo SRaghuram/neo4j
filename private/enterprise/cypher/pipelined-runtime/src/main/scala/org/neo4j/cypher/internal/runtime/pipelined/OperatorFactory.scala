@@ -71,6 +71,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.CartesianProductOpe
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ConditionalApplyOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipByIdSeekOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipTypeScanOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctPrimitiveOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctSinglePrimitiveOperator
@@ -126,6 +127,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.TopOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.TriadicBuildOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.TriadicFilterOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedRelationshipByIdSeekOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedRelationshipTypeScanOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnionOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnwindOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ValueHashJoinOperator
@@ -288,6 +290,22 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           slots.getLongOffsetFor(startNode),
           slots.getLongOffsetFor(endNode),
           converters.toCommandSeekArgs(id, relIds),
+          physicalPlan.argumentSizes(id))
+
+      case plans.DirectedRelationshipTypeScan(column, startNode, relType, endNode, _) =>
+        new DirectedRelationshipTypeScanOperator(WorkIdentity.fromPlan(plan),
+          slots.getLongOffsetFor(column),
+          slots.getLongOffsetFor(startNode),
+          LazyType(relType)(semanticTable),
+          slots.getLongOffsetFor(endNode),
+          physicalPlan.argumentSizes(id))
+
+      case plans.UndirectedRelationshipTypeScan(column, startNode, relType, endNode, _) =>
+        new UndirectedRelationshipTypeScanOperator(WorkIdentity.fromPlan(plan),
+          slots.getLongOffsetFor(column),
+          slots.getLongOffsetFor(startNode),
+          LazyType(relType)(semanticTable),
+          slots.getLongOffsetFor(endNode),
           physicalPlan.argumentSizes(id))
 
       case plans.NodeCountFromCountStore(idName, labelNames, _) =>
