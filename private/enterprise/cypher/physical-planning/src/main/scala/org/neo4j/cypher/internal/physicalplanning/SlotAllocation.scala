@@ -41,6 +41,7 @@ import org.neo4j.cypher.internal.logical.plans.DetachDeleteExpression
 import org.neo4j.cypher.internal.logical.plans.DetachDeleteNode
 import org.neo4j.cypher.internal.logical.plans.DetachDeletePath
 import org.neo4j.cypher.internal.logical.plans.DirectedRelationshipByIdSeek
+import org.neo4j.cypher.internal.logical.plans.DirectedRelationshipTypeScan
 import org.neo4j.cypher.internal.logical.plans.DropResult
 import org.neo4j.cypher.internal.logical.plans.Eager
 import org.neo4j.cypher.internal.logical.plans.EmptyResult
@@ -103,6 +104,7 @@ import org.neo4j.cypher.internal.logical.plans.TriadicBuild
 import org.neo4j.cypher.internal.logical.plans.TriadicFilter
 import org.neo4j.cypher.internal.logical.plans.TriadicSelection
 import org.neo4j.cypher.internal.logical.plans.UndirectedRelationshipByIdSeek
+import org.neo4j.cypher.internal.logical.plans.UndirectedRelationshipTypeScan
 import org.neo4j.cypher.internal.logical.plans.Union
 import org.neo4j.cypher.internal.logical.plans.UnwindCollection
 import org.neo4j.cypher.internal.logical.plans.ValueHashJoin
@@ -500,6 +502,16 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         slots.newLong(leaf.idName, nullable, CTRelationship)
         slots.newLong(leaf.leftNode, nullable, CTNode)
         slots.newLong(leaf.rightNode, nullable, CTNode)
+
+      case leaf: DirectedRelationshipTypeScan =>
+        slots.newLong(leaf.relName, nullable, CTRelationship)
+        slots.newLong(leaf.startNode, nullable, CTNode)
+        slots.newLong(leaf.endNode, nullable, CTNode)
+
+      case leaf: UndirectedRelationshipTypeScan =>
+        slots.newLong(leaf.relName, nullable, CTRelationship)
+        slots.newLong(leaf.startNode, nullable, CTNode)
+        slots.newLong(leaf.endNode, nullable, CTNode)
 
       case leaf: NodeCountFromCountStore =>
         slots.newReference(leaf.idName, false, CTInteger)
