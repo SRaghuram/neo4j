@@ -259,6 +259,7 @@ public abstract class BaseRunReportCommand implements Runnable
     @Override
     public void run()
     {
+        neo4jBranch = BranchAndVersion.teamcityBranchToRealBranch( neo4jBranch );
         RunReportParams runReportParams =
                 new RunReportParams( neo4jCommit,
                                      neo4jVersion,

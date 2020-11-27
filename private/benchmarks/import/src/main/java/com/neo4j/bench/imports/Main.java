@@ -319,6 +319,7 @@ public class Main
 
     private void report( long start, long time, Neo4jConfig neo4jConfig, BenchmarkGroupBenchmarkMetrics metrics )
     {
+        neo4jBranch = BranchAndVersion.teamcityBranchToRealBranch( neo4jBranch );
         ParameterVerifier.performSanityChecks( neo4jBranchOwner, neo4jVersion, neo4jBranch );
         BenchmarkTool tool = new BenchmarkTool( IMPORT_BENCH, toolCommit, IMPORT_OWNER, neo4jBranch );
         Java java = Java.current( Stream.of( jvmArgs ).collect( joining( " " ) ) );

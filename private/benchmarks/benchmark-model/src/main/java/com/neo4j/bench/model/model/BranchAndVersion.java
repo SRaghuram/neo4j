@@ -88,4 +88,14 @@ public class BranchAndVersion
         throw new RuntimeException(
                 "Branch could not be converted to Version, wrong size " + Arrays.toString( split ) + " expected x.z.y(-dropxz.y) but got " + version );
     }
+
+    /**
+     * Removes unnecessary prefix from Teamcity branches
+     * @param teamcityBranch raw branch from Teamcity VCS root
+     * @return the branch without the prefix
+     */
+    public static String teamcityBranchToRealBranch( String teamcityBranch )
+    {
+        return teamcityBranch.startsWith( "ref/heads/" ) ? teamcityBranch.replace( "ref/heads/", "" ) : teamcityBranch;
+    }
 }

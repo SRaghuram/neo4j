@@ -13,6 +13,7 @@ import static com.neo4j.bench.model.model.BranchAndVersion.validate;
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 public class BranchAndVersionTest
 {
@@ -139,6 +140,22 @@ public class BranchAndVersionTest
 
         assertException( IllegalArgumentException.class,
                          () -> BranchAndVersion.assertBranchEqualsSeries( "1.2.3", "2.3" ) );
+    }
+
+    @Test
+    public void shouldRemoveTeamcityPrefix()
+    {
+        String teamcityPrefix = "ref/heads/";
+        String dropBranch = "4.3-drop01";
+        String branch = "4.3";
+        String personalBranch = "personalBranch";
+        assertEquals( BranchAndVersion.teamcityBranchToRealBranch( teamcityPrefix + dropBranch ), dropBranch );
+        assertEquals( BranchAndVersion.teamcityBranchToRealBranch( teamcityPrefix + branch ), branch );
+        assertEquals( BranchAndVersion.teamcityBranchToRealBranch( teamcityPrefix + personalBranch ), personalBranch );
+
+        assertEquals( BranchAndVersion.teamcityBranchToRealBranch( dropBranch ), dropBranch );
+        assertEquals( BranchAndVersion.teamcityBranchToRealBranch( branch ), branch );
+        assertEquals( BranchAndVersion.teamcityBranchToRealBranch( personalBranch ), personalBranch );
     }
 
     public void checkIsValidSeriesBranch()
