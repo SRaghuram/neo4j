@@ -92,12 +92,14 @@ class SetPropertyOperator(val workIdentity: WorkIdentity,
 }
 
 object SetPropertyOperator {
-  def setNodeProperties(nodeId: Long,
+  def addNodeProperties(nodeId: Long,
                         propertiesMap: AnyValue,
-                      tokenWrite: TokenWrite,
-                      write: Write,
-                      queryStatisticsTracker: MutableQueryStatistics): Unit = {
-    safeCastToMap(propertiesMap).foreach((k: String, v: AnyValue) => setNodeProperty(nodeId, k, v, tokenWrite, write, queryStatisticsTracker))
+                        tokenWrite: TokenWrite,
+                        write: Write,
+                        queryStatisticsTracker: MutableQueryStatistics): Unit = {
+    safeCastToMap(propertiesMap)
+      .filter((_, v) => !(v eq NO_VALUE))
+      .foreach((k: String, v: AnyValue) => setNodeProperty(nodeId, k, v, tokenWrite, write, queryStatisticsTracker))
   }
 
   def setNodeProperty(nodeId: Long,
@@ -106,19 +108,19 @@ object SetPropertyOperator {
                       tokenWrite: TokenWrite,
                       write: Write,
                       queryStatisticsTracker: MutableQueryStatistics): Unit = {
-    if (!(propertyValue eq NO_VALUE)) {
-      val propertyKeyId = tokenWrite.propertyKeyGetOrCreateForName(propertyKey)
-      write.nodeSetProperty(nodeId, propertyKeyId, makeValueNeoSafe(propertyValue))
-      queryStatisticsTracker.setProperty()
-    }
+    val propertyKeyId = tokenWrite.propertyKeyGetOrCreateForName(propertyKey)
+    write.nodeSetProperty(nodeId, propertyKeyId, makeValueNeoSafe(propertyValue))
+    queryStatisticsTracker.setProperty()
   }
 
-  def setRelationshipProperties(relationshipId: Long,
+  def addRelationshipProperties(relationshipId: Long,
                                 propertiesMap: AnyValue,
                                 tokenWrite: TokenWrite,
                                 write: Write,
                                 queryStatisticsTracker: MutableQueryStatistics): Unit = {
-    safeCastToMap(propertiesMap).foreach((k: String, v: AnyValue) => setRelationshipProperty(relationshipId, k, v, tokenWrite, write, queryStatisticsTracker))
+    safeCastToMap(propertiesMap)
+      .filter((_, v) => !(v eq NO_VALUE))
+      .foreach((k: String, v: AnyValue) => setRelationshipProperty(relationshipId, k, v, tokenWrite, write, queryStatisticsTracker))
   }
 
   def setRelationshipProperty(relationshipId: Long,
@@ -127,11 +129,9 @@ object SetPropertyOperator {
                               tokenWrite: TokenWrite,
                               write: Write,
                               queryStatisticsTracker: MutableQueryStatistics): Unit = {
-    if (!(propertyValue eq NO_VALUE)) {
-      val propertyKeyId = tokenWrite.propertyKeyGetOrCreateForName(propertyKey)
-      write.relationshipSetProperty(relationshipId, propertyKeyId, makeValueNeoSafe(propertyValue))
-      queryStatisticsTracker.setProperty()
-    }
+    val propertyKeyId = tokenWrite.propertyKeyGetOrCreateForName(propertyKey)
+    write.relationshipSetProperty(relationshipId, propertyKeyId, makeValueNeoSafe(propertyValue))
+    queryStatisticsTracker.setProperty()
   }
 
   private def safeCastToMap(value: AnyValue): MapValue = value match {
@@ -155,10 +155,10 @@ class SetPropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
   }
 
   override def genOperate: IntermediateRepresentation = {
-    if(entityValue == null) {
+    if (entityValue == null) {
       entityValue = entity()
     }
-    if(propertyValue == null) {
+    if (propertyValue == null) {
       propertyValue = value()
     }
 

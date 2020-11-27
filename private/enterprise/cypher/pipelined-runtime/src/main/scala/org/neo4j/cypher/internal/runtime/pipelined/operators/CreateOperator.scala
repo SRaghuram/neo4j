@@ -86,7 +86,7 @@ class CreateOperator(val workIdentity: WorkIdentity,
         val labelIds = command.labels.map(_.getOrCreateId(state.query)).toArray
         val nodeId = createNode(labelIds, write, resources.queryStatisticsTracker)
         command.properties.foreach(p =>
-          SetPropertyOperator.setNodeProperties(
+          SetPropertyOperator.addNodeProperties(
             nodeId,
             p(cursor, queryState),
             token,
@@ -109,7 +109,7 @@ class CreateOperator(val workIdentity: WorkIdentity,
         } else {
           val newId = createRelationship(startNodeId, typeId, endNodeId, write, resources.queryStatisticsTracker)
           command.properties.foreach(p =>
-            SetPropertyOperator.setRelationshipProperties(
+            SetPropertyOperator.addRelationshipProperties(
               newId,
               p(cursor, queryState),
               token,
@@ -189,7 +189,7 @@ class CreateOperatorTemplate(override val inner: OperatorTaskTemplate,
             case Some(ps) =>
               val p = ps()
               propertyExpressions += p
-              invokeStatic(method[SetPropertyOperator, Unit, Long, AnyValue, TokenWrite, Write, MutableQueryStatistics]("setNodeProperties"),
+              invokeStatic(method[SetPropertyOperator, Unit, Long, AnyValue, TokenWrite, Write, MutableQueryStatistics]("addNodeProperties"),
                 load(nodeVar), nullCheckIfRequired(p), loadField(TOKEN), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
             case _ => noop()
           }
@@ -228,7 +228,7 @@ class CreateOperatorTemplate(override val inner: OperatorTaskTemplate,
                 case Some(ps) =>
                   val p = ps()
                   propertyExpressions += p
-                  invokeStatic(method[SetPropertyOperator, Unit, Long, AnyValue, TokenWrite, Write, MutableQueryStatistics]("setRelationshipProperties"),
+                  invokeStatic(method[SetPropertyOperator, Unit, Long, AnyValue, TokenWrite, Write, MutableQueryStatistics]("addRelationshipProperties"),
                     load(relVar), nullCheckIfRequired(p), loadField(TOKEN), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
                 case None => noop()
               }
