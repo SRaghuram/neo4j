@@ -96,6 +96,6 @@ public class BranchAndVersion
      */
     public static String teamcityBranchToRealBranch( String teamcityBranch )
     {
-        return teamcityBranch.startsWith( "ref/heads/" ) ? teamcityBranch.replace( "ref/heads/", "" ) : teamcityBranch;
+        return teamcityBranch.replaceAll( "^ref/heads/", "" );
     }
 }

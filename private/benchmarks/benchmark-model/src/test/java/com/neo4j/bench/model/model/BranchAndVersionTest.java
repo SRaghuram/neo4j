@@ -9,11 +9,13 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
+import static com.neo4j.bench.model.model.BranchAndVersion.teamcityBranchToRealBranch;
 import static com.neo4j.bench.model.model.BranchAndVersion.validate;
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.Assert.assertEquals;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 
 public class BranchAndVersionTest
 {
@@ -149,13 +151,16 @@ public class BranchAndVersionTest
         String dropBranch = "4.3-drop01";
         String branch = "4.3";
         String personalBranch = "personalBranch";
-        assertEquals( BranchAndVersion.teamcityBranchToRealBranch( teamcityPrefix + dropBranch ), dropBranch );
-        assertEquals( BranchAndVersion.teamcityBranchToRealBranch( teamcityPrefix + branch ), branch );
-        assertEquals( BranchAndVersion.teamcityBranchToRealBranch( teamcityPrefix + personalBranch ), personalBranch );
 
-        assertEquals( BranchAndVersion.teamcityBranchToRealBranch( dropBranch ), dropBranch );
-        assertEquals( BranchAndVersion.teamcityBranchToRealBranch( branch ), branch );
-        assertEquals( BranchAndVersion.teamcityBranchToRealBranch( personalBranch ), personalBranch );
+        assertThat( teamcityBranchToRealBranch( teamcityPrefix + dropBranch ), equalTo( dropBranch ) );
+        assertThat( teamcityBranchToRealBranch( teamcityPrefix + branch ), equalTo( branch ) );
+        assertThat( teamcityBranchToRealBranch( teamcityPrefix + personalBranch ), equalTo( personalBranch ) );
+        assertThat( teamcityBranchToRealBranch( personalBranch + teamcityPrefix + personalBranch ),
+                    equalTo( personalBranch + teamcityPrefix + personalBranch ) );
+
+        assertThat( teamcityBranchToRealBranch( dropBranch ), equalTo( dropBranch ) );
+        assertThat( teamcityBranchToRealBranch( branch ), equalTo( branch ) );
+        assertThat( teamcityBranchToRealBranch( personalBranch ), equalTo( personalBranch ) );
     }
 
     public void checkIsValidSeriesBranch()
