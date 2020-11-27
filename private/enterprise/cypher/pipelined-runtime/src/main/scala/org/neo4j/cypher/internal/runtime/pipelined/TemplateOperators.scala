@@ -108,6 +108,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDisti
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate.SerialLimitStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelSkipOperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SetPropertyOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleExactSeekQueryNodeIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleNodeByIdSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleRangeSeekQueryNodeIndexSeekTaskTemplate
@@ -825,6 +826,10 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               )
             ).toIndexedSeq
             new CreateOperatorTemplate(ctx.inner, plan.id, nodeCommands, relCommands, ctx.lenientCreateRelationship)(ctx.expressionCompiler)
+
+        case plan@plans.SetProperty(_, entity, propertyKey, value) =>
+          ctx: TemplateContext =>
+            new SetPropertyOperatorTemplate(ctx.inner, plan.id, ctx.compileExpression(entity, plan.id), propertyKey.name, ctx.compileExpression(value, plan.id))(ctx.expressionCompiler)
 
         case _ =>
           None

@@ -117,6 +117,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectEndpointsHea
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectEndpointsMiddleOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipCountFromCountStoreOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SetPropertyOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SkipOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeHeadOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeMiddleOperator
@@ -925,6 +926,9 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             r.idName, r.startNode, r.endNode
           ))
         Some(new CreateOperator(WorkIdentity.fromPlan(plan), nodesToCreate.toArray, relationshipsToCreate.toArray, lenientCreateRelationship))
+
+      case plans.SetProperty(_, idName, propertyKey, propertyValue) if !parallelExecution =>
+        Some(new SetPropertyOperator(WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, idName), propertyKey.name, converters.toCommandExpression(id, propertyValue)))
 
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException)
