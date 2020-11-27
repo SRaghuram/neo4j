@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.AntiConditionalApply
 import org.neo4j.cypher.internal.logical.plans.ConditionalApply
 import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
+import org.neo4j.cypher.internal.logical.plans.IndexSeekLeafPlan
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NodeUniqueIndexSeek
 import org.neo4j.cypher.internal.logical.plans.ProcedureSignature
@@ -31,6 +32,7 @@ import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
 import org.neo4j.cypher.internal.physicalplanning.ReduceOutput
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.isRefSlotAndNotAlias
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
@@ -222,36 +224,14 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           indexSeekMode)
 
       case plans.MultiNodeIndexSeek(nodeIndexSeeks) =>
-        val argumentSize = physicalPlan.argumentSizes(id)
-        val nodeIndexSeekParameters: Seq[NodeIndexSeekParameters] = nodeIndexSeeks.map { p =>
-            val columnOffset = slots.getLongOffsetFor(p.idName)
-            val slottedIndexProperties = p.properties.map(SlottedIndexedProperty(p.idName, _, slots)).toArray
-            val queryIndex = indexRegistrator.registerQueryIndex(p.label, p.properties)
-            val kernelIndexOrder = asKernelIndexOrder(p.indexOrder)
-            val valueExpression = p.valueExpr.map(converters.toCommandExpression(id, _))
-            val indexSeekMode = IndexSeekModeFactory(unique = p.isInstanceOf[NodeUniqueIndexSeek], readOnly = readOnly).fromQueryExpression(p.valueExpr)
-            NodeIndexSeekParameters(columnOffset, slottedIndexProperties, queryIndex, kernelIndexOrder, valueExpression, indexSeekMode)
-        }
-
         new MultiNodeIndexSeekOperator(WorkIdentity.fromPlan(plan),
-                                       argumentSize,
-                                       nodeIndexSeekParameters)
+                                       physicalPlan.argumentSizes(id),
+                                       computeMultiNodeIndexSeekParamaters(id, slots, nodeIndexSeeks))
 
       case plans.AssertingMultiNodeIndexSeek(_, nodeIndexSeeks) =>
-        val argumentSize = physicalPlan.argumentSizes(id)
-        val nodeIndexSeekParameters: Seq[NodeIndexSeekParameters] = nodeIndexSeeks.map { p =>
-          val columnOffset = slots.getLongOffsetFor(p.idName)
-          val slottedIndexProperties = p.properties.map(SlottedIndexedProperty(p.idName, _, slots)).toArray
-          val queryIndex = indexRegistrator.registerQueryIndex(p.label, p.properties)
-          val kernelIndexOrder = asKernelIndexOrder(p.indexOrder)
-          val valueExpression = p.valueExpr.map(converters.toCommandExpression(id, _))
-          val indexSeekMode = IndexSeekModeFactory(unique = p.isInstanceOf[NodeUniqueIndexSeek], readOnly = readOnly).fromQueryExpression(p.valueExpr)
-          NodeIndexSeekParameters(columnOffset, slottedIndexProperties, queryIndex, kernelIndexOrder, valueExpression, indexSeekMode)
-        }
-
         new AssertingMultiNodeIndexSeekOperator(WorkIdentity.fromPlan(plan),
-          argumentSize,
-          nodeIndexSeekParameters)
+                                                physicalPlan.argumentSizes(id),
+                                                computeMultiNodeIndexSeekParamaters(id, slots, nodeIndexSeeks))
 
       case plans.NodeIndexScan(column, labelToken, properties, _, indexOrder) =>
         val argumentSize = physicalPlan.argumentSizes(id)
@@ -755,6 +735,20 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
     middlePlans.foldLeft(middleOperatorBuilder -> maybeSlottedPipeOperatorToChainOnTo)(createMiddleFoldFunction)
     val middleOperators = middleOperatorBuilder.result.toArray
     middleOperators
+  }
+
+  private def computeMultiNodeIndexSeekParamaters(id: Id,
+                                                 slots: SlotConfiguration,
+                                                 nodeIndexSeeks: Seq[IndexSeekLeafPlan]) = {
+    nodeIndexSeeks.map { p =>
+      val columnOffset = slots.getLongOffsetFor(p.idName)
+      val slottedIndexProperties = p.properties.map(SlottedIndexedProperty(p.idName, _, slots)).toArray
+      val queryIndex = indexRegistrator.registerQueryIndex(p.label, p.properties)
+      val kernelIndexOrder = asKernelIndexOrder(p.indexOrder)
+      val valueExpression = p.valueExpr.map(converters.toCommandExpression(id, _))
+      val indexSeekMode = IndexSeekModeFactory(unique = p.isInstanceOf[NodeUniqueIndexSeek], readOnly = readOnly).fromQueryExpression(p.valueExpr)
+      NodeIndexSeekParameters(columnOffset, slottedIndexProperties, queryIndex, kernelIndexOrder, valueExpression, indexSeekMode)
+    }
   }
 
   // To be used with foldLeft only

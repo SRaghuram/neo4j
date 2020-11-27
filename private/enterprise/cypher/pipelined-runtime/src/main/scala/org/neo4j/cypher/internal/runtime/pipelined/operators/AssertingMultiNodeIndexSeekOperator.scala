@@ -6,23 +6,17 @@
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.pipelined.NodeIndexSeekParameters
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate.isImpossible
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.exceptions.MergeConstraintConflictException
 import org.neo4j.internal.kernel.api.IndexQuery
-import org.neo4j.internal.kernel.api.IndexQueryConstraints.constrained
-import org.neo4j.internal.kernel.api.NodeValueIndexCursor
-import org.neo4j.internal.kernel.api.Read
-import org.neo4j.internal.schema.IndexOrder
 
 class AssertingMultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
                                           argumentSize: SlotConfiguration.Size,
@@ -33,6 +27,7 @@ class AssertingMultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
   private val indexPropertyIndices: Array[Int] = nodeIndexSeekParameters.head.slottedIndexProperties.zipWithIndex.filter(_._1.getValueFromIndex).map(_._2)
   private val indexPropertySlotOffsets: Array[Int] = nodeIndexSeekParameters.head.slottedIndexProperties.flatMap(_.maybeCachedNodePropertySlot)
   private val propertyIds = nodeIndexSeekParameters.head.slottedIndexProperties.map(_.propertyKeyId)
+  private val indexSeekers: Array[IndexSeeker] = nodeIndexSeekParameters.map(new IndexSeeker(_)).toArray
   private val numberOfSeeks: Int = nodeIndexSeekParameters.length
 
   override protected def nextTasks(state: PipelinedQueryState,
@@ -74,7 +69,7 @@ class AssertingMultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
       var i = 1
       while (i < numberOfSeeks) {
         val currentSeekParameters = nodeIndexSeekParameters(i)
-        val seeker = new IndexSeeker(currentSeekParameters)
+        val seeker = indexSeekers(i)
         val indexQueries: Seq[Seq[IndexQuery]] = seeker.computeIndexQueries(queryState, initExecutionContext)
         val (nodeCursor, cursorsToClose) =
           computeCursor(indexQueries, read, state, resources, currentSeekParameters.queryIndex, currentSeekParameters.kernelIndexOrder, needsValues = false)
