@@ -5,6 +5,7 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.RewindableExecutionResult
@@ -615,30 +616,33 @@ class OptionalMatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStat
                  |MATCH (a)-[:ACTED_IN]->(m)<-[:DIRECTED]-(d) RETURN a,m,d LIMIT 10;""".stripMargin)
   }
 
-  test("Should switch order of CartesianProduct vs. Apply-Optional in grid query depending on runtime") {
-    // Create a 10x10 grid where also the first al#nd last nodes of each row and column are connected.
-    val rows = for {
-      x <- 0 until 10
-    } yield {
-      val row = for {
-        y <- 0 until 10
-      } yield createLabeledNode(Map("name" -> s"n($x,$y)"), "Person")
-      (row :+ row.head).sliding(2).foreach {
-        case Seq(a, b) => relate(a, b)
+  // Tests with grid helper methods
+  {
+    def create10x10grid(): Unit = {
+      // Create a 10x10 grid where also the first and last nodes of each row and column are connected.
+      val rows = for {
+        x <- 0 until 10
+      } yield {
+        val row = for {
+          y <- 0 until 10
+        } yield createLabeledNode(Map("name" -> s"n($x,$y)"), "Person")
+        (row :+ row.head).sliding(2).foreach {
+          case Seq(a, b) => relate(a, b)
+        }
+        row
       }
-      row
-    }
-    for {
-      i <- 0 until 10
-    } {
-      val column = rows.map(_(i))
-      (column :+ column.head).sliding(2).foreach {
-        case Seq(a, b) => relate(a, b)
+      for {
+        i <- 0 until 10
+      } {
+        val column = rows.map(_ (i))
+        (column :+ column.head).sliding(2).foreach {
+          case Seq(a, b) => relate(a, b)
+        }
       }
+      graph.createIndex("Person", "name")
     }
-    graph.createIndex("Person", "name")
 
-    val query =
+    val gridQuery =
       """MATCH (p0:Person { name:'n(0,0)' }),
         |      (p1:Person { name:'n(0,1)' }),
         |      (p2:Person { name:'n(0,2)' })
@@ -648,19 +652,51 @@ class OptionalMatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStat
         |RETURN count(*)
         |""".stripMargin
 
-    val resultSlotted = executeSingle(s"CYPHER runtime=slotted connectcomponentsplanner=idp $query")
+    def shouldPlanOptionalLast(r: RewindableExecutionResult): Unit = {
+      r.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults")
+        .onTopOf(aPlan("EagerAggregation")
+          .onTopOf(aPlan("Apply")
+            .withRHS(aPlan("Optional"))))
+    }
 
-    // In slotted, Cartesian Product is more expensive. It should therefore be done early, and at least one optional match, planned with Apply-Optional,
-    // should be planned last.
-    resultSlotted.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults")
-      .onTopOf(aPlan("EagerAggregation")
-        .onTopOf(aPlan("Apply")))
+    def shouldPlanCartesianLast(r: RewindableExecutionResult): Unit = {
+      r.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults")
+        .onTopOf(aPlan("EagerAggregation")
+          .onTopOf(aPlan("CartesianProduct")))
+    }
 
-    val resultPipelined = executeSingle(s"CYPHER runtime=pipelined connectcomponentsplanner=idp $query")
+    test("Should switch order of CartesianProduct vs. Apply-Optional in grid query depending on runtime") {
+      restartWithConfig(databaseConfig() ++ Map(
+        GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(128),
+        GraphDatabaseInternalSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(1024)
+      ))
 
-    // In pipelined, Cartesian Product is cheap. The last thing in the plan should therefore be a Cartesian Product.
-    resultPipelined.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults")
-      .onTopOf(aPlan("EagerAggregation")
-        .onTopOf(aPlan("CartesianProduct")))
+      create10x10grid()
+
+      // In slotted, Cartesian Product is more expensive. It should therefore be done early, and at least one optional match, planned with Apply-Optional,
+      // should be planned last.
+      val resultSlotted = executeSingle(s"CYPHER runtime=slotted connectComponentsPlanner=idp $gridQuery")
+      shouldPlanOptionalLast(resultSlotted)
+
+      // In pipelined, Cartesian Product is cheap. The last thing in the plan should therefore be a Cartesian Product.
+      val resultPipelined = executeSingle(s"CYPHER runtime=pipelined connectComponentsPlanner=idp $gridQuery")
+      shouldPlanCartesianLast(resultPipelined)
+    }
+
+    test("Should not switch order of CartesianProduct vs. Apply-Optional in grid query depending on runtime if chunk size is 1") {
+      restartWithConfig(databaseConfig() ++ Map(
+        GraphDatabaseInternalSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(1),
+        GraphDatabaseInternalSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(1)
+      ))
+
+      create10x10grid()
+
+      val resultSlotted = executeSingle(s"CYPHER runtime=slotted connectComponentsPlanner=idp $gridQuery")
+      shouldPlanOptionalLast(resultSlotted)
+
+      // If chunk size is 1, then both runtimes should get the same calculates cost for cartesian products
+      val resultPipelined = executeSingle(s"CYPHER runtime=pipelined connectComponentsPlanner=idp $gridQuery")
+      shouldPlanOptionalLast(resultPipelined)
+    }
   }
 }
