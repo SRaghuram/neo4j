@@ -847,8 +847,8 @@ class FunctionIT
 
             try ( BufferedReader reader = new BufferedReader( new InputStreamReader( FunctionIT.class.getResourceAsStream( "/misc/functions" ) ) ) )
             {
-                String expected = reader.lines().collect( Collectors.joining( lineSeparator() ) );
-                String actual = res.resultAsString();
+                String expected = reader.lines().collect( Collectors.joining( lineSeparator() ) ).trim();
+                String actual = res.resultAsString().trim();
                 // Be aware that the text file "functions" must end with two newlines
                 assertEquals( expected, actual );
             }
