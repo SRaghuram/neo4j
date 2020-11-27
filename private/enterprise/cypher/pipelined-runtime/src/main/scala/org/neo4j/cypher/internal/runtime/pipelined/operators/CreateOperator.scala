@@ -34,7 +34,6 @@ import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.runtime.LenientCreateRelationship
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
-import org.neo4j.cypher.internal.runtime.makeValueNeoSafe
 import org.neo4j.cypher.internal.runtime.pipelined.MutableQueryStatistics
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
@@ -44,8 +43,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateOperator.createNode
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateOperator.createRelationship
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateOperator.handleMissingNode
-import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateOperator.setNodeProperties
-import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateOperator.setRelationshipProperties
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_WRITE
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATS_TRACKER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATS_TRACKER_V
@@ -65,8 +62,6 @@ import org.neo4j.kernel.api.StatementConstants.NO_SUCH_NODE
 import org.neo4j.kernel.api.StatementConstants.NO_SUCH_RELATIONSHIP
 import org.neo4j.kernel.api.StatementConstants.NO_SUCH_RELATIONSHIP_TYPE
 import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.Values.NO_VALUE
-import org.neo4j.values.virtual.MapValue
 
 import scala.collection.mutable
 
@@ -90,7 +85,14 @@ class CreateOperator(val workIdentity: WorkIdentity,
         val command = nodes(i)
         val labelIds = command.labels.map(_.getOrCreateId(state.query)).toArray
         val nodeId = createNode(labelIds, write, resources.queryStatisticsTracker)
-        command.properties.foreach(p => setNodeProperties(nodeId, p(cursor, queryState), token, write, resources.queryStatisticsTracker))
+        command.properties.foreach(p =>
+          SetPropertyOperator.setNodeProperties(
+            nodeId,
+            p(cursor, queryState),
+            token,
+            write,
+            resources.queryStatisticsTracker
+          ))
         cursor.setLongAt(command.idOffset, nodeId)
         i += 1
       }
@@ -106,7 +108,14 @@ class CreateOperator(val workIdentity: WorkIdentity,
           handleMissingNode(command.relName, command.endName, lenientCreateRelationship)
         } else {
           val newId = createRelationship(startNodeId, typeId, endNodeId, write, resources.queryStatisticsTracker)
-          command.properties.foreach(p => setRelationshipProperties(newId, p(cursor, queryState), token, write, resources.queryStatisticsTracker))
+          command.properties.foreach(p =>
+            SetPropertyOperator.setRelationshipProperties(
+              newId,
+              p(cursor, queryState),
+              token,
+              write,
+              resources.queryStatisticsTracker
+            ))
           newId
         }
         cursor.setLongAt(command.relIdOffset, relationshipId)
@@ -126,20 +135,6 @@ object CreateOperator {
     nodeId
   }
 
-  def setNodeProperties(node: Long,
-                        properties: AnyValue,
-                        token: Token,
-                        write: Write,
-                        queryStatisticsTracker: MutableQueryStatistics): Unit = {
-    safeCastToMap(properties).foreach((k: String, v: AnyValue) => {
-      if (!(v eq NO_VALUE)) {
-        val propertyKeyId = token.propertyKeyGetOrCreateForName(k)
-        translateException(token, write.nodeSetProperty(node, propertyKeyId, makeValueNeoSafe(v)))
-        queryStatisticsTracker.setProperty()
-      }
-    })
-  }
-
   def handleMissingNode(relName: String, nodeName: String, lenientCreateRelationship: Boolean): Long =
     if (lenientCreateRelationship) NO_SUCH_RELATIONSHIP
     else failOnMissingNode(relName, nodeName)
@@ -155,26 +150,6 @@ object CreateOperator {
       val relId = write.relationshipCreate(source, typ, target)
       queryStatisticsTracker.createRelationship()
       relId
-  }
-
-  def setRelationshipProperties(relationship: Long,
-                                properties: AnyValue,
-                                token: Token,
-                                write: Write,
-                                queryStatisticsTracker: MutableQueryStatistics): Unit = {
-    safeCastToMap(properties).foreach((k: String, v: AnyValue) => {
-      if (!(v eq NO_VALUE)) {
-        val propertyKeyId = token.propertyKeyGetOrCreateForName(k)
-        translateException(token,  write.relationshipSetProperty(relationship, propertyKeyId, makeValueNeoSafe(v)))
-        queryStatisticsTracker.setProperty()
-      }
-    })
-  }
-
-  private def safeCastToMap(value: AnyValue): MapValue = value match {
-    case mapValue: MapValue => mapValue
-    case _ =>
-      throw new CypherTypeException(s"Parameter provided for node creation is not a Map, instead got $value")
   }
 }
 case class CreateNodeFusedCommand(offset: Int, labels: Seq[Either[Int, String]], properties: Option[() => IntermediateExpression])
@@ -214,7 +189,7 @@ class CreateOperatorTemplate(override val inner: OperatorTaskTemplate,
             case Some(ps) =>
               val p = ps()
               propertyExpressions += p
-              invokeStatic(method[CreateOperator, Unit, Long, AnyValue, Token, Write, MutableQueryStatistics]("setNodeProperties"),
+              invokeStatic(method[SetPropertyOperator, Unit, Long, AnyValue, TokenWrite, Write, MutableQueryStatistics]("setNodeProperties"),
                 load(nodeVar), nullCheckIfRequired(p), loadField(TOKEN), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
             case _ => noop()
           }
@@ -253,7 +228,7 @@ class CreateOperatorTemplate(override val inner: OperatorTaskTemplate,
                 case Some(ps) =>
                   val p = ps()
                   propertyExpressions += p
-                  invokeStatic(method[CreateOperator, Unit, Long, AnyValue, Token, Write, MutableQueryStatistics]("setRelationshipProperties"),
+                  invokeStatic(method[SetPropertyOperator, Unit, Long, AnyValue, TokenWrite, Write, MutableQueryStatistics]("setRelationshipProperties"),
                     load(relVar), nullCheckIfRequired(p), loadField(TOKEN), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
                 case None => noop()
               }
