@@ -90,7 +90,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1, n.prop2", executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(
         _ should includeSomewhere.aPlan("Projection")
-            .containingArgumentForProjection(Map("`n.prop1`" -> "cache[n.prop1]", "`n.prop2`" -> "n.prop2"))
+            .containingArgumentForProjection("`n.prop1`" -> "cache[n.prop1]", "`n.prop2`" -> "n.prop2")
           // just for n.prop2, not for n.prop1
           .withDBHitsBetween(2, 4)
           .onTopOf(aPlan("NodeIndexSeek")
@@ -105,7 +105,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1 AS foo", executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should includeSomewhere.aPlan("Projection")
-      .containingArgumentForProjection(Map("foo" -> "cache[n.prop1]"))
+      .containingArgumentForProjection("foo" -> "cache[n.prop1]")
       .withDBHits(0)
       .onTopOf(aPlan("NodeIndexSeek")
         .withExactVariables("n").containingArgumentForCachedProperty("n", "prop1"))
@@ -127,7 +127,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1 * 2", executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(
         _ should includeSomewhere.aPlan("Projection")
-          .containingArgumentForProjection(Map("`n.prop1 * 2`" -> "cache[n.prop1] * $autoint_1"))
+          .containingArgumentForProjection("`n.prop1 * 2`" -> "cache[n.prop1] * $autoint_1")
           .withDBHits(0)
           .onTopOf(aPlan("NodeIndexSeek")
             .withExactVariables("n").containingArgumentForCachedProperty("n", "prop1"))
@@ -159,7 +159,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
       executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(
         _ should (includeSomewhere.aPlan("Projection")
-          .containingArgumentForProjection(Map("`n.prop2`" -> "n.prop2"))
+          .containingArgumentForProjection("`n.prop2`" -> "n.prop2")
           // just for n.prop2, not for n.prop1
           .withDBHitsBetween(6, 12)
           .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n"))
@@ -353,7 +353,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
       planComparisonStrategy = ComparePlansWithAssertion(_ should
         includeSomewhere.aPlan("Projection")
           .withDBHits(0)
-          .containingArgumentForProjection(Map("`n.prop1`" -> "cache[n.prop1]", "`m.prop1`" -> "cache[m.prop1]"))))
+          .containingArgumentForProjection("`n.prop1`" -> "cache[n.prop1]", "`m.prop1`" -> "cache[m.prop1]")))
 
     result.toList should equal(
       List(
@@ -481,7 +481,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
       planComparisonStrategy = ComparePlansWithAssertion(
         _ should includeSomewhere
           .aPlan("Projection")
-          .containingArgumentForProjection(Map("`m.prop1`" -> "cache[m.prop1]"))
+          .containingArgumentForProjection("`m.prop1`" -> "cache[m.prop1]")
           .withDBHits(0)
           .withLHS(includeSomewhere
             .aPlan("NodeIndexSeek")
@@ -499,7 +499,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere
         .aPlan("Projection")
-        .containingArgumentForProjection(Map("`n.prop1`" -> "cache[n.prop1]"))
+        .containingArgumentForProjection("`n.prop1`" -> "cache[n.prop1]")
         .withDBHits(0)
         .onTopOf(includeSomewhere
           .aPlan("NodeIndexSeekByRange")
@@ -529,7 +529,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere
         .aPlan("Projection")
-        .containingArgumentForProjection(Map("`n.prop1`" -> "cache[n.prop1]", "`n.prop2`" -> "cache[n.prop2]"))
+        .containingArgumentForProjection("`n.prop1`" -> "cache[n.prop1]", "`n.prop2`" -> "cache[n.prop2]")
         .withDBHits()
         .onTopOf(includeSomewhere.aPlan("Union")
           .withLHS(includeSomewhere.aPlan("NodeIndexSeekByRange"))
@@ -662,7 +662,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
       executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
-      includeSomewhere.aPlan("Projection").containingArgumentForProjection(Map("`n.prop1`" -> "cache[n.prop1]"))
+      includeSomewhere.aPlan("Projection").containingArgumentForProjection("`n.prop1`" -> "cache[n.prop1]")
         .onTopOf(aPlan("Sort")
           .onTopOf(aPlan("Projection")
             .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1"))))
