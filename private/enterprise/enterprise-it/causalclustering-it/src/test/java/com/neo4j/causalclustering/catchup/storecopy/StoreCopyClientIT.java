@@ -332,7 +332,7 @@ class StoreCopyClientIT
         assertEventually( () -> assertableLogProvider, asr ->
         {
             assertThat( assertableLogProvider ).forClass( StoreCopyClient.class ).forLevel( WARN )
-                                               .assertExceptionForLogMessage( "StoreCopyRequest failed exceptionally" )
+                                               .assertExceptionForLogMessage( "failed exceptionally." )
                                                .hasStackTraceContaining( "Connection refused: " )
                                                .hasStackTraceContaining( "localhost/127.0.0.1:" + port );
             return true;

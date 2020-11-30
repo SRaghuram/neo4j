@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.catchup.storecopy;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
-import com.neo4j.causalclustering.catchup.VersionedCatchupClients.PreparedRequest;
 
 import java.net.ConnectException;
 import java.nio.file.Path;
@@ -20,7 +19,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -32,9 +30,6 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 
-import static com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV3;
-import static com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV4;
-import static com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV5;
 import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactions.noConstraint;
 import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactions.requiredRange;
 import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.LAST_CHECKPOINTED_TX_UNAVAILABLE;
@@ -116,7 +111,7 @@ public class StoreCopyClient
             throws StoreCopyFailedException
     {
         final var pathsToBeProcessed = new ArrayBlockingQueue<>( filesToDownload.size(), false, filesToDownload );
-        CopyOnWriteArrayList<StoreCopyFailedException> storeCopyExceptions = new CopyOnWriteArrayList<>();
+        final var storeCopyExceptions = new CopyOnWriteArrayList<StoreCopyFailedException>();
         final var copiedFiles = new CopyOnWriteArrayList<>();
         while ( copiedFiles.size() < filesToDownload.size() )
         {
@@ -137,11 +132,11 @@ public class StoreCopyClient
                                       }
 
                                       storeCopyClientMonitor.startReceivingStoreFile( destDir.resolve( nextPath.getFileName() ).toString() );
-                                      var response = requestToSecondary( nextFreeAddress.get(), storeFileStream,
-                                                                         getStoreFilesV3( expectedStoreId, lastCheckPointedTxId, nextPath ),
-                                                                         getStoreFilesV4( expectedStoreId, lastCheckPointedTxId, nextPath ),
-                                                                         getStoreFilesV5( expectedStoreId, lastCheckPointedTxId, nextPath ) );
-                                      final var successfulResponse = response.map( v -> successfulRequest( v, storeCopyExceptions ) ).orElse( false );
+                                      var nextAddress = nextFreeAddress.get();
+                                      var response = getStoreFile( nextAddress, storeFileStream, expectedStoreId, lastCheckPointedTxId, nextPath );
+                                      final var successfulResponse = response
+                                              .map( v -> successfulRequest( v, storeCopyExceptions, nextAddress, nextPath ) )
+                                              .orElse( false );
                                       if ( successfulResponse )
                                       {
                                           storeCopyClientMonitor.finishReceivingStoreFile( destDir.resolve( nextPath.getFileName() ).toString() );
@@ -175,20 +170,16 @@ public class StoreCopyClient
         }
     }
 
-    private Optional<StoreCopyFinishedResponse> requestToSecondary( SocketAddress address, StoreFileStreamProvider storeFileStream,
-                                                                    Function<CatchupClientV3,PreparedRequest<StoreCopyFinishedResponse>> v3Request,
-                                                                    Function<CatchupClientV4,PreparedRequest<StoreCopyFinishedResponse>> v4Request,
-                                                                    Function<CatchupClientV5,PreparedRequest<StoreCopyFinishedResponse>> v5Request )
+    private Optional<StoreCopyFinishedResponse> getStoreFile( SocketAddress address, StoreFileStreamProvider storeFileStream,
+            StoreId expectedStoreId, long lastCheckPointedTxId, Path path )
     {
         try
         {
-
-            log.info( "Sending request StoreCopyRequest to '%s'", address );
-
+            log.info( "Getting store file '%s' from '%s'", path, address );
             final var response = catchUpClientFactory.getClient( address, log )
-                                                     .v3( v3Request )
-                                                     .v4( v4Request )
-                                                     .v5( v5Request )
+                                                     .v3( c -> c.getStoreFile( expectedStoreId, path, lastCheckPointedTxId, namedDatabaseId ) )
+                                                     .v4( c -> c.getStoreFile( expectedStoreId, path, lastCheckPointedTxId, namedDatabaseId ) )
+                                                     .v5( c -> c.getStoreFile( expectedStoreId, path, lastCheckPointedTxId, namedDatabaseId ) )
                                                      .withResponseHandler( StoreCopyResponseAdaptors.filesCopyAdaptor( storeFileStream, log ) )
                                                      .request();
             return Optional.of( response );
@@ -201,7 +192,7 @@ public class StoreCopyClient
         {
             //TODO: I understood the argument that we should just throw and catch Exception because anything can go wrong with a future/network request, but
             // it seems like we're at risk of swallowing runtime exceptions in some cases where we otherwise wouldn't
-            log.warn( "StoreCopyRequest failed exceptionally.", e );
+            log.warn( format( "Getting store file '%s' from '%s' failed exceptionally.", path, address ), e );
         }
         return Optional.empty();
     }
@@ -257,41 +248,24 @@ public class StoreCopyClient
         }
     }
 
-    private boolean successfulRequest( StoreCopyFinishedResponse response, CopyOnWriteArrayList<StoreCopyFailedException> exceptions )
+    private boolean successfulRequest( StoreCopyFinishedResponse response, List<StoreCopyFailedException> exceptions, SocketAddress address, Path path )
     {
         switch ( response.status() )
         {
         case SUCCESS:
-            log.info( "StoreCopyRequest was successful." );
+            log.info( "Getting store file '%s' from '%s' was successful.", path, address );
             return true;
         case E_TOO_FAR_BEHIND:
         case E_UNKNOWN:
         case E_STORE_ID_MISMATCH:
         case E_DATABASE_UNKNOWN:
-            log.warn( "StoreCopyRequest failed with response: %s.", response.status() );
+            log.warn( "Getting store file '%s' from '%s' failed with response: %s.", path, address, response.status() );
             return false;
         default:
-            exceptions.add( new StoreCopyFailedException( format( "Request responded with an unknown response type: %s.", response.status() ) ) );
+            exceptions.add( new StoreCopyFailedException(
+                    format( "Getting store file '%s' from '%s' responded with an unknown response type: %s.", path, address, response.status() ) ) );
             return false;
         }
-    }
-
-    private Function<CatchupClientV3,PreparedRequest<StoreCopyFinishedResponse>> getStoreFilesV3( StoreId expectedStoreId, long lastCheckPointedTxId,
-                                                                                                  Path path )
-    {
-        return c -> c.getStoreFile( expectedStoreId, path, lastCheckPointedTxId, namedDatabaseId );
-    }
-
-    private Function<CatchupClientV4,PreparedRequest<StoreCopyFinishedResponse>> getStoreFilesV4( StoreId expectedStoreId, long lastCheckPointedTxId,
-                                                                                                  Path path )
-    {
-        return c -> c.getStoreFile( expectedStoreId, path, lastCheckPointedTxId, namedDatabaseId );
-    }
-
-    private Function<CatchupClientV5,PreparedRequest<StoreCopyFinishedResponse>> getStoreFilesV5( StoreId expectedStoreId, long lastCheckPointedTxId,
-                                                                                                  Path path )
-    {
-        return c -> c.getStoreFile( expectedStoreId, path, lastCheckPointedTxId, namedDatabaseId );
     }
 
     static class TransactionIdHandler
