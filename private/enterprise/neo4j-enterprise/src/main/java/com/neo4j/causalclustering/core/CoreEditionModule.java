@@ -548,19 +548,19 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var factoryV2 = new RaftProtocolClientInstaller.Factory( pipelineBuilders.client(),
                                                                  logProvider,
                                                                  new SupportedMessagesV2(),
-                                                                 () -> new RaftMessageEncoder(),
+                                                                 RaftMessageEncoder::new,
                                                                  ApplicationProtocols.RAFT_2_0 );
 
         var factoryV3 = new RaftProtocolClientInstaller.Factory( pipelineBuilders.client(),
                                                                  logProvider,
                                                                  new SupportedMessagesV3(),
-                                                                 () -> new RaftMessageEncoderV3(),
+                                                                 RaftMessageEncoderV3::new,
                                                                  ApplicationProtocols.RAFT_3_0 );
 
         var factoryV4 = new RaftProtocolClientInstaller.Factory( pipelineBuilders.client(),
                                                                  logProvider,
                                                                  SUPPORT_ALL,
-                                                                 () -> new RaftMessageEncoderV4(),
+                                                                 RaftMessageEncoderV4::new,
                                                                  ApplicationProtocols.RAFT_4_0 );
         return List.of( factoryV2, factoryV3, factoryV4 )
                    .stream()

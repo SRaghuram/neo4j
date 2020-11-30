@@ -7,12 +7,25 @@ package com.neo4j.causalclustering.messaging.marshalling.v3;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.messaging.marshalling.SupportedMessages;
+import com.neo4j.causalclustering.messaging.marshalling.v2.SupportedMessagesV2;
 
-public class SupportedMessagesV3 extends SupportedMessages
+public class SupportedMessagesV3 extends SupportedMessagesV2
 {
     @Override
-    public Boolean handle( RaftMessages.StatusResponse statusResponse ) throws Exception
+    public Boolean handle( RaftMessages.LeadershipTransfer.Proposal leadershipTransferProposal )
     {
-        return false;
+        return true;
+    }
+
+    @Override
+    public Boolean handle( RaftMessages.LeadershipTransfer.Request leadershipTransferRequest )
+    {
+        return true;
+    }
+
+    @Override
+    public Boolean handle( RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection )
+    {
+        return true;
     }
 }

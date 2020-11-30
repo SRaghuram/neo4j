@@ -9,120 +9,132 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 
 public abstract class SupportedMessages implements RaftMessages.Handler<Boolean,Exception>
 {
-    public static final SupportedMessages SUPPORT_ALL = new SupportedMessages()
+    private final boolean defaultValue;
+
+    protected SupportedMessages()
+    {
+        this( false );
+    }
+
+    private SupportedMessages( boolean defaultValue )
+    {
+        this.defaultValue = defaultValue;
+    }
+
+    public static final SupportedMessages SUPPORT_ALL = new SupportedMessages( true )
     {
     };
 
-    private boolean defaultToTrue()
+    private boolean defaultValue()
     {
-        return true;
+        return defaultValue;
     }
 
     @Override
     public Boolean handle( RaftMessages.Vote.Request request )
     {
-        return defaultToTrue();
+        return defaultValue();
     }
 
     @Override
     public Boolean handle( RaftMessages.Vote.Response response )
     {
-        return defaultToTrue();
+        return defaultValue();
     }
 
     @Override
     public Boolean handle( RaftMessages.PreVote.Request request )
     {
-        return defaultToTrue();
+        return defaultValue();
     }
 
     @Override
     public Boolean handle( RaftMessages.PreVote.Response response )
     {
-        return defaultToTrue();
+        return defaultValue();
     }
 
     @Override
     public Boolean handle( RaftMessages.AppendEntries.Request request )
     {
-        return defaultToTrue();
+        return defaultValue();
     }
 
     @Override
     public Boolean handle( RaftMessages.AppendEntries.Response response )
     {
-        return defaultToTrue();
+        return defaultValue();
     }
 
     @Override
     public Boolean handle( RaftMessages.Heartbeat heartbeat )
     {
-        return defaultToTrue();
+        return defaultValue();
     }
 
     @Override
     public Boolean handle( RaftMessages.HeartbeatResponse heartbeatResponse )
     {
-        return defaultToTrue();
+        return defaultValue();
     }
 
     @Override
     public Boolean handle( RaftMessages.LogCompactionInfo logCompactionInfo )
     {
-        return defaultToTrue();
+        return defaultValue();
     }
 
     @Override
     public Boolean handle( RaftMessages.Timeout.Election election )
     {
-        return defaultToTrue();
+        return defaultValue();
     }
 
     @Override
     public Boolean handle( RaftMessages.Timeout.Heartbeat heartbeat )
     {
-        return defaultToTrue();
+        return defaultValue();
     }
 
     @Override
     public Boolean handle( RaftMessages.NewEntry.Request request )
     {
-        return defaultToTrue();
+        return defaultValue();
     }
 
     @Override
     public Boolean handle( RaftMessages.NewEntry.BatchRequest batchRequest )
     {
-        return defaultToTrue();
+        return defaultValue();
     }
 
     @Override
     public Boolean handle( RaftMessages.PruneRequest pruneRequest )
     {
-        return defaultToTrue();
+        return defaultValue();
     }
 
     @Override
     public Boolean handle( RaftMessages.LeadershipTransfer.Proposal leadershipTransferProposal )
     {
-        return defaultToTrue();
+        return defaultValue();
     }
 
     @Override
     public Boolean handle( RaftMessages.LeadershipTransfer.Request leadershipTransferRequest )
     {
-        return defaultToTrue();
+        return defaultValue();
     }
 
     @Override
     public Boolean handle( RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection )
     {
-        return defaultToTrue();
+        return defaultValue();
     }
 
     @Override
-    public Boolean handle( RaftMessages.StatusResponse statusResponse ) throws Exception
+    public Boolean handle( RaftMessages.StatusResponse statusResponse )
     {
-        return defaultToTrue();
+        return defaultValue();
     }
 }
