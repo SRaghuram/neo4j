@@ -80,7 +80,7 @@ public interface ClusterMember
 
     String intraClusterBoltAdvertisedAddress();
 
-    String loopbackBoltAddress();
+    String loopbackUnixDomainSocketFile();
 
     default <T> void updateConfig( Setting<T> setting, T value )
     {

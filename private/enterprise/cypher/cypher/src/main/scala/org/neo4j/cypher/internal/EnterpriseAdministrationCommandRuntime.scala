@@ -24,6 +24,7 @@ import org.neo4j.configuration.Config
 import org.neo4j.configuration.GraphDatabaseInternalSettings
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
+import org.neo4j.configuration.connectors.BoltConnectorInternalSettings
 import org.neo4j.configuration.helpers.DatabaseNameValidator
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.cypher.internal.ast.ActionResource
@@ -164,7 +165,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
   private val communityCommandRuntime: CommunityAdministrationCommandRuntime = CommunityAdministrationCommandRuntime(normalExecutionEngine, resolver, logicalToExecutable)
   private val config: Config = resolver.resolveDependency(classOf[Config])
   private val maxDBLimit: Long = config.get(EnterpriseEditionSettings.max_number_of_databases)
-  private val loopback_enabled = config.get(GraphDatabaseInternalSettings.enable_loopback_auth)
+  private val loopback_enabled = config.get(BoltConnectorInternalSettings.enable_loopback_auth)
   private val create_drop_database_is_blocked = config.get(GraphDatabaseInternalSettings.block_create_drop_database)
   private val start_stop_database_is_blocked = config.get(GraphDatabaseInternalSettings.block_start_stop_database)
 

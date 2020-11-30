@@ -60,7 +60,7 @@ public class ReadReplica implements ClusterMember
     private final int index;
     private final String boltSocketAddress;
     private final String intraClusterBoltSocketAddress;
-    private final String loopbackBoltSocketAddress;
+    private final Path loopbackUnixDomainBoltSocketFile;
     private final Config memberConfig;
     private final Monitors monitors;
     private final ThreadGroup threadGroup;
@@ -69,7 +69,7 @@ public class ReadReplica implements ClusterMember
     private ReadReplicaGraphDatabase readReplicaGraphDatabase;
     private GraphDatabaseFacade systemDatabase;
 
-    public ReadReplica( Path parentDir, int index, int boltPort, int intraClusterBoltPort, int loopbackBoltPort, int httpPort,
+    public ReadReplica( Path parentDir, int index, int boltPort, int intraClusterBoltPort, Path loopbackUnixDomainSocketFile, int httpPort,
             int txPort, int backupPort, int discoveryPort, DiscoveryServiceFactory discoveryServiceFactory,
             List<SocketAddress> coreMemberDiscoveryAddresses, Map<String,String> extraParams,
             Map<String,IntFunction<String>> instanceExtraParams, String recordFormat, Monitors monitors,
@@ -79,7 +79,7 @@ public class ReadReplica implements ClusterMember
 
         boltSocketAddress = format( advertisedHost, boltPort );
         intraClusterBoltSocketAddress = format( advertisedHost, intraClusterBoltPort);
-        loopbackBoltSocketAddress = format( "127.0.0.1", loopbackBoltPort);
+        loopbackUnixDomainBoltSocketFile = loopbackUnixDomainSocketFile;
 
         Config.Builder config = Config.newBuilder();
         config.set( GraphDatabaseSettings.mode, GraphDatabaseSettings.Mode.READ_REPLICA );
@@ -102,7 +102,7 @@ public class ReadReplica implements ClusterMember
         config.set( BoltConnector.advertised_address, new SocketAddress( advertisedHost, boltPort ) );
         config.set( GraphDatabaseSettings.routing_listen_address, new SocketAddress( listenHost, intraClusterBoltPort ) );
         config.set( GraphDatabaseSettings.routing_advertised_address, new SocketAddress( advertisedHost, intraClusterBoltPort ) );
-        config.set( BoltConnectorInternalSettings.loopback_listen_port, loopbackBoltPort );
+        config.set( BoltConnectorInternalSettings.unsupported_loopback_listen_file, loopbackUnixDomainSocketFile );
         config.set( BoltConnector.encryption_level, DISABLED );
         config.set( HttpConnector.enabled, TRUE );
         config.set( HttpConnector.listen_address, new SocketAddress( listenHost, httpPort ) );
@@ -140,9 +140,9 @@ public class ReadReplica implements ClusterMember
     }
 
     @Override
-    public String loopbackBoltAddress()
+    public String loopbackUnixDomainSocketFile()
     {
-        return loopbackBoltSocketAddress;
+        return loopbackUnixDomainBoltSocketFile.toString();
     }
 
     @Override

@@ -97,8 +97,6 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
 
     private static Driver readReplicaDriver;
 
-    private static Driver loopbackLeaderDriver;
-
     private static Driver adminDriver;
 
     private static List<Driver> adminDrivers;
@@ -116,8 +114,7 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
                 sslPolicyConfig.enabled.name(), TRUE,
                 sslPolicyConfig.base_directory.name(), CERTIFICATES_DIR,
                 GraphDatabaseSettings.routing_enabled.name(), TRUE,
-                GraphDatabaseInternalSettings.block_upgrade_procedures.name(), TRUE,
-                BoltConnectorInternalSettings.enable_loopback_auth.name(), TRUE
+                GraphDatabaseInternalSettings.block_upgrade_procedures.name(), TRUE
         );
         var readReplicaParams = Map.of(
                 CausalClusteringSettings.middleware_logging_level.name(), Level.DEBUG.toString(),
@@ -125,8 +122,7 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
                 sslPolicyConfig.enabled.name(), TRUE,
                 sslPolicyConfig.base_directory.name(), CERTIFICATES_DIR,
                 GraphDatabaseSettings.routing_enabled.name(), TRUE,
-                GraphDatabaseInternalSettings.block_upgrade_procedures.name(), TRUE,
-                BoltConnectorInternalSettings.enable_loopback_auth.name(), TRUE
+                GraphDatabaseInternalSettings.block_upgrade_procedures.name(), TRUE
         );
 
         ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
@@ -175,8 +171,6 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
 
         var fooFollower = getFollower( cluster, fooLeader );
         fooFollowerDriver = coreDrivers.get( fooFollower.index() );
-
-        loopbackLeaderDriver = driver( "bolt://" + systemLeader.loopbackBoltAddress(), "ignore", "foo" );
 
         List<String> allUris = new ArrayList<>();
         cluster.coreMembers().forEach( member -> allUris.add( member.directURI() ) );
@@ -267,12 +261,6 @@ class ClusterRoutingSecurityIT extends ClusterTestSupport
     void testPermissionsThroughReadReplica()
     {
         doTestPermissions( readReplicaDriver );
-    }
-
-    @Test
-    void testLoopbackOnSystemLeader()
-    {
-        runQuery( loopbackLeaderDriver, "CALL dbms.upgrade() YIELD status RETURN status", 1, "system" );
     }
 
     void doTestPermissions( Driver driver )
