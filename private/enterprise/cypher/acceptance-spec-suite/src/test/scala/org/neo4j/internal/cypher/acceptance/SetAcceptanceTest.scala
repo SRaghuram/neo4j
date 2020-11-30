@@ -124,7 +124,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     val a = createNode()
 
     // when
-    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n) SET (CASE WHEN true THEN n END).name = 'neo4j' RETURN count(*)")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) SET (CASE WHEN true THEN n END).name = 'neo4j' RETURN count(*)")
 
     // then
     assertStats(result, propertiesWritten = 1)
@@ -137,7 +137,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     val r = relate(createNode(), createNode())
 
     // when
-    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH ()-[r]->() SET (CASE WHEN true THEN r END).name = 'neo4j' RETURN count(*)")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH ()-[r]->() SET (CASE WHEN true THEN r END).name = 'neo4j' RETURN count(*)")
 
     // then
     assertStats(result, propertiesWritten = 1)
@@ -176,7 +176,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
 
   //Not suitable for the TCK
   test("should fail at runtime when the expression is not a node or a relationship") {
-    failWithError(Configs.InterpretedAndSlotted + Configs.Pipelined, "SET (CASE WHEN true THEN $node END).name = 'neo4j' RETURN count(*)",
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, "SET (CASE WHEN true THEN $node END).name = 'neo4j' RETURN count(*)",
       "Type mismatch: expected Map, Node, Relationship, Point, Duration, Date, Time, LocalTime, LocalDateTime or DateTime but was Integer",
       params = Map("node" -> 42))
   }

@@ -24,7 +24,7 @@ class RemoveAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
         |REMOVE CASE WHEN a.age>b.age THEN a ELSE b END.age
         |RETURN a.age, b.age""".stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     // then
     result.toList should equal(List(Map("a.age" -> 23, "b.age" -> null)))
