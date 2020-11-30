@@ -504,12 +504,12 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         slots.newLong(leaf.rightNode, nullable, CTNode)
 
       case leaf: DirectedRelationshipTypeScan =>
-        slots.newLong(leaf.relName, nullable, CTRelationship)
+        slots.newLong(leaf.idName, nullable, CTRelationship)
         slots.newLong(leaf.startNode, nullable, CTNode)
         slots.newLong(leaf.endNode, nullable, CTNode)
 
       case leaf: UndirectedRelationshipTypeScan =>
-        slots.newLong(leaf.relName, nullable, CTRelationship)
+        slots.newLong(leaf.idName, nullable, CTRelationship)
         slots.newLong(leaf.startNode, nullable, CTNode)
         slots.newLong(leaf.endNode, nullable, CTNode)
 
