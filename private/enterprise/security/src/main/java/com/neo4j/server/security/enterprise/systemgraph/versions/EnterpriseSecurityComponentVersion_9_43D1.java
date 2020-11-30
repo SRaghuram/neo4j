@@ -27,11 +27,11 @@ import org.neo4j.server.security.systemgraph.ComponentVersion;
 /**
  * This is the EnterpriseSecurityComponent version for Neo4j 4.3-drop1.
  */
-public class EnterpriseSecurityComponentVersion_8_43D1 extends SupportedEnterpriseSecurityComponentVersion
+public class EnterpriseSecurityComponentVersion_9_43D1 extends SupportedEnterpriseSecurityComponentVersion
 {
     private final KnownEnterpriseSecurityComponentVersion previous;
 
-    public EnterpriseSecurityComponentVersion_8_43D1( Log log, KnownEnterpriseSecurityComponentVersion previous )
+    public EnterpriseSecurityComponentVersion_9_43D1( Log log, KnownEnterpriseSecurityComponentVersion previous )
     {
         super( ComponentVersion.ENTERPRISE_SECURITY_43D1, log );
         this.previous = previous;
@@ -134,14 +134,7 @@ public class EnterpriseSecurityComponentVersion_8_43D1 extends SupportedEnterpri
     @Override
     boolean supportsUpdateAction( PrivilegeAction action )
     {
-        switch ( action )
-        {
-        case SET_USER_DEFAULT_DATABASE:
-            return true;
-
-        default:
-            return previous.supportsUpdateAction( action );
-        }
+        return previous.supportsUpdateAction( action );
     }
 
     @Override
