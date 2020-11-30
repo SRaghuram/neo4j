@@ -482,11 +482,6 @@ class SecurityAdministrationCommandLoggingIT
             this.subject = new AuthSubject()
             {
                 @Override
-                public void logout()
-                {
-                }
-
-                @Override
                 public AuthenticationResult getAuthenticationResult()
                 {
                     return AuthenticationResult.SUCCESS;

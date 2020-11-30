@@ -22,12 +22,6 @@ public class FabricAuthSubject implements AuthSubject
     }
 
     @Override
-    public void logout()
-    {
-        wrappedAuthSubject.logout();
-    }
-
-    @Override
     public AuthenticationResult getAuthenticationResult()
     {
         return wrappedAuthSubject.getAuthenticationResult();

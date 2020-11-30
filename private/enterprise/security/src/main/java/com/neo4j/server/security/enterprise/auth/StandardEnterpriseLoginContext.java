@@ -138,12 +138,6 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         }
 
         @Override
-        public void logout()
-        {
-            shiroSubject.logout();
-        }
-
-        @Override
         public AuthenticationResult getAuthenticationResult()
         {
             return shiroSubject.getAuthenticationResult();

@@ -182,13 +182,6 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
     }
 
     @Override
-    public void logout( BoltSubject subject ) throws Exception
-    {
-        subject.client.disconnect();
-        subject.client = connectionFactory.newInstance();
-    }
-
-    @Override
     public void updateAuthToken( BoltSubject subject, String username, String password )
     {
 

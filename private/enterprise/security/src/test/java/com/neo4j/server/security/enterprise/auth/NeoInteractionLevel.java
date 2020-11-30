@@ -47,8 +47,6 @@ public interface NeoInteractionLevel<S>
 
     S login( String username, String password ) throws Exception;
 
-    void logout( S subject ) throws Exception;
-
     void updateAuthToken( S subject, String username, String password );
 
     String nameOf( S subject );

@@ -388,7 +388,6 @@ public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInter
     /*
     Admin creates user Henrik with password bar
     Henrik logs in with correct password → ok
-    Henrik logs off
     Admin suspends user Henrik
     User Henrik logs in with correct password → fail
      */
@@ -398,7 +397,6 @@ public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInter
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.createUser('Henrik', 'bar', false)" );
         S subject = neo.login( "Henrik", "bar" );
         neo.assertAuthenticated( subject );
-        neo.logout( subject );
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.suspendUser('Henrik')" );
         subject = neo.login( "Henrik", "bar" );
         neo.assertUnauthenticated( subject );
@@ -585,7 +583,6 @@ public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInter
     Henrik starts transaction with read query → ok
     Henrik changes password to 123
     Henrik starts transaction with read query → ok
-    Henrik logs out
     Henrik logs in with password abc → fail
     Henrik logs in with password 123 → ok
     Henrik starts transaction with read query → ok
@@ -602,7 +599,6 @@ public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInter
         assertDDLCommandSuccess( subject, "ALTER CURRENT USER SET PASSWORD FROM 'abc' TO '123'" );
         neo.updateAuthToken( subject, "Henrik", "123" ); // Because RESTSubject caches an auth token that is sent with every request
         testSuccessfulRead( subject, 3 );
-        neo.logout( subject );
         subject = neo.login( "Henrik", "abc" );
         neo.assertUnauthenticated( subject );
         subject = neo.login( "Henrik", "123" );
@@ -616,7 +612,6 @@ public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInter
     Henrik logs in with password abc → ok
     Henrik starts transaction with read query → ok
     Admin changes user Henrik’s password to 123
-    Henrik logs out
     Henrik logs in with password abc → fail
     Henrik logs in with password 123 → ok
     Henrik starts transaction with read query → ok
@@ -631,7 +626,6 @@ public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInter
         neo.assertAuthenticated( subject );
         testSuccessfulRead( subject, 3 );
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.changeUserPassword('Henrik', '123', false)" );
-        neo.logout( subject );
         subject = neo.login( "Henrik", "abc" );
         neo.assertUnauthenticated( subject );
         subject = neo.login( "Henrik", "123" );

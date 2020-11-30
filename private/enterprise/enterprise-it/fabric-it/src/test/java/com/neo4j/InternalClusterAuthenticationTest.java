@@ -341,12 +341,6 @@ class InternalClusterAuthenticationTest
             {
 
                 @Override
-                public void logout()
-                {
-
-                }
-
-                @Override
                 public AuthenticationResult getAuthenticationResult()
                 {
                     return null;

@@ -69,13 +69,6 @@ public class InClusterLoginContext implements EnterpriseLoginContext
         }
 
         @Override
-        public void logout()
-        {
-            username = null;
-            authenticationResult = FAILURE;
-        }
-
-        @Override
         public AuthenticationResult getAuthenticationResult()
         {
             return authenticationResult;

@@ -168,11 +168,6 @@ abstract class AbstractRESTInteraction extends CommunityWebContainerTestBase imp
     }
 
     @Override
-    public void logout( RESTSubject subject )
-    {
-    }
-
-    @Override
     public void updateAuthToken( RESTSubject subject, String username, String password )
     {
         subject.principalCredentials = HTTP.basicAuthHeader( username, password );

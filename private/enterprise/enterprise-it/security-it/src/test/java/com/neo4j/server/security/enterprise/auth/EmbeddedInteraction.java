@@ -128,12 +128,6 @@ public class EmbeddedInteraction implements NeoInteractionLevel<EnterpriseLoginC
     }
 
     @Override
-    public void logout( EnterpriseLoginContext loginContext )
-    {
-        loginContext.subject().logout();
-    }
-
-    @Override
     public void updateAuthToken( EnterpriseLoginContext subject, String username, String password )
     {
     }

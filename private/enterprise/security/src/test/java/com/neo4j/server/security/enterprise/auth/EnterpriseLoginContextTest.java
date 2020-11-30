@@ -191,27 +191,6 @@ class EnterpriseLoginContextTest
         assertThrows( AuthorizationViolationException.class, () -> loginContext.authorize( token, DEFAULT_DATABASE_NAME ) );
     }
 
-    @Test
-    void shouldHaveNoPermissionsAfterLogout() throws Throwable
-    {
-        // Given
-        when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Set.of( PredefinedRoles.ARCHITECT ) ) );
-        when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.ARCHITECT ) ) ).thenReturn( new HashSet<>(
-                Arrays.asList( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenPrivilege, indexPrivilege,
-                        constraintPrivilege ) ) );
-        EnterpriseLoginContext loginContext = login();
-
-        // When
-        SecurityContext securityContext = loginContext.authorize( token, DEFAULT_DATABASE_NAME );
-        assertTrue( securityContext.mode().allowsWrites() );
-        assertTrue( securityContext.mode().allowsSchemaWrites() );
-
-        loginContext.subject().logout();
-
-        // Then
-        assertThrows( AuthorizationViolationException.class, () -> loginContext.authorize( token, DEFAULT_DATABASE_NAME ) );
-    }
-
     private EnterpriseLoginContext login() throws InvalidAuthTokenException
     {
         return authManager.login( authToken( "user", "password" ) );
