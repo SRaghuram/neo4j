@@ -849,7 +849,6 @@ class FunctionIT
             {
                 String expected = reader.lines().collect( Collectors.joining( lineSeparator() ) ).trim();
                 String actual = res.resultAsString().trim();
-                // Be aware that the text file "functions" must end with two newlines
                 assertEquals( expected, actual );
             }
             catch ( IOException e )
