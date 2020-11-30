@@ -943,7 +943,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("GRANT ROLE PUBLIC TO neo4j")
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
   }
 
   test("should not fail granting reserved role as parameter to user") {
@@ -951,7 +951,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("GRANT ROLE $role TO neo4j", Map("role" -> PUBLIC))
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
   }
 
   test("should grant reserved role together with other role to user") {
@@ -986,7 +986,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // THEN
     val result = execute("SHOW USERS")
     result.toSet shouldBe Set(
-      neo4jUser,
+      defaultUser,
       user("Bar", Seq("fairy", "dragon")),
       user("Baz"),
       user("Zet", Seq("fairy"))
@@ -1075,7 +1075,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("GRANT ROLE dragon TO Bar")
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar", Seq("dragon"), passwordChangeRequired = false))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user("Bar", Seq("dragon"), passwordChangeRequired = false))
   }
 
   test("should fail when granting non-existing role to user") {
@@ -1089,7 +1089,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message "Failed to grant role 'dragon' to user 'Bar': Role does not exist."
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user("Bar"))
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers ++ publicRole("Bar")
 
     // and with parameters
@@ -1100,7 +1100,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message "Failed to grant role 'dragon' to user 'Bar': Role does not exist."
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user("Bar"))
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers ++ publicRole("Bar")
 
     // and an invalid (non-existing) one
@@ -1111,7 +1111,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message "Failed to grant role '' to user 'Bar': Role does not exist."
 
     // AND
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user("Bar"))
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers ++ publicRole("Bar")
 
     // and an invalid (non-existing) one with parameter
@@ -1122,7 +1122,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message "Failed to grant role '' to user 'Bar': Role does not exist."
 
     // AND
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user("Bar"))
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers ++ publicRole("Bar")
   }
 
@@ -1138,7 +1138,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message "Failed to grant role 'dragon' to user 'Bar': User does not exist."
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
 
     // and with parameters
@@ -1149,7 +1149,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message "Failed to grant role 'dragon' to user 'Bar': User does not exist."
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
 
     // and an invalid (non-existing) one
@@ -1160,7 +1160,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message "Failed to grant role 'dragon' to user '': User does not exist."
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
 
     // and an invalid (non-existing) one with parameters
@@ -1171,7 +1171,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message "Failed to grant role 'dragon' to user '': User does not exist."
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
   }
 
@@ -1182,7 +1182,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "Failed to grant role 'dragon' to user 'Bar': Role does not exist."
 
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
 
     // and an invalid (non-existing) ones
@@ -1192,7 +1192,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "Failed to grant role '' to user '': Role does not exist."
 
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
   }
 

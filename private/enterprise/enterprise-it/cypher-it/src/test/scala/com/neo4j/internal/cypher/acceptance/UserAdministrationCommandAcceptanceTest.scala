@@ -62,7 +62,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val result = execute("SHOW USERS")
 
     // THEN
-    result.toSet should be(Set(neo4jUser))
+    result.toSet should be(Set(defaultUser))
   }
 
   test("should show all users") {
@@ -80,7 +80,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val result = execute("SHOW USERS")
 
     // THEN
-    result.toSet shouldBe Set(neo4jUser, user("Bar"), user("Baz"), user("Zet"))
+    result.toSet shouldBe Set(defaultUser, user("Bar"), user("Baz"), user("Zet"))
   }
 
   test("should show users with yield") {
@@ -352,11 +352,11 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // WHEN
     val exception = the[DatabaseAdministrationException] thrownBy {
-      execute("SHOW USERS YIELD * WHERE user = $name", ("name"-> "neo4j"))
+      execute("SHOW USERS YIELD * WHERE user = $name", "name"-> "neo4j")
     }
 
     // THEN
-    exception.getMessage shouldBe("This is an administration command and it should be executed against the system database: SHOW USERS")
+    exception.getMessage shouldBe "This is an administration command and it should be executed against the system database: SHOW USERS"
   }
 
   // Tests for show current user
@@ -424,7 +424,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     setup()
 
     // THEN
-    execute("SHOW CURRENT USER") should have size(0)
+    execute("SHOW CURRENT USER") should have size 0
   }
 
   test("should show current user with default database") {
@@ -453,7 +453,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE USER bar SET PASSWORD 'password'")
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("bar"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user("bar"))
     testUserLogin("bar", "wrong", AuthenticationResult.FAILURE)
     testUserLogin("bar", "password", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
@@ -463,7 +463,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE USER bar IF NOT EXISTS SET PASSWORD 'password'")
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("bar"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user("bar"))
     testUserLogin("bar", "wrong", AuthenticationResult.FAILURE)
     testUserLogin("bar", "password", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
@@ -473,7 +473,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE USER bar SET PASSWORD 'p4s5W*rd'")
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("bar"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user("bar"))
     testUserLogin("bar", "p4s5w*rd", AuthenticationResult.FAILURE)
     testUserLogin("bar", "password", AuthenticationResult.FAILURE)
     testUserLogin("bar", "p4s5W*rd", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
@@ -486,7 +486,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "A password cannot be empty."
 
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
   }
 
   test("should create user with password as parameter") {
@@ -494,7 +494,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE USER foo SET PASSWORD $password CHANGE REQUIRED", Map("password" -> "bar"))
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user("foo"))
     testUserLogin("foo", "wrong", AuthenticationResult.FAILURE)
     testUserLogin("foo", "bar", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
@@ -504,7 +504,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE USER $user SET PASSWORD $password CHANGE REQUIRED", Map("user" -> "foo", "password" -> "bar"))
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user("foo"))
     testUserLogin("user", "bar", AuthenticationResult.FAILURE)
     testUserLogin("foo", "wrong", AuthenticationResult.FAILURE)
     testUserLogin("foo", "bar", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
@@ -512,7 +512,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should not use query cache when creating multiple users with parameterized passwords") {
     // GIVEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
     val passwords = Seq("bar", "abc", "password")
     val createCount = Map("cachable" -> 1, "total" -> 2) // create has one outer and one inner command
     val dropCount = Map("cachable" -> 3, "total" -> 3) // drop has one outer and two inner commands
@@ -534,7 +534,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     counter.counts should equal(CacheCounts(misses = misses, hits = hits, compilations = misses))
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
   }
 
   test("should use query cache when creating multiple roles with parameterized names") {
@@ -562,7 +562,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "Only string values are accepted as password, got: Integer"
 
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
   }
 
   test("should fail when creating user with password as missing parameter") {
@@ -572,7 +572,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "Expected parameter(s): password"
 
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
   }
 
   test("should fail when creating user with password as null parameter") {
@@ -582,7 +582,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "Expected parameter(s): password"
 
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
   }
 
   test("should create user with password change not required") {
@@ -590,7 +590,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE USER foo SET PLAINTEXT PASSWORD 'password' CHANGE NOT REQUIRED")
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo", passwordChangeRequired = false))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user("foo", passwordChangeRequired = false))
     testUserLogin("foo", "wrong", AuthenticationResult.FAILURE)
     testUserLogin("foo", "password", AuthenticationResult.SUCCESS)
   }
@@ -600,7 +600,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE USER foo SET PASSWORD 'password' SET STATUS ACTIVE")
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user("foo"))
     testUserLogin("foo", "wrong", AuthenticationResult.FAILURE)
     testUserLogin("foo", "password", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
@@ -610,17 +610,17 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE USER foo SET PASSWORD 'password' SET STATUS SUSPENDED")
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo", suspended = true))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user("foo", suspended = true))
     testUserLogin("foo", "wrong", AuthenticationResult.FAILURE)
     testUserLogin("foo", "password", AuthenticationResult.FAILURE)
   }
 
   test("should create user with all parameters") {
     // WHEN
-    execute(s"CREATE USER foo SET PLAINTEXT PASSWORD 'password' CHANGE NOT REQUIRED SET STATUS SUSPENDED SET DEFAULT DATABASE ${DEFAULT_DATABASE_NAME}")
+    execute(s"CREATE USER foo SET PLAINTEXT PASSWORD 'password' CHANGE NOT REQUIRED SET STATUS SUSPENDED SET DEFAULT DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo", passwordChangeRequired = false, suspended = true,
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user("foo", passwordChangeRequired = false, suspended = true,
       defaultDatabase = DEFAULT_DATABASE_NAME))
   }
 
@@ -638,7 +638,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message "Failed to create the specified user 'neo4j': User already exists."
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
   }
 
   test("should do nothing when creating already existing user using if not exists") {
@@ -646,7 +646,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE USER neo4j IF NOT EXISTS SET PASSWORD 'password' CHANGE NOT REQUIRED SET STATUS SUSPENDED")
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
   }
 
   test("should fail when creating user with illegal username") {
@@ -657,7 +657,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message "The provided username is empty."
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
 
     // and using parameter
     the[InvalidArgumentException] thrownBy {
@@ -667,7 +667,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message "The provided username is empty."
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
 
     // and with invalid username
     the[InvalidArgumentException] thrownBy {
@@ -679,7 +679,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
         |Use ascii characters that are not ',', ':' or whitespaces.""".stripMargin
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
 
     // and with invalid username as parameter
     the[InvalidArgumentException] thrownBy {
@@ -691,7 +691,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
         |Use ascii characters that are not ',', ':' or whitespaces.""".stripMargin
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
 
     val exception = the[SyntaxException] thrownBy {
       // WHEN
@@ -702,7 +702,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     exception.getMessage should include("Invalid input '4'")
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("3neo4j"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user("3neo4j"))
   }
 
   test("should replace existing user") {
@@ -710,7 +710,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE OR REPLACE USER bar SET PASSWORD 'firstPassword'")
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("bar"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user("bar"))
     testUserLogin("bar", "wrong", AuthenticationResult.FAILURE)
     testUserLogin("bar", "firstPassword", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
 
@@ -718,7 +718,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE OR REPLACE USER bar SET PASSWORD 'secondPassword'")
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("bar"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user("bar"))
     testUserLogin("bar", "firstPassword", AuthenticationResult.FAILURE)
     testUserLogin("bar", "secondPassword", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
@@ -740,7 +740,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message "Failed to replace the specified user 'neo4j': Deleting yourself is not allowed."
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUserActive)
     testUserLogin("neo4j", "bar", AuthenticationResult.SUCCESS)
     testUserLogin("neo4j", "baz", AuthenticationResult.FAILURE)
   }
@@ -773,7 +773,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute(s"CREATE USER $username SET ENCRYPTED PASSWORD '$encryptedPassword'")
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user(username))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user(username))
     testUserLogin(username, "wrong", AuthenticationResult.FAILURE)
     testUserLogin(username, encryptedPassword, AuthenticationResult.FAILURE)
     testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
@@ -790,7 +790,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute(s"CREATE USER $username SET ENCRYPTED PASSWORD '$encryptedPassword'")
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user(username))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user(username))
     testUserLogin(username, "wrong", AuthenticationResult.FAILURE)
     testUserLogin(username, encryptedPassword, AuthenticationResult.FAILURE)
     testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
@@ -807,7 +807,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "Incorrect format of encrypted password. Correct format is '<encryption-version>,<hash>,<salt>'."
 
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
   }
 
   test("should fail to create user with encrypted password and unsupported version number") {
@@ -821,7 +821,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "The encryption version specified is not available."
 
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
   }
 
   test("should fail to create user with encrypted password and missing salt/hash") {
@@ -835,7 +835,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "Incorrect format of encrypted password. Correct format is '<encryption-version>,<hash>,<salt>'."
 
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
   }
 
   test("should fail to create user with empty encrypted password") {
@@ -845,7 +845,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "Incorrect format of encrypted password. Correct format is '<encryption-version>,<hash>,<salt>'."
 
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser)
   }
 
   test("should create user with encrypted password as parameter") {
@@ -858,7 +858,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute(s"CREATE USER $username SET ENCRYPTED PASSWORD $$password CHANGE REQUIRED", Map("password" -> encryptedPassword))
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user(username))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user(username))
     testUserLogin(username, "wrong", AuthenticationResult.FAILURE)
     testUserLogin(username, encryptedPassword, AuthenticationResult.FAILURE)
     testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
@@ -873,7 +873,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute(s"CREATE USER $username SET PASSWORD $$password SET DEFAULT DATABASE $$database", Map("password" -> "pass", "database" -> "bar"))
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user(username, defaultDatabase = "bar"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user(username, defaultDatabase = "bar"))
     testUserLogin(username, "pass", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
@@ -885,7 +885,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute(s"CREATE USER $username SET PASSWORD $$password SET DEFAULT DATABASE $$database", Map("password" -> "pass", "database" -> "bar"))
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user(username, defaultDatabase = "bar"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user(username, defaultDatabase = "bar"))
     testUserLogin(username, "pass", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
@@ -899,7 +899,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("DROP USER foo")
 
     // THEN
-    execute("SHOW USERS").toSet should be(Set(neo4jUser))
+    execute("SHOW USERS").toSet should be(Set(defaultUser))
   }
 
   test("should drop existing user using if exists") {
@@ -910,7 +910,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("DROP USER foo IF EXISTS")
 
     // THEN
-    execute("SHOW USERS").toSet should be(Set(neo4jUser))
+    execute("SHOW USERS").toSet should be(Set(defaultUser))
   }
 
   test("should re-create dropped user") {
@@ -922,7 +922,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE USER foo SET PASSWORD 'bar'")
 
     // THEN
-    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("foo")))
+    execute("SHOW USERS").toSet should be(Set(defaultUser, user("foo")))
   }
 
   test("should be able to drop the user that created you") {
@@ -936,7 +936,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW USERS").toSet should be(Set(
-      neo4jUser,
+      defaultUser,
       user("alice", Seq("admin"), passwordChangeRequired = false),
       user("bob", Seq("admin"), passwordChangeRequired = false)
     ))
@@ -945,7 +945,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     executeOnSystem("bob", "bar", "DROP USER alice")
 
     // THEN
-    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("bob", Seq("admin"), passwordChangeRequired = false)))
+    execute("SHOW USERS").toSet should be(Set(defaultUser, user("bob", Seq("admin"), passwordChangeRequired = false)))
   }
 
   test("should fail when dropping current user that is admin") {
@@ -959,7 +959,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message "Failed to delete the specified user 'neo4j': Deleting yourself is not allowed."
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUserActive)
 
     the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
       // WHEN
@@ -968,7 +968,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message "Failed to delete the specified user 'neo4j': Deleting yourself is not allowed."
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUserActive)
   }
 
   test("should fail when dropping non-existing user") {
@@ -986,7 +986,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message "Failed to delete the specified user 'foo': User does not exist."
 
     // THEN
-    execute("SHOW USERS").toSet should be(Set(neo4jUser))
+    execute("SHOW USERS").toSet should be(Set(defaultUser))
 
     // and an invalid (non-existing) one
     the[InvalidArgumentsException] thrownBy {
@@ -1003,7 +1003,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message "Failed to delete the specified user ':foo': User does not exist."
 
     // THEN
-    execute("SHOW USERS").toSet should be(Set(neo4jUser))
+    execute("SHOW USERS").toSet should be(Set(defaultUser))
   }
 
   test("should do nothing when dropping non-existing user using if exists") {
@@ -1011,7 +1011,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("DROP USER foo IF EXISTS")
 
     // THEN
-    execute("SHOW USERS").toSet should be(Set(neo4jUser))
+    execute("SHOW USERS").toSet should be(Set(defaultUser))
 
     // and an invalid (non-existing) one
 
@@ -1019,7 +1019,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("DROP USER `:foo` IF EXISTS")
 
     // THEN
-    execute("SHOW USERS").toSet should be(Set(neo4jUser))
+    execute("SHOW USERS").toSet should be(Set(defaultUser))
   }
 
   // Tests for altering users
@@ -1558,8 +1558,8 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     executeOnSystem("foo", "password", "SHOW DATABASE bar", resultHandler = (row, _) => {
       // THEN
       row.get("name") should be("bar")
-      withClue("bar should be default database: ")(row.get("default") shouldBe(true))
-      withClue("bar should not be system default database: ")(row.get("systemDefault") shouldBe(false))
+      withClue("bar should be default database: ")(row.get("default") shouldBe true)
+      withClue("bar should not be system default database: ")(row.get("systemDefault") shouldBe false)
     }) should be (1)
   }
 
@@ -1576,8 +1576,8 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     executeOnSystem("foo", "password", "SHOW DATABASE bar", resultHandler = (row, _) => {
       // THEN
       row.get("name") should be("bar")
-      withClue("bar should be default database: ")(row.get("default") shouldBe(true))
-      withClue("bar should not be system default database: ")(row.get("systemDefault") shouldBe(false))
+      withClue("bar should be default database: ")(row.get("default") shouldBe true)
+      withClue("bar should not be system default database: ")(row.get("systemDefault") shouldBe false)
     }) should be (1)
   }
 
@@ -1592,7 +1592,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     executeOnSystem("foo", "password", "SHOW CURRENT USER", resultHandler = (row, _) => {
       // THEN
       row.get("user") should be("foo")
-      row.get("defaultDatabase") shouldBe("doesnotexist")
+      row.get("defaultDatabase") shouldBe "doesnotexist"
     }) should be (1)
   }
 
@@ -2016,7 +2016,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message String.format(PERMISSION_DENIED + PASSWORD_CHANGE_REQUIRED_MESSAGE)
 
     // THEN
-    execute("SHOW USERS").toSet should be(Set(neo4jUser))
+    execute("SHOW USERS").toSet should be(Set(defaultUser))
   }
 
   test("should fail create user for user with editor role") {
@@ -2031,7 +2031,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message PERMISSION_DENIED_CREATE_USER
 
     // THEN
-    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false)))
+    execute("SHOW USERS").toSet should be(Set(defaultUser, user("alice", Seq("editor"), passwordChangeRequired = false)))
   }
 
   test("should fail drop user for user with editor role") {
@@ -2047,7 +2047,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message PERMISSION_DENIED_DROP_USER
 
     // THEN
-    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false), user("bob")))
+    execute("SHOW USERS").toSet should be(Set(defaultUser, user("alice", Seq("editor"), passwordChangeRequired = false), user("bob")))
   }
 
   test("should fail alter other user for user with editor role") {
@@ -2063,7 +2063,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message PERMISSION_DENIED_SET_USER_STATUS
 
     // THEN
-    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false), user("bob")))
+    execute("SHOW USERS").toSet should be(Set(defaultUser, user("alice", Seq("editor"), passwordChangeRequired = false), user("bob")))
   }
 
   test("should allow alter own user password without admin only through 'ALTER CURRENT USER SET PASSWORD' command") {
@@ -2078,13 +2078,13 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message PERMISSION_DENIED_SET_PASSWORDS
 
     // THEN
-    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"))))
+    execute("SHOW USERS").toSet should be(Set(defaultUser, user("alice", Seq("editor"))))
 
     // WHEN
     executeOnSystem("alice", "abc", "ALTER CURRENT USER SET PASSWORD FROM 'abc' TO 'xyz'")
 
     // THEN
-    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false)))
+    execute("SHOW USERS").toSet should be(Set(defaultUser, user("alice", Seq("editor"), passwordChangeRequired = false)))
   }
 
   test("should fail alter own user status without admin") {
@@ -2099,7 +2099,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message PERMISSION_DENIED_SET_USER_STATUS
 
     // THEN
-    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false)))
+    execute("SHOW USERS").toSet should be(Set(defaultUser, user("alice", Seq("editor"), passwordChangeRequired = false)))
   }
 
   test("should fail alter own user status when suspended") {
@@ -2114,7 +2114,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message PERMISSION_DENIED
 
     // THEN
-    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("admin"), suspended = true, passwordChangeRequired = false)))
+    execute("SHOW USERS").toSet should be(Set(defaultUser, user("alice", Seq("admin"), suspended = true, passwordChangeRequired = false)))
   }
 
   test("should allow show database for non admin user") {
@@ -2165,10 +2165,10 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     Seq("foo", "neo4j").foreach { db =>
       selectDatabase(db)
-      execute("CALL db.createLabel('DbLabel')");
-      execute("CALL db.createProperty('dbNameProp')");
+      execute("CALL db.createLabel('DbLabel')")
+      execute("CALL db.createProperty('dbNameProp')")
     }
-    selectDatabase("system")
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT CREATE ON DEFAULT GRAPH NODE DbLabel TO aliceRole")
     execute("GRANT SET PROPERTY {dbNameProp} ON DEFAULT GRAPH NODE DbLabel TO aliceRole")
 
@@ -2179,7 +2179,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       })
 
     // GIVEN
-    selectDatabase("system")
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("ALTER USER alice SET DEFAULT DATABASE foo")
 
     // WHEN / THEN
@@ -2196,7 +2196,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   private def prepareUser(username: String, password: String): Unit = {
     execute(s"CREATE USER $username SET PASSWORD '$password'")
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user(username))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user(username))
     testUserLogin(username, "wrong", AuthenticationResult.FAILURE)
     testUserLogin(username, password, AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }

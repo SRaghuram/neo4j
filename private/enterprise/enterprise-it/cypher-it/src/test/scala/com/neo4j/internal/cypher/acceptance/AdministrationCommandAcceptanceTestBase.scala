@@ -85,8 +85,8 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val databaseString: String = "foo"
   val databaseString2: String = "bar"
 
-  val neo4jUser: Map[String, Any] = adminUser("neo4j")
-  val neo4jUserActive: Map[String, Any] = adminUser("neo4j", passwordChangeRequired = false)
+  val defaultUser: Map[String, Any] = adminUser("neo4j")
+  val defaultUserActive: Map[String, Any] = adminUser("neo4j", passwordChangeRequired = false)
   val onlineStatus: String = DatabaseStatus.Online.stringValue()
   val offlineStatus: String = DatabaseStatus.Offline.stringValue()
 

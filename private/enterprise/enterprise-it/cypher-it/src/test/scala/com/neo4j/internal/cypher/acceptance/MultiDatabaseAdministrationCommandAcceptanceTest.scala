@@ -468,7 +468,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   test("should show default DBMS database even when it is stopped") {
     // GIVEN
     setup()
-    execute(s"STOP DATABASE ${DEFAULT_DATABASE_NAME}")
+    execute(s"STOP DATABASE $DEFAULT_DATABASE_NAME")
 
     // WHEN
     val result = execute("SHOW DEFAULT DBMS DATABASE")
@@ -688,11 +688,11 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // WHEN
     val exception = the[DatabaseAdministrationException] thrownBy {
-      execute("SHOW DEFAULT DATABASE YIELD * WHERE name = $name", ("name"-> "db1"))
+      execute("SHOW DEFAULT DATABASE YIELD * WHERE name = $name", "name"-> "db1")
     }
 
     // THEN
-    exception.getMessage shouldBe("This is an administration command and it should be executed against the system database: SHOW DEFAULT DATABASE")
+    exception.getMessage shouldBe "This is an administration command and it should be executed against the system database: SHOW DEFAULT DATABASE"
   }
 
   test("Should always show system even without access") {
@@ -913,16 +913,16 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     executeOnSystem("bar", "123", "SHOW DATABASE foo", resultHandler = (row, _) => {
       // THEN
       row.get("name") should be("foo")
-      row.get("default") shouldBe(true)
-      row.get("systemDefault") shouldBe(false)
+      row.get("default") shouldBe true
+      row.get("systemDefault") shouldBe false
     }) should be (1)
 
     // WHEN
     executeOnSystem("bar", "123", "SHOW DATABASE neo4j", resultHandler = (row, _) => {
       // THEN
       row.get("name") should be("neo4j")
-      row.get("default") shouldBe(false)
-      row.get("systemDefault") shouldBe(true)
+      row.get("default") shouldBe false
+      row.get("systemDefault") shouldBe true
     }) should be (1)
   }
 
@@ -952,13 +952,13 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute(s"CREATE USER $username SET PASSWORD $$password SET DEFAULT DATABASE $$database", Map("password" -> "pass", "database" -> "bar"))
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user(username, defaultDatabase = "bar"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user(username, defaultDatabase = "bar"))
 
     // WHEN
     execute("CREATE DATABASE bar WAIT")
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user(username, defaultDatabase = "bar"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user(username, defaultDatabase = "bar"))
     testUserLogin(username, "pass", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
@@ -975,7 +975,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("DROP DATABASE bar")
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user(username, defaultDatabase = "bar"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUser, user(username, defaultDatabase = "bar"))
     testUserLogin(username, "pass", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 

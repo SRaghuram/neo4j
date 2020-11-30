@@ -93,7 +93,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
 
     // THEN
     executeOnSystem("foo", "bar", "CREATE USER user SET PASSWORD 'abc'")
-    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("foo", passwordChangeRequired = false, roles = Seq("custom")), user("user")))
+    execute("SHOW USERS").toSet should be(Set(defaultUser, user("foo", passwordChangeRequired = false, roles = Seq("custom")), user("user")))
 
     // WHEN
     execute("DROP USER user")
@@ -182,7 +182,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
 
     // THEN
     executeOnSystem("foo", "bar", "DROP USER user")
-    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("foo", passwordChangeRequired = false, roles = Seq("custom"))))
+    execute("SHOW USERS").toSet should be(Set(defaultUser, user("foo", passwordChangeRequired = false, roles = Seq("custom"))))
 
     // WHEN
     execute("CREATE USER user SET PASSWORD 'abc'")
@@ -224,7 +224,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
         // THEN
         executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD CHANGE NOT REQUIRED")
         execute("SHOW USERS").toSet should be(Set(
-          neo4jUser,
+          defaultUser,
           user("foo", passwordChangeRequired = false, roles = Seq("custom")),
           user("user", passwordChangeRequired = false)
         ))
@@ -302,7 +302,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
         // THEN
         executeOnSystem("foo", "bar", "ALTER USER user SET STATUS SUSPENDED")
         execute("SHOW USERS").toSet should be(Set(
-          neo4jUser,
+          defaultUser,
           user("foo", passwordChangeRequired = false, roles = Seq("custom")),
           user("user", suspended = true)
         ))
@@ -414,7 +414,7 @@ class UserManagementPrivilegesAcceptanceTest extends AdministrationCommandAccept
     // THEN
     executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD CHANGE NOT REQUIRED SET STATUS SUSPENDED")
     execute("SHOW USERS").toSet should be(Set(
-      neo4jUser,
+      defaultUser,
       user("foo", passwordChangeRequired = false, roles = Seq("custom")),
       user("user", passwordChangeRequired = false, suspended = true)
     ))

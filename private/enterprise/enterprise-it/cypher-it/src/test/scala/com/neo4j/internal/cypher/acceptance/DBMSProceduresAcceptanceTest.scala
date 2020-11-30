@@ -20,7 +20,7 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
     executeOnSystem("neo4j", "neo", "CALL dbms.security.createUser('Alice', 'foo')")
 
     //THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive, user("Alice"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUserActive, user("Alice"))
     testUserLogin("Alice", "foo", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
@@ -40,7 +40,7 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
     executeOnSystem("neo4j", "neo", "CALL dbms.security.createUser('Alice', 'foo') RETURN 'yay'")
 
     //THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive, user("Alice"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUserActive, user("Alice"))
     testUserLogin("Alice", "foo", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
@@ -65,7 +65,7 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
 
 
     //THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive)
+    execute("SHOW USERS").toSet shouldBe Set(defaultUserActive)
   }
 
   test("should execute dbms.security.createUser on system with username parameter") {
@@ -76,7 +76,7 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
     executeOnSystem("neo4j", "neo", "CALL dbms.security.createUser($name, 'foo')", Map[String, Object]("name" -> "Alice").asJava)
 
     //THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive, user("Alice"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUserActive, user("Alice"))
     testUserLogin("Alice", "foo", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
@@ -88,7 +88,7 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
     executeOnSystem("neo4j", "neo", "CALL dbms.security.createUser('Alice', $password)", Map[String, Object]("password" -> "foo").asJava)
 
     //THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive, user("Alice"))
+    execute("SHOW USERS").toSet shouldBe Set(defaultUserActive, user("Alice"))
     testUserLogin("Alice", "foo", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
