@@ -13,13 +13,10 @@ import com.neo4j.fabric.eval.ClusterCatalogManager.LeaderStatus
 import com.neo4j.fabric.eval.ClusterCatalogManager.RoutingDisabled
 import com.neo4j.fabric.eval.ClusterCatalogManager.RoutingDisallowed
 import com.neo4j.fabric.eval.ClusterCatalogManager.RoutingPossible
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.configuration.helpers.SocketAddress
 import org.neo4j.dbms.api.DatabaseManagementService
-import org.neo4j.fabric.eval.Catalog
-import org.neo4j.fabric.eval.DatabaseLookup
-import org.neo4j.fabric.executor.FabricException
-import org.neo4j.fabric.executor.Location
 import org.neo4j.kernel.api.exceptions.Status
 import org.neo4j.kernel.database.NamedDatabaseId
 
@@ -101,13 +98,15 @@ class ClusterCatalogManager(
     leaderLookup.leaderBoltAddress(databaseId)
                 .getOrElse(noLeaderAddressFailure(databaseId.name()))
 
-  private def routingDisabledError(dbName: String): Nothing =
+  private def routingDisabledError(dbName: String): Nothing = {
+    val setting = GraphDatabaseSettings.routing_enabled.name()
     throw new FabricException(
       Status.Cluster.NotALeader,
-      """Unable to route write operation to leader for database '%s'. Server-side routing is disabled.
-        |Either connect to the database directly using the driver (or interactively with the :use command),
-        |or enable server-side routing by setting `dbms.routing.enabled=true`""".stripMargin,
+      s"""Unable to route write operation to leader for database '%s'. Server-side routing is disabled.
+         |Either connect to the database directly using the driver (or interactively with the :use command),
+         |or enable server-side routing by setting `$setting=true`""".stripMargin,
       dbName)
+  }
 
   private def noLeaderAddressFailure(dbName: String): Nothing =
     throw new FabricException(
