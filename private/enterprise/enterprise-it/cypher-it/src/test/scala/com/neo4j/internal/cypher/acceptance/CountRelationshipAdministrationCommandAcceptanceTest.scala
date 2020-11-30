@@ -14,37 +14,65 @@ import org.neo4j.graphdb.Label
 // Tests for actual behaviour of count() function on relationships for restricted users
 class CountRelationshipAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
-  test("should get correct count for all relationships with traversal privilege") {
-    // GIVEN
+  def setupGraph(): Unit = {
     setupUserWithCustomRole()
-    execute("GRANT MATCH {*} ON GRAPH * NODES A TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     graph.withTx(tx => tx.execute("CREATE (a:A {name:'a'}), (a)-[:LOVES]->(:B {name:'b'}), (a)-[:LOVES]->(:A {name:'c'})"))
+  }
+
+  test("should get no relationships with only match privileges") {
+    // GIVEN
+    setupGraph()
+
+    //WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
+
+    //THEN
     executeOnDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
       row.get("count(r)") should be(0)
     }) should be(1)
+  }
+
+  test("should get subset of relationships given limited node traversal privileges") {
+    // GIVEN
+    setupGraph()
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH {*} ON GRAPH * NODES A TO custom")
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
       row.get("count(r)") should be(1)
     }) should be(1)
+  }
+
+  test("should get all relationships with unspecific node match privileges") {
+    // GIVEN
+    setupGraph()
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
       row.get("count(r)") should be(2)
     }) should be(1)
+  }
+
+  test("should get no relationships after denied traverse privileges") {
+    // GIVEN
+    setupGraph()
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
     execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
@@ -53,37 +81,59 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     }) should be(1)
   }
 
-  test("should get correct count for specific relationship with traversal privilege") {
+  test("should get no relationships with only specific match privileges") {
     // GIVEN
-    setupUserWithCustomRole()
-    execute("GRANT MATCH {*} ON GRAPH * NODES A TO custom")
-
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.withTx(tx => tx.execute("CREATE (a:A {name:'a'}), (a)-[:LOVES]->(:B {name:'b'}), (a)-[:LOVES]->(:A {name:'c'})"))
-    executeOnDefault("joe", "soap", "MATCH ()-[r:LOVES]->() RETURN count(r)", resultHandler = (row, _) => {
-      row.get("count(r)") should be(0)
-    }) should be(1)
+    setupGraph()
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH {*} ON GRAPH * NODES A TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", "MATCH ()-[r:LOVES]->() RETURN count(r)", resultHandler = (row, _) => {
+      row.get("count(r)") should be(0)
+    }) should be(1)
+  }
+
+  test("should get partial relationships from specific traversal privileges for subset of nodes") {
+    // GIVEN
+    setupGraph()
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH {*} ON GRAPH * NODES A TO custom")
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "MATCH ()-[r:LOVES]->() RETURN count(r)", resultHandler = (row, _) => {
       row.get("count(r)") should be(1)
     }) should be(1)
+  }
+
+  test("should get all relationships from specific traversal privileges for all nodes") {
+    // GIVEN
+    setupGraph()
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH {*} ON GRAPH * NODES A TO custom")
     execute("GRANT MATCH {*} ON GRAPH * NODES B TO custom")
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", "MATCH ()-[r:LOVES]->() RETURN count(r)", resultHandler = (row, _) => {
       row.get("count(r)") should be(2)
     }) should be(1)
+  }
+
+  test("should get no relationships from specific traversal privileges once denied") {
+    // GIVEN
+    setupGraph()
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH {*} ON GRAPH * NODES A TO custom")
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
     execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
 
     // THEN
