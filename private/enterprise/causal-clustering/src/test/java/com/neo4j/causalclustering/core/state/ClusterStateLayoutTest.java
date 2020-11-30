@@ -7,6 +7,8 @@ package com.neo4j.causalclustering.core.state;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.file.Path;
 import java.util.Set;
@@ -18,6 +20,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static com.neo4j.configuration.CausalClusteringSettings.DEFAULT_CLUSTER_STATE_DIRECTORY_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATA_DIR_NAME;
 import static org.neo4j.internal.helpers.collection.Iterators.set;
 
@@ -161,5 +164,13 @@ class ClusterStateLayoutTest
 
         assertNotEquals( layout.clusterStateVersionFile(), this.layout.clusterStateVersionFile() );
         assertNotEquals( layout.raftGroupIdFile( DATABASE_NAME ), this.layout.raftGroupIdFile( DATABASE_NAME ) );
+    }
+
+    @ParameterizedTest
+    @ValueSource( strings = {"./foo", "../foo", "file://foo", "http://foo", "/var/run", "C:\\Windows"} )
+    void shouldNotAllowInvalidDatabaseNames( String maliciousName )
+    {
+        assertThrows( IllegalArgumentException.class, () -> layout.raftGroupDir( maliciousName ) );
+        assertThrows( IllegalArgumentException.class, () -> layout.raftGroupIdFile( maliciousName ) );
     }
 }

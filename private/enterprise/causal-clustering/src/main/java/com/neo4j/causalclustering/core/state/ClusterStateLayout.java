@@ -155,12 +155,14 @@ public class ClusterStateLayout
     private Path databaseClusterStateDirectory( CoreStateFiles<?> coreStateFiles, String databaseName )
     {
         checkScope( coreStateFiles, DATABASE );
+        checkDirectoryName( databaseName );
         Path databaseDirectory = dbDirectory().resolve( databaseName );
         return databaseDirectory.resolve( stateDirectoryName( coreStateFiles ) );
     }
 
     public Path raftGroupDir( String databaseName )
     {
+        checkDirectoryName( databaseName );
         return dbDirectory().resolve( databaseName );
     }
 
@@ -182,6 +184,14 @@ public class ClusterStateLayout
     private static void checkScope( CoreStateFiles<?> coreStateFiles, CoreStateFiles.Scope scope )
     {
         checkArgument( coreStateFiles.scope() == scope, "Illegal scope: " + coreStateFiles.scope() );
+    }
+
+    private static void checkDirectoryName( String dir )
+    {
+        if ( dir.matches( ".*[\\\\/]+.*" ) )
+        {
+            throw new IllegalArgumentException( "Illegal directory name" );
+        }
     }
 
     public List<String> allRaftGroups()
