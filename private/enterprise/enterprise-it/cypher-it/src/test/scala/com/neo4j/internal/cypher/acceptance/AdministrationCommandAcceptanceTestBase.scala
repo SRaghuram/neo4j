@@ -82,11 +82,13 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val roleName: String = "custom"
   val username: String = "joe"
   val password: String = "soap"
+  val newPassword: String = "new"
   val databaseString: String = "foo"
   val databaseString2: String = "bar"
 
-  val defaultUser: Map[String, Any] = adminUser("neo4j")
-  val defaultUserActive: Map[String, Any] = adminUser("neo4j", passwordChangeRequired = false)
+  val defaultUsername: String = "neo4j"
+  val defaultUser: Map[String, Any] = adminUser(defaultUsername)
+  val defaultUserActive: Map[String, Any] = adminUser(defaultUsername, passwordChangeRequired = false)
   val onlineStatus: String = DatabaseStatus.Online.stringValue()
   val offlineStatus: String = DatabaseStatus.Offline.stringValue()
 
@@ -103,10 +105,10 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     reader
   )
 
-  val adminWithDefaultUser: Map[String, Any] = role(PredefinedRoles.ADMIN).member("neo4j").map
+  val adminWithDefaultUser: Map[String, Any] = role(PredefinedRoles.ADMIN).member(defaultUsername).map
 
   val defaultRolesWithUsers: Set[Map[String, Any]] = Set(
-    role(PredefinedRoles.PUBLIC).member("neo4j").map,
+    role(PredefinedRoles.PUBLIC).member(defaultUsername).map,
     adminWithDefaultUser,
     role(PredefinedRoles.ARCHITECT).noMember().map,
     role(PredefinedRoles.PUBLISHER).noMember().map,
@@ -170,19 +172,19 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     }
   }
 
-  lazy val defaultUserPrivileges: Set[Map[String, String]] = publicPrivileges("neo4j") ++ Set(
-    granted(access).role("admin").user("neo4j").map,
-    granted(matchPrivilege).role("admin").user("neo4j").node("*").map,
-    granted(matchPrivilege).role("admin").user("neo4j").relationship("*").map,
-    granted(write).role("admin").user("neo4j").node("*").map,
-    granted(write).role("admin").user("neo4j").relationship("*").map,
-    granted(nameManagement).role("admin").user("neo4j").map,
-    granted(indexManagement).role("admin").user("neo4j").map,
-    granted(constraintManagement).role("admin").user("neo4j").map,
-    granted(startDatabase).role("admin").user("neo4j").map,
-    granted(stopDatabase).role("admin").user("neo4j").map,
-    granted(transaction("*")).role("admin").user("neo4j").map,
-    granted(allDbmsPrivilege).role("admin").user("neo4j").map,
+  lazy val defaultUserPrivileges: Set[Map[String, String]] = publicPrivileges(defaultUsername) ++ Set(
+    granted(access).role("admin").user(defaultUsername).map,
+    granted(matchPrivilege).role("admin").user(defaultUsername).node("*").map,
+    granted(matchPrivilege).role("admin").user(defaultUsername).relationship("*").map,
+    granted(write).role("admin").user(defaultUsername).node("*").map,
+    granted(write).role("admin").user(defaultUsername).relationship("*").map,
+    granted(nameManagement).role("admin").user(defaultUsername).map,
+    granted(indexManagement).role("admin").user(defaultUsername).map,
+    granted(constraintManagement).role("admin").user(defaultUsername).map,
+    granted(startDatabase).role("admin").user(defaultUsername).map,
+    granted(stopDatabase).role("admin").user(defaultUsername).map,
+    granted(transaction("*")).role("admin").user(defaultUsername).map,
+    granted(allDbmsPrivilege).role("admin").user(defaultUsername).map,
   )
 
   def asPrivilegesResult(row: Result.ResultRow): Map[String, AnyRef] =

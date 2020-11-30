@@ -13,25 +13,29 @@ import org.neo4j.graphdb.Label
 
 // Tests for actual behaviour of count() function on relationships for restricted users
 class CountRelationshipAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
+  private val returnCountVar = "count"
+  private val countAllRelationshipsQuery = s"MATCH ()-[r]->() RETURN count(r) as $returnCountVar"
+  private val countLovesRelationshipsQuery = s"MATCH ()-[r:LOVES]->() RETURN count(r) as $returnCountVar"
 
   def setupGraph(): Unit = {
     setupUserWithCustomRole()
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     graph.withTx(tx => tx.execute("CREATE (a:A {name:'a'}), (a)-[:LOVES]->(:B {name:'b'}), (a)-[:LOVES]->(:A {name:'c'})"))
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
   }
 
   test("should get no relationships with only match privileges") {
     // GIVEN
     setupGraph()
 
-    //WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
+    // WHEN
+    execute(s"GRANT MATCH {*} ON GRAPH * NODES A TO $roleName")
 
-    //THEN
-    executeOnDBMSDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
-      row.get("count(r)") should be(0)
+    // THEN
+    executeOnDBMSDefault(username, password, countAllRelationshipsQuery, resultHandler = (row, _) => {
+      row.get(returnCountVar) should be(0)
     }) should be(1)
   }
 
@@ -40,13 +44,12 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     setupGraph()
 
     // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH {*} ON GRAPH * NODES A TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
+    execute(s"GRANT MATCH {*} ON GRAPH * NODES A TO $roleName")
+    execute(s"GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
-      row.get("count(r)") should be(1)
+    executeOnDBMSDefault(username, password, countAllRelationshipsQuery, resultHandler = (row, _) => {
+      row.get(returnCountVar) should be(1) // Only see (:A)-[]->(:A), not (:A)-[]->(:B) since no traverse node B privilege
     }) should be(1)
   }
 
@@ -55,13 +58,12 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     setupGraph()
 
     // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
+    execute(s"GRANT MATCH {*} ON GRAPH * NODES * TO $roleName")
+    execute(s"GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
-      row.get("count(r)") should be(2)
+    executeOnDBMSDefault(username, password, countAllRelationshipsQuery, resultHandler = (row, _) => {
+      row.get(returnCountVar) should be(2)
     }) should be(1)
   }
 
@@ -70,14 +72,13 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     setupGraph()
 
     // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
-    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
+    execute(s"GRANT MATCH {*} ON GRAPH * NODES * TO $roleName")
+    execute(s"GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO $roleName")
+    execute(s"DENY TRAVERSE ON GRAPH * RELATIONSHIPS * TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
-      row.get("count(r)") should be(0)
+    executeOnDBMSDefault(username, password, countAllRelationshipsQuery, resultHandler = (row, _) => {
+      row.get(returnCountVar) should be(0)
     }) should be(1)
   }
 
@@ -86,12 +87,11 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     setupGraph()
 
     // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH {*} ON GRAPH * NODES A TO custom")
+    execute(s"GRANT MATCH {*} ON GRAPH * NODES A TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", "MATCH ()-[r:LOVES]->() RETURN count(r)", resultHandler = (row, _) => {
-      row.get("count(r)") should be(0)
+    executeOnDBMSDefault(username, password, countLovesRelationshipsQuery, resultHandler = (row, _) => {
+      row.get(returnCountVar) should be(0)
     }) should be(1)
   }
 
@@ -100,13 +100,12 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     setupGraph()
 
     // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH {*} ON GRAPH * NODES A TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
+    execute(s"GRANT MATCH {*} ON GRAPH * NODES A TO $roleName")
+    execute(s"GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", "MATCH ()-[r:LOVES]->() RETURN count(r)", resultHandler = (row, _) => {
-      row.get("count(r)") should be(1)
+    executeOnDBMSDefault(username, password, countLovesRelationshipsQuery, resultHandler = (row, _) => {
+      row.get(returnCountVar) should be(1) // Only see (:A)-[]->(:A), not (:A)-[]->(:B) since no traverse node B privilege
     }) should be(1)
   }
 
@@ -115,14 +114,12 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     setupGraph()
 
     // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH {*} ON GRAPH * NODES A TO custom")
-    execute("GRANT MATCH {*} ON GRAPH * NODES B TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
+    execute(s"GRANT MATCH {*} ON GRAPH * NODES A, B TO $roleName")
+    execute(s"GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", "MATCH ()-[r:LOVES]->() RETURN count(r)", resultHandler = (row, _) => {
-      row.get("count(r)") should be(2)
+    executeOnDBMSDefault(username, password, countLovesRelationshipsQuery, resultHandler = (row, _) => {
+      row.get(returnCountVar) should be(2)
     }) should be(1)
   }
 
@@ -131,21 +128,20 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     setupGraph()
 
     // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT MATCH {*} ON GRAPH * NODES A TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
-    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
+    execute(s"GRANT MATCH {*} ON GRAPH * NODES A TO $roleName")
+    execute(s"GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO $roleName")
+    execute(s"DENY TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO $roleName")
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
-      row.get("count(r)") should be(0)
+    executeOnDBMSDefault(username, password, countAllRelationshipsQuery, resultHandler = (row, _) => {
+      row.get(returnCountVar) should be(0) // Denied relationship LOVES traverse, no other relationships exists in graph
     }) should be(1)
   }
 
   test("should get zero count for relationships with no traverse relationship privilege") {
     // GIVEN
     setupUserWithCustomRole()
-    execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
+    execute(s"GRANT MATCH {*} ON GRAPH * NODES * TO $roleName")
     denseTestHelper.setupGraph()
 
     // WHEN .. THEN
@@ -164,8 +160,8 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
   test("should get correct count for relationships with traverse on LOVES relationship") {
     // GIVEN
     setupUserWithCustomRole()
-    execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
+    execute(s"GRANT MATCH {*} ON GRAPH * NODES * TO $roleName")
+    execute(s"GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO $roleName")
     denseTestHelper.setupGraph()
 
     // WHEN .. THEN
@@ -184,8 +180,8 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
   test("should get correct count for relationships with traverse on all relationships") {
     // GIVEN
     setupUserWithCustomRole()
-    execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES, KNOWS TO custom")
+    execute(s"GRANT MATCH {*} ON GRAPH * NODES * TO $roleName")
+    execute(s"GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES, KNOWS TO $roleName") // equivalent to 'RELATIONSHIPS *' on the given graph
     denseTestHelper.setupGraph()
 
     // WHEN .. THEN
@@ -204,9 +200,9 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
   test("should get correct count for relationships with traverse on all relationships, deny traverse C nodes") {
     // GIVEN
     setupUserWithCustomRole()
-    execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES, KNOWS TO custom")
-    execute("DENY TRAVERSE ON GRAPH * NODES C TO custom")
+    execute(s"GRANT MATCH {*} ON GRAPH * NODES * TO $roleName")
+    execute(s"GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES, KNOWS TO $roleName")
+    execute(s"DENY TRAVERSE ON GRAPH * NODES C TO $roleName")
     denseTestHelper.setupGraph()
 
     // WHEN .. THEN
@@ -225,10 +221,10 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
   test("should get correct count for relationships with traverse on KNOWS relationships, deny traverse C nodes") {
     // GIVEN
     setupUserWithCustomRole()
-    execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES, KNOWS TO custom")
-    execute("DENY TRAVERSE ON GRAPH * NODES C TO custom")
-    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
+    execute(s"GRANT MATCH {*} ON GRAPH * NODES * TO $roleName")
+    execute(s"GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES, KNOWS TO $roleName")
+    execute(s"DENY TRAVERSE ON GRAPH * NODES C TO $roleName")
+    execute(s"DENY TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO $roleName")
     denseTestHelper.setupGraph()
 
     // WHEN .. THEN
@@ -247,27 +243,27 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
   test("should get correct count for relationship within transaction with traversal privilege") {
     // GIVEN
     setupUserWithCustomRole()
-    execute("GRANT WRITE ON GRAPH * TO custom")
+    execute(s"GRANT WRITE ON GRAPH * TO $roleName")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:A)-[:R]->(:A:B)<-[:R]-(:B)")
 
-    val countQuery = "MATCH ()-[r:R]->(:A) RETURN count(r) as count"
+    val countQuery = s"MATCH ()-[r:R]->(:A) RETURN count(r) as $returnCountVar"
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS R TO custom")
+    execute(s"GRANT TRAVERSE ON GRAPH * NODES A TO $roleName")
+    execute(s"GRANT TRAVERSE ON GRAPH * RELATIONSHIPS R TO $roleName")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    execute(countQuery).toList should be(List(Map("count" -> 2)))
+    execute(countQuery).toList should be(List(Map(returnCountVar -> 2)))
 
     // THEN
-    executeOnDBMSDefault("joe", "soap", countQuery, requiredOperator = Some("RelationshipCountFromCountStore"), resultHandler = (row, _) => {
-      row.get("count") should be(3)
+    executeOnDBMSDefault(username, password, countQuery, requiredOperator = Some("RelationshipCountFromCountStore"), resultHandler = (row, _) => {
+      row.get(returnCountVar) should be(3) // Can see (:A)-[:R]->(:A:B) and the two in TX, not (:A:B)<-[:R]-(:B) since no traverse node B privilege
     }, executeBefore = tx => tx.execute("CREATE (:A)-[:R]->(:A)<-[:R]-(:B)")) should be(1)
 
-    execute(countQuery).toList should be(List(Map("count" -> 4)))
+    execute(countQuery).toList should be(List(Map(returnCountVar -> 4)))
   }
 
   test("Counting queries should work with restricted user") {
@@ -275,7 +271,7 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     val countingNodesQuery = "MATCH () RETURN { name:'nodes', data:count(*) } AS result"
     val countingRelsQuery = "MATCH ()-[]->() RETURN { name:'relationships', data: count(*)} AS result"
 
-    // Given
+    // Given graph and default privileges
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:Person)-[:WROTE]->(:Letter)<-[:HAS_STAMP]-(:Stamp)")
 
@@ -285,10 +281,12 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
     execute("GRANT ROLE role TO tim")
     execute("GRANT ACCESS ON DATABASE * TO role")
     execute("GRANT MATCH {*} ON GRAPH * ELEMENTS * TO role")
-    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIP WROTE TO role")
 
     // RELS
+    // Given
+    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIP WROTE TO role")
     selectDatabase(DEFAULT_DATABASE_NAME)
+
     // When & Then
 
     // unrestricted:
@@ -303,12 +301,12 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
       }
     ) should be(1)
 
+    // NODES
     // Given
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("DENY TRAVERSE ON GRAPH * NODES Person TO role")
-
-    // NODES
     selectDatabase(DEFAULT_DATABASE_NAME)
+
     // When & Then
 
     // unrestricted:
@@ -326,18 +324,18 @@ class CountRelationshipAdministrationCommandAcceptanceTest extends Administratio
 
   object denseTestHelper {
     val superCount = 100
-    val sizeOfLovesSparseNode = "MATCH (b:B {name:'sparse'}) RETURN size((b)<-[:LOVES]-()) AS count"
-    val sizeOfAllSparseNode = "MATCH (b:B {name:'sparse'}) RETURN size((b)<--()) AS count"
-    val sizeOfLovesDenseNode = "MATCH (a:A {name:'dense'}) RETURN size((a)-[:LOVES]->()) AS count"
-    val sizeOfAllDenseNode = "MATCH (a:A {name:'dense'}) RETURN size((a)-->()) AS count"
-    val countLovesDenseNode = "MATCH (:A {name:'dense'})-[r:LOVES]->() RETURN count(r) AS count"
-    val countAllDenseNode = "MATCH (:A {name:'dense'})-[r]->() RETURN count(r) AS count"
+    val sizeOfLovesSparseNode = s"MATCH (b:B {name:'sparse'}) RETURN size((b)<-[:LOVES]-()) AS $returnCountVar"
+    val sizeOfAllSparseNode = s"MATCH (b:B {name:'sparse'}) RETURN size((b)<--()) AS $returnCountVar"
+    val sizeOfLovesDenseNode = s"MATCH (a:A {name:'dense'}) RETURN size((a)-[:LOVES]->()) AS $returnCountVar"
+    val sizeOfAllDenseNode = s"MATCH (a:A {name:'dense'}) RETURN size((a)-->()) AS $returnCountVar"
+    val countLovesDenseNode = s"MATCH (:A {name:'dense'})-[r:LOVES]->() RETURN count(r) AS $returnCountVar"
+    val countAllDenseNode = s"MATCH (:A {name:'dense'})-[r]->() RETURN count(r) AS $returnCountVar"
     val testCounts: PartialFunction[AnyRef, Unit] = {
       case (query: String, (expectedCount: Int, expectedRows: Int)) =>
         withClue(s"$query:") {
-          executeOnDBMSDefault("joe", "soap", query, resultHandler = (row, _) => {
+          executeOnDBMSDefault(username, password, query, resultHandler = (row, _) => {
             withClue("result should be:") {
-              row.get("count") should be(expectedCount)
+              row.get(returnCountVar) should be(expectedCount)
             }
           }) should be(expectedRows)
         }
