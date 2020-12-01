@@ -17,6 +17,10 @@ import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.configuration.helpers.SocketAddress
 import org.neo4j.dbms.api.DatabaseManagementService
+import org.neo4j.fabric.eval.Catalog
+import org.neo4j.fabric.eval.DatabaseLookup
+import org.neo4j.fabric.executor.FabricException
+import org.neo4j.fabric.executor.Location
 import org.neo4j.kernel.api.exceptions.Status
 import org.neo4j.kernel.database.NamedDatabaseId
 
