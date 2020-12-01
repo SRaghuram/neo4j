@@ -26,7 +26,7 @@ public class GcProfiler implements ExternalProfiler
     // profiler log -- used by this class only
     private static String gcProfilerLogName( RecordingDescriptor recordingDescriptor )
     {
-        return "gc-profiler-" + recordingDescriptor.sanitizedName() + ".log";
+        return recordingDescriptor.sanitizedFilename( "gc-profiler-", ".log" );
     }
 
     @Override

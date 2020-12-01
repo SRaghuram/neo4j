@@ -20,18 +20,15 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import static com.neo4j.bench.common.util.BenchmarkUtil.assertDirectoryExists;
 import static com.neo4j.bench.common.util.BenchmarkUtil.assertDoesNotExist;
@@ -112,107 +109,80 @@ public class ForkDirectory
         return dir.toAbsolutePath().toString();
     }
 
-    public void copyProfilerRecordings( Path targetDir,
-                                        Predicate<RecordingDescriptor> doCopyPredicate,
-                                        BiConsumer<RecordingDescriptor,Path> onCopyConsumer )
+    public Map<RecordingDescriptor,Path> copyProfilerRecordings( Path targetDir, Predicate<RecordingDescriptor> doCopyPredicate )
     {
+        Map<RecordingDescriptor,Path> recordings = forkDescription.recordings;
+        Map<Path,RecordingDescriptor> validRecordings = recordings.keySet().stream()
+                                                                  .filter( descriptor -> descriptor.runPhase().equals( RunPhase.MEASUREMENT ) )
+                                                                  .collect( toMap( recordings::get, identity() ) );
+
         try
         {
-            Map<RecordingDescriptor,Path> recordings = forkDescription.recordings;
-            Map<Path,RecordingDescriptor> validRecordings = recordings.keySet().stream()
-                                                                      .filter( descriptor -> descriptor.runPhase().equals( RunPhase.MEASUREMENT ) )
-                                                                      .collect( toMap( recordings::get, identity() ) );
-
-            Files.walkFileTree( dir,
-                                new CopyMatchedFilesVisitor( targetDir, new SanitizingPathMatcher( validRecordings, doCopyPredicate, onCopyConsumer ) ) );
+            return Files.walk( dir )
+                        .filter( validRecordings::containsKey )
+                        .map( recording -> findRecording( recording, validRecordings ) )
+                        .filter( doCopyPredicate )
+                        .collect( Collectors.toMap( Function.identity(), recordingDescriptor -> copy( targetDir, recordingDescriptor ) ) );
         }
         catch ( IOException e )
         {
             throw new UncheckedIOException( format( "Error copying profile recordings\n" +
                                                     "From : %s\n" +
-                                                    "To   : %s", dir, targetDir ),
-                                            e );
+                                                    "To   : %s", dir, targetDir ), e );
         }
     }
 
-    private static class SanitizingPathMatcher implements PathMatcher
+    private Path copy( Path targetDir, RecordingDescriptor recordingDescriptor )
     {
-        private final Map<Path,RecordingDescriptor> validRecordings;
-        private final Predicate<RecordingDescriptor> doCopyPredicate;
-        private final BiConsumer<RecordingDescriptor,Path> onCopyConsumer;
+        Path relativePath = copyFile( recordingDescriptor, targetDir );
+        writeParamsDescription( recordingDescriptor, targetDir );
+        return relativePath;
+    }
 
-        private SanitizingPathMatcher( Map<Path,RecordingDescriptor> validRecordings,
-                                       Predicate<RecordingDescriptor> doCopyPredicate,
-                                       BiConsumer<RecordingDescriptor,Path> onCopyConsumer )
+    private RecordingDescriptor findRecording( Path recording, Map<Path,RecordingDescriptor> validRecordings )
+    {
+        RecordingDescriptor recordingDescriptor = validRecordings.get( recording );
+        String filename = recording.getFileName().toString();
+        if ( !filename.equals( recordingDescriptor.sanitizedFilename() ) )
         {
-            this.validRecordings = validRecordings;
-            this.doCopyPredicate = doCopyPredicate;
-            this.onCopyConsumer = onCopyConsumer;
+            throw new IllegalStateException( format( "Encountered unexpected profiler recording filename\n" +
+                                                     "Expected name : %s\n" +
+                                                     "Actual name   : %s",
+                                                     recordingDescriptor.filename(),
+                                                     recording.toAbsolutePath().toString() ) );
         }
+        return recordingDescriptor;
+    }
 
-        @Override
-        public boolean matches( Path recording )
+    private Path copyFile( RecordingDescriptor recordingDescriptor, Path toPath )
+    {
+        Path source = pathFor( recordingDescriptor.sanitizedFilename() );
+        Path relativeTarget = Paths.get( recordingDescriptor.filename() );
+        Path target = toPath.resolve( relativeTarget );
+        try
         {
-            boolean doCopy = validRecordings.containsKey( recording ) &&
-                             doCopyPredicate.test( validRecordings.get( recording ) );
-            if ( doCopy )
-            {
-                Path deSanitizedRecording = Paths.get( deSanitizedName( recording ) );
-                onCopyConsumer.accept( validRecordings.get( recording ), deSanitizedRecording );
-            }
-            return doCopy;
+            Files.copy( source, target );
+            return relativeTarget;
         }
-
-        private String deSanitizedName( Path recording )
+        catch ( IOException e )
         {
-            RecordingDescriptor recordingDescriptor = validRecordings.get( recording );
-            if ( null == recordingDescriptor )
-            {
-                throw new IllegalStateException( format( "Tried to de-sanitize a file that has no associated recording descriptor\n" +
-                                                         "File: %s",
-                                                         recording.toAbsolutePath() ) );
-            }
-            String filename = recording.getFileName().toString();
-            if ( filename.equals( recordingDescriptor.sanitizedFilename() ) )
-            {
-                return recordingDescriptor.filename();
-            }
-            else
-            {
-                throw new IllegalStateException( format( "Encountered unexpected profiler recording filename\n" +
-                                                         "Expected name : %s\n" +
-                                                         "Actual name   : %s",
-                                                         recordingDescriptor.filename(),
-                                                         recording.toAbsolutePath().toString() ) );
-            }
+            throw new UncheckedIOException( format( "Error copying profile recording\n" +
+                                                    "From : %s\n" +
+                                                    "To   : %s", source, target ), e );
         }
     }
 
-    private static class CopyMatchedFilesVisitor extends SimpleFileVisitor<Path>
+    private void writeParamsDescription( RecordingDescriptor recordingDescriptor, Path toPath )
     {
-        private final Path toPath;
-        private final SanitizingPathMatcher matcher;
-
-        private CopyMatchedFilesVisitor( Path toPath, SanitizingPathMatcher matcher )
+        Path target = toPath.resolve( recordingDescriptor.paramsFilename() );
+        try
         {
-            this.toPath = toPath;
-            this.matcher = matcher;
+            String parametersDescription = recordingDescriptor.name();
+            Files.write( target, parametersDescription.getBytes( StandardCharsets.UTF_8 ) );
         }
-
-        @Override
-        public FileVisitResult preVisitDirectory( Path dir, BasicFileAttributes attrs )
+        catch ( IOException e )
         {
-            return FileVisitResult.CONTINUE;
-        }
-
-        @Override
-        public FileVisitResult visitFile( Path file, BasicFileAttributes attrs ) throws IOException
-        {
-            if ( matcher.matches( file ) )
-            {
-                Files.copy( file, toPath.resolve( matcher.deSanitizedName( file ) ) );
-            }
-            return FileVisitResult.CONTINUE;
+            throw new UncheckedIOException( format( "Error writing parameters description: %s", target ), e );
         }
     }
 

@@ -9,10 +9,10 @@ import com.google.common.collect.Sets;
 import com.neo4j.bench.client.QueryRetrier;
 import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.client.queries.submit.SubmitTestRun;
+import com.neo4j.bench.common.profiling.RecordingDescriptor;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
-import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.model.model.BenchmarkGroupBenchmark;
 import com.neo4j.bench.model.model.TestRunError;
 import com.neo4j.bench.model.model.TestRunReport;
@@ -26,7 +26,9 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.joining;
 import static org.apache.commons.lang3.StringUtils.appendIfMissing;
@@ -37,6 +39,13 @@ public class ResultsReporter
     public static final String CMD_RESULTS_STORE_USER = "--results-store-user";
     public static final String CMD_RESULTS_STORE_PASSWORD = "--results-store-pass";
     public static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
+    private static final Set<RecordingType> IGNORED_RECORDING_TYPES = Sets.newHashSet( RecordingType.NONE,
+                                                                                       RecordingType.HEAP_DUMP,
+                                                                                       RecordingType.TRACE_STRACE,
+                                                                                       RecordingType.TRACE_MPSTAT,
+                                                                                       RecordingType.TRACE_VMSTAT,
+                                                                                       RecordingType.TRACE_IOSTAT,
+                                                                                       RecordingType.TRACE_JVM );
 
     private final String resultsStoreUsername;
     private final String resultsStorePassword;
@@ -158,13 +167,6 @@ public class ResultsReporter
     private void extractProfilerRecordings( TestRunReport testRunReport, Path tempProfilerRecordingsDir, URI s3FolderUri, File workDir )
     {
         String s3Folder = appendIfMissing( removeStart( s3FolderUri.toString(), "s3://" ), "/" );
-        Set<RecordingType> ignoredRecordingTypes = Sets.newHashSet( RecordingType.NONE,
-                                                                    RecordingType.HEAP_DUMP,
-                                                                    RecordingType.TRACE_STRACE,
-                                                                    RecordingType.TRACE_MPSTAT,
-                                                                    RecordingType.TRACE_VMSTAT,
-                                                                    RecordingType.TRACE_IOSTAT,
-                                                                    RecordingType.TRACE_JVM );
 
         for ( BenchmarkGroupDirectory benchmarkGroupDirectory : BenchmarkGroupDirectory.searchAllIn( workDir.toPath() ) )
         {
@@ -176,17 +178,15 @@ public class ResultsReporter
                 if ( testRunReport.benchmarkGroupBenchmarks().contains( benchmarkGroupBenchmark ) )
                 {
                     ProfilerRecordings profilerRecordings = new ProfilerRecordings();
-                    for ( ForkDirectory forkDirectory : benchmarksDirectory.forks() )
-                    {
-                        forkDirectory.copyProfilerRecordings( tempProfilerRecordingsDir,
-                                                              // only copy valid recordings for upload
-                                                              recordingDescriptor -> !ignoredRecordingTypes.contains( recordingDescriptor.recordingType() ),
-                                                              // attached valid/copied recordings to test run report
-                                                              ( recordingDescriptor, recording ) ->
-                                                                      profilerRecordings.with( recordingDescriptor.recordingType(),
-                                                                                               recordingDescriptor.additionalParams(),
-                                                                                               s3Folder + recording.getFileName().toString() ) );
-                    }
+
+                    copyValidRecordings( benchmarksDirectory, tempProfilerRecordingsDir )
+                            .forEach( ( recordingDescriptor, path ) ->
+                                              // attached valid/copied recordings to test run report
+                                              profilerRecordings.with( recordingDescriptor.recordingType(),
+                                                                       recordingDescriptor.additionalParams(),
+                                                                       s3Folder + path.toString() )
+                            );
+
                     if ( !profilerRecordings.toMap().isEmpty() )
                     {
                         // TODO once we have parameterized profilers we should assert that every expected recording exists
@@ -199,5 +199,19 @@ public class ResultsReporter
                 }
             }
         }
+    }
+
+    private Map<RecordingDescriptor,Path> copyValidRecordings( BenchmarkDirectory benchmarksDirectory, Path tempProfilerRecordingsDir )
+    {
+        return benchmarksDirectory.forks().stream()
+                                  .flatMap( forkDirectory -> forkDirectory.copyProfilerRecordings( tempProfilerRecordingsDir, this::shouldUpload )
+                                                                          .entrySet()
+                                                                          .stream() )
+                                  .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) );
+    }
+
+    private boolean shouldUpload( RecordingDescriptor recordingDescriptor )
+    {
+        return !IGNORED_RECORDING_TYPES.contains( recordingDescriptor.recordingType() );
     }
 }

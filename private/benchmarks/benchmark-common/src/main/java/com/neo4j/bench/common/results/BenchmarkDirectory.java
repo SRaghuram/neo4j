@@ -6,6 +6,7 @@
 package com.neo4j.bench.common.results;
 
 import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.common.util.PathUtil;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.util.JsonUtil;
 
@@ -40,7 +41,7 @@ public class BenchmarkDirectory
     {
         try
         {
-            Path dir = parentDir.resolve( nameFor( benchmark ) );
+            Path dir = parentDir.resolve( filenameFor( benchmark ) );
             Optional<BenchmarkDirectory> maybeBenchmark = tryOpenAt( dir, benchmark );
             if ( !maybeBenchmark.isPresent() )
             {
@@ -62,7 +63,7 @@ public class BenchmarkDirectory
 
     static BenchmarkDirectory findOrFailAt( Path parentDir, Benchmark benchmark )
     {
-        Path dir = parentDir.resolve( nameFor( benchmark ) );
+        Path dir = parentDir.resolve( filenameFor( benchmark ) );
         Optional<BenchmarkDirectory> maybeBenchmarkDirectory = tryOpenAt( dir, benchmark );
         if ( !maybeBenchmarkDirectory.isPresent() )
         {
@@ -103,9 +104,9 @@ public class BenchmarkDirectory
         return JsonUtil.deserializeJson( benchmarkJson, Benchmark.class );
     }
 
-    private static String nameFor( Benchmark benchmark )
+    private static String filenameFor( Benchmark benchmark )
     {
-        return BenchmarkUtil.sanitize( benchmark.name() );
+        return BenchmarkUtil.sanitize( PathUtil.withDefaultMaxLength().limitLength( benchmark.name() ) );
     }
 
     private final Path dir;

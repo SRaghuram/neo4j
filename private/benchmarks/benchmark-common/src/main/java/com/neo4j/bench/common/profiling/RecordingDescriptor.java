@@ -13,7 +13,7 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.KeyDeserializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.neo4j.bench.common.results.RunPhase;
-import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.common.util.PathUtil;
 import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.model.util.JsonUtil;
@@ -26,6 +26,10 @@ import static com.neo4j.bench.common.util.BenchmarkUtil.sanitize;
 
 public class RecordingDescriptor
 {
+
+    private static final String PARAMS_EXTENSION = ".params";
+    private static final PathUtil PATH_UTIL = PathUtil.withDefaultMaxLengthAndMargin( PARAMS_EXTENSION.length() );
+
     public static class RecordingDescriptorKeyDeserializer extends KeyDeserializer
     {
         @Override
@@ -78,19 +82,39 @@ public class RecordingDescriptor
         return additionalParams;
     }
 
+    public String sanitizedName()
+    {
+        return sanitize( PATH_UTIL.limitLength( name() ) );
+    }
+
     public String sanitizedFilename()
     {
-        return sanitize( filename() );
+        return sanitizedFilename( recordingType.extension() );
+    }
+
+    public String sanitizedFilename( String extension )
+    {
+        return sanitizedFilename( "", extension );
+    }
+
+    public String sanitizedFilename( String prefix, String extension )
+    {
+        return sanitize( filename( prefix, extension ) );
+    }
+
+    public String paramsFilename()
+    {
+        return filename() + PARAMS_EXTENSION;
     }
 
     public String filename()
     {
-        return name() + recordingType.extension();
+        return filename( "", recordingType.extension() );
     }
 
-    public String sanitizedName()
+    private String filename( String prefix, String extension )
     {
-        return sanitize( name() );
+        return PATH_UTIL.limitLength( prefix, name(), extension );
     }
 
     public String name()

@@ -108,7 +108,7 @@ abstract class SecondaryRecordingCreator
         @Override
         Set<String> requiredEnvironmentVariables()
         {
-            return Sets.newHashSet( "FLAMEGRAPH_DIR" );
+            return Sets.newHashSet( FLAME_GRAPH_DIR );
         }
 
         @Override
@@ -126,7 +126,7 @@ abstract class SecondaryRecordingCreator
             {
                 // generate collapsed stack frames, into temporary location
                 RecordingDescriptor jfrMemFlameDescriptor = profilerRecordingDescriptor.recordingDescriptorFor( RecordingType.JFR_MEMALLOC_FLAMEGRAPH );
-                Path collapsedStackFrames = forkDirectory.create( jfrMemFlameDescriptor.sanitizedName() + ".collapsed.stack" );
+                Path collapsedStackFrames = forkDirectory.create( jfrMemFlameDescriptor.sanitizedFilename( ".collapsed.stack" ) );
                 StackCollapse stackCollapse = JfrMemoryStackCollapse.forMemoryAllocation( jfrRecording );
                 StackCollapseWriter.write( stackCollapse, collapsedStackFrames );
                 // generate flamegraphs

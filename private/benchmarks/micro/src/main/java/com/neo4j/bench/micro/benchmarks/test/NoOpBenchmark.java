@@ -5,15 +5,28 @@
  */
 package com.neo4j.bench.micro.benchmarks.test;
 
+import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
+import org.openjdk.jmh.annotations.Param;
 
 public class NoOpBenchmark extends BaseDatabaseBenchmark
 {
+    // long parameters to verify that filenames don't exceed filesystem limit
+    @ParamValues( allowed = {"longParameterValue1-111111111-222222222-333333333-444444444-555555555-666666666"},
+            base = {"longParameterValue1-111111111-222222222-333333333-444444444-555555555-666666666"} )
+    @Param( {} )
+    public String longParameterName1;
+
+    @ParamValues( allowed = {"longParameterValue2-111111111-222222222-333333333-444444444-555555555-666666666"},
+            base = {"longParameterValue2-111111111-222222222-333333333-444444444-555555555-666666666"} )
+    @Param( {} )
+    public String longParameterName2;
+
     @Override
     public String description()
     {

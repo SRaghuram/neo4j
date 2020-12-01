@@ -5,11 +5,7 @@
  */
 package com.neo4j.bench.common.results;
 
-import com.google.common.collect.Lists;
-import com.neo4j.bench.common.profiling.ParameterizedProfiler;
-import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
-import com.neo4j.bench.common.profiling.ProfilerType;
-import com.neo4j.bench.common.profiling.RecordingDescriptor;
+import com.neo4j.bench.common.util.PathUtil;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkGroup;
 import org.junit.jupiter.api.Test;
@@ -19,18 +15,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.common.results.RunPhase.MEASUREMENT;
 import static com.neo4j.bench.common.util.BenchmarkUtil.assertException;
 import static com.neo4j.bench.common.util.BenchmarkUtil.sanitize;
 import static com.neo4j.bench.model.model.Benchmark.Mode;
-import static com.neo4j.bench.model.model.Parameters.NONE;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -48,7 +40,7 @@ public class DirectoryTest
     private static final String FORK2 = "fork2";
 
     @Inject
-    public TestDirectory temporaryFolder;
+    private TestDirectory temporaryFolder;
 
     @Test
     void shouldBeAbleToCreateGroupDirs()
@@ -72,7 +64,7 @@ public class DirectoryTest
         BenchmarkDirectory benchDir1 = groupDir.findOrCreate( BENCH_1 );
         Path groupDirPath = Paths.get( groupDir.toAbsolutePath() );
         Path benchDirPath1 = Paths.get( benchDir1.toAbsolutePath() );
-        Path expectedBenchDirPath1 = groupDirPath.resolve( sanitize( BENCH_1.name() ) );
+        Path expectedBenchDirPath1 = groupDirPath.resolve( sanitize( PathUtil.withDefaultMaxLength().limitLength( BENCH_1.name() ) ) );
         assertThat( "Bench dir had unexpected location", expectedBenchDirPath1, equalTo( benchDirPath1 ) );
         assertTrue( Files.exists( expectedBenchDirPath1 ), "Bench dir was not created" );
         assertThat( "Group dir did not contain expected benchmark", groupDir.benchmarks(), containsInAnyOrder( BENCH_1 ) );
@@ -114,34 +106,12 @@ public class DirectoryTest
     {
         Path parentDir = temporaryFolder.absolutePath();
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( parentDir, GROUP_1 );
-
-        List<ProfilerType> expectedProfilers1 = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
-        List<ProfilerType> expectedProfilers2 = Lists.newArrayList( ProfilerType.ASYNC );
-
         BenchmarkDirectory benchDir = groupDir.findOrCreate( BENCH_1 );
 
         assertThat( "New bench dir was not empty", benchDir.forks(), equalTo( Collections.emptyList() ) );
 
-        ForkDirectory forkDir1 = benchDir.create( FORK1 );
-        Map<RecordingDescriptor,Path> fork1ExpectedRecordings = registerProfilers( GROUP_1,
-                                                                                   BENCH_1,
-                                                                                   ParameterizedProfiler.defaultProfilers( expectedProfilers1 ),
-                                                                                   forkDir1 );
-        Path benchDirPath = Paths.get( benchDir.toAbsolutePath() );
-        Path forkDirPath1 = Paths.get( forkDir1.toAbsolutePath() );
-        Path expectedForkDirPath1 = benchDirPath.resolve( sanitize( FORK1 ) );
-        assertThat( "Fork dir had unexpected location", expectedForkDirPath1, equalTo( forkDirPath1 ) );
-        assertTrue( Files.exists( expectedForkDirPath1 ), "Fork dir was not created" );
-        assertThat( "Fork dir should know its profilers", forkDir1.recordings(), equalTo( fork1ExpectedRecordings ) );
-        assertThat( "Fork dir should know its name", forkDir1.name(), equalTo( FORK1 ) );
-
-        ForkDirectory forkDir2 = benchDir.create( FORK2 );
-        Map<RecordingDescriptor,Path> fork2ExpectedRecordings = registerProfilers( GROUP_1,
-                                                                                   BENCH_1,
-                                                                                   ParameterizedProfiler.defaultProfilers( expectedProfilers2 ),
-                                                                                   forkDir2 );
-        assertThat( "Fork dir should know its profilers", forkDir2.recordings(), equalTo( fork2ExpectedRecordings ) );
-        assertThat( "Fork dir should know its name", forkDir2.name(), equalTo( FORK2 ) );
+        benchDir.create( FORK1 );
+        benchDir.create( FORK2 );
 
         assertThat( "Bench dir contained unexpected forks",
                     benchDir.forks().stream().map( ForkDirectory::name ).collect( toList() ),
@@ -149,7 +119,7 @@ public class DirectoryTest
 
         // should not be able to create a fork directory where one already exists
         assertException( RuntimeException.class,
-                                       () -> benchDir.create( FORK1 ) );
+                         () -> benchDir.create( FORK1 ) );
     }
 
     @Test
@@ -158,14 +128,9 @@ public class DirectoryTest
         Path parentDir = temporaryFolder.absolutePath();
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( parentDir, GROUP_1 );
         BenchmarkDirectory benchDir = groupDir.findOrCreate( BENCH_1 );
-        List<ProfilerType> expectedProfilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
         ForkDirectory forkDirBefore = benchDir.create( FORK1 );
         assertThat( forkDirBefore.recordings(), equalTo( Collections.emptyMap() ) );
-        Map<RecordingDescriptor,Path> expectedRecordings = registerProfilers( GROUP_1,
-                                                                              BENCH_1,
-                                                                              ParameterizedProfiler.defaultProfilers( expectedProfilers ),
-                                                                              forkDirBefore );
-        assertThat( forkDirBefore.recordings(), equalTo( expectedRecordings ) );
+
         ForkDirectory forkDirAfter = ForkDirectory.openAt( Paths.get( forkDirBefore.toAbsolutePath() ) );
         assertThat( forkDirBefore.toAbsolutePath(), equalTo( forkDirAfter.toAbsolutePath() ) );
         assertThat( forkDirBefore.name(), equalTo( forkDirAfter.name() ) );
@@ -190,13 +155,13 @@ public class DirectoryTest
         assertThat( "File path should be within fork directory", file1.getParent(), equalTo( forkDirPath ) );
 
         assertException( RuntimeException.class,
-                                       () -> forkDir.findOrFail( "file1" ) );
+                         () -> forkDir.findOrFail( "file1" ) );
 
         assertThat( "Same filenames mapped to different files", forkDir.create( "file1" ), equalTo( file1 ) );
         assertTrue( Files.exists( file1 ), "File should be created now" );
 
         assertException( RuntimeException.class,
-                                       () -> forkDir.create( "file1" ) );
+                         () -> forkDir.create( "file1" ) );
 
         assertThat( "Could not find previously created file", forkDir.findOrFail( "file1" ), equalTo( file1 ) );
         assertThat( "Same filenames mapped to different files", forkDir.findOrCreate( "file1" ), equalTo( file1 ) );
@@ -210,26 +175,5 @@ public class DirectoryTest
 
         Path planFile = forkDir.pathForPlan();
         assertFalse( Files.exists( planFile ), "Plan file should not yet be created" );
-    }
-
-    private Map<RecordingDescriptor,Path> registerProfilers( BenchmarkGroup benchmarkGroup,
-                                                             Benchmark benchmark,
-                                                             List<ParameterizedProfiler> profilers,
-                                                             ForkDirectory forkDir )
-    {
-        Map<RecordingDescriptor,Path> recordings = new HashMap<>();
-        for ( ParameterizedProfiler profiler : profilers )
-        {
-            ProfilerRecordingDescriptor profilerDescriptor = ProfilerRecordingDescriptor.create( benchmarkGroup,
-                                                                                                 benchmark,
-                                                                                                 MEASUREMENT,
-                                                                                                 profiler,
-                                                                                                 NONE );
-            // this call registers the created path with the fork
-            RecordingDescriptor recordingDescriptor = profilerDescriptor.recordingDescriptorFor( profiler.profilerType().recordingType() );
-            Path recording = forkDir.registerPathFor( recordingDescriptor );
-            recordings.put( recordingDescriptor, recording );
-        }
-        return recordings;
     }
 }

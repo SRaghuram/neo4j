@@ -6,13 +6,15 @@
 package com.neo4j.bench.common.profiling;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.model.model.Parameters;
-import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.results.ForkDirectory;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.JvmVersion;
+import com.neo4j.bench.common.util.PathUtil;
 import com.neo4j.bench.common.util.Resources;
+import com.neo4j.bench.model.model.Parameters;
+import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.model.profiling.RecordingType;
 
 import java.nio.file.Files;
@@ -34,14 +36,14 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
     private static String jfrProfilerLogName( Parameters parameters )
     {
         String additionalParametersString = parameters.isEmpty() ? "" : "-" + parameters.toString();
-        return "jfr-profiler" + additionalParametersString + ".log";
+        return PathUtil.withDefaultMaxLength().limitLength( "jfr-profiler", additionalParametersString, ".log" );
     }
 
     // JFR profiler log -- used as redirect for the process that starts the JFR recording
     private static String jfrLogName( Parameters parameters )
     {
         String additionalParametersString = parameters.isEmpty() ? "" : "-" + parameters.toString();
-        return "jfr" + additionalParametersString + ".log";
+        return PathUtil.withDefaultMaxLength().limitLength( "jfr", additionalParametersString, ".log" );
     }
 
     /*
@@ -182,7 +184,7 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
             startJfrCommand[1] = Long.toString( pid.get() );
             startJfrCommand[2] = "JFR.start";
             startJfrCommand[3] = "settings=profile";
-            startJfrCommand[4] = "name=" + recordingDescriptor.sanitizedName();
+            startJfrCommand[4] = createNameArgument( recordingDescriptor );
             startJfrCommand[5] = "dumponexit=" + DUMP_ON_EXIT;
             if ( DUMP_ON_EXIT )
             {
@@ -252,7 +254,7 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
                     jvm.launchJcmd(),
                     Long.toString( pid.get() ),
                     "JFR.dump",
-                    format( "name=%s", recordingDescriptor.sanitizedName() ),
+                    createNameArgument( recordingDescriptor ),
                     format( "filename='%s'", jfrProfilerOutput.toAbsolutePath() )};
 
             appendFile( profilerLog,
@@ -293,7 +295,7 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
                     jvm.launchJcmd(),
                     Long.toString( pid.get() ),
                     "JFR.stop",
-                    format( "name=%s", recordingDescriptor.sanitizedName() )};
+                    createNameArgument( recordingDescriptor )};
 
             appendFile( profilerLog,
                         Instant.now(),
@@ -347,5 +349,10 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
         {
             throw new RuntimeException( "Error trying to stop JFR profiler", e );
         }
+    }
+
+    private String createNameArgument( RecordingDescriptor recordingDescriptor )
+    {
+        return format( "name=%s",  recordingDescriptor.sanitizedName() );
     }
 }

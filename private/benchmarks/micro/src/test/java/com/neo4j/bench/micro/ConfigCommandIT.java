@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.micro;
 
+import com.google.common.collect.ImmutableMap;
 import com.neo4j.bench.jmh.api.config.BenchmarkConfigFile;
 import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
 import com.neo4j.bench.jmh.api.config.BenchmarksFinder;
@@ -34,7 +35,6 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.google.common.collect.Sets.newHashSet;
 import static com.neo4j.bench.jmh.api.config.SuiteDescription.fromConfig;
-import static com.neo4j.bench.micro.TestUtils.map;
 import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
@@ -412,13 +412,14 @@ public class ConfigCommandIT extends AnnotationsFixture
         assertThat( configFile.entries().size(), equalTo( 2 ) );
         assertTrue( configFile.hasEntry( benchmarkName1 ) );
         assertTrue( configFile.getEntry( benchmarkName1 ).isEnabled() );
-        assertThat( configFile.getEntry( benchmarkName1 ).values().size(), equalTo( 1 ) );
         assertThat( configFile.getEntry( benchmarkName1 ).values(),
-                    equalTo( map( "extraNodes", newHashSet( "1", "2" ) ) ) );
+                    equalTo( ImmutableMap.of( "extraNodes", newHashSet( "1", "2" ) ) ) );
         assertTrue( configFile.hasEntry( benchmarkName2 ) );
         assertTrue( configFile.getEntry( benchmarkName2 ).isEnabled() );
-        assertThat( configFile.getEntry( benchmarkName2 ).values().size(), equalTo( 0 ) );
-        assertThat( configFile.getEntry( benchmarkName2 ).values(), equalTo( emptyMap() ) );
+        assertThat( configFile.getEntry( benchmarkName2 ).values(), equalTo( ImmutableMap.of(
+                "longParameterName1", newHashSet( "longParameterValue1-111111111-222222222-333333333-444444444-555555555-666666666" ),
+                "longParameterName2", newHashSet( "longParameterValue2-111111111-222222222-333333333-444444444-555555555-666666666" )
+        ) ) );
 
         assertTrue( validation.isValid(), validation.report() );
         SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getAnnotations(), new Validation() );

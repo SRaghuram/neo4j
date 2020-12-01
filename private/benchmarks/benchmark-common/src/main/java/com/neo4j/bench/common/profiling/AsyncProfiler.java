@@ -35,13 +35,13 @@ public class AsyncProfiler implements InternalProfiler, ExternalProfiler
     // profiler log -- used by this class only
     private static String asyncProfilerLogName( RecordingDescriptor recordingDescriptor )
     {
-        return "async-profiler-" + recordingDescriptor.sanitizedName() + ".log";
+        return recordingDescriptor.sanitizedFilename( "async-profiler-", ".log" );
     }
 
     // Async profiler log -- used as redirect for the process that starts the Async recording
     private static String asyncLogName( RecordingDescriptor recordingDescriptor )
     {
-        return "async-" + recordingDescriptor.sanitizedName() + ".log";
+        return recordingDescriptor.sanitizedFilename( "async-", ".log" );
     }
 
     @Override
