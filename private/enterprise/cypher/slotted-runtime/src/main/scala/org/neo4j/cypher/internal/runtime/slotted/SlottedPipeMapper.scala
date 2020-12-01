@@ -36,7 +36,6 @@ import org.neo4j.cypher.internal.logical.plans.Expand
 import org.neo4j.cypher.internal.logical.plans.ExpandAll
 import org.neo4j.cypher.internal.logical.plans.ExpandInto
 import org.neo4j.cypher.internal.logical.plans.ForeachApply
-import org.neo4j.cypher.internal.logical.plans.IncludeTies
 import org.neo4j.cypher.internal.logical.plans.Limit
 import org.neo4j.cypher.internal.logical.plans.LockNodes
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
@@ -55,6 +54,7 @@ import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
 import org.neo4j.cypher.internal.logical.plans.OrderedDistinct
 import org.neo4j.cypher.internal.logical.plans.PartialSort
 import org.neo4j.cypher.internal.logical.plans.PartialTop
+import org.neo4j.cypher.internal.logical.plans.PartialTop1WithTies
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.logical.plans.Projection
 import org.neo4j.cypher.internal.logical.plans.RemoveLabels
@@ -72,6 +72,7 @@ import org.neo4j.cypher.internal.logical.plans.SetRelationshipProperty
 import org.neo4j.cypher.internal.logical.plans.Skip
 import org.neo4j.cypher.internal.logical.plans.Sort
 import org.neo4j.cypher.internal.logical.plans.Top
+import org.neo4j.cypher.internal.logical.plans.Top1WithTies
 import org.neo4j.cypher.internal.logical.plans.Union
 import org.neo4j.cypher.internal.logical.plans.UnwindCollection
 import org.neo4j.cypher.internal.logical.plans.ValueHashJoin
@@ -437,14 +438,22 @@ class SlottedPipeMapper(fallback: PipeMapper,
       case Top(_, sortItems, SignedDecimalIntegerLiteral("1")) =>
         Top1Pipe(source, SlottedExecutionContextOrdering.asComparator(sortItems.map(translateColumnOrder(slots, _))))(id = id)
 
+      case Top1WithTies(_, sortItems) =>
+        Top1WithTiesPipe(source, SlottedExecutionContextOrdering.asComparator(sortItems.map(translateColumnOrder(slots, _))))(id = id)
+
       case Top(_, sortItems, limit) =>
         TopNPipe(source, convertExpressions(limit),
           SlottedExecutionContextOrdering.asComparator(sortItems.map(translateColumnOrder(slots, _))))(id = id)
+
 
       case PartialTop(_, _, stillToSortSuffix, _, _) if stillToSortSuffix.isEmpty => source
 
       case PartialTop(_, alreadySortedPrefix, stillToSortSuffix, SignedDecimalIntegerLiteral("1"), _) =>
         PartialTop1Pipe(source, SlottedExecutionContextOrdering.asComparator(alreadySortedPrefix.map(translateColumnOrder(slots, _)).toList),
+          SlottedExecutionContextOrdering.asComparator(stillToSortSuffix.map(translateColumnOrder(slots, _)).toList))(id = id)
+
+      case PartialTop1WithTies(_, alreadySortedPrefix, stillToSortSuffix) =>
+        PartialTop1WithTiesPipe(source, SlottedExecutionContextOrdering.asComparator(alreadySortedPrefix.map(translateColumnOrder(slots, _)).toList),
           SlottedExecutionContextOrdering.asComparator(stillToSortSuffix.map(translateColumnOrder(slots, _)).toList))(id = id)
 
       case PartialTop(_, alreadySortedPrefix, stillToSortSuffix, limit, skipSortingPrefixLength) =>
@@ -453,16 +462,6 @@ class SlottedPipeMapper(fallback: PipeMapper,
           skipSortingPrefixLength.map(convertExpressions),
           SlottedExecutionContextOrdering.asComparator(alreadySortedPrefix.map(translateColumnOrder(slots, _)).toList),
           SlottedExecutionContextOrdering.asComparator(stillToSortSuffix.map(translateColumnOrder(slots, _)).toList))(id = id)
-
-      case Limit(_, count, IncludeTies) =>
-        (source, count) match {
-          case (SortPipe(inner, comparator), SignedDecimalIntegerLiteral("1")) =>
-            Top1WithTiesPipe(inner, comparator)(id = id)
-          case (PartialSortPipe(inner, prefixComparator, suffixComparator, None), SignedDecimalIntegerLiteral("1")) =>
-            PartialTop1WithTiesPipe(inner, prefixComparator, suffixComparator)(id = id)
-
-          case _ => throw new InternalException("Including ties is only supported for very specific plans")
-        }
 
       // Pipes that do not themselves read/write slots should be fine to use the fallback (non-slot aware pipes)
       case _: Selection |

@@ -17,7 +17,6 @@ import com.neo4j.bench.micro.data.Plans.astVariable
 import com.neo4j.bench.micro.data.TypeParamValues.LNG
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations.Benchmark
@@ -72,7 +71,7 @@ class AntiSemiApply extends AbstractCypherBenchmark {
     val rhs = "rhs"
     val lhsAllNodesScan = plans.AllNodesScan(lhs, Set.empty)(IdGen)
     val rhsAllNodesScan = plans.AllNodesScan(rhs, Set(lhs))(IdGen)
-    val limit = plans.Limit(rhsAllNodesScan, astLiteralFor(rhsRows, LNG), DoNotIncludeTies)(IdGen)
+    val limit = plans.Limit(rhsAllNodesScan, astLiteralFor(rhsRows, LNG))(IdGen)
     val antiSemiApply = plans.AntiSemiApply(lhsAllNodesScan, limit)(IdGen)
     val resultColumns = List(lhs)
     val produceResults = plans.ProduceResult(antiSemiApply, columns = resultColumns)(IdGen)

@@ -24,7 +24,6 @@ import org.neo4j.cypher.internal.logical.plans.Apply
 import org.neo4j.cypher.internal.logical.plans.Argument
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
 import org.neo4j.cypher.internal.logical.plans.Create
-import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
 import org.neo4j.cypher.internal.logical.plans.Eager
 import org.neo4j.cypher.internal.logical.plans.Expand
 import org.neo4j.cypher.internal.logical.plans.ExpandAll
@@ -145,7 +144,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
 
   test("single all nodes scan with limit") {
     // given
-    val plan = plans.Limit(AllNodesScan("x", Set.empty), literalInt(1), DoNotIncludeTies)
+    val plan = plans.Limit(AllNodesScan("x", Set.empty), literalInt(1))
 
     // when
     val pipe = build(plan)

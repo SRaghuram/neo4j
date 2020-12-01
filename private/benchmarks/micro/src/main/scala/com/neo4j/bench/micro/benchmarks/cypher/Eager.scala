@@ -17,7 +17,6 @@ import com.neo4j.bench.micro.data.TypeParamValues.LNG
 import com.neo4j.bench.micro.data.TypeParamValues.STR_SML
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
@@ -76,7 +75,7 @@ class Eager extends AbstractCypherBenchmark {
       leftAllNodesScan,
       SemanticTable().addNode(astVariable(nodeName)),
       List(nodeName))
-    val limit = plans.Limit(cartesianProducts, astLiteralFor(NODE_COUNT, LNG), DoNotIncludeTies)(IdGen)
+    val limit = plans.Limit(cartesianProducts, astLiteralFor(NODE_COUNT, LNG))(IdGen)
     val projectColumns = Range(0, referenceColumns).map(i => (s"r$i", astLiteralFor(i, refType))).toMap
     val projection = plans.Projection(limit, projectColumns)(IdGen)
     val eager = plans.Eager(projection)(IdGen)

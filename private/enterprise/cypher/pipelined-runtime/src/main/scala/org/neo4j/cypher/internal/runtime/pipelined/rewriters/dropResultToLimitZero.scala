@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.runtime.pipelined.rewriters
 
 import org.neo4j.cypher.internal.expressions.SignedDecimalIntegerLiteral
-import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
 import org.neo4j.cypher.internal.logical.plans.DropResult
 import org.neo4j.cypher.internal.logical.plans.Limit
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
@@ -26,7 +25,7 @@ case class dropResultToLimitZero(cardinalities: Cardinalities,
                                  stopper: AnyRef => Boolean) extends Rewriter {
   private val instance: Rewriter = bottomUp(Rewriter.lift {
     case dropResult @ DropResult(source) =>
-      Limit(source, SignedDecimalIntegerLiteral("0")(InputPosition.NONE), DoNotIncludeTies)(SameId(dropResult.id))
+      Limit(source, SignedDecimalIntegerLiteral("0")(InputPosition.NONE))(SameId(dropResult.id))
   }, stopper)
 
   override def apply(input: AnyRef): AnyRef = instance.apply(input)

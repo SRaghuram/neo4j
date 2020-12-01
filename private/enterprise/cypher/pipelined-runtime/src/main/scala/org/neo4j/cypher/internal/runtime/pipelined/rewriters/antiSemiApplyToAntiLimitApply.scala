@@ -9,7 +9,6 @@ import org.neo4j.cypher.internal.expressions.SignedDecimalIntegerLiteral
 import org.neo4j.cypher.internal.logical.plans.Anti
 import org.neo4j.cypher.internal.logical.plans.AntiSemiApply
 import org.neo4j.cypher.internal.logical.plans.Apply
-import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
 import org.neo4j.cypher.internal.logical.plans.Limit
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.SelectOrAntiSemiApply
@@ -39,7 +38,7 @@ case class antiSemiApplyToAntiLimitApply(cardinalities: Cardinalities,
   override def apply(input: AnyRef): AnyRef = instance.apply(input)
 
   private def newRhs(lhs: LogicalPlan, rhs: LogicalPlan) = {
-    val limit = Limit(rhs, SignedDecimalIntegerLiteral("1")(InputPosition.NONE), DoNotIncludeTies)(idGen)
+    val limit = Limit(rhs, SignedDecimalIntegerLiteral("1")(InputPosition.NONE))(idGen)
     val anti = Anti(limit)(idGen)
     val lhsCardinality = cardinalities.get(lhs.id)
     def updateAttributes(newPlan: LogicalPlan): Unit = {

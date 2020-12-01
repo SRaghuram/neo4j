@@ -13,7 +13,6 @@ import org.neo4j.cypher.internal.expressions.ListLiteral
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.CompositeQueryExpression
 import org.neo4j.cypher.internal.logical.plans.Distinct
-import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
 import org.neo4j.cypher.internal.logical.plans.ExistenceQueryExpression
 import org.neo4j.cypher.internal.logical.plans.ExpandAll
 import org.neo4j.cypher.internal.logical.plans.ExpandInto
@@ -645,7 +644,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
             }
 
         // Special case for limit with serial execution
-        case plan@Limit(_, countExpression, DoNotIncludeTies) if serialExecutionOnly =>
+        case plan@Limit(_, countExpression) if serialExecutionOnly =>
           ctx: TemplateContext =>
             val argumentStateMapId = ctx.executionGraphDefinition.findArgumentStateMapForPlan(plan.id)
             if (hasNoNestedArguments) {

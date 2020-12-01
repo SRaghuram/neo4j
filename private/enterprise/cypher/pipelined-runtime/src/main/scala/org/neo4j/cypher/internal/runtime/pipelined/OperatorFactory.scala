@@ -9,7 +9,6 @@ import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.AntiConditionalApply
 import org.neo4j.cypher.internal.logical.plans.ConditionalApply
-import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
 import org.neo4j.cypher.internal.logical.plans.IndexSeekLeafPlan
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NodeUniqueIndexSeek
@@ -796,7 +795,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       case plans.NonFuseable(_) =>
         Some(new NonFuseableOperator(WorkIdentity.fromPlan(plan)))
 
-      case plans.Limit(_, count, DoNotIncludeTies) =>
+      case plans.Limit(_, count) =>
         val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
         Some(new LimitOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, count))(id))
 
