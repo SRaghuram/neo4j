@@ -191,7 +191,7 @@ class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     val query =
     """
       |MATCH (b:Board)
-      |WITH b, 1 AS test
+      |WITH b, 1 AS ignore
       |MATCH
       |(b)-[b_fields_0_field11:fields]->(field11:Field),
       |(b)-[b_fields_1_field12:fields]->(field12:Field),
