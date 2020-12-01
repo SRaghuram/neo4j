@@ -147,7 +147,7 @@ public class BranchAndVersionTest
     @Test
     public void shouldRemoveTeamcityPrefix()
     {
-        String teamcityPrefix = "ref/heads/";
+        String teamcityPrefix = "refs/heads/";
         String dropBranch = "4.3-drop01";
         String branch = "4.3";
         String personalBranch = "personalBranch";
