@@ -25,7 +25,6 @@ import java.util.Objects;
 import org.neo4j.dbms.identity.ServerId;
 
 import static com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.RAFT_MEMBER_MAPPING;
-import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 
 /**
  * Keeps track of raft member IDs for every database/server pair.

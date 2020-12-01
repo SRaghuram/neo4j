@@ -24,6 +24,6 @@ public class ReadReplicaPanicHandlers extends DatabasePanicHandlers
         super( panicService, kernelDatabase.getNamedDatabaseId(), List.of(
                 raiseAvailabilityGuard( kernelDatabase ),
                 markUnhealthy( kernelDatabase ),
-                stopDatabase( kernelDatabase, clusterInternalOperator ) ) );
+                stopDatabase( clusterInternalOperator ) ) );
     }
 }

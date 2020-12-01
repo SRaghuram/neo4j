@@ -7,14 +7,15 @@ package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
-import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember;
 import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.TopologyService;
+import com.neo4j.causalclustering.discovery.akka.ActorSystemRestarter;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
-import com.neo4j.causalclustering.discovery.akka.Restarter;
+import com.neo4j.causalclustering.discovery.akka.DummyPanicService;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.akka.system.JoinMessageFactory;
+import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember;
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.EnterpriseDatabaseState;
@@ -42,9 +43,7 @@ import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static org.neo4j.internal.helpers.DefaultTimeoutStrategy.constant;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 class AkkaCoreTopologyMisConfiguredIT
@@ -88,6 +87,7 @@ class AkkaCoreTopologyMisConfiguredIT
         var resolver = NoOpHostnameResolver.resolver( config );
         var actorSystemLifecycle = new ActorSystemLifecycle( actorSystemFactory, resolver, new JoinMessageFactory( resolver ), config, logProvider );
         var databaseIdRepository = new TestDatabaseIdRepository();
+        var panicker = DummyPanicService.PANICKER;
         Map<NamedDatabaseId,DatabaseState> states = Map.of( databaseIdRepository.defaultDatabase(),
                 new EnterpriseDatabaseState( databaseIdRepository.defaultDatabase(), STARTED ) );
         var databaseStateService = new StubDatabaseStateService( states, EnterpriseDatabaseState::unknown );
@@ -98,12 +98,14 @@ class AkkaCoreTopologyMisConfiguredIT
                 logProvider,
                 logProvider,
                 new NoRetriesStrategy(),
-                new Restarter( constant( 1, MILLISECONDS ), 2 ),
+                ActorSystemRestarter.forTest( 2 ),
                 TestCoreDiscoveryMember::new,
                 jobScheduler,
                 Clocks.systemClock(),
                 new Monitors(),
-                databaseStateService );
+                databaseStateService,
+                panicker
+        );
 
         service.init();
         service.start();

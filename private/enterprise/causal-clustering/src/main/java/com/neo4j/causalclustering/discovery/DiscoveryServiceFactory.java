@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.discovery.member.CoreDiscoveryMemberFactory;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
+import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
 
 import java.time.Clock;
@@ -22,9 +23,11 @@ import org.neo4j.ssl.config.SslPolicyLoader;
 public interface DiscoveryServiceFactory
 {
     CoreTopologyService coreTopologyService( Config config, CoreServerIdentity myIdentity, JobScheduler jobScheduler, LogProvider logProvider,
-            LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver, RetryStrategy topologyServiceRetryStrategy,
-            SslPolicyLoader sslPolicyLoader, CoreDiscoveryMemberFactory discoveryMemberFactory, DiscoveryFirstStartupDetector firstStartupDetector,
-            Monitors monitors, Clock clock, DatabaseStateService databaseStateService );
+                                             LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver,
+                                             RetryStrategy topologyServiceRetryStrategy,
+                                             SslPolicyLoader sslPolicyLoader, CoreDiscoveryMemberFactory discoveryMemberFactory,
+                                             DiscoveryFirstStartupDetector firstStartupDetector, Monitors monitors,
+                                             Clock clock, DatabaseStateService databaseStateService, Panicker panicker );
 
     TopologyService readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler, ServerIdentity myIdentity,
             RemoteMembersResolver remoteMembersResolver, SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory, Clock clock,

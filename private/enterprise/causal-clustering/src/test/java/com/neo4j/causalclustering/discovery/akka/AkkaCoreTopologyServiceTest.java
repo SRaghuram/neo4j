@@ -12,9 +12,9 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.RoleInfo;
-import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
+import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
@@ -49,7 +49,7 @@ import static com.neo4j.causalclustering.discovery.akka.GlobalTopologyStateTestU
 import static com.neo4j.causalclustering.discovery.akka.GlobalTopologyStateTestUtil.setupReadReplicaTopologyState;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.is;
@@ -66,20 +66,19 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static org.neo4j.internal.helpers.DefaultTimeoutStrategy.constant;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 
 class AkkaCoreTopologyServiceTest
 {
-
     private Config config = Config.defaults();
     private CoreServerIdentity myIdentity = new InMemoryCoreServerIdentity();
     private LogProvider logProvider = NullLogProvider.getInstance();
     private LogProvider userLogProvider = NullLogProvider.getInstance();
     private RetryStrategy catchupAddressretryStrategy = new NoRetriesStrategy();
     private Clock clock = Clock.fixed( Instant.now(), ZoneId.of( "UTC" ) );
-    private Restarter restarter = new Restarter( constant( 1, MILLISECONDS ), 0 );
+    private final int maxAkkaSystemRestartAttempts = 3;
+    private ActorSystemRestarter actorSystemRestarter = ActorSystemRestarter.forTest( maxAkkaSystemRestartAttempts );
 
     private Map<NamedDatabaseId,DatabaseState> databaseStates;
     private DatabaseStateService databaseStateService;
@@ -91,7 +90,6 @@ class AkkaCoreTopologyServiceTest
     @BeforeEach
     void setup()
     {
-
         var databaseId1 = randomNamedDatabaseId();
         var databaseId2 = randomNamedDatabaseId();
         databaseStates = Map.of(
@@ -116,12 +114,14 @@ class AkkaCoreTopologyServiceTest
                 systemLifecycle,
                 logProvider,
                 userLogProvider,
-                catchupAddressretryStrategy, restarter,
+                catchupAddressretryStrategy,
+                actorSystemRestarter,
                 TestCoreDiscoveryMember::factory,
                 new JobSchedulerAdapter(),
                 clock,
                 new Monitors(),
-                databaseStateService
+                databaseStateService,
+                DummyPanicService.PANICKER
         );
     }
 
@@ -142,7 +142,7 @@ class AkkaCoreTopologyServiceTest
         var expectedMessage = new PublishInitialData( expectedSnapshot );
         testKit.expectMsgEquals( expectedMessage );
 
-        service.restart();
+        assertTrue( service.restartSameThread() );
 
         testKit.expectMsgEquals( expectedMessage );
     }
@@ -166,7 +166,7 @@ class AkkaCoreTopologyServiceTest
     @Test
     void shouldNotRestartIfPre()
     {
-        service.restart();
+        assertFalse( service.restartSameThread() );
 
         verifyNoInteractions( systemLifecycle );
     }
@@ -177,7 +177,7 @@ class AkkaCoreTopologyServiceTest
         service.init();
         clearInvocations( systemLifecycle );
 
-        service.restart();
+        assertFalse( service.restartSameThread() );
 
         verifyNoInteractions( systemLifecycle );
     }
@@ -191,7 +191,7 @@ class AkkaCoreTopologyServiceTest
         service.shutdown();
         clearInvocations( systemLifecycle );
 
-        service.restart();
+        assertFalse( service.restartSameThread() );
 
         verifyNoInteractions( systemLifecycle );
     }
@@ -203,7 +203,7 @@ class AkkaCoreTopologyServiceTest
         service.start();
         clearInvocations( systemLifecycle );
 
-        service.restart();
+        assertTrue( service.restartSameThread() );
 
         InOrder inOrder = inOrder( systemLifecycle );
         inOrder.verify( systemLifecycle ).shutdown();
@@ -361,7 +361,7 @@ class AkkaCoreTopologyServiceTest
     @Test
     void shouldReportEmptyTopologiesAfterRestart() throws Exception
     {
-        testEmptyTopologiesAreReportedAfter( AkkaCoreTopologyService::restart );
+        testEmptyTopologiesAreReportedAfter( AkkaCoreTopologyService::restartSameThread );
     }
 
     @Test
@@ -373,7 +373,7 @@ class AkkaCoreTopologyServiceTest
 
         Mockito.doThrow( new RuntimeException() ).when( systemLifecycle ).shutdown();
 
-        service.restart();
+        assertTrue( service.restartSameThread() );
 
         InOrder inOrder = inOrder( systemLifecycle );
         inOrder.verify( systemLifecycle ).shutdown();
@@ -389,7 +389,7 @@ class AkkaCoreTopologyServiceTest
 
         Mockito.doThrow( new RuntimeException() ).doNothing().when( systemLifecycle ).createClusterActorSystem( any() );
 
-        service.restart();
+        assertTrue( service.restartSameThread() );
 
         InOrder inOrder = inOrder( systemLifecycle );
         inOrder.verify( systemLifecycle ).shutdown();
@@ -397,22 +397,41 @@ class AkkaCoreTopologyServiceTest
     }
 
     @Test
-    void shouldRetryUntilSuccessful() throws Throwable
+    void shouldRetryUntilSucceeded() throws Throwable
     {
         service.init();
         service.start();
         clearInvocations( systemLifecycle );
 
-        int numFailures = 15;
+        int numFailures = maxAkkaSystemRestartAttempts - 1;
         Exception exception = new RuntimeException();
         final Exception[] exceptions = Stream.generate( () -> exception ).limit( numFailures ).toArray( Exception[]::new );
         Mockito.doThrow( exceptions ).doNothing().when( systemLifecycle ).createClusterActorSystem( any() );
 
-        service.restart();
+        assertTrue( service.restartSameThread() );
 
         InOrder inOrder = inOrder( systemLifecycle );
         inOrder.verify( systemLifecycle ).shutdown();
-        inOrder.verify( systemLifecycle, times( numFailures + 1 ) ).createClusterActorSystem( any() );
+        inOrder.verify( systemLifecycle, times( maxAkkaSystemRestartAttempts ) ).createClusterActorSystem( any() );
+    }
+
+    @Test
+    void shouldRetryUntilFailuresExceeded() throws Throwable
+    {
+        service.init();
+        service.start();
+        clearInvocations( systemLifecycle );
+
+        int numFailures = maxAkkaSystemRestartAttempts;
+        Exception exception = new RuntimeException();
+        final Exception[] exceptions = Stream.generate( () -> exception ).limit( numFailures ).toArray( Exception[]::new );
+        Mockito.doThrow( exceptions ).doNothing().when( systemLifecycle ).createClusterActorSystem( any() );
+
+        assertThatThrownBy( service::restartSameThread ).hasCauseInstanceOf( ActorSystemRestarter.RestartFailedException.class );
+
+        InOrder inOrder = inOrder( systemLifecycle );
+        inOrder.verify( systemLifecycle ).shutdown();
+        inOrder.verify( systemLifecycle, times( maxAkkaSystemRestartAttempts ) ).createClusterActorSystem( any() );
     }
 
     private void testEmptyTopologiesAreReportedAfter( ThrowingConsumer<AkkaCoreTopologyService,Exception> testAction ) throws Exception

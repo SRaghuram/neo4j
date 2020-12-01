@@ -16,7 +16,8 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.tx.PullRequestMonitor;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
-import com.neo4j.causalclustering.error_handling.DatabasePanicker;
+import com.neo4j.causalclustering.error_handling.DatabasePanicEvent;
+import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.dbms.ClusterInternalDbmsOperator.StoreCopyHandle;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 
@@ -33,6 +34,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.util.VisibleForTesting;
 
+import static com.neo4j.causalclustering.error_handling.DatabasePanicReason.CatchupFailed;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.CANCELLED;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.PANIC;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.STORE_COPYING;
@@ -58,7 +60,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
     private final Log log;
     private final StoreCopyProcess storeCopyProcess;
     private final CatchupClientFactory catchUpClient;
-    private final DatabasePanicker panicker;
+    private final Panicker panicker;
     private final BatchingTxApplier applier;
     private final ReplicatedDatabaseEventDispatch databaseEventDispatch;
     private final PullRequestMonitor pullRequestMonitor;
@@ -69,7 +71,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
     private StoreCopyHandle storeCopyHandle;
 
     CatchupPollingProcess( Executor executor, ReadReplicaDatabaseContext databaseContext, CatchupClientFactory catchUpClient, BatchingTxApplier applier,
-            ReplicatedDatabaseEventDispatch databaseEventDispatch, StoreCopyProcess storeCopyProcess, LogProvider logProvider, DatabasePanicker panicker,
+            ReplicatedDatabaseEventDispatch databaseEventDispatch, StoreCopyProcess storeCopyProcess, LogProvider logProvider, Panicker panicker,
             CatchupAddressProvider upstreamProvider )
     {
         this.databaseContext = databaseContext;
@@ -158,7 +160,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
     {
         upToDateFuture.completeExceptionally( e );
         state = PANIC;
-        panicker.panic( e );
+        panicker.panic( new DatabasePanicEvent( databaseContext.databaseId(), CatchupFailed, e ) );
     }
 
     private void pullTransactions()

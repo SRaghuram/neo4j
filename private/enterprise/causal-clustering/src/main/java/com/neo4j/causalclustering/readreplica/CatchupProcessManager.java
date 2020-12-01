@@ -13,7 +13,9 @@ import com.neo4j.causalclustering.core.consensus.schedule.Timer;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.error_handling.DatabasePanicker;
+import com.neo4j.causalclustering.error_handling.DatabasePanicEvent;
+import com.neo4j.causalclustering.error_handling.DatabasePanicReason;
+import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
@@ -41,11 +43,10 @@ import static com.neo4j.causalclustering.core.consensus.schedule.TimeoutFactory.
 import static com.neo4j.causalclustering.readreplica.CatchupProcessManager.Timers.TX_PULLER_TIMER;
 
 /**
- * This class is responsible for aggregating a number of {@link CatchupPollingProcess} instances and pulling transactions for
- * each database present on this machine. These pull operations are issued on a fixed interval and take place in parallel.
- *
- * If the necessary transactions are not remotely available then a fresh copy of the
- * entire store will be pulled down.
+ * This class is responsible for aggregating a number of {@link CatchupPollingProcess} instances and pulling transactions for each database present on this
+ * machine. These pull operations are issued on a fixed interval and take place in parallel.
+ * <p>
+ * If the necessary transactions are not remotely available then a fresh copy of the entire store will be pulled down.
  */
 // TODO: Get rid of this aggregation, since we no longer have any need to aggregate.
 public class CatchupProcessManager extends SafeLifecycle
@@ -67,7 +68,7 @@ public class CatchupProcessManager extends SafeLifecycle
     private final Log log;
     private final Config config;
     private final CatchupComponentsRepository catchupComponents;
-    private final DatabasePanicker panicker;
+    private final Panicker panicker;
     private final ReplicatedDatabaseEventDispatch databaseEventDispatch;
     private final PageCacheTracer pageCacheTracer;
 
@@ -78,9 +79,9 @@ public class CatchupProcessManager extends SafeLifecycle
     private Timer timer;
 
     CatchupProcessManager( Executor executor, CatchupComponentsRepository catchupComponents, ReadReplicaDatabaseContext databaseContext,
-            DatabasePanicker panicker, TopologyService topologyService, CatchupClientFactory catchUpClient,
-            UpstreamDatabaseStrategySelector selectionStrategyPipeline, TimerService timerService, CommandIndexTracker commandIndexTracker,
-            LogProvider logProvider, Config config, ReplicatedDatabaseEventDispatch databaseEventDispatch, PageCacheTracer pageCacheTracer )
+                           Panicker panicker, TopologyService topologyService, CatchupClientFactory catchUpClient,
+                           UpstreamDatabaseStrategySelector selectionStrategyPipeline, TimerService timerService, CommandIndexTracker commandIndexTracker,
+                           LogProvider logProvider, Config config, ReplicatedDatabaseEventDispatch databaseEventDispatch, PageCacheTracer pageCacheTracer )
     {
         this.logProvider = logProvider;
         this.log = logProvider.getLog( this.getClass() );
@@ -146,10 +147,11 @@ public class CatchupProcessManager extends SafeLifecycle
         return true;
     }
 
-    public synchronized void panic( Throwable e )
+    @VisibleForTesting
+    synchronized void panicDatabase( DatabasePanicReason reason, Throwable e )
     {
         log.error( "Unexpected issue in catchup process. No more catchup requests will be scheduled.", e );
-        panicker.panic( e );
+        panicker.panic( new DatabasePanicEvent( databaseContext.databaseId(), reason, e ) );
         isPanicked = true;
     }
 
@@ -170,7 +172,7 @@ public class CatchupProcessManager extends SafeLifecycle
                 logProvider, databaseEventDispatch, pageCacheTracer );
 
         CatchupPollingProcess catchupProcess = new CatchupPollingProcess( executor, databaseContext, catchupClient,
-                batchingTxApplier, databaseEventDispatch, dbCatchupComponents.storeCopyProcess(), logProvider, this::panic,
+                batchingTxApplier, databaseEventDispatch, dbCatchupComponents.storeCopyProcess(), logProvider, this.panicker,
                 new UpstreamStrategyBasedAddressProvider( topologyService, selectionStrategyPipeline ) );
 
         txPulling.add( batchingTxApplier );

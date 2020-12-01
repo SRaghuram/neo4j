@@ -8,7 +8,8 @@ package com.neo4j.causalclustering.core.state.snapshot;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
-import com.neo4j.causalclustering.error_handling.DatabasePanicker;
+import com.neo4j.causalclustering.error_handling.DatabasePanicEvent;
+import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 
 import org.neo4j.internal.helpers.TimeoutStrategy;
@@ -16,6 +17,8 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.TransactionIdStore;
+
+import static com.neo4j.causalclustering.error_handling.DatabasePanicReason.SnapshotFailed;
 
 class PersistentSnapshotDownloader implements Runnable
 {
@@ -31,14 +34,14 @@ class PersistentSnapshotDownloader implements Runnable
     private final ReplicatedDatabaseEventService databaseEventService;
     private final Log log;
     private final TimeoutStrategy strategy;
-    private final DatabasePanicker panicker;
+    private final Panicker panicker;
     private final CoreSnapshotMonitor coreSnapshotMonitor;
     private volatile State state;
     private volatile boolean stopped;
 
     PersistentSnapshotDownloader( CatchupAddressProvider addressProvider, CommandApplicationProcess applicationProcess, CoreDownloader downloader,
                                   CoreSnapshotService snapshotService, ReplicatedDatabaseEventService databaseEventService, StoreDownloadContext context,
-                                  Log log, TimeoutStrategy strategy, DatabasePanicker panicker, Monitors monitors )
+                                  Log log, TimeoutStrategy strategy, Panicker panicker, Monitors monitors )
     {
         this.applicationProcess = applicationProcess;
         this.addressProvider = addressProvider;
@@ -119,7 +122,7 @@ class PersistentSnapshotDownloader implements Runnable
             if ( e.status() == SnapshotFailedException.Status.UNRECOVERABLE )
             {
                 log.error( "Unrecoverable error when downloading core snapshot and store.", e );
-                panicker.panic( e );
+                panicker.panic( new DatabasePanicEvent( context.databaseId(), SnapshotFailed, e ) );
             }
             else
             {
@@ -129,7 +132,7 @@ class PersistentSnapshotDownloader implements Runnable
         catch ( Throwable e )
         {
             log.error( "Unrecoverable error when downloading core snapshot and store.", e );
-            panicker.panic( e );
+            panicker.panic( new DatabasePanicEvent( context.databaseId(), SnapshotFailed, e ) );
         }
         finally
         {

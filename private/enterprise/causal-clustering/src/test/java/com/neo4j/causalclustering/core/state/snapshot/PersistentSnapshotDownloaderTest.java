@@ -8,7 +8,8 @@ package com.neo4j.causalclustering.core.state.snapshot;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
-import com.neo4j.causalclustering.error_handling.DatabasePanicker;
+import com.neo4j.causalclustering.error_handling.DatabasePanicEvent;
+import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.dbms.ClusterInternalDbmsOperator.StoreCopyHandle;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
@@ -31,6 +32,7 @@ import org.neo4j.monitoring.Monitors;
 
 import static com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader.DOWNLOAD_SNAPSHOT;
 import static com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader.SHUTDOWN;
+import static com.neo4j.causalclustering.error_handling.DatabasePanicReason.SnapshotFailed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -47,7 +49,7 @@ class PersistentSnapshotDownloaderTest
             new SnapshotFailedException( "Failed to download snapshot", SnapshotFailedException.Status.RETRYABLE );
     private final SocketAddress fromAddress = new SocketAddress( "localhost", 1234 );
     private final CatchupAddressProvider catchupAddressProvider = new CatchupAddressProvider.SingleAddressProvider( fromAddress );
-    private final DatabasePanicker panicker = mock( DatabasePanicker.class );
+    private final Panicker panicker = mock( Panicker.class );
     private final CommandApplicationProcess applicationProcess = mock( CommandApplicationProcess.class );
     private final NoPauseTimeoutStrategy backoffStrategy = new NoPauseTimeoutStrategy();
     private final CoreSnapshot snapshot = mock( CoreSnapshot.class );
@@ -277,7 +279,7 @@ class PersistentSnapshotDownloaderTest
         persistentSnapshotDownloader.run();
 
         // then
-        verify( panicker ).panic( runtimeException );
+        verify( panicker ).panic( new DatabasePanicEvent( namedDatabaseId, SnapshotFailed, runtimeException ) );
     }
 
     @Test
@@ -293,7 +295,7 @@ class PersistentSnapshotDownloaderTest
         persistentSnapshotDownloader.run();
 
         // then
-        verify( panicker ).panic( snapshotFailedException );
+        verify( panicker ).panic( new DatabasePanicEvent( namedDatabaseId, SnapshotFailed, snapshotFailedException ) );
     }
 
     @Test

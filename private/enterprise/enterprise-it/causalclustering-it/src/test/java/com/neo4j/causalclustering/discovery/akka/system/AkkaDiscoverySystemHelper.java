@@ -10,8 +10,9 @@ import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
 import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
-import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember;
 import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
+import com.neo4j.causalclustering.discovery.akka.DummyPanicService;
+import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember;
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.dbms.EnterpriseDatabaseState;
 
@@ -79,8 +80,10 @@ public class AkkaDiscoverySystemHelper
         Function<NamedDatabaseId,DatabaseState> asStarted = id -> new EnterpriseDatabaseState( id, STARTED );
         var databaseStates = startedDatabases.stream().collect( Collectors.toMap( identity(), asStarted ) );
         var databaseStateService = new StubDatabaseStateService( databaseStates, EnterpriseDatabaseState::unknown );
+        var panicker = DummyPanicService.PANICKER;
+
         return discoveryServiceFactory.coreTopologyService( config, identityModule, createInitialisedScheduler(), logProvider,
                                                             logProvider, membersResolver, retryStrategy, sslPolicyLoader, TestCoreDiscoveryMember::factory,
-                                                            firstStartupDetector, monitors, Clocks.systemClock(), databaseStateService );
+                                                            firstStartupDetector, monitors, Clocks.systemClock(), databaseStateService, panicker );
     }
 }

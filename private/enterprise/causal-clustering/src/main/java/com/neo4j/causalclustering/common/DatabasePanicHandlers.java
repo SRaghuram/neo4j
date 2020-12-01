@@ -29,12 +29,12 @@ public abstract class DatabasePanicHandlers extends LifecycleAdapter
     @Override
     public void init()
     {
-        panicService.addPanicEventHandlers( namedDatabaseId, panicHandlerList );
+        panicService.addDatabasePanicEventHandlers( namedDatabaseId, panicHandlerList );
     }
 
     @Override
     public void shutdown()
     {
-        panicService.removePanicEventHandlers( namedDatabaseId );
+        panicService.removeDatabasePanicEventHandlers( namedDatabaseId );
     }
 }

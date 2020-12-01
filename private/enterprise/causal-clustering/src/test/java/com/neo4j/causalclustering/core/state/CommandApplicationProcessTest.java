@@ -22,6 +22,7 @@ import com.neo4j.causalclustering.core.replication.session.LocalOperationId;
 import com.neo4j.causalclustering.core.state.machines.tx.CoreReplicatedContent;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
+import com.neo4j.causalclustering.error_handling.DatabasePanicReason;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.identity.IdFactory;
 import org.junit.jupiter.api.AfterEach;
@@ -244,7 +245,7 @@ class CommandApplicationProcessTest
     {
         // given
         doThrow( RuntimeException.class ).when( commandDispatcher )
-                .dispatch( any( ReplicatedTransaction.class ), anyLong(), any() );
+                                         .dispatch( any( ReplicatedTransaction.class ), anyLong(), any() );
         applicationProcess.start();
 
         // when
@@ -348,8 +349,8 @@ class CommandApplicationProcessTest
             var notifyFuture = runAsync( () -> applicationProcess.notifyCommitted( current + 1 ) );
 
             // then
-            assertThat(pauseFuture).succeedsWithin( 30, SECONDS );
-            assertThat(notifyFuture).succeedsWithin( 30, SECONDS );
+            assertThat( pauseFuture ).succeedsWithin( 30, SECONDS );
+            assertThat( notifyFuture ).succeedsWithin( 30, SECONDS );
 
             // reset state
             applicationProcess.resumeApplier( "Testing" );
@@ -373,7 +374,7 @@ class CommandApplicationProcessTest
         volatile boolean hasPanicked;
 
         @Override
-        public void panic( Throwable e )
+        public void panic( DatabasePanicReason reason, Throwable e )
         {
             hasPanicked = true;
         }

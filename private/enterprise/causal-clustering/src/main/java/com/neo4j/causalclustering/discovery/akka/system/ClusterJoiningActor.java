@@ -11,7 +11,6 @@ import akka.actor.Props;
 import akka.cluster.Cluster;
 import akka.cluster.ClusterEvent;
 import akka.cluster.Member;
-import akka.event.EventStream;
 import akka.japi.pf.ReceiveBuilder;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.akka.AbstractActorWithTimersAndLogging;

@@ -5,54 +5,43 @@
  */
 package com.neo4j.causalclustering.error_handling;
 
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.SimpleLogService;
-import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
-import org.neo4j.util.concurrent.BinaryLatch;
+import org.neo4j.test.OnDemandJobScheduler;
 
 import static java.lang.String.format;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
 import static org.neo4j.logging.LogAssertions.assertThat;
-import static org.neo4j.test.conditions.Conditions.TRUE;
-import static org.neo4j.test.assertion.Assert.assertEventually;
 
-class PanicServiceTest
+class DefaultPanicServiceTest
 {
     private final AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
     private final LogService logService = new SimpleLogService( assertableLogProvider );
-
-    private final SingleThreadExecutor panicExecutor = new SingleThreadExecutor();
-    private final JobScheduler jobScheduler = new ThreadPoolJobScheduler( panicExecutor );
-
-    private final PanicService panicService = new PanicService( jobScheduler, logService );
-
+    private final OnDemandJobScheduler jobScheduler = new OnDemandJobScheduler( true );
+    private final DefaultPanicService panicService = new DefaultPanicService( jobScheduler, logService, new TestDbmsPanicker() );
     private final NamedDatabaseId namedDatabaseId1 = randomNamedDatabaseId();
     private final NamedDatabaseId namedDatabaseId2 = randomNamedDatabaseId();
 
     @AfterEach
-    void afterEach() throws Exception
+    void cleanup()
     {
-        panicExecutor.shutdownNow();
-        assertTrue( panicExecutor.awaitTermination( 30, SECONDS ) );
+        Assertions.assertThat( jobScheduler.getJob() ).as( "There are no remaining queued tasks on the scheduler" ).isNull();
+        jobScheduler.close();
     }
 
     @Test
@@ -61,21 +50,21 @@ class PanicServiceTest
         var lockedEventHandler1 = new LockedEventHandler();
         var lockedEventHandler2 = new LockedEventHandler();
 
-        panicService.addPanicEventHandlers( namedDatabaseId1, List.of( lockedEventHandler1 ) );
-        panicService.addPanicEventHandlers( namedDatabaseId2, List.of( lockedEventHandler2 ) );
+        panicService.addDatabasePanicEventHandlers( namedDatabaseId1, List.of( lockedEventHandler1 ) );
+        panicService.addDatabasePanicEventHandlers( namedDatabaseId2, List.of( lockedEventHandler2 ) );
 
         var panicker1 = panicService.panickerFor( namedDatabaseId1 );
 
-        panicker1.panic( new Exception() );
-        panicker1.panic( new IOException() );
-        panicker1.panic( new RuntimeException() );
+        panicker1.panic( DatabasePanicReason.Test, new Exception() );
+        panicker1.panic( DatabasePanicReason.Test, new IOException() );
+        panicker1.panic( DatabasePanicReason.Test, new RuntimeException() );
 
         assertFalse( lockedEventHandler1.isComplete );
-        lockedEventHandler1.unlock();
 
-        assertEventually( "Should have completed handling the panic event", () -> lockedEventHandler1.isComplete, TRUE, 30, SECONDS );
+        runBackgroundTasks();
+
+        assertThat( lockedEventHandler1.isComplete ).as( "Should have completed handling the panic event" ).isTrue();
         assertEquals( 1, lockedEventHandler1.numberOfPanicEvents.get() );
-
         assertEquals( 0, lockedEventHandler2.numberOfPanicEvents.get() );
     }
 
@@ -85,14 +74,14 @@ class PanicServiceTest
         var error = new Exception();
         var panicker = panicService.panickerFor( namedDatabaseId2 );
 
-        panicker.panic( error );
+        panicker.panic( DatabasePanicReason.Test, error );
 
-        panicExecutor.awaitBackgroundTaskCompletion();
+        runBackgroundTasks();
         assertThat( assertableLogProvider )
                 .forClass( panicService.getClass() )
                 .forLevel( ERROR )
-                .containsMessageWithException( format( "Clustering components for '%s' have encountered a critical error", namedDatabaseId2 ),
-                        error );
+                .containsMessageWithException( format( "Components for '%s' have encountered a critical error", namedDatabaseId2 ),
+                                               error );
     }
 
     @Test
@@ -108,12 +97,13 @@ class PanicServiceTest
                 new FailingReportingEventHandler( numberOfInvokedHandlers ),
                 new ReportingEventHandler( numberOfInvokedHandlers ) );
 
-        panicService.addPanicEventHandlers( namedDatabaseId1, handlers );
+        panicService.addDatabasePanicEventHandlers( namedDatabaseId1, handlers );
 
         var panicker = panicService.panickerFor( namedDatabaseId1 );
-        panicker.panic( new Exception() );
+        panicker.panic( DatabasePanicReason.Test, new Exception() );
 
-        assertEventually( numberOfInvokedHandlers::get, value -> value == handlers.size(), 30, SECONDS );
+        runBackgroundTasks();
+        assertThat( numberOfInvokedHandlers.get() ).isEqualTo( handlers.size() );
     }
 
     @Test
@@ -121,19 +111,41 @@ class PanicServiceTest
     {
         var handlerIds = new LinkedBlockingQueue<Integer>();
 
-        var handlers = List.<DatabasePanicEventHandler>of( cause -> handlerIds.add( 1 ), cause -> handlerIds.add( 2 ), cause -> handlerIds.add( 3 ) );
+        var handlers = List.<DatabasePanicEventHandler>of(
+                info -> handlerIds.add( 1 ), info -> handlerIds.add( 2 ), info -> handlerIds.add( 3 )
+        );
 
-        panicService.addPanicEventHandlers( namedDatabaseId2, handlers );
+        panicService.addDatabasePanicEventHandlers( namedDatabaseId2, handlers );
 
         var panicker = panicService.panickerFor( namedDatabaseId2 );
-        panicker.panic( new Exception() );
+        panicker.panic( DatabasePanicReason.Test, new Exception() );
 
-        panicExecutor.awaitBackgroundTaskCompletion();
+        runBackgroundTasks();
 
         assertEquals( 1, handlerIds.poll() );
         assertEquals( 2, handlerIds.poll() );
         assertEquals( 3, handlerIds.poll() );
         assertNull( handlerIds.poll() );
+    }
+
+    @Test
+    void shouldPanicDbms()
+    {
+        var testException = new Exception( "something went wrong" );
+        panicService.panicker().panic( new DbmsPanicEvent( DbmsPanicReason.Test, testException ) );
+
+        runBackgroundTasks();
+        assertThat( panicCounter.get() ).isEqualTo( 1 );
+        assertThat( lastPanicReason ).isEqualTo( DbmsPanicReason.Test );
+        assertThat( lastPanicException ).isEqualTo( testException );
+    }
+
+    private void runBackgroundTasks()
+    {
+        while ( jobScheduler.getJob() != null )
+        {
+            jobScheduler.runJob();
+        }
     }
 
     private static class FailingReportingEventHandler extends ReportingEventHandler
@@ -144,9 +156,9 @@ class PanicServiceTest
         }
 
         @Override
-        public void onPanic( Throwable cause )
+        public void onPanic( DatabasePanicEvent event )
         {
-            super.onPanic( cause );
+            super.onPanic( event );
             throw new RuntimeException();
         }
     }
@@ -161,7 +173,7 @@ class PanicServiceTest
         }
 
         @Override
-        public void onPanic( Throwable cause )
+        public void onPanic( DatabasePanicEvent event )
         {
             invocationCounter.getAndIncrement();
         }
@@ -169,34 +181,29 @@ class PanicServiceTest
 
     private static class LockedEventHandler implements DatabasePanicEventHandler
     {
-        BinaryLatch latch = new BinaryLatch();
         AtomicInteger numberOfPanicEvents = new AtomicInteger();
         volatile boolean isComplete;
 
         @Override
-        public void onPanic( Throwable cause )
+        public void onPanic( DatabasePanicEvent event )
         {
             numberOfPanicEvents.getAndIncrement();
-            latch.await();
             isComplete = true;
-        }
-
-        void unlock()
-        {
-            latch.release();
         }
     }
 
-    private static class SingleThreadExecutor extends ThreadPoolExecutor
-    {
-        SingleThreadExecutor()
-        {
-            super( 1, 1, 0L, SECONDS, new LinkedBlockingQueue<>(), daemon( PanicServiceTest.class.getSimpleName() ) );
-        }
+    private final AtomicInteger panicCounter = new AtomicInteger();
+    private volatile Throwable lastPanicException;
+    private volatile Panicker.Reason lastPanicReason;
 
-        void awaitBackgroundTaskCompletion()
+    private class TestDbmsPanicker implements DbmsPanicker
+    {
+        @Override
+        public void panic( DbmsPanicEvent event )
         {
-            assertEventually( this::getCompletedTaskCount, value -> value == 1L, 30, SECONDS );
+            panicCounter.incrementAndGet();
+            lastPanicException = event.getCause();
+            lastPanicReason = event.getReason();
         }
     }
 }

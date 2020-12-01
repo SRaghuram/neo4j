@@ -18,12 +18,12 @@ class MarkUnhealthyHandler implements DatabasePanicEventHandler
     }
 
     @Override
-    public void onPanic( Throwable cause )
+    public void onPanic( DatabasePanicEvent panic )
     {
         var dbHealth = db.getDatabaseHealth();
         if ( dbHealth != null )
         {
-            dbHealth.panic( cause );
+            dbHealth.panic( panic.getCause() );
         }
     }
 }

@@ -10,13 +10,14 @@ import com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
 import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
-import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember;
 import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
+import com.neo4j.causalclustering.discovery.akka.ActorSystemRestarter;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
-import com.neo4j.causalclustering.discovery.akka.Restarter;
+import com.neo4j.causalclustering.discovery.akka.DummyPanicService;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.akka.system.JoinMessageFactory;
+import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember;
 import com.neo4j.causalclustering.helper.ErrorHandler;
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.configuration.CausalClusteringSettings;
@@ -55,9 +56,7 @@ import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static org.neo4j.internal.helpers.DefaultTimeoutStrategy.constant;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -261,12 +260,13 @@ class AkkaCoreTopologyDowningIT
                 logProvider,
                 logProvider,
                 new NoRetriesStrategy(),
-                new Restarter( constant( 1, MILLISECONDS ), 2 ),
+                ActorSystemRestarter.forTest( 1 ),
                 TestCoreDiscoveryMember::factory,
                 createInitialisedScheduler(),
                 Clocks.systemClock(),
                 new Monitors(),
-                databaseStateService
+                databaseStateService,
+                DummyPanicService.PANICKER
         );
 
         service.init();

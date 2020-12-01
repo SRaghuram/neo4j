@@ -42,6 +42,8 @@ import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonito
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.member.CoreDiscoveryMemberFactory;
+import com.neo4j.causalclustering.error_handling.DbmsPanicEvent;
+import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
@@ -53,7 +55,7 @@ import java.util.Objects;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -69,22 +71,24 @@ import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.scheduler.CallableExecutor;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.util.VisibleForTesting;
 
 import static akka.actor.ActorRef.noSender;
+import static com.neo4j.causalclustering.error_handling.DbmsPanicReason.IrrecoverableDiscoveryFailure;
 import static java.lang.String.format;
 
-public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopologyService
+public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopologyService, Restartable
 {
     private final ActorSystemLifecycle actorSystemLifecycle;
     private final LogProvider logProvider;
     private final RetryStrategy catchupAddressRetryStrategy;
-    private final Restarter restarter;
+    private final ActorSystemRestarter actorSystemRestarter;
     private final CoreDiscoveryMemberFactory memberSnapshotFactory;
     private final JobScheduler jobScheduler;
-    private final Executor executor;
+    private final CallableExecutor executor;
     private final Clock clock;
     private final ReplicatedDataMonitor replicatedDataMonitor;
     private final ClusterSizeMonitor clusterSizeMonitor;
@@ -96,6 +100,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
 
     private final CoreTopologyListenerService listenerService = new CoreTopologyListenerService();
     private final Map<NamedDatabaseId,LeaderInfo> localLeadersByDatabaseId = new ConcurrentHashMap<>();
+    private final Panicker panicker;
 
     private volatile boolean isRestarting;
     private volatile ActorRef coreTopologyActorRef;
@@ -104,14 +109,14 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     private volatile GlobalTopologyState globalTopologyState;
 
     public AkkaCoreTopologyService( Config config, CoreServerIdentity myIdentity, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
-            LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, Restarter restarter,
-            CoreDiscoveryMemberFactory memberSnapshotFactory, JobScheduler jobScheduler, Clock clock, Monitors monitors,
-            DatabaseStateService databaseStateService )
+                                    LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, ActorSystemRestarter actorSystemRestarter,
+                                    CoreDiscoveryMemberFactory memberSnapshotFactory, JobScheduler jobScheduler, Clock clock, Monitors monitors,
+                                    DatabaseStateService databaseStateService, Panicker panicker )
     {
         this.actorSystemLifecycle = actorSystemLifecycle;
         this.logProvider = logProvider;
         this.catchupAddressRetryStrategy = catchupAddressRetryStrategy;
-        this.restarter = restarter;
+        this.actorSystemRestarter = actorSystemRestarter;
         this.memberSnapshotFactory = memberSnapshotFactory;
         this.jobScheduler = jobScheduler;
         this.executor = jobScheduler.executor( Group.AKKA_HELPER );
@@ -124,12 +129,13 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         this.globalTopologyState = newGlobalTopologyState( logProvider, listenerService );
         this.clusterSizeMonitor = monitors.newMonitor( ClusterSizeMonitor.class );
         this.databaseStateService = databaseStateService;
+        this.panicker = panicker;
     }
 
     @Override
     public void start0()
     {
-        actorSystemLifecycle.createClusterActorSystem(() -> executor.execute(this::restart));
+        actorSystemLifecycle.createClusterActorSystem(this);
         var coreTopologySink = actorSystemLifecycle.queueMostRecent( this::onCoreTopologyMessage );
         var directorySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbLeaderUpdate );
         var bootstrapStateSink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onBootstrapStateUpdate );
@@ -308,6 +314,16 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
+    public Future<?> scheduleRestart()
+    {
+        if ( isRestarting )
+        {
+            log.warn( "Core topology service restart requested when restart already in progress." );
+        }
+        return executor.submit( this::restartSameThread );
+    }
+
+    @Override
     public boolean didBootstrapDatabase( NamedDatabaseId namedDatabaseId )
     {
         var thisRaftMember = resolveRaftMemberForServer( namedDatabaseId, myIdentity.serverId() );
@@ -315,17 +331,27 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @VisibleForTesting
-    public synchronized void restart()
+    public synchronized boolean restartSameThread()
     {
         if ( !SafeLifecycle.State.RUN.equals( state() ) )
         {
             log.info( "Not restarting because not running. State is %s", state() );
-            return;
+            return false;
         }
 
         userLog.info( "Restarting discovery system after probable network partition" );
 
-        restarter.restart( this::doRestart );
+        try
+        {
+            actorSystemRestarter.restart( "Discovery system", this::doRestart );
+            return true;
+        }
+        catch ( Throwable e )
+        {
+            log.error( "Unable to restart discovery system. Triggering Dbms panic." );
+            panicker.panic( new DbmsPanicEvent( IrrecoverableDiscoveryFailure, e ) );
+            return false;
+        }
     }
 
     private boolean doRestart()
@@ -536,7 +562,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     @Override
     public boolean isHealthy()
     {
-        return restarter.isHealthy();
+        return actorSystemRestarter.isHealthy();
     }
 
     @VisibleForTesting

@@ -39,7 +39,6 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.bolt.txtracking.TransactionIdTracker;
 import org.neo4j.bolt.txtracking.TransactionIdTrackerException;
 import org.neo4j.configuration.GraphDatabaseSettings;

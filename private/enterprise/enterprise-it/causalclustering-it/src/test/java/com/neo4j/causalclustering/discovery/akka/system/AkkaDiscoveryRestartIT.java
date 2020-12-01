@@ -13,11 +13,12 @@ import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
+import com.neo4j.causalclustering.discovery.akka.ActorSystemRestarter;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.AkkaTopologyClient;
-import com.neo4j.causalclustering.discovery.akka.Restarter;
 import com.neo4j.causalclustering.discovery.member.CoreDiscoveryMemberFactory;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
+import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -33,8 +34,6 @@ import java.util.Random;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.identity.ServerIdentity;
-import org.neo4j.internal.helpers.DefaultTimeoutStrategy;
-import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
@@ -43,10 +42,8 @@ import org.neo4j.test.ports.PortAuthority;
 
 import static com.neo4j.causalclustering.discovery.akka.system.AkkaDiscoverySystemHelper.NAMED_DATABASE_ID;
 import static com.neo4j.causalclustering.discovery.akka.system.AkkaDiscoverySystemHelper.coreTopologyService;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.neo4j.internal.helpers.DefaultTimeoutStrategy.exponential;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
@@ -132,21 +129,16 @@ public class AkkaDiscoveryRestartIT
 
     private static class TestAkkaCoreTopologyServiceFactory implements DiscoveryServiceFactory
     {
-        private static final long RESTART_RETRY_DELAY_MS = 1000L;
-        private static final long RESTART_RETRY_DELAY_MAX_MS = 60 * 1000L;
-        private static final int RESTART_FAILURES_BEFORE_UNHEALTHY = 8;
         private Boolean firstStartup = true;
 
         @Override
-        public TestAkkaCoreTopologyService coreTopologyService( Config config, CoreServerIdentity myIdentity, JobScheduler jobScheduler,
-                LogProvider logProvider, LogProvider userLogProvider,
-                RemoteMembersResolver remoteMembersResolver, RetryStrategy catchupAddressRetryStrategy,
-                SslPolicyLoader sslPolicyLoader, CoreDiscoveryMemberFactory discoveryMemberFactory,
-                DiscoveryFirstStartupDetector firstStartupDetector,
-                Monitors monitors, Clock clock, DatabaseStateService databaseStateService )
+        public TestAkkaCoreTopologyService coreTopologyService(
+                Config config, CoreServerIdentity myIdentity, JobScheduler jobScheduler, LogProvider logProvider, LogProvider userLogProvider,
+                RemoteMembersResolver remoteMembersResolver, RetryStrategy catchupAddressRetryStrategy, SslPolicyLoader sslPolicyLoader,
+                CoreDiscoveryMemberFactory discoveryMemberFactory, DiscoveryFirstStartupDetector firstStartupDetector, Monitors monitors, Clock clock,
+                DatabaseStateService databaseStateService, Panicker panicker )
         {
-            TimeoutStrategy timeoutStrategy = exponential( RESTART_RETRY_DELAY_MS, RESTART_RETRY_DELAY_MAX_MS, MILLISECONDS );
-            Restarter restarter = new Restarter( timeoutStrategy, RESTART_FAILURES_BEFORE_UNHEALTHY );
+            ActorSystemRestarter actorSystemRestarter = ActorSystemRestarter.forConfig( config);
 
             return new TestAkkaCoreTopologyService(
                     config,
@@ -154,12 +146,14 @@ public class AkkaDiscoveryRestartIT
                     actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader ),
                     logProvider,
                     userLogProvider, catchupAddressRetryStrategy,
-                    restarter,
+                    actorSystemRestarter,
                     discoveryMemberFactory,
                     jobScheduler,
                     clock,
                     monitors,
-                    databaseStateService );
+                    databaseStateService,
+                    panicker
+            );
         }
 
         @Override
@@ -191,12 +185,14 @@ public class AkkaDiscoveryRestartIT
     {
         private final ActorSystemLifecycle actorSystemLifecycle;
 
-        TestAkkaCoreTopologyService( Config config, CoreServerIdentity identityModule, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
-                LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, Restarter restarter, CoreDiscoveryMemberFactory discoveryMemberFactory,
-                JobScheduler jobScheduler, Clock clock, Monitors monitors, DatabaseStateService databaseStateService )
+        TestAkkaCoreTopologyService(
+                Config config, CoreServerIdentity identityModule, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
+                LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, ActorSystemRestarter actorSystemRestarter,
+                CoreDiscoveryMemberFactory discoveryMemberFactory, JobScheduler jobScheduler, Clock clock, Monitors monitors,
+                DatabaseStateService databaseStateService, Panicker panicker )
         {
-            super( config, identityModule, actorSystemLifecycle, logProvider, userLogProvider, catchupAddressRetryStrategy, restarter, discoveryMemberFactory,
-                    jobScheduler, clock, monitors, databaseStateService );
+            super( config, identityModule, actorSystemLifecycle, logProvider, userLogProvider, catchupAddressRetryStrategy, actorSystemRestarter,
+                   discoveryMemberFactory, jobScheduler, clock, monitors, databaseStateService, panicker );
             this.actorSystemLifecycle = actorSystemLifecycle;
         }
 

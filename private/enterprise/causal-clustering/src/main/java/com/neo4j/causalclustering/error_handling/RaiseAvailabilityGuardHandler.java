@@ -9,7 +9,7 @@ import org.neo4j.kernel.database.Database;
 
 class RaiseAvailabilityGuardHandler implements DatabasePanicEventHandler
 {
-    private static final String PANIC_REQUIREMENT_MESSAGE = "Clustering components have encountered a critical error: " ;
+    private static final String PANIC_REQUIREMENT_MESSAGE = "Clustering components have encountered a critical error: ";
 
     private final Database db;
 
@@ -19,12 +19,12 @@ class RaiseAvailabilityGuardHandler implements DatabasePanicEventHandler
     }
 
     @Override
-    public void onPanic( Throwable cause )
+    public void onPanic( DatabasePanicEvent panic )
     {
         var dbAvailabilityGuard = db.getDatabaseAvailabilityGuard();
         if ( dbAvailabilityGuard != null )
         {
-            dbAvailabilityGuard.require( () -> PANIC_REQUIREMENT_MESSAGE + cause.getMessage() );
+            dbAvailabilityGuard.require( () -> PANIC_REQUIREMENT_MESSAGE + panic.getCause().getMessage() );
         }
     }
 }

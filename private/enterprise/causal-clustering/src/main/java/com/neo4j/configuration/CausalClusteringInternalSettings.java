@@ -234,4 +234,24 @@ public class CausalClusteringInternalSettings implements SettingsDeclaration
     @Description( "Maximum timeout for cluster status request execution" )
     public static final Setting<Duration> cluster_status_request_maximum_wait =
             newBuilder( "unsupported.causal_clustering.cluster_status_request_maximum_wait", DURATION, ofSeconds( 5 ) ).build();
+
+    @Internal
+    @Description( "Maximum timeout for akka shutdown" )
+    public static final Setting<Duration> akka_shutdown_timeout =
+            newBuilder( "causal_clustering.middleware.akka.shutdown_timeout", DURATION, ofMinutes( 2 ) ).build();
+
+    @Internal
+    @Description( "Initial retry interval for akka restarter (which uses exponential backoff if it fails)" )
+    public static Setting<Duration> akka_actor_system_restarter_initial_delay =
+            newBuilder( "causal_clustering.akka_actor_system_restarter.initial_delay", DURATION, ofSeconds( 1 ) ).build();
+
+    @Internal
+    @Description( "Maximum retry interval for akka restarter (which uses exponential backoff if it fails)" )
+    public static Setting<Duration> akka_actor_system_restarter_max_delay =
+            newBuilder( "causal_clustering.akka_actor_system_restarter.max_delay", DURATION, ofMinutes( 1 ) ).build();
+
+    @Internal
+    @Description( "Maximum number of akka restart attempts before we panic the DBMS. Set to -1 to retry forever" )
+    public static Setting<Integer> akka_actor_system_max_restart_attempts =
+            newBuilder( "causal_clustering.akka_actor_system_restarter.max_acceptable_failures", INT, 8 ).build();
 }

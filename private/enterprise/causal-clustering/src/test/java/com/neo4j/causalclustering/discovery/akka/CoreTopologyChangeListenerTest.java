@@ -9,8 +9,8 @@ import com.neo4j.causalclustering.discovery.CoreTopologyService.Listener;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
-import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
+import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
@@ -33,19 +33,17 @@ import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.neo4j.internal.helpers.DefaultTimeoutStrategy.constant;
 
 class CoreTopologyChangeListenerTest
 {
     private final NamedDatabaseId namedDatabaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
     private final CoreServerIdentity myIdentity = new InMemoryCoreServerIdentity();
     private final RetryStrategy catchupAddressRetryStrategy = new NoRetriesStrategy();
-    private final Restarter restarter = new Restarter( constant( 1, MILLISECONDS ), 0 );
+    private final ActorSystemRestarter actorSystemRestarter = ActorSystemRestarter.forTest( 0 );
     private final JobScheduler jobScheduler = new ThreadPoolJobScheduler( Executors.newSingleThreadExecutor() );
     private DatabaseStateService databaseStateService = new StubDatabaseStateService( dbId -> new EnterpriseDatabaseState( dbId, STARTED ) );
 
@@ -58,12 +56,13 @@ class CoreTopologyChangeListenerTest
             NullLogProvider.getInstance(),
             NullLogProvider.getInstance(),
             catchupAddressRetryStrategy,
-            restarter,
+            actorSystemRestarter,
             TestCoreDiscoveryMember::factory,
             jobScheduler,
             Clocks.systemClock(),
             new Monitors(),
-            databaseStateService
+            databaseStateService,
+            DummyPanicService.PANICKER
     );
 
     @Test

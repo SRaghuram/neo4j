@@ -13,31 +13,30 @@ import akka.japi.pf.ReceiveBuilder;
 import akka.remote.ThisActorSystemQuarantinedEvent;
 import com.neo4j.causalclustering.discovery.akka.AbstractActorWithTimersAndLogging;
 import com.neo4j.causalclustering.discovery.akka.AkkaActorSystemRestartStrategy;
-
-import java.time.Duration;
+import com.neo4j.causalclustering.discovery.akka.Restartable;
 
 public class RestartNeededListeningActor extends AbstractActorWithTimersAndLogging
 {
     public static final String NAME = "cc-core-restart-needed-listener";
     public static final String TIMER_KEY = "cc-core-restart-needed-listener-timer";
 
-    public static Props props( Runnable restart, EventStream eventStream, Cluster cluster,
+    public static Props props( Restartable akkaRestarter, EventStream eventStream, Cluster cluster,
                                AkkaActorSystemRestartStrategy actorSystemRestartStrategy )
     {
         return Props.create( RestartNeededListeningActor.class,
-                             () -> new RestartNeededListeningActor( restart, eventStream, cluster, actorSystemRestartStrategy ) );
+                             () -> new RestartNeededListeningActor( akkaRestarter, eventStream, cluster, actorSystemRestartStrategy ) );
     }
 
-    private RestartNeededListeningActor( Runnable restart, EventStream eventStream, Cluster cluster,
+    private RestartNeededListeningActor( Restartable akkaRestarter, EventStream eventStream, Cluster cluster,
                                          AkkaActorSystemRestartStrategy actorSystemRestartStrategy )
     {
-        this.restart = restart;
+        this.akkaRestarter = akkaRestarter;
         this.eventStream = eventStream;
         this.cluster = cluster;
         this.actorSystemRestartStrategy = actorSystemRestartStrategy;
     }
 
-    private final Runnable restart;
+    private final Restartable akkaRestarter;
     private final EventStream eventStream;
     private final Cluster cluster;
     private final AkkaActorSystemRestartStrategy actorSystemRestartStrategy;
@@ -91,7 +90,7 @@ public class RestartNeededListeningActor extends AbstractActorWithTimersAndLoggi
     {
         log().info( "Restart triggered by {}", event );
         unsubscribe();
-        restart.run();
+        akkaRestarter.scheduleRestart();
         getContext().become( createShuttingDownReceive() );
     }
 

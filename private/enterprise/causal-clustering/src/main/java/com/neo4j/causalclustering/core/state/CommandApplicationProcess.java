@@ -16,7 +16,9 @@ import com.neo4j.causalclustering.core.replication.DistributedOperation;
 import com.neo4j.causalclustering.core.replication.ProgressTracker;
 import com.neo4j.causalclustering.core.state.machines.tx.CoreReplicatedContent;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
+import com.neo4j.causalclustering.error_handling.DatabasePanicEvent;
 import com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler;
+import com.neo4j.causalclustering.error_handling.DatabasePanicReason;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.helper.StatUtil;
 import com.neo4j.causalclustering.helper.scheduling.LimitingScheduler;
@@ -95,7 +97,7 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
     }
 
     @Override
-    public void onPanic( Throwable cause )
+    public void onPanic( DatabasePanicEvent panic )
     {
         hasPanicked = true;
     }
@@ -142,7 +144,7 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
         }
         catch ( Throwable e )
         {
-            panicker.panic( e );
+            panicker.panic( DatabasePanicReason.CommandApplicationFailed, e );
             log.error( "Failed to apply", e );
         }
     }

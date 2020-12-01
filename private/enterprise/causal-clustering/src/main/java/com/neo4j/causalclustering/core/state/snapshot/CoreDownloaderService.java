@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core.state.snapshot;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
-import com.neo4j.causalclustering.error_handling.DatabasePanicker;
+import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 
@@ -34,7 +34,7 @@ public class CoreDownloaderService extends LifecycleAdapter
     private final CommandApplicationProcess applicationProcess;
     private final Log log;
     private final TimeoutStrategy strategy;
-    private final DatabasePanicker panicker;
+    private final Panicker panicker;
     private final Monitors monitors;
     private final DatabaseStartAborter databaseStartAborter;
     private final StoreDownloadContext context;
@@ -47,7 +47,7 @@ public class CoreDownloaderService extends LifecycleAdapter
 
     public CoreDownloaderService( JobScheduler jobScheduler, CoreDownloader downloader, StoreDownloadContext context, CoreSnapshotService snapshotService,
                                   ReplicatedDatabaseEventService databaseEventService, CommandApplicationProcess applicationProcess, LogProvider logProvider,
-                                  TimeoutStrategy strategy, DatabasePanicker panicker, Monitors monitors, DatabaseStartAborter databaseStartAborter )
+                                  TimeoutStrategy strategy, Panicker panicker, Monitors monitors, DatabaseStartAborter databaseStartAborter )
     {
         this.jobScheduler = jobScheduler;
         this.downloader = downloader;

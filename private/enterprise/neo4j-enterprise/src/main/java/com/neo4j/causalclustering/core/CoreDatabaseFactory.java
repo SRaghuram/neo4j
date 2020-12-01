@@ -58,6 +58,7 @@ import com.neo4j.causalclustering.discovery.RaftCoreTopologyConnector;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.error_handling.PanicService;
+import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
 import com.neo4j.causalclustering.identity.CoreIdentityModule;
 import com.neo4j.causalclustering.identity.RaftBinder;
@@ -99,7 +100,6 @@ import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
 import org.neo4j.graphdb.factory.module.id.IdContextFactory;
 import org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder;
-import org.neo4j.internal.helpers.DefaultTimeoutStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -337,7 +337,8 @@ class CoreDatabaseFactory
                                  CoreRaftContext raftContext, ClusterInternalDbmsOperator internalOperator )
     {
         var myIdentity = this.identityModule.serverId();
-        var panicker = panicService.panickerFor( namedDatabaseId );
+        var panicker = panicService.panicker();
+        var databasePanicker = panicService.panickerFor( namedDatabaseId );
         var raftGroup = raftContext.raftGroup();
         var debugLog = kernelDatabase.getInternalLogProvider();
 
@@ -346,7 +347,7 @@ class CoreDatabaseFactory
         var lastFlushedStateStorage = storageFactory.createLastFlushedStorage( namedDatabaseId.name(), raftComponents, debugLog );
         var coreState = new CoreState( sessionTracker, lastFlushedStateStorage, kernelComponents.stateMachines() );
 
-        var applicationProcess = createCommandApplicationProcess( raftGroup, panicker, config, raftComponents, jobScheduler,
+        var applicationProcess = createCommandApplicationProcess( raftGroup, databasePanicker, config, raftComponents, jobScheduler,
                                                                   dependencies, monitors, raftContext.progressTracker(), sessionTracker,
                                                                   coreState, debugLog );
 
@@ -372,7 +373,7 @@ class CoreDatabaseFactory
         raftGroup.raftMembershipManager().setRecoverFromIndexSupplier( lastFlushedStateStorage::getInitialState );
 
         var raftMessageHandlerChainFactory = new RaftMessageHandlerChainFactory( jobScheduler, clock, debugLog, monitors, config,
-                                                                                 raftMessageDispatcher, catchupAddressProvider, panicker );
+                                                                                 raftMessageDispatcher, catchupAddressProvider, databasePanicker );
 
         var messageHandler = raftMessageHandlerChainFactory.createMessageHandlerChain( raftGroup, downloadService, applicationProcess );
 
@@ -429,6 +430,7 @@ class CoreDatabaseFactory
                                                                        ProgressTracker progressTracker, SessionTracker sessionTracker,
                                                                        CoreState coreState, DatabaseLogProvider debugLog )
     {
+
         CommandApplicationProcess commandApplicationProcess = new CommandApplicationProcess( raftGroup.raftLog(),
                                                                                              config.get( state_machine_apply_max_batch_size ),
                                                                                              config.get( state_machine_flush_window_size ), debugLog,
@@ -468,7 +470,7 @@ class CoreDatabaseFactory
                                    availabilityTimeoutMillis, debugLog, databaseManager, monitors, leaderAwaitDuration );
     }
 
-    private CoreDownloaderService createDownloader( CatchupComponentsProvider catchupComponentsProvider, DatabasePanicker panicker, JobScheduler jobScheduler,
+    private CoreDownloaderService createDownloader( CatchupComponentsProvider catchupComponentsProvider, Panicker panicker, JobScheduler jobScheduler,
                                                     Monitors monitors, CommandApplicationProcess commandApplicationProcess, CoreSnapshotService snapshotService,
                                                     StoreDownloadContext downloadContext,
                                                     DatabaseLogProvider debugLog )

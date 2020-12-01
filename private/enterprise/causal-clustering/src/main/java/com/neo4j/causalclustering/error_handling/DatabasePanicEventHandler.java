@@ -15,9 +15,9 @@ public interface DatabasePanicEventHandler
     /**
      * Since resources may be very limited during a panic any implementation of this interface should be as simple as possible.
      * Don't use up any extra memory or create new threads.
-     * @param cause the cause of the panic
+     * @param panic information about the cause and nature of the panic
      */
-    void onPanic( Throwable cause );
+    void onPanic( DatabasePanicEvent panic );
 
     static DatabasePanicEventHandler raiseAvailabilityGuard( Database db )
     {
@@ -29,8 +29,13 @@ public interface DatabasePanicEventHandler
         return new MarkUnhealthyHandler( db );
     }
 
-    static DatabasePanicEventHandler stopDatabase( Database db, ClusterInternalDbmsOperator internalOperator )
+    static DatabasePanicEventHandler stopDatabase( ClusterInternalDbmsOperator internalOperator )
     {
-        return new StopDatabaseHandler( db, internalOperator );
+        return new StopDatabaseHandler( internalOperator );
+    }
+
+    static DatabasePanicEventHandler panicDbmsIfSystemDatabasePanics( Panicker panicker )
+    {
+        return new PanicDbmsIfSystemDatabaseHandler( panicker );
     }
 }

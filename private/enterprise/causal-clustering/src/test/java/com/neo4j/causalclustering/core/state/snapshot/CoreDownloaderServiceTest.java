@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
-import com.neo4j.causalclustering.error_handling.DatabasePanicker;
+import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import org.junit.jupiter.api.AfterEach;
@@ -52,7 +52,7 @@ class CoreDownloaderServiceTest
     private final LogProvider logProvider = NullLogProvider.getInstance();
 
     private JobScheduler centralJobScheduler;
-    private final DatabasePanicker panicker = mock( DatabasePanicker.class );
+    private final Panicker panicker = mock( Panicker.class );
     private final DatabaseStartAborter databaseStartAborter = mock( DatabaseStartAborter.class );
     private StoreDownloadContext downloadContext = mock( StoreDownloadContext.class );
 

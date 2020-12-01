@@ -8,6 +8,7 @@ package com.neo4j.dbms;
 import com.neo4j.causalclustering.common.CausalClusteringTestHelpers;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.causalclustering.error_handling.DatabasePanicReason;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
@@ -61,7 +62,7 @@ public class ClusteredDbmsReconcilerIT
         var err = new Exception( "Panic cause" );
 
         // when
-        fooPanicker.panic( err );
+        fooPanicker.panic( DatabasePanicReason.Test, err );
 
         // then
         assertEventually( "Reconciler should eventually stop",

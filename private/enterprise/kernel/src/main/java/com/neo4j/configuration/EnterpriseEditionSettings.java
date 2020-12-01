@@ -15,6 +15,7 @@ import org.neo4j.graphdb.config.Setting;
 
 import static org.neo4j.configuration.SettingConstraints.min;
 import static org.neo4j.configuration.SettingImpl.newBuilder;
+import static org.neo4j.configuration.SettingValueParsers.BOOL;
 import static org.neo4j.configuration.SettingValueParsers.LONG;
 import static org.neo4j.configuration.SettingValueParsers.STRING;
 import static org.neo4j.configuration.SettingValueParsers.listOf;
@@ -42,4 +43,11 @@ public class EnterpriseEditionSettings implements SettingsDeclaration
             "If this setting is left empty all dynamic settings updates will be blocked." )
     public static final Setting<List<String>> dynamic_setting_allowlist =
             newBuilder( "dbms.dynamic.setting.allowlist", listOf( STRING ), List.of( "*" ) ).build();
+
+    @Description( "If there is a Database Management System Panic (an irrecoverable error) should the neo4j process shut down or continue running. " +
+                  "Following a DbMS panic it is likely that a significant amount of functionality will be lost. " +
+                  "Recovering full functionality will require a Neo4j restart"
+    )
+    public static final Setting<Boolean> shutdown_on_dbms_panic =
+            newBuilder( "dbms.panic.shutdown_on_panic", BOOL, false ).build();
 }

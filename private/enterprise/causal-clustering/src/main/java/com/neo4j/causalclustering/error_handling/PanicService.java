@@ -6,91 +6,36 @@
 package com.neo4j.causalclustering.error_handling;
 
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.kernel.database.NamedDatabaseId;
-import org.neo4j.logging.Log;
-import org.neo4j.logging.internal.LogService;
-import org.neo4j.scheduler.Group;
-import org.neo4j.scheduler.JobScheduler;
 
-import static org.neo4j.util.Preconditions.checkState;
-
-public class PanicService
+/**
+ * This service provides methods to get {@link DbmsPanicker} instances which can be used to trigger DBMS Panics and {@link DatabasePanicker} instances which can
+ * be used to trigger Database Panics
+ */
+public interface PanicService
 {
-    private final Map<NamedDatabaseId,DatabasePanicEventHandlers> handlersByDatabase = new ConcurrentHashMap<>();
-    private final Executor executor;
-    private final Log log;
+    // We don't currently have an interface for adding handlers for DBMS panics but that's simply because we don't need one.
 
-    public PanicService( JobScheduler jobScheduler, LogService logService )
-    {
-        executor = jobScheduler.executor( Group.PANIC_SERVICE );
-        log = logService.getUserLog( getClass() );
-    }
+    void addDatabasePanicEventHandlers( NamedDatabaseId namedDatabaseId, List<? extends DatabasePanicEventHandler> handlers );
 
-    public void addPanicEventHandlers( NamedDatabaseId namedDatabaseId, List<? extends DatabasePanicEventHandler> handlers )
-    {
-        var newHandlers = new DatabasePanicEventHandlers( handlers );
-        var oldHandlers = handlersByDatabase.putIfAbsent( namedDatabaseId, newHandlers );
-        checkState( oldHandlers == null, "Panic handlers for %s are already installed", namedDatabaseId );
-    }
+    void removeDatabasePanicEventHandlers( NamedDatabaseId namedDatabaseId );
 
-    public void removePanicEventHandlers( NamedDatabaseId namedDatabaseId )
-    {
-        handlersByDatabase.remove( namedDatabaseId );
-    }
+    /**
+     * Get a panicker.
+     *
+     * @return the interface for triggering all kinds of panic.
+     */
+    Panicker panicker();
 
-    public DatabasePanicker panickerFor( NamedDatabaseId namedDatabaseId )
-    {
-        return error -> panicAsync( namedDatabaseId, error );
-    }
-
-    private void panicAsync( NamedDatabaseId namedDatabaseId, Throwable error )
-    {
-        executor.execute( () -> panic( namedDatabaseId, error ) );
-    }
-
-    private void panic( NamedDatabaseId namedDatabaseId, Throwable error )
-    {
-        log.error( "Clustering components for '" + namedDatabaseId + "' have encountered a critical error", error );
-
-        var handlers = handlersByDatabase.get( namedDatabaseId );
-        if ( handlers != null )
-        {
-            handlers.handlePanic( error );
-        }
-    }
-
-    private class DatabasePanicEventHandlers
-    {
-        final List<? extends DatabasePanicEventHandler> handlers;
-        final AtomicBoolean panicked;
-
-        DatabasePanicEventHandlers( List<? extends DatabasePanicEventHandler> handlers )
-        {
-            this.handlers = handlers;
-            this.panicked = new AtomicBoolean();
-        }
-
-        void handlePanic( Throwable cause )
-        {
-            if ( panicked.compareAndSet( false, true ) )
-            {
-                for ( var handler : handlers )
-                {
-                    try
-                    {
-                        handler.onPanic( cause );
-                    }
-                    catch ( Throwable t )
-                    {
-                        log.error( "Failed to handle a panic event", t );
-                    }
-                }
-            }
-        }
-    }
+    /**
+     * Get a Database panicker for the requested database.
+     *
+     * @deprecated use panicker instead with an appropriate Panic instance.
+     *
+     * @param namedDatabaseId identifier for the database that the returned panicker will be for
+     * @return the interface for triggering a Database
+     */
+    @Deprecated
+    DatabasePanicker panickerFor( NamedDatabaseId namedDatabaseId );
 }

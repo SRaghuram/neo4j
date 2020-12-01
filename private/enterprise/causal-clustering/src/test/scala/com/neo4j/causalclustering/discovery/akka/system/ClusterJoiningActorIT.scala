@@ -12,7 +12,6 @@ import java.util.concurrent.TimeUnit
 import akka.actor.ActorRef
 import akka.actor.Address
 import akka.cluster.Cluster
-import akka.event.EventStream
 import com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver
 import com.neo4j.causalclustering.discovery.NoOpHostnameResolver
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT

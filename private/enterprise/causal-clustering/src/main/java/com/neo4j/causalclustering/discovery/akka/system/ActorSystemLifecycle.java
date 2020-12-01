@@ -25,7 +25,9 @@ import akka.stream.javadsl.Source;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.akka.AkkaActorSystemRestartStrategy;
+import com.neo4j.causalclustering.discovery.akka.Restartable;
 import com.neo4j.causalclustering.discovery.akka.coretopology.RestartNeededListeningActor;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
 import scala.Option;
 import scala.concurrent.duration.FiniteDuration;
 
@@ -48,9 +50,8 @@ import org.neo4j.util.VisibleForTesting;
  */
 public class ActorSystemLifecycle
 {
-    static final int SYSTEM_SHUTDOWN_TIMEOUT_S = 60;
-    static final int ACTOR_SHUTDOWN_TIMEOUT_S = 15;
     private static final int CLIENT_RECONNECT_TIMEOUT_S = 10;
+    private static final long ACTOR_SHUTDOWN_TIMEOUT_S = 15;
 
     private final ActorSystemFactory actorSystemFactory;
     private final RemoteMembersResolver resolver;
@@ -58,6 +59,7 @@ public class ActorSystemLifecycle
     private final Config config;
     private final Log log;
     private final AkkaActorSystemRestartStrategy actorSystemRestartStrategy;
+    private final Duration actorSystemShutdownTimeout;
 
     @VisibleForTesting
     protected ActorSystemComponents actorSystemComponents;
@@ -71,13 +73,14 @@ public class ActorSystemLifecycle
         this.config = config;
         this.log = logProvider.getLog( getClass() );
         this.actorSystemRestartStrategy = new AkkaActorSystemRestartStrategy.RestartWhenMajorityUnreachableOrSingletonFirstSeed( resolver );
+        this.actorSystemShutdownTimeout = this.config.get( CausalClusteringInternalSettings.akka_shutdown_timeout );
     }
 
-    public void createClusterActorSystem( Runnable restart )
+    public void createClusterActorSystem( Restartable akkaRestarter )
     {
         this.actorSystemComponents = new ActorSystemComponents( actorSystemFactory,  ProviderSelection.cluster() );
 
-        Props props = ClusterJoiningActor.props( cluster(), startRestartNeededListeningActor(restart), resolver, config );
+        Props props = ClusterJoiningActor.props( cluster(), startRestartNeededListeningActor(akkaRestarter), resolver, config );
         applicationActorOf( props, ClusterJoiningActor.NAME ).tell( joinMessageFactory.message(), ActorRef.noSender() );
     }
 
@@ -91,9 +94,9 @@ public class ActorSystemLifecycle
         joinMessageFactory.addSeenAddresses( addresses );
     }
 
-    private ActorRef startRestartNeededListeningActor( Runnable restart )
+    private ActorRef startRestartNeededListeningActor( Restartable akkaRestarter )
     {
-        Props props = RestartNeededListeningActor.props( restart, this.eventStream(), this.cluster(), this.restartStrategy() );
+        Props props = RestartNeededListeningActor.props( akkaRestarter, this.eventStream(), this.cluster(), this.restartStrategy() );
         return this.applicationActorOf( props, RestartNeededListeningActor.NAME );
     }
 
@@ -127,7 +130,7 @@ public class ActorSystemLifecycle
                 .coordinatedShutdown()
                 .runAll( ShutdownByNeo4jLifecycle.INSTANCE )
                 .toCompletableFuture()
-                .get( SYSTEM_SHUTDOWN_TIMEOUT_S, TimeUnit.SECONDS );
+                .get( this.actorSystemShutdownTimeout.toSeconds(), TimeUnit.SECONDS );
     }
 
     public <T> SourceQueueWithComplete<T> queueMostRecent( Procedure<T> sink )

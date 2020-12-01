@@ -8,10 +8,11 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
 import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
-import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember;
 import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.akka.DummyPanicService;
+import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember;
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.EnterpriseDatabaseState;
@@ -33,6 +34,7 @@ import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.configuration.CausalClusteringSettings.initial_discovery_members;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.test.ports.PortAuthority.allocatePort;
@@ -60,11 +62,12 @@ class AkkaCoreTopologyServiceIT
         var sslPolicyLoader = SslPolicyLoader.create( config, logProvider );
         var firstStartupDetector = new TestFirstStartupDetector( true );
         var databaseStateService = new StubDatabaseStateService( dbId -> new EnterpriseDatabaseState( dbId, EnterpriseOperatorState.STARTED ) );
+        var panicker = DummyPanicService.PANICKER;
 
         service = new AkkaDiscoveryServiceFactory().coreTopologyService( config, identityModule, jobScheduler, logProvider, logProvider,
                                                                          initialDiscoveryMemberResolver, new NoRetriesStrategy(), sslPolicyLoader,
                                                                          TestCoreDiscoveryMember::factory, firstStartupDetector,
-                                                                         new Monitors(), Clocks.systemClock(), databaseStateService );
+                                                                         new Monitors(), Clocks.systemClock(), databaseStateService, panicker );
     }
 
     @AfterEach
@@ -78,7 +81,7 @@ class AkkaCoreTopologyServiceIT
     {
         service.init();
         service.start();
-        service.restart();
+        assertThat( service.restartSameThread() ).isTrue();
         service.stop();
         service.shutdown();
     }

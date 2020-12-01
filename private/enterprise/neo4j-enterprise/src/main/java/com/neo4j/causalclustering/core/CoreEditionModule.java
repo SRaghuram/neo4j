@@ -28,6 +28,8 @@ import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import com.neo4j.causalclustering.discovery.procedures.CoreRoleProcedure;
 import com.neo4j.causalclustering.discovery.procedures.InstalledProtocolsProcedure;
+import com.neo4j.causalclustering.error_handling.DbmsPanicker;
+import com.neo4j.causalclustering.error_handling.DefaultPanicService;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.CoreIdentityModule;
 import com.neo4j.causalclustering.identity.MemberIdMigrator;
@@ -210,7 +212,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
         temporaryDatabaseFactory = new EnterpriseTemporaryDatabaseFactory( globalModule.getPageCache(), globalModule.getFileSystem() );
 
-        panicService = new PanicService( globalModule.getJobScheduler(), logService );
+        panicService = new DefaultPanicService( globalModule.getJobScheduler(), logService, DbmsPanicker.buildFor( globalConfig, logService ) );
         globalDependencies.satisfyDependencies( panicService ); // used by test
 
         watcherServiceFactory = layout -> createDatabaseFileSystemWatcher( globalModule.getFileWatcher(), layout, logService, fileWatcherFileNameFilter() );
@@ -388,8 +390,9 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         addThroughputMonitorService();
 
         this.coreDatabaseFactory = new CoreDatabaseFactory( globalModule, panicService, databaseManager, topologyService, storageFactory,
-                temporaryDatabaseFactory, identityModule, raftGroupFactory, raftMessageDispatcher, catchupComponentsProvider,
-                recoveryFacade, raftLogger, raftSender, databaseEventService, dbmsModel, databaseStartAborter, logEntryWriterFactory );
+                                                            temporaryDatabaseFactory, identityModule, raftGroupFactory, raftMessageDispatcher,
+                                                            catchupComponentsProvider, recoveryFacade, raftLogger, raftSender, databaseEventService, dbmsModel,
+                                                            databaseStartAborter, logEntryWriterFactory );
 
         RaftServerFactory raftServerFactory = new RaftServerFactory( globalModule, identityModule, pipelineBuilders.server(), raftLogger,
                 supportedRaftProtocols, supportedModifierProtocols, databaseManager.databaseIdRepository() );
@@ -502,7 +505,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     {
         var firstStartupDetector = new DefaultDiscoveryFirstStartupDetector( clusterStateLayout );
         var discoveryModule = new CoreDiscoveryModule( identityModule, discoveryServiceFactory, globalModule, sslPolicyLoader,
-                                                       firstStartupDetector, databaseStateService );
+                                                       firstStartupDetector, databaseStateService, panicService.panicker() );
         return discoveryModule.topologyService();
     }
 

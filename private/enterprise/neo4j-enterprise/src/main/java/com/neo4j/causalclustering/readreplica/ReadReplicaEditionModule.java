@@ -19,6 +19,8 @@ import com.neo4j.causalclustering.discovery.member.DefaultDiscoveryMember;
 import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import com.neo4j.causalclustering.discovery.procedures.ReadReplicaRoleProcedure;
 import com.neo4j.causalclustering.discovery.procedures.ReadReplicaToggleProcedure;
+import com.neo4j.causalclustering.error_handling.DbmsPanicker;
+import com.neo4j.causalclustering.error_handling.DefaultPanicService;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitorService;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
@@ -122,7 +124,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         SettingsWhitelist settingsWhiteList = new SettingsWhitelist( globalConfig );
         globalDependencies.satisfyDependency( settingsWhiteList );
 
-        panicService = new PanicService( jobScheduler, logService );
+        panicService = new DefaultPanicService( jobScheduler, logService, DbmsPanicker.buildFor( globalConfig, logService ) );
         // used in tests
         globalDependencies.satisfyDependencies( panicService );
 

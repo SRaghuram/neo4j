@@ -15,7 +15,8 @@ import com.neo4j.causalclustering.core.consensus.schedule.CountingTimerService;
 import com.neo4j.causalclustering.core.consensus.schedule.Timer;
 import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.error_handling.DatabasePanicker;
+import com.neo4j.causalclustering.error_handling.DatabasePanicReason;
+import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
@@ -51,7 +52,7 @@ class CatchupProcessManagerTest
     private final UpstreamDatabaseStrategySelector strategyPipeline = mock( UpstreamDatabaseStrategySelector.class );
     private final TopologyService topologyService = mock( TopologyService.class );
     private final CatchupComponentsRepository catchupComponents = mock( CatchupComponentsRepository.class );
-    private final DatabasePanicker databasePanicker = mock( DatabasePanicker.class );
+    private final Panicker panicker = mock( Panicker.class );
 
     private final StubClusteredDatabaseManager databaseService = new StubClusteredDatabaseManager();
     private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
@@ -74,7 +75,7 @@ class CatchupProcessManagerTest
 
         //Construct the manager under test
         catchupProcessManager = spy( new CatchupProcessManager( new CallingThreadExecutor(), catchupComponents, databaseContext,
-                databasePanicker, topologyService, catchUpClient, strategyPipeline, timerService, new CommandIndexTracker(),
+                panicker, topologyService, catchUpClient, strategyPipeline, timerService, new CommandIndexTracker(),
                 NullLogProvider.getInstance(), Config.defaults(), mock( ReplicatedDatabaseEventDispatch.class ), PageCacheTracer.NULL ) );
     }
 
@@ -109,7 +110,7 @@ class CatchupProcessManagerTest
 
         catchupProcessManager.initTimer();
         catchupProcessManager.setCatchupProcess( catchupProcess );
-        catchupProcessManager.panic( new RuntimeException( "Don't panic Mr. Mainwaring!" ) );
+        catchupProcessManager.panicDatabase( DatabasePanicReason.Test, new RuntimeException( "Don't panic Mr. Mainwaring!" ) );
 
         Timer timer = spy( single( timerService.getTimers( TX_PULLER_TIMER ) ) );
 

@@ -3,6 +3,7 @@ com.neo4j.configuration.EnterpriseEditionSettings::EnterpriseEditionSettings() v
 com.neo4j.configuration.EnterpriseEditionSettings::dynamic_setting_allowlist org.neo4j.graphdb.config.Setting<java.util.List<java.lang.String>> public static final
 com.neo4j.configuration.EnterpriseEditionSettings::dynamic_setting_whitelist org.neo4j.graphdb.config.Setting<java.util.List<java.lang.String>> public static final
 com.neo4j.configuration.EnterpriseEditionSettings::max_number_of_databases org.neo4j.graphdb.config.Setting<java.lang.Long> public static final
+com.neo4j.configuration.EnterpriseEditionSettings::shutdown_on_dbms_panic org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
 com.neo4j.configuration.MetricsSettings public class extends java.lang.Object implements org.neo4j.configuration.SettingsDeclaration
 com.neo4j.configuration.MetricsSettings.CompressionOption public static final enum extends java.lang.Enum<com.neo4j.configuration.MetricsSettings.CompressionOption>
 com.neo4j.configuration.MetricsSettings.CompressionOption::GZ com.neo4j.configuration.MetricsSettings.CompressionOption public static final

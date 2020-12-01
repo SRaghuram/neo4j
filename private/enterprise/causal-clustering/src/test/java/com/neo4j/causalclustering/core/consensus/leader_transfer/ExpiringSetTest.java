@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.core.consensus.leader_transfer;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import java.util.concurrent.TimeUnit;
 
 import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;

@@ -16,7 +16,9 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
-import com.neo4j.causalclustering.error_handling.DatabasePanicker;
+import com.neo4j.causalclustering.error_handling.DatabasePanicEvent;
+import com.neo4j.causalclustering.error_handling.DbmsPanicEvent;
+import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
@@ -43,6 +45,7 @@ import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.CallingThreadExecutor;
 
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
+import static com.neo4j.causalclustering.error_handling.DatabasePanicReason.CatchupFailed;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.STORE_COPYING;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.TX_PULLING;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -81,7 +84,7 @@ class CatchupPollingProcessTest
 
     private final MockClientResponses clientResponses = responses();
     private final CatchupClientV3 v3Client = spy( new MockClientV3( clientResponses, databaseIdRepository ) );
-    private final DatabasePanicker panicker = mock( DatabasePanicker.class );
+    private final Panicker panicker = mock( Panicker.class );
     private final CatchupAddressProvider catchupAddressProvider = mock( CatchupAddressProvider.class );
     private final Database kernelDatabase = mock( Database.class );
 
@@ -200,7 +203,7 @@ class CatchupPollingProcessTest
         txPuller.start();
         txPuller.tick().get();
 
-        verify( panicker ).panic( any() );
+        verify( panicker ).panic( new DatabasePanicEvent( namedDatabaseId, CatchupFailed, any() ) );
     }
 
     @Test

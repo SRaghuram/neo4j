@@ -5,12 +5,16 @@
  */
 package com.neo4j.causalclustering.discovery.akka.coretopology
 
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Future
+
 import akka.cluster.Cluster
 import akka.cluster.ClusterEvent.ClusterShuttingDown
 import akka.event.EventStream
 import akka.remote.ThisActorSystemQuarantinedEvent
 import com.neo4j.causalclustering.discovery.akka.AkkaActorSystemRestartStrategy.NeverRestart
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
+import com.neo4j.causalclustering.discovery.akka.Restartable
 import org.mockito.Mockito.verify
 
 class RestartNeededListeningActorIT extends BaseAkkaIT("Quarantine") {
@@ -78,8 +82,11 @@ class RestartNeededListeningActorIT extends BaseAkkaIT("Quarantine") {
     val cluster = mock[Cluster]
 
     var counter = 0
-    val restart = new Runnable {
-      override def run(): Unit = counter = counter + 1
+    val restart = new Restartable {
+      override def scheduleRestart(): Future[Boolean] = {
+        counter = counter + 1
+        return CompletableFuture.completedFuture(true)
+      }
     }
     val quarantine = ThisActorSystemQuarantinedEvent(null, null)
 
