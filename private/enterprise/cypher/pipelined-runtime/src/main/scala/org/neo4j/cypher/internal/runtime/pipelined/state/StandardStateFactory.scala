@@ -55,6 +55,7 @@ class StandardStateFactory extends StateFactory {
     if (argumentSlotOffset == TopLevelArgument.SLOT_OFFSET) {
       new StandardSingletonArgumentStateMap[S](argumentStateMapId, factory, memoryTracker)
     } else {
+      memoryTracker.allocateHeap(StandardArgumentStateMap.SHALLOW_SIZE)
       new StandardArgumentStateMap[S](argumentStateMapId, argumentSlotOffset, factory, memoryTracker, morselSize)
     }
 

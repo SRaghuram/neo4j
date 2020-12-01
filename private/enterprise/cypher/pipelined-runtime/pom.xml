@@ -19,6 +19,9 @@
 
     <properties>
         <moduleName>com.neo4j.cypher.internal.runtime.pipelined</moduleName>
+        <test.runner.jvm.settings.additional>
+            -javaagent:${settings.localRepository}/com/github/jbellis/jamm/${jamm.version}/jamm-${jamm.version}.jar
+        </test.runner.jvm.settings.additional>
     </properties>
 
     <scm>
@@ -128,6 +131,13 @@
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-random-values</artifactId>
             <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- external test dependencies -->
+        <dependency>
+            <groupId>com.github.jbellis</groupId>
+            <artifactId>jamm</artifactId>
             <scope>test</scope>
         </dependency>
 

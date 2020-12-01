@@ -9,6 +9,7 @@ import java.util
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.state.AbstractArgumentStateMap.Controllers
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.StandardArgumentStateMap.StandardCompletedStateController
@@ -32,55 +33,52 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: A
                                                        factory: ArgumentStateFactory[STATE],
                                                        memoryTracker: MemoryTracker,
                                                        morselSize: Int)
-  extends AbstractArgumentStateMap[STATE, AbstractArgumentStateMap.StateController[STATE]](memoryTracker) {
+  extends AbstractArgumentStateMap[STATE, AbstractArgumentStateMap.StateController[STATE]](memoryTracker) with Controllers[AbstractArgumentStateMap.StateController[STATE]] {
 
-  class OrderedControllers(memoryTracker: MemoryTracker) extends Controllers[AbstractArgumentStateMap.StateController[STATE]] {
-    val controllerList: HeapTrackingLongEnumerationList[AbstractArgumentStateMap.StateController[STATE]] =
-      HeapTrackingLongEnumerationList.create(memoryTracker, Numbers.ceilingPowerOfTwo(morselSize))
+  private val controllerList: HeapTrackingLongEnumerationList[AbstractArgumentStateMap.StateController[STATE]] =
+    HeapTrackingLongEnumerationList.create(memoryTracker, Numbers.ceilingPowerOfTwo(morselSize))
 
-    override def forEach(fun: (Long, AbstractArgumentStateMap.StateController[STATE]) => Unit): Unit =
-      controllerList.foreach((l, v) => fun(l, v))
+  override def forEachController(fun: (Long, AbstractArgumentStateMap.StateController[STATE]) => Unit): Unit =
+    controllerList.foreach((l, v) => fun(l, v))
 
-    override def valuesIterator(): util.Iterator[AbstractArgumentStateMap.StateController[STATE]] =
-      controllerList.valuesIterator()
+  override def controllersIterator(): util.Iterator[AbstractArgumentStateMap.StateController[STATE]] =
+    controllerList.valuesIterator()
 
-    override def remove(key: Long): AbstractArgumentStateMap.StateController[STATE] =
-      controllerList.remove(key)
+  override def removeController(key: Long): AbstractArgumentStateMap.StateController[STATE] =
+    controllerList.remove(key)
 
-    override def put(key: Long,
-                     value: AbstractArgumentStateMap.StateController[STATE]): AbstractArgumentStateMap.StateController[STATE] = {
-      require(controllerList.lastKey + 1 == key)
-      val oldValue = controllerList.get(key)
-      controllerList.add(value)
-      oldValue
-    }
-
-    override def get(key: Long): AbstractArgumentStateMap.StateController[STATE] =
-      controllerList.get(key)
-
-    /**
-     * @return the first value or null if no value exists
-     */
-    override def getFirstValue: AbstractArgumentStateMap.StateController[STATE] = controllerList.getFirst
+  override def putController(key: Long,
+                             value: AbstractArgumentStateMap.StateController[STATE]): AbstractArgumentStateMap.StateController[STATE] = {
+    require(controllerList.lastKey + 1 == key)
+    val oldValue = controllerList.get(key)
+    controllerList.add(value)
+    oldValue
   }
 
-  override protected val controllers = new OrderedControllers(memoryTracker)
+  override def getController(key: Long): AbstractArgumentStateMap.StateController[STATE] =
+    controllerList.get(key)
+
+  override def getFirstController: AbstractArgumentStateMap.StateController[STATE] = controllerList.getFirst
 
   override protected def newStateController(argument: Long,
                                             argumentMorsel: MorselReadCursor,
                                             argumentRowIdsForReducers: Array[Long],
                                             initialCount: Int,
                                             memoryTracker: MemoryTracker): AbstractArgumentStateMap.StateController[STATE] = {
-    if (factory.completeOnConstruction) {
-      val state = factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers, memoryTracker)
-      new StandardCompletedStateController(state)
-    } else {
-      new StandardStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers, memoryTracker), initialCount)
-    }
+    val state = factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers, memoryTracker)
+    val controller =
+      if (factory.completeOnConstruction) {
+        new StandardCompletedStateController(state)
+      } else {
+        new StandardStateController(state, initialCount)
+      }
+    memoryTracker.allocateHeap(controller.shallowSize + state.shallowSize)
+    controller
   }
 }
 
 object StandardArgumentStateMap {
+  final val SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[StandardArgumentStateMap[_]])
 
   /**
    * Controller which knows when an [[ArgumentState]] is complete.
@@ -134,7 +132,7 @@ object StandardArgumentStateMap {
       s"[count: ${_count}, state: $state]"
     }
 
-    override def shallowSize: Long = StandardStateController.SHALLOW_SIZE
+    override final def shallowSize: Long = StandardStateController.SHALLOW_SIZE
   }
 
   object StandardStateController {

@@ -137,8 +137,7 @@ class LHSAccumulatingRHSArgumentStreamingSource[ACC_DATA <: AnyRef,
     val nbrOfMorsels = morselData.morsels.size
     val nbrOfTrackerDecrements = morselData.argumentStream match {
       case _: EndOfStream =>
-        val nullRhsAcc = rhsArgumentStateMap.peek(argumentRowId)
-        checkOnlyWhenAssertionsAreEnabled(nullRhsAcc == null, "RHS accumulator should have already been removed in take()")
+        checkOnlyWhenAssertionsAreEnabled(rhsArgumentStateMap.peek(argumentRowId) == null, "RHS accumulator should have already been removed in take()")
         // No more data will ever arrive for this argument
         val lhsAccumulator = lhsArgumentStateMap.remove(argumentRowId)
         lhsAccumulator.close()

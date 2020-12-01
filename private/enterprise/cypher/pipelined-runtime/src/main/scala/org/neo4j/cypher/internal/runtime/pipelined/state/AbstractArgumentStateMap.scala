@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.state.AbstractArgumentStateMap.Controllers
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
 import org.neo4j.memory.MemoryTracker
@@ -21,51 +22,7 @@ import scala.collection.mutable.ArrayBuffer
  * All functionality of either standard or concurrent ASM that can be written without knowing the concrete Map type.
  */
 abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: AbstractArgumentStateMap.StateController[STATE]](memoryTracker: MemoryTracker)
-  extends ArgumentStateMap[STATE] {
-
-  trait Controllers[V] {
-    /**
-     * Calls the given function on all entries in the map.
-     * @param fun the function
-     */
-    def forEach(fun: (Long, V) => Unit)
-
-    /**
-     * Adds an entry to the map.
-     * @param key the key
-     * @param value the value
-     * @return
-     */
-    def put(key: Long, value: V): V
-
-    /**
-     * @param key the entry key
-     * @return the value to which the given key is mapped
-     */
-    def get(key: Long): V
-
-    /**
-     * Removes the entry with given key and asserts that it is the first entry.
-     * @param key the key
-     * @return the value of the removed entry
-     */
-    def remove(key: Long): V
-
-    /**
-     * @return the first value or null if no value exists
-     */
-    def getFirstValue: V
-
-    /**
-     * @return an iterator over all values
-     */
-    def valuesIterator(): java.util.Iterator[V]
-  }
-
-  /**
-   * A Map of the controllers.
-   */
-    protected val controllers: Controllers[CONTROLLER]
+  extends ArgumentStateMap[STATE] with Controllers[CONTROLLER] {
 
   /**
    * Create a new state controller
@@ -80,18 +37,21 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
 
   override def update(argumentRowId: Long, onState: STATE => Unit): Unit = {
     DebugSupport.ASM.log("ASM %s update %03d", argumentStateMapId, argumentRowId)
-    onState(controllers.get(argumentRowId).peek)
+    onState(getController(argumentRowId).peek)
   }
 
   override def clearAll(f: STATE => Unit): Unit = {
-    controllers.forEach((_, controller) => {
+    var shallowSize: Long = 0L
+    forEachController((_, controller) => {
       val state = controller.take()
       if (state != null) {
         // We do not remove the controller from controllers here in case there
         // is some outstanding work unit that wants to update count of accumulator
         f(state)
+        shallowSize += state.shallowSize
       }
     })
+    memoryTracker.releaseHeap(shallowSize)
   }
 
   override def skip(morsel: Morsel,
@@ -99,7 +59,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     ArgumentStateMap.skip(
       argumentSlotOffset,
       morsel,
-      (argumentRowId, nRows) => reserve(controllers.get(argumentRowId).peek, nRows))
+      (argumentRowId, nRows) => reserve(getController(argumentRowId).peek, nRows))
   }
 
   override def filterWithSideEffect[FILTER_STATE](morsel: Morsel,
@@ -109,14 +69,15 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
       argumentSlotOffset,
       morsel,
       (argumentRowId, nRows) => {
-        val controller = controllers.get(argumentRowId)
+        val controller = getController(argumentRowId)
         if (controller != null) {
           val controllerState = controller.peek
           if (controllerState != null) {
             val FilterStateWithIsLast(filterState, isLastState) = createState(controllerState, nRows)
             if (isLastState) {
               if (controller.hasCompleted) {
-                controllers.remove(argumentRowId) // Saves memory
+                removeController(argumentRowId) // Saves memory
+                memoryTracker.releaseHeap(controller.shallowSize + controllerState.shallowSize)
               }
               controller.take() // Saves memory
             }
@@ -135,7 +96,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   }
 
   override def takeCompleted(n: Int): IndexedSeq[STATE] = {
-    val iterator = controllers.valuesIterator()
+    val iterator = controllersIterator()
     val builder = new ArrayBuffer[STATE]
 
     while(iterator.hasNext && builder.size < n) {
@@ -149,8 +110,9 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
 
     var i = 0
     while (i < builder.length) {
-      val controller = controllers.remove(builder(i).argumentRowId)
-      memoryTracker.releaseHeap(controller.shallowSize)
+      val state = builder(i)
+      val controller = removeController(state.argumentRowId)
+      memoryTracker.releaseHeap(controller.shallowSize + state.shallowSize)
 
       i += 1
     }
@@ -163,34 +125,21 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   }
 
   override def takeIfCompletedOrElsePeek(argumentId: Long): ArgumentStateWithCompleted[STATE] = {
-    val controller = controllers.get(argumentId)
-    if (controller == null) {
-      null.asInstanceOf[ArgumentStateWithCompleted[STATE]]
-    } else {
-      val completedState = controller.takeCompleted()
-      if (completedState != null) {
-        controllers.remove(completedState.argumentRowId)
-        DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, completedState.argumentRowId)
-        ArgumentStateWithCompleted(completedState, isCompleted = true)
-      } else {
-        val peekedState = controller.peek
-        if (peekedState != null) {
-          ArgumentStateWithCompleted(peekedState, isCompleted = false)
-        } else {
-          null.asInstanceOf[ArgumentStateWithCompleted[STATE]]
-        }
-      }
-    }
+    val controller = getController(argumentId)
+    takeIfCompletedOrElsePeek(controller)
   }
 
   override def takeOneIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {
-    val controller = controllers.getFirstValue
+    val controller = getFirstController
+    takeIfCompletedOrElsePeek(controller)
+  }
 
+  private[this] def takeIfCompletedOrElsePeek(controller: CONTROLLER): ArgumentStateWithCompleted[STATE] = {
     if (controller != null) {
       val completedState = controller.takeCompleted()
       if (completedState != null) {
-        controllers.remove(completedState.argumentRowId)
-        memoryTracker.releaseHeap(controller.shallowSize)
+        removeController(completedState.argumentRowId)
+        memoryTracker.releaseHeap(controller.shallowSize + completedState.shallowSize)
         DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, completedState.argumentRowId)
         ArgumentStateWithCompleted(completedState, isCompleted = true)
       } else {
@@ -207,11 +156,11 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   }
 
   override def peekCompleted(): Iterator[STATE] = {
-    controllers.valuesIterator().asScala.map[STATE](_.peekCompleted).filter(_ != null)
+    controllersIterator().asScala.map[STATE](_.peekCompleted).filter(_ != null)
   }
 
   override def peek(argumentId: Long): STATE = {
-    val controller = controllers.get(argumentId)
+    val controller = getController(argumentId)
     if (controller != null) {
       controller.peek
     } else {
@@ -220,7 +169,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   }
 
   override def hasCompleted: Boolean = {
-    val iterator = controllers.valuesIterator()
+    val iterator = controllersIterator()
 
     while(iterator.hasNext) {
       val controller = iterator.next()
@@ -232,7 +181,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   }
 
   override def someArgumentStateIsCompletedOr(statePredicate: STATE => Boolean): Boolean = {
-    val iterator = controllers.valuesIterator()
+    val iterator = controllersIterator()
 
     while(iterator.hasNext) {
       val controller = iterator.next()
@@ -244,12 +193,12 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   }
 
   override def hasCompleted(argument: Long): Boolean = {
-    val controller = controllers.get(argument)
+    val controller = getController(argument)
     controller != null && controller.hasCompleted
   }
 
   override def exists(statePredicate: STATE => Boolean): Boolean = {
-    val iterator = controllers.valuesIterator()
+    val iterator = controllersIterator()
 
     while(iterator.hasNext) {
       val controller = iterator.next()
@@ -263,10 +212,10 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
 
   override def remove(argument: Long): STATE = {
     DebugSupport.ASM.log("ASM %s rem %03d", argumentStateMapId, argument)
-    val controller = controllers.remove(argument)
+    val controller = removeController(argument)
     if (controller != null) {
       val state = controller.take()
-      memoryTracker.releaseHeap(controller.shallowSize)
+      memoryTracker.releaseHeap(controller.shallowSize + (if (state != null) state.shallowSize else 0))
       state
     } else {
       null.asInstanceOf[STATE]
@@ -276,19 +225,19 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   override def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int): Unit = {
     DebugSupport.ASM.log("ASM %s init %03d", argumentStateMapId, argument)
     val newController = newStateController(argument, argumentMorsel, argumentRowIdsForReducers, initialCount, memoryTracker)
-    val previousValue = controllers.put(argument, newController)
-    memoryTracker.allocateHeap(newController.shallowSize)
+    val previousValue = putController(argument, newController)
     Preconditions.checkState(previousValue == null, "ArgumentStateMap cannot re-initiate the same argument (argument: %d)", Long.box(argument))
   }
 
   override def increment(argument: Long): Unit = {
-    val controller = controllers.get(argument)
+    val controller = getController(argument)
     val newCount = controller.increment()
     DebugSupport.ASM.log("ASM %s incr %03d to %d", argumentStateMapId, argument, newCount)
   }
 
   override def decrement(argument: Long): STATE = {
-    val controller = controllers.get(argument)
+    // TODO: Let controller.decrement() return the state if count is zero?
+    val controller = getController(argument)
     val statePeek = controller.peek // We peek before decrement to be sure to not loose the state if someone else takes it after decrement
     val newCount = controller.decrement()
     DebugSupport.ASM.log("ASM %s decr %03d to %d", argumentStateMapId, argument, newCount)
@@ -302,7 +251,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   override final def toString: String = {
     val sb = new StringBuilder
     sb ++= "ArgumentStateMap(\n"
-    controllers.forEach((argumentRowId, controller) => {
+    forEachController((argumentRowId, controller) => {
       sb ++= s"$argumentRowId -> $controller\n"
     })
     sb += ')'
@@ -360,5 +309,44 @@ object AbstractArgumentStateMap {
      * @return the shallow size of the state controller
      */
     def shallowSize: Long
+  }
+
+  trait Controllers[V] {
+    /**
+     * Calls the given function on all entries in the map.
+     * @param fun the function
+     */
+    def forEachController(fun: (Long, V) => Unit)
+
+    /**
+     * Adds an entry to the map.
+     * @param key the key
+     * @param controller the controller
+     * @return
+     */
+    def putController(key: Long, controller: V): V
+
+    /**
+     * @param key the entry key
+     * @return the controller to which the given key is mapped
+     */
+    def getController(key: Long): V
+
+    /**
+     * Removes the entry with given key and asserts that it is the first entry.
+     * @param key the key
+     * @return the controller of the removed entry
+     */
+    def removeController(key: Long): V
+
+    /**
+     * @return the first controller or null if no controller exists
+     */
+    def getFirstController: V
+
+    /**
+     * @return an iterator over all controllers
+     */
+    def controllersIterator(): java.util.Iterator[V]
   }
 }

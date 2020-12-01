@@ -3,13 +3,12 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher.internal.runtime.pipelined
+package org.neo4j.cypher.internal.runtime.pipelined.state
 
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselUnitTest
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 
 import scala.collection.mutable.ArrayBuffer
 

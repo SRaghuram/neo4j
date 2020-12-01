@@ -99,6 +99,10 @@ trait ArgumentStateMap[S <: ArgumentState] {
 
   /**
    * Decrement the argument counter for `argument`.
+   *
+   * WARNING: The caller does not get ownership or exclusive access to the state
+   *          and it may concurrently be taken and updated or closed by another thread
+   *
    * @return the argument state iff count has reached zero, otherwise `null`
    */
   def decrement(argument: Long): S

@@ -31,33 +31,34 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
                                                          factory: ArgumentStateFactory[STATE])
   extends AbstractArgumentStateMap[STATE, AbstractArgumentStateMap.StateController[STATE]](EmptyMemoryTracker.INSTANCE) {
 
-  override protected val controllers = new ConcurrentControllers
+  private[this] val controllers = new ConcurrentHashMap[Long, AbstractArgumentStateMap.StateController[STATE]]
 
-  class ConcurrentControllers extends ConcurrentHashMap[Long, AbstractArgumentStateMap.StateController[STATE]]
-                              with Controllers[AbstractArgumentStateMap.StateController[STATE]] {
+  override def forEachController(fun: (Long, AbstractArgumentStateMap.StateController[STATE]) => Unit): Unit = {
+    controllers.forEach((arg, state) => fun(arg, state))
+  }
 
-    override def forEach(fun: (Long, AbstractArgumentStateMap.StateController[STATE]) => Unit): Unit = {
-      super[ConcurrentHashMap].forEach((arg, state) => fun(arg, state))
-    }
+  override def putController(key: Long, controller: AbstractArgumentStateMap.StateController[STATE]): AbstractArgumentStateMap.StateController[STATE] = {
+    controllers.put(key, controller)
+  }
 
-    override def get(key: Long): AbstractArgumentStateMap.StateController[STATE] =
-      super[ConcurrentHashMap].get(key)
+  override def getController(key: Long): AbstractArgumentStateMap.StateController[STATE] =
+    controllers.get(key)
 
-    override def remove(key: Long): AbstractArgumentStateMap.StateController[STATE] =
-      super[ConcurrentHashMap].remove(key)
+  override def removeController(key: Long): AbstractArgumentStateMap.StateController[STATE] =
+    controllers.remove(key)
 
-    override def valuesIterator(): util.Iterator[AbstractArgumentStateMap.StateController[STATE]] = {
-      values().iterator()
-    }
+  override def controllersIterator(): util.Iterator[AbstractArgumentStateMap.StateController[STATE]] = {
+    controllers.values().iterator()
+  }
 
-    override def getFirstValue: AbstractArgumentStateMap.StateController[STATE] = {
-      val iter = values.iterator()
+  override def getFirstController: AbstractArgumentStateMap.StateController[STATE] = {
+    // TODO: I think this is unusable. The method only makes sense on an OrderedConcurrentArgumentStateMap
+    val iter = controllers.values.iterator()
 
-      if(iter.hasNext) {
-        iter.next()
-      } else {
-        null
-      }
+    if(iter.hasNext) {
+      iter.next()
+    } else {
+      null
     }
   }
 
@@ -74,7 +75,7 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
   }
 
   override def update(argumentRowId: Long, onState: STATE => Unit): Unit = {
-    val controller = controllers.get(argumentRowId)
+    val controller = getController(argumentRowId)
     // The controller can be null if it was already removed due to a cancellation of that argument row id
     if (controller != null) {
       // This increment and decrement serves as a soft lock to make sure that if we apply `onState`, the modified state will be taken.

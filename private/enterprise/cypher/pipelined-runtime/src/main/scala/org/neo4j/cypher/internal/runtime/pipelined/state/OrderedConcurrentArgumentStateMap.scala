@@ -43,12 +43,12 @@ class OrderedConcurrentArgumentStateMap[STATE <: ArgumentState](argumentStateMap
   }
 
   override def takeOneIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {
-    val controller = controllers.get(lastCompletedArgumentId + 1)
+    val controller = getController(lastCompletedArgumentId + 1)
     if (controller != null) {
       val state = controller.takeCompleted()
       if (state != null) {
         lastCompletedArgumentId += 1
-        controllers.remove(state.argumentRowId)
+        removeController(state.argumentRowId)
         DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, state.argumentRowId)
         ArgumentStateWithCompleted(state, isCompleted = true)
       } else {
@@ -65,7 +65,7 @@ class OrderedConcurrentArgumentStateMap[STATE <: ArgumentState](argumentStateMap
   }
 
   override def someArgumentStateIsCompletedOr(statePredicate: STATE => Boolean): Boolean = {
-    val controller = controllers.get(lastCompletedArgumentId + 1)
+    val controller = getController(lastCompletedArgumentId + 1)
     controller != null && (controller.hasCompleted || statePredicate(controller.peek))
   }
 }

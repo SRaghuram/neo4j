@@ -31,9 +31,13 @@ class StandardSingletonArgumentStateMap[STATE <: ArgumentState](val argumentStat
                                             initialCount: Int,
                                             memoryTracker: MemoryTracker): AbstractArgumentStateMap.StateController[STATE] = {
     if (factory.completeOnConstruction) {
-      new StandardCompletedStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers, memoryTracker))
+      val state = factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers, memoryTracker)
+      memoryTracker.allocateHeap(state.shallowSize)
+      new StandardCompletedStateController(state)
     } else {
-      new StandardStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers, memoryTracker), initialCount)
+      val state = factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers, memoryTracker)
+      memoryTracker.allocateHeap(state.shallowSize)
+      new StandardStateController(state, initialCount)
     }
   }
 }
