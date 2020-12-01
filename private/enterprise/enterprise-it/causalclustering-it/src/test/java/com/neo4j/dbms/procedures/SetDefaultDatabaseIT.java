@@ -121,10 +121,10 @@ public class SetDefaultDatabaseIT
         // GIVEN
         assertDefaultDatabase( "neo4j", cluster );
         CausalClusteringTestHelpers.stopDatabase( "neo4j", cluster );
-        CausalClusteringTestHelpers.assertDatabaseEventuallyStopped( "neo4j", cluster );
+        CausalClusteringTestHelpers.assertDatabaseEventuallyInStateSeenByAll( "neo4j", cluster.allMembers(), STOPPED );
         CausalClusteringTestHelpers.createDatabase( "foo", cluster, true );
         CausalClusteringTestHelpers.stopDatabase( "foo", cluster );
-        CausalClusteringTestHelpers.assertDatabaseEventuallyStopped( "foo", cluster );
+        CausalClusteringTestHelpers.assertDatabaseEventuallyInStateSeenByAll( "foo", cluster.allMembers(), STOPPED );
 
         cluster.systemTx( ( db, tx ) ->
         {
