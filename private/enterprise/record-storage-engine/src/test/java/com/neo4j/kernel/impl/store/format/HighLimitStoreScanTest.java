@@ -11,7 +11,11 @@ import com.neo4j.kernel.impl.store.format.highlimit.v306.HighLimitV3_0_6;
 import com.neo4j.kernel.impl.store.format.highlimit.v310.HighLimitV3_1_0;
 import com.neo4j.kernel.impl.store.format.highlimit.v320.HighLimitV3_2_0;
 import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.eclipse.collections.api.factory.Sets;
+import org.eclipse.collections.api.set.ImmutableSet;
+import org.eclipse.collections.api.set.primitive.LongSet;
+import org.eclipse.collections.impl.factory.primitive.LongSets;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -19,19 +23,23 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
+import java.nio.file.OpenOption;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.LongFunction;
+import java.util.function.LongSupplier;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
+import org.neo4j.internal.id.FreeIds;
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
+import org.neo4j.internal.id.indexed.IndexedIdGenerator;
 import org.neo4j.internal.recordstorage.RecordNodeCursor;
 import org.neo4j.internal.recordstorage.RecordRelationshipScanCursor;
 import org.neo4j.internal.recordstorage.RecordStorageReader;
@@ -52,6 +60,7 @@ import org.neo4j.kernel.impl.store.StoreFactory;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
+import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.test.extension.Inject;
@@ -64,6 +73,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
+import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.internal.helpers.ArrayUtil.concat;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
@@ -113,12 +123,17 @@ class HighLimitStoreScanTest
     private NeoStores neoStores;
     private RelationshipStore relationshipStore;
     private NodeStore nodeStore;
+    private DatabaseLayout databaseLayout;
 
     void startStore( RecordFormats format ) throws IOException
     {
-        DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( directory.directory( "db" ) );
+        startStore( format, new DefaultIdGeneratorFactory( directory.getFileSystem(), immediate() ) );
+    }
+
+    void startStore( RecordFormats format, IdGeneratorFactory idGeneratorFactory ) throws IOException
+    {
+        databaseLayout = DatabaseLayout.ofFlat( directory.directory( "db" ) );
         Config config = Config.defaults();
-        IdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( directory.getFileSystem(), RecoveryCleanupWorkCollector.immediate() );
         StoreFactory storeFactory =
                 new StoreFactory( databaseLayout, config, idGeneratorFactory, pageCache, directory.getFileSystem(), format, nullLogProvider(),
                         PageCacheTracer.NULL, Sets.immutable.empty() );
@@ -201,6 +216,54 @@ class HighLimitStoreScanTest
             }
             assertThat( expectedRelationships.hasNext() ).isFalse();
         }
+    }
+
+    @MethodSource( "formats" )
+    @ParameterizedTest
+    void shouldNotPutSecondaryUnitsInFreelistOnIdGeneratorRebuild( RecordFormats format ) throws IOException
+    {
+        // given
+        startStore( format );
+        List<NodeRecord> records = createRandomDoubleRecordUnitRecords( this::generateRandomNode, nodeStore, 1_000 );
+        LongSet secondaryUnitIds =
+                LongSets.immutable.of( records.stream().mapToLong( NodeRecord::getSecondaryUnitId ).filter( id -> !Record.NULL_REFERENCE.is( id ) ).toArray() );
+
+        // when/then
+        stopStore();
+        assertThat( directory.getFileSystem().deleteFile( databaseLayout.idNodeStore() ) ).isTrue();
+        MutableBoolean checked = new MutableBoolean();
+        IdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( directory.getFileSystem(), immediate() )
+        {
+            @Override
+            public IdGenerator open( PageCache pageCache, Path filename, IdType idType, LongSupplier highIdScanner, long maxId, boolean readOnly,
+                    PageCursorTracer cursorTracer, ImmutableSet<OpenOption> openOptions )
+            {
+                return new IndexedIdGenerator( pageCache, filename, immediate(), idType, false, highIdScanner, maxId, readOnly, cursorTracer, openOptions )
+                {
+                    @Override
+                    public void start( FreeIds freeIdsForRebuild, PageCursorTracer cursorTracer ) throws IOException
+                    {
+                        // Make sure that no ID we see during rebuild is in our set of secondary unit ID set
+                        // We're only checking the node records because that's what we're monitoring
+                        if ( filename.equals( databaseLayout.idNodeStore() ) )
+                        {
+                            checked.setTrue();
+                            freeIdsForRebuild.accept( id -> assertThat( secondaryUnitIds.contains( id ) ).isFalse() );
+                        }
+                        super.start( freeIdsForRebuild, cursorTracer );
+                    }
+                };
+            }
+
+            @Override
+            public IdGenerator create( PageCache pageCache, Path filename, IdType idType, long highId, boolean throwIfFileExists, long maxId, boolean readOnly,
+                    PageCursorTracer cursorTracer, ImmutableSet<OpenOption> openOptions )
+            {
+                throw new UnsupportedOperationException( "Unexpected call since the store should exist" );
+            }
+        };
+        startStore( format, idGeneratorFactory );
+        assertThat( checked.booleanValue() ).isTrue();
     }
 
     private <T extends AbstractBaseRecord> List<T> createRandomDoubleRecordUnitRecords( LongFunction<T> generator, RecordStore<T> store, int count )
