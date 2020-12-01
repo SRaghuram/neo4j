@@ -71,7 +71,7 @@ class PartialSort extends AbstractCypherBenchmark {
 
   @ParamValues(
     allowed = Array("0", "5000", "50000", "500000"),
-    base = Array("0", "5000", "50000", "500000"))
+    base = Array("0", "500000"))
   @Param(Array[Int]())
   var skipCount: Int = _
 
