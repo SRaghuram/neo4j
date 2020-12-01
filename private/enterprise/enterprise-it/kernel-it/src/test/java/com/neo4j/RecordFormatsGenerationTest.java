@@ -25,6 +25,7 @@ import org.neo4j.kernel.impl.store.format.FormatFamily;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.format.StoreVersion;
+import org.neo4j.kernel.impl.store.format.aligned.PageAlignedV4_1;
 import org.neo4j.kernel.impl.store.format.standard.StandardV3_4;
 import org.neo4j.kernel.impl.store.format.standard.StandardV4_0;
 
@@ -47,7 +48,8 @@ class RecordFormatsGenerationTest
                 HighLimitV3_1_0.RECORD_FORMATS,
                 HighLimitV3_2_0.RECORD_FORMATS,
                 HighLimitV3_4_0.RECORD_FORMATS,
-                HighLimit.RECORD_FORMATS
+                HighLimit.RECORD_FORMATS,
+                PageAlignedV4_1.RECORD_FORMATS
         );
 
         // Verify that our list above is complete.
@@ -62,7 +64,7 @@ class RecordFormatsGenerationTest
                 .filter( format -> format.generation() != NO_GENERATION )
                 .collect( groupingBy( RecordFormats::getFormatFamily,
                         mapping( RecordFormats::generation, toList() ) ) );
-        assertEquals( 2, generationsForFamilies.size() );
+        assertEquals( 3, generationsForFamilies.size() );
         for ( Map.Entry<FormatFamily,List<Integer>> familyListGeneration : generationsForFamilies.entrySet() )
         {
             assertEquals( familyListGeneration.getValue(), distinct( familyListGeneration.getValue() ),
