@@ -24,7 +24,7 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.internal.batchimport.BatchImporterFactory;
 import org.neo4j.internal.batchimport.input.Collector;
-import org.neo4j.internal.batchimport.staging.ExecutionMonitors;
+import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
@@ -188,7 +188,7 @@ class RestartableImportIT
             RecordFormats format = RecordFormatSelector.selectForVersion( args[2] );
             BatchImporterFactory factory = BatchImporterFactory.withHighestPriority();
             factory.instantiate( DatabaseLayout.ofFlat( databaseDirectory ), new DefaultFileSystemAbstraction(), null, PageCacheTracer.NULL, DEFAULT,
-                    NullLogService.getInstance(), ExecutionMonitors.invisible(), EMPTY, Config.defaults(), format,
+                    NullLogService.getInstance(), ExecutionMonitor.INVISIBLE, EMPTY, Config.defaults(), format,
                     NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE )
                     .doImport( input( Long.parseLong( args[1] ) ) );
             // Create this file to communicate completion for real

@@ -51,7 +51,6 @@ import static org.neo4j.configuration.GraphDatabaseSettings.preallocate_logical_
 import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.internal.batchimport.Configuration.DEFAULT;
 import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
-import static org.neo4j.internal.batchimport.staging.ExecutionMonitors.invisible;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @Neo4jLayoutExtension
@@ -254,7 +253,7 @@ class RestartableParallelBatchImporterIT
 
         // when
         SimpleRandomizedInput input = input();
-        importer( invisible() ).doImport( input );
+        importer( ExecutionMonitor.INVISIBLE ).doImport( input );
 
         // then
         DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( databaseLayout ).build();
