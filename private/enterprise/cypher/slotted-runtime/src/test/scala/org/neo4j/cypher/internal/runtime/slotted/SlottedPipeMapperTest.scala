@@ -74,6 +74,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SkipPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SortPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.UniqueIndexSeek
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.SlotMappings
 import org.neo4j.cypher.internal.runtime.slotted.aggregation.SlottedPrimitiveGroupingAggTable
 import org.neo4j.cypher.internal.runtime.slotted.expressions.NodeProperty
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedCommandProjection
@@ -89,6 +90,7 @@ import org.neo4j.cypher.internal.runtime.slotted.pipes.ExpandAllSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.ExpandIntoSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.ForeachSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.SlotMapping
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeIndexScanSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeIndexSeekSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodesByLabelScanSlottedPipe
@@ -883,7 +885,71 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     outRow.getCachedPropertyAt(1) should equal(Values.stringValue("aprop")) // aa.prop
   }
 
+  test("should map between long and ref slot with different argument sizes") {
+    val from = SlotConfiguration.empty
+      .newLong("arg1", false, CTNode)
+      .newReference("k", false, CTNode)
+    val to = SlotConfiguration.empty
+      .newLong("arg1", false, CTNode)
+      .newLong("k", false, CTNode)
 
+    val mappings = SlottedPipeMapper.computeSlotMappings(from, Size.apply(1, 0), to)
+    mappings.slotMapping shouldBe (
+      Array(
+        SlotMapping(fromOffset = 0, toOffset = 1, fromIsLongSlot = false, toIsLongSlot = true)
+      ))
+    mappings.cachedPropertyMappings shouldBe Array.empty
+
+    val reversedMapping = SlottedPipeMapper.computeSlotMappings(to, Size.apply(1, 0), from)
+    reversedMapping.slotMapping shouldBe (
+      Array(
+        SlotMapping(fromOffset = 1, toOffset = 0, fromIsLongSlot = true, toIsLongSlot = false)
+      ))
+    reversedMapping.cachedPropertyMappings shouldBe Array.empty
+  }
+
+  test("should map between long and ref slots") {
+    val from = SlotConfiguration.empty
+      .newLong("arg1", false, CTNode)
+      .newLong("arg2", false, CTNode)
+      .newLong("a", false, CTNode)
+      .newLong("b", false, CTRelationship)
+      .newLong("c", false, CTRelationship)
+      .newReference("arg3", false, CTRelationship)
+      .newReference("k", false, CTNode)
+      .newCachedProperty(cachedNodeProp("k", "prop1"))
+      .newReference("m", false, CTRelationship)
+      .newCachedProperty(cachedNodeProp("k", "prop2"))
+      .newReference("d", false, CTRelationship)
+
+    val to = SlotConfiguration.empty
+      .newLong("arg1", false, CTNode)
+      .newLong("arg2", false, CTNode)
+      .newLong("a", false, CTNode)
+      .newLong("c", false, CTRelationship)
+      .newLong("d", false, CTRelationship)
+      .newLong("e", false, CTRelationship)
+      .newLong("b", false, CTRelationship)
+      .newReference("arg3", false, CTRelationship)
+      .newReference("k", false, CTNode)
+      .newReference("m", false, CTRelationship)
+      .newCachedProperty(cachedNodeProp("k", "prop1"))
+      .newCachedProperty(cachedNodeProp("k", "prop2"))
+
+    val mappings = SlottedPipeMapper.computeSlotMappings(from, Size.apply(2, 1), to)
+
+    mappings.slotMapping shouldBe (
+      Array(
+        SlotMapping(fromOffset = 2, toOffset = 2, fromIsLongSlot = true, toIsLongSlot = true),
+        SlotMapping(fromOffset = 3, toOffset = 6, fromIsLongSlot = true, toIsLongSlot = true),
+        SlotMapping(fromOffset = 4, toOffset = 3, fromIsLongSlot = true, toIsLongSlot = true),
+        SlotMapping(fromOffset = 1, toOffset = 1, fromIsLongSlot = false, toIsLongSlot = false),
+        SlotMapping(fromOffset = 3, toOffset = 2, fromIsLongSlot = false, toIsLongSlot = false),
+        SlotMapping(fromOffset = 5, toOffset = 4, fromIsLongSlot = false, toIsLongSlot = true)
+      ))
+
+    mappings.cachedPropertyMappings shouldBe (Array(2 -> 3, 4 -> 4))
+  }
 
   test("should compute union mapping with projecting a long slot to a ref slot") {
     // given

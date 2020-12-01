@@ -790,23 +790,33 @@ object SlottedPipeMapper {
   /** Computes slot mappings from one slot configuration to another
    *
    * Given the values:
-   *                  0,    1, 2, 3, 4, 5, 6      0, 1,  2,  3,  4
-   *  fromSlots = [arg1, arg2, a, b, c]       [arg3, k, p1,  m, p2]
+   *                  0,    1, 2, 3, 4, 5, 6      0, 1,  2,  3,  4, 5
+   *  fromSlots = [arg1, arg2, a, b, c]       [arg3, k, p1,  m, p2, d]
    *  toSlots =   [arg1, arg2, a, c, d, e, b] [arg3, k,  m, p1, p2]
    *  argumentSize.nLongs = 2
    *  argumentSize.nReferences = 1
    *
    * it produces the output:
-   *  longMappings           2->2, 3->6, 4->3
-   *  refMappings            1->1, 3->2
-   *  cachedPropertyMappings 2->3, 4->4
+   * SlotMapping:
+   *  SlotMapping(fromOffset=2, toOffset=2, fromIsLongSlot=true, toIsLongSlot=true)
+   *  SlotMapping(fromOffset=3, toOffset=6, fromIsLongSlot=true, toIsLongSlot=true)
+   *  SlotMapping(fromOffset=4, toOffset=3, fromIsLongSlot=true, toIsLongSlot=true)
+   *  SlotMapping(fromOffset=1, toOffset=1, fromIsLongSlot=false, toIsLongSlot=false)
+   *  SlotMapping(fromOffset=3, toOffset=2, fromIsLongSlot=false, toIsLongSlot=false)
+   *  SlotMapping(fromOffset=5, toOffset=4, fromIsLongSlot=false, toIsLongSlot=true)
+   *
+   * CachedPropertyMapping:
+   *  (2 -> 3)
+   *  (4 -> 4)
+   *
    * */
   def computeSlotMappings(fromSlots: SlotConfiguration, argumentSize: SlotConfiguration.Size, toSlots: SlotConfiguration): SlotMappings = {
     val slotMappings = collection.mutable.ArrayBuffer.newBuilder[SlotMapping]
     val cachedPropertyMappings = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
 
     fromSlots.foreachSlotAndAliasesOrdered({
-      case SlotWithKeyAndAliases(VariableSlotKey(key), fromSlot, _) if fromSlot.offset >= argumentSize.nLongs =>
+      case SlotWithKeyAndAliases(VariableSlotKey(key), fromSlot, _)
+        if (fromSlot.isLongSlot && fromSlot.offset >= argumentSize.nLongs) || (!fromSlot.isLongSlot && fromSlot.offset >= argumentSize.nReferences) =>
         toSlots.get(key) match {
           case Some(toSlot) => slotMappings += SlotMapping(fromSlot.offset, toSlot.offset, fromSlot.isLongSlot, toSlot.isLongSlot)
         }
