@@ -51,6 +51,7 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.ConstraintType;
+import org.neo4j.internal.batchimport.input.BadCollector;
 import org.neo4j.internal.counts.GBPTreeCountsStore;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.kernel.api.SchemaRead;
@@ -237,6 +238,7 @@ public class StoreUpgradeIT
 
             assertFalse( Files.exists( layout.countStore().resolveSibling( layout.countStore().getFileName() + ".a" ) ) );
             assertFalse( Files.exists( layout.countStore().resolveSibling( layout.countStore().getFileName() + ".b" ) ) );
+            assertFalse( Files.exists( layout.file( BadCollector.BAD_FILE_NAME ) ) );
         }
 
         @Test
