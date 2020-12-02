@@ -98,8 +98,10 @@ object SetPropertyOperator {
                         write: Write,
                         queryStatisticsTracker: MutableQueryStatistics): Unit = {
     safeCastToMap(propertiesMap)
-      .filter((_, v) => !(v eq NO_VALUE))
-      .foreach((k: String, v: AnyValue) => setNodeProperty(nodeId, k, v, tokenWrite, write, queryStatisticsTracker))
+      .foreach{
+        case  (k: String, v: AnyValue) if !(v eq NO_VALUE) => setNodeProperty(nodeId, k, v, tokenWrite, write, queryStatisticsTracker)
+        case _ =>
+      }
   }
 
   def setNodeProperty(nodeId: Long,
@@ -119,8 +121,10 @@ object SetPropertyOperator {
                                 write: Write,
                                 queryStatisticsTracker: MutableQueryStatistics): Unit = {
     safeCastToMap(propertiesMap)
-      .filter((_, v) => !(v eq NO_VALUE))
-      .foreach((k: String, v: AnyValue) => setRelationshipProperty(relationshipId, k, v, tokenWrite, write, queryStatisticsTracker))
+      .foreach{
+        case  (k: String, v: AnyValue) if !(v eq NO_VALUE) => setRelationshipProperty(relationshipId, k, v, tokenWrite, write, queryStatisticsTracker)
+        case _ =>
+      }
   }
 
   def setRelationshipProperty(relationshipId: Long,
