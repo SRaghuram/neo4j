@@ -832,8 +832,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   }
 
-  //TODO remove ignored after fixing: Issue with planning RelationshipByIdSeek with bounded nodes
-  ignore("should handle more complex relationship predicate") {
+  test("should handle more complex relationship predicate") {
 
     val query =
       """
