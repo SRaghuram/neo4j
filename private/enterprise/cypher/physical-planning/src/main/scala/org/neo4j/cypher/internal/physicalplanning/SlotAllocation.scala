@@ -75,6 +75,7 @@ import org.neo4j.cypher.internal.logical.plans.OptionalExpand
 import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
 import org.neo4j.cypher.internal.logical.plans.PartialSort
 import org.neo4j.cypher.internal.logical.plans.PartialTop
+import org.neo4j.cypher.internal.logical.plans.PartialTop1WithTies
 import org.neo4j.cypher.internal.logical.plans.PreserveOrder
 import org.neo4j.cypher.internal.logical.plans.ProcedureCall
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
@@ -97,6 +98,7 @@ import org.neo4j.cypher.internal.logical.plans.SetRelationshipProperty
 import org.neo4j.cypher.internal.logical.plans.Skip
 import org.neo4j.cypher.internal.logical.plans.Sort
 import org.neo4j.cypher.internal.logical.plans.Top
+import org.neo4j.cypher.internal.logical.plans.Top1WithTies
 import org.neo4j.cypher.internal.logical.plans.TriadicBuild
 import org.neo4j.cypher.internal.logical.plans.TriadicFilter
 import org.neo4j.cypher.internal.logical.plans.TriadicSelection
@@ -566,7 +568,9 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
            _: Sort |
            _: PartialSort |
            _: Top |
+           _: Top1WithTies |
            _: PartialTop |
+           _: PartialTop1WithTies |
            _: CacheProperties |
            _: NonFuseable |
            _: TriadicBuild |
