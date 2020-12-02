@@ -7,6 +7,7 @@ package com.neo4j.internal.cypher.acceptance
 
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+
 import com.neo4j.configuration.EnterpriseEditionSettings
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.GraphDatabaseInternalSettings.block_create_drop_database
@@ -24,12 +25,15 @@ import org.neo4j.exceptions.DatabaseAdministrationException
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.DatabaseShutdownException
+import org.neo4j.graphdb.Label
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.internal.kernel.api.security.AuthenticationResult
 import org.neo4j.internal.kernel.api.security.LoginContext
 import org.neo4j.kernel.DeadlockDetectedException
 import org.neo4j.kernel.api.KernelTransaction
+
+import scala.collection.Map
 
 class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
   test("should return empty counts to the outside for commands that update the system graph internally") {
@@ -1287,6 +1291,59 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     // THEN
     val result = execute("SHOW DATABASE fOo")
     result.toList should be(List(db("foo")))
+  }
+
+  test("should set default to true when recreating default database") {
+    // GIVEN
+    setup(defaultConfig)
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute(s"DROP DATABASE $DEFAULT_DATABASE_NAME")
+
+    // WHEN
+    execute(s"CREATE DATABASE $DEFAULT_DATABASE_NAME")
+
+    // THEN
+    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true), db(SYSTEM_DATABASE_NAME)))
+  }
+
+  test("should set default to false when recreating config specified default database and new default exists") {
+    // GIVEN
+    setup(defaultConfig)
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE foo")
+    execute(s"DROP DATABASE $DEFAULT_DATABASE_NAME")
+    setDefaultDatabase("foo")
+
+    // WHEN
+    execute(s"CREATE DATABASE $DEFAULT_DATABASE_NAME")
+
+    // THEN
+    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME), db("foo", default = true, systemDefault = true), db(SYSTEM_DATABASE_NAME)))
+  }
+
+  test("should change default database according to config when restarting") {
+    // GIVEN
+    setup(defaultConfig)
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE foo")
+    setDefaultDatabase(DEFAULT_DATABASE_NAME, default = false)
+    setDefaultDatabase("foo")
+
+    // WHEN resetting system graph with config
+    initSystemGraph(defaultConfig)
+
+    // THEN
+    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true, systemDefault = true), db("foo"), db(SYSTEM_DATABASE_NAME)))
+  }
+
+  private def setDefaultDatabase(name: String, default: Boolean = true): Unit = {
+    graph.withTx { tx =>
+      // manually change default database value
+      val node = tx.findNode(Label.label("Database"), "name", name)
+      node.setProperty("default", default)
+      tx.commit()
+    }
   }
 
   test("should create default database on re-start after being dropped") {

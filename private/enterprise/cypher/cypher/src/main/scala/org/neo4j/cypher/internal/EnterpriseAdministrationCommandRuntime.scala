@@ -792,16 +792,16 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         normalizedName.name()
       })
       val defaultDbName = config.get(GraphDatabaseSettings.default_database)
-      def isDefault(dbName: String) = dbName.equals(defaultDbName)
+      def isConfigDefault(dbName: String) = dbName.equals(defaultDbName)
 
       val virtualKeys: Array[String] = Array(
         "status",
-        "default",
+        "configDefault",
         "uuid")
       def virtualValues(params: MapValue): Array[AnyValue] = Array(
         params.get(nameFields.nameKey),
         DatabaseStatus.Online,
-        Values.booleanValue(isDefault(params.get(nameFields.nameKey).asInstanceOf[TextValue].stringValue())),
+        Values.booleanValue(isConfigDefault(params.get(nameFields.nameKey).asInstanceOf[TextValue].stringValue())),
         Values.utf8Value(UUID.randomUUID().toString))
 
       def asInternalKeys(keys: Array[String]): Array[String] = keys.map(internalKey)
@@ -839,10 +839,12 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       }
 
       UpdatingSystemCommandExecutionPlan("CreateDatabase", normalExecutionEngine,
-        s"""CREATE (d:Database {name: $$`${nameFields.nameKey}`})
+        s"""OPTIONAL MATCH (d:Database {default: true})
+           |WITH coalesce(not(d.default), $$`${internalKey("configDefault")}`) AS systemDefault
+           |CREATE (d:Database {name: $$`${nameFields.nameKey}`})
            |SET
            |  d.status = $$`${internalKey("status")}`,
-           |  d.default = $$`${internalKey("default")}`,
+           |  d.default = systemDefault,
            |  d.created_at = datetime(),
            |  d.uuid = $$`${internalKey("uuid")}`
            |  $queryAdditions
