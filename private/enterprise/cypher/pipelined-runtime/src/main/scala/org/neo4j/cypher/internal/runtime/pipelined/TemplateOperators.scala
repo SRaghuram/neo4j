@@ -59,6 +59,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.ConditionalOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DelegateOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperatorState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctSinglePrimitiveState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.EmptyResultOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandIntoOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.FilterOperatorTemplate
@@ -786,6 +787,10 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                 ordered = true
               ))
             )
+
+        case plan: plans.EmptyResult =>
+          ctx: TemplateContext =>
+            new EmptyResultOperatorTemplate(ctx.inner, plan.id)(ctx.expressionCompiler)
 
         case _ =>
           None

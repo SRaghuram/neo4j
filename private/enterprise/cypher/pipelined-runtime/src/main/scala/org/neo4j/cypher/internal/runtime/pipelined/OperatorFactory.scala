@@ -716,10 +716,6 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                                     lazyTypes,
                                     length.isSimple)
 
-      case _: plans.EmptyResult =>
-        val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStateBufferVariant].argumentStateMapId
-        EmptyResultOperator(WorkIdentity.fromPlan(plan)).reducer(argumentStateMapId, id)
-
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException otherwise)
         interpretedPipesFallbackPolicy.breakOn(plan)
@@ -884,6 +880,9 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           call.callResults.map(r => r.outputName).toArray
         ))
 
+      case _: plans.EmptyResult =>
+        Some(new EmptyResultOperator(WorkIdentity.fromPlan(plan)))
+
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException)
         interpretedPipesFallbackPolicy.breakOn(plan)
@@ -951,9 +950,6 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
               AggregationOperator(WorkIdentity.fromPlan(plan, "Pre"), aggregators, groupings)
                 .mapper(argumentSlotOffset, argumentStateMapId, expressions, id)
             }
-
-          case _: plans.EmptyResult =>
-            EmptyResultOperator(WorkIdentity.fromPlan(plan, "Pre")).mapper(argumentSlotOffset, bufferId)
         }
     }
   }

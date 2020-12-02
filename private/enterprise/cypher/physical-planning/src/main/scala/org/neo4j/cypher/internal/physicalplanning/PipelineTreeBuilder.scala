@@ -646,8 +646,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
 
       case _: Sort |
            _: Aggregation |
-           _: Top |
-           _: EmptyResult =>
+           _: Top =>
         if (breakingPolicy.breakOn(plan, applyPlans(plan.id))) {
           val argumentStateBuffer = outputToArgumentStateBuffer(source, plan, argument, argument.argumentSlotOffset)
           val pipeline = newPipeline(plan, argumentStateBuffer)

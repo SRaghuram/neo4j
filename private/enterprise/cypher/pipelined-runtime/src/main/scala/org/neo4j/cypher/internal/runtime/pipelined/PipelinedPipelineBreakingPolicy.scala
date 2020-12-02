@@ -166,8 +166,7 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
            _: VarExpand |
            _: TriadicBuild |
            _: TriadicFilter |
-           _: PreserveOrder |
-           _: EmptyResult
+           _: PreserveOrder
       => breakOnFuseableOperator(lp, outerApplyPlanId, fuseIndex)
 
       // Void procedures preserve cardinality and are always non-breaking
@@ -191,7 +190,8 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
            _: Projection |
            _: CacheProperties |
            _: Selection |
-           _: NonFuseable
+           _: NonFuseable |
+           _: EmptyResult
       => (false, fuseIndex)
 
       // 2 child operators
