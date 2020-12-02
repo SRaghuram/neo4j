@@ -18,9 +18,11 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.util.VisibleForTesting;
 
 public abstract class AkkaActorSystemRestartStrategy
 {
@@ -108,6 +110,15 @@ public abstract class AkkaActorSystemRestartStrategy
         private final int MAX_CONSECUTIVE_FAILURES = 3;
         private final AtomicInteger count = new AtomicInteger();
 
+        /**
+         * currentFailureFirstDetected contains the instant when the current series of consecutive failures first began.
+         * This is necessary because we cannot rely on akka to keep a fixed time gap between consecutive executions of this function.
+         * Akka _schedules_ this function with the desired interval but if there is contention or a GC/VM pause then those scheduled executions can pile up
+         * resulting in the function being _executed_ with an undefined (potentially 0) time gap between executions (n.b. because this is used by an actor it is
+         * not possible for this to be executed concurrently)
+         */
+        private final AtomicReference<Instant> currentFailureFirstDetected = new AtomicReference<>();
+
         private final Supplier<Optional<SocketAddress>> firstSeed;
 
         public RestartWhenMajorityUnreachableOrSingletonFirstSeed( RemoteMembersResolver membersResolver )
@@ -118,18 +129,21 @@ public abstract class AkkaActorSystemRestartStrategy
         @Override
         public boolean restartRequired( Cluster cluster )
         {
-            if ( majorityUnreachable( cluster ) )
+            if ( anyRequirementUnsatisfied( cluster ) )
             {
-                if ( count.incrementAndGet() >= MAX_CONSECUTIVE_FAILURES )
-                {
-                    return true;
-                }
+                Instant now = Instant.now();
+                var failureFirstDetectedAt = currentFailureFirstDetected.compareAndExchange( null, now );
+                Instant failAfter = (failureFirstDetectedAt == null ? now : failureFirstDetectedAt)
+                        .plus( DEFAULT_CHECK_FREQUENCY.multipliedBy( MAX_CONSECUTIVE_FAILURES ) );
+
+                return count.incrementAndGet() >= MAX_CONSECUTIVE_FAILURES && now.isAfter( failAfter );
             }
             else
             {
                 count.set( 0 );
+                currentFailureFirstDetected.set( null );
+                return false;
             }
-            return false;
         }
 
         @Override
@@ -139,7 +153,8 @@ public abstract class AkkaActorSystemRestartStrategy
                    + ". Triggered after " + count.get() + " consecutive failures. Running every " + checkFrequency().toString();
         }
 
-        private boolean majorityUnreachable( Cluster cluster )
+        @VisibleForTesting
+        boolean anyRequirementUnsatisfied( Cluster cluster )
         {
             ClusterEvent.CurrentClusterState clusterState = cluster.state();
             Set<Member> unreachable = clusterState.getUnreachable();

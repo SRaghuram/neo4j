@@ -70,6 +70,9 @@ public class TestAkkaResilienceOne
     private static final String downingMessage = "Leader is removing unreachable node";
     private static final String nodeJoiningItselfMessage = "is JOINING itself";
 
+    private static final Duration detectFailureRestartAkkaAndReformTimeout = Duration.ofSeconds( 90 );
+    private static final Duration acceptableHeartbeatPause = Duration.ofSeconds( 30 );
+
     private static final AuthToken authToken = AuthTokens.basic( "neo4j", "password" );
 
     @CausalCluster
@@ -86,8 +89,14 @@ public class TestAkkaResilienceOne
     @CoreModifier
     private static Neo4jContainer<?> configure( Neo4jContainer<?> input ) throws IOException
     {
+        // The settings here make the akka failure detector behave more like a fixed timeout failure detector.
+        // A large heartbeat pause makes the test take longer to run but prevents flakiness because of contention or GC or VM pauses when running in TC
         return DeveloperWorkflow.configureNeo4jContainerIfNecessary( input )
-                                .withNeo4jConfig( CausalClusteringSettings.middleware_logging_level.name(), Level.INFO.toString() );
+                                .withNeo4jConfig( CausalClusteringSettings.middleware_logging_level.name(), Level.DEBUG.toString() )
+                                .withNeo4jConfig( CausalClusteringInternalSettings.akka_failure_detector_acceptable_heartbeat_pause.name(),
+                                                  acceptableHeartbeatPause.toSeconds() + "s" )
+                                .withNeo4jConfig( CausalClusteringInternalSettings.akka_failure_detector_expected_response_after.name(), "10s" )
+                                .withNeo4jConfig( CausalClusteringInternalSettings.akka_failure_detector_threshold.name(), "4" );
     }
 
     @BeforeAll
@@ -112,6 +121,7 @@ public class TestAkkaResilienceOne
 
         try
         {
+            cluster.waitForLogMessageOnAll( cluster.getAllServers(), "Started.", Duration.ofMinutes( 2 ) );
             clusterChecker.verifyConnectivity();
             checkClusterState();
         }
@@ -154,6 +164,7 @@ public class TestAkkaResilienceOne
         finally
         {
             cluster.startServers( cluster.getAllServers() );
+            cluster.waitForLogMessageOnAll( cluster.getAllServers(), "Started.", Duration.ofMinutes( 2 ) );
         }
         cluster.waitForBoltOnAll( cluster.getAllServers(), Duration.ofMinutes( 2 ) );
     }
@@ -183,7 +194,7 @@ public class TestAkkaResilienceOne
 
         // when
         cluster.pauseRandomServersExcept( 1, others );
-        Instant deadline = Instant.now().plus( Duration.ofSeconds( 30 ) );
+        Instant deadline = Instant.now().plus( detectFailureRestartAkkaAndReformTimeout );
 
         waitUntil( deadline );
         assertThat( countInDebugLogs( others, downingMessage ) ).isEqualTo( downingMessageCountBefore + 1 );
@@ -197,20 +208,20 @@ public class TestAkkaResilienceOne
         try
         {
             // Give the seed long enough to form a cluster on its own
-            waitUntil( Instant.now().plus( Duration.ofSeconds( 60 ) ) );
+            waitUntil( Instant.now().plus( detectFailureRestartAkkaAndReformTimeout ) );
             if ( testSeed )
             {
                 // This fails on 4.1 and below
                 // We require that the node join itself in this situation
-                try
-                {
-                    assertThat( countInDebugLogs( testServer, nodeJoiningItselfMessage ) )
-                            .isEqualTo( nodeJoiningItselfMessageCountBefore + 1 );
-                }
-                catch ( AssertionError e )
-                {
-                    log.warn( () -> "Node did not join itself after restart" + e.getMessage() );
-                }
+                assertThat( countInDebugLogs( testServer, nodeJoiningItselfMessage ) )
+                        .as( "Node should join itself after restart" )
+                        .isGreaterThan( nodeJoiningItselfMessageCountBefore );
+            }
+            else
+            {
+                assertThat( countInDebugLogs( testServer, nodeJoiningItselfMessage ) )
+                        .as( "Node should not join itself after restart" )
+                        .isEqualTo( nodeJoiningItselfMessageCountBefore );
             }
         }
         finally
@@ -234,6 +245,7 @@ public class TestAkkaResilienceOne
 
     private int countInDebugLogs( Set<Neo4jServer> servers, String pattern )
     {
+        log.info( () -> "Checking debug logs for " + pattern );
         String debugLogs = servers.stream().map( Neo4jServer::getDebugLog ).collect( Collectors.joining( "\n" ) );
         Matcher matcher = Pattern.compile( pattern ).matcher( debugLogs );
         int count = 0;
@@ -268,7 +280,7 @@ public class TestAkkaResilienceOne
 
         // when
         cluster.pauseRandomServersExcept( 1, others );
-        Instant deadline = Instant.now().plus( Duration.ofSeconds( 30 ) );
+        Instant deadline = Instant.now().plus( detectFailureRestartAkkaAndReformTimeout );
 
         waitUntil( deadline );
         assertThat( countInDebugLogs( others, downingMessage ) ).isEqualTo( downingMessageCountBefore + 1 );
@@ -285,18 +297,18 @@ public class TestAkkaResilienceOne
             // case:
             //   testSeed: On 4.1 and below the seed cannot form a new cluster after a restart - it will just keep trying to join the others
             //   !testSeed: On 4.1 and below nobody can start a new cluster after a restart - everyone will just keep trying to join the everyone else
-            waitUntil( Instant.now().plus( Duration.ofSeconds( 60 ) ) );
+            waitUntil( Instant.now().plus( detectFailureRestartAkkaAndReformTimeout ) );
             if ( testSeed )
             {
-                try
-                {
-                    assertThat( countInDebugLogs( testServer, nodeJoiningItselfMessage ) )
-                            .isEqualTo( nodeJoiningItselfMessageCountBefore + 1 );
-                }
-                catch ( AssertionError e )
-                {
-                    log.warn( () -> "Node did not join itself after restart" + e.getMessage() );
-                }
+                assertThat( countInDebugLogs( testServer, nodeJoiningItselfMessage ) )
+                        .as( "Node should join itself after restart" )
+                        .isGreaterThan( nodeJoiningItselfMessageCountBefore );
+            }
+            else
+            {
+                assertThat( countInDebugLogs( testServer, nodeJoiningItselfMessage ) )
+                        .as( "Node should not join itself after restart" )
+                        .isEqualTo( nodeJoiningItselfMessageCountBefore );
             }
         }
         finally
@@ -317,7 +329,7 @@ public class TestAkkaResilienceOne
                 "Akka should restart",
                 () -> countInDebugLogs( testServer, akkaRestartMessage ),
                 equalityCondition( akkaRestartMessageCountBefore + 1 ),
-                10, TimeUnit.SECONDS
+                detectFailureRestartAkkaAndReformTimeout.toSeconds(), TimeUnit.SECONDS
         );
     }
 
