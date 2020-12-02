@@ -44,6 +44,7 @@ import org.neo4j.cypher.internal.logical.plans.DropResult
 import org.neo4j.cypher.internal.logical.plans.Eager
 import org.neo4j.cypher.internal.logical.plans.EmptyResult
 import org.neo4j.cypher.internal.logical.plans.ErrorPlan
+import org.neo4j.cypher.internal.logical.plans.ExhaustiveLimit
 import org.neo4j.cypher.internal.logical.plans.Expand
 import org.neo4j.cypher.internal.logical.plans.ExpandAll
 import org.neo4j.cypher.internal.logical.plans.ExpandInto
@@ -560,6 +561,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
       case _: ProduceResult |
            _: Selection |
            _: Limit |
+           _: ExhaustiveLimit |
            _: Skip |
            _: Sort |
            _: PartialSort |

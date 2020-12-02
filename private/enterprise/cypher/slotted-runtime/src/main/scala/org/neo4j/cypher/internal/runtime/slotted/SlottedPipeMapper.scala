@@ -32,6 +32,7 @@ import org.neo4j.cypher.internal.logical.plans.DropResult
 import org.neo4j.cypher.internal.logical.plans.Eager
 import org.neo4j.cypher.internal.logical.plans.EmptyResult
 import org.neo4j.cypher.internal.logical.plans.ErrorPlan
+import org.neo4j.cypher.internal.logical.plans.ExhaustiveLimit
 import org.neo4j.cypher.internal.logical.plans.Expand
 import org.neo4j.cypher.internal.logical.plans.ExpandAll
 import org.neo4j.cypher.internal.logical.plans.ExpandInto
@@ -466,6 +467,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
       // Pipes that do not themselves read/write slots should be fine to use the fallback (non-slot aware pipes)
       case _: Selection |
            _: Limit |
+           _: ExhaustiveLimit |
            _: ErrorPlan |
            _: Skip |
            _: NonFuseable =>

@@ -27,8 +27,10 @@ import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeek
 import org.neo4j.cypher.internal.runtime.spec.tests.DistinctTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DropResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EmptyResultTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.EagerLimitProfileRowsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EnterpriseNodeIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EsotericAssertSameNodeTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ExhaustiveLimitTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllWithOtherOperatorsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandIntoTestBase
@@ -157,6 +159,7 @@ class SlottedUnwindTest extends UnwindTestBase(ENTERPRISE.DEFAULT, SlottedRuntim
 class SlottedDistinctTest extends DistinctTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedOrderedDistinctTest extends OrderedDistinctTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedLimitTest extends LimitTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedExhaustiveLimitTest extends ExhaustiveLimitTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedSkipTest extends SkipTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedNodeHashJoinTest extends NodeHashJoinTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedValueHashJoinTest extends ValueHashJoinTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
@@ -170,7 +173,8 @@ class SlottedProvidedOrderTest extends ProvidedOrderTestBase(ENTERPRISE.DEFAULT,
                                with NonParallelProvidedOrderTestBase[EnterpriseRuntimeContext]
                                with CartesianProductProvidedOrderTestBase[EnterpriseRuntimeContext]
 class SlottedProfileRowsTest extends ProfileRowsTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT, 1)
-                             with NonParallelProfileRowsTestBase[EnterpriseRuntimeContext]
+                              with EagerLimitProfileRowsTestBase[EnterpriseRuntimeContext]
+                              with NonParallelProfileRowsTestBase[EnterpriseRuntimeContext]
 class SlottedProfileDbHitsTest extends LegacyDbHitsTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT, createsRelValueInExpand = false)
                                with ProcedureCallDbHitsTestBase[EnterpriseRuntimeContext]
                                with NestedPlanDbHitsTestBase[EnterpriseRuntimeContext]
