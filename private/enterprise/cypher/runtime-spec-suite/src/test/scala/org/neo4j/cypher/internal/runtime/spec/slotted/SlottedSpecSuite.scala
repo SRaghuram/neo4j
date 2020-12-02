@@ -50,6 +50,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.LetSelectOrAntiSemiApplyTest
 import org.neo4j.cypher.internal.runtime.spec.tests.LetSelectOrSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LetSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LimitTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.LockNodesTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryDeallocationTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementDisabledTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementTestBase
@@ -227,4 +228,6 @@ class SlottedCreateTest extends CreateTestBase(ENTERPRISE.DEFAULT, SlottedRuntim
 class SlottedLenientCreateRelationshipTest extends LenientCreateRelationshipTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
 class SlottedSetPropertyTest extends SetPropertyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 
+
+class SlottedLockNodesTest extends LockNodesTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 
