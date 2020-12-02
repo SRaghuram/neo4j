@@ -116,6 +116,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.RollupApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SelectOrAntiSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SelectOrSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SemiApplyTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.SetNodePropertyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SetPropertiesFromMapNodeTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SetPropertiesFromMapRelationshipTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SetPropertyTestBase
@@ -501,14 +502,16 @@ class PipelinedCreateNoFusingTest extends CreateTestBase(NO_FUSING, PIPELINED, S
 class PipelinedLenientCreateRelationshipTest extends LenientCreateRelationshipTestBase(FUSING, PIPELINED) with PipelinedSpecSuite
 class PipelinedLenientCreateRelationshipNoFusingTest extends LenientCreateRelationshipTestBase(NO_FUSING, PIPELINED) with PipelinedSpecSuite
 
-//SET
+//SET PROPERTY
 class PipelinedSetPropertyTestBase extends SetPropertyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedSetPropertyNoFusingTest extends SetPropertyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedSetNodePropertyNoFusingTest extends SetNodePropertyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
+// SET FROM MAP
 class PipelinedSetPropertiesFromMapNodeTestBase extends SetPropertiesFromMapNodeTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedSetPropertiesFromMapNoFusingNodeTest extends SetPropertiesFromMapNodeTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedSetPropertiesFromMapRelationshipTestBase extends SetPropertiesFromMapRelationshipTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedSetPropertiesFromMapNoFusingRelationshipTest extends SetPropertiesFromMapRelationshipTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
-
 
 //EXHAUSTIVE LIMIT
 class PipelinedExhaustiveLimitTest extends ExhaustiveLimitTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
