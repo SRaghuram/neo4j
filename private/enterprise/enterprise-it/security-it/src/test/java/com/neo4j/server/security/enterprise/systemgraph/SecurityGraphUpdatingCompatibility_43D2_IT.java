@@ -15,7 +15,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.KernelTransaction;
 
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_43D2;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_43D2;
 
 class SecurityGraphUpdatingCompatibility_43D2_IT extends SecurityGraphCompatibilityTestBase
 {

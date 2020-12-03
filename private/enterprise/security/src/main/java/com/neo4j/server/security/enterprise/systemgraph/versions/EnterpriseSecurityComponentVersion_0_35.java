@@ -22,7 +22,8 @@ import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.auth.ListSnapshot;
-import org.neo4j.server.security.systemgraph.ComponentVersion;
+
+import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_35;
 
 /**
  * This is the EnterpriseSecurityComponent version for Neo4j 3.5
@@ -34,7 +35,7 @@ public class EnterpriseSecurityComponentVersion_0_35 extends KnownEnterpriseSecu
 
     public EnterpriseSecurityComponentVersion_0_35( Log log, RoleRepository roleRepository, CustomSecurityInitializer customSecurityInitializer )
     {
-        super( ComponentVersion.ENTERPRISE_SECURITY_35, log );
+        super( ENTERPRISE_SECURITY_35, log );
         this.roleRepository = roleRepository;
         this.customSecurityInitializer = customSecurityInitializer;
     }

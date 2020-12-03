@@ -32,6 +32,7 @@ import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.procedure.enterprise.builtin.SettingsWhitelist;
 import com.neo4j.server.enterprise.EnterpriseNeoWebServer;
+import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseDefaultDatabaseResolver;
 
 import java.time.Duration;
@@ -55,6 +56,7 @@ import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.DefaultSystemGraphInitializer;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
+import org.neo4j.dbms.database.SystemGraphComponents;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.exceptions.KernelException;
@@ -98,6 +100,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     private final ReconciledTransactionTracker reconciledTxTracker;
     private final EnterpriseFabricServicesBootstrap fabricServicesBootstrap;
     private final Dependencies dependencies;
+    private final SecurityLog securityLog;
     private DatabaseStartAborter databaseStartAborter;
 
     public EnterpriseEditionModule( GlobalModule globalModule )
@@ -116,6 +119,8 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         fabricServicesBootstrap = new EnterpriseFabricServicesBootstrap.Single( globalModule.getGlobalLife(), dependencies, globalModule.getLogService() );
         SettingsWhitelist settingsWhiteList = new SettingsWhitelist( globalModule.getGlobalConfig() );
         dependencies.satisfyDependency( settingsWhiteList );
+        securityLog = new SecurityLog( globalModule.getGlobalConfig(), globalModule.getFileSystem() );
+        globalModule.getGlobalLife().add( securityLog );
     }
 
     @Override

@@ -13,13 +13,14 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.logging.NullLog;
-import org.neo4j.server.security.systemgraph.ComponentVersion;
+
+import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_UNKNOWN_VERSION;
 
 public class NoEnterpriseSecurityComponentVersion extends KnownEnterpriseSecurityComponentVersion
 {
     public NoEnterpriseSecurityComponentVersion()
     {
-        super( ComponentVersion.ENTERPRISE_SECURITY_UNKNOWN_VERSION, NullLog.getInstance() );
+        super( ENTERPRISE_SECURITY_UNKNOWN_VERSION, NullLog.getInstance() );
     }
 
     @Override

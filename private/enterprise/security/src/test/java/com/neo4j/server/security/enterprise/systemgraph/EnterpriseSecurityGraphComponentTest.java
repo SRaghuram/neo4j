@@ -51,16 +51,16 @@ import static org.neo4j.dbms.database.SystemGraphComponent.Status.CURRENT;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.REQUIRES_UPGRADE;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.UNSUPPORTED_BUT_CAN_UPGRADE;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_36;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_40;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41D1;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D4;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D6;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D7;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42P1;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_43D1;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_43D2;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_36;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_40;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_41;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_41D1;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D4;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D6;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D7;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42P1;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_43D1;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_43D2;
 
 @TestDirectoryExtension
 @TestInstance( PER_CLASS )

@@ -27,11 +27,11 @@ import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.logging.Log;
-import org.neo4j.server.security.systemgraph.ComponentVersion;
-import org.neo4j.server.security.systemgraph.KnownSystemComponentVersion;
+import org.neo4j.dbms.database.ComponentVersion;
+import org.neo4j.dbms.database.KnownSystemComponentVersion;
 
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.UNKNOWN_VERSION;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.UNKNOWN_VERSION;
 
 public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSystemComponentVersion
 {

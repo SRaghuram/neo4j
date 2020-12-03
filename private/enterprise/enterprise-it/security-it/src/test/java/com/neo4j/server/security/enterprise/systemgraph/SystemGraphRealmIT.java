@@ -62,7 +62,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
-import static org.neo4j.dbms.database.AbstractSystemGraphComponent.SECURITY_USER_COMPONENT;
+import static org.neo4j.dbms.database.ComponentVersion.SECURITY_USER_COMPONENT;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.CURRENT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ACCESS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CONSTRAINT;
@@ -83,7 +83,7 @@ import static org.neo4j.logging.LogAssertions.assertThat;
 import static org.neo4j.security.BasicSystemGraphRealmTestHelper.assertAuthenticationFails;
 import static org.neo4j.security.BasicSystemGraphRealmTestHelper.assertAuthenticationSucceeds;
 import static org.neo4j.security.BasicSystemGraphRealmTestHelper.createUser;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.LATEST_COMMUNITY_SECURITY_COMPONENT_VERSION;
+import static org.neo4j.server.security.systemgraph.UserSecurityGraphComponentVersion.LATEST_COMMUNITY_SECURITY_COMPONENT_VERSION;
 
 @TestDirectoryExtension
 class SystemGraphRealmIT

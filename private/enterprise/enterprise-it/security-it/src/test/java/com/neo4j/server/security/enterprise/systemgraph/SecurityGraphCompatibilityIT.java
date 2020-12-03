@@ -35,15 +35,15 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_36;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_40;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41D1;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D4;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D6;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D7;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42P1;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_43D1;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_36;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_40;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_41;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_41D1;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D4;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D6;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D7;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42P1;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_43D1;
 
 class SecurityGraphCompatibilityIT extends SecurityGraphCompatibilityTestBase
 {

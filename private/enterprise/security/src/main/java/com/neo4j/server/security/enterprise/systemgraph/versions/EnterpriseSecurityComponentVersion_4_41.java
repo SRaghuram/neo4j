@@ -20,9 +20,9 @@ import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.ProcedureSegment;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.logging.Log;
-import org.neo4j.server.security.systemgraph.ComponentVersion;
 
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
+import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_41;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
 
 /**
@@ -34,7 +34,7 @@ public class EnterpriseSecurityComponentVersion_4_41 extends SupportedEnterprise
 
     public EnterpriseSecurityComponentVersion_4_41( Log log, KnownEnterpriseSecurityComponentVersion previous )
     {
-        super( ComponentVersion.ENTERPRISE_SECURITY_41, log );
+        super( ENTERPRISE_SECURITY_41, log );
         this.previous = previous;
     }
 

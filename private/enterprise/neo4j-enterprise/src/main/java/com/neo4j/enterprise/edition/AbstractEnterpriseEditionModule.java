@@ -69,17 +69,17 @@ public interface AbstractEnterpriseEditionModule
         FileSystemAbstraction fileSystem = globalModule.getFileSystem();
         LogProvider logProvider = globalModule.getLogService().getUserLogProvider();
 
-        var communityComponent = CommunitySecurityModule.createSecurityComponent( securityLog, config, fileSystem, logProvider );
-        var enterpriseComponent = EnterpriseSecurityModule.createSecurityComponent( securityLog, config, fileSystem, logProvider );
+        var userSecurityComponent = CommunitySecurityModule.createSecurityComponent( securityLog, config, fileSystem, logProvider );
+        var roleAndPrivilegeComponent = EnterpriseSecurityModule.createSecurityComponent( securityLog, config, fileSystem, logProvider );
 
         Dependencies dependencies = globalModule.getGlobalDependencies();
         // TODO find a better way to provide a way to let the runtime check the version of the enterprise security graph
-        dependencies.satisfyDependency( enterpriseComponent );
+        dependencies.satisfyDependency( roleAndPrivilegeComponent );
         SystemGraphComponents systemGraphComponents = dependencies.resolveDependency( SystemGraphComponents.class );
-        systemGraphComponents.register( communityComponent );
-        systemGraphComponents.register( enterpriseComponent );
+        systemGraphComponents.register( userSecurityComponent );
+        systemGraphComponents.register( roleAndPrivilegeComponent );
 
-        return enterpriseComponent;
+        return roleAndPrivilegeComponent;
     }
 
     default SecurityProvider makeEnterpriseSecurityModule( GlobalModule globalModule, DefaultDatabaseResolver defaultDatabaseResolver )
@@ -105,7 +105,6 @@ public interface AbstractEnterpriseEditionModule
             );
             securityModule.setup();
             globalModule.getGlobalLife().add( securityModule.authManager() );
-            globalModule.getGlobalDependencies().satisfyDependency( securityComponent );
             return securityModule;
         }
         return EnterpriseNoAuthSecurityProvider.INSTANCE;

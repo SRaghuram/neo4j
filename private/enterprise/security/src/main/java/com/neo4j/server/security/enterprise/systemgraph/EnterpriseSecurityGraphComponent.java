@@ -36,6 +36,7 @@ import java.util.Set;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.dbms.database.AbstractSystemGraphComponent;
+import org.neo4j.dbms.database.KnownSystemComponentVersions;
 import org.neo4j.dbms.database.SystemGraphComponent;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -44,13 +45,13 @@ import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.auth.UserRepository;
-import org.neo4j.server.security.systemgraph.KnownSystemComponentVersions;
 import org.neo4j.server.security.systemgraph.UserSecurityGraphComponent;
 
 import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.ROLE_LABEL;
 import static com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion.USER_LABEL;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.UNKNOWN_VERSION;
+import static org.neo4j.dbms.database.ComponentVersion.SECURITY_PRIVILEGE_COMPONENT;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.UNKNOWN_VERSION;
 
 /**
  * This component contains roles and privileges and is an enterprise-only component.
@@ -99,11 +100,11 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
         knownSecurityComponentVersions.add( version8 );
         knownSecurityComponentVersions.add( version9 );
         knownSecurityComponentVersions.add( version10 );
-        knownSecurityComponentVersions.add( new EnterpriseSecurityComponentVersion_Future( log, knownSecurityComponentVersions.latestSecurityGraphVersion() ) );
+        knownSecurityComponentVersions.add( new EnterpriseSecurityComponentVersion_Future( log, knownSecurityComponentVersions.latestComponentVersion() ) );
     }
 
     @Override
-    public String component()
+    public String componentName()
     {
         return SECURITY_PRIVILEGE_COMPONENT;
     }
@@ -111,17 +112,17 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
     @Override
     public Status detect( Transaction tx )
     {
-        return knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx ).getStatus();
+        return knownSecurityComponentVersions.detectCurrentComponentVersion( tx ).getStatus();
     }
 
     @Override
     public void initializeSystemGraphModel( Transaction tx ) throws Exception
     {
-        final KnownEnterpriseSecurityComponentVersion componentBeforeInit = knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx );
+        final KnownEnterpriseSecurityComponentVersion componentBeforeInit = knownSecurityComponentVersions.detectCurrentComponentVersion( tx );
         log.info( "Initializing system graph model for component '%s' with version %d and status %s",
                 SECURITY_PRIVILEGE_COMPONENT, componentBeforeInit.version, componentBeforeInit.getStatus() );
         initializeLatestSystemGraph( tx );
-        KnownEnterpriseSecurityComponentVersion componentAfterInit = knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx );
+        KnownEnterpriseSecurityComponentVersion componentAfterInit = knownSecurityComponentVersions.detectCurrentComponentVersion( tx );
         log.info( "After initialization of system graph model component '%s' have version %d and status %s",
                 SECURITY_PRIVILEGE_COMPONENT, componentAfterInit.version, componentAfterInit.getStatus() );
 
@@ -138,7 +139,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
     {
         SystemGraphComponent.executeWithFullAccess( system, tx ->
         {
-            KnownEnterpriseSecurityComponentVersion currentVersion = knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx );
+            KnownEnterpriseSecurityComponentVersion currentVersion = knownSecurityComponentVersions.detectCurrentComponentVersion( tx );
             log.info( "Upgrading component '%s' with version %d and status %s to latest version",
                     SECURITY_PRIVILEGE_COMPONENT, currentVersion.version, currentVersion.getStatus() );
 
@@ -152,7 +153,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
                 if ( currentVersion.migrationSupported() )
                 {
                     log.debug( "Upgrading security graph to latest version" );
-                    knownSecurityComponentVersions.latestSecurityGraphVersion().upgradeSecurityGraph( tx, currentVersion.version );
+                    knownSecurityComponentVersions.latestComponentVersion().upgradeSecurityGraph( tx, currentVersion.version );
                 }
                 else
                 {
@@ -186,25 +187,25 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
     public void assertUpdateWithAction( Transaction tx, PrivilegeAction action, SpecialDatabase specialDatabase, Segment segment )
             throws UnsupportedOperationException
     {
-        KnownEnterpriseSecurityComponentVersion component = knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx );
+        KnownEnterpriseSecurityComponentVersion component = knownSecurityComponentVersions.detectCurrentComponentVersion( tx );
         component.assertUpdateWithAction( action, specialDatabase, segment );
     }
 
     public KnownEnterpriseSecurityComponentVersion findSecurityGraphComponentVersion( String substring )
     {
-        return knownSecurityComponentVersions.findSecurityGraphVersion( substring );
+        return knownSecurityComponentVersions.findComponentVersion( substring );
     }
 
     @Override
     public DatabaseSecurityCommands getBackupCommands( Transaction tx, String databaseName, boolean saveUsers, boolean saveRoles )
     {
-        KnownEnterpriseSecurityComponentVersion component = knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx );
+        KnownEnterpriseSecurityComponentVersion component = knownSecurityComponentVersions.detectCurrentComponentVersion( tx );
         return component.getBackupCommands( tx, databaseName.toLowerCase(), saveUsers, saveRoles );
     }
 
     public Set<ResourcePrivilege> getPrivilegesForRole( Transaction tx, String role )
     {
-        KnownEnterpriseSecurityComponentVersion version = knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx );
+        KnownEnterpriseSecurityComponentVersion version = knownSecurityComponentVersions.detectCurrentComponentVersion( tx );
         if ( !version.runtimeSupported() )
         {
             return Collections.emptySet();
@@ -214,7 +215,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
 
     Set<ResourcePrivilege> getPrivilegeForRoles( Transaction tx, List<String> roles, Cache<String,Set<ResourcePrivilege>> privilegeCache )
     {
-        KnownEnterpriseSecurityComponentVersion version = knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx );
+        KnownEnterpriseSecurityComponentVersion version = knownSecurityComponentVersions.detectCurrentComponentVersion( tx );
         if ( !version.runtimeSupported() )
         {
             return Collections.emptySet();
@@ -224,7 +225,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
 
     private void initializeLatestSystemGraph( Transaction tx ) throws Exception
     {
-        KnownEnterpriseSecurityComponentVersion latest = knownSecurityComponentVersions.latestSecurityGraphVersion();
+        KnownEnterpriseSecurityComponentVersion latest = knownSecurityComponentVersions.latestComponentVersion();
         Map<String,Set<String>> admins = new HashMap<>();
         admins.put( PredefinedRoles.ADMIN, Set.of( decideOnAdminUsername( tx ) ) );
         latest.initializePrivileges( tx, PredefinedRoles.roles, admins );
@@ -238,7 +239,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
     private String decideOnAdminUsername( Transaction tx ) throws Exception
     {
         String newAdmin = null;
-        KnownEnterpriseSecurityComponentVersion latestComponent = knownSecurityComponentVersions.latestSecurityGraphVersion();
+        KnownEnterpriseSecurityComponentVersion latestComponent = knownSecurityComponentVersions.latestComponentVersion();
         Set<String> usernames = latestComponent.getAllNames( tx, USER_LABEL );
 
         // Try to determine who should be admin, by first checking the outcome of the SetDefaultAdmin command

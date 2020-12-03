@@ -458,7 +458,7 @@ public class EnterpriseBuiltInDbmsProcedures
         }
         SystemGraphComponents versions = systemGraphComponents;
         ArrayList<SystemGraphComponentStatusResultDetails> results = new ArrayList<>();
-        versions.forEach( version -> results.add( new SystemGraphComponentStatusResultDetails( version.component(), version.detect( transaction ) ) ) );
+        versions.forEach( version -> results.add( new SystemGraphComponentStatusResultDetails( version.componentName(), version.detect( transaction ) ) ) );
         return Stream.concat( Stream.of( new SystemGraphComponentStatusResultDetails( versions.component(), versions.detect( transaction ) ) ),
                 results.stream() );
     }
@@ -497,22 +497,22 @@ public class EnterpriseBuiltInDbmsProcedures
                     {
                         component.upgradeToCurrent( graph );
                         results.add(
-                                new SystemGraphComponentUpgradeResultDetails( component.component(), component.detect( transaction ).name(), "Upgraded" ) );
+                                new SystemGraphComponentUpgradeResultDetails( component.componentName(), component.detect( transaction ).name(), "Upgraded" ) );
 
                     }
                     catch ( Exception e )
                     {
                         failed.add( component );
-                        results.add( new SystemGraphComponentUpgradeResultDetails( component.component(), initialStatus.name(), e.toString() ) );
+                        results.add( new SystemGraphComponentUpgradeResultDetails( component.componentName(), initialStatus.name(), e.toString() ) );
                     }
                 }
                 else
                 {
-                    results.add( new SystemGraphComponentUpgradeResultDetails( component.component(), initialStatus.name(), "" ) );
+                    results.add( new SystemGraphComponentUpgradeResultDetails( component.componentName(), initialStatus.name(), "" ) );
                 }
             } );
             String upgradeResult =
-                    failed.isEmpty() ? "Success" : "Failed: " + failed.stream().map( SystemGraphComponent::component ).collect( Collectors.joining( ", " ) );
+                    failed.isEmpty() ? "Success" : "Failed: " + failed.stream().map( SystemGraphComponent::componentName ).collect( Collectors.joining( ", " ) );
             return Stream.concat(
                     Stream.of( new SystemGraphComponentUpgradeResultDetails( versions.component(), versions.detect( transaction ).name(), upgradeResult ) ),
                     results.stream() );
@@ -520,7 +520,7 @@ public class EnterpriseBuiltInDbmsProcedures
         else
         {
             versions.forEach(
-                    version -> results.add( new SystemGraphComponentUpgradeResultDetails( version.component(), version.detect( transaction ).name(), "" ) ) );
+                    version -> results.add( new SystemGraphComponentUpgradeResultDetails( version.componentName(), version.detect( transaction ).name(), "" ) ) );
             return Stream.concat( Stream.of( new SystemGraphComponentUpgradeResultDetails( versions.component(), versions.detect( transaction ).name(), "" ) ),
                     results.stream() );
         }

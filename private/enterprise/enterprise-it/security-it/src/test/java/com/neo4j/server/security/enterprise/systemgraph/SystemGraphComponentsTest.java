@@ -50,7 +50,6 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
 import org.neo4j.server.security.auth.InMemoryUserRepository;
 import org.neo4j.server.security.auth.UserRepository;
-import org.neo4j.server.security.systemgraph.ComponentVersion;
 import org.neo4j.server.security.systemgraph.UserSecurityGraphComponent;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -62,6 +61,7 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
+import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_FAKE_VERSION;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
@@ -72,21 +72,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_36;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_40;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_41;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_41D1;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D4;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D6;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D7;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42P1;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_43D1;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_43D2;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.CURRENT;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.REQUIRES_UPGRADE;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.UNSUPPORTED_BUT_CAN_UPGRADE;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.UNSUPPORTED_FUTURE;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_36;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_40;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41D1;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D4;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D6;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D7;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42P1;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_43D1;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_43D2;
 
 @TestDirectoryExtension
 @TestInstance( PER_CLASS )
@@ -142,7 +142,7 @@ class SystemGraphComponentsTest
         HashMap<String,SystemGraphComponent.Status> statuses = new HashMap<>();
         inTx( tx ->
         {
-            systemGraphComponents.forEach( component -> statuses.put( component.component(), component.detect( tx ) ) );
+            systemGraphComponents.forEach( component -> statuses.put( component.componentName(), component.detect( tx ) ) );
             statuses.put( "dbms-status", systemGraphComponents.detect( tx ) );
         } );
         assertThat( "Expecting four components", statuses.size(), is( 4 ) );
@@ -295,7 +295,7 @@ class SystemGraphComponentsTest
         HashMap<String,SystemGraphComponent.Status> statuses = new HashMap<>();
         inTx( tx ->
         {
-            systemGraphComponents.forEach( component -> statuses.put( component.component(), component.detect( tx ) ) );
+            systemGraphComponents.forEach( component -> statuses.put( component.componentName(), component.detect( tx ) ) );
             statuses.put( "dbms-status", systemGraphComponents.detect( tx ) );
         } );
         for ( var entry : expected.entrySet() )
@@ -357,7 +357,7 @@ class SystemGraphComponentsTest
     {
         EnterpriseSecurityComponentVersionFake( Log log )
         {
-            super( ComponentVersion.ENTERPRISE_SECURITY_FAKE_VERSION, log );
+            super( ENTERPRISE_SECURITY_FAKE_VERSION, log );
         }
 
         @Override

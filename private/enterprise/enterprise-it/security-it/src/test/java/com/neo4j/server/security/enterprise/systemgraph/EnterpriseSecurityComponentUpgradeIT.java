@@ -48,16 +48,16 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRANSACTION_MANAGEMENT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRAVERSE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.WRITE;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_35;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_36;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_40;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41D1;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D4;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D6;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42D7;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_42P1;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_43D1;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_35;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_36;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_40;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_41;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_41D1;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D4;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D6;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42D7;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_42P1;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_43D1;
 
 class EnterpriseSecurityComponentUpgradeIT extends SecurityGraphCompatibilityTestBase
 {

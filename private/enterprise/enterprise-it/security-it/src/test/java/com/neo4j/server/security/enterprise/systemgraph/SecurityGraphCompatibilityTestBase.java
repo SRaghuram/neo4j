@@ -49,10 +49,10 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import static org.neo4j.configuration.GraphDatabaseSettings.allow_single_automatic_upgrade;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_35;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_36;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_40;
-import static org.neo4j.server.security.systemgraph.ComponentVersion.Neo4jVersions.VERSION_41D1;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_35;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_36;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_40;
+import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_41D1;
 
 @EphemeralTestDirectoryExtension
 abstract class SecurityGraphCompatibilityTestBase

@@ -22,7 +22,8 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.logging.Log;
-import org.neo4j.server.security.systemgraph.ComponentVersion;
+
+import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_43D1;
 
 /**
  * This is the EnterpriseSecurityComponent version for Neo4j 4.3-drop1.
@@ -33,7 +34,7 @@ public class EnterpriseSecurityComponentVersion_9_43D1 extends SupportedEnterpri
 
     public EnterpriseSecurityComponentVersion_9_43D1( Log log, KnownEnterpriseSecurityComponentVersion previous )
     {
-        super( ComponentVersion.ENTERPRISE_SECURITY_43D1, log );
+        super( ENTERPRISE_SECURITY_43D1, log );
         this.previous = previous;
     }
 

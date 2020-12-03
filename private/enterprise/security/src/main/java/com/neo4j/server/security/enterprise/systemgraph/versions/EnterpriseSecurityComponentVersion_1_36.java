@@ -26,7 +26,8 @@ import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.logging.Log;
-import org.neo4j.server.security.systemgraph.ComponentVersion;
+
+import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_36;
 
 /**
  * This is the EnterpriseSecurityComponent version for Neo4j 3.6
@@ -43,7 +44,7 @@ public class EnterpriseSecurityComponentVersion_1_36 extends KnownEnterpriseSecu
 
     public EnterpriseSecurityComponentVersion_1_36( Log log, Config config, KnownEnterpriseSecurityComponentVersion previous )
     {
-        super( ComponentVersion.ENTERPRISE_SECURITY_36, log );
+        super( ENTERPRISE_SECURITY_36, log );
         this.config = config;
         this.previous = previous;
     }

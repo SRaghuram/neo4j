@@ -21,9 +21,9 @@ import org.neo4j.internal.kernel.api.security.FunctionSegment;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.logging.Log;
-import org.neo4j.server.security.systemgraph.ComponentVersion;
 
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
+import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D4;
 
 /**
  * This is the EnterpriseSecurityComponent version for Neo4j 4.2-drop4.
@@ -34,7 +34,7 @@ public class EnterpriseSecurityComponentVersion_5_42D4 extends SupportedEnterpri
 
     public EnterpriseSecurityComponentVersion_5_42D4( Log log, KnownEnterpriseSecurityComponentVersion previous )
     {
-        super( ComponentVersion.ENTERPRISE_SECURITY_42D4, log );
+        super( ENTERPRISE_SECURITY_42D4, log );
         this.previous = previous;
     }
 

@@ -19,9 +19,9 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.logging.Log;
-import org.neo4j.server.security.systemgraph.ComponentVersion;
 
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
+import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponentVersion.ENTERPRISE_SECURITY_42D6;
 
 /**
  * This is the EnterpriseSecurityComponent version for Neo4j 4.2-drop6.
@@ -32,7 +32,7 @@ public class EnterpriseSecurityComponentVersion_6_42D6 extends SupportedEnterpri
 
     public EnterpriseSecurityComponentVersion_6_42D6( Log log, KnownEnterpriseSecurityComponentVersion previous )
     {
-        super( ComponentVersion.ENTERPRISE_SECURITY_42D6, log );
+        super( ENTERPRISE_SECURITY_42D6, log );
         this.previous = previous;
     }
 
