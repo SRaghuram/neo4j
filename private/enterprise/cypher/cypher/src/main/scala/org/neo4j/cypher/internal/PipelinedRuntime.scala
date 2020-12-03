@@ -175,7 +175,8 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                                             logicalPlan,
                                             query.semanticTable,
                                             breakingPolicy,
-      allocateArgumentSlots = true)
+                                            context.config,
+                                            allocateArgumentSlots = true)
 
     if (ENABLE_DEBUG_PRINTS && PRINT_PLAN_INFO_EARLY) {
       printRewrittenPlanInfo(physicalPlan.logicalPlan)

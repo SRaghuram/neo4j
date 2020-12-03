@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.slotted
 
 import org.mockito.Mockito
 import org.mockito.Mockito.when
+import org.neo4j.cypher.internal.CypherRuntimeConfiguration
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.compiler.planner.LogicalPlanningTestSupport2
 import org.neo4j.cypher.internal.expressions.CachedProperty
@@ -117,7 +118,8 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
   private def build(beforeRewrite: LogicalPlan): Pipe = {
     val tokenContext = mock[TokenContext]
     when(tokenContext.getOptPropertyKeyId("propertyKey")).thenReturn(Some(0))
-    val physicalPlan = PhysicalPlanner.plan(tokenContext, beforeRewrite, table, SlottedPipelineBreakingPolicy)
+    val physicalPlan = PhysicalPlanner.plan(tokenContext, beforeRewrite, table, SlottedPipelineBreakingPolicy,
+      CypherRuntimeConfiguration.defaultConfiguration)
     val converters = new ExpressionConverters(SlottedExpressionConverters(physicalPlan),
       CommunityExpressionConverter(TokenContext.EMPTY))
 

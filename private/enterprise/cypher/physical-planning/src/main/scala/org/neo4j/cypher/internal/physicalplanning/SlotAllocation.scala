@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.physicalplanning
 import java.util
 
 import org.neo4j.cypher.internal
+import org.neo4j.cypher.internal.CypherRuntimeConfiguration
 import org.neo4j.cypher.internal.ast.ProcedureResultItem
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.expressions.CachedProperty
@@ -177,10 +178,10 @@ object SlotAllocation {
                     semanticTable: SemanticTable,
                     breakingPolicy: PipelineBreakingPolicy,
                     availableExpressionVariables: AvailableExpressionVariables,
+                    config: CypherRuntimeConfiguration,
                     allocateArgumentSlots: Boolean = false): SlotMetaData =
     new SingleQuerySlotAllocator(allocateArgumentSlots,
-      breakingPolicy,
-      availableExpressionVariables).allocateSlots(lp, semanticTable, None)
+      breakingPolicy, availableExpressionVariables, config).allocateSlots(lp, semanticTable, None)
 }
 
 /**
@@ -190,6 +191,7 @@ object SlotAllocation {
 class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: Boolean,
                                                          breakingPolicy: PipelineBreakingPolicy,
                                                          availableExpressionVariables: AvailableExpressionVariables,
+                                                         config: CypherRuntimeConfiguration,
                                                          private val allocations: SlotConfigurations = new SlotConfigurations,
                                                          private val argumentSizes: ArgumentSizes = new ArgumentSizes,
                                                          private val applyPlans: ApplyPlans = new ApplyPlans,
@@ -452,6 +454,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
     new SingleQuerySlotAllocator(allocateArgumentSlots,
       newBreakingPolicy,
       availableExpressionVariables,
+      config,
       allocations,
       argumentSizes,
       applyPlans,
@@ -614,7 +617,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
 
       case Create(_, nodes, relationships) =>
         nodes.foreach(n => slots.newLong(n.idName, nullable = false, CTNode))
-        relationships.foreach(r => slots.newLong(r.idName, nullable = false, CTRelationship))
+        relationships.foreach(r => slots.newLong(r.idName, nullable = config.lenientCreateRelationship, CTRelationship))
 
       case _:MergeCreateNode =>
       // The variable name should already have been allocated by the NodeLeafPlan

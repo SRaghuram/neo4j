@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.physicalplanning
 
 import org.mockito.Mockito.mock
+import org.neo4j.cypher.internal.CypherRuntimeConfiguration
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.expressions.Variable
 import org.neo4j.cypher.internal.logical.builder.AbstractLogicalPlanBuilder
@@ -53,6 +54,7 @@ class ExecutionGraphDefinitionBuilder(operatorFuserFactory: OperatorFuserFactory
       logicalPlan,
       semanticTable,
       breakingPolicy,
+      CypherRuntimeConfiguration.defaultConfiguration,
       allocateArgumentSlots = true)
     val converters: ExpressionConverters = mock(classOf[ExpressionConverters])
     ExecutionGraphDefiner.defineFrom(breakingPolicy, operatorFuserFactory, physicalPlan, converters, leveragedOrders)

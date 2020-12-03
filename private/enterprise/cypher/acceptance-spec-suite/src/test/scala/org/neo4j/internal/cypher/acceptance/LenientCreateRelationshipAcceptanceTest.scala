@@ -34,6 +34,22 @@ class LenientCreateRelationshipAcceptanceTest extends ExecutionEngineFunSuite wi
     assertStats(result, relationshipsCreated = 1)
   }
 
+  test("should silently not CREATE relationship if start-point is missing and return null") {
+    graph.withTx( tx => tx.execute("CREATE (a), (b)"))
+
+    //List(Map(r1 -> (?)-[RELTYPE(0),0]->(?), r2 -> null))
+    val result = executeWith(Configs.InterpretedAndSlotted,
+      """MATCH (a), (b)
+        |WHERE id(a)=0 AND id(b)=1
+        |OPTIONAL MATCH (b)-[:LINK_TO]->(c)
+        |CREATE (b)-[r1:LINK_TO]->(a)
+        |CREATE (c)-[r2:MISSING_C]->(a)
+        |RETURN r2""".stripMargin)
+
+    assertStats(result, relationshipsCreated = 1)
+    result.toList should equal(List(Map("r2" -> null)))
+  }
+
   // No CLG decision on this AFAIK, so not TCK material
   test("should silently not CREATE relationship if end-point is missing") {
     graph.withTx( tx => tx.execute("CREATE (a), (b)"))
