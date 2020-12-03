@@ -940,6 +940,39 @@ class StoreCopyCommandIT extends AbstractCommandIT
     }
 
     @Test
+    void copyMultipleSchemasRecommendation() throws Exception
+    {
+        // Create some data
+        try ( Transaction tx = databaseAPI.beginTx() )
+        {
+            Node a = tx.createNode( NUMBER_LABEL );
+            a.setProperty( "name", "Uno" );
+            Node b = tx.createNode( CHARACTER_LABEL );
+            b.setProperty( "name", "Dos" );
+            Node c = tx.createNode( NUMBER_LABEL );
+            c.setProperty( "name", "Tres" );
+
+            a.createRelationshipTo( b, KNOWS );
+            tx.commit();
+        }
+        try ( Transaction tx = databaseAPI.beginTx() )
+        {
+            tx.schema().indexFor( NUMBER_LABEL ).on( "name" ).withName( "myIndex" ).create();
+            tx.schema().indexFor( CHARACTER_LABEL ).on( "name" ).withName( "myIndex2" ).create();
+            tx.commit();
+        }
+
+        String databaseName = databaseAPI.databaseName();
+        String copyName = getCopyName( databaseName, "copy" );
+        managementService.shutdownDatabase( databaseName );
+
+        copyDatabase( "--from-database=" + databaseName, "--to-database=" + copyName );
+
+        assertTrue(
+                out.containsMessage( "NOTICE: It is recommended to create multiple indexes in the same transaction for more efficient population of those." ) );
+    }
+
+    @Test
     void mustRepairBrokenTokens() throws Exception
     {
         // Create some data
