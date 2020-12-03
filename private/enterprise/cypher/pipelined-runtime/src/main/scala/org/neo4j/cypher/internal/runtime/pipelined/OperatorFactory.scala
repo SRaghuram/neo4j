@@ -81,6 +81,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.FilterOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.InputOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.LabelScanOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.LimitOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.LockNodesOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MiddleOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselArgumentStateBufferOutputOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselBufferOutputOperator
@@ -928,6 +929,9 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
       case plans.SetProperty(_, idName, propertyKey, propertyValue) if !parallelExecution =>
         Some(new SetPropertyOperator(WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, idName), propertyKey.name, converters.toCommandExpression(id, propertyValue)))
+
+      case plans.LockNodes(_, nodesToLock) =>
+        Some(new LockNodesOperator(WorkIdentity.fromPlan(plan), nodesToLock))
 
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException)

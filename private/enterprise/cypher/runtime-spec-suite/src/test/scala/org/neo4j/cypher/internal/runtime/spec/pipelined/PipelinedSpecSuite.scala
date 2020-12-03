@@ -62,6 +62,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.LetSelectOrAntiSemiApplyTest
 import org.neo4j.cypher.internal.runtime.spec.tests.LetSelectOrSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LetSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LimitTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.LockNodesTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryDeallocationTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementDisabledTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementTestBase
@@ -634,6 +635,10 @@ class PipelinedDynamicLimitPropagationTest extends RuntimeTestSuite[EnterpriseRu
     input.hasMore shouldBe true
   }
 }
+
+// LOCK NODES
+class PipelinedLockNodesTest extends LockNodesTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedLockNodesNoFusingTest extends LockNodesTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 object PipelinedDynamicLimitPropagationTest {
   val CONFIGURED_MORSEL_SIZE: Int = 100

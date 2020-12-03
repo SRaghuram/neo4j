@@ -48,7 +48,6 @@ import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.ProcedureCallMode
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ArgumentOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.BinaryOperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ByNameLookup
@@ -67,6 +66,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTa
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandIntoOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.FilterOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.InputOperatorTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.LockNodesOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyNodeByIdsSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeCountFromCountStoreOperatorTemplate
@@ -130,7 +130,6 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.DistinctAllPr
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.DistinctWithReferences
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.findDistinctPhysicalOp
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
-import org.neo4j.cypher.internal.runtime.slotted.pipes.CreateNodeSlottedCommand
 import org.neo4j.cypher.internal.util.Many
 import org.neo4j.cypher.internal.util.One
 import org.neo4j.cypher.internal.util.Zero
@@ -831,6 +830,9 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
           ctx: TemplateContext =>
             new SetPropertyOperatorTemplate(ctx.inner, plan.id, ctx.compileExpression(entity, plan.id), propertyKey.name, ctx.compileExpression(value, plan.id))(ctx.expressionCompiler)
 
+        case plan@plans.LockNodes(_, nodesToLock) =>
+          ctx: TemplateContext =>
+            new LockNodesOperatorTemplate(ctx.inner, plan.id, nodesToLock.map(ctx.slots(_)).toSeq)(ctx.expressionCompiler)
         case _ =>
           None
       }
