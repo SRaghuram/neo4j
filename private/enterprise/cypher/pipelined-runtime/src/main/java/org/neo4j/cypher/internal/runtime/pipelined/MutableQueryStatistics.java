@@ -135,4 +135,28 @@ public class MutableQueryStatistics implements QueryStatistics
     {
         return false;
     }
+
+    @Override
+    public String toString()
+    {
+        StringBuilder builder = new StringBuilder();
+        includeIfNonZero( builder, "Nodes created: ", createdNodes );
+        includeIfNonZero( builder, "Relationships created: ", createdRelationships );
+        includeIfNonZero( builder, "Properties set: ", setProperties );
+        includeIfNonZero( builder, "Nodes deleted: ", deletedNodes );
+        includeIfNonZero( builder, "Relationships deleted: ", deletedRelationships );
+        includeIfNonZero( builder, "Labels added: ", addedLabels );
+        includeIfNonZero( builder, "Labels removed: ", removedLabels );
+        String result = builder.toString();
+
+        return result.isEmpty() ? "<Nothing happened>" : result;
+    }
+
+    private void includeIfNonZero( StringBuilder builder, String message, long count )
+    {
+        if ( count > 0 )
+        {
+            builder.append( message ).append( count ).append( System.lineSeparator() );
+        }
+    }
 }
