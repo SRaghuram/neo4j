@@ -356,8 +356,9 @@ class ProcedureOperatorTaskTemplate(inner: OperatorTaskTemplate,
     block(
       loop(and(innermost.predicate, loadField(canContinue)))(
         block(
-          codeGen.copyFromInput(codeGen.inputSlotConfiguration.numberOfLongs,
-            codeGen.inputSlotConfiguration.numberOfReferences),
+          codeGen.copyFromInput(Math.min(codeGen.inputSlotConfiguration.numberOfLongs, codeGen.slots.numberOfLongs),
+            Math.min(codeGen.inputSlotConfiguration.numberOfReferences,
+              codeGen.slots.numberOfReferences)),
           block(indexToOffset.map {
             case (index, offset) => codeGen.setRefAt(offset, arrayLoad(loadField(nextVar), index))
           }: _*),

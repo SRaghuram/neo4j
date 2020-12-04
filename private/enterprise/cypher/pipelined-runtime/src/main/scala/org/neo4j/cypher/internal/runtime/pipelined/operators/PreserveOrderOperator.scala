@@ -103,7 +103,9 @@ class PreserveOrderOperatorTaskTemplate(override val inner: OperatorTaskTemplate
       loop(and(invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue")), innermost.predicate))(
         block(
           innermost.resetBelowLimitAndAdvanceToNextArgument,
-          codeGen.copyFromInput(codeGen.inputSlotConfiguration.numberOfLongs, codeGen.inputSlotConfiguration.numberOfReferences),
+          codeGen.copyFromInput(Math.min(codeGen.inputSlotConfiguration.numberOfLongs, codeGen.slots.numberOfLongs),
+            Math.min(codeGen.inputSlotConfiguration.numberOfReferences,
+              codeGen.slots.numberOfReferences)),
           inner.genOperateWithExpressions,
           // Else if no inner operator can proceed we move to the next input row
           doIfInnerCantContinue(block(invokeSideEffect(INPUT_CURSOR, NEXT),  profileRow(id, doProfile))),
