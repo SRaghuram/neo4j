@@ -10,9 +10,9 @@ set -e
 set -u
 set -x
 
-if [ $# -lt 32 ] ; then
-    echo "Expected at least 34 arguments, but got $#"
-    echo "usage: ./run-report-benchmarks.sh neo4j_version neo4j_commit neo4j_branch neo4j_branch_owner neo4j_api neo4j_planner neo4j_runtime neo4j_config neo4j_benchmark_config teamcity_build_id teamcity_parent_build_id ldbc_tooling_commit tool-branch tool-branch-owner results_store_uri results_store_user results_store_pass ldbc_read_params ldbc_write_params ldbc_config ldbc_read_threads ldbc_warmup_count ldbc_run_count ldbc_repetition_count ldbc_results_dir ldbc_working_dir ldbc_source_db ldbc_db_reuse_policy ldbc_jvm_args jvm_path profilers triggered_by"
+if [ $# -lt 30 ] ; then
+    echo "Expected at least 30 arguments, but got $#"
+    echo "usage: ./run-report-benchmarks.sh neo4j_version neo4j_commit neo4j_branch neo4j_branch_owner neo4j_api neo4j_planner neo4j_runtime neo4j_config neo4j_benchmark_config teamcity_build_id teamcity_parent_build_id results_store_uri results_store_user results_store_pass ldbc_read_params ldbc_write_params ldbc_config ldbc_read_threads ldbc_warmup_count ldbc_run_count ldbc_repetition_count ldbc_results_dir ldbc_working_dir ldbc_source_db ldbc_db_reuse_policy ldbc_jvm_args jvm_path profilers triggered_by"
     exit 1
 fi
 
@@ -27,33 +27,30 @@ neo4j_config="${8}"
 neo4j_benchmark_config="${9}"
 teamcity_build_id="${10}"
 teamcity_parent_build_id="${11}"
-ldbc_tooling_commit="${12}"
-tool_branch="${13}"
-tool_branch_owner="${14}"
-results_store_uri="${15}"
-results_store_user="${16}"
-results_store_pass="${17}"
-ldbc_read_params="${18}"
-ldbc_write_params="${19}"
-ldbc_config="${20}"
-ldbc_read_threads="${21}"
-ldbc_warmup_count="${22}"
-ldbc_run_count="${23}"
-ldbc_repetition_count="${24}"
-ldbc_results_dir="${25}"
-ldbc_working_dir="${26}"
-ldbc_source_db="${27}"
-ldbc_db_reuse_policy="${28}"
-ldbc_jvm_args="${29}"
-jvm_path="${30}"
-profilers="${31}"
-triggered_by="${32}"
+results_store_uri="${12}"
+results_store_user="${13}"
+results_store_pass="${14}"
+ldbc_read_params="${15}"
+ldbc_write_params="${16}"
+ldbc_config="${17}"
+ldbc_read_threads="${18}"
+ldbc_warmup_count="${19}"
+ldbc_run_count="${20}"
+ldbc_repetition_count="${21}"
+ldbc_results_dir="${22}"
+ldbc_working_dir="${23}"
+ldbc_source_db="${24}"
+ldbc_db_reuse_policy="${25}"
+ldbc_jvm_args="${26}"
+jvm_path="${27}"
+profilers="${29}"
+triggered_by="${30}"
 
 # here we are checking for optional AWS endpoint URL,
 # this is required for end to end testing, where we mock s3
 aws_endpoint_url=
-if [[ $# -eq 33 ]]; then
-	aws_endpoint_url="${33}"
+if [[ $# -eq 31 ]]; then
+	aws_endpoint_url="${31}"
 fi
 
 if [[ -z "$JAVA_HOME" ]]; then
@@ -89,10 +86,6 @@ echo "------------------------------------------------"
 echo "TeamCity Build ID:            ${teamcity_build_id}"
 echo "TeamCity Parent Build ID:     ${teamcity_parent_build_id}"
 echo "TeamCity Build Triggered by:  ${triggered_by}"
-echo "------------------------------------------------"
-echo "LDBC tooling commit:       ${ldbc_tooling_commit}"
-echo "LDBC tooling branch:       ${tool_branch}"
-echo "LDBC tooling branch owner: ${tool_branch_owner}"
 echo "------------------------------------------------"
 echo "Results store uri:   ${results_store_uri}"
 echo "Results store user:  ${results_store_user}"
@@ -148,9 +141,6 @@ ${jvm_path} -XX:OnOutOfMemoryError="$out_of_memory_script --jvm-pid %p --output-
   --neo4j-version "${neo4j_version}" \
   --teamcity_build "${teamcity_build_id}" \
   --teamcity_parent_build "${teamcity_parent_build_id}" \
-  --tool-commit "${ldbc_tooling_commit}" \
-  --tool-branch-owner "${tool_branch_owner}" \
-  --tool-branch "${tool_branch}" \
   --ldbc-jar "${ldbc_benchmarks_dir}"/neo4j-connectors/target/ldbc.jar  \
   --working-dir "${ldbc_working_dir}" \
   --reuse-db "${ldbc_db_reuse_policy}" \

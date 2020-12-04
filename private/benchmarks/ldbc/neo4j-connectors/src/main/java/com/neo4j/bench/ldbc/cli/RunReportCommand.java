@@ -167,34 +167,6 @@ public class RunReportCommand implements Runnable
     private Long parentBuild;
 
     // ===================================================
-    // ====================== Tool =======================
-    // ===================================================
-
-    private static final String CMD_TOOL_COMMIT = "--tool-commit";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_TOOL_COMMIT},
-            description = "Commit of benchmarking tool used to run benchmark",
-            title = "Benchmark Tool Commit" )
-    @Required
-    private String toolCommit;
-
-    private static final String CMD_TOOL_BRANCH = "--tool-branch";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_TOOL_BRANCH},
-            description = "Tool branch name",
-            title = "Tool Branch" )
-    @Required
-    private String toolBranch;
-
-    private static final String CMD_TOOL_BRANCH_OWNER = "--tool-branch-owner";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_TOOL_BRANCH_OWNER},
-            description = "Owner of repository containing Tool branch",
-            title = "Tool Branch Owner" )
-    @Required
-    private String toolBranchOwner = "neo4j";
-
-    // ===================================================
     // ================ Tool Configuration ===============
     // ===================================================
 
@@ -463,8 +435,6 @@ public class RunReportCommand implements Runnable
                     CMD_BRANCH_OWNER + " : " + neo4jBranchOwner + "\n" +
                     "--------------------------------------------------------------\n" +
                     CMD_TEAMCITY_BUILD + " : " + build + "\n" + CMD_TEAMCITY_PARENT_BUILD + " : " + parentBuild + "\n" +
-                    "--------------------------------------------------------------\n" +
-                    CMD_TOOL_COMMIT + " : " + toolCommit + "\n" +
                     "--------------------------------------------------------------\n" +
                     CMD_LDBC_CONFIG + " : " + ldbcConfigFile.getAbsolutePath() + "\n" +
                     CMD_WRITES + " : " + ((null == writeParams) ? null : writeParams.getAbsolutePath()) + "\n" +
@@ -888,7 +858,7 @@ public class RunReportCommand implements Runnable
         TestRun testRun = new TestRun( finishTime - startTime, startTime, build, parentBuild, triggeredBy );
         BenchmarkConfig benchmarkConfig = new BenchmarkConfig( ldbcConfig.asMap() );
         Neo4j neo4j = new Neo4j( neo4jCommit, neo4jVersion, ENTERPRISE, neo4jBranch, neo4jBranchOwner );
-        BenchmarkTool tool = new BenchmarkTool( Repository.LDBC_BENCH, toolCommit, toolBranchOwner, toolBranch );
+        BenchmarkTool tool = new BenchmarkTool( Repository.LDBC_BENCH, neo4jCommit, neo4jBranchOwner, neo4jBranch );
         Java java = Java.current( jvmArgs );
 
         BenchmarkGroupBenchmarkMetrics workloadMetrics = new BenchmarkGroupBenchmarkMetrics();
