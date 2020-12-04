@@ -151,12 +151,6 @@ $java_cmd -jar $benchmark_infra_scheduler_jar \
   "$neo4j_branch" \
   --neo4j-branch-owner \
   "$branch_owner" \
-  --tool-commit \
-  "$neo4j_commit" \
-  --tool-branch-owner \
-  "$branch_owner" \
-  --tool-branch \
-  "$neo4j_branch" \
   --teamcity-build \
   "$teamcity_build" \
   --parent-teamcity-build \

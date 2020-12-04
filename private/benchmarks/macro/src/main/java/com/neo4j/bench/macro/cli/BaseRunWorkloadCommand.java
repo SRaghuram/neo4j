@@ -54,9 +54,6 @@ import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_RUNTI
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_SKIP_FLAMEGRAPHS;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_TEAMCITY_BUILD;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_TIME_UNIT;
-import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_TOOL_BRANCH;
-import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_TOOL_COMMIT;
-import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_TOOL_OWNER;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_TRIGGERED_BY;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_WARMUP;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_WORKLOAD;
@@ -205,27 +202,6 @@ public abstract class BaseRunWorkloadCommand implements Runnable
     private String neo4jBranchOwner;
 
     @Option( type = OptionType.COMMAND,
-             name = {CMD_TOOL_COMMIT},
-             description = "Commit of benchmarking tool used to run benchmark",
-             title = "Benchmark Tool Commit" )
-    @Required
-    private String toolCommit;
-
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_TOOL_OWNER},
-             description = "Owner of repository containing the benchmarking tool used to run benchmark",
-             title = "Benchmark Tool Owner" )
-    @Required
-    private String toolOwner = "neo-technology";
-
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_TOOL_BRANCH},
-             description = "Branch of benchmarking tool used to run benchmark",
-             title = "Benchmark Tool Branch" )
-    @Required
-    private String toolBranch;
-
-    @Option( type = OptionType.COMMAND,
              name = {CMD_TEAMCITY_BUILD},
              description = "Build number of the TeamCity build that ran the benchmarks",
              title = "TeamCity Build Number" )
@@ -298,9 +274,6 @@ public abstract class BaseRunWorkloadCommand implements Runnable
                                                                            new Version( neo4jVersion ),
                                                                            neo4jBranch,
                                                                            neo4jBranchOwner,
-                                                                           toolCommit,
-                                                                           toolOwner,
-                                                                           toolBranch,
                                                                            teamcityBuild,
                                                                            parentBuild,
                                                                            triggeredBy );

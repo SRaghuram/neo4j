@@ -12,9 +12,9 @@ if [[ -z "$JAVA_HOME" ]]; then
   exit 1
 fi
 
-if [ $# -lt 31 ]; then
+if [ $# -lt 29 ]; then
   echo "Expected at least 31 arguments, but got $#"
-  echo "usage: ./run-report-benchmarks.sh workload db warmup_count measurement_count db_edition jvm neo4j_config work_dir profilers forks time_unit results_store_uri results_store_user results_store_password neo4j_commit neo4j_version neo4j_branch neo4j_branch_owner tool_commit tool_branch_owner tool_branch teamcity_build parent_teamcity_build jvm_args recreate_schema triggered_by error_policy deployment queries"
+  echo "usage: ./run-report-benchmarks.sh workload db warmup_count measurement_count db_edition jvm neo4j_config work_dir profilers forks time_unit results_store_uri results_store_user results_store_password neo4j_commit neo4j_version neo4j_branch neo4j_branch_owner teamcity_build parent_teamcity_build jvm_args recreate_schema triggered_by error_policy deployment queries"
   exit 1
 fi
 
@@ -36,24 +36,21 @@ neo4j_commit="${15}"
 neo4j_version="${16}"
 neo4j_branch="${17}"
 neo4j_branch_owner="${18}"
-tool_commit="${19}"
-tool_branch_owner="${20}"
-tool_branch="${21}"
-teamcity_build="${22}"
-parent_teamcity_build="${23}"
-execution_mode="${24}"
-jvm_args="${25}"
-recreate_schema="${26}"
-planner="${27}"
-runtime="${28}"
-triggered_by="${29}"
-error_policy="${30}"
-deployment="${31}"
-queries="${32}"
+teamcity_build="${19}"
+parent_teamcity_build="${20}"
+execution_mode="${21}"
+jvm_args="${22}"
+recreate_schema="${23}"
+planner="${24}"
+runtime="${25}"
+triggered_by="${26}"
+error_policy="${27}"
+deployment="${28}"
+queries="${29}"
 
 # parse optional arguments
 all_args=("$@")
-optional_args=("${all_args[@]:32}")
+optional_args=("${all_args[@]:29}")
 aws_endpoint_url=
 test_run_id=
 
@@ -108,9 +105,6 @@ echo "Neo4j version                                                  : ${neo4j_v
 echo "Neo4j commit                                                   : ${neo4j_commit}"
 echo "Neo4j branch                                                   : ${neo4j_branch}"
 echo "Neo4j branch owner                                             : ${neo4j_branch_owner}"
-echo "Macro benchmarks commit                                        : ${tool_commit}"
-echo "Macro branch                                                   : ${tool_branch}"
-echo "Macro branch owner                                             : ${tool_branch_owner}"
 echo "Macro execute mode                                             : ${execution_mode}"
 echo "JVM args                                                       : ${jvm_args}"
 echo "Recreate Schema                                                : ${recreate_schema}"
@@ -146,9 +140,6 @@ ${jvm} -Xmx1g -XX:OnOutOfMemoryError="$out_of_memory_script --jvm-pid %p --outpu
   --neo4j-version "${neo4j_version}" \
   --neo4j-branch "${neo4j_branch}" \
   --neo4j-branch-owner "${neo4j_branch_owner}" \
-  --tool-commit "${tool_commit}" \
-  --tool-branch-owner "${tool_branch_owner}" \
-  --tool-branch "${tool_branch}" \
   --teamcity-build "${teamcity_build}" \
   --parent-teamcity-build "${parent_teamcity_build}" \
   --execution-mode "${execution_mode}" \

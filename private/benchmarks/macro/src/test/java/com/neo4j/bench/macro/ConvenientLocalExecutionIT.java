@@ -116,9 +116,6 @@ class ConvenientLocalExecutionIT
                 new Version( neo4jVersion ),
                 neo4jBranch,
                 neo4jBranchOwner,
-                toolCommit,
-                toolBranchOwner,
-                toolBranch,
                 teamcityBuild,
                 parentTeamcityBuild,
                 triggeredBy

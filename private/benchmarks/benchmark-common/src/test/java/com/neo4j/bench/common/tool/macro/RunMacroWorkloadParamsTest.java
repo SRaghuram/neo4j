@@ -51,9 +51,6 @@ public class RunMacroWorkloadParamsTest
                                                                                     new Version( "3.4.1" ),
                                                                                     "neo4jBranch",
                                                                                     "neo4jBranchOwner",
-                                                                                    "toolCommit",
-                                                                                    "toolOwner",
-                                                                                    "toolBranch",
                                                                                     1L,
                                                                                     0L,
                                                                                     "neo4j" );
@@ -83,9 +80,6 @@ public class RunMacroWorkloadParamsTest
                                     new Version( "3.4.1" ),
                                     "neo4jBranch",
                                     "neo4jBranchOwner",
-                                    "toolCommit",
-                                    "toolOwner",
-                                    "toolBranch",
                                     1L,
                                     0L,
                                     "neo4j" );

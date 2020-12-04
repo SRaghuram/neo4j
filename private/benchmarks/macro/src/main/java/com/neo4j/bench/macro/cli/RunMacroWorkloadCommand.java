@@ -313,7 +313,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                     params.parentBuild(),
                     params.triggeredBy() );
 
-            BenchmarkTool tool = new BenchmarkTool( Repository.MACRO_BENCH, params.toolCommit(), params.toolOwner(), params.toolBranch() );
+            BenchmarkTool tool = new BenchmarkTool( Repository.MACRO_BENCH, params.neo4jCommit(), params.neo4jBranchOwner(), params.neo4jBranch() );
 
             BenchmarkConfig benchmarkConfig = new BenchmarkConfig( new HashMap<>() );
             Java java = Java.current( params.jvmArgs().toArgsString() );

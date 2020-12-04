@@ -103,15 +103,6 @@ public class RunMacroWorkloadParams
     public static final String CMD_NEO4J_OWNER = "--neo4j-branch-owner";
     private String neo4jBranchOwner;
 
-    public static final String CMD_TOOL_COMMIT = "--tool-commit";
-    private String toolCommit;
-
-    public static final String CMD_TOOL_OWNER = "--tool-branch-owner";
-    private String toolOwner;
-
-    public static final String CMD_TOOL_BRANCH = "--tool-branch";
-    private String toolBranch;
-
     public static final String CMD_TEAMCITY_BUILD = "--teamcity-build";
     private Long teamcityBuild;
 
@@ -163,9 +154,6 @@ public class RunMacroWorkloadParams
                                    Version neo4jVersion,
                                    String neo4jBranch,
                                    String neo4jBranchOwner,
-                                   String toolCommit,
-                                   String toolOwner,
-                                   String toolBranch,
                                    Long teamcityBuild,
                                    Long parentBuild,
                                    String triggeredBy )
@@ -196,9 +184,6 @@ public class RunMacroWorkloadParams
         this.neo4jVersion = neo4jVersion;
         this.neo4jBranch = neo4jBranch;
         this.neo4jBranchOwner = neo4jBranchOwner;
-        this.toolCommit = toolCommit;
-        this.toolOwner = toolOwner;
-        this.toolBranch = toolBranch;
         this.teamcityBuild = teamcityBuild;
         this.parentBuild = parentBuild;
         this.triggeredBy = triggeredBy;
@@ -314,21 +299,6 @@ public class RunMacroWorkloadParams
         return neo4jBranchOwner;
     }
 
-    public String toolCommit()
-    {
-        return toolCommit;
-    }
-
-    public String toolOwner()
-    {
-        return toolOwner;
-    }
-
-    public String toolBranch()
-    {
-        return toolBranch;
-    }
-
     public Long teamcityBuild()
     {
         return teamcityBuild;
@@ -397,9 +367,6 @@ public class RunMacroWorkloadParams
         map.put( CMD_NEO4J_VERSION, neo4jVersion.fullVersion() );
         map.put( CMD_NEO4J_BRANCH, neo4jBranch );
         map.put( CMD_NEO4J_OWNER, neo4jBranchOwner );
-        map.put( CMD_TOOL_COMMIT, toolCommit );
-        map.put( CMD_TOOL_OWNER, toolOwner );
-        map.put( CMD_TOOL_BRANCH, toolBranch );
         map.put( CMD_TEAMCITY_BUILD, Long.toString( teamcityBuild ) );
         map.put( CMD_PARENT_TEAMCITY_BUILD, Long.toString( parentBuild ) );
         map.put( CMD_TRIGGERED_BY, triggeredBy );
@@ -411,7 +378,6 @@ public class RunMacroWorkloadParams
         return asMap().entrySet()
                       .stream()
                       // boolean parameters either exist in args output or do not, they have no value. filter out boolean parameters that have value 'false'
-                      .filter( entry -> !entry.getValue().toLowerCase().equals( "false" ) )
                       .flatMap( entry -> entry.getValue().toLowerCase().equals( "true" )
                                          ? Stream.of( entry.getKey() )
                                          : Stream.of( entry.getKey(), entry.getValue() ) )
@@ -443,9 +409,6 @@ public class RunMacroWorkloadParams
                 neo4jVersion,
                 neo4jBranch,
                 neo4jBranchOwner,
-                toolCommit,
-                toolOwner,
-                toolBranch,
                 teamcityBuild,
                 parentBuild,
                 triggeredBy );
