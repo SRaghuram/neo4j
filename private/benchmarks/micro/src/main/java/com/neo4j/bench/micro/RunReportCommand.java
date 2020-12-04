@@ -207,9 +207,9 @@ public class RunReportCommand extends BaseRunReportCommand
                 runReportParams.triggeredBy() );
         BenchmarkConfig benchmarkConfig = suiteDescription.toBenchmarkConfig();
         BenchmarkTool tool = new BenchmarkTool( Repository.MICRO_BENCH,
-                                                runReportParams.toolCommit(),
-                                                runReportParams.toolOwner(),
-                                                runReportParams.toolBranch() );
+                                                runReportParams.neo4jCommit(),
+                                                runReportParams.neo4jBranchOwner(),
+                                                runReportParams.neo4jBranch() );
         Java java = Java.current( String.join( " ", jvmArgs ) );
 
         InstanceDiscovery instanceDiscovery = InstanceDiscovery.create();

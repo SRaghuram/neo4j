@@ -10,9 +10,9 @@ set -e
 set -u
 set -x
 
-if [ $# -lt 20 ] ; then
-    echo "Expected at least 20 arguments, but got $#"
-    echo "usage: ./run-report-benchmarks.sh neo4j_version neo4j_commit neo4j_branch neo4j_branch_owner tool_branch tool_branch_owner tool_commit results_store_uri results_store_user results_store_password benchmark_config teamcity_build_id jvm_args jmh_args neo4j_config_path jvm_path profilers triggered_by work_dir"
+if [ $# -lt 18 ] ; then
+    echo "Expected at least 18 arguments, but got $#"
+    echo "usage: ./run-report-benchmarks.sh neo4j_version neo4j_commit neo4j_branch neo4j_branch_owner results_store_uri results_store_user results_store_password benchmark_config teamcity_build_id jvm_args jmh_args neo4j_config_path jvm_path profilers triggered_by work_dir"
     exit 1
 fi
 
@@ -20,29 +20,26 @@ neo4j_version="${1}"
 neo4j_commit="${2}"
 neo4j_branch="${3}"
 neo4j_branch_owner="${4}"
-tool_branch="${5}"
-tool_branch_owner="${6}"
-tool_commit="${7}"
-results_store_uri="${8}"
-results_store_user="${9}"
-results_store_password="${10}"
-benchmark_config="${11}"
-teamcity_build_id="${12}"
-parent_teamcity_build_id="${13}"
-jvm_args="${14}"
-jmh_args="${15}"
-neo4j_config_path="${16}"
-jvm_path="${17}"
-profilers="${18}"
-triggered_by="${19}"
-work_dir="${20}"
+results_store_uri="${5}"
+results_store_user="${6}"
+results_store_password="${7}"
+benchmark_config="${8}"
+teamcity_build_id="${9}"
+parent_teamcity_build_id="${10}"
+jvm_args="${11}"
+jmh_args="${12}"
+neo4j_config_path="${13}"
+jvm_path="${14}"
+profilers="${15}"
+triggered_by="${16}"
+work_dir="${17}"
 micro_benchmarks_dir=$(pwd)
 
 # here we are checking for optional AWS endpoint URL,
 # this is required for end to end testing, where we mock s3
 aws_endpoint_url=
-if [[ $# -eq 21 ]]; then
-	aws_endpoint_url="${21}"
+if [[ $# -eq 18 ]]; then
+	aws_endpoint_url="${18}"
 fi
 
 if [[ -z "$JAVA_HOME" ]]; then
@@ -54,9 +51,6 @@ echo "Neo4j version: ${neo4j_version}"
 echo "Neo4j commit: ${neo4j_commit}"
 echo "Neo4j branch: ${neo4j_branch}"
 echo "Neo4j branch owner: ${neo4j_branch_owner}"
-echo "Tool branch: ${tool_branch}"
-echo "Tool branch owner: ${tool_branch_owner}"
-echo "Tool benchmarks commit: ${tool_commit}"
 echo "Results store uri: ${results_store_uri}"
 echo "Results store user: ${results_store_user}"
 echo "Benchmark config: ${benchmark_config}"
@@ -85,9 +79,6 @@ ${jvm_path} -jar "${jar_path}" run-export  \
         --branch_owner "${neo4j_branch_owner}" \
         --teamcity_build "${teamcity_build_id}" \
         --parent_teamcity_build "${parent_teamcity_build_id}" \
-        --tool_commit "${tool_commit}" \
-        --tool_branch "${tool_branch}" \
-        --tool_branch_owner "${tool_branch_owner}" \
         --config "${benchmark_config}" \
         --triggered-by "${triggered_by}" \
         --work-dir "${work_dir}" \

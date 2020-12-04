@@ -42,9 +42,6 @@ import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_PARENT_TEAMC
 import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_PROFILERS;
 import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_WORK_DIR;
 import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_TEAMCITY_BUILD;
-import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_TOOL_BRANCH;
-import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_TOOL_COMMIT;
-import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_TOOL_OWNER;
 import static com.neo4j.bench.common.tool.micro.RunReportParams.CMD_TRIGGERED_BY;
 
 public abstract class BaseRunReportCommand implements Runnable
@@ -90,27 +87,6 @@ public abstract class BaseRunReportCommand implements Runnable
              title = "Neo4j Configuration" )
     @Required
     private File neo4jConfigFile;
-
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_TOOL_COMMIT},
-             description = "Commit of benchmarking tool used to run benchmark",
-             title = "Benchmark Tool Commit" )
-    @Required
-    private String toolCommit;
-
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_TOOL_OWNER},
-             description = "Owner of repository containing the benchmarking tool used to run benchmark",
-             title = "Benchmark Tool Owner" )
-    @Required
-    private String toolOwner = "neo-technology";
-
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_TOOL_BRANCH},
-             description = "Branch of benchmarking tool used to run benchmark",
-             title = "Benchmark Tool Branch" )
-    @Required
-    private String toolBranch = neo4jVersion;
 
     @Option( type = OptionType.COMMAND,
              name = {CMD_TEAMCITY_BUILD},
@@ -183,9 +159,6 @@ public abstract class BaseRunReportCommand implements Runnable
             String neo4jBranch,
             String branchOwner,
             Path neo4jConfig,
-            String toolCommit,
-            String toolBranchOwner,
-            String toolBranch,
             long teamcityBuild,
             long parentTeamcityBuild,
             String jvmArgs,
@@ -215,12 +188,6 @@ public abstract class BaseRunReportCommand implements Runnable
                 branchOwner,
                 CMD_NEO4J_CONFIG,
                 neo4jConfig.toAbsolutePath().toString(),
-                CMD_TOOL_COMMIT,
-                toolCommit,
-                CMD_TOOL_OWNER,
-                toolBranchOwner,
-                CMD_TOOL_BRANCH,
-                toolBranch,
                 CMD_TEAMCITY_BUILD,
                 Long.toString( teamcityBuild ),
                 CMD_PARENT_TEAMCITY_BUILD,
@@ -267,9 +234,6 @@ public abstract class BaseRunReportCommand implements Runnable
                                      neo4jBranch,
                                      neo4jBranchOwner,
                                      neo4jConfigFile,
-                                     toolCommit,
-                                     toolOwner,
-                                     toolBranch,
                                      build,
                                      parentBuild,
                                      jvmArgsString,

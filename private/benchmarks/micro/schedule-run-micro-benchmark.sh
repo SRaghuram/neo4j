@@ -100,12 +100,6 @@ $java_cmd -jar $benchmark_infra_scheduler_jar \
     "$branch_owner" \
     --neo4j_config \
     "neo4j.conf" \
-    --tool_commit \
-    "$neo4j_commit" \
-    --tool_branch_owner \
-    "$branch_owner" \
-    --tool_branch \
-    "$neo4j_branch" \
     --teamcity_build \
     "$teamcity_build" \
     --parent_teamcity_build \

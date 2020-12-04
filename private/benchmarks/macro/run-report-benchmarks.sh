@@ -13,7 +13,7 @@ if [[ -z "$JAVA_HOME" ]]; then
 fi
 
 if [ $# -lt 29 ]; then
-  echo "Expected at least 31 arguments, but got $#"
+  echo "Expected at least 29 arguments, but got $#"
   echo "usage: ./run-report-benchmarks.sh workload db warmup_count measurement_count db_edition jvm neo4j_config work_dir profilers forks time_unit results_store_uri results_store_user results_store_password neo4j_commit neo4j_version neo4j_branch neo4j_branch_owner teamcity_build parent_teamcity_build jvm_args recreate_schema triggered_by error_policy deployment queries"
   exit 1
 fi

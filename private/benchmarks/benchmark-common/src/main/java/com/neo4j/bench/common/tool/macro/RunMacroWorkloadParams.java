@@ -378,6 +378,7 @@ public class RunMacroWorkloadParams
         return asMap().entrySet()
                       .stream()
                       // boolean parameters either exist in args output or do not, they have no value. filter out boolean parameters that have value 'false'
+                      .filter( entry -> !entry.getValue().toLowerCase().equals( "false" ) )
                       .flatMap( entry -> entry.getValue().toLowerCase().equals( "true" )
                                          ? Stream.of( entry.getKey() )
                                          : Stream.of( entry.getKey(), entry.getValue() ) )

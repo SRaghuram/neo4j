@@ -11,7 +11,6 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import java.io.File;
-import java.nio.file.Paths;
 
 import static com.neo4j.bench.model.options.Edition.ENTERPRISE;
 
@@ -35,15 +34,6 @@ public class RunReportParams
 
     public static final String CMD_NEO4J_CONFIG = "--neo4j_config";
     private File neo4jConfigFile;
-
-    public static final String CMD_TOOL_COMMIT = "--tool_commit";
-    private String toolCommit;
-
-    public static final String CMD_TOOL_OWNER = "--tool_branch_owner";
-    private String toolOwner = "neo-technology";
-
-    public static final String CMD_TOOL_BRANCH = "--tool_branch";
-    private String toolBranch = neo4jVersion;
 
     public static final String CMD_TEAMCITY_BUILD = "--teamcity_build";
     private Long build;
@@ -81,9 +71,6 @@ public class RunReportParams
                             String neo4jBranch,
                             String neo4jBranchOwner,
                             File neo4jConfigFile,
-                            String toolCommit,
-                            String toolOwner,
-                            String toolBranch,
                             Long build,
                             Long parentBuild,
                             String jvmArgsString,
@@ -101,9 +88,6 @@ public class RunReportParams
         this.neo4jBranch = neo4jBranch;
         this.neo4jBranchOwner = neo4jBranchOwner;
         this.neo4jConfigFile = neo4jConfigFile;
-        this.toolCommit = toolCommit;
-        this.toolOwner = toolOwner;
-        this.toolBranch = toolBranch;
         this.build = build;
         this.parentBuild = parentBuild;
         this.jvmArgsString = jvmArgsString;
@@ -144,21 +128,6 @@ public class RunReportParams
     public File neo4jConfigFile()
     {
         return neo4jConfigFile;
-    }
-
-    public String toolCommit()
-    {
-        return toolCommit;
-    }
-
-    public String toolOwner()
-    {
-        return toolOwner;
-    }
-
-    public String toolBranch()
-    {
-        return toolBranch;
     }
 
     public Long build()
