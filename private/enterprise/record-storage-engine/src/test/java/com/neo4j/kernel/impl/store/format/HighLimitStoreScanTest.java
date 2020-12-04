@@ -236,9 +236,10 @@ class HighLimitStoreScanTest
         {
             @Override
             public IdGenerator open( PageCache pageCache, Path filename, IdType idType, LongSupplier highIdScanner, long maxId, boolean readOnly,
-                    PageCursorTracer cursorTracer, ImmutableSet<OpenOption> openOptions )
+                    Config config, PageCursorTracer cursorTracer, ImmutableSet<OpenOption> openOptions )
             {
-                return new IndexedIdGenerator( pageCache, filename, immediate(), idType, false, highIdScanner, maxId, readOnly, cursorTracer, openOptions )
+                return new IndexedIdGenerator( pageCache, filename, immediate(), idType, false, highIdScanner, maxId, readOnly, config, cursorTracer,
+                        openOptions )
                 {
                     @Override
                     public void start( FreeIds freeIdsForRebuild, PageCursorTracer cursorTracer ) throws IOException
@@ -257,7 +258,7 @@ class HighLimitStoreScanTest
 
             @Override
             public IdGenerator create( PageCache pageCache, Path filename, IdType idType, long highId, boolean throwIfFileExists, long maxId, boolean readOnly,
-                    PageCursorTracer cursorTracer, ImmutableSet<OpenOption> openOptions )
+                    Config config, PageCursorTracer cursorTracer, ImmutableSet<OpenOption> openOptions )
             {
                 throw new UnsupportedOperationException( "Unexpected call since the store should exist" );
             }
