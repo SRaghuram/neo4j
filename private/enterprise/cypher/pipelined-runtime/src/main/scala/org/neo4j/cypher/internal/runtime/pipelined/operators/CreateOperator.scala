@@ -16,7 +16,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.declare
 import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
 import org.neo4j.codegen.api.IntermediateRepresentation.equal
 import org.neo4j.codegen.api.IntermediateRepresentation.field
-import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
@@ -24,15 +23,12 @@ import org.neo4j.codegen.api.IntermediateRepresentation.isNull
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
-import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.noop
-import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
 import org.neo4j.codegen.api.IntermediateRepresentation.or
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.IntermediateRepresentation.ternary
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
-import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.runtime.LenientCreateRelationship
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
@@ -50,7 +46,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateOperator.hand
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateOperator.setNodeProperties
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateOperator.setRelationshipProperties
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_WRITE
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NO_TOKEN
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATS_TRACKER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATS_TRACKER_V
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.TOKEN_WRITE
@@ -60,19 +55,18 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.pipes.CreateNodeSlottedCommand
 import org.neo4j.cypher.internal.runtime.slotted.pipes.CreateRelationshipSlottedCommand
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.exceptions.InternalException
-import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
 import org.neo4j.internal.kernel.api.TokenWrite
 import org.neo4j.internal.kernel.api.Write
 import org.neo4j.kernel.api.StatementConstants.NO_SUCH_NODE
 import org.neo4j.kernel.api.StatementConstants.NO_SUCH_RELATIONSHIP
 import org.neo4j.kernel.api.StatementConstants.NO_SUCH_RELATIONSHIP_TYPE
-import org.neo4j.util.Preconditions
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values.NO_VALUE
 import org.neo4j.values.virtual.MapValue
+
+import scala.collection.mutable
 
 class CreateOperator(val workIdentity: WorkIdentity,
                      nodes: Array[CreateNodeSlottedCommand],
@@ -198,46 +192,35 @@ class CreateOperatorTemplate(override val inner: OperatorTaskTemplate,
                              lenientCreateRelationship: Boolean)(protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
   private val labelFields = createNodeCommands.map(nc => nc.offset -> field[Array[Int]](codeGen.namer.nextVariableName())).toMap
   private val relTypeFields = createRelationshipCommands.map(rc => rc.offset -> field[Int](codeGen.namer.nextVariableName(), constant(NO_SUCH_RELATIONSHIP_TYPE))).toMap
-  private var nodePropertyMap: Map[Int, IntermediateExpression] = _
-  private var relPropertyMap: Map[Int, IntermediateExpression] = _
+  private val propertyExpressions = mutable.ArrayBuffer.empty[IntermediateExpression]
 
   override def genInit: IntermediateRepresentation = {
     inner.genInit
   }
 
   override def genOperate: IntermediateRepresentation = {
-    if (nodePropertyMap == null) {
-      nodePropertyMap = createNodeCommands.flatMap {
-        case CreateNodeFusedCommand(offset, _, Some(p)) => Some(offset -> p())
-        case _ => None
-      }.toMap
-    }
-    if (relPropertyMap == null) {
-      relPropertyMap = createRelationshipCommands.flatMap {
-        case CreateRelationshipFusedCommand(offset, _, _, _, _, _, _, Some(p)) => Some(offset -> p())
-        case _ => None
-      }.toMap
-    }
-
     val nodeOps = createNodeCommands.map {
-      case CreateNodeFusedCommand(offset, labels, properties) =>
+      case CreateNodeFusedCommand(offset, _, properties) =>
         val nodeVar = codeGen.namer.nextVariableName("node")
         block(
           declareAndAssign(typeRefOf[Long], nodeVar,
             invokeStatic(
               method[CreateOperator, Long, Array[Int], Write, MutableQueryStatistics]("createNode"),
-              loadField(labelFields(offset)), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
-          ),
-          properties.map(_ =>
-            invokeStatic(method[CreateOperator, Unit, Long, AnyValue, TokenWrite, Write, MutableQueryStatistics]("setNodeProperties"),
-              load(nodeVar), nullCheckIfRequired(nodePropertyMap(offset)), loadField(TOKEN_WRITE), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
-          ).getOrElse(noop()),
-          codeGen.setLongAt(offset, load(nodeVar))
+              loadField(labelFields(offset)), loadField(DATA_WRITE), QUERY_STATS_TRACKER)),
+          codeGen.setLongAt(offset, load(nodeVar)),
+          properties match {
+            case Some(ps) =>
+              val p = ps()
+              propertyExpressions += p
+              invokeStatic(method[CreateOperator, Unit, Long, AnyValue, TokenWrite, Write, MutableQueryStatistics]("setNodeProperties"),
+                load(nodeVar), nullCheckIfRequired(p), loadField(TOKEN_WRITE), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
+            case _ => noop()
+          }
         )
     }
 
     val relOps = createRelationshipCommands.map {
-      case CreateRelationshipFusedCommand(offset, relName, relType, startName, startSlot, endName, endSlot, properties) =>
+      case CreateRelationshipFusedCommand(offset, relName, _, startName, startSlot, endName, endSlot, properties) =>
         val relVar = codeGen.namer.nextVariableName("relationship")
         val startNodeVar = codeGen.namer.nextVariableName("start")
         val endNodeVar = codeGen.namer.nextVariableName("end")
@@ -264,13 +247,17 @@ class CreateOperatorTemplate(override val inner: OperatorTaskTemplate,
                 method[CreateOperator, Long, Long, Int, Long, Write, MutableQueryStatistics]("createRelationship"),
                 load(startNodeVar), loadField(relTypeFields(offset)), load(endNodeVar), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
             ),
-              properties.map(_ =>
-                invokeStatic(method[CreateOperator, Unit, Long, AnyValue, TokenWrite, Write, MutableQueryStatistics]("setRelationshipProperties"),
-                  load(relVar), nullCheckIfRequired(relPropertyMap(offset)), loadField(TOKEN_WRITE), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
-              ).getOrElse(noop())
+              codeGen.setLongAt(offset, load(relVar)),
+              properties match {
+                case Some(ps) =>
+                  val p = ps()
+                  propertyExpressions += p
+                  invokeStatic(method[CreateOperator, Unit, Long, AnyValue, TokenWrite, Write, MutableQueryStatistics]("setRelationshipProperties"),
+                    load(relVar), nullCheckIfRequired(p), loadField(TOKEN_WRITE), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
+                case None => noop()
+              }
             )
-          },
-          codeGen.setLongAt(offset, load(relVar))
+          }
         )
     }
     block(
@@ -286,7 +273,8 @@ class CreateOperatorTemplate(override val inner: OperatorTaskTemplate,
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation =
     inner.genSetExecutionEvent(event)
 
-  override def genExpressions: Seq[IntermediateExpression] = (nodePropertyMap.values ++ relPropertyMap.values).toSeq
+  override def genExpressions: Seq[IntermediateExpression] = propertyExpressions
+  //(nodePropertyMap.values ++ relPropertyMap.values).toSeq
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(QUERY_STATS_TRACKER_V)
 
