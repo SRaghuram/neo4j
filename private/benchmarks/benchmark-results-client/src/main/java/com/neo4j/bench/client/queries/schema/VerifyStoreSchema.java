@@ -69,7 +69,7 @@ public class VerifyStoreSchema implements Query<Void>
             assertOneToOne( "TestRun nodes connect to Environment nodes correctly",
                             "(:TestRun)", "-[:IN_ENVIRONMENT]->", "(:Environment)", session );
 
-            assertManyToOne( "Environment nodes connect to Instance nodes correctly",
+            assertManyToMany( "Environment nodes connect to Instance nodes correctly",
                              "(:Environment)", "-[:HAS_INSTANCE]->", "(:Instance)", session );
 
             assertManyToOne( "TestRun nodes connect to BenchmarkToolVersion nodes correctly",
