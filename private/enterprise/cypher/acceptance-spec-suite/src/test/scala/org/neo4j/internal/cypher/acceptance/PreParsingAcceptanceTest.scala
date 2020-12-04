@@ -72,7 +72,7 @@ class PreParsingAcceptanceTest extends ExecutionEngineFunSuite with EnterpriseGr
   }
 
   test("should fallback if pipelined doesn't support query") {
-    val query = "CREATE (n:L)"
+    val query = "MERGE (n:L)"
     execute(query).executionPlanDescription() shouldNot haveRuntime("PIPELINED")
   }
 

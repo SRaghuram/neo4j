@@ -1603,7 +1603,7 @@ class EagerizationAcceptanceTest
   test("never ending query should end - this is the query that prompted Eagerness in the first place") {
     createNode()
     val query = "MATCH (a) CREATE ()"
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))
     assertStats(result, nodesCreated = 1)
   }

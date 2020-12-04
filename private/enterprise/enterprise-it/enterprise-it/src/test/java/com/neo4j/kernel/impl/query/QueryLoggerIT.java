@@ -252,7 +252,7 @@ class QueryLoggerIT
 
         List<String> logLines = readAllLines( logFilename );
         assertEquals( 1, logLines.size() );
-        assertThat( logLines.get( 0 ), endsWith( String.format( " B - %s - %s - runtime=slotted - {}", connectionAndDatabaseDetails(), QUERY ) ) );
+        assertThat( logLines.get( 0 ), endsWith( String.format( " B - %s - %s - runtime=pipelined - {}", connectionAndDatabaseDetails(), QUERY ) ) );
         assertThat( logLines.get( 0 ), containsString( AUTH_DISABLED.username() ) );
     }
 
@@ -413,7 +413,7 @@ class QueryLoggerIT
         assertEquals( 1, logLines.size() );
         assertThat( logLines.get( 0 ), endsWith( String.format(
                 " B - %s - %s - {props: {name: 'Roland', position: 'Gunslinger', followers: ['Jake', 'Eddie', 'Susannah']}}"
-                        + " - runtime=slotted - {}",
+                        + " - runtime=pipelined - {}",
                 connectionAndDatabaseDetails(),
                 query ) ) );
         assertThat( logLines.get( 0 ), containsString( AUTH_DISABLED.username() ) );

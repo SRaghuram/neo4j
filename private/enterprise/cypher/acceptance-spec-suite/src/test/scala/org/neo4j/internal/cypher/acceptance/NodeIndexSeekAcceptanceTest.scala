@@ -604,7 +604,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
   }
 
   private def setUpDatabaseForTests() {
-    executeWith(Configs.InterpretedAndSlotted,
+    executeWith(Configs.InterpretedAndSlottedAndPipelined,
       """CREATE (architect:Matrix { name:'The Architect' }),
         |       (smith:Matrix { name:'Agent Smith' }),
         |       (cypher:Matrix:Crew { name:'Cypher' }),

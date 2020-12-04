@@ -782,10 +782,10 @@ order by a.COL1""".format(a, b))
 
   test("doctest gone wild") {
     // given
-    executeWith(Configs.InterpretedAndSlotted, "CREATE (n:Actor {name:'Tom Hanks'})")
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "CREATE (n:Actor {name:'Tom Hanks'})")
 
     // when
-    val result = executeWith(Configs.InterpretedAndSlotted, """MATCH (actor:Actor)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, """MATCH (actor:Actor)
                                WHERE actor.name = "Tom Hanks"
                                CREATE (movie:Movie {title:'Sleepless in Seattle'})
                                CREATE (actor)-[:ACTED_IN]->(movie)""")

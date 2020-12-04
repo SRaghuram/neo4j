@@ -164,7 +164,7 @@ class UnionAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonS
         |CREATE (b:B)
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     val expected = List()
 
     result.toList should equal(expected)

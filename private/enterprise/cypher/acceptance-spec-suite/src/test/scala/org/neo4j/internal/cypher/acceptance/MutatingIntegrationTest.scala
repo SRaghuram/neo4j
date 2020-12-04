@@ -21,7 +21,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
   test("create a single node") {
     val before = graph.withTx( tx => tx.getAllNodes.asScala.size)
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "create (a)")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "create (a)")
 
     assertStats(result, nodesCreated = 1)
     graph.withTx( tx =>  {
@@ -53,13 +53,13 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
   }
 
   test("create two nodes and a relationship between them") {
-    val result = executeWith(Configs.InterpretedAndSlotted, "create (a), (b), (a)-[r:REL]->(b)")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "create (a), (b), (a)-[r:REL]->(b)")
 
     assertStats(result, nodesCreated = 2, relationshipsCreated = 1)
   }
 
   test("create one node and dumpToString") {
-    val result = executeWith(Configs.InterpretedAndSlotted, "create (a {name:'Cypher'})")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "create (a {name:'Cypher'})")
 
     assertStats(result,
       nodesCreated = 1,
@@ -109,7 +109,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
     val b = createNode()
     val c = createNode()
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "create (n) with n MATCH (x) WHERE id(x) IN [0, 1, 2] create (n)-[:REL]->(x)")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "create (n) with n MATCH (x) WHERE id(x) IN [0, 1, 2] create (n)-[:REL]->(x)")
     assertStats(result,
       nodesCreated = 1,
       relationshipsCreated = 3
@@ -331,7 +331,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
   }
 
   test("create two rels in one command should work") {
-    val result = executeWith(Configs.InterpretedAndSlotted, "create (a{name:'a'})-[:test]->(b), (a)-[:test2]->(c)")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "create (a{name:'a'})-[:test]->(b), (a)-[:test2]->(c)")
 
     assertStats(result, nodesCreated = 3, relationshipsCreated = 2, propertiesWritten = 1)
   }

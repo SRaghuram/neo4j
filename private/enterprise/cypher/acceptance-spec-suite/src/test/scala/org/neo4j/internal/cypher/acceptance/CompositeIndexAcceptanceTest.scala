@@ -613,8 +613,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should plan a composite index seek for a multiple property predicate expression when index is created after data") {
-    executeWith(Configs.InterpretedAndSlotted, "WITH RANGE(0,10) AS num CREATE (:Person {id:num})") // ensure label cardinality favors index
-    executeWith(Configs.InterpretedAndSlotted, "CREATE (n:Person {name:'Joe', surname:'Soap'})")
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "WITH RANGE(0,10) AS num CREATE (:Person {id:num})") // ensure label cardinality favors index
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "CREATE (n:Person {name:'Joe', surname:'Soap'})")
     graph.createIndex("Person", "name")
     graph.createIndex("Person", "name", "surname")
     executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:Person) WHERE n.name = 'Joe' AND n.surname = 'Soap' RETURN n",

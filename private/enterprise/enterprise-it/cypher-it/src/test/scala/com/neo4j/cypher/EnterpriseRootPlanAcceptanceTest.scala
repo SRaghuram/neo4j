@@ -22,14 +22,14 @@ import scala.collection.JavaConverters.mapAsScalaMapConverter
 class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with EnterpriseGraphDatabaseTestSupport {
 
   test("query that does not go through the pipelined runtime") {
-    given("CREATE ()")
+    given("MERGE ()")
       .withCypherVersion(CypherVersion.default)
       .shouldHaveCypherVersion(CypherVersion.default)
       .shouldHaveRuntime(SlottedRuntimeName)
   }
 
   test("query that does not go through the pipelined runtime (explicit)") {
-    given("CREATE ()")
+    given("MERGE ()")
       .withCypherVersion(CypherVersion.default)
       .withRuntime(PipelinedRuntimeName)
       .shouldHaveCypherVersion(CypherVersion.default)

@@ -530,7 +530,7 @@ class QueryPlanCompactionAcceptanceTest extends ExecutionEngineFunSuite with Que
         |;""".stripMargin
 
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = shouldCompact("+Create"))
     assertStats(result, nodesCreated = 171, relationshipsCreated = 253, propertiesWritten = 564, labelsAdded = 171)
   }
@@ -554,7 +554,7 @@ class QueryPlanCompactionAcceptanceTest extends ExecutionEngineFunSuite with Que
                   |  (JoelS)-[:PRODUCED]->(TheMatrix)
                   |""".stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy = shouldCompact("+Create"))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, planComparisonStrategy = shouldCompact("+Create"))
     assertStats(result, nodesCreated = 8, relationshipsCreated = 7, propertiesWritten = 21, labelsAdded = 8)
   }
 

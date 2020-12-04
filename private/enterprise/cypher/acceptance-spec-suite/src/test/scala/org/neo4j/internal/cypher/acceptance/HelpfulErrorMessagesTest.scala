@@ -293,7 +293,7 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
   }
 
   test("should throw sensible and helpful error message on wrong property value type") {
-    failWithError(Configs.InterpretedAndSlotted,"CREATE (n{prop:$param})",
+    failWithError(Configs.InterpretedAndSlottedAndPipelined,"CREATE (n{prop:$param})",
       "Property values can only be of primitive types or arrays thereof. Encountered: Map{A -> String(\"B\")}.", Map("param"-> Map("A" -> "B")))
   }
 }

@@ -130,7 +130,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
   test("should have bound node recognized after projection with WITH + CALL") {
     val query = "CREATE (a:L) WITH a CALL db.labels() YIELD label CREATE (b) CREATE (a)<-[:T]-(b)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     assertStats(result, nodesCreated = 2, relationshipsCreated = 1, labelsAdded = 1)
   }
@@ -151,7 +151,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
 
     val query = "CREATE" + List.fill(amount)("(:Bar)-[:FOO]->(:Baz)").mkString(", ")
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     assertStats(result, nodesCreated = 2 * amount, relationshipsCreated = amount, labelsAdded = 2 * amount)
 
@@ -165,7 +165,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
 
     val query = "CREATE" + List.fill(createdNumber)("(:Bar{prop: 1})").mkString(", ")
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     assertStats(result, nodesCreated = createdNumber, labelsAdded = createdNumber, propertiesWritten = createdNumber)
 
