@@ -151,8 +151,9 @@ class UnwindOperatorTaskTemplate(inner: OperatorTaskTemplate,
     block(
       loop(and(innermost.predicate, loadField(canContinue)))(
         block(
-          codeGen.copyFromInput(codeGen.inputSlotConfiguration.numberOfLongs,
-            codeGen.inputSlotConfiguration.numberOfReferences),
+          codeGen.copyFromInput(Math.min(codeGen.inputSlotConfiguration.numberOfLongs, codeGen.slots.numberOfLongs),
+            Math.min(codeGen.inputSlotConfiguration.numberOfReferences,
+              codeGen.slots.numberOfReferences)),
           codeGen.setRefAt(offset,
             invoke(loadField(cursorField), method[IteratorCursor, AnyValue]("value"))),
           inner.genOperateWithExpressions,
