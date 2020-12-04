@@ -82,9 +82,6 @@ class ConvenientLocalExecutionIT
         String neo4jBranch = "1.2";
         String neo4jBranchOwner = "neo-technology";
         String neo4jCommit = "abcd123";
-        String toolBranch = "0.1";
-        String toolBranchOwner = "neo-technology";
-        String toolCommit = "1234abc";
         long parentTeamcityBuild = 0;
         long teamcityBuild = 1;
         String triggeredBy = "xyz";

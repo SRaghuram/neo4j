@@ -83,9 +83,6 @@ public class BenchmarkingToolTest
                                                                                                  "3.4.4", // neo4jBranch
                                                                                                  "branchOwner",
                                                                                                  new File( "neo4j.conf" ).getAbsoluteFile(),
-                                                                                                 "toolCommit",
-                                                                                                 "toolBranchOwner",
-                                                                                                 "3.4", // tool branch
                                                                                                  1L, // teamcity build
                                                                                                  2L, // parent teamcity build
                                                                                                  JvmArgs.from( "-Xmx4g" ).toArgsString(),

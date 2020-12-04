@@ -27,9 +27,6 @@ public class RunMicroWorkloadParams
                                                  String neo4jBranch,
                                                  String neo4jBranchOwner,
                                                  File neo4jConfigFile,
-                                                 String toolCommit,
-                                                 String toolOwner,
-                                                 String toolBranch,
                                                  Long build,
                                                  Long parentBuild,
                                                  String jvmArgsString,
@@ -47,9 +44,6 @@ public class RunMicroWorkloadParams
                 neo4jBranch,
                 neo4jBranchOwner,
                 neo4jConfigFile,
-                toolCommit,
-                toolOwner,
-                toolBranch,
                 build,
                 parentBuild,
                 JvmArgs.parse( jvmArgsString ),
@@ -78,15 +72,6 @@ public class RunMicroWorkloadParams
 
     public static final String CMD_NEO4J_CONFIG = "--neo4j_config";
     private final File neo4jConfigFile;
-
-    public static final String CMD_TOOL_COMMIT = "--tool_commit";
-    private final String toolCommit;
-
-    public static final String CMD_TOOL_OWNER = "--tool_branch_owner";
-    private final String toolOwner;
-
-    public static final String CMD_TOOL_BRANCH = "--tool_branch";
-    private final String toolBranch;
 
     public static final String CMD_TEAMCITY_BUILD = "--teamcity_build";
     private final Long build;
@@ -122,9 +107,6 @@ public class RunMicroWorkloadParams
                                    @JsonProperty( "neo4jBranch" ) String neo4jBranch,
                                    @JsonProperty( "neo4jBranchOwner" ) String neo4jBranchOwner,
                                    @JsonProperty( "neo4jConfigFile" ) File neo4jConfigFile,
-                                   @JsonProperty( "toolCommit" ) String toolCommit,
-                                   @JsonProperty( "toolOwner" ) String toolOwner,
-                                   @JsonProperty( "toolBranch" ) String toolBranch,
                                    @JsonProperty( "build" ) Long build,
                                    @JsonProperty( "parentBuild" ) Long parentBuild,
                                    @JsonProperty( "jvmArgs" ) JvmArgs jvmArgs,
@@ -141,9 +123,6 @@ public class RunMicroWorkloadParams
         this.neo4jBranch = neo4jBranch;
         this.neo4jBranchOwner = neo4jBranchOwner;
         this.neo4jConfigFile = neo4jConfigFile;
-        this.toolCommit = toolCommit;
-        this.toolOwner = toolOwner;
-        this.toolBranch = toolBranch;
         this.build = build;
         this.parentBuild = parentBuild;
         this.jvmArgs = jvmArgs;
@@ -210,21 +189,6 @@ public class RunMicroWorkloadParams
         return parentBuild;
     }
 
-    public String toolCommit()
-    {
-        return toolCommit;
-    }
-
-    public String toolOwner()
-    {
-        return toolOwner;
-    }
-
-    public String toolBranch()
-    {
-        return toolBranch;
-    }
-
     public String neo4jCommit()
     {
         return neo4jCommit;
@@ -243,11 +207,6 @@ public class RunMicroWorkloadParams
     public String neo4jBranchOwner()
     {
         return neo4jBranchOwner;
-    }
-
-    public String toolBranchOwner()
-    {
-        return toolOwner;
     }
 
     @Override

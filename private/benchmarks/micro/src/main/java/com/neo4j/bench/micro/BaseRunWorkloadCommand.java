@@ -30,9 +30,6 @@ import static com.neo4j.bench.common.tool.micro.RunMicroWorkloadParams.CMD_NEO4J
 import static com.neo4j.bench.common.tool.micro.RunMicroWorkloadParams.CMD_PARENT_TEAMCITY_BUILD;
 import static com.neo4j.bench.common.tool.micro.RunMicroWorkloadParams.CMD_PROFILERS;
 import static com.neo4j.bench.common.tool.micro.RunMicroWorkloadParams.CMD_TEAMCITY_BUILD;
-import static com.neo4j.bench.common.tool.micro.RunMicroWorkloadParams.CMD_TOOL_BRANCH;
-import static com.neo4j.bench.common.tool.micro.RunMicroWorkloadParams.CMD_TOOL_COMMIT;
-import static com.neo4j.bench.common.tool.micro.RunMicroWorkloadParams.CMD_TOOL_OWNER;
 import static com.neo4j.bench.common.tool.micro.RunMicroWorkloadParams.CMD_TRIGGERED_BY;
 
 public abstract class BaseRunWorkloadCommand implements Runnable
@@ -78,27 +75,6 @@ public abstract class BaseRunWorkloadCommand implements Runnable
              title = "Neo4j Configuration" )
     @Required
     private File neo4jConfigFile;
-
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_TOOL_COMMIT},
-             description = "Commit of benchmarking tool used to run benchmark",
-             title = "Benchmark Tool Commit" )
-    @Required
-    private String toolCommit;
-
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_TOOL_OWNER},
-             description = "Owner of repository containg the benchmarking tool used to run benchmark",
-             title = "Benchmark Tool Owner" )
-    @Required
-    private String toolOwner = "neo-technology";
-
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_TOOL_BRANCH},
-             description = "Branch of benchmarking tool used to run benchmark",
-             title = "Benchmark Tool Branch" )
-    @Required
-    private String toolBranch = neo4jVersion;
 
     @Option( type = OptionType.COMMAND,
              name = {CMD_TEAMCITY_BUILD},
@@ -168,9 +144,6 @@ public abstract class BaseRunWorkloadCommand implements Runnable
                 neo4jBranch,
                 neo4jBranchOwner,
                 neo4jConfigFile,
-                toolCommit,
-                toolOwner,
-                toolBranch,
                 build,
                 parentBuild,
                 jvmArgsString,
