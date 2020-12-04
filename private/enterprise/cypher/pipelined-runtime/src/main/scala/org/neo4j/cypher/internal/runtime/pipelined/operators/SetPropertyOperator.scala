@@ -8,21 +8,16 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.block
-import org.neo4j.codegen.api.IntermediateRepresentation.cast
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
-import org.neo4j.codegen.api.IntermediateRepresentation.constructor
 import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
-import org.neo4j.codegen.api.IntermediateRepresentation.fail
-import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
-import org.neo4j.codegen.api.IntermediateRepresentation.instanceOf
-import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
-import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
+import org.neo4j.cypher.internal.runtime.IsNoValue
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands
 import org.neo4j.cypher.internal.runtime.makeValueNeoSafe
@@ -37,7 +32,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATS_TRACKER_V
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.TOKEN_WRITE
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.conditionallyProfileRow
-import org.neo4j.cypher.internal.runtime.pipelined.operators.SetPropertyOperator.setRelationshipProperty
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CypherTypeException
@@ -45,6 +39,7 @@ import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.internal.kernel.api.TokenWrite
 import org.neo4j.internal.kernel.api.Write
 import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.Values
 import org.neo4j.values.storable.Values.NO_VALUE
 import org.neo4j.values.virtual.MapValue
 import org.neo4j.values.virtual.VirtualNodeValue
@@ -67,26 +62,14 @@ class SetPropertyOperator(val workIdentity: WorkIdentity,
     while (cursor.next()) {
       val resolvedEntity = entity.apply(cursor, queryState)
 
-      resolvedEntity match {
-        case node: VirtualNodeValue => SetPropertyOperator.setNodeProperty(
-          node.id(),
-          propertyKey,
-          propertyValue.apply(cursor, queryState),
-          tokenWrite,
-          write,
-          resources.queryStatisticsTracker
-        )
-        case relationship: VirtualRelationshipValue => setRelationshipProperty(
-          relationship.id(),
-          propertyKey,
-          propertyValue.apply(cursor, queryState),
-          tokenWrite,
-          write,
-          resources.queryStatisticsTracker
-        )
-        case _ => throw new InvalidArgumentException(
-          s"The expression $entity should have been a node or a relationship, but got $resolvedEntity")
-      }
+      SetPropertyOperator.setProperty(
+        resolvedEntity,
+        propertyKey,
+        propertyValue.apply(cursor, queryState),
+        tokenWrite,
+        write,
+        resources.queryStatisticsTracker
+      )
     }
   }
 }
@@ -98,8 +81,8 @@ object SetPropertyOperator {
                         write: Write,
                         queryStatisticsTracker: MutableQueryStatistics): Unit = {
     safeCastToMap(propertiesMap)
-      .foreach{
-        case  (k: String, v: AnyValue) if !(v eq NO_VALUE) => setNodeProperty(nodeId, k, v, tokenWrite, write, queryStatisticsTracker)
+      .foreach {
+        case (k: String, v: AnyValue) if !(v eq NO_VALUE) => setNodeProperty(nodeId, k, v, tokenWrite, write, queryStatisticsTracker)
         case _ =>
       }
   }
@@ -111,8 +94,15 @@ object SetPropertyOperator {
                       write: Write,
                       queryStatisticsTracker: MutableQueryStatistics): Unit = {
     val propertyKeyId = tokenWrite.propertyKeyGetOrCreateForName(propertyKey)
-    write.nodeSetProperty(nodeId, propertyKeyId, makeValueNeoSafe(propertyValue))
-    queryStatisticsTracker.setProperty()
+    val safeValue = makeValueNeoSafe(propertyValue)
+    if (safeValue == Values.NO_VALUE) {
+      if (!(write.nodeRemoveProperty(nodeId, propertyKeyId) eq Values.NO_VALUE)) {
+        queryStatisticsTracker.setProperty()
+      }
+    } else {
+      write.nodeSetProperty(nodeId, propertyKeyId, safeValue)
+      queryStatisticsTracker.setProperty()
+    }
   }
 
   def addRelationshipProperties(relationshipId: Long,
@@ -121,8 +111,8 @@ object SetPropertyOperator {
                                 write: Write,
                                 queryStatisticsTracker: MutableQueryStatistics): Unit = {
     safeCastToMap(propertiesMap)
-      .foreach{
-        case  (k: String, v: AnyValue) if !(v eq NO_VALUE) => setRelationshipProperty(relationshipId, k, v, tokenWrite, write, queryStatisticsTracker)
+      .foreach {
+        case (k: String, v: AnyValue) if !(v eq NO_VALUE) => setRelationshipProperty(relationshipId, k, v, tokenWrite, write, queryStatisticsTracker)
         case _ =>
       }
   }
@@ -134,8 +124,44 @@ object SetPropertyOperator {
                               write: Write,
                               queryStatisticsTracker: MutableQueryStatistics): Unit = {
     val propertyKeyId = tokenWrite.propertyKeyGetOrCreateForName(propertyKey)
-    write.relationshipSetProperty(relationshipId, propertyKeyId, makeValueNeoSafe(propertyValue))
-    queryStatisticsTracker.setProperty()
+    val safeValue = makeValueNeoSafe(propertyValue)
+    if (safeValue == Values.NO_VALUE) {
+      if (!(write.relationshipRemoveProperty(relationshipId, propertyKeyId) eq Values.NO_VALUE)) {
+        queryStatisticsTracker.setProperty()
+      }
+    } else {
+      write.relationshipSetProperty(relationshipId, propertyKeyId, safeValue)
+      queryStatisticsTracker.setProperty()
+    }
+  }
+
+  def setProperty(entity: AnyValue,
+                  propertyKey: String,
+                  propertyValue: AnyValue,
+                  tokenWrite: TokenWrite,
+                  write: Write,
+                  queryStatisticsTracker: MutableQueryStatistics): Unit = {
+    entity match {
+      case node: VirtualNodeValue => SetPropertyOperator.setNodeProperty(
+        node.id(),
+        propertyKey,
+        propertyValue,
+        tokenWrite,
+        write,
+        queryStatisticsTracker
+      )
+      case relationship: VirtualRelationshipValue => setRelationshipProperty(
+        relationship.id(),
+        propertyKey,
+        propertyValue,
+        tokenWrite,
+        write,
+        queryStatisticsTracker
+      )
+      case IsNoValue() => // Do nothing
+      case _ => throw new InvalidArgumentException(
+        s"Expected to set property on a node or a relationship, but got $entity")
+    }
   }
 
   private def safeCastToMap(value: AnyValue): MapValue = value match {
@@ -170,31 +196,17 @@ class SetPropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
     val entityValueVar = codeGen.namer.nextVariableName("end")
 
     block(
-      declareAndAssign(typeRefOf[AnyValue], propertyValueVar, propertyValue.ir),
-      declareAndAssign(typeRefOf[AnyValue], entityValueVar, entityValue.ir),
-      ifElse(instanceOf[VirtualNodeValue](load(entityValueVar)))(
-        invokeStatic(
-          method[SetPropertyOperator, Unit, Long, String, AnyValue, TokenWrite, Write, MutableQueryStatistics]("setNodeProperty"),
-          invoke(cast[VirtualNodeValue](load(entityValueVar)), method[VirtualNodeValue, Long]("id")),
-          constant(key),
-          load(propertyValueVar),
-          loadField(TOKEN_WRITE),
-          loadField(DATA_WRITE),
-          QUERY_STATS_TRACKER
-        )
-      )(block(
-        ifElse(instanceOf[VirtualRelationshipValue](load(entityValueVar)))
-        (invokeStatic(
-          method[SetPropertyOperator, Unit, Long, String, AnyValue, TokenWrite, Write, MutableQueryStatistics]("setRelationshipProperty"),
-          invoke(cast[VirtualRelationshipValue](load(entityValueVar)), method[VirtualRelationshipValue, Long]("id")),
-          constant(key),
-          load(propertyValueVar),
-          loadField(TOKEN_WRITE),
-          loadField(DATA_WRITE),
-          QUERY_STATS_TRACKER
-        ))
-        (fail(newInstance(constructor[IllegalStateException, String], constant(s"Properties can only be set on nodes or relationships."))))
-      )),
+      declareAndAssign(typeRefOf[AnyValue], propertyValueVar, nullCheckIfRequired(propertyValue)),
+      declareAndAssign(typeRefOf[AnyValue], entityValueVar, nullCheckIfRequired(entityValue)),
+      invokeStatic(
+        method[SetPropertyOperator, Unit, AnyValue, String, AnyValue, TokenWrite, Write, MutableQueryStatistics]("setProperty"),
+        load(entityValueVar),
+        constant(key),
+        load(propertyValueVar),
+        loadField(TOKEN_WRITE),
+        loadField(DATA_WRITE),
+        QUERY_STATS_TRACKER
+      ),
       inner.genOperateWithExpressions,
       conditionallyProfileRow(innerCannotContinue, id, doProfile),
     )
