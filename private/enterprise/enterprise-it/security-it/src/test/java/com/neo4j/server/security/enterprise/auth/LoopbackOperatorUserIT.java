@@ -84,11 +84,13 @@ import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
 class LoopbackOperatorUserIT
 {
     private static final Path LISTEN_FILE = Path.of( "/tmp/loopy.sock" );
-    private static TransportTestUtil util = new TransportTestUtil( newMessageEncoder() );
+    private static final TransportTestUtil util = new TransportTestUtil( newMessageEncoder() );
     private static final org.neo4j.driver.Config driverConfig = org.neo4j.driver.Config.builder()
                                                                                        .withLogging( Logging.none() )
                                                                                        .withoutEncryption()
                                                                                        .withConnectionTimeout( 10, TimeUnit.SECONDS )
+                                                                                       .withMaxConnectionPoolSize( 1 )
+                                                                                       .withEventLoopThreads( 1 )
                                                                                        .build();
 
     @Inject
@@ -356,7 +358,7 @@ class LoopbackOperatorUserIT
     void shouldFailStartupWithNoOperatorPassword()
     {
         assertThatThrownBy( () -> getEnterpriseManagementService( Map.of( BoltConnectorInternalSettings.enable_loopback_auth, true,
-                                                                          BoltConnectorInternalSettings.unsupported_loopback_listen_file, Path.of( "/tmp" ) ) )
+                                                                          BoltConnectorInternalSettings.unsupported_loopback_listen_file, LISTEN_FILE ) )
         )
                 .hasRootCauseMessage( "No password has been set for the loopback operator. Run `neo4j-admin set-operator-password <password>`." );
     }
