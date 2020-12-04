@@ -150,13 +150,6 @@ public class Main
     private File neo4jConfigFile;
 
     @Option( type = OptionType.COMMAND,
-             name = {"--tool_commit"},
-             description = "Commit of benchmarking tool used to run benchmark",
-             title = "Benchmark Tool Commit" )
-    @Required
-    private String toolCommit;
-
-    @Option( type = OptionType.COMMAND,
              name = {"--teamcity_parent_build"},
              description = "Build number of the TeamCity parent build that ran the packaging",
              title = "TeamCity Parent Build Number" )
@@ -321,7 +314,7 @@ public class Main
     {
         neo4jBranch = BranchAndVersion.teamcityBranchToRealBranch( neo4jBranch );
         ParameterVerifier.performSanityChecks( neo4jBranchOwner, neo4jVersion, neo4jBranch );
-        BenchmarkTool tool = new BenchmarkTool( IMPORT_BENCH, toolCommit, IMPORT_OWNER, neo4jBranch );
+        BenchmarkTool tool = new BenchmarkTool( IMPORT_BENCH, neo4jCommit, IMPORT_OWNER, neo4jBranch );
         Java java = Java.current( Stream.of( jvmArgs ).collect( joining( " " ) ) );
 
         try ( StoreClient client = StoreClient.connect( resultsStoreUri, resultsStoreUsername, resultsStorePassword ) )
