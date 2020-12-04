@@ -29,6 +29,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.IntermediateRepresentation.ternary
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
+import org.neo4j.cypher.internal.macros.TranslateExceptionMacros.translateException
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.runtime.LenientCreateRelationship
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
@@ -48,7 +49,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.CreateOperator.setR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_WRITE
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATS_TRACKER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATS_TRACKER_V
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.TOKEN_WRITE
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.TOKEN
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.conditionallyProfileRow
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.getNodeIdFromSlot
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -57,6 +58,7 @@ import org.neo4j.cypher.internal.runtime.slotted.pipes.CreateRelationshipSlotted
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.exceptions.InternalException
+import org.neo4j.internal.kernel.api.Token
 import org.neo4j.internal.kernel.api.TokenWrite
 import org.neo4j.internal.kernel.api.Write
 import org.neo4j.kernel.api.StatementConstants.NO_SUCH_NODE
@@ -79,7 +81,7 @@ class CreateOperator(val workIdentity: WorkIdentity,
 
     val queryState = state.queryStateForExpressionEvaluation(resources)
     val write = state.query.transactionalContext.dataWrite
-    val tokenWrite = state.query.transactionalContext.transaction.tokenWrite()
+    val token = state.query.transactionalContext.transaction.token()
 
     val cursor: MorselFullCursor = morsel.fullCursor()
     while (cursor.next()) {
@@ -88,7 +90,7 @@ class CreateOperator(val workIdentity: WorkIdentity,
         val command = nodes(i)
         val labelIds = command.labels.map(_.getOrCreateId(state.query)).toArray
         val nodeId = createNode(labelIds, write, resources.queryStatisticsTracker)
-        command.properties.foreach(p => setNodeProperties(nodeId, p(cursor, queryState), tokenWrite, write, resources.queryStatisticsTracker))
+        command.properties.foreach(p => setNodeProperties(nodeId, p(cursor, queryState), token, write, resources.queryStatisticsTracker))
         cursor.setLongAt(command.idOffset, nodeId)
         i += 1
       }
@@ -104,7 +106,7 @@ class CreateOperator(val workIdentity: WorkIdentity,
           handleMissingNode(command.relName, command.endName, lenientCreateRelationship)
         } else {
           val newId = createRelationship(startNodeId, typeId, endNodeId, write, resources.queryStatisticsTracker)
-          command.properties.foreach(p => setRelationshipProperties(newId, p(cursor, queryState), tokenWrite, write, resources.queryStatisticsTracker))
+          command.properties.foreach(p => setRelationshipProperties(newId, p(cursor, queryState), token, write, resources.queryStatisticsTracker))
           newId
         }
         cursor.setLongAt(command.relIdOffset, relationshipId)
@@ -126,13 +128,13 @@ object CreateOperator {
 
   def setNodeProperties(node: Long,
                         properties: AnyValue,
-                        tokenWrite: TokenWrite,
+                        token: Token,
                         write: Write,
                         queryStatisticsTracker: MutableQueryStatistics): Unit = {
     safeCastToMap(properties).foreach((k: String, v: AnyValue) => {
       if (!(v eq NO_VALUE)) {
-        val propertyKeyId = tokenWrite.propertyKeyGetOrCreateForName(k)
-        write.nodeSetProperty(node, propertyKeyId, makeValueNeoSafe(v))
+        val propertyKeyId = token.propertyKeyGetOrCreateForName(k)
+        translateException(token, write.nodeSetProperty(node, propertyKeyId, makeValueNeoSafe(v)))
         queryStatisticsTracker.setProperty()
       }
     })
@@ -157,13 +159,13 @@ object CreateOperator {
 
   def setRelationshipProperties(relationship: Long,
                                 properties: AnyValue,
-                                tokenWrite: TokenWrite,
+                                token: Token,
                                 write: Write,
                                 queryStatisticsTracker: MutableQueryStatistics): Unit = {
     safeCastToMap(properties).foreach((k: String, v: AnyValue) => {
       if (!(v eq NO_VALUE)) {
-        val propertyKeyId = tokenWrite.propertyKeyGetOrCreateForName(k)
-        write.relationshipSetProperty(relationship, propertyKeyId, makeValueNeoSafe(v))
+        val propertyKeyId = token.propertyKeyGetOrCreateForName(k)
+        translateException(token,  write.relationshipSetProperty(relationship, propertyKeyId, makeValueNeoSafe(v)))
         queryStatisticsTracker.setProperty()
       }
     })
@@ -212,8 +214,8 @@ class CreateOperatorTemplate(override val inner: OperatorTaskTemplate,
             case Some(ps) =>
               val p = ps()
               propertyExpressions += p
-              invokeStatic(method[CreateOperator, Unit, Long, AnyValue, TokenWrite, Write, MutableQueryStatistics]("setNodeProperties"),
-                load(nodeVar), nullCheckIfRequired(p), loadField(TOKEN_WRITE), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
+              invokeStatic(method[CreateOperator, Unit, Long, AnyValue, Token, Write, MutableQueryStatistics]("setNodeProperties"),
+                load(nodeVar), nullCheckIfRequired(p), loadField(TOKEN), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
             case _ => noop()
           }
         )
@@ -252,8 +254,8 @@ class CreateOperatorTemplate(override val inner: OperatorTaskTemplate,
                 case Some(ps) =>
                   val p = ps()
                   propertyExpressions += p
-                  invokeStatic(method[CreateOperator, Unit, Long, AnyValue, TokenWrite, Write, MutableQueryStatistics]("setRelationshipProperties"),
-                    load(relVar), nullCheckIfRequired(p), loadField(TOKEN_WRITE), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
+                  invokeStatic(method[CreateOperator, Unit, Long, AnyValue, Token, Write, MutableQueryStatistics]("setRelationshipProperties"),
+                    load(relVar), nullCheckIfRequired(p), loadField(TOKEN), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
                 case None => noop()
               }
             )
@@ -278,7 +280,7 @@ class CreateOperatorTemplate(override val inner: OperatorTaskTemplate,
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(QUERY_STATS_TRACKER_V)
 
-  override def genFields: Seq[Field] = Seq(DATA_WRITE, TOKEN_WRITE) ++ labelFields.values ++ relTypeFields.values
+  override def genFields: Seq[Field] = Seq(DATA_WRITE, TOKEN) ++ labelFields.values ++ relTypeFields.values
 
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
 
@@ -288,12 +290,12 @@ class CreateOperatorTemplate(override val inner: OperatorTaskTemplate,
 
   private def labelGetOrCreate(label: Either[Int, String]) = label match {
     case Left(token) => constant(token)
-    case Right(labelName) => invoke(loadField(TOKEN_WRITE), method[TokenWrite, Int, String]("labelGetOrCreateForName"), constant(labelName))
+    case Right(labelName) => invoke(loadField(TOKEN), method[TokenWrite, Int, String]("labelGetOrCreateForName"), constant(labelName))
   }
 
   private def typeGetOrCreate(typ: Either[Int, String]) = typ match {
     case Left(token) => constant(token)
-    case Right(typeName) => invoke(loadField(TOKEN_WRITE), method[TokenWrite, Int, String]("relationshipTypeGetOrCreateForName"), constant(typeName))
+    case Right(typeName) => invoke(loadField(TOKEN), method[TokenWrite, Int, String]("relationshipTypeGetOrCreateForName"), constant(typeName))
   }
 
   private def setLabelField(command: CreateNodeFusedCommand): IntermediateRepresentation = {

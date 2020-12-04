@@ -52,9 +52,12 @@ import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.DbAccess
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
+import org.neo4j.cypher.internal.runtime.pipelined.MutableQueryStatistics
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPool
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
@@ -70,9 +73,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
-import org.neo4j.cypher.internal.runtime.DbAccess
-import org.neo4j.cypher.internal.runtime.ReadableRow
-import org.neo4j.cypher.internal.runtime.pipelined.MutableQueryStatistics
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.cypher.operations.CursorUtils
@@ -94,6 +94,7 @@ import org.neo4j.internal.kernel.api.NodeValueIndexCursor
 import org.neo4j.internal.kernel.api.PropertyCursor
 import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
+import org.neo4j.internal.kernel.api.Token
 import org.neo4j.internal.kernel.api.TokenWrite
 import org.neo4j.internal.kernel.api.Write
 import org.neo4j.internal.schema.IndexOrder
@@ -160,6 +161,7 @@ object OperatorCodeGenHelperTemplates {
   val DATA_WRITE: InstanceField = field[Write]("dataWrite",
     invokeStatic(method[OperatorCodeGenHelperTemplates, Write, KernelTransaction]("write"), load(TX_CONSTRUCTOR_PARAMETER.name)))
   val TOKEN_WRITE: InstanceField = field[TokenWrite]("tokenWrite", invoke(load(TX_CONSTRUCTOR_PARAMETER.name), method[KernelTransaction, TokenWrite]("tokenWrite")))
+  val TOKEN: InstanceField = field[TokenWrite]("token", invoke(load(TX_CONSTRUCTOR_PARAMETER.name), method[KernelTransaction, Token]("token")))
   val INPUT_CURSOR_FIELD_NAME = "inputCursor"
   val INPUT_CURSOR_FIELD: InstanceField =
     field[MorselReadCursor](INPUT_CURSOR_FIELD_NAME,
