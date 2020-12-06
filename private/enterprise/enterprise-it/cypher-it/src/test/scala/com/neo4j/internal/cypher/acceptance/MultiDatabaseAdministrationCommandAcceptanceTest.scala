@@ -7,7 +7,6 @@ package com.neo4j.internal.cypher.acceptance
 
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-
 import com.neo4j.configuration.EnterpriseEditionSettings
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.GraphDatabaseInternalSettings.block_create_drop_database
@@ -17,6 +16,7 @@ import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.default_database
 import org.neo4j.configuration.connectors.BoltConnector
+import org.neo4j.configuration.helpers.SocketAddress
 import org.neo4j.dbms.api.DatabaseExistsException
 import org.neo4j.dbms.api.DatabaseLimitReachedException
 import org.neo4j.dbms.api.DatabaseNotFoundException
@@ -1167,6 +1167,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   test("should not fail when calling procedure allows expired credentials") {
     defaultConfig.set(BoltConnector.enabled.asInstanceOf[Setting[Any]], true)
+    defaultConfig.set(BoltConnector.listen_address.asInstanceOf[Setting[Any]], new SocketAddress("localhost",0))
     try {
       setup()
       setupUserWithCustomRole()
