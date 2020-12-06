@@ -446,7 +446,6 @@ class SlottedPipeMapper(fallback: PipeMapper,
         TopNPipe(source, convertExpressions(limit),
           SlottedExecutionContextOrdering.asComparator(sortItems.map(translateColumnOrder(slots, _))))(id = id)
 
-
       case PartialTop(_, _, stillToSortSuffix, _, _) if stillToSortSuffix.isEmpty => source
 
       case PartialTop(_, alreadySortedPrefix, stillToSortSuffix, SignedDecimalIntegerLiteral("1"), _) =>
