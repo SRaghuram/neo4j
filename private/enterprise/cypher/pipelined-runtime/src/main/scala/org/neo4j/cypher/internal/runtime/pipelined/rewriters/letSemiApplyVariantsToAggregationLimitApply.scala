@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.rewriters
 
+import org.neo4j.cypher.internal.compiler.planner.logical.steps.skipAndLimit.planLimitOnTopOf
 import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.expressions.SignedDecimalIntegerLiteral
 import org.neo4j.cypher.internal.expressions.True
@@ -12,7 +13,6 @@ import org.neo4j.cypher.internal.logical.plans.Aggregation
 import org.neo4j.cypher.internal.logical.plans.Apply
 import org.neo4j.cypher.internal.logical.plans.LetSelectOrSemiApply
 import org.neo4j.cypher.internal.logical.plans.LetSemiApply
-import org.neo4j.cypher.internal.logical.plans.Limit
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.Projection
 import org.neo4j.cypher.internal.logical.plans.SelectOrSemiApply
@@ -77,7 +77,7 @@ case class letSemiApplyVariantsToAggregationLimitApply(cardinalities: Cardinalit
   private def rhsToAggregationLimit(lhs: LogicalPlan,
                                     rhs: LogicalPlan,
                                     idName: String): LogicalPlan = {
-    val limit = Limit(rhs, SignedDecimalIntegerLiteral("1")(InputPosition.NONE))(idGen)
+    val limit = planLimitOnTopOf(rhs, SignedDecimalIntegerLiteral("1")(InputPosition.NONE))(idGen)
     val aggregation = Aggregation(limit, Map.empty, Map(idName -> NonEmpty))(idGen)
     cardinalities.copy(lhs.id, limit.id)
     cardinalities.copy(lhs.id, aggregation.id)

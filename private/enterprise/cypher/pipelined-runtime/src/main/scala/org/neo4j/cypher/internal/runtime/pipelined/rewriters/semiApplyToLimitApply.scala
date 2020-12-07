@@ -5,9 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.rewriters
 
+import org.neo4j.cypher.internal.compiler.planner.logical.steps.skipAndLimit.planLimitOnTopOf
 import org.neo4j.cypher.internal.expressions.SignedDecimalIntegerLiteral
 import org.neo4j.cypher.internal.logical.plans.Apply
-import org.neo4j.cypher.internal.logical.plans.Limit
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.SelectOrSemiApply
 import org.neo4j.cypher.internal.logical.plans.SemiApply
@@ -36,7 +36,7 @@ case class semiApplyToLimitApply(cardinalities: Cardinalities,
   override def apply(input: AnyRef): AnyRef = instance.apply(input)
 
   private def newRhs(lhs: LogicalPlan, rhs: LogicalPlan) = {
-    val limit = Limit(rhs, SignedDecimalIntegerLiteral("1")(InputPosition.NONE))(idGen)
+    val limit = planLimitOnTopOf(rhs, SignedDecimalIntegerLiteral("1")(InputPosition.NONE))(idGen)
     cardinalities.set(limit.id, cardinalities.get(lhs.id))
     providedOrders.copy(rhs.id, limit.id)
     limit
