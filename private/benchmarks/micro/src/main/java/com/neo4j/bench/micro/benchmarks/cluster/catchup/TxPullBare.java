@@ -13,8 +13,6 @@ import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
 
-import java.util.function.Function;
-
 import org.neo4j.logging.LogProvider;
 
 import static com.neo4j.bench.micro.Main.run;
@@ -26,6 +24,12 @@ public class TxPullBare extends AbstractBareBenchmark
 {
     private static final int TX_COUNT = 2;
     private ClientSequence sequence;
+
+    @ParamValues(
+            allowed = {"V3", "V4", "LATEST"},
+            base = {"V3", "V4", "LATEST"} )
+    @Param( {} )
+    public ProtocolVersion protocolVersion;
 
     @ParamValues(
             allowed = {"1KB", "1MB", "100MB", "1GB"},
@@ -43,6 +47,12 @@ public class TxPullBare extends AbstractBareBenchmark
     public boolean isThreadSafe()
     {
         return false;
+    }
+
+    @Override
+    ProtocolVersion protocolVersion()
+    {
+        return protocolVersion;
     }
 
     void prepare( BareClient clientHandler ) throws InterruptedException

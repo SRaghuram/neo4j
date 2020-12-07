@@ -23,8 +23,13 @@ import static java.util.concurrent.TimeUnit.MICROSECONDS;
 public class StoreCopyBare extends AbstractBareBenchmark
 {
     private static final int FILE_COUNT = 8;
-
     private ClientSequence sequence;
+
+    @ParamValues(
+            allowed = {"V3", "V4", "LATEST"},
+            base = {"V3", "V4", "LATEST"} )
+    @Param( {} )
+    public ProtocolVersion protocolVersion;
 
     @ParamValues(
             allowed = {"64MB", "256MB", "1GB"},
@@ -61,6 +66,12 @@ public class StoreCopyBare extends AbstractBareBenchmark
     public boolean isThreadSafe()
     {
         return false;
+    }
+
+    @Override
+    ProtocolVersion protocolVersion()
+    {
+        return protocolVersion;
     }
 
     @Benchmark

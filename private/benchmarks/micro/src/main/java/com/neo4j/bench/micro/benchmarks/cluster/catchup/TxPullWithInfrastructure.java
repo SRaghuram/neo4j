@@ -14,9 +14,6 @@ import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
 
-import org.neo4j.kernel.database.NamedDatabaseId;
-import org.neo4j.storageengine.api.StoreId;
-
 import static com.neo4j.bench.micro.Main.run;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
@@ -25,6 +22,12 @@ import static java.util.concurrent.TimeUnit.MICROSECONDS;
 public class TxPullWithInfrastructure extends AbstractWithInfrastructureBenchmark
 {
     private static final int TX_COUNT = 2;
+
+    @ParamValues(
+            allowed = {"V3", "V4", "LATEST"},
+            base = {"V3", "V4", "LATEST"} )
+    @Param( {} )
+    public ProtocolVersion protocolVersion;
 
     @ParamValues(
             allowed = {"1KB", "1MB", "100MB", "1GB"},
@@ -42,6 +45,12 @@ public class TxPullWithInfrastructure extends AbstractWithInfrastructureBenchmar
     public boolean isThreadSafe()
     {
         return false;
+    }
+
+    @Override
+    ProtocolVersion protocolVersion()
+    {
+        return protocolVersion;
     }
 
     @Override

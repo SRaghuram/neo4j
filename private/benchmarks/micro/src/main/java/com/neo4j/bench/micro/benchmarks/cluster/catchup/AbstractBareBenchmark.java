@@ -54,7 +54,7 @@ abstract class AbstractBareBenchmark extends BaseRegularBenchmark
         log.info( "Prepare start" );
         var clientHandler = new BareClient( logProvider, platform );
         var serverHandler = new BareServer( logProvider, filesHolder, transactionProvider );
-        var proto = new CatchupProtocolInstallers( logProvider, clientHandler, BareTransactionProvider.COMMAND_FACTORY, serverHandler );
+        var proto = new CatchupProtocolInstallers( protocolVersion(), logProvider, clientHandler, BareTransactionProvider.COMMAND_FACTORY, serverHandler );
         platform.start( proto, logProvider );
         prepare( clientHandler );
         log.info( "Prepare done" );
@@ -67,6 +67,8 @@ abstract class AbstractBareBenchmark extends BaseRegularBenchmark
         filesHolder.close();
         transactionProvider.set( 0, 0 );
     }
+
+    abstract ProtocolVersion protocolVersion();
 
     abstract void prepare( BareClient clientHandler ) throws Throwable;
 }

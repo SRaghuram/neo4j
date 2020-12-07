@@ -7,7 +7,6 @@ package com.neo4j.bench.micro.benchmarks.cluster.raft;
 
 import com.neo4j.bench.micro.benchmarks.cluster.EditionModuleBackedAbstractBenchmark;
 import com.neo4j.bench.micro.benchmarks.cluster.LocalNetworkPlatform;
-import com.neo4j.bench.micro.benchmarks.cluster.ProtocolVersion;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.messaging.Inbound;
@@ -27,7 +26,7 @@ import org.neo4j.logging.log4j.Log4jLogProvider;
 
 public abstract class AbstractRaftBenchmark extends EditionModuleBackedAbstractBenchmark
 {
-    private static final boolean DEBUG = false;
+    protected static boolean DEBUG;
 
     static final RaftMemberId MEMBER_ID = new RaftMemberId( UUID.randomUUID() );
     private final LocalNetworkPlatform platform = new LocalNetworkPlatform();

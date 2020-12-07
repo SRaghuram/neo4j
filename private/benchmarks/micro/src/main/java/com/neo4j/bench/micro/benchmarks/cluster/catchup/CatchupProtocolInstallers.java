@@ -10,6 +10,8 @@ import com.neo4j.causalclustering.catchup.CatchupResponseHandler;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.v3.CatchupProtocolClientInstallerV3;
 import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstallerV3;
+import com.neo4j.causalclustering.catchup.v4.CatchupProtocolClientInstallerV4;
+import com.neo4j.causalclustering.catchup.v4.CatchupProtocolServerInstallerV4;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 
@@ -20,15 +22,17 @@ import static java.util.Collections.emptyList;
 
 class CatchupProtocolInstallers implements ProtocolInstallers
 {
+    private final ProtocolVersion version;
     private final LogProvider logProvider;
     private final NettyPipelineBuilderFactory pipelineBuilderFactory;
     private final CatchupResponseHandler responseHandler;
     private final CatchupServerHandler serverHandler;
     private final CommandReaderFactory commandReaderFactory;
 
-    CatchupProtocolInstallers( LogProvider logProvider, CatchupResponseHandler responseHandler, CommandReaderFactory commandReaderFactory,
-            CatchupServerHandler serverHandler )
+    CatchupProtocolInstallers( ProtocolVersion version, LogProvider logProvider, CatchupResponseHandler responseHandler,
+            CommandReaderFactory commandReaderFactory, CatchupServerHandler serverHandler )
     {
+        this.version = version;
         this.logProvider = logProvider;
         this.pipelineBuilderFactory = NettyPipelineBuilderFactory.insecure();
         this.responseHandler = responseHandler;
@@ -39,12 +43,30 @@ class CatchupProtocolInstallers implements ProtocolInstallers
     @Override
     public ProtocolInstaller<ProtocolInstaller.Orientation.Client> clientInstaller()
     {
-        return new CatchupProtocolClientInstallerV3( pipelineBuilderFactory, emptyList(), logProvider, responseHandler, commandReaderFactory );
+        switch ( version )
+        {
+        case V3:
+            return new CatchupProtocolClientInstallerV3( pipelineBuilderFactory, emptyList(), logProvider, responseHandler, commandReaderFactory );
+        case V4:
+        case LATEST:
+            return new CatchupProtocolClientInstallerV4( pipelineBuilderFactory, emptyList(), logProvider, responseHandler, commandReaderFactory );
+        default:
+            throw new IllegalArgumentException( "Can't handle: " + version );
+        }
     }
 
     @Override
     public ProtocolInstaller<ProtocolInstaller.Orientation.Server> serverInstaller()
     {
-        return new CatchupProtocolServerInstallerV3( pipelineBuilderFactory, emptyList(), logProvider, serverHandler );
+        switch ( version )
+        {
+        case V3:
+            return new CatchupProtocolServerInstallerV3( pipelineBuilderFactory, emptyList(), logProvider, serverHandler );
+        case V4:
+        case LATEST:
+            return new CatchupProtocolServerInstallerV4( pipelineBuilderFactory, emptyList(), logProvider, serverHandler );
+        default:
+            throw new IllegalArgumentException( "Can't handle: " + version );
+        }
     }
 }

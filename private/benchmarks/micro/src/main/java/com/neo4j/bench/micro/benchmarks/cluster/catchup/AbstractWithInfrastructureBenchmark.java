@@ -18,9 +18,12 @@ import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.database.DatabaseManager;
@@ -40,6 +43,9 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.Clocks;
+
+import static com.neo4j.configuration.CausalClusteringInternalSettings.experimental_catchup_protocol;
+import static com.neo4j.configuration.CausalClusteringSettings.catchup_implementations;
 
 abstract class AbstractWithInfrastructureBenchmark extends EditionModuleBackedAbstractBenchmark
 {
@@ -74,6 +80,14 @@ abstract class AbstractWithInfrastructureBenchmark extends EditionModuleBackedAb
     }
 
     @Override
+    protected Config createConfig( Path tempDirectory )
+    {
+        return Config.newBuilder()
+                .set( GraphDatabaseSettings.neo4j_home, tempDirectory )
+                .set( catchup_implementations, List.of( protocolVersion().version() ) ).build();
+    }
+
+    @Override
     public void setUp() throws Throwable
     {
         var socketAddress = new SocketAddress( "localhost", 46871 );
@@ -84,6 +98,8 @@ abstract class AbstractWithInfrastructureBenchmark extends EditionModuleBackedAb
         catchupClientsWrapper = new CatchupClientsWrapper( module(), catchupClientFactory, db().databaseId(), logProvider(), socketAddress );
         prepare();
     }
+
+    abstract ProtocolVersion protocolVersion();
 
     abstract void prepare() throws Throwable;
 
@@ -106,7 +122,7 @@ abstract class AbstractWithInfrastructureBenchmark extends EditionModuleBackedAb
                 .pipelineBuilder( NettyPipelineBuilderFactory.insecure() )
                 .inactivityTimeout( Duration.ofSeconds( 60 ) )
                 .scheduler( dependencyResolver.resolveDependency( JobScheduler.class ) )
-                .config( Config.defaults() )
+                .config( config() )
                 .bootstrapConfig( BootstrapConfiguration.clientConfig( config() ) )
                 .commandReader( module().getStorageEngineFactory().commandReaderFactory() )
                 .clock( Clocks.nanoClock() )

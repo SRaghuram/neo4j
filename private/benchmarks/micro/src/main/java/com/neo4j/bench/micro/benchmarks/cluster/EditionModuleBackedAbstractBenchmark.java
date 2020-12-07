@@ -59,9 +59,14 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
         return globalModule;
     }
 
-    public Config config()
+    protected Config config()
     {
         return config;
+    }
+
+    protected Config createConfig( Path tempDirectory )
+    {
+        return Config.newBuilder().set( GraphDatabaseSettings.neo4j_home, tempDirectory ).build();
     }
 
     protected abstract void setUp() throws Throwable;
@@ -82,10 +87,10 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
         var tempDirectory = forkDirectory == null ? Path.of( "." ) : Paths.get( forkDirectory.toAbsolutePath() );
         tempDirectory = tempDirectory.resolve( "temp-db" ).toAbsolutePath().normalize();
         FileUtils.deleteDirectory( tempDirectory.toFile() );
-        config = Config.newBuilder().set( GraphDatabaseSettings.neo4j_home, tempDirectory ).build();
+        config = createConfig( tempDirectory );
         managementService = new DatabaseManagementServiceFactory( DbmsInfo.COMMUNITY, this::saveModule )
                 .build( config, GraphDatabaseDependencies.newDependencies().dependencies( noOpSystemGraphInitializer() ) );
-        graphDatabaseFacade = (GraphDatabaseFacade) managementService.database( Config.defaults().get( GraphDatabaseSettings.default_database ) );
+        graphDatabaseFacade = (GraphDatabaseFacade) managementService.database( config.get( GraphDatabaseSettings.default_database ) );
         setUp();
     }
 

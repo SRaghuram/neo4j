@@ -3,11 +3,11 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.micro.benchmarks.cluster;
+package com.neo4j.bench.micro.benchmarks.cluster.raft;
 
 public enum ProtocolVersion
 {
     V2,
     V3,
-    V4
+    LATEST
 }

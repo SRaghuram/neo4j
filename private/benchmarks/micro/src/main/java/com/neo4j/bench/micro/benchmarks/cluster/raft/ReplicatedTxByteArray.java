@@ -7,7 +7,6 @@ package com.neo4j.bench.micro.benchmarks.cluster.raft;
 
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
-import com.neo4j.bench.micro.benchmarks.cluster.ProtocolVersion;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.identity.RaftGroupId;
@@ -26,11 +25,15 @@ import static java.util.concurrent.TimeUnit.MICROSECONDS;
 @OutputTimeUnit( MICROSECONDS )
 public class ReplicatedTxByteArray extends AbstractRaftBenchmark
 {
-    @ParamValues( allowed = {"V1", "V2"}, base = "V2" )
+    @ParamValues(
+            allowed = {"V2", "V3", "LATEST"},
+            base = {"V2", "V3", "LATEST"} )
     @Param( {} )
     public ProtocolVersion protocolVersion;
 
-    @ParamValues( allowed = {"1KB", "1MB", "100MB", "999MB"}, base = {"1KB", "1MB", "100MB", "999MB"} )
+    @ParamValues(
+            allowed = {"1KB", "1MB", "100MB", "999MB"},
+            base = {"1KB", "1MB", "100MB", "999MB"} )
     @Param( {} )
     public String txSize;
 

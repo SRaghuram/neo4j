@@ -27,6 +27,12 @@ public class StoreCopyWithInfrastructure extends AbstractWithInfrastructureBench
     private static final int TX_COUNT = 16;
 
     @ParamValues(
+            allowed = {"V3", "V4", "LATEST"},
+            base = {"V3", "V4", "LATEST"} )
+    @Param( {} )
+    public ProtocolVersion protocolVersion;
+
+    @ParamValues(
             allowed = {"64MB", "256MB", "1GB"},
             base = {"64MB", "256MB", "1GB"} )
     @Param( {} )
@@ -42,6 +48,12 @@ public class StoreCopyWithInfrastructure extends AbstractWithInfrastructureBench
     public boolean isThreadSafe()
     {
         return false;
+    }
+
+    @Override
+    ProtocolVersion protocolVersion()
+    {
+        return protocolVersion;
     }
 
     @Override
