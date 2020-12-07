@@ -31,6 +31,12 @@ import org.neo4j.test.extension.Inject;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseHasDropped;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseHasStarted;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseHasStopped;
+import static com.neo4j.test.driver.DriverTestHelper.createDatabaseWait;
+import static com.neo4j.test.driver.DriverTestHelper.dropDatabaseWait;
+import static com.neo4j.test.driver.DriverTestHelper.startDatabaseWait;
+import static com.neo4j.test.driver.DriverTestHelper.stopDatabaseNoWait;
+import static com.neo4j.test.driver.DriverTestHelper.stopDatabaseWait;
+import static com.neo4j.test.driver.DriverTestHelper.writeData;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -133,48 +139,48 @@ public class WaitDatabaseOperationIT
     void shouldBeAvailableAfterBlockingCreate()
     {
         var dbName = "createDB";
-        var responses = DriverTestHelper.createDatabaseWait( driver, dbName );
+        var responses = createDatabaseWait( driver, dbName );
 
         assertResponsesAreSuccessful( responses );
         assertDatabaseHasStarted( dbName, cluster );
-        DriverTestHelper.writeData( driver, dbName );
+        writeData( driver, dbName );
     }
 
     @Test
     void shouldBeShutdownAfterBlockingStop()
     {
         var dbName = "stopDb";
-        DriverTestHelper.createDatabaseNoWait( driver, dbName );
-        var responses = DriverTestHelper.stopDatabaseWait( driver, dbName );
+        createDatabaseWait( driver, dbName );
+        var responses = stopDatabaseWait( driver, dbName );
 
         assertResponsesAreSuccessful( responses );
         assertDatabaseHasStopped( dbName, cluster );
-        assertThrows( Exception.class, () -> DriverTestHelper.writeData( driver, dbName ) );
+        assertThrows( Exception.class, () -> writeData( driver, dbName ) );
     }
 
     @Test
     void shouldBeAvailableAfterBlockingStart()
     {
         var dbName = "baz";
-        DriverTestHelper.createDatabaseNoWait( driver, dbName );
-        DriverTestHelper.stopDatabaseNoWait( driver, dbName );
-        var responses = DriverTestHelper.startDatabaseWait( driver, dbName );
+        createDatabaseWait( driver, dbName );
+        stopDatabaseNoWait( driver, dbName );
+        var responses = startDatabaseWait( driver, dbName );
 
         assertResponsesAreSuccessful( responses );
         assertDatabaseHasStarted( dbName, cluster );
-        DriverTestHelper.writeData( driver, dbName );
+        writeData( driver, dbName );
     }
 
     @Test
     void shouldBeGoneAfterBlockingDrop()
     {
         var dbName = "stopDb";
-        DriverTestHelper.createDatabaseNoWait( driver, dbName );
-        var responses = DriverTestHelper.dropDatabaseWait( driver, dbName );
+        createDatabaseWait( driver, dbName );
+        var responses = dropDatabaseWait( driver, dbName );
 
         assertResponsesAreSuccessful( responses );
         assertDatabaseHasDropped( dbName, cluster );
-        assertThrows( Exception.class, () -> DriverTestHelper.writeData( driver, dbName ) );
+        assertThrows( Exception.class, () -> writeData( driver, dbName ) );
     }
 
     private void assertResponsesAreSuccessful( WaitResponses responses )
