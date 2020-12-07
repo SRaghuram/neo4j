@@ -5,44 +5,37 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies;
 
-import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
-import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
-import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
-import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 
 import static com.neo4j.configuration.CausalClusteringSettings.cluster_allow_reads_on_followers;
 import static com.neo4j.configuration.CausalClusteringSettings.cluster_allow_reads_on_leader;
-import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
 
 public class AddressCollector
 {
-    private final TopologyService topologyService;
     private final LeaderService leaderService;
     private final Config config;
     private final Log log;
+    private final Function<NamedDatabaseId,ClusterServerInfos> infosProvider;
 
-    public AddressCollector( TopologyService topologyService, LeaderService leaderService, Config config, Log log )
+    public AddressCollector( Function<NamedDatabaseId,ClusterServerInfos> infosProvider, LeaderService leaderService, Config config, Log log )
     {
-        this.topologyService = topologyService;
+        this.infosProvider = infosProvider;
         this.leaderService = leaderService;
         this.config = config;
         this.log = log;
@@ -55,45 +48,41 @@ public class AddressCollector
 
     public RoutingResult createRoutingResult( NamedDatabaseId namedDatabaseId, Policy policy )
     {
-        var coreTopology = topologyService.coreTopologyForDatabase( namedDatabaseId );
-        var rrTopology = topologyService.readReplicaTopologyForDatabase( namedDatabaseId );
-        var optionalLeaderId = leaderService.getLeaderId( namedDatabaseId );
+        var allServerInfos = infosProvider.apply( namedDatabaseId );
 
         var timeToLive = config.get( GraphDatabaseSettings.routing_ttl ).toMillis();
         var shouldShuffle = config.get( CausalClusteringSettings.load_balancing_shuffle );
 
-        return new RoutingResult( routeEndpoints( coreTopology, policy, shouldShuffle ),
-                                  writeEndpoints( namedDatabaseId ),
-                                  readEndpoints( coreTopology, rrTopology, optionalLeaderId, policy, shouldShuffle, namedDatabaseId ),
-                                  timeToLive );
+        return new RoutingResult( routeEndpoints( allServerInfos, policy, shouldShuffle ),
+                writeEndpoints( namedDatabaseId ),
+                readEndpoints( allServerInfos, policy, shouldShuffle, namedDatabaseId ),
+                timeToLive );
     }
 
-    private List<SocketAddress> routeEndpoints( DatabaseCoreTopology coreTopology, Policy policy, boolean shouldShuffle )
+    private List<SocketAddress> routeEndpoints( ClusterServerInfos clusterServerInfos, Policy policy, boolean shouldShuffle )
     {
-        var routers = coreTopology.servers().entrySet().stream().map( AddressCollector::newServerInfo );
-
-        if ( policy != null )
+        if ( policy == null )
         {
-            var routersSet = routers.collect( toSet() );
-
-            var preferredRouters = new ArrayList<>( policy.apply( routersSet ) );
-            routersSet.removeAll( preferredRouters );
-            var otherRouters = new ArrayList<>( routersSet );
-
-            if ( shouldShuffle )
-            {
-                Collections.shuffle( preferredRouters );
-                Collections.shuffle( otherRouters );
-            }
-            routers = Stream.concat( preferredRouters.stream(), otherRouters.stream() );
+            var cores = clusterServerInfos.cores().allServers().stream()
+                    .map( ServerInfo::boltAddress )
+                    .collect( toList() );
+            Collections.shuffle( cores );
+            return cores;
         }
-        else
+
+        var cores = clusterServerInfos.cores().allServers();
+
+        var preferredRouters = new ArrayList<>( policy.apply( cores ) );
+        var otherRouters = new ArrayList<>( cores );
+        otherRouters.removeAll( preferredRouters );
+
+        if ( shouldShuffle )
         {
-            var allRouters = routers.collect( toList() );
-            Collections.shuffle( allRouters );
-            routers = allRouters.stream();
+            Collections.shuffle( preferredRouters );
+            Collections.shuffle( otherRouters );
         }
-        return routers.map( ServerInfo::boltAddress ).collect( toList() );
+
+        return Stream.concat( preferredRouters.stream(), otherRouters.stream() ).map( ServerInfo::boltAddress ).collect( toList() );
     }
 
     private List<SocketAddress> writeEndpoints( NamedDatabaseId namedDatabaseId )
@@ -106,36 +95,19 @@ public class AddressCollector
         return optionalLeaderAddress.stream().collect( toList() );
     }
 
-    private List<SocketAddress> readEndpoints( DatabaseCoreTopology coreTopology,
-                                               DatabaseReadReplicaTopology rrTopology,
-                                               Optional<ServerId> optionalLeaderId,
-                                               Policy policy,
-                                               boolean shouldShuffle,
-                                               NamedDatabaseId dbId )
+    private List<SocketAddress> readEndpoints( ClusterServerInfos clusterServerInfos, Policy policy, Boolean shouldShuffle, NamedDatabaseId namedDatabaseId )
     {
         var allowReadOnFollowers = config.get( cluster_allow_reads_on_followers );
         var allowReadOnLeader = config.get( cluster_allow_reads_on_leader );
-        var possibleReaders = rrTopology.servers().entrySet().stream().map( AddressCollector::newServerInfo ).collect( toSet() );
+        var possibleReaders = new HashSet<>( clusterServerInfos.readReplicas().onlineServers() );
 
         if ( allowReadOnFollowers || possibleReaders.isEmpty() )
         {
-            var coreMembers = coreTopology.servers().entrySet().stream().map( AddressCollector::newServerInfo ).collect( toSet() );
-
-            // if the leader is present and it is not alone filter it out from the read end points unless it should be included always
-            if ( !allowReadOnLeader && coreMembers.size() > 1 && optionalLeaderId.isPresent() )
-            {
-                var leaderId = optionalLeaderId.get();
-                coreMembers = coreMembers.stream().filter( serverInfo -> !serverInfo.serverId().equals( leaderId ) ).collect( toSet() );
-            }
-            // if there is only the leader return it as read end point
-            // or if we cannot locate the leader return all cores as read end points
-            possibleReaders.addAll( coreMembers );
-            // leader might become available a bit later and we might end up using it for reading during this ttl, should be fine in general
+            possibleReaders.addAll( clusterServerInfos.followers().onlineServers() );
         }
-        else if ( allowReadOnLeader && optionalLeaderId.isPresent() )
+        if ( allowReadOnLeader || possibleReaders.isEmpty() )
         {
-            coreTopology.servers().entrySet().stream().filter( e ->  e.getKey().equals( optionalLeaderId.get() ) )
-                    .map( AddressCollector::newServerInfo ).findFirst().ifPresent( possibleReaders::add );
+            possibleReaders.addAll( clusterServerInfos.leader().onlineServers() );
         }
 
         var readers = new ArrayList<>( policy == null ? possibleReaders :
@@ -145,23 +117,6 @@ public class AddressCollector
         {
             Collections.shuffle( readers );
         }
-        return readers.stream()
-                      .filter( r -> isMemberOnline( r.serverId(), dbId ) )
-                      .map( ServerInfo::boltAddress ).collect( toList() );
-    }
-
-    private boolean isMemberOnline( ServerId serverId, NamedDatabaseId dbId )
-    {
-        return topologyService.lookupDatabaseState( dbId, serverId ).operatorState() == STARTED;
-    }
-
-    private static ServerInfo newServerInfo( Map.Entry<ServerId,? extends DiscoveryServerInfo> entry )
-    {
-        return newServerInfo( entry.getKey(), entry.getValue() );
-    }
-
-    private static ServerInfo newServerInfo( ServerId serverId, DiscoveryServerInfo discoveryServerInfo )
-    {
-        return new ServerInfo( discoveryServerInfo.connectors().clientBoltAddress(), serverId, discoveryServerInfo.groups() );
+        return readers.stream().map( ServerInfo::boltAddress ).collect( toList() );
     }
 }

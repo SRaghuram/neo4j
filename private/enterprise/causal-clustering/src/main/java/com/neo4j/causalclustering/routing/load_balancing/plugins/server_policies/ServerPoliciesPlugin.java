@@ -43,7 +43,7 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     {
         var log = logProvider.getLog( getClass() );
         this.policies = FilteringPolicyLoader.loadServerPolicies( config, log );
-        this.addressCollector = new AddressCollector( topologyService, leaderService, config, log );
+        this.addressCollector = new AddressCollector( new ClusterServerInfosProvider( topologyService, leaderService ), leaderService, config, log );
     }
 
     @Override

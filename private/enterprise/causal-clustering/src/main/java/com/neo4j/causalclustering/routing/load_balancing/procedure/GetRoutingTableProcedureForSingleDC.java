@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.routing.load_balancing.procedure;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.AddressCollector;
+import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.ClusterServerInfosProvider;
 
 import java.util.List;
 
@@ -36,7 +37,8 @@ public class GetRoutingTableProcedureForSingleDC extends BaseGetRoutingTableProc
             DatabaseManager<?> databaseManager, Config config, LogProvider logProvider )
     {
         super( namespace, databaseManager, config, logProvider );
-        this.addressCollector = new AddressCollector( topologyService, leaderService, config, logProvider.getLog( getClass() ) );
+        this.addressCollector = new AddressCollector( new ClusterServerInfosProvider( topologyService, leaderService ), leaderService, config,
+                logProvider.getLog( getClass() ) );
     }
 
     @Override

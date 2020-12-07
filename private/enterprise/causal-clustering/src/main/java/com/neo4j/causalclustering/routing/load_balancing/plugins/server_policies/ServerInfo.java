@@ -19,8 +19,8 @@ import org.neo4j.dbms.identity.ServerId;
 public class ServerInfo
 {
     private final SocketAddress boltAddress;
-    private ServerId serverId;
-    private Set<ServerGroupName> groups;
+    private final ServerId serverId;
+    private final Set<ServerGroupName> groups;
 
     public ServerInfo( SocketAddress boltAddress, ServerId serverId, Set<ServerGroupName> groups )
     {
