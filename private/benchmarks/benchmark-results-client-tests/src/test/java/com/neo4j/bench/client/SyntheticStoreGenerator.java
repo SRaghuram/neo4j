@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.client;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.client.queries.annotation.AttachMetricsAnnotation;
@@ -374,13 +373,16 @@ public class SyntheticStoreGenerator
                             new TestRun( DURATION_MS.get(), calendar.getTimeInMillis(), BUILD.get(), BUILD.get(), triggeredBy );
                     generationResult.addTestRun( testRun );
 
-                    Environment environment = new Environment( ImmutableMap.of(
-                            new Instance( "instance",
-                                          Instance.Kind.AWS,
-                                          "Linux",
-                                          8,
-                                          1024 ),
-                            1L ) );
+                    Map<Instance,Long> instances = new HashMap();
+                    for ( int i = 0; i < RNG.nextInt( 1, 4 ); i++ )
+                    {
+                        instances.put( new Instance( "instance",
+                                                     Instance.Kind.AWS,
+                                                     "Linux",
+                                                     i,
+                                                     1024 ), 1L );
+                    }
+                    Environment environment = new Environment( instances );
                     generationResult.addEnvironments( environment );
                     Java java = new Java(
                             randomFrom( jvms ),
