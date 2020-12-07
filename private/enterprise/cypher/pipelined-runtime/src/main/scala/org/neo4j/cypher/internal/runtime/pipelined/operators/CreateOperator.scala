@@ -249,7 +249,6 @@ class CreateOperatorTemplate(override val inner: OperatorTaskTemplate,
                 method[CreateOperator, Long, Long, Int, Long, Write, MutableQueryStatistics]("createRelationship"),
                 load(startNodeVar), loadField(relTypeFields(offset)), load(endNodeVar), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
             ),
-              codeGen.setLongAt(offset, load(relVar)),
               properties match {
                 case Some(ps) =>
                   val p = ps()
@@ -259,7 +258,8 @@ class CreateOperatorTemplate(override val inner: OperatorTaskTemplate,
                 case None => noop()
               }
             )
-          }
+          },
+          codeGen.setLongAt(offset, load(relVar))
         )
     }
     block(
