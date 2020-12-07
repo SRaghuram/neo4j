@@ -55,7 +55,6 @@ import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
 import org.neo4j.cypher.internal.logical.plans.OrderedDistinct
 import org.neo4j.cypher.internal.logical.plans.PartialSort
 import org.neo4j.cypher.internal.logical.plans.PartialTop
-import org.neo4j.cypher.internal.logical.plans.PartialTop1WithTies
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.logical.plans.Projection
 import org.neo4j.cypher.internal.logical.plans.RemoveLabels
@@ -113,7 +112,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyType
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.OrderedAggregationPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PartialSortPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PartialTop1Pipe
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.PartialTop1WithTiesPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PartialTopNPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeMapper
@@ -450,10 +448,6 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
       case PartialTop(_, alreadySortedPrefix, stillToSortSuffix, SignedDecimalIntegerLiteral("1"), _) =>
         PartialTop1Pipe(source, SlottedExecutionContextOrdering.asComparator(alreadySortedPrefix.map(translateColumnOrder(slots, _)).toList),
-          SlottedExecutionContextOrdering.asComparator(stillToSortSuffix.map(translateColumnOrder(slots, _)).toList))(id = id)
-
-      case PartialTop1WithTies(_, alreadySortedPrefix, stillToSortSuffix) =>
-        PartialTop1WithTiesPipe(source, SlottedExecutionContextOrdering.asComparator(alreadySortedPrefix.map(translateColumnOrder(slots, _)).toList),
           SlottedExecutionContextOrdering.asComparator(stillToSortSuffix.map(translateColumnOrder(slots, _)).toList))(id = id)
 
       case PartialTop(_, alreadySortedPrefix, stillToSortSuffix, limit, skipSortingPrefixLength) =>

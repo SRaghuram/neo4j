@@ -75,7 +75,6 @@ import org.neo4j.cypher.internal.logical.plans.OptionalExpand
 import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
 import org.neo4j.cypher.internal.logical.plans.PartialSort
 import org.neo4j.cypher.internal.logical.plans.PartialTop
-import org.neo4j.cypher.internal.logical.plans.PartialTop1WithTies
 import org.neo4j.cypher.internal.logical.plans.PreserveOrder
 import org.neo4j.cypher.internal.logical.plans.ProcedureCall
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
@@ -570,7 +569,6 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
            _: Top |
            _: Top1WithTies |
            _: PartialTop |
-           _: PartialTop1WithTies |
            _: CacheProperties |
            _: NonFuseable |
            _: TriadicBuild |
