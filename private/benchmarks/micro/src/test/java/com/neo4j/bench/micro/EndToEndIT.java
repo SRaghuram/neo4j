@@ -84,12 +84,6 @@ class EndToEndIT extends BaseEndToEndIT
                        "neo4j_branch",
                        // neo4j_branch_owner
                        "neo4j_branch_owner",
-                       // tool_branch
-                       "tool_branch",
-                       // tool_branch_owner
-                       "tool_branch_owner",
-                       // tool_commit
-                       "tool_commit",
                        resultStoreCredentials.boltUri(),
                        resultStoreCredentials.user(),
                        resultStoreCredentials.pass(),

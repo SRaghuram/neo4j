@@ -456,9 +456,6 @@ class EndToEndIT extends BaseEndToEndIT
                        "3.5.1",
                        "neo4j_branch",
                        "neo4j_branch_owner",
-                       "tool_commit",
-                       "tool_branch_owner",
-                       "tool_branch",
                        // teamcity_build
                        "1",
                        // parent_teamcity_build

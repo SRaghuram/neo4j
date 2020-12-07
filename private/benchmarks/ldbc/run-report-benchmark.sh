@@ -10,8 +10,8 @@ set -e
 set -u
 set -x
 
-if [ $# -lt 30 ] ; then
-    echo "Expected at least 30 arguments, but got $#"
+if [ $# -lt 29 ] ; then
+    echo "Expected at least 29 arguments, but got $#"
     echo "usage: ./run-report-benchmarks.sh neo4j_version neo4j_commit neo4j_branch neo4j_branch_owner neo4j_api neo4j_planner neo4j_runtime neo4j_config neo4j_benchmark_config teamcity_build_id teamcity_parent_build_id results_store_uri results_store_user results_store_pass ldbc_read_params ldbc_write_params ldbc_config ldbc_read_threads ldbc_warmup_count ldbc_run_count ldbc_repetition_count ldbc_results_dir ldbc_working_dir ldbc_source_db ldbc_db_reuse_policy ldbc_jvm_args jvm_path profilers triggered_by"
     exit 1
 fi
@@ -43,14 +43,14 @@ ldbc_source_db="${24}"
 ldbc_db_reuse_policy="${25}"
 ldbc_jvm_args="${26}"
 jvm_path="${27}"
-profilers="${29}"
-triggered_by="${30}"
+profilers="${28}"
+triggered_by="${29}"
 
 # here we are checking for optional AWS endpoint URL,
 # this is required for end to end testing, where we mock s3
 aws_endpoint_url=
-if [[ $# -eq 31 ]]; then
-	aws_endpoint_url="${31}"
+if [[ $# -eq 30 ]]; then
+	aws_endpoint_url="${30}"
 fi
 
 if [[ -z "$JAVA_HOME" ]]; then

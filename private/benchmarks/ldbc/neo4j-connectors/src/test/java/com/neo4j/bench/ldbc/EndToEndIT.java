@@ -140,9 +140,6 @@ public class EndToEndIT extends BaseEndToEndIT
                        "1",
                        // parent_teamcity_build
                        "0",
-                       "tool_commit",
-                       "tool_branch",
-                       "tool_branch_owner",
                        resultStoreCredentials.boltUri(),
                        resultStoreCredentials.user(),
                        resultStoreCredentials.pass(),
