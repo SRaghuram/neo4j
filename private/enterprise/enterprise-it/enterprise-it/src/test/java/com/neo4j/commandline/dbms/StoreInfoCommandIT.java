@@ -34,7 +34,39 @@ public class StoreInfoCommandIT extends AbstractCommandIT
     private DatabaseManagementService managementService;
 
     @Test
-    void storeInfoCorrectlyDetectsTheNeedForRecovery() throws IOException
+    void storeInfoCorrectlyDetectsRecoveryNotRequired()
+    {
+        // given
+        managementService.createDatabase( "foo" );
+        var fooDb = (GraphDatabaseAPI) managementService.database( "foo" );
+
+        try ( var tx = fooDb.beginTx() )
+        {
+            tx.createNode();
+            tx.commit();
+        }
+
+        managementService.shutdownDatabase( "foo" );
+
+        var format = RecordFormatSelector.defaultFormat();
+        var expected = "Database name:                foo" + System.lineSeparator() +
+                       "Database in use:              false" + System.lineSeparator() +
+                       "Store format version:         " + format.storeVersion() + System.lineSeparator() +
+                       "Store format introduced in:   " + format.introductionVersion() + System.lineSeparator() +
+                       "Last committed transaction id:2" + System.lineSeparator() +
+                       "Store needs recovery:         false";
+
+        // when
+        var command = new StoreInfoCommand( getExtensionContext() );
+        CommandLine.populateCommand( command, fooDb.databaseLayout().databaseDirectory().toString() );
+        command.execute();
+
+        // then
+        assertTrue( out.containsMessage( expected ) );
+    }
+
+    @Test
+    void storeInfoCorrectlyDetectsRecoveryRequired() throws IOException
     {
         // given
         managementService.createDatabase( "foo" );
