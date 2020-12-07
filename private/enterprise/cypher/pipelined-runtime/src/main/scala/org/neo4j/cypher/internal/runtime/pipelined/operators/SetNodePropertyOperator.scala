@@ -18,6 +18,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
+import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.runtime.IsNoValue
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -33,17 +34,20 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATS_TRACKER_V
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.TOKEN_WRITE
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.conditionallyProfileRow
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SetNodePropertyOperator.getNodeId
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.TokenWrite
 import org.neo4j.internal.kernel.api.Write
+import org.neo4j.kernel.api.StatementConstants
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.NodeReference
 import org.neo4j.values.virtual.NodeValue
 
 class SetNodePropertyOperator(val workIdentity: WorkIdentity,
                               idName: String,
+                              slot: Slot,
                               propertyKey: String,
                               propertyValue: commands.expressions.Expression) extends StatelessOperator {
 
@@ -57,28 +61,40 @@ class SetNodePropertyOperator(val workIdentity: WorkIdentity,
 
     val cursor: MorselFullCursor = morsel.fullCursor()
     while (cursor.next()) {
-      val nodeOption = cursor.getByName(idName) match {
-        case n: NodeValue => Some(n.id())
-        case l: NodeReference => Some(l.id())
-        case IsNoValue() => None
-        case x => throw new InternalException(s"Expected to find a node at '$idName' but found instead: $x")
+      val nodeId = slot match {
+        case s if s.isLongSlot => cursor.getLongAt(s.offset)
+        case s => getNodeId(idName, cursor.getRefAt(s.offset))
       }
 
-      nodeOption.map(node => SetPropertyOperator.setNodeProperty(
-        node,
-        propertyKey,
-        propertyValue.apply(cursor, queryState),
-        tokenWrite,
-        write,
-        resources.queryStatisticsTracker
-      ))
+      if (nodeId != StatementConstants.NO_SUCH_NODE) {
+        SetPropertyOperator.setNodeProperty(
+          nodeId,
+          propertyKey,
+          propertyValue.apply(cursor, queryState),
+          tokenWrite,
+          write,
+          resources.queryStatisticsTracker
+        )
+      }
+    }
+  }
+}
+
+object SetNodePropertyOperator {
+  def getNodeId(idName: String, node: AnyValue): Long = {
+    node match {
+      case nodeValue: NodeValue => nodeValue.id()
+      case nodeRefernce: NodeReference => nodeRefernce.id()
+      case IsNoValue() => StatementConstants.NO_SUCH_NODE
+      case x => throw new InternalException(s"Expected to find a node at '$idName.' but found instead: $x")
     }
   }
 }
 
 class SetNodePropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
                                       override val id: Id,
-                                      offset: Int,
+                                      idName: String,
+                                      slot: Slot,
                                       key: String,
                                       value: () => IntermediateExpression)(protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
 
@@ -95,9 +111,18 @@ class SetNodePropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
 
     val entityId = codeGen.namer.nextVariableName("entity")
 
+    val nodeId = slot match {
+      case s if s.isLongSlot => codeGen.getLongAt(s.offset)
+      case s => invokeStatic(
+        method[SetNodePropertyOperator, Long, String, AnyValue]("getNodeId"),
+        constant(idName),
+        codeGen.getRefAt(s.offset)
+      )
+    }
+
     block(
-      declareAndAssign(typeRefOf[Long], entityId, codeGen.getLongAt(offset)),
-      condition(notEqual(load(entityId), constant(-1L)))(
+      declareAndAssign(typeRefOf[Long], entityId, nodeId),
+      condition(notEqual(load(entityId), constant(StatementConstants.NO_SUCH_NODE)))(
         invokeStatic(
           method[SetPropertyOperator, Unit, Long, String, AnyValue, TokenWrite, Write, MutableQueryStatistics]("setNodeProperty"),
           load(entityId),
