@@ -118,6 +118,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelExhau
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate.SerialLimitStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelSkipOperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SetNodePropertyOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SetPropertiesFromMapOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SetPropertyOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleExactSeekQueryNodeIndexSeekTaskTemplate
@@ -149,6 +150,7 @@ import org.neo4j.cypher.internal.util.Zero
 import org.neo4j.cypher.internal.util.ZeroOneOrMany
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
+import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.IndexQuery
 import org.neo4j.internal.schema.IndexOrder
@@ -866,6 +868,11 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
         case plan@plans.SetProperty(_, entity, propertyKey, value) =>
           ctx: TemplateContext =>
             new SetPropertyOperatorTemplate(ctx.inner, plan.id, ctx.compileExpression(entity, plan.id), propertyKey.name, ctx.compileExpression(value, plan.id))(ctx.expressionCompiler)
+
+        case plan@plans.SetNodeProperty(_, entity, propertyKey, value) =>
+          ctx: TemplateContext =>
+            val offset = ctx.slots.get(entity).filter(_.isLongSlot).map(_.offset).getOrElse(throw new CypherTypeException("Expected a node in setNodePorperty"))
+            new SetNodePropertyOperatorTemplate(ctx.inner, plan.id, offset, propertyKey.name, ctx.compileExpression(value, plan.id))(ctx.expressionCompiler)
 
         case plan@plans.SetPropertiesFromMap(_, entity, expression, removeOtherProps) =>
           ctx: TemplateContext =>
