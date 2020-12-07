@@ -8,14 +8,16 @@ package com.neo4j.causalclustering.core.replication;
 @SuppressWarnings( "WeakerAccess" )
 public class BenchmarkResult
 {
+    public String dbName;
     public Long totalRequests;
     public Long totalBytes;
     public Long timeMillis;
     public Double opsPerMilli;
     public Double mbPerSecond;
 
-    BenchmarkResult( long totalRequests, long totalBytes, long totalTimeMillis )
+    BenchmarkResult( String dbName, long totalRequests, long totalBytes, long totalTimeMillis )
     {
+        this.dbName = dbName;
         this.totalRequests = totalRequests;
         this.totalBytes = totalBytes;
         this.timeMillis = totalTimeMillis;

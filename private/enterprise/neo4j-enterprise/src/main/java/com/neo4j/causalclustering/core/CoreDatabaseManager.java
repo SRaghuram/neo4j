@@ -72,6 +72,7 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         CoreRaftContext raftContext = edition.coreDatabaseFactory().createRaftContext( namedDatabaseId, raftComponents, coreDatabaseMonitors,
                 coreDatabaseDependencies, bootstrapContext, coreDatabaseLogService, globalModule.getOtherMemoryPool().getPoolMemoryTracker() );
 
+        coreDatabaseDependencies.satisfyDependency( raftContext.replicator());
         var databaseConfig = new DatabaseConfig( config, namedDatabaseId );
         var versionContextSupplier = createVersionContextSupplier( databaseConfig );
         var kernelResolvers = new CoreKernelResolvers();

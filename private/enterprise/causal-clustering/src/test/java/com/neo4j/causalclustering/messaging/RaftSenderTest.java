@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.messaging;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.IdFactory;
+import com.neo4j.causalclustering.net.LoadBalancedTrackingChannelPoolMap.RaftGroupSocket;
 import com.neo4j.causalclustering.net.PooledChannel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
@@ -46,7 +47,7 @@ class RaftSenderTest
         } );
         var pooledChannel = mock( PooledChannel.class );
         when( pooledChannel.channel() ).thenReturn( embeddedChannel );
-        when( channelPoolService.acquire( any( SocketAddress.class ) ) ).thenReturn( completedFuture( pooledChannel ) );
+        when( channelPoolService.acquire( any( RaftGroupSocket.class ) ) ).thenReturn( completedFuture( pooledChannel ) );
 
         RaftSender raftSender = new RaftSender( logProvider, channelPoolService );
 

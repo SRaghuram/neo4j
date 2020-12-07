@@ -43,6 +43,7 @@ import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static co.unruly.matchers.StreamMatchers.empty;
+import static com.neo4j.causalclustering.net.ChannelPoolService.SOCKET_TO_INET;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -56,7 +57,7 @@ class ChannelPoolServiceIT
     private static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.SECONDS;
     private static final int DEFAULT_TIME_OUT = 30;
     private final ProtocolStack protocolStackRaft = new ProtocolStack( TestApplicationProtocols.RAFT_2, emptyList() );
-    private ChannelPoolService pool;
+    private ChannelPoolService<SocketAddress> pool;
     private SocketAddress to1;
     private SocketAddress to2;
     private final SocketAddress serverlessAddress = new SocketAddress( "localhost", PortAuthority.allocatePort() );
@@ -70,8 +71,8 @@ class ChannelPoolServiceIT
     {
         poolEventsMonitor = new PoolEventsMonitor();
         poolScheduler = new ThreadPoolJobScheduler();
-        pool = new ChannelPoolService( BootstrapConfiguration.clientConfig( Config.defaults() ), poolScheduler, Group.RAFT_CLIENT,
-                poolEventsMonitor, SimpleChannelPool::new );
+        pool = new ChannelPoolService<>( BootstrapConfiguration.clientConfig( Config.defaults() ), poolScheduler, Group.RAFT_CLIENT,
+                                         poolEventsMonitor, SimpleChannelPool::new, SOCKET_TO_INET, TrackingChannelPoolMap::new );
 
         startServers();
 

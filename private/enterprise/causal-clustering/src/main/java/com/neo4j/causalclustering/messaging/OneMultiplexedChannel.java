@@ -21,7 +21,7 @@ public class OneMultiplexedChannel extends SimpleChannelPool
 {
     private volatile Future<Channel> fChannel;
 
-    OneMultiplexedChannel( Bootstrap bootstrap, ChannelPoolHandler handler )
+    public OneMultiplexedChannel( Bootstrap bootstrap, ChannelPoolHandler handler )
     {
         super( bootstrap, handler );
     }

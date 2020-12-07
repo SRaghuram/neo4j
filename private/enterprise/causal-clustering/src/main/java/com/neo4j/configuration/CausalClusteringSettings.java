@@ -470,4 +470,8 @@ public class CausalClusteringSettings implements SettingsDeclaration
             " Allowable values: " + ModifierProtocols.ALLOWED_VALUES_STRING )
     public static final Setting<List<String>> compression_implementations =
             newBuilder( "causal_clustering.protocol_implementations.compression", listOf( STRING ), emptyList() ).build();
+
+    @Description( "The maximum number of TCP channels between two nodes to operate the raft protocol." +
+                  "Each database gets allocated one channel, but a single channel can be used by more than one database." )
+    public static final Setting<Integer> max_raft_channels = newBuilder( "causal_clustering.max_raft_channels", INT, 8 ).build();
 }

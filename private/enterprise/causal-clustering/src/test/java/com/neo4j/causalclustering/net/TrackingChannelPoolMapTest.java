@@ -36,6 +36,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.test.ports.PortAuthority;
 
+import static com.neo4j.causalclustering.net.ChannelPoolService.SOCKET_TO_INET;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -86,7 +87,7 @@ class TrackingChannelPoolMapTest
         new ServerBootstrap().childHandler( new EmptyChannelHandler() ).group( serverGroup ).channel( serverConfig.channelClass() ).bind( port ).sync();
     }
 
-    private TrackingChannelPoolMap createPoolMap( BootstrapConfiguration<? extends SocketChannel> clientConfig, EventLoopGroup clientGroup )
+    private TrackingChannelPoolMap<SocketAddress> createPoolMap( BootstrapConfiguration<? extends SocketChannel> clientConfig, EventLoopGroup clientGroup )
     {
         var bootstrap = new Bootstrap().group( clientGroup ).channel( clientConfig.channelClass() ).resolver( new AddressResolverGroup<InetSocketAddress>()
         {
@@ -97,14 +98,14 @@ class TrackingChannelPoolMapTest
                 return new AlwaysResolve( executor, resolver );
             }
         } );
-        return new TrackingChannelPoolMap( bootstrap, new AbstractChannelPoolHandler()
+        return new TrackingChannelPoolMap<>( bootstrap, new AbstractChannelPoolHandler()
         {
             @Override
             public void channelCreated( Channel ch )
             {
 
             }
-        }, SimpleChannelPool::new );
+        }, SimpleChannelPool::new, SOCKET_TO_INET );
     }
 
     class AlwaysResolve extends AbstractAddressResolver<InetSocketAddress>

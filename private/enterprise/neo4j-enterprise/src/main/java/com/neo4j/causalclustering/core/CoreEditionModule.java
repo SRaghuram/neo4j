@@ -17,6 +17,7 @@ import com.neo4j.causalclustering.core.consensus.RaftGroupFactory;
 import com.neo4j.causalclustering.core.consensus.leader_transfer.DefaultRaftMembershipResolver;
 import com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferService;
 import com.neo4j.causalclustering.core.consensus.protocol.RaftProtocolClientInstaller;
+import com.neo4j.causalclustering.core.replication.ReplicationBenchmarkProcedure;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.ClusterStateMigrator;
 import com.neo4j.causalclustering.core.state.CoreDiscoveryModule;
@@ -308,9 +309,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
                                          catchupComponentsProvider.catchupClientFactory(), globalModule.getLogService().getInternalLogProvider(),
                                          new InfoProvider( databaseManager, reconcilerModule.databaseStateService() ) ) );
         globalProcedures.register( new ClusterSetDefaultDatabaseProcedure( databaseManager.databaseIdRepository(), topologyService ) );
-        // TODO: Figure out how the replication benchmark procedure should work.
-//        globalProcedures.registerComponent( Replicator.class, x -> replicationModule.getReplicator(), false );
-//        globalProcedures.registerProcedure( ReplicationBenchmarkProcedure.class );
+        globalProcedures.registerComponent( DatabaseManager.class, ignored -> databaseManager , false );
+        globalProcedures.registerProcedure( ReplicationBenchmarkProcedure.class );
     }
 
     @Override
@@ -410,7 +410,6 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
         // LeaderTransferService is not required by databases to function. It monitors the databases running on this machine.
         globalLife.add( leaderTransferService );
-
     }
 
     private void addThroughputMonitorService()
@@ -489,9 +488,11 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
     private RaftChannelPoolService buildRaftChannelPoolService( GlobalModule globalModule )
     {
+        var config = globalModule.getGlobalConfig();
+        var maxChannels = config.get( CausalClusteringSettings.max_raft_channels );
         var clientChannelInitializer = buildClientChannelInitializer( globalModule.getLogService() );
-        var bootstrapConfig = BootstrapConfiguration.clientConfig( globalConfig );
-        return new RaftChannelPoolService( bootstrapConfig, globalModule.getJobScheduler(), logProvider, clientChannelInitializer );
+        var bootstrapConfig = BootstrapConfiguration.clientConfig( this.globalConfig );
+        return new RaftChannelPoolService( bootstrapConfig, globalModule.getJobScheduler(), logProvider, clientChannelInitializer, maxChannels );
     }
 
     private ClientChannelInitializer buildClientChannelInitializer( LogService logService )

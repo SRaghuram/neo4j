@@ -27,10 +27,10 @@ public class EnterpriseClusterInProcessRunner
                     CausalClusterInProcessBuilder.init()
                             .withBuilder( EnterpriseInProcessNeo4jBuilder::new )
                             .withCores( 3 )
-                            .withReplicas( 3 )
+                            .withReplicas( 0 )
                             .withLogger( new Log4jLogProvider( System.out ) )
                             .atPath( clusterPath )
-                            .withConfig( GraphDatabaseSettings.auth_enabled, true )
+                            .withConfig( GraphDatabaseSettings.auth_enabled, false )
                             .withConfig( SecuritySettings.authentication_providers,  List.of( SecuritySettings.NATIVE_REALM_NAME ) )
                             .withConfig( SecuritySettings.authorization_providers, List.of( SecuritySettings.NATIVE_REALM_NAME ) )
                             .build();

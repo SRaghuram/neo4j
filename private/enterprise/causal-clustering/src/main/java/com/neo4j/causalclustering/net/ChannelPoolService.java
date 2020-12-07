@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.net;
 
+import com.neo4j.causalclustering.net.TrackingChannelPoolMap.TrackingChannelPoolMapFactory;
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -13,6 +14,7 @@ import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.ChannelPoolHandler;
 import io.netty.channel.socket.SocketChannel;
 
+import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
@@ -30,8 +32,12 @@ import static com.neo4j.causalclustering.net.NettyUtil.toCompletableFuture;
 import static com.neo4j.causalclustering.protocol.handshake.ChannelAttribute.PROTOCOL_STACK;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 
-public class ChannelPoolService implements Lifecycle
+public class ChannelPoolService<T> implements Lifecycle
 {
+
+    protected static final Function<SocketAddress,InetSocketAddress> SOCKET_TO_INET =
+            socketAddress -> InetSocketAddress.createUnresolved( socketAddress.getHostname(), socketAddress.getPort() );
+
     private final BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration;
     private final JobScheduler scheduler;
     private final Group group;
@@ -42,21 +48,31 @@ public class ChannelPoolService implements Lifecycle
     private final ReentrantReadWriteLock.ReadLock sharedService = lock.readLock();
     private CompletableFuture<PooledChannel> endOfLife;
 
-    private TrackingChannelPoolMap poolMap; // used as "is stopped" flag, stopped when null
-    private ChannelPoolFactory poolFactory;
+    private TrackingChannelPoolMap<T> poolMap; // used as "is stopped" flag, stopped when null
+    private final ChannelPoolFactory poolFactory;
+    private final Function<T,InetSocketAddress> keyToInetAddress;
+    private final TrackingChannelPoolMapFactory<T> poolMapFactory;
     private EventLoopGroup eventLoopGroup;
 
-    public ChannelPoolService( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration, JobScheduler scheduler, Group group,
-            ChannelPoolHandler channelPoolHandler, ChannelPoolFactory poolFactory )
+    public ChannelPoolService( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration,
+                               JobScheduler scheduler,
+                               Group group,
+                               ChannelPoolHandler channelPoolHandler,
+                               ChannelPoolFactory poolFactory,
+                               Function<T,InetSocketAddress> keyToInetAddress,
+                               TrackingChannelPoolMapFactory<T> poolMapFactory
+    )
     {
         this.bootstrapConfiguration = bootstrapConfiguration;
         this.scheduler = scheduler;
         this.group = group;
         this.poolHandler = channelPoolHandler;
         this.poolFactory = poolFactory;
+        this.keyToInetAddress = keyToInetAddress;
+        this.poolMapFactory = poolMapFactory;
     }
 
-    public CompletableFuture<PooledChannel> acquire( SocketAddress address )
+    public CompletableFuture<PooledChannel> acquire( T address )
     {
         sharedService.lock();
         try
@@ -92,7 +108,7 @@ public class ChannelPoolService implements Lifecycle
             endOfLife = new CompletableFuture<>();
             eventLoopGroup = bootstrapConfiguration.eventLoopGroup( scheduler.executor( group ) );
             Bootstrap baseBootstrap = new Bootstrap().group( eventLoopGroup ).channel( bootstrapConfiguration.channelClass() );
-            poolMap = new TrackingChannelPoolMap( baseBootstrap, poolHandler, poolFactory );
+            poolMap = poolMapFactory.create( baseBootstrap, poolHandler, poolFactory, keyToInetAddress );
         }
         finally
         {

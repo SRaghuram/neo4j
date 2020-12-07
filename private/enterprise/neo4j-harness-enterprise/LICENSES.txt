@@ -15,6 +15,7 @@ Apache Software License, Version 2.0
   akka-remote
   akka-stream
   Apache Commons BeanUtils
+  Apache Commons Codec
   Apache Commons Collections
   Apache Commons Compress
   Apache Commons Exec
@@ -75,6 +76,7 @@ Apache Software License, Version 2.0
   mercator
   Metrics Core
   Metrics Integration with JMX
+  Neo4j Java Driver
   Netty
   Netty/All-in-One
   Non-Blocking Reactive Foundation for the JVM

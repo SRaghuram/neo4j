@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.messaging;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.net.ChannelPoolService;
+import com.neo4j.causalclustering.net.LoadBalancedTrackingChannelPoolMap.RaftGroupSocket;
 import com.neo4j.causalclustering.net.PooledChannel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -22,7 +22,7 @@ import org.neo4j.logging.LogProvider;
 
 public class RaftSender implements Outbound<SocketAddress,RaftMessages.OutboundRaftMessageContainer<?>>
 {
-    private final ChannelPoolService channels;
+    private final RaftChannelPoolService channels;
     private final Log log;
 
     public RaftSender( LogProvider logProvider, RaftChannelPoolService channelPoolService )
@@ -34,8 +34,9 @@ public class RaftSender implements Outbound<SocketAddress,RaftMessages.OutboundR
     @Override
     public void send( SocketAddress to, RaftMessages.OutboundRaftMessageContainer<?> message, boolean block )
     {
+        var raftGroupSocket = new RaftGroupSocket( message.raftGroupId(), to );
         // Wait for channel because Raft relies on messages being sent in order on the channel, otherwise they may have to be re-sent.
-        var pooledChannel = waitForPooledChannel( to );
+        var pooledChannel = waitForPooledChannel( raftGroupSocket );
         if ( pooledChannel == null )
         {
             return;
@@ -70,7 +71,7 @@ public class RaftSender implements Outbound<SocketAddress,RaftMessages.OutboundR
         }
     }
 
-    private PooledChannel waitForPooledChannel( SocketAddress to )
+    private PooledChannel waitForPooledChannel( RaftGroupSocket to )
     {
         try
         {
@@ -78,11 +79,11 @@ public class RaftSender implements Outbound<SocketAddress,RaftMessages.OutboundR
         }
         catch ( InterruptedException e )
         {
-            log.info( "Failed to acquire channel because the request was interrupted " + printAddress( to ), e );
+            log.info( "Failed to acquire channel because the request was interrupted " + printAddress( to.socketAddress() ), e );
         }
         catch ( ExecutionException e )
         {
-            log.warn( "Failed to acquire channel " + printAddress( to ), e );
+            log.warn( "Failed to acquire channel " + printAddress( to.socketAddress() ), e );
         }
         return null;
     }

@@ -57,6 +57,7 @@ com.neo4j.configuration.CausalClusteringSettings::load_balancing_plugin org.neo4
 com.neo4j.configuration.CausalClusteringSettings::load_balancing_shuffle org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
 com.neo4j.configuration.CausalClusteringSettings::log_shipping_max_lag org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
 com.neo4j.configuration.CausalClusteringSettings::log_shipping_retry_timeout org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+com.neo4j.configuration.CausalClusteringSettings::max_raft_channels org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
 com.neo4j.configuration.CausalClusteringSettings::middleware_logging_level org.neo4j.graphdb.config.Setting<org.neo4j.logging.Level> public static final
 com.neo4j.configuration.CausalClusteringSettings::minimum_core_cluster_size_at_formation org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
 com.neo4j.configuration.CausalClusteringSettings::minimum_core_cluster_size_at_runtime org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final

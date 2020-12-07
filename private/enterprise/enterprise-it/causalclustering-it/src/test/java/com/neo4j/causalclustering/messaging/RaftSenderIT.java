@@ -24,6 +24,7 @@ import com.neo4j.causalclustering.messaging.marshalling.v3.encoding.RaftMessageE
 import com.neo4j.causalclustering.messaging.marshalling.v4.decoding.RaftMessageDecoderV4;
 import com.neo4j.causalclustering.messaging.marshalling.v4.encoding.RaftMessageEncoderV4;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
+import com.neo4j.causalclustering.net.LoadBalancedTrackingChannelPoolMap;
 import com.neo4j.causalclustering.net.PooledChannel;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
@@ -41,6 +42,7 @@ import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import com.neo4j.causalclustering.protocol.init.ClientChannelInitializer;
 import com.neo4j.causalclustering.protocol.init.ServerChannelInitializer;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
+import com.neo4j.configuration.CausalClusteringSettings;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
@@ -56,6 +58,7 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -143,13 +146,14 @@ class RaftSenderIT
     void shouldReturnSameChannelForMultipleRequests( ApplicationProtocols clientProtocol ) throws Exception
     {
         Server server = life.add( raftServer( new ChannelInboundHandlerAdapter(), clientProtocol ) );
+        var raftGroupSocket = new LoadBalancedTrackingChannelPoolMap.RaftGroupSocket( new RaftGroupId( UUID.randomUUID() ), server.address() );
         RaftChannelPoolService clientPool = life.add( raftPoolService( clientProtocol ) );
 
-        Channel channelA = clientPool.acquire( server.address() ).get( 10, SECONDS ).channel();
-        Channel channelB = clientPool.acquire( server.address() ).get( 10, SECONDS ).channel();
+        Channel channelA = clientPool.acquire( raftGroupSocket ).get( 10, SECONDS ).channel();
+        Channel channelB = clientPool.acquire( raftGroupSocket ).get( 10, SECONDS ).channel();
         assertEquals( channelA, channelB );
 
-        Channel channelC = clientPool.acquire( server.address() ).get( 10, SECONDS ).channel();
+        Channel channelC = clientPool.acquire( raftGroupSocket ).get( 10, SECONDS ).channel();
         assertEquals( channelB, channelC );
     }
 
@@ -158,16 +162,17 @@ class RaftSenderIT
     void shouldReturnNewChannelAfterClose( ApplicationProtocols clientProtocol ) throws Exception
     {
         Server server = life.add( raftServer( new ChannelInboundHandlerAdapter(), clientProtocol ) );
+        var raftGroupSocket = new LoadBalancedTrackingChannelPoolMap.RaftGroupSocket( new RaftGroupId( UUID.randomUUID() ), server.address() );
         RaftChannelPoolService clientPool = life.add( raftPoolService( clientProtocol ) );
 
-        Channel channelA = clientPool.acquire( server.address() ).get( 10, SECONDS ).channel();
+        Channel channelA = clientPool.acquire( raftGroupSocket ).get( 10, SECONDS ).channel();
         channelA.close().sync();
 
-        Channel channelB = clientPool.acquire( server.address() ).get( 10, SECONDS ).channel();
+        Channel channelB = clientPool.acquire( raftGroupSocket ).get( 10, SECONDS ).channel();
         assertNotEquals( channelA, channelB );
         channelB.close().sync();
 
-        Channel channelC = clientPool.acquire( server.address() ).get( 10, SECONDS ).channel();
+        Channel channelC = clientPool.acquire( raftGroupSocket ).get( 10, SECONDS ).channel();
         assertNotEquals( channelB, channelC );
     }
 
@@ -176,13 +181,14 @@ class RaftSenderIT
     void shouldCloseChannelOnCloseOfPool( ApplicationProtocols clientProtocol ) throws Exception
     {
         Server server = life.add( raftServer( new ChannelInboundHandlerAdapter(), clientProtocol ) );
+        var raftGroupSocket = new LoadBalancedTrackingChannelPoolMap.RaftGroupSocket( new RaftGroupId( UUID.randomUUID() ), server.address() );
         RaftChannelPoolService clientPool = life.add( raftPoolService( clientProtocol ) );
 
-        Channel channelA = clientPool.acquire( server.address() ).get( 10, SECONDS ).channel();
+        Channel channelA = clientPool.acquire( raftGroupSocket ).get( 10, SECONDS ).channel();
         channelA.close().sync();
 
-        Channel channelB = clientPool.acquire( server.address() ).get( 10, SECONDS ).channel();
-        Channel channelC = clientPool.acquire( server.address() ).get( 10, SECONDS ).channel();
+        Channel channelB = clientPool.acquire( raftGroupSocket ).get( 10, SECONDS ).channel();
+        Channel channelC = clientPool.acquire( raftGroupSocket ).get( 10, SECONDS ).channel();
 
         clientPool.stop();
         clientPool.shutdown();
@@ -197,13 +203,14 @@ class RaftSenderIT
     void shouldReacquireAfterInitialFailure( ApplicationProtocols clientProtocol ) throws Exception
     {
         Server server = life.add( raftServer( new ChannelInboundHandlerAdapter(), clientProtocol ) );
+        var raftGroupSocket = new LoadBalancedTrackingChannelPoolMap.RaftGroupSocket( new RaftGroupId( UUID.randomUUID() ), server.address() );
         RaftChannelPoolService clientPool = life.add( raftPoolService( clientProtocol ) );
 
         server.stop();
-        assertThrows( ExecutionException.class, () -> clientPool.acquire( server.address() ).get() );
+        assertThrows( ExecutionException.class, () -> clientPool.acquire( raftGroupSocket ).get() );
 
         server.start();
-        Channel channelB = clientPool.acquire( server.address() ).get( 10, SECONDS ).channel();
+        Channel channelB = clientPool.acquire( raftGroupSocket ).get( 10, SECONDS ).channel();
 
         assertTrue( channelB.isOpen() );
     }
@@ -213,12 +220,13 @@ class RaftSenderIT
     void shouldAcquireInQuickSuccession( ApplicationProtocols clientProtocol ) throws Exception
     {
         Server server = life.add( raftServer( new ChannelInboundHandlerAdapter(), clientProtocol ) );
+        var raftGroupSocket = new LoadBalancedTrackingChannelPoolMap.RaftGroupSocket( new RaftGroupId( UUID.randomUUID() ), server.address() );
         RaftChannelPoolService clientPool = life.add( raftPoolService( clientProtocol ) );
 
         // this tries to be a bit racy, acquiring several times before the connection is fully up
-        CompletableFuture<PooledChannel> fChannelA = clientPool.acquire( server.address() );
-        CompletableFuture<PooledChannel> fChannelB = clientPool.acquire( server.address() );
-        CompletableFuture<PooledChannel> fChannelC = clientPool.acquire( server.address() );
+        CompletableFuture<PooledChannel> fChannelA = clientPool.acquire( raftGroupSocket );
+        CompletableFuture<PooledChannel> fChannelB = clientPool.acquire( raftGroupSocket );
+        CompletableFuture<PooledChannel> fChannelC = clientPool.acquire( raftGroupSocket );
 
         Channel channelA = fChannelA.get( 10, SECONDS ).channel();
         Channel channelB = fChannelB.get( 10, SECONDS ).channel();
@@ -374,7 +382,8 @@ class RaftSenderIT
 
         ClientChannelInitializer channelInitializer = new ClientChannelInitializer( handshakeInitializer, pipelineFactory, handshakeTimeout, logProvider );
 
-        return new RaftChannelPoolService( BootstrapConfiguration.clientConfig( Config.defaults() ), scheduler, logProvider, channelInitializer );
+        var maxChannels = CausalClusteringSettings.max_raft_channels.defaultValue();
+        return new RaftChannelPoolService( BootstrapConfiguration.clientConfig( Config.defaults() ), scheduler, logProvider, channelInitializer , maxChannels );
     }
 
     private ApplicationProtocolRepository clientRepository( ApplicationProtocols clientProtocol )

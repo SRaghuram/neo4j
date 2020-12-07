@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.helpers.SocketAddress;
@@ -27,16 +28,22 @@ import org.neo4j.internal.helpers.collection.Pair;
 
 import static java.util.Collections.unmodifiableCollection;
 
-class TrackingChannelPoolMap extends AbstractChannelPoolMap<SocketAddress,ChannelPool>
+public class TrackingChannelPoolMap<T> extends AbstractChannelPoolMap<T,ChannelPool>
 {
+
     private final Bootstrap baseBootstrap;
+    private final Function<T,InetSocketAddress> keyToInetAddress;
     private final ChannelPoolHandlers poolHandlers;
     private final InstalledProtocolsTracker protocolsTracker;
     private final ChannelPoolFactory poolFactory;
 
-    TrackingChannelPoolMap( Bootstrap baseBootstrap, ChannelPoolHandler poolHandler, ChannelPoolFactory poolFactory )
+    public TrackingChannelPoolMap( Bootstrap baseBootstrap,
+                                   ChannelPoolHandler poolHandler,
+                                   ChannelPoolFactory poolFactory,
+                                   Function<T,InetSocketAddress> keyToInetAddress )
     {
         this.baseBootstrap = baseBootstrap;
+        this.keyToInetAddress = keyToInetAddress;
         this.protocolsTracker = new InstalledProtocolsTracker();
         this.poolHandlers = new ChannelPoolHandlers( Arrays.asList( poolHandler, protocolsTracker ) );
         this.poolFactory = poolFactory;
@@ -48,10 +55,11 @@ class TrackingChannelPoolMap extends AbstractChannelPoolMap<SocketAddress,Channe
     }
 
     @Override
-    protected ChannelPool newPool( SocketAddress address )
+    protected ChannelPool newPool( T poolKey )
     {
-        return poolFactory.create( baseBootstrap.clone().remoteAddress( InetSocketAddress.createUnresolved( address.getHostname(), address.getPort() ) ),
-                poolHandlers );
+        var remoteAddress = keyToInetAddress.apply( poolKey );
+        var bootstrap = baseBootstrap.clone().remoteAddress( remoteAddress );
+        return poolFactory.create( bootstrap, poolHandlers );
     }
 
     private static class InstalledProtocolsTracker extends AbstractChannelPoolHandler
@@ -112,5 +120,14 @@ class TrackingChannelPoolMap extends AbstractChannelPoolMap<SocketAddress,Channe
                 poolHandlers.forEach( chh -> errorHandler.execute( () -> chh.channelCreated( ch ) ) );
             }
         }
+    }
+
+    @FunctionalInterface
+    public interface TrackingChannelPoolMapFactory<T>
+    {
+        TrackingChannelPoolMap<T> create( Bootstrap baseBootstrap,
+                                          ChannelPoolHandler poolHandler,
+                                          ChannelPoolFactory poolFactory,
+                                          Function<T,InetSocketAddress> keyToInetAddress );
     }
 }

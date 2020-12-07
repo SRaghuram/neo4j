@@ -7,6 +7,9 @@ package com.neo4j.causalclustering.messaging;
 
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.ChannelPoolService;
+import com.neo4j.causalclustering.net.LoadBalancedTrackingChannelPoolMap;
+import com.neo4j.causalclustering.net.LoadBalancedTrackingChannelPoolMap.RaftGroupSocket;
+import com.neo4j.causalclustering.net.TrackingChannelPoolMap.TrackingChannelPoolMapFactory;
 import com.neo4j.causalclustering.protocol.init.ClientChannelInitializer;
 import io.netty.channel.Channel;
 import io.netty.channel.pool.AbstractChannelPoolHandler;
@@ -17,13 +20,21 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
-public class RaftChannelPoolService extends ChannelPoolService
+public class RaftChannelPoolService extends ChannelPoolService<RaftGroupSocket>
 {
+
+    private static TrackingChannelPoolMapFactory<RaftGroupSocket> createPoolMapFactory( int maxChannels )
+    {
+        return ( baseBootstrap, poolHandler, poolFactory, keyToInetAddress ) ->
+                new LoadBalancedTrackingChannelPoolMap( baseBootstrap, poolHandler, poolFactory, maxChannels );
+    }
+
     public RaftChannelPoolService( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration, JobScheduler scheduler, LogProvider logProvider,
-            ClientChannelInitializer channelInitializer )
+                                   ClientChannelInitializer channelInitializer, int maxChannels )
     {
         super( bootstrapConfiguration, scheduler, Group.RAFT_CLIENT,
-                new PipelineInstaller( logProvider.getLog( RaftChannelPoolService.class ), channelInitializer ), OneMultiplexedChannel::new );
+               new PipelineInstaller( logProvider.getLog( RaftChannelPoolService.class ), channelInitializer ), OneMultiplexedChannel::new,
+               RaftGroupSocket::unresolvedSocketAddress, createPoolMapFactory( maxChannels ) );
     }
 
     private static class PipelineInstaller extends AbstractChannelPoolHandler
