@@ -5,10 +5,32 @@
  */
 package com.neo4j.bench.micro.benchmarks.cluster.raft;
 
+import com.neo4j.causalclustering.core.SupportedProtocolCreator;
 import org.junit.jupiter.api.Test;
+
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
+import org.neo4j.configuration.Config;
+import org.neo4j.logging.NullLogProvider;
+
+import static com.neo4j.bench.micro.benchmarks.cluster.raft.ProtocolVersion.LATEST;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class RaftTest
 {
+    @Test
+    void checkProtocolVersions()
+    {
+        var supported = new SupportedProtocolCreator( Config.defaults(), NullLogProvider.nullLogProvider() );
+        var productionProtocols = supported.getSupportedRaftProtocolsFromConfiguration().versions().stream()
+                .sorted().collect( Collectors.toList() );
+        var benchmarkedProtocols = Arrays.stream( ProtocolVersion.values() ).filter( pv -> pv != LATEST )
+                .map( ProtocolVersion::version ).collect( Collectors.toList() );
+        assertEquals( productionProtocols, benchmarkedProtocols );
+        assertEquals( LATEST.version(), productionProtocols.get( productionProtocols.size() - 1 ) );
+    }
+
     @Test
     void serializeTxByteArray() throws Throwable
     {
@@ -25,7 +47,7 @@ class RaftTest
                 benchmarkTearDown();
             }
         };
-        c.protocolVersion = ProtocolVersion.LATEST;
+        c.protocolVersion = LATEST;
         c.txSize = "100kb";
         c.pre();
         c.serializeContent();
@@ -48,7 +70,7 @@ class RaftTest
                 benchmarkTearDown();
             }
         };
-        c.protocolVersion = ProtocolVersion.LATEST;
+        c.protocolVersion = LATEST;
         c.txSize = "100kb";
         c.pre();
         c.serializeContent();

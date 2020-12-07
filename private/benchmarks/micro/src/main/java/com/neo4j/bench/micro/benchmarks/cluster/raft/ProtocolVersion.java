@@ -5,9 +5,23 @@
  */
 package com.neo4j.bench.micro.benchmarks.cluster.raft;
 
+import com.neo4j.configuration.ApplicationProtocolVersion;
+
 public enum ProtocolVersion
 {
-    V2,
-    V3,
-    LATEST
+    V2( "2.0" ),
+    V3( "3.0" ),
+    LATEST( "3.0" );
+
+    private final ApplicationProtocolVersion version;
+
+    ProtocolVersion( String version )
+    {
+        this.version = ApplicationProtocolVersion.parse( version );
+    }
+
+    public ApplicationProtocolVersion version()
+    {
+        return version;
+    }
 }

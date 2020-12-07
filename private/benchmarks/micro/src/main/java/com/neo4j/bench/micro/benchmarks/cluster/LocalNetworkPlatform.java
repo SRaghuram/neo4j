@@ -29,10 +29,10 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLog;
+import org.neo4j.test.ports.PortAuthority;
 
 public class LocalNetworkPlatform
 {
-    private static final int SOME_BULLSHIT_PORT = 46870;
     private Log log = NullLog.getInstance();
     private ExecutorService executor;
     private Server server;
@@ -50,7 +50,7 @@ public class LocalNetworkPlatform
         {
             log.info( "BEGIN start" );
             ProtocolInstaller<ProtocolInstaller.Orientation.Server> serverProtocolInstaller = serverClientContext.serverInstaller();
-            SocketAddress listenSocketAddress = new SocketAddress( "localhost", SOME_BULLSHIT_PORT );
+            SocketAddress listenSocketAddress = new SocketAddress( "localhost", PortAuthority.allocatePort() );
             log.info( "Starting server. Binding to: %s", listenSocketAddress );
             server = new Server( serverProtocolInstaller::install, null, serverLogService, listenSocketAddress, executor,
                     new ConnectorPortRegister(), BootstrapConfiguration.serverConfig( Config.defaults() ) );
