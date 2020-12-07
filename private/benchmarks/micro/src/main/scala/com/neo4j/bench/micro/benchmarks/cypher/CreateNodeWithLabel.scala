@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.expressions.LabelName
 import org.neo4j.cypher.internal.ir
 import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.graphdb.GraphDatabaseService
@@ -38,7 +39,7 @@ import org.openjdk.jmh.infra.Blackhole
 class CreateNodeWithLabel extends AbstractCypherBenchmark {
   @ParamValues(
     allowed = Array(Interpreted.NAME, Slotted.NAME, Pipelined.NAME, Parallel.NAME),
-    base = Array(Slotted.NAME,  Pipelined.NAME)
+    base = Array(Pipelined.NAME)
   )
   @Param(Array[String]())
   var runtime: String = _
@@ -81,8 +82,8 @@ class CreateNodeWithLabel extends AbstractCypherBenchmark {
     val createNode = ir.CreateNode("a", Seq(LabelName("A")(InputPosition.NONE)), None)
     val create = plans.Create(plans.Argument()(IdGen), Seq(createNode), Seq.empty)(IdGen)
     val empty = plans.EmptyResult(create)(IdGen)
-
-    TestSetup(empty, SemanticTable(), List.empty)
+    val produceResult = ProduceResult(empty, Seq.empty)(IdGen)
+    TestSetup(produceResult, SemanticTable(), List.empty)
   }
 
   var subscriber: CountSubscriber = _
