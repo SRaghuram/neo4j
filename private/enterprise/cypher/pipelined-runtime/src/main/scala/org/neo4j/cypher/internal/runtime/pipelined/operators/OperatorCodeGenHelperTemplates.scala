@@ -161,7 +161,7 @@ object OperatorCodeGenHelperTemplates {
   val DATA_WRITE: InstanceField = field[Write]("dataWrite",
     invokeStatic(method[OperatorCodeGenHelperTemplates, Write, KernelTransaction]("write"), load(TX_CONSTRUCTOR_PARAMETER.name)))
   val TOKEN_WRITE: InstanceField = field[TokenWrite]("tokenWrite", invoke(load(TX_CONSTRUCTOR_PARAMETER.name), method[KernelTransaction, TokenWrite]("tokenWrite")))
-  val TOKEN: InstanceField = field[TokenWrite]("token", invoke(load(TX_CONSTRUCTOR_PARAMETER.name), method[KernelTransaction, Token]("token")))
+  val TOKEN: InstanceField = field[Token]("token", invoke(load(TX_CONSTRUCTOR_PARAMETER.name), method[KernelTransaction, Token]("token")))
   val INPUT_CURSOR_FIELD_NAME = "inputCursor"
   val INPUT_CURSOR_FIELD: InstanceField =
     field[MorselReadCursor](INPUT_CURSOR_FIELD_NAME,

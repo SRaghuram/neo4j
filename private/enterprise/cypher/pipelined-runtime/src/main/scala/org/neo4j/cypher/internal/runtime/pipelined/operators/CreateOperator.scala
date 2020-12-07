@@ -276,7 +276,6 @@ class CreateOperatorTemplate(override val inner: OperatorTaskTemplate,
     inner.genSetExecutionEvent(event)
 
   override def genExpressions: Seq[IntermediateExpression] = propertyExpressions
-  //(nodePropertyMap.values ++ relPropertyMap.values).toSeq
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(QUERY_STATS_TRACKER_V)
 
