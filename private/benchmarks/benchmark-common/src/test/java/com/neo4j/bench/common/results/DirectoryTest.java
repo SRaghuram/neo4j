@@ -123,21 +123,6 @@ public class DirectoryTest
     }
 
     @Test
-    void benchDirShouldOpenExistingForkDirs()
-    {
-        Path parentDir = temporaryFolder.absolutePath();
-        BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( parentDir, GROUP_1 );
-        BenchmarkDirectory benchDir = groupDir.findOrCreate( BENCH_1 );
-        ForkDirectory forkDirBefore = benchDir.create( FORK1 );
-        assertThat( forkDirBefore.recordings(), equalTo( Collections.emptyMap() ) );
-
-        ForkDirectory forkDirAfter = ForkDirectory.openAt( Paths.get( forkDirBefore.toAbsolutePath() ) );
-        assertThat( forkDirBefore.toAbsolutePath(), equalTo( forkDirAfter.toAbsolutePath() ) );
-        assertThat( forkDirBefore.name(), equalTo( forkDirAfter.name() ) );
-        assertThat( forkDirBefore.recordings(), equalTo( forkDirAfter.recordings() ) );
-    }
-
-    @Test
     void benchDirShouldCreateFilesInForkDir() throws Exception
     {
         Path parentDir = temporaryFolder.absolutePath();

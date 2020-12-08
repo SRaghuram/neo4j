@@ -29,6 +29,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.neo4j.bench.common.util.BenchmarkUtil.assertDirectoryExists;
 import static com.neo4j.bench.common.util.BenchmarkUtil.assertDoesNotExist;
@@ -39,7 +40,6 @@ import static java.util.stream.Collectors.toMap;
 
 public class ForkDirectory
 {
-    private static final String FORK_JSON = "fork.json";
     private static final String PLAN_JSON = "plan.json";
     private final Path dir;
     private final ForkDescription forkDescription;
@@ -70,7 +70,8 @@ public class ForkDirectory
             Path dir = parentDir.resolve( BenchmarkUtil.sanitize( name ) );
             assertDoesNotExist( dir );
             Files.createDirectory( dir );
-            saveForkDetails( dir, name );
+            ForkDescription forkDescription = new ForkDescription( name, dir );
+            forkDescription.save();
             return openAt( dir );
         }
         catch ( IOException e )
@@ -82,21 +83,13 @@ public class ForkDirectory
     public static ForkDirectory openAt( Path dir )
     {
         assertDirectoryExists( dir );
-        assertFileExists( dir.resolve( FORK_JSON ) );
         return new ForkDirectory( dir );
-    }
-
-    private static void saveForkDetails( Path dir, String name )
-    {
-        Path jsonPath = create( dir, FORK_JSON );
-        ForkDescription forkDescription = new ForkDescription( name );
-        JsonUtil.serializeJson( jsonPath, forkDescription );
     }
 
     private ForkDirectory( Path dir )
     {
         this.dir = dir;
-        this.forkDescription = loadDescription( dir.resolve( FORK_JSON ) );
+        this.forkDescription = ForkDescription.load( dir );
     }
 
     public String name()
@@ -116,10 +109,9 @@ public class ForkDirectory
                                                                   .filter( descriptor -> descriptor.runPhase().equals( RunPhase.MEASUREMENT ) )
                                                                   .collect( toMap( recordings::get, identity() ) );
 
-        try
+        try ( Stream<Path> files = Files.walk( dir ) )
         {
-            return Files.walk( dir )
-                        .filter( validRecordings::containsKey )
+            return files.filter( validRecordings::containsKey )
                         .map( recording -> findRecording( recording, validRecordings ) )
                         .filter( doCopyPredicate )
                         .collect( Collectors.toMap( Function.identity(), recordingDescriptor -> copy( targetDir, recordingDescriptor ) ) );
@@ -219,8 +211,7 @@ public class ForkDirectory
     {
         Path path = pathFor( recordingDescriptor.sanitizedFilename() );
         forkDescription.registerRecording( recordingDescriptor, path );
-        Path jsonPath = pathFor( dir, FORK_JSON );
-        JsonUtil.serializeJson( jsonPath, forkDescription );
+        forkDescription.save();
         return path;
     }
 
@@ -275,12 +266,6 @@ public class ForkDirectory
                                                                            !recordingDescriptor.recordingType().equals( RecordingType.HEAP_DUMP ) );
     }
 
-    private static ForkDescription loadDescription( Path jsonPath )
-    {
-        assertFileExists( jsonPath );
-        return JsonUtil.deserializeJson( jsonPath, ForkDescription.class );
-    }
-
     private static Path create( Path dir, String filename )
     {
         try
@@ -312,17 +297,44 @@ public class ForkDirectory
 
     private static class ForkDescription
     {
-        private String name;
+        private static final String FORK_JSON = "fork.json";
 
+        private final String name;
+        private final Path root;
         @JsonSerialize( keyUsing = RecordingDescriptor.RecordingDescriptorKeySerializer.class )
         @JsonDeserialize( keyUsing = RecordingDescriptor.RecordingDescriptorKeyDeserializer.class )
-        private Map<RecordingDescriptor,Path> recordings;
+        private final Map<RecordingDescriptor,Path> recordings;
+
+        private static ForkDescription load( Path dir )
+        {
+            Path jsonPath = dir.resolve( FORK_JSON );
+            assertFileExists( jsonPath );
+            ForkDescription fork = JsonUtil.deserializeJson( jsonPath, ForkDescription.class );
+            Map<RecordingDescriptor,Path> rebasedRecordings = rebase( fork.root, dir, fork.recordings );
+            return new ForkDescription( fork.name, dir, rebasedRecordings );
+        }
+
+        /**
+         * Jackson saves all paths as absolute, so we want to reverse it and keep them relative to {@link ForkDirectory#dir}.
+         */
+        private static Map<RecordingDescriptor,Path> rebase( Path fromDir, Path toDir, Map<RecordingDescriptor,Path> recordings )
+        {
+            return recordings.entrySet()
+                             .stream()
+                             .collect( toMap( Map.Entry::getKey, entry -> toDir.resolve( fromDir.relativize( entry.getValue() ) ) ) );
+        }
 
         @JsonCreator
-        private ForkDescription( @JsonProperty( "name" ) String name )
+        private ForkDescription( @JsonProperty( "name" ) String name, @JsonProperty( "root" ) Path root )
+        {
+            this( name, root, new HashMap<>() );
+        }
+
+        private ForkDescription( String name, Path root, Map<RecordingDescriptor,Path> recordings )
         {
             this.name = name;
-            this.recordings = new HashMap<>();
+            this.root = root;
+            this.recordings = recordings;
         }
 
         private String name()
@@ -349,6 +361,12 @@ public class ForkDirectory
         public int hashCode()
         {
             return HashCodeBuilder.reflectionHashCode( this );
+        }
+
+        private void save()
+        {
+            Path jsonPath = pathFor( root, FORK_JSON );
+            JsonUtil.serializeJson( jsonPath, this );
         }
     }
 }

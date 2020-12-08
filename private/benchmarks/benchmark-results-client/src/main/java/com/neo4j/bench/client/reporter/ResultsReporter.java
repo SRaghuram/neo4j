@@ -5,19 +5,12 @@
  */
 package com.neo4j.bench.client.reporter;
 
-import com.google.common.collect.Sets;
 import com.neo4j.bench.client.QueryRetrier;
 import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.client.queries.submit.SubmitTestRun;
-import com.neo4j.bench.common.profiling.RecordingDescriptor;
-import com.neo4j.bench.common.results.BenchmarkDirectory;
-import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
-import com.neo4j.bench.model.model.BenchmarkGroupBenchmark;
 import com.neo4j.bench.model.model.TestRunError;
 import com.neo4j.bench.model.model.TestRunReport;
-import com.neo4j.bench.model.profiling.ProfilerRecordings;
-import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.model.util.JsonUtil;
 import org.apache.commons.lang3.StringUtils;
 
@@ -26,26 +19,15 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.joining;
 import static org.apache.commons.lang3.StringUtils.appendIfMissing;
-import static org.apache.commons.lang3.StringUtils.removeStart;
 
 public class ResultsReporter
 {
     public static final String CMD_RESULTS_STORE_USER = "--results-store-user";
     public static final String CMD_RESULTS_STORE_PASSWORD = "--results-store-pass";
     public static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
-    private static final Set<RecordingType> IGNORED_RECORDING_TYPES = Sets.newHashSet( RecordingType.NONE,
-                                                                                       RecordingType.HEAP_DUMP,
-                                                                                       RecordingType.TRACE_STRACE,
-                                                                                       RecordingType.TRACE_MPSTAT,
-                                                                                       RecordingType.TRACE_VMSTAT,
-                                                                                       RecordingType.TRACE_IOSTAT,
-                                                                                       RecordingType.TRACE_JVM );
 
     private final String resultsStoreUsername;
     private final String resultsStorePassword;
@@ -80,7 +62,10 @@ public class ResultsReporter
             Path tempRecordingsDir = Files.createTempDirectory( workDir.toPath(), null );
             URI s3ProfilerRecordingsFolderUri = constructS3Uri( awsEndpointURL, s3Bucket, tempRecordingsDir );
 
-            extractProfilerRecordings( testRunReport, tempRecordingsDir, s3ProfilerRecordingsFolderUri, workDir );
+            ResultsCopy.extractProfilerRecordings( testRunReport.benchmarkGroupBenchmarkMetrics(),
+                                                   tempRecordingsDir,
+                                                   s3ProfilerRecordingsFolderUri,
+                                                   workDir.toPath() );
 
             String archiveName = tempRecordingsDir.getFileName() + ".tar.gz";
             String s3ArchivePath = s3Bucket + archiveName;
@@ -154,64 +139,5 @@ public class ResultsReporter
                                               .map( message -> message + "\n------------------------------------------------------------------------------" )
                                               .collect( joining( "\n" ) ) );
         }
-    }
-
-    /**
-     * This method will:
-     *  <ol>
-     *   <li>Discovers profiler recordings in `workDir`</li>
-     *   <li>Attach each discovered recording to the provided {@link TestRunReport}</li>
-     *   <li>Copy each discovered recording to `tempProfilerRecordingsDir`</li>
-     * </ol>
-     */
-    private void extractProfilerRecordings( TestRunReport testRunReport, Path tempProfilerRecordingsDir, URI s3FolderUri, File workDir )
-    {
-        String s3Folder = appendIfMissing( removeStart( s3FolderUri.toString(), "s3://" ), "/" );
-
-        for ( BenchmarkGroupDirectory benchmarkGroupDirectory : BenchmarkGroupDirectory.searchAllIn( workDir.toPath() ) )
-        {
-            for ( BenchmarkDirectory benchmarksDirectory : benchmarkGroupDirectory.benchmarkDirectories() )
-            {
-                BenchmarkGroupBenchmark benchmarkGroupBenchmark = new BenchmarkGroupBenchmark( benchmarkGroupDirectory.benchmarkGroup(),
-                                                                                               benchmarksDirectory.benchmark() );
-                // Only process successful benchmarks
-                if ( testRunReport.benchmarkGroupBenchmarks().contains( benchmarkGroupBenchmark ) )
-                {
-                    ProfilerRecordings profilerRecordings = new ProfilerRecordings();
-
-                    copyValidRecordings( benchmarksDirectory, tempProfilerRecordingsDir )
-                            .forEach( ( recordingDescriptor, path ) ->
-                                              // attached valid/copied recordings to test run report
-                                              profilerRecordings.with( recordingDescriptor.recordingType(),
-                                                                       recordingDescriptor.additionalParams(),
-                                                                       s3Folder + path.toString() )
-                            );
-
-                    if ( !profilerRecordings.toMap().isEmpty() )
-                    {
-                        // TODO once we have parameterized profilers we should assert that every expected recording exists
-
-                        testRunReport.benchmarkGroupBenchmarkMetrics()
-                                     .attachProfilerRecording( benchmarkGroupBenchmark.benchmarkGroup(),
-                                                               benchmarkGroupBenchmark.benchmark(),
-                                                               profilerRecordings );
-                    }
-                }
-            }
-        }
-    }
-
-    private Map<RecordingDescriptor,Path> copyValidRecordings( BenchmarkDirectory benchmarksDirectory, Path tempProfilerRecordingsDir )
-    {
-        return benchmarksDirectory.forks().stream()
-                                  .flatMap( forkDirectory -> forkDirectory.copyProfilerRecordings( tempProfilerRecordingsDir, this::shouldUpload )
-                                                                          .entrySet()
-                                                                          .stream() )
-                                  .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) );
-    }
-
-    private boolean shouldUpload( RecordingDescriptor recordingDescriptor )
-    {
-        return !IGNORED_RECORDING_TYPES.contains( recordingDescriptor.recordingType() );
     }
 }

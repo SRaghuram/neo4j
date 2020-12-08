@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.Collections;
 import java.util.Map;
 import java.util.function.Predicate;
@@ -56,7 +57,7 @@ public class ForkDirectoryTest
         BenchmarkDirectory benchDir = BenchmarkGroupDirectory.createAt( temporaryFolder.absolutePath(), GROUP ).findOrCreate( BENCH );
         ForkDirectory forkDir = benchDir.create( FORK_NAME );
 
-        RecordingDescriptor recordingDescriptor = registerProfiler( forkDir, ParameterizedProfiler.defaultProfiler( ProfilerType.JFR ) );
+        RecordingDescriptor recordingDescriptor = registerProfiler( forkDir, ProfilerType.JFR );
 
         Path forkDirPath = Paths.get( forkDir.toAbsolutePath() );
         Map<RecordingDescriptor,Path> forkExpectedRecordings =
@@ -68,6 +69,59 @@ public class ForkDirectoryTest
         assertTrue( Files.exists( expectedForkDirPath ), "Fork dir was not created" );
         assertThat( "Fork dir should know its profilers", forkDir.recordings(), equalTo( forkExpectedRecordings ) );
         assertThat( "Fork dir should know its name", forkDir.name(), equalTo( FORK_NAME ) );
+    }
+
+    @Test
+    public void shouldOpenExistingForkDirs()
+    {
+        Path parentDir = temporaryFolder.absolutePath();
+        ForkDirectory forkDirBefore = BenchmarkGroupDirectory.createAt( parentDir, GROUP ).findOrCreate( BENCH ).create( FORK_NAME );
+        RecordingDescriptor recordingDescriptor = registerProfiler( forkDirBefore, ProfilerType.JFR );
+
+        Path recordingPath = forkDirBefore.findRegisteredPathFor( recordingDescriptor );
+        assertTrue( recordingPath.isAbsolute() );
+        assertThat( forkDirBefore.recordings(), equalTo( ImmutableMap.of( recordingDescriptor, recordingPath ) ) );
+
+        ForkDirectory forkDirAfter = ForkDirectory.openAt( Paths.get( forkDirBefore.toAbsolutePath() ) );
+        assertThat( forkDirBefore.toAbsolutePath(), equalTo( forkDirAfter.toAbsolutePath() ) );
+        assertThat( forkDirBefore.name(), equalTo( forkDirAfter.name() ) );
+        assertThat( forkDirBefore.recordings(), equalTo( forkDirAfter.recordings() ) );
+    }
+
+    @Test
+    public void shouldKeepPathsRelativeToParentDir()
+    {
+        Path parentDirAbsolute = temporaryFolder.absolutePath();
+        Path parentDirRelative = Paths.get( "" ).toAbsolutePath().relativize( parentDirAbsolute );
+        ForkDirectory forkDirAbsolute = BenchmarkGroupDirectory.findOrCreateAt( parentDirAbsolute, GROUP ).findOrCreate( BENCH ).findOrCreate( FORK_NAME );
+        RecordingDescriptor recordingDescriptor = registerProfiler( forkDirAbsolute, ProfilerType.JFR );
+        ForkDirectory forkDirRelative = BenchmarkGroupDirectory.findOrCreateAt( parentDirRelative, GROUP ).findOrCreate( BENCH ).findOrCreate( FORK_NAME );
+
+        assertTrue( forkDirAbsolute.findRegisteredPathFor( recordingDescriptor ).isAbsolute() );
+        assertFalse( forkDirRelative.findRegisteredPathFor( recordingDescriptor ).isAbsolute() );
+    }
+
+    @Test
+    public void shouldOpenForkDirMovedToAnotherDirectory() throws Exception
+    {
+        Path parentDir1 = temporaryFolder.directory( "dir1" );
+        ForkDirectory forkDir1 = BenchmarkGroupDirectory.createAt( parentDir1, GROUP ).findOrCreate( BENCH ).create( FORK_NAME );
+        RecordingDescriptor recordingDescriptor1 = registerProfiler( forkDir1, ProfilerType.JFR );
+
+        Path parentDir2 = temporaryFolder.directory( "dir2" );
+        Files.move( Paths.get( forkDir1.toAbsolutePath() ), parentDir2, StandardCopyOption.REPLACE_EXISTING );
+        ForkDirectory forkDir2 = ForkDirectory.openAt( parentDir2 );
+        RecordingDescriptor recordingDescriptor2 = registerProfiler( forkDir2, ProfilerType.ASYNC );
+
+        Path parentDir3 = temporaryFolder.directory( "dir3" );
+        Files.move( parentDir2, parentDir3, StandardCopyOption.REPLACE_EXISTING );
+        ForkDirectory forkDir3 = ForkDirectory.openAt( parentDir3 );
+        RecordingDescriptor recordingDescriptor3 = registerProfiler( forkDir3, ProfilerType.GC );
+
+        Map<RecordingDescriptor,Path> recordings = forkDir3.recordings();
+        assertTrue( Files.exists( parentDir3.resolve( recordings.get( recordingDescriptor1 ) ) ), "Descriptor points to a non-existing file" );
+        assertTrue( Files.exists( parentDir3.resolve( recordings.get( recordingDescriptor2 ) ) ), "Descriptor points to a non-existing file" );
+        assertTrue( Files.exists( parentDir3.resolve( recordings.get( recordingDescriptor3 ) ) ), "Descriptor points to a non-existing file" );
     }
 
     @Test
@@ -86,7 +140,7 @@ public class ForkDirectoryTest
         Path targetDir = temporaryFolder.absolutePath();
         ForkDirectory forkDir = BenchmarkGroupDirectory.createAt( targetDir, GROUP ).findOrCreate( BENCH ).create( FORK_NAME );
 
-        RecordingDescriptor recordingDescriptor = registerProfiler( forkDir, ParameterizedProfiler.defaultProfiler( ProfilerType.JFR ) );
+        RecordingDescriptor recordingDescriptor = registerProfiler( forkDir, ProfilerType.JFR );
         Predicate<RecordingDescriptor> predicate = Predicates.alwaysTrue();
 
         Map<RecordingDescriptor,Path> recordingDescriptors = forkDir.copyProfilerRecordings( targetDir, predicate );
@@ -106,7 +160,7 @@ public class ForkDirectoryTest
         Path targetDir = temporaryFolder.absolutePath();
         ForkDirectory forkDir = BenchmarkGroupDirectory.createAt( targetDir, GROUP ).findOrCreate( BENCH ).create( FORK_NAME );
 
-        RecordingDescriptor recordingDescriptor = registerProfiler( forkDir, ParameterizedProfiler.defaultProfiler( ProfilerType.JFR ) );
+        RecordingDescriptor recordingDescriptor = registerProfiler( forkDir, ProfilerType.JFR );
         Predicate<RecordingDescriptor> predicate = Predicates.alwaysFalse();
 
         Map<RecordingDescriptor,Path> recordingDescriptors = forkDir.copyProfilerRecordings( targetDir, predicate );
@@ -115,11 +169,12 @@ public class ForkDirectoryTest
         assertFalse( Files.exists( targetDir.resolve( recordingDescriptor.filename() ) ), "File was copied" );
     }
 
-    private RecordingDescriptor registerProfiler( ForkDirectory forkDir, ParameterizedProfiler profiler )
+    private RecordingDescriptor registerProfiler( ForkDirectory forkDir, ProfilerType profilerType )
     {
+        ParameterizedProfiler profiler = ParameterizedProfiler.defaultProfiler( profilerType );
         ProfilerRecordingDescriptor profilerDescriptor =
                 ProfilerRecordingDescriptor.create( ForkDirectoryTest.GROUP, ForkDirectoryTest.BENCH, MEASUREMENT, profiler, NONE );
-        RecordingDescriptor recordingDescriptor = profilerDescriptor.recordingDescriptorFor( profiler.profilerType().recordingType() );
+        RecordingDescriptor recordingDescriptor = profilerDescriptor.recordingDescriptorFor( profilerType.recordingType() );
         forkDir.findOrCreate( recordingDescriptor.sanitizedFilename() );
         forkDir.registerPathFor( recordingDescriptor );
         return recordingDescriptor;
