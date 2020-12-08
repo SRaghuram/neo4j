@@ -16,6 +16,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
+import org.neo4j.cypher.internal.macros.TranslateExceptionMacros.translateException
 import org.neo4j.cypher.internal.runtime.IsNoValue
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -30,13 +31,13 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_WRITE
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATS_TRACKER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATS_TRACKER_V
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.TOKEN_WRITE
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.TOKEN
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.conditionallyProfileRow
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.exceptions.InvalidArgumentException
-import org.neo4j.internal.kernel.api.TokenWrite
+import org.neo4j.internal.kernel.api.Token
 import org.neo4j.internal.kernel.api.Write
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
@@ -56,7 +57,7 @@ class SetPropertyOperator(val workIdentity: WorkIdentity,
 
     val queryState = state.queryStateForExpressionEvaluation(resources)
     val write = state.query.transactionalContext.dataWrite
-    val tokenWrite = state.query.transactionalContext.transaction.tokenWrite()
+    val token = state.query.transactionalContext.transaction.token()
 
     val cursor: MorselFullCursor = morsel.fullCursor()
     while (cursor.next()) {
@@ -66,7 +67,7 @@ class SetPropertyOperator(val workIdentity: WorkIdentity,
         resolvedEntity,
         propertyKey,
         propertyValue.apply(cursor, queryState),
-        tokenWrite,
+        token,
         write,
         resources.queryStatisticsTracker
       )
@@ -77,12 +78,12 @@ class SetPropertyOperator(val workIdentity: WorkIdentity,
 object SetPropertyOperator {
   def addNodeProperties(nodeId: Long,
                         propertiesMap: AnyValue,
-                        tokenWrite: TokenWrite,
+                        token: Token,
                         write: Write,
                         queryStatisticsTracker: MutableQueryStatistics): Unit = {
     safeCastToMap(propertiesMap)
       .foreach {
-        case (k: String, v: AnyValue) if !(v eq NO_VALUE) => setNodeProperty(nodeId, k, v, tokenWrite, write, queryStatisticsTracker)
+        case (k: String, v: AnyValue) if !(v eq NO_VALUE) => setNodeProperty(nodeId, k, v, token, write, queryStatisticsTracker)
         case _ =>
       }
   }
@@ -90,29 +91,29 @@ object SetPropertyOperator {
   def setNodeProperty(nodeId: Long,
                       propertyKey: String,
                       propertyValue: AnyValue,
-                      tokenWrite: TokenWrite,
+                      token: Token,
                       write: Write,
                       queryStatisticsTracker: MutableQueryStatistics): Unit = {
-    val propertyKeyId = tokenWrite.propertyKeyGetOrCreateForName(propertyKey)
+    val propertyKeyId = token.propertyKeyGetOrCreateForName(propertyKey)
     val safeValue = makeValueNeoSafe(propertyValue)
     if (safeValue == Values.NO_VALUE) {
       if (!(write.nodeRemoveProperty(nodeId, propertyKeyId) eq Values.NO_VALUE)) {
         queryStatisticsTracker.setProperty()
       }
     } else {
-      write.nodeSetProperty(nodeId, propertyKeyId, safeValue)
+      translateException(token,  write.nodeSetProperty(nodeId, propertyKeyId, safeValue))
       queryStatisticsTracker.setProperty()
     }
   }
 
   def addRelationshipProperties(relationshipId: Long,
                                 propertiesMap: AnyValue,
-                                tokenWrite: TokenWrite,
+                                token: Token,
                                 write: Write,
                                 queryStatisticsTracker: MutableQueryStatistics): Unit = {
     safeCastToMap(propertiesMap)
       .foreach {
-        case (k: String, v: AnyValue) if !(v eq NO_VALUE) => setRelationshipProperty(relationshipId, k, v, tokenWrite, write, queryStatisticsTracker)
+        case (k: String, v: AnyValue) if !(v eq NO_VALUE) => setRelationshipProperty(relationshipId, k, v, token, write, queryStatisticsTracker)
         case _ =>
       }
   }
@@ -120,17 +121,17 @@ object SetPropertyOperator {
   def setRelationshipProperty(relationshipId: Long,
                               propertyKey: String,
                               propertyValue: AnyValue,
-                              tokenWrite: TokenWrite,
+                              token: Token,
                               write: Write,
                               queryStatisticsTracker: MutableQueryStatistics): Unit = {
-    val propertyKeyId = tokenWrite.propertyKeyGetOrCreateForName(propertyKey)
+    val propertyKeyId = token.propertyKeyGetOrCreateForName(propertyKey)
     val safeValue = makeValueNeoSafe(propertyValue)
     if (safeValue == Values.NO_VALUE) {
       if (!(write.relationshipRemoveProperty(relationshipId, propertyKeyId) eq Values.NO_VALUE)) {
         queryStatisticsTracker.setProperty()
       }
     } else {
-      write.relationshipSetProperty(relationshipId, propertyKeyId, safeValue)
+      translateException(token, write.relationshipSetProperty(relationshipId, propertyKeyId, safeValue))
       queryStatisticsTracker.setProperty()
     }
   }
@@ -138,7 +139,7 @@ object SetPropertyOperator {
   def setProperty(entity: AnyValue,
                   propertyKey: String,
                   propertyValue: AnyValue,
-                  tokenWrite: TokenWrite,
+                  token: Token,
                   write: Write,
                   queryStatisticsTracker: MutableQueryStatistics): Unit = {
     entity match {
@@ -146,7 +147,7 @@ object SetPropertyOperator {
         node.id(),
         propertyKey,
         propertyValue,
-        tokenWrite,
+        token,
         write,
         queryStatisticsTracker
       )
@@ -154,7 +155,7 @@ object SetPropertyOperator {
         relationship.id(),
         propertyKey,
         propertyValue,
-        tokenWrite,
+        token,
         write,
         queryStatisticsTracker
       )
@@ -199,11 +200,11 @@ class SetPropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
       declareAndAssign(typeRefOf[AnyValue], propertyValueVar, nullCheckIfRequired(propertyValue)),
       declareAndAssign(typeRefOf[AnyValue], entityValueVar, nullCheckIfRequired(entityValue)),
       invokeStatic(
-        method[SetPropertyOperator, Unit, AnyValue, String, AnyValue, TokenWrite, Write, MutableQueryStatistics]("setProperty"),
+        method[SetPropertyOperator, Unit, AnyValue, String, AnyValue, Token, Write, MutableQueryStatistics]("setProperty"),
         load(entityValueVar),
         constant(key),
         load(propertyValueVar),
-        loadField(TOKEN_WRITE),
+        loadField(TOKEN),
         loadField(DATA_WRITE),
         QUERY_STATS_TRACKER
       ),
@@ -219,7 +220,7 @@ class SetPropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(QUERY_STATS_TRACKER_V)
 
-  override def genFields: Seq[Field] = Seq(DATA_WRITE, TOKEN_WRITE)
+  override def genFields: Seq[Field] = Seq(DATA_WRITE, TOKEN)
 
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
 

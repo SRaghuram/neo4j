@@ -29,7 +29,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.IntermediateRepresentation.ternary
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
-import org.neo4j.cypher.internal.macros.TranslateExceptionMacros.translateException
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.runtime.LenientCreateRelationship
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
@@ -53,7 +52,6 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.pipes.CreateNodeSlottedCommand
 import org.neo4j.cypher.internal.runtime.slotted.pipes.CreateRelationshipSlottedCommand
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.Token
 import org.neo4j.internal.kernel.api.TokenWrite
@@ -189,7 +187,7 @@ class CreateOperatorTemplate(override val inner: OperatorTaskTemplate,
             case Some(ps) =>
               val p = ps()
               propertyExpressions += p
-              invokeStatic(method[SetPropertyOperator, Unit, Long, AnyValue, TokenWrite, Write, MutableQueryStatistics]("addNodeProperties"),
+              invokeStatic(method[SetPropertyOperator, Unit, Long, AnyValue, Token, Write, MutableQueryStatistics]("addNodeProperties"),
                 load(nodeVar), nullCheckIfRequired(p), loadField(TOKEN), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
             case _ => noop()
           }
@@ -228,7 +226,7 @@ class CreateOperatorTemplate(override val inner: OperatorTaskTemplate,
                 case Some(ps) =>
                   val p = ps()
                   propertyExpressions += p
-                  invokeStatic(method[SetPropertyOperator, Unit, Long, AnyValue, TokenWrite, Write, MutableQueryStatistics]("addRelationshipProperties"),
+                  invokeStatic(method[SetPropertyOperator, Unit, Long, AnyValue, Token, Write, MutableQueryStatistics]("addRelationshipProperties"),
                     load(relVar), nullCheckIfRequired(p), loadField(TOKEN), loadField(DATA_WRITE), QUERY_STATS_TRACKER)
                 case None => noop()
               }
