@@ -281,12 +281,7 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan, maybeOwningPi
         nilProjector
     }
 
-    val projector = project(e.step)
-    // Symbol table dependencies is only used for runtime expressions by PatternMatcher. It would be nice to
-    // get rid of this from runtime expressions.
-    val dependencies = e.step.dependencies.flatMap(_.dependencies).map(_.name)
-
-    SlottedProjectedPath(dependencies, projector)
+    SlottedProjectedPath(project(e.step))
   }
 
 }
