@@ -38,7 +38,7 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
     }
 
     @Override
-    public void init( FileSystemAbstraction fs, String defaultDatabaseName, Config config, Path storeDirectory )
+    public void init( FileSystemAbstraction fs, String defaultDatabaseName, Config config, Path ignoredStoreDir )
     {
         this.fs = fs;
         this.clusterStateLayout = ClusterStateLayout.of( config.get( CausalClusteringSettings.cluster_state_directory ) );
@@ -63,24 +63,27 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
 
     private void getRaftLogs( List<DiagnosticsReportSource> sources )
     {
-        Path raftLogDirectory = clusterStateLayout.raftLogDirectory( defaultDatabaseName );
-        FileNames fileNames = new FileNames( raftLogDirectory );
-        SortedMap<Long,Path> allFiles = fileNames.getAllFiles( fs, NullLog.getInstance() );
-
-        for ( Path logFile : allFiles.values() )
+        Path raftLogDir = clusterStateLayout.raftLogDirectory( defaultDatabaseName );
+        var raftLogDirFile = raftLogDir.toFile();
+        var hasRaftLogDir = raftLogDirFile.exists() && raftLogDirFile.isDirectory();
+        if ( hasRaftLogDir )
         {
-            sources.add( DiagnosticsReportSources.newDiagnosticsFile( "raft/" + logFile.getFileName(), fs, logFile ) );
+            FileNames fileNames = new FileNames( raftLogDir );
+            SortedMap<Long,Path> allFiles = fileNames.getAllFiles( fs, NullLog.getInstance() );
+
+            for ( Path logFile : allFiles.values() )
+            {
+                sources.add( DiagnosticsReportSources.newDiagnosticsFile( "raft/" + logFile.getFileName(), fs, logFile ) );
+            }
         }
     }
 
     private void getClusterState( List<DiagnosticsReportSource> sources )
     {
-        Set<Path> directories = clusterStateLayout.listGlobalAndDatabaseDirectories( defaultDatabaseName, type -> type != RAFT_LOG );
+        clusterStateLayout.listGlobalAndDatabaseDirectories( defaultDatabaseName, type -> type != RAFT_LOG ).stream()
+                   .filter( dir -> dir.toFile().exists() )
+                   .forEach( dir -> addDirectory( "ccstate", dir, sources ));
 
-        for ( Path directory : directories )
-        {
-            addDirectory( "ccstate", directory, sources );
-        }
     }
 
     /**
