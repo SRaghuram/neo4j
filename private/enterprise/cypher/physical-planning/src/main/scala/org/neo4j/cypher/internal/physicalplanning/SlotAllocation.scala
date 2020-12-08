@@ -42,7 +42,6 @@ import org.neo4j.cypher.internal.logical.plans.DetachDeleteNode
 import org.neo4j.cypher.internal.logical.plans.DetachDeletePath
 import org.neo4j.cypher.internal.logical.plans.DirectedRelationshipByIdSeek
 import org.neo4j.cypher.internal.logical.plans.DirectedRelationshipTypeScan
-import org.neo4j.cypher.internal.logical.plans.DropResult
 import org.neo4j.cypher.internal.logical.plans.Eager
 import org.neo4j.cypher.internal.logical.plans.EmptyResult
 import org.neo4j.cypher.internal.logical.plans.ErrorPlan
@@ -638,7 +637,6 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         slots.newLong(name, nullable = false, CTRelationship)
 
       case _: EmptyResult |
-           _: DropResult |
            _: ErrorPlan |
            _: Eager =>
 

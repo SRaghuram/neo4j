@@ -46,7 +46,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Aggreg
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.True
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.DropResultPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekMode
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekModeFactory
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
@@ -1020,8 +1019,6 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       pipe match {
         case p: PipeWithSource =>
           collectPipeNames(p.getSource, pipeName :: acc)
-        case p: DropResultPipe => // Special case that does not implement PipeWithSource
-          collectPipeNames(p.source, pipeName :: acc)
         case _ =>
           acc
       }

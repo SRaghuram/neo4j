@@ -29,7 +29,6 @@ import org.neo4j.cypher.internal.logical.plans.DetachDeleteNode
 import org.neo4j.cypher.internal.logical.plans.DetachDeletePath
 import org.neo4j.cypher.internal.logical.plans.DirectedRelationshipTypeScan
 import org.neo4j.cypher.internal.logical.plans.Distinct
-import org.neo4j.cypher.internal.logical.plans.DropResult
 import org.neo4j.cypher.internal.logical.plans.Eager
 import org.neo4j.cypher.internal.logical.plans.EmptyResult
 import org.neo4j.cypher.internal.logical.plans.ErrorPlan
@@ -105,7 +104,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.True
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.DropResultPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.EagerAggregationPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.EmptyResultPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekModeFactory
@@ -377,9 +375,6 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
       case EmptyResult(_) =>
         EmptyResultPipe(source)(id)
-
-      case DropResult(_) =>
-        DropResultPipe(source)(id)
 
       case UnwindCollection(_, name, expression) =>
         val offset = slots.getReferenceOffsetFor(name)

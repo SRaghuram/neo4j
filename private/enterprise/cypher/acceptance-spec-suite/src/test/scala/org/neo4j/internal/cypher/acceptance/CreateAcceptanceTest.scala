@@ -8,6 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
+import org.neo4j.cypher.internal.runtime.QueryStatistics
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
@@ -254,5 +255,12 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
 
     val result = executeSingle(query)
     result.toList should be(List(Map("freqMinus" -> 3.9e-05, "freqNoPlus" -> 3.9e05, "freqPlus" -> 3.9e05)))
+  }
+
+  test("should create node even though the predicate is always false") {
+    val q = "CREATE (n) WITH n WHERE 1 < 0 RETURN 42"
+    val result = executeWith(Configs.InterpretedAndSlotted, q)
+    result.queryStatistics() shouldEqual QueryStatistics(nodesCreated = 1)
+    result shouldBe empty
   }
 }
