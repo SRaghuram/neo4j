@@ -229,5 +229,5 @@ public class MetricsSettings implements SettingsDeclaration
                     .setDependency( default_listen_address ).build();
 
     @Description( "Set to `true` to enable the JMX metrics endpoint" )
-    public static final Setting<Boolean> jmx_enabled = newBuilder( "metrics.jmx.enabled", BOOL, false ).build();
+    public static final Setting<Boolean> jmx_enabled = newBuilder( "metrics.jmx.enabled", BOOL, true ).build();
 }
