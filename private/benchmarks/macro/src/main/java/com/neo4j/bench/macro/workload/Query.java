@@ -6,12 +6,12 @@
 package com.neo4j.bench.macro.workload;
 
 import com.google.common.collect.Sets;
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.tool.macro.DeploymentMode;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkGroup;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -136,15 +136,15 @@ public class Query
         }
     }
 
-    Query( String group,
-           String name,
-           String description,
-           Optional<QueryString> warmupQueryString,
-           QueryString queryString,
-           boolean isSingleShot,
-           boolean isMutating,
-           Parameters parameters,
-           DeploymentMode mode )
+    public Query( String group,
+                  String name,
+                  String description,
+                  Optional<QueryString> warmupQueryString,
+                  QueryString queryString,
+                  boolean isSingleShot,
+                  boolean isMutating,
+                  Parameters parameters,
+                  DeploymentMode mode )
     {
         this.group = group;
         this.name = name;

@@ -5,6 +5,9 @@
  */
 package com.neo4j.bench.macro.execution.measurement;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+
 public class CountMeasurementControl implements MeasurementControl
 {
     private final long maxCount;
@@ -38,6 +41,18 @@ public class CountMeasurementControl implements MeasurementControl
     public String description()
     {
         return "count( " + maxCount + " )";
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return HashCodeBuilder.reflectionHashCode( this );
+    }
+
+    @Override
+    public boolean equals( Object obj )
+    {
+        return EqualsBuilder.reflectionEquals( this, obj );
     }
 
     @Override

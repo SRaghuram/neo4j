@@ -6,6 +6,8 @@
 package com.neo4j.bench.macro.execution.measurement;
 
 import com.neo4j.bench.common.util.BenchmarkUtil;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import java.time.Duration;
 
@@ -43,6 +45,18 @@ public class DurationMeasurementControl implements MeasurementControl
     public String description()
     {
         return "time( " + BenchmarkUtil.durationToString( Duration.ofMillis( maxDurationMs ) ) + " )";
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return HashCodeBuilder.reflectionHashCode( this );
+    }
+
+    @Override
+    public boolean equals( Object obj )
+    {
+        return EqualsBuilder.reflectionEquals( this, obj );
     }
 
     @Override

@@ -5,6 +5,9 @@
  */
 package com.neo4j.bench.macro.execution.measurement;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+
 import static java.util.stream.Collectors.joining;
 
 public class AndCompositeMeasurementControl extends CompositeMeasurementControl
@@ -24,5 +27,17 @@ public class AndCompositeMeasurementControl extends CompositeMeasurementControl
     public String description()
     {
         return "and( " + measurementControls.stream().map( MeasurementControl::description ).collect( joining( " , " ) ) + " )";
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return HashCodeBuilder.reflectionHashCode( this );
+    }
+
+    @Override
+    public boolean equals( Object obj )
+    {
+        return EqualsBuilder.reflectionEquals( this, obj );
     }
 }

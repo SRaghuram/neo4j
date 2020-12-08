@@ -182,6 +182,12 @@ public class Runner
             throw new RuntimeException( "Run finished before it was supposed to, probably because it ran out of parameters" );
         }
 
+        // If the warm-up query needs to be rolled back (e.g., because mutating the graph would interfere with the measurement queries), then we need run
+        // execute one more warmup-up query and commit it. This is not ideal, as it can leave the graph in an unknown state, but it is difficult to get around,
+        // because we need to commit at least one record of each kind that the benchmark writes, in order to bridge the ID gaps created by the rollbacks.
+        // Running one measurement query before measurement was considered, but this is not reliable in the case that the measurement query is a Single Shot.
+        // See below for more details.
+        //
         // About our ID generators: running transactions that rolls back instead of committing can't quite mark those IDs as reusable during rollback.
         // Reason is that rollbacks aren't recorded in the transaction log and therefore will not propagate over a cluster and i.e. would have resulted
         // in each cluster member ending up with differences in their ID freelists. Instead the next committing transaction will bridge any gap in high ID

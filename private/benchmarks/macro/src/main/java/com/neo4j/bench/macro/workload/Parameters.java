@@ -33,7 +33,7 @@ public abstract class Parameters
 
     public abstract ParametersReader create() throws Exception;
 
-    static Parameters empty()
+    public static Parameters empty()
     {
         return new EmptyParameters();
     }

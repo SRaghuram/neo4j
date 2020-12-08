@@ -8,10 +8,12 @@ package com.neo4j.bench.macro.workload;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 public class StaticQueryString extends QueryString
 {
-    static StaticQueryString atDefaults( String value )
+    public static StaticQueryString atDefaults( String value )
     {
         return new StaticQueryString( Planner.DEFAULT, Runtime.DEFAULT, ExecutionMode.EXECUTE, value );
     }
@@ -62,5 +64,23 @@ public class StaticQueryString extends QueryString
     public boolean isPeriodicCommit()
     {
         return value.toLowerCase().contains( "periodic commit" );
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return HashCodeBuilder.reflectionHashCode( this );
+    }
+
+    @Override
+    public boolean equals( Object obj )
+    {
+        return EqualsBuilder.reflectionEquals( this, obj );
+    }
+
+    @Override
+    public String toString()
+    {
+        return value;
     }
 }
