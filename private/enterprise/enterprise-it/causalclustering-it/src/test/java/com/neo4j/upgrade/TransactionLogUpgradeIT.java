@@ -85,7 +85,7 @@ class TransactionLogUpgradeIT
         {
             tx.findNodes( DbmsRuntimeRepository.DBMS_RUNTIME_LABEL )
               .stream()
-              .forEach( dbmsRuntimeNode -> dbmsRuntimeNode.setProperty( DbmsRuntimeRepository.VERSION_PROPERTY, runtimeVersion.getVersionNumber() ) );
+              .forEach( dbmsRuntimeNode -> dbmsRuntimeNode.setProperty( DbmsRuntimeRepository.VERSION_PROPERTY, runtimeVersion.getVersion() ) );
 
             tx.commit();
         }
