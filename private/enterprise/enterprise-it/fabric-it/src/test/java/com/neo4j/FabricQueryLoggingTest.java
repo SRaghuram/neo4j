@@ -10,6 +10,7 @@ import com.neo4j.fabric.driver.DriverPool;
 import com.neo4j.fabric.driver.FabricDriverTransaction;
 import com.neo4j.fabric.driver.PooledDriver;
 import com.neo4j.utils.DriverUtils;
+import com.neo4j.utils.ReactorDebugging;
 import com.neo4j.utils.TestFabric;
 import com.neo4j.utils.TestFabricFactory;
 import org.junit.jupiter.api.AfterEach;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
@@ -317,61 +319,73 @@ class FabricQueryLoggingTest
     @Test
     void testQueryLoggingFailure()
     {
-        when( graph0Result.records() ).thenReturn(
-                recs( rec( Values.stringValue( "a" ) ), rec( Values.stringValue( "b" ) ) )
-        );
 
-        when( graph1Result.records() ).thenReturn(
-                Flux.error( new Exception( "my failure!" ) )
-        );
+        // Tracing code to debug flaky test
+        String interceptorName = "reactorDebugging";
+        try
+        {
+            Hooks.onEachOperator( interceptorName, ReactorDebugging::toStringInterceptor );
 
-        String query = joinAsLines(
-                "CYPHER debug=fabriclogrecords",
-                "UNWIND [0, 1] AS s",
-                "CALL { USE mega.graph(s) RETURN 2 AS y }",
-                "RETURN s, y ORDER BY s, y"
-        );
+            when( graph0Result.records() ).thenReturn(
+                    recs( rec( Values.stringValue( "a" ) ), rec( Values.stringValue( "b" ) ) )
+            );
 
-        assertThat( catchThrowable( () -> doInTx( mega, AccessMode.READ, tx -> tx.run( query ).consume() ) ) )
-                .hasMessageContaining( "my failure!" );
+            when( graph1Result.records() ).thenReturn(
+                    Flux.error( new Exception( "my failure!" ) )
+            );
 
-        assertThat( queryExecutionMonitor.events, containsInRelativeOrder(
-                startProcessing()
-                        .where( "query", e -> e.query, query()
-                                .where( "queryText", ExecutingQuery::rawQueryText, is( query ) )
-                                .where( "dbName", this::dbName, is( Optional.empty() ) ) )
-                        .where( "status", e -> e.snapshot.status(), is( "parsing" ) ),
-                startExecution()
-                        .where( "query", e -> e.query, query()
-                                .where( "queryText", ExecutingQuery::rawQueryText, is( query ) )
-                                .where( "dbName", this::dbName, is( Optional.empty() ) ) )
-                        .where( "status", e -> e.snapshot.status(), is( "planning" ) ),
-                endFailure()
-                        .where( "query", e -> e.query, query()
-                                .where( "queryText", ExecutingQuery::rawQueryText, is( query ) )
-                                .where( "dbName", this::dbName, is( Optional.empty() ) ) )
-                        .where( "failure", e -> e.failureMessage, containsString( "my failure!" ) )
-                        .where( "status", e -> e.snapshot.status(), is( "running" ) )
-        ) );
+            String query = joinAsLines(
+                    "CYPHER debug=fabriclogrecords",
+                    "UNWIND [0, 1] AS s",
+                    "CALL { USE mega.graph(s) RETURN 2 AS y }",
+                    "RETURN s, y ORDER BY s, y"
+            );
 
-        assertThat( queryExecutionMonitor.events, containsInRelativeOrder(
-                startProcessing()
-                        .where( "query", e -> e.query, query()
-                                .where( "queryText", ExecutingQuery::rawQueryText, containsString( "Internal query" ) )
-                                .where( "dbName", this::dbName, is( Optional.of( "mega" ) ) ) )
-                        .where( "status", e -> e.snapshot.status(), is( "parsing" ) ),
-                startExecution()
-                        .where( "query", e -> e.query, query()
-                                .where( "queryText", ExecutingQuery::rawQueryText, containsString( "Internal query" ) )
-                                .where( "dbName", this::dbName, is( Optional.of( "mega" ) ) ) )
-                        .where( "status", e -> e.snapshot.status(), is( "planned" ) ),
-                endFailure()
-                        .where( "query", e -> e.query, query()
-                                .where( "queryText", ExecutingQuery::rawQueryText, containsString( "Internal query" ) )
-                                .where( "dbName", this::dbName, is( Optional.of( "mega" ) ) ) )
-                        .where( "failure", e -> e.failure, throwable( is( FabricException.class ), containsString( "my failure!" ) ) )
-                        .where( "status", e -> e.snapshot.status(), is( "running" ) )
-        ) );
+            assertThat( catchThrowable( () -> doInTx( mega, AccessMode.READ, tx -> tx.run( query ).consume() ) ) )
+                    .hasMessageContaining( "my failure!" );
+
+            assertThat( queryExecutionMonitor.events, containsInRelativeOrder(
+                    startProcessing()
+                            .where( "query", e -> e.query, query()
+                                    .where( "queryText", ExecutingQuery::rawQueryText, is( query ) )
+                                    .where( "dbName", this::dbName, is( Optional.empty() ) ) )
+                            .where( "status", e -> e.snapshot.status(), is( "parsing" ) ),
+                    startExecution()
+                            .where( "query", e -> e.query, query()
+                                    .where( "queryText", ExecutingQuery::rawQueryText, is( query ) )
+                                    .where( "dbName", this::dbName, is( Optional.empty() ) ) )
+                            .where( "status", e -> e.snapshot.status(), is( "planning" ) ),
+                    endFailure()
+                            .where( "query", e -> e.query, query()
+                                    .where( "queryText", ExecutingQuery::rawQueryText, is( query ) )
+                                    .where( "dbName", this::dbName, is( Optional.empty() ) ) )
+                            .where( "failure", e -> e.failureMessage, containsString( "my failure!" ) )
+                            .where( "status", e -> e.snapshot.status(), is( "running" ) )
+            ) );
+
+            assertThat( queryExecutionMonitor.events, containsInRelativeOrder(
+                    startProcessing()
+                            .where( "query", e -> e.query, query()
+                                    .where( "queryText", ExecutingQuery::rawQueryText, containsString( "Internal query" ) )
+                                    .where( "dbName", this::dbName, is( Optional.of( "mega" ) ) ) )
+                            .where( "status", e -> e.snapshot.status(), is( "parsing" ) ),
+                    startExecution()
+                            .where( "query", e -> e.query, query()
+                                    .where( "queryText", ExecutingQuery::rawQueryText, containsString( "Internal query" ) )
+                                    .where( "dbName", this::dbName, is( Optional.of( "mega" ) ) ) )
+                            .where( "status", e -> e.snapshot.status(), is( "planned" ) ),
+                    endFailure()
+                            .where( "query", e -> e.query, query()
+                                    .where( "queryText", ExecutingQuery::rawQueryText, containsString( "Internal query" ) )
+                                    .where( "dbName", this::dbName, is( Optional.of( "mega" ) ) ) )
+                            .where( "failure", e -> e.failure, throwable( is( FabricException.class ), containsString( "my failure!" ) ) )
+                            .where( "status", e -> e.snapshot.status(), is( "running" ) )
+            ) );
+        }
+        finally
+        {
+            Hooks.resetOnEachOperator( interceptorName );
+        }
     }
 
     @Test
