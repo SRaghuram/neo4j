@@ -84,7 +84,7 @@ class OperatorFactoryTest extends CypherFunSuite with AstConstructionTestSupport
 
   test("should fully chain fallback pipes") {
     // given
-    val pipeline = shortestPath("x", "r", "y") ~> dropResult ~> dropResult
+    val pipeline = shortestPath("x", "r", "y") ~> exhaustiveLimitZero ~> exhaustiveLimitZero
 
     // when
     val (headOperator, middleOperators) = buildWithFactory(pipeline, TEST_FALLBACK_POLICY)
@@ -103,7 +103,7 @@ class OperatorFactoryTest extends CypherFunSuite with AstConstructionTestSupport
 
   test("should chain fallback pipes with interruption") {
     // given
-    val pipeline = shortestPath("x", "r", "y") ~> dropResult ~> filter ~> dropResult ~> dropResult
+    val pipeline = shortestPath("x", "r", "y") ~> exhaustiveLimitZero ~> filter ~> exhaustiveLimitZero ~> exhaustiveLimitZero
 
     // when
     val (headOperator, middleOperators) = buildWithFactory(pipeline, TEST_FALLBACK_POLICY)
@@ -115,7 +115,7 @@ class OperatorFactoryTest extends CypherFunSuite with AstConstructionTestSupport
 
   test("should interpret partial pipelines, chain fallback pipes") {
     // given
-    val pipeline = allNodes("x") ~> filter ~> dropResult ~> dropResult ~> dropResult
+    val pipeline = allNodes("x") ~> filter ~> exhaustiveLimitZero ~> exhaustiveLimitZero ~> exhaustiveLimitZero
 
     // when
     val (headOperator, middleOperators) = buildWithFactory(pipeline, TEST_FALLBACK_POLICY)
@@ -130,7 +130,7 @@ class OperatorFactoryTest extends CypherFunSuite with AstConstructionTestSupport
 
   test("should interpret partial pipelines, chain fallback pipes with interruption") {
     // given
-    val pipeline = allNodes("x") ~> filter ~> dropResult ~> dropResult ~> filter ~> dropResult ~> dropResult
+    val pipeline = allNodes("x") ~> filter ~> exhaustiveLimitZero ~> exhaustiveLimitZero ~> filter ~> exhaustiveLimitZero ~> exhaustiveLimitZero
 
     // when
     val (headOperator, middleOperators) = buildWithFactory(pipeline, TEST_FALLBACK_POLICY)
@@ -161,7 +161,7 @@ class OperatorFactoryTest extends CypherFunSuite with AstConstructionTestSupport
 
   def filter: LogicalPlan => LogicalPlan = Selection(Seq(trueLiteral), _)
 
-  def dropResult: LogicalPlan => LogicalPlan = ExhaustiveLimit(_, SignedDecimalIntegerLiteral("0")(InputPosition.NONE))
+  def exhaustiveLimitZero: LogicalPlan => LogicalPlan = ExhaustiveLimit(_, SignedDecimalIntegerLiteral("0")(InputPosition.NONE))
 
   def shortestPath(from: String, relName: String, to: String): PipelineBuilder = {
     val min = 1
