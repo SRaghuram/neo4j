@@ -43,6 +43,7 @@ import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.procedure.enterprise.builtin.SettingsWhitelist;
 import com.neo4j.server.enterprise.EnterpriseNeoWebServer;
+import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseDefaultDatabaseResolver;
 
 import java.nio.file.Path;
@@ -58,6 +59,7 @@ import org.neo4j.cypher.internal.javacompat.EnterpriseCypherEngineProvider;
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.SystemGraphComponents;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -100,6 +102,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     private final CatchupComponentsProvider catchupComponentsProvider;
     private final DiscoveryServiceFactory discoveryServiceFactory;
     private final SslPolicyLoader sslPolicyLoader;
+    private final SecurityLog securityLog;
 
     private TopologyService topologyService;
     private ReadReplicaDatabaseFactory readReplicaDatabaseFactory;
@@ -157,6 +160,9 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         editionInvariants( globalModule, globalDependencies );
 
         fabricServicesBootstrap = new EnterpriseFabricServicesBootstrap.ReadReplica( globalModule.getGlobalLife(), globalDependencies, logService );
+
+        securityLog = new SecurityLog( globalModule.getGlobalConfig(), globalModule.getFileSystem() );
+        globalModule.getGlobalLife().add( securityLog );
     }
 
     private void addThroughputMonitorService()
@@ -272,16 +278,22 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     @Override
     public SystemGraphInitializer createSystemGraphInitializer( GlobalModule globalModule, DatabaseManager<?> databaseManager )
     {
-        var systemGraphComponents = globalModule.getSystemGraphComponents();
+        return globalModule.getGlobalDependencies().satisfyDependency( SystemGraphInitializer.NO_OP );
+    }
+
+    @Override
+    public void registerSystemGraphComponents( SystemGraphComponents systemGraphComponents, GlobalModule globalModule,
+                                               DatabaseManager<?> databaseManager )
+    {
         var systemGraphComponent = new EnterpriseSystemGraphComponent( globalModule.getGlobalConfig() );
         systemGraphComponents.register( systemGraphComponent );
-        return globalModule.getGlobalDependencies().satisfyDependency( SystemGraphInitializer.NO_OP );
+        registerSecurityComponents( systemGraphComponents, globalModule, securityLog );
     }
 
     @Override
     public void createSecurityModule( GlobalModule globalModule )
     {
-        setSecurityProvider( makeEnterpriseSecurityModule( globalModule, defaultDatabaseResolver ) );
+        setSecurityProvider( makeEnterpriseSecurityModule( globalModule, defaultDatabaseResolver, securityLog ) );
     }
 
     @Override

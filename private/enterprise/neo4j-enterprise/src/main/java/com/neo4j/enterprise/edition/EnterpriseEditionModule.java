@@ -54,10 +54,8 @@ import org.neo4j.cypher.internal.javacompat.EnterpriseCypherEngineProvider;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.dbms.database.DefaultSystemGraphInitializer;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.dbms.database.SystemGraphComponents;
-import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.dbms.identity.ServerId;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.fabric.FabricDatabaseManager;
@@ -210,25 +208,19 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     }
 
     @Override
-    public SystemGraphInitializer createSystemGraphInitializer( GlobalModule globalModule, DatabaseManager<?> databaseManager )
+    public void registerSystemGraphComponents( SystemGraphComponents systemGraphComponents, GlobalModule globalModule,
+                                               DatabaseManager<?> databaseManager )
     {
         var fabricDatabaseManager = dependencies.resolveDependency( FabricDatabaseManager.class );
-
-        DependencyResolver globalDependencies = globalModule.getGlobalDependencies();
-        Supplier<GraphDatabaseService> systemSupplier = systemSupplier( globalDependencies );
-        var systemGraphComponents = globalModule.getSystemGraphComponents();
         var systemGraphComponent = new FabricSystemGraphComponent( globalModule.getGlobalConfig(), fabricDatabaseManager );
         systemGraphComponents.register( systemGraphComponent );
-        SystemGraphInitializer initializer =
-                CommunityEditionModule.tryResolveOrCreate( SystemGraphInitializer.class, globalModule.getExternalDependencyResolver(),
-                        () -> new DefaultSystemGraphInitializer( systemSupplier, systemGraphComponents ) );
-        return globalModule.getGlobalDependencies().satisfyDependency( initializer );
+        registerSecurityComponents( systemGraphComponents, globalModule, securityLog );
     }
 
     @Override
     public void createSecurityModule( GlobalModule globalModule )
     {
-        setSecurityProvider( makeEnterpriseSecurityModule( globalModule, defaultDatabaseResolver ) );
+        setSecurityProvider( makeEnterpriseSecurityModule( globalModule, defaultDatabaseResolver, securityLog ) );
     }
 
     @Override

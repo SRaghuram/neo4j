@@ -63,7 +63,7 @@ public interface AbstractEnterpriseEditionModule
         globalModule.getGlobalLife().add( workerManager );
     }
 
-    private EnterpriseSecurityGraphComponent setupSecurityGraphInitializer( GlobalModule globalModule, SecurityLog securityLog )
+    default void registerSecurityComponents( SystemGraphComponents systemGraphComponents, GlobalModule globalModule, SecurityLog securityLog )
     {
         Config config = globalModule.getGlobalConfig();
         FileSystemAbstraction fileSystem = globalModule.getFileSystem();
@@ -71,32 +71,27 @@ public interface AbstractEnterpriseEditionModule
 
         var userSecurityComponent = CommunitySecurityModule.createSecurityComponent( securityLog, config, fileSystem, logProvider );
         var roleAndPrivilegeComponent = EnterpriseSecurityModule.createSecurityComponent( securityLog, config, fileSystem, logProvider );
-
-        Dependencies dependencies = globalModule.getGlobalDependencies();
-        // TODO find a better way to provide a way to let the runtime check the version of the enterprise security graph
-        dependencies.satisfyDependency( roleAndPrivilegeComponent );
-        SystemGraphComponents systemGraphComponents = dependencies.resolveDependency( SystemGraphComponents.class );
         systemGraphComponents.register( userSecurityComponent );
         systemGraphComponents.register( roleAndPrivilegeComponent );
 
-        return roleAndPrivilegeComponent;
+        Dependencies dependencies = globalModule.getGlobalDependencies();
+        dependencies.satisfyDependency( roleAndPrivilegeComponent );
     }
 
-    default SecurityProvider makeEnterpriseSecurityModule( GlobalModule globalModule, DefaultDatabaseResolver defaultDatabaseResolver )
+    default SecurityProvider makeEnterpriseSecurityModule( GlobalModule globalModule, DefaultDatabaseResolver defaultDatabaseResolver, SecurityLog securityLog )
     {
-        Config config = globalModule.getGlobalConfig();
-        LogProvider userLogProvider = globalModule.getLogService().getUserLogProvider();
-        SecurityLog securityLog = new SecurityLog( config, globalModule.getFileSystem() );
+        var config = globalModule.getGlobalConfig();
+        var userLogProvider = globalModule.getLogService().getUserLogProvider();
+        var dependencies = globalModule.getGlobalDependencies();
         var authCacheExecutor = getAuthCacheExecutor( globalModule );
-        CaffeineCacheFactory cacheFactory = new ExecutorBasedCaffeineCacheFactory( authCacheExecutor );
-        globalModule.getGlobalLife().add( securityLog );
-        EnterpriseSecurityGraphComponent securityComponent = setupSecurityGraphInitializer( globalModule, securityLog );
+        var cacheFactory = new ExecutorBasedCaffeineCacheFactory( authCacheExecutor );
         if ( config.get( GraphDatabaseSettings.auth_enabled ) )
         {
+            var securityComponent = dependencies.resolveDependency( EnterpriseSecurityGraphComponent.class );
             EnterpriseSecurityModule securityModule = new EnterpriseSecurityModule(
                     userLogProvider,
                     securityLog, config,
-                    globalModule.getGlobalDependencies(),
+                    dependencies,
                     globalModule.getTransactionEventListeners(),
                     securityComponent,
                     cacheFactory,

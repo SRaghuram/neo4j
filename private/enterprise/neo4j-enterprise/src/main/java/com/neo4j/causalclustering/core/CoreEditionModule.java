@@ -87,6 +87,7 @@ import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.procedure.enterprise.builtin.SettingsWhitelist;
 import com.neo4j.server.enterprise.EnterpriseNeoWebServer;
+import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseDefaultDatabaseResolver;
 
 import java.nio.file.Path;
@@ -108,6 +109,7 @@ import org.neo4j.cypher.internal.javacompat.EnterpriseCypherEngineProvider;
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.SystemGraphComponents;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -172,6 +174,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
     private final EnterpriseFabricServicesBootstrap fabricServicesBootstrap;
     private final ServerGroupsSupplier serverGroupsSupplier;
+    private final SecurityLog securityLog;
 
     private CoreDatabaseFactory coreDatabaseFactory;
     private CoreTopologyService topologyService;
@@ -252,6 +255,9 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         fabricServicesBootstrap = new EnterpriseFabricServicesBootstrap.Core( globalLife, globalDependencies, logService );
 
         setGlobalRaftParallelism( globalModule, globalConfig );
+
+        securityLog = new SecurityLog( globalModule.getGlobalConfig(), globalModule.getFileSystem() );
+        globalModule.getGlobalLife().add( securityLog );
     }
 
     private static void setGlobalRaftParallelism( GlobalModule globalModule, Config globalConfig )
@@ -438,16 +444,22 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     @Override
     public SystemGraphInitializer createSystemGraphInitializer( GlobalModule globalModule, DatabaseManager<?> databaseManager )
     {
-        var systemGraphComponents = globalModule.getSystemGraphComponents();
+        return globalModule.getGlobalDependencies().satisfyDependency( SystemGraphInitializer.NO_OP );
+    }
+
+    @Override
+    public void registerSystemGraphComponents( SystemGraphComponents systemGraphComponents, GlobalModule globalModule,
+                                               DatabaseManager<?> databaseManager )
+    {
         var systemGraphComponent = new EnterpriseSystemGraphComponent( globalModule.getGlobalConfig() );
         systemGraphComponents.register( systemGraphComponent );
-        return globalModule.getGlobalDependencies().satisfyDependency( SystemGraphInitializer.NO_OP );
+        registerSecurityComponents( systemGraphComponents, globalModule, securityLog );
     }
 
     @Override
     public void createSecurityModule( GlobalModule globalModule )
     {
-        setSecurityProvider( makeEnterpriseSecurityModule( globalModule, defaultDatabaseResolver ) );
+        setSecurityProvider( makeEnterpriseSecurityModule( globalModule, defaultDatabaseResolver, securityLog ) );
     }
 
     @Override
