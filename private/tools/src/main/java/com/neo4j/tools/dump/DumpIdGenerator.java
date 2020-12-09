@@ -18,8 +18,6 @@ import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.scheduler.JobScheduler;
 
-import static org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier.EMPTY;
-
 public class DumpIdGenerator
 {
     public static void main( String[] args ) throws IOException
@@ -37,7 +35,7 @@ public class DumpIdGenerator
         JobScheduler scheduler = life.add( JobSchedulerFactory.createScheduler() );
         life.start();
         var pageCacheTracer = PageCacheTracer.NULL;
-        try ( MuninnPageCache pageCache = new MuninnPageCache( swapper, 1_000, pageCacheTracer, EMPTY, scheduler ) )
+        try ( MuninnPageCache pageCache = new MuninnPageCache( swapper, scheduler, MuninnPageCache.config( 1_000 ) ) )
         {
             IndexedIdGenerator.dump( pageCache, file, pageCacheTracer );
         }

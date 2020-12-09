@@ -370,8 +370,11 @@ public class StoreCopy
         SingleFilePageSwapperFactory factory = new SingleFilePageSwapperFactory( fileSystem );
         var memoryTracker = EmptyMemoryTracker.INSTANCE;
         MemoryAllocator memoryAllocator = MemoryAllocator.createAllocator( ByteUnit.parse( memory ), memoryTracker );
-        return new MuninnPageCache( factory, memoryAllocator, PageCacheTracer.NULL, versionContextSupplier, jobScheduler, clock, memoryTracker,
-                new ConfigurableIOBufferFactory( config, memoryTracker ) );
+        MuninnPageCache.Configuration configuration = MuninnPageCache.config( memoryAllocator )
+                .versionContextSupplier( versionContextSupplier )
+                .clock( clock )
+                .bufferFactory( new ConfigurableIOBufferFactory( config, memoryTracker ) );
+        return new MuninnPageCache( factory, jobScheduler, configuration );
     }
 
     private Log4jLogProvider getLog( OutputStream out )
