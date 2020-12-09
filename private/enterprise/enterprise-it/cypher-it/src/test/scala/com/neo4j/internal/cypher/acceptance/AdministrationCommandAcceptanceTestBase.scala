@@ -615,7 +615,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     val userRepository = new InMemoryUserRepository
     val roleRepository = new InMemoryRoleRepository
     val enterpriseSecurityGraphComponent = new EnterpriseSecurityGraphComponent(mock[Log], roleRepository, userRepository, config)
-    enterpriseSecurityGraphComponent.initializeSystemGraph(graphOps)
+    enterpriseSecurityGraphComponent.initializeSystemGraph(graphOps, true)
   }
 
   def clearPublicRole(): Unit = {

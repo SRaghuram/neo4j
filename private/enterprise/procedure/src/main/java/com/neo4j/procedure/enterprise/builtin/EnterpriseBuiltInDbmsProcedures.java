@@ -511,16 +511,16 @@ public class EnterpriseBuiltInDbmsProcedures
                     results.add( new SystemGraphComponentUpgradeResultDetails( component.componentName(), initialStatus.name(), "" ) );
                 }
             } );
-            String upgradeResult =
-                    failed.isEmpty() ? "Success" : "Failed: " + failed.stream().map( SystemGraphComponent::componentName ).collect( Collectors.joining( ", " ) );
+            String upgradeResult = failed.isEmpty() ? "Success"
+                                     : "Failed: " + failed.stream().map( SystemGraphComponent::componentName ).collect( Collectors.joining( ", " ) );
             return Stream.concat(
                     Stream.of( new SystemGraphComponentUpgradeResultDetails( versions.component(), versions.detect( transaction ).name(), upgradeResult ) ),
                     results.stream() );
         }
         else
         {
-            versions.forEach(
-                    version -> results.add( new SystemGraphComponentUpgradeResultDetails( version.componentName(), version.detect( transaction ).name(), "" ) ) );
+            versions.forEach( version -> results
+                    .add( new SystemGraphComponentUpgradeResultDetails( version.componentName(), version.detect( transaction ).name(), "" ) ) );
             return Stream.concat( Stream.of( new SystemGraphComponentUpgradeResultDetails( versions.component(), versions.detect( transaction ).name(), "" ) ),
                     results.stream() );
         }

@@ -27,6 +27,8 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.dbms.database.ComponentVersion.DBMS_RUNTIME_COMPONENT;
+import static org.neo4j.dbms.database.SystemGraphComponent.VERSION_LABEL;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
@@ -67,7 +69,7 @@ class TransactionLogUpgradeIT
     void testBasicVersionLifecycle()
     {
         // the system DB will be initialised with the default version for this binary
-        assertRuntimeVersion( DbmsRuntimeVersion.V4_2 );
+        assertRuntimeVersion( DbmsRuntimeVersion.LATEST_DBMS_RUNTIME_COMPONENT_VERSION );
 
         // BTW this should never be manipulated directly outside tests
         setRuntimeVersion( DbmsRuntimeVersion.V4_1 );
@@ -76,16 +78,16 @@ class TransactionLogUpgradeIT
 
         systemDb.executeTransactionally( "CALL dbms.upgrade()" );
 
-        assertRuntimeVersion( DbmsRuntimeVersion.V4_2 );
+        assertRuntimeVersion( DbmsRuntimeVersion.LATEST_DBMS_RUNTIME_COMPONENT_VERSION );
     }
 
     private void setRuntimeVersion( DbmsRuntimeVersion runtimeVersion )
     {
         try ( var tx = systemDb.beginTx() )
         {
-            tx.findNodes( DbmsRuntimeRepository.DBMS_RUNTIME_LABEL )
+            tx.findNodes( VERSION_LABEL )
               .stream()
-              .forEach( dbmsRuntimeNode -> dbmsRuntimeNode.setProperty( DbmsRuntimeRepository.VERSION_PROPERTY, runtimeVersion.getVersion() ) );
+              .forEach( dbmsRuntimeNode -> dbmsRuntimeNode.setProperty( DBMS_RUNTIME_COMPONENT, runtimeVersion.getVersion() ) );
 
             tx.commit();
         }

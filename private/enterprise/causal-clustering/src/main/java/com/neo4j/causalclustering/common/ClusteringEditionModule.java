@@ -26,6 +26,7 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.DatabaseOperationCounts;
 import org.neo4j.dbms.database.DbmsRuntimeRepository;
+import org.neo4j.dbms.database.DbmsRuntimeSystemGraphComponent;
 import org.neo4j.function.Predicates;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
@@ -94,11 +95,10 @@ public abstract class ClusteringEditionModule extends AbstractEditionModule
     }
 
     @Override
-    public DbmsRuntimeRepository createAndRegisterDbmsRuntimeRepository( GlobalModule globalModule,
-            DatabaseManager<?> databaseManager,
-            Dependencies dependencies )
+    public DbmsRuntimeRepository createAndRegisterDbmsRuntimeRepository( GlobalModule globalModule, DatabaseManager<?> databaseManager,
+            Dependencies dependencies, DbmsRuntimeSystemGraphComponent dbmsRuntimeSystemGraphComponent )
     {
-        var dbmsRuntimeRepository = new ClusterDbmsRuntimeRepository( databaseManager );
+        var dbmsRuntimeRepository = new ClusterDbmsRuntimeRepository( databaseManager, dbmsRuntimeSystemGraphComponent );
         var replicatedDatabaseEventService = dependencies.resolveDependency( ReplicatedDatabaseEventService.class );
         replicatedDatabaseEventService.registerListener( NAMED_SYSTEM_DATABASE_ID, dbmsRuntimeRepository );
         return dbmsRuntimeRepository;

@@ -113,7 +113,7 @@ class EnterpriseSecurityGraphComponentTest
         // GIVEN
         initializeSystemAndUsers();
         EnterpriseSecurityGraphComponent component = getComponent();
-        component.initializeSystemGraph( system );
+        component.initializeSystemGraph( system, true );
 
         // WHEN .. THEN
         inTx( tx ->
@@ -173,8 +173,8 @@ class EnterpriseSecurityGraphComponentTest
         UserRepository initialPassword = new InMemoryUserRepository();
         var userSecurityGraphComponent = new UserSecurityGraphComponent( NullLog.getInstance(), oldUsers, initialPassword, Config.defaults() );
 
-        systemGraphComponent.initializeSystemGraph( system );
-        userSecurityGraphComponent.initializeSystemGraph( system );
+        systemGraphComponent.initializeSystemGraph( system, true );
+        userSecurityGraphComponent.initializeSystemGraph( system, true );
     }
 
     private void inTx( ThrowingConsumer<Transaction,Exception> consumer ) throws Exception

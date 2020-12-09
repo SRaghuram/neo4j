@@ -33,7 +33,6 @@ import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.dbms.database.DbmsRuntimeSystemGraphComponent;
 import org.neo4j.dbms.database.DefaultSystemGraphComponent;
 import org.neo4j.dbms.database.SystemGraphComponent;
 import org.neo4j.dbms.database.SystemGraphComponents;
@@ -72,6 +71,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.dbms.database.ComponentVersion.DBMS_RUNTIME_COMPONENT;
 import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_36;
 import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_40;
 import static org.neo4j.dbms.database.ComponentVersion.Neo4jVersions.VERSION_41;
@@ -115,7 +115,7 @@ class SystemGraphComponentsTest
         systemGraphComponents.register( enterpriseComponent );
 
         // removing DBMS runtime component as it is not a subject of this test
-        systemGraphComponents.deregister( DbmsRuntimeSystemGraphComponent.COMPONENT_NAME );
+        systemGraphComponents.deregister( DBMS_RUNTIME_COMPONENT );
     }
 
     @BeforeEach
@@ -340,8 +340,8 @@ class SystemGraphComponentsTest
         UserRepository initialPassword = new InMemoryUserRepository();
         var userSecurityGraphComponent = new UserSecurityGraphComponent( NullLog.getInstance(), oldUsers, initialPassword, Config.defaults() );
 
-        systemGraphComponent.initializeSystemGraph( system );
-        userSecurityGraphComponent.initializeSystemGraph( system );
+        systemGraphComponent.initializeSystemGraph( system, true );
+        userSecurityGraphComponent.initializeSystemGraph( system, true );
     }
 
     private void inTx( ThrowingConsumer<Transaction,Exception> consumer ) throws Exception
