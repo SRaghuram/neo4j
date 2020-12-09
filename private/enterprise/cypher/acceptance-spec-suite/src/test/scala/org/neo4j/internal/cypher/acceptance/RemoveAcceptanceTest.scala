@@ -31,13 +31,13 @@ class RemoveAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
   }
 
   test("remove property from null literal") {
-    executeWith(Configs.InterpretedAndSlotted, "REMOVE null.p") should have size 0
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "REMOVE null.p") should have size 0
   }
 
   test("remove works on chained properties") {
     val n = createNode("a" -> 123, "b" -> "hello")
 
-    executeWith(Configs.InterpretedAndSlotted,
+    executeWith(Configs.InterpretedAndSlottedAndPipelined,
       "MATCH (n) WITH {node: n} AS map REMOVE map.node.a")
 
     n shouldNot haveProperty("a")

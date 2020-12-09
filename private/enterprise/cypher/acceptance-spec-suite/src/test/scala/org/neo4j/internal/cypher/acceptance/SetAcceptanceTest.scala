@@ -244,7 +244,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
   test("set works on chained properties") {
     val n = createNode("a" -> 123)
 
-    executeWith(Configs.InterpretedAndSlotted,
+    executeWith(Configs.InterpretedAndSlottedAndPipelined,
       "MATCH (n) WITH {node: n} AS map SET map.node.b = 'hello'")
 
     n should haveProperty("a").withValue(123)

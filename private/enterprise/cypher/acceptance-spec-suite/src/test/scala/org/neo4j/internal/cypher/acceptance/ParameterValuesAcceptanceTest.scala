@@ -185,7 +185,7 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   test("removing property when not sure if it is a node or relationship should still work - NODE") {
     val n = createNode("name" -> "Anders")
 
-    executeWith(Configs.InterpretedAndSlotted, "WITH $p as p SET p.lastname = p.name REMOVE p.name", params = Map("p" -> n))
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "WITH $p as p SET p.lastname = p.name REMOVE p.name", params = Map("p" -> n))
 
     graph.withTx( tx => {
       val node = tx.getNodeById(n.getId)
@@ -197,7 +197,7 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   test("removing property when not sure if it is a node or relationship should still work - REL") {
     val r = relate(createNode(), createNode(), "name" -> "Anders")
 
-    executeWith(Configs.InterpretedAndSlotted, "WITH $p as p SET p.lastname = p.name REMOVE p.name", params = Map("p" -> r))
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "WITH $p as p SET p.lastname = p.name REMOVE p.name", params = Map("p" -> r))
 
     graph.withTx( tx => {
       val relationship = tx.getRelationshipById(r.getId)
