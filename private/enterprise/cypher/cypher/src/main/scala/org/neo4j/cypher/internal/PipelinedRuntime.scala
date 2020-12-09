@@ -8,8 +8,8 @@ package org.neo4j.cypher.internal
 import org.neo4j.codegen.api.CodeGeneration
 import org.neo4j.cypher.internal.PipelinedRuntime.CODE_GEN_FAILED_MESSAGE
 import org.neo4j.cypher.internal.compiler.CodeGenerationFailedNotification
+import org.neo4j.cypher.internal.compiler.ExecutionModel.Batched
 import org.neo4j.cypher.internal.compiler.ExperimentalFeatureNotification
-import org.neo4j.cypher.internal.compiler.PushBatchedExecution
 import org.neo4j.cypher.internal.config.MemoryTracking
 import org.neo4j.cypher.internal.config.MemoryTrackingController
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
@@ -156,7 +156,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                           context: EnterpriseRuntimeContext,
                           queryIndexRegistrator: QueryIndexRegistrator,
                           warnings: Set[InternalNotification]): ExecutionPlan = {
-    val batchSize = PushBatchedExecution(context.config.pipelinedBatchSizeSmall, context.config.pipelinedBatchSizeBig)
+    val batchSize = Batched(context.config.pipelinedBatchSizeSmall, context.config.pipelinedBatchSizeBig)
       .selectBatchSize(query.logicalPlan, query.cardinalities)
 
     val logicalPlan = pipelinedPrePhysicalPlanRewriter(query, parallelExecution)

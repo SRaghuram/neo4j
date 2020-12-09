@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.LogicalQuery
 import org.neo4j.cypher.internal.PipelinedRuntime.PIPELINED
 import org.neo4j.cypher.internal.RuntimeContext
 import org.neo4j.cypher.internal.SlottedRuntime
-import org.neo4j.cypher.internal.compiler.VolcanoModelExecution
+import org.neo4j.cypher.internal.compiler.ExecutionModel.Volcano
 import org.neo4j.cypher.internal.compiler.planner.logical.CardinalityCostModel
 import org.neo4j.cypher.internal.compiler.planner.logical.Metrics.QueryGraphSolverInput
 import org.neo4j.cypher.internal.logical.generator.LogicalPlanGenerator.WithState
@@ -131,7 +131,7 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with 
     val randVals = RandomValues.create(new Random(seed.long._1))
     val parameters = state.parameters.map(_ -> randVals.nextValue().asObject()).toMap
 
-    val cost = CardinalityCostModel(VolcanoModelExecution).costFor(logicalQuery.logicalPlan, QueryGraphSolverInput.empty, state.semanticTable, logicalQuery.cardinalities, logicalQuery.providedOrders)
+    val cost = CardinalityCostModel(Volcano).costFor(logicalQuery.logicalPlan, QueryGraphSolverInput.empty, state.semanticTable, logicalQuery.cardinalities, logicalQuery.providedOrders)
 
     val clues = Seq(
       s"plan = $plan",
