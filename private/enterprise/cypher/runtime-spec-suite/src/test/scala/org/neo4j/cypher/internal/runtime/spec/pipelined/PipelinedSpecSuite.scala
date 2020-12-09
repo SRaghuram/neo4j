@@ -44,7 +44,6 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ConditionalApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CreateTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DistinctTestBase
-import org.neo4j.cypher.internal.runtime.spec.tests.DropResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EmptyResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EnterpriseNodeIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllTestBase
@@ -461,10 +460,6 @@ class PipelinedRollupApplyNoFusingTest extends RollupApplyTestBase(NO_FUSING, PI
 // ROLLUP APPLY REWRITER
 class PipelinedRollupApplyRewriterTest extends RollupApplyRewriterTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedRollupApplyRewriterNoFusingTest extends RollupApplyRewriterTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
-
-// DROP RESULT
-class PipelinedDropResultTest extends DropResultTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
-class PipelinedDropResultNoFusingTest extends DropResultTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // EMPTY RESULT
 class PipelinedEmptyResultTest extends EmptyResultTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite

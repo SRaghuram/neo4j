@@ -56,7 +56,6 @@ import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductProvidedOrde
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DistinctTestBase
-import org.neo4j.cypher.internal.runtime.spec.tests.DropResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EmptyResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EnterpriseNodeIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllTestBase
@@ -358,10 +357,6 @@ class ParallelAntiSemiApplyNoFusingTest extends AntiSemiApplyTestBase(NO_FUSING,
 // ROLLUP APPLY
 class ParallelRuntimeRollupApplyTest extends RollupApplyTestBase(FUSING, PARALLEL, SIZE_HINT)
 class ParallelRuntimeRollupApplyNoFusingTest extends RollupApplyTestBase(NO_FUSING, PARALLEL, SIZE_HINT)
-
-// DROP RESULT
-class ParallelRuntimeDropResultTest extends DropResultTestBase(FUSING, PARALLEL, SIZE_HINT)
-class ParallelRuntimeDropResultNoFusingTest extends DropResultTestBase(NO_FUSING, PARALLEL, SIZE_HINT)
 
 // EMPTY RESULT
 class ParallelRuntimeEmptyResultTest extends EmptyResultTestBase(FUSING, PARALLEL, SIZE_HINT)
