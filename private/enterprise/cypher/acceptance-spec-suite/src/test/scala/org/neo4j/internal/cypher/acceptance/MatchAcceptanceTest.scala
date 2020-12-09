@@ -993,24 +993,24 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test("should not touch the database when for impossible anded predicates") {
     // Given
-    for (_ <- 1 to 50) createNode()
+    for (_ <- 1 to 500) createNode()
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "PROFILE MATCH (n) WHERE 1 = 0 AND 5 > 1 RETURN n")
 
     // Then
-    result.executionPlanDescription().totalDbHits.hits should equal(0)
+    result.executionPlanDescription().totalDbHits.hits should be < 3L
   }
 
   test("should not touch the database when for impossible or'd predicates") {
     // Given
-    for (_ <- 1 to 50) createNode()
+    for (_ <- 1 to 500) createNode()
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "PROFILE MATCH (n) WHERE 1 = 0 OR 1 > 5 RETURN n")
 
     // Then
-    result.executionPlanDescription().totalDbHits.hits should equal(0)
+    result.executionPlanDescription().totalDbHits.hits should be < 3L
   }
 
   test("should remove anded predicates that is always true") {
