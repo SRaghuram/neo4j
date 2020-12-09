@@ -36,6 +36,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.neo4j.driver.internal.types.InternalTypeSystem.TYPE_SYSTEM;
 
 public class CypherOverBoltIT
 {
@@ -390,6 +391,64 @@ public class CypherOverBoltIT
             Result result = session.run( query );
 
             assertEquals( 2000, result.single().get( "c" ).asInt() );
+        }
+    }
+
+    @Test
+    public void shouldEvaluateVariablesWithLiteralNamesCorrectlyVariableFirst()
+    {
+        try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
+              Session session = driver.session() )
+        {
+            String query = "CREATE (:T {true: true})";
+            Result result = session.run( query );
+
+            result.consume();
+        }
+        try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
+              Session session = driver.session() )
+        {
+            // This should return the variable `true`
+            String query = "MATCH (n) WITH n AS `true` RETURN `true`";
+            Result result = session.run( query );
+            assertTrue( result.single().get( "true" ).hasType( TYPE_SYSTEM.NODE() ) );
+        }
+        try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
+              Session session = driver.session() )
+        {
+            // This should return the literal true
+            String query = "MATCH (n) WITH n AS `true` RETURN true";
+            Result result = session.run( query );
+            assertTrue( result.single().get( "true" ).hasType( TYPE_SYSTEM.BOOLEAN() ) );
+        }
+    }
+
+    @Test
+    public void shouldEvaluateVariablesWithLiteralNamesCorrectlyLiteralFirst()
+    {
+        try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
+              Session session = driver.session() )
+        {
+            String query = "CREATE (:T {true: true})";
+            Result result = session.run( query );
+
+            result.consume();
+        }
+        try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
+              Session session = driver.session() )
+        {
+            // This should return the literal true
+            String query = "MATCH (n) WITH n AS `true` RETURN true";
+            Result result = session.run( query );
+            assertTrue( result.single().get( "true" ).hasType( TYPE_SYSTEM.BOOLEAN() ) );
+        }
+        try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
+              Session session = driver.session() )
+        {
+            // This should return the variable `true`
+            String query = "MATCH (n) WITH n AS `true` RETURN `true`";
+            Result result = session.run( query );
+            assertTrue( result.single().get( "true" ).hasType( TYPE_SYSTEM.NODE() ) );
         }
     }
 
