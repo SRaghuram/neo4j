@@ -16,6 +16,7 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.PlanComparisonStrategy
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.TestConfiguration
+import org.neo4j.internal.index.label.RelationshipTypeScanStoreSettings
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections
@@ -176,6 +177,56 @@ class EagerizationAcceptanceTest
     val result = executeWith(Configs.InterpretedAndSlotted, query = query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     result.columnAs[Int]("count").next should equal(2)
+    assertStats(result, relationshipsDeleted = 1)
+  }
+
+  test("should introduce eagerness between MATCH with undirected rel type scan and DELETE relationships") {
+    restartWithConfig(databaseConfig() ++ Map(RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store -> java.lang.Boolean.TRUE))
+    val a = createNode()
+    val b = createNode()
+    relate(a, b, "T")
+    val query = "MATCH (a)-[t:T]-(b) DELETE t RETURN count(*) as count"
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query = query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    result.columnAs[Int]("count").next should equal(2)
+    assertStats(result, relationshipsDeleted = 1)
+  }
+
+  test("should introduce eagerness between MATCH with directed rel type scan and DELETE relationships") {
+    restartWithConfig(databaseConfig() ++ Map(RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store -> java.lang.Boolean.TRUE))
+    val a = createNode()
+    val b = createNode()
+    relate(a, b, "T")
+    val query = "MATCH (a)-[t:T]->(b) DELETE t RETURN count(*) as count"
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query = query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    result.columnAs[Int]("count").next should equal(1)
+    assertStats(result, relationshipsDeleted = 1)
+  }
+
+  test("should introduce eagerness between MATCH undirected rel by id and DELETE relationships") {
+    val a = createNode()
+    val b = createNode()
+    val r = relate(a, b, "T")
+    val query = s"MATCH (a)-[t:T]-(b) WHERE id(t) = ${r.getId} DELETE t RETURN count(*) as count"
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query = query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    result.columnAs[Int]("count").next should equal(2)
+    assertStats(result, relationshipsDeleted = 1)
+  }
+
+  test("should introduce eagerness between MATCH directed rel by id and DELETE relationships") {
+    val a = createNode()
+    val b = createNode()
+    val r = relate(a, b, "T")
+    val query = s"MATCH (a)-[t:T]->(b) WHERE id(t) = ${r.getId} DELETE t RETURN count(*) as count"
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query = query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    result.columnAs[Int]("count").next should equal(1)
     assertStats(result, relationshipsDeleted = 1)
   }
 
@@ -362,6 +413,18 @@ class EagerizationAcceptanceTest
     val b = createNode()
     relate(a, b, "T")
     val query = "MATCH (a)-[t:T]-(b) CREATE (a)-[:T]->(b) RETURN count(*) as count"
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    result.columnAs[Int]("count").next should equal(2)
+    assertStats(result, relationshipsCreated = 2)
+  }
+
+  test("should introduce eagerness between MATCH by relationship id and CREATE relationships with overlapping relationship types") {
+    val a = createNode()
+    val b = createNode()
+    val r = relate(a, b, "T")
+    val query = s"MATCH (a)-[t:T]-(b) WHERE id(t) = ${r.getId} CREATE (a)-[:T]->(b) RETURN count(*) as count"
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
