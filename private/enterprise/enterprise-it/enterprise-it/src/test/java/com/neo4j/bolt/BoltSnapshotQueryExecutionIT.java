@@ -134,7 +134,7 @@ class BoltSnapshotQueryExecutionIT
         } );
         assertThat(e.getMessage())
                 .containsSubsequence( "Unable to get clean data snapshot for query",
-                                      "MATCH (n:toRetry)", "CREATE ()", "RETURN n.c",
+                                      "MATCH (`n`:`toRetry`)", "CREATE ()", "RETURN (`n`).`c` AS `n.c`",
                                       "that performs updates." );
     }
 

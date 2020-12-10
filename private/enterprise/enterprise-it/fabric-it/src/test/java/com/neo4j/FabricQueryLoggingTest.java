@@ -43,11 +43,6 @@ import org.neo4j.fabric.stream.Records;
 import org.neo4j.fabric.stream.StatementResult;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.database.NamedDatabaseId;
-import org.neo4j.logging.Level;
-import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.internal.LogService;
-import org.neo4j.logging.internal.SimpleLogService;
-import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -113,11 +108,8 @@ class FabricQueryLoggingTest
 
         queryExecutionMonitor = new AssertableQueryExecutionMonitor.Monitor();
 
-        LogProvider systemOutLogProvider = new Log4jLogProvider( System.out, Level.DEBUG );
-        LogService logService = new SimpleLogService( systemOutLogProvider, systemOutLogProvider );
         testFabric = new TestFabricFactory()
                 .withFabricDatabase( "mega" )
-                .withLogService( logService )
                 .withAdditionalSettings( additionalSettings )
                 .addMocks( driverPool )
                 .withQueryExecutionMonitor( queryExecutionMonitor )
@@ -398,6 +390,28 @@ class FabricQueryLoggingTest
         assertEquals( 2, logLines.size() );
         assertThat( logLines.get( 0 ) ).containsPattern( "Query started: id:[0-9]+" );
         assertThat( logLines.get( 1 ) ).containsPattern( "id:[0-9]+" );
+        assertThat( logLines.get( 0 ) ).contains( query );
+        assertThat( logLines.get( 1 ) ).contains( query );
+    }
+
+    @Test
+    void testLogOutputOfNormalQueryWithLiteralVariableName() throws IOException
+    {
+        String query = joinAsLines(
+                "MATCH (n) WITH n AS `true` RETURN `true`"
+        );
+
+        doInTx( neo4j, AccessMode.READ, tx -> tx.run( query ).consume() );
+
+        Path logFile = getQueryLog();
+        assertEventually( () -> testDirectory.getFileSystem().fileExists( logFile ), TRUE, 1, MINUTES );
+        List<String> logLines = readAllLines( logFile );
+
+        assertEquals( 2, logLines.size() );
+        assertThat( logLines.get( 0 ) ).containsPattern( "Query started: id:[0-9]+" );
+        assertThat( logLines.get( 1 ) ).containsPattern( "id:[0-9]+" );
+        assertThat( logLines.get( 0 ) ).contains( query );
+        assertThat( logLines.get( 1 ) ).contains( query );
     }
 
     @Test
@@ -424,6 +438,7 @@ class FabricQueryLoggingTest
                                   .map( m -> m.group( 1 ) )
                                   .collect( Collectors.toSet() );
         assertThat( ids, hasSize( 3 ) ); //has 3 started queries with unique ids
+        assertThat( logLines.get( 0 ) ).contains( query );
     }
 
     private Path getQueryLog()

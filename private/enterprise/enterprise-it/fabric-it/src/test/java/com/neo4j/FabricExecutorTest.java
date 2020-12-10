@@ -531,11 +531,11 @@ class FabricExecutorTest
         ) ).consume() );
 
         assertThat( internalLogProvider ).forClass( FabricExecutor.class ).forLevel( DEBUG )
-                                         .containsMessages( "local 2: UNWIND [0, 1] AS s RETURN s AS s" )
+                                         .containsMessages( "local 2: UNWIND [0, 1] AS `s` RETURN `s` AS `s`" )
                                          .containsMessages( "remote 0: CYPHER debug=fabriclogrecords RETURN 2 AS `y`" )
                                          .containsMessages( "remote 1: CYPHER debug=fabriclogrecords RETURN 2 AS `y`" )
                                          .containsMessages( "local 2: InputDataStream(Vector(Variable(s), Variable(y))) " +
-                                                                    "RETURN s AS s, y AS y ORDER BY s ASCENDING, y ASCENDING" );
+                                                                    "RETURN `s` AS `s`, `y` AS `y` ORDER BY `s` ASCENDING, `y` ASCENDING" );
     }
 
     private String codeOf( NotificationCode notificationCode )
