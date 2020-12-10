@@ -88,6 +88,7 @@ import org.neo4j.internal.kernel.api.IndexQuery.StringSuffixPredicate
 import org.neo4j.internal.kernel.api.IndexQueryConstraints
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.internal.kernel.api.KernelReadTracer
+import org.neo4j.internal.kernel.api.Locks
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
@@ -160,6 +161,7 @@ object OperatorCodeGenHelperTemplates {
   val DATA_READ: InstanceField = field[Read]("dataRead", invoke(load(TX_CONSTRUCTOR_PARAMETER.name), method[KernelTransaction, Read]("dataRead")))
   val DATA_WRITE: InstanceField = field[Write]("dataWrite",
     invokeStatic(method[OperatorCodeGenHelperTemplates, Write, KernelTransaction]("write"), load(TX_CONSTRUCTOR_PARAMETER.name)))
+  val LOCKS: InstanceField = field[Locks]("locks", invoke(load(TX_CONSTRUCTOR_PARAMETER.name), method[KernelTransaction, Locks]("locks")))
   val TOKEN_WRITE: InstanceField = field[TokenWrite]("tokenWrite", invoke(load(TX_CONSTRUCTOR_PARAMETER.name), method[KernelTransaction, TokenWrite]("tokenWrite")))
   val TOKEN: InstanceField = field[Token]("token", invoke(load(TX_CONSTRUCTOR_PARAMETER.name), method[KernelTransaction, Token]("token")))
   val INPUT_CURSOR_FIELD_NAME = "inputCursor"

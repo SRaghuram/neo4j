@@ -10,25 +10,28 @@ import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayOf
 import org.neo4j.codegen.api.IntermediateRepresentation.block
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
+import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.runtime.CastSupport
 import org.neo4j.cypher.internal.runtime.IsNoValue
-import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LockNodesPipe.getNodes
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_WRITE
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.LOCKS
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols.CTNode
+import org.neo4j.internal.kernel.api.Locks
+import org.neo4j.kernel.api.StatementConstants
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.VirtualNodeValue
+
+import scala.collection.mutable
 
 class LockNodesOperator(val workIdentity: WorkIdentity,
                         val nodesToLock: Set[String]) extends StatelessOperator {
@@ -45,14 +48,26 @@ class LockNodesOperator(val workIdentity: WorkIdentity,
 }
 
 object LockNodesOperator {
-  def lockNodes(context: QueryContext, nodesFromLongSlot: Array[Long], nodesFromRefSlots: Array[AnyValue]): Unit = {
-    val nodeIds = nodesFromLongSlot ++ nodesFromRefSlots.flatMap {
-      case n: VirtualNodeValue => Some(n.id())
-      case IsNoValue() => None
-      case x: AnyValue => throw CastSupport.typeError[VirtualNodeValue](x)
+  def lockNodes(locks: Locks, nodesFromLongSlot: Array[Long], nodesFromRefSlots: Array[AnyValue]): Unit = {
+    var i = 0
+    var ids = mutable.ArrayBuffer.empty[Long]
+    while (i < nodesFromLongSlot.length) {
+      if (nodesFromLongSlot(i) != StatementConstants.NO_SUCH_NODE) {
+        ids += nodesFromLongSlot(i)
+      }
+      i += 1
+    }
+    i = 0
+    while (i < nodesFromRefSlots.length) {
+      nodesFromRefSlots(i) match {
+        case n: VirtualNodeValue => ids += n.id()
+        case IsNoValue() => { /*ignore*/ }
+        case x: AnyValue => throw CastSupport.typeError[VirtualNodeValue](x)
+      }
+      i += 1
     }
 
-    context.lockNodes(nodeIds.filterNot(_ == -1L): _*)
+    ids.sorted.foreach(locks.acquireExclusiveNodeLock(_))
   }
 }
 
@@ -69,8 +84,8 @@ class LockNodesOperatorTemplate(override val inner: OperatorTaskTemplate,
     val (nodesFromLongSlots, nodesFromRefsSlots) = slotsToLock.partition(_.isLongSlot)
     block(
       invokeStatic(
-        method[LockNodesOperator, Unit, QueryContext, Array[Long], Array[AnyValue]]("lockNodes"),
-        DB_ACCESS,
+        method[LockNodesOperator, Unit, Locks, Array[Long], Array[AnyValue]]("lockNodes"),
+        loadField(LOCKS),
         arrayOf[Long](nodesFromLongSlots.map(_.offset).map(codeGen.getLongAt): _*),
         arrayOf[AnyValue](nodesFromRefsSlots.map(_.offset).map(codeGen.getRefAt): _*),
       ),
@@ -85,7 +100,7 @@ class LockNodesOperatorTemplate(override val inner: OperatorTaskTemplate,
 
   override def genLocalVariables: Seq[LocalVariable] = Seq.empty
 
-  override def genFields: Seq[Field] = Seq(DATA_WRITE)
+  override def genFields: Seq[Field] = Seq(LOCKS)
 
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
 
