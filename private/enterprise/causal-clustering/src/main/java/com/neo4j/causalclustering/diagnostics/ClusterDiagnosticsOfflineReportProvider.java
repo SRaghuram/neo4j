@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.configuration.CausalClusteringSettings;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -73,7 +74,8 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
 
             for ( Path logFile : allFiles.values() )
             {
-                sources.add( DiagnosticsReportSources.newDiagnosticsFile( "raft/" + logFile.getFileName(), fs, logFile ) );
+                var destination = "raft" + File.pathSeparator + logFile.getFileName().toString();
+                sources.add( DiagnosticsReportSources.newDiagnosticsFile( destination, fs, logFile ) );
             }
         }
     }
