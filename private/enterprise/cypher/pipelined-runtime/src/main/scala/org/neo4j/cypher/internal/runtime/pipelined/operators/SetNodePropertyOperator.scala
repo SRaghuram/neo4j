@@ -32,13 +32,13 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_WRITE
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATS_TRACKER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATS_TRACKER_V
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.TOKEN_WRITE
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.TOKEN
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.conditionallyProfileRow
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SetNodePropertyOperator.getNodeId
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.InternalException
-import org.neo4j.internal.kernel.api.TokenWrite
+import org.neo4j.internal.kernel.api.Token
 import org.neo4j.internal.kernel.api.Write
 import org.neo4j.kernel.api.StatementConstants
 import org.neo4j.values.AnyValue
@@ -57,7 +57,7 @@ class SetNodePropertyOperator(val workIdentity: WorkIdentity,
 
     val queryState = state.queryStateForExpressionEvaluation(resources)
     val write = state.query.transactionalContext.dataWrite
-    val tokenWrite = state.query.transactionalContext.transaction.tokenWrite()
+    val token = state.query.transactionalContext.transaction.token()
 
     val cursor: MorselFullCursor = morsel.fullCursor()
     while (cursor.next()) {
@@ -71,7 +71,7 @@ class SetNodePropertyOperator(val workIdentity: WorkIdentity,
           nodeId,
           propertyKey,
           propertyValue.apply(cursor, queryState),
-          tokenWrite,
+          token,
           write,
           resources.queryStatisticsTracker
         )
@@ -124,11 +124,11 @@ class SetNodePropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
       declareAndAssign(typeRefOf[Long], entityId, nodeId),
       condition(notEqual(load(entityId), constant(StatementConstants.NO_SUCH_NODE)))(
         invokeStatic(
-          method[SetPropertyOperator, Unit, Long, String, AnyValue, TokenWrite, Write, MutableQueryStatistics]("setNodeProperty"),
+          method[SetPropertyOperator, Unit, Long, String, AnyValue, Token, Write, MutableQueryStatistics]("setNodeProperty"),
           load(entityId),
           constant(key),
           nullCheckIfRequired(propertyValue),
-          loadField(TOKEN_WRITE),
+          loadField(TOKEN),
           loadField(DATA_WRITE),
           QUERY_STATS_TRACKER
         )),
@@ -144,7 +144,7 @@ class SetNodePropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(QUERY_STATS_TRACKER_V)
 
-  override def genFields: Seq[Field] = Seq(DATA_WRITE, TOKEN_WRITE)
+  override def genFields: Seq[Field] = Seq(DATA_WRITE, TOKEN)
 
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
 
