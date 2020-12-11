@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.physicalplanning
 
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
+import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition.HeadPlan
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.util.attribution.Id
 
@@ -27,6 +28,18 @@ case class ArgumentStateMapId(x: Int) extends AnyVal
 
 object PipelineId {
   val NO_PIPELINE: PipelineId = PipelineId(-1)
+}
+
+object PipelineDefinition {
+  sealed trait HeadPlan {
+    def id: Id = plan.id
+    protected def plan: LogicalPlan
+  }
+
+  case class InterpretedHead(plan: LogicalPlan) extends HeadPlan
+  case class FusedHead(fusedPlans: IndexedSeq[LogicalPlan]) extends HeadPlan {
+    override protected def plan: LogicalPlan = fusedPlans.head
+  }
 }
 
 /**

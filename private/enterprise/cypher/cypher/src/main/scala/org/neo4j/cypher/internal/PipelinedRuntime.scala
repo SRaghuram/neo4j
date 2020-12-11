@@ -19,10 +19,11 @@ import org.neo4j.cypher.internal.options.CypherRuntimeOption
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefiner
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphVisualizer
-import org.neo4j.cypher.internal.physicalplanning.FusedHead
-import org.neo4j.cypher.internal.physicalplanning.InterpretedHead
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanner
+import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition.FusedHead
+import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition.InterpretedHead
+import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.plandescription.Arguments.PipelineInfo
@@ -57,6 +58,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.OperatorFactory
 import org.neo4j.cypher.internal.runtime.pipelined.PipelineCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.PipelinedPipelineBreakingPolicy
 import org.neo4j.cypher.internal.runtime.pipelined.TemplateOperatorPolicy
+import org.neo4j.cypher.internal.runtime.pipelined.TemplateOperators.NewTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ExecutingQuery
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ExecutionGraphSchedulingPolicy
 import org.neo4j.cypher.internal.runtime.pipelined.execution.LazyScheduling
@@ -207,17 +209,10 @@ class PipelinedRuntime private(parallelExecution: Boolean,
     DebugLog.logDiff("PhysicalPlanner.plan")
     //=======================================================
 
-    val executionGraphDefinition =
+    val ExecutionGraphDefiner.Result(executionGraphDefinition, pipelineTemplates) =
       ExecutionGraphDefiner.defineFrom(
         breakingPolicy,
-        operatorFusionPolicy.operatorFuserFactory(physicalPlan,
-                                                  context.tokenContext,
-                                                  query.readOnly,
-                                                  query.doProfile,
-                                                  queryIndexRegistrator,
-                                                  parallelExecution,
-                                                  codeGenerationMode,
-                                                  context.config.lenientCreateRelationship),
+        operatorFusionPolicy.operatorFuserFactory(physicalPlan, query.readOnly, parallelExecution),
         physicalPlan,
         converters,
         query.leveragedOrders)
@@ -249,11 +244,20 @@ class PipelinedRuntime private(parallelExecution: Boolean,
 
     DebugLog.logDiff("Scheduling")
     //=======================================================
-    val fuseOperators = new PipelineCompiler(operatorFactory, context.tokenContext, parallelExecution,
-      codeGenerationMode)
+    val pipelineCompiler = new PipelineCompiler(
+      operatorFactory,
+      context.tokenContext,
+      codeGenerationMode,
+      queryIndexRegistrator,
+      query.readOnly,
+      query.doProfile,
+      context.config.lenientCreateRelationship,
+      // This cast is currently necessary. See details in [[OperatorFuser.templates]]
+      pipelineTemplates.asInstanceOf[Map[PipelineId, IndexedSeq[NewTemplate]]]
+    )
 
     try {
-      val executablePipelines: IndexedSeq[ExecutablePipeline] = fuseOperators.compilePipelines(executionGraphDefinition)
+      val executablePipelines: IndexedSeq[ExecutablePipeline] = pipelineCompiler.compilePipelines(executionGraphDefinition)
       DebugLog.logDiff("FuseOperators")
       //=======================================================
 
@@ -384,7 +388,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
           case InterpretedHead(plan) if plan.id == planId =>
             return Some(PipelineInfo(pipeline.id.x, fused = false))
 
-          case FusedHead(fuser) if fuser.fusedPlans.exists(_.id.x == planId.x) =>
+          case FusedHead(fusedPlans) if fusedPlans.exists(_.id.x == planId.x) =>
             return Some(PipelineInfo(pipeline.id.x, fused = true))
 
           case _ =>

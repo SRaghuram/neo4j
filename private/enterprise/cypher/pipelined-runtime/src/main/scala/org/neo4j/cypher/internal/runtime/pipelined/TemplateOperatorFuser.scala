@@ -5,42 +5,27 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined
 
-import org.neo4j.codegen.api.CodeGeneration
 import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans.AntiConditionalApply
-import org.neo4j.cypher.internal.logical.plans.ConditionalApply
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
-import org.neo4j.cypher.internal.logical.plans.SelectOrAntiSemiApply
-import org.neo4j.cypher.internal.logical.plans.SelectOrSemiApply
-import org.neo4j.cypher.internal.logical.plans.Union
-import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.physicalplanning.OperatorFuser
 import org.neo4j.cypher.internal.physicalplanning.OperatorFuserFactory
 import org.neo4j.cypher.internal.physicalplanning.OutputDefinition
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
-import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
 import org.neo4j.cypher.internal.physicalplanning.ReduceOutput
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
-import org.neo4j.cypher.internal.planner.spi.TokenContext
-import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
-import org.neo4j.cypher.internal.runtime.compiled.expressions.VariableNamer
+import org.neo4j.cypher.internal.runtime.pipelined.TemplateOperators.NewTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.TemplateOperators.TemplateContext
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AggregatorFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorNoGroupingTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate
-import org.neo4j.cypher.internal.runtime.pipelined.operators.BinaryOperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTaskWithMorselGenerator.compileOperator
-import org.neo4j.cypher.internal.runtime.pipelined.operators.DelegateOperatorTaskTemplate
-import org.neo4j.cypher.internal.runtime.pipelined.operators.Operator
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProduceResultOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleArgumentAggregationMapperOperatorNoGroupingTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleArgumentAggregationMapperOperatorTaskTemplate
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
@@ -48,103 +33,43 @@ import org.neo4j.exceptions.CantCompileQueryException
 import scala.collection.mutable.ArrayBuffer
 
 class TemplateOperatorFuserFactory(physicalPlan: PhysicalPlan,
-                                   tokenContext: TokenContext,
                                    readOnly: Boolean,
-                                   doProfile: Boolean,
-                                   indexRegistrator: QueryIndexRegistrator,
                                    parallelExecution: Boolean,
-                                   fusionOverPipelineEnabled: Boolean,
-                                   codeGenerationMode: CodeGeneration.CodeGenerationMode,
-                                   lenientCreateRelationship: Boolean) extends OperatorFuserFactory {
-  override def newOperatorFuser(headPlanId: Id, inputSlotConfiguration: SlotConfiguration): OperatorFuser =
+                                   fusionOverPipelineEnabled: Boolean) extends OperatorFuserFactory {
+  override def newOperatorFuser(headPlanId: Id): OperatorFuser =
     new TemplateOperatorFuser(physicalPlan,
-                              tokenContext,
                               readOnly,
-                              doProfile,
-                              indexRegistrator,
                               parallelExecution,
                               fusionOverPipelineEnabled,
-                              codeGenerationMode,
-                              headPlanId,
-                              inputSlotConfiguration,
-                              lenientCreateRelationship)
+                              headPlanId)
 }
 
-class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
-                            val tokenContext: TokenContext,
-                            val readOnly: Boolean,
-                            doProfile: Boolean,
-                            indexRegistrator: QueryIndexRegistrator,
+class TemplateOperatorFuser(physicalPlan: PhysicalPlan,
+                            readOnly: Boolean,
                             parallelExecution: Boolean,
                             fusionOverPipelineEnabled: Boolean,
-                            codeGenerationMode: CodeGeneration.CodeGenerationMode,
-                            headPlanId: Id,
-                            inputSlotConfiguration: SlotConfiguration,
-                            lenientCreateRelationship: Boolean) extends TemplateOperators(readOnly, parallelExecution, fusionOverPipelineEnabled) with OperatorFuser {
+                            headPlanId: Id) extends TemplateOperators(readOnly, parallelExecution, fusionOverPipelineEnabled) with OperatorFuser {
 
   private val slots = physicalPlan.slotConfigurations(headPlanId)
   generateSlotAccessorFunctions(slots)
 
-  private val namer = new VariableNamer
-
-  private val templates = new ArrayBuffer[NewTemplate]
+  private val _templates = new ArrayBuffer[NewTemplate]
   private val _fusedPlans = new ArrayBuffer[LogicalPlan]
 
-  def fusedPlans: IndexedSeq[LogicalPlan] = _fusedPlans
+  override def fusedPlans: IndexedSeq[LogicalPlan] = _fusedPlans
 
-  def compile(executionGraphDefinition: ExecutionGraphDefinition, pipelineId: PipelineId): Operator = {
+  override def templates: IndexedSeq[NewTemplate] = _templates
 
-    val expressionCompiler =
-      _fusedPlans.head match {
-        case plan@(_: Union| _: ConditionalApply | _: AntiConditionalApply | _: SelectOrSemiApply | _: SelectOrAntiSemiApply) =>
-          val leftSlots = physicalPlan.slotConfigurations(plan.lhs.get.id)
-          val rightSlots = physicalPlan.slotConfigurations(plan.rhs.get.id)
-          new BinaryOperatorExpressionCompiler(slots, inputSlotConfiguration, leftSlots, rightSlots, readOnly, namer)
-        case _ =>
-          new OperatorExpressionCompiler(slots, inputSlotConfiguration, readOnly, namer) // NOTE: We assume slots is the same within an entire pipeline
-      }
-
-    val innermost = new DelegateOperatorTaskTemplate()(expressionCompiler)
-    var currentTemplate: OperatorTaskTemplate = innermost
-
-    var argumentStates = new ArrayBuffer[ArgumentStateDescriptor]
-
-    for ( fixTemplate <- templates.reverse ) {
-      val ctx = TemplateContext(slots,
-                                physicalPlan.slotConfigurations,
-                                tokenContext,
-                                indexRegistrator,
-                                physicalPlan.argumentSizes,
-                                executionGraphDefinition,
-                                currentTemplate,
-                                innermost,
-                                expressionCompiler,
-                                lenientCreateRelationship)
-      val x = fixTemplate(ctx)
-      x.template.setProfile(doProfile)
-      argumentStates ++= x.argumentStateFactory
-      currentTemplate = x.template
-    }
-    val workIdentity = WorkIdentity.fromFusedPlans(fusedPlans)
-    try {
-      compileOperator(currentTemplate, workIdentity, argumentStates, codeGenerationMode, pipelineId)
-    } catch {
-      // In the case of a StackOverflowError we cannot recover correctly and abort fusing altogether.
-      case e: StackOverflowError =>
-        throw new CantCompileQueryException("Stack overflow caused operator compilation to fail", e)
-    }
-  }
-
-  def fuseIn(plan: LogicalPlan): Boolean = {
-    val newTemplate = createTemplate(plan, templates.isEmpty, physicalPlan.applyPlans(plan.id) == Id.INVALID_ID)
+  override def fuseIn(plan: LogicalPlan): Boolean = {
+    val newTemplate = createTemplate(plan, _templates.isEmpty, physicalPlan.applyPlans(plan.id) == Id.INVALID_ID)
     if (newTemplate.isDefined) {
-      templates += newTemplate.get
+      _templates += newTemplate.get
       _fusedPlans += plan
     }
     newTemplate.isDefined
   }
 
-  def fuseIn(output: OutputDefinition): Boolean = {
+  override def fuseIn(output: OutputDefinition): Boolean = {
 
     val aggregatorFactory = AggregatorFactory(physicalPlan)
 
@@ -230,7 +155,7 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
 
     maybePlanAndTemplate match {
       case Some((plan, fixTemplate)) =>
-        templates += fixTemplate
+        _templates += fixTemplate
         _fusedPlans += plan
         true
       case None =>

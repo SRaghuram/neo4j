@@ -48,6 +48,9 @@ import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.ProcedureCallMode
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
+import org.neo4j.cypher.internal.runtime.pipelined.TemplateOperators.NewTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.TemplateOperators.TemplateAndArgumentStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.TemplateOperators.TemplateContext
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ArgumentOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.BinaryOperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ByNameLookup
@@ -155,26 +158,7 @@ case class DynamicFactoryArgumentStateDescriptor(argumentStateMapId: ArgumentSta
                                                  operatorId: Id,
                                                  ordered: Boolean) extends ArgumentStateDescriptor
 
-abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, fuseOverPipelines: Boolean) {
-
-  case class TemplateAndArgumentStateFactory(template: OperatorTaskTemplate, argumentStateFactory: Option[ArgumentStateDescriptor])
-  type NewTemplate = TemplateContext => TemplateAndArgumentStateFactory
-
-  // NOTE: These implicits are used to reduce the boilerplate in the template match cases, which improves readability
-  //       They allow for example omitting Some(), and omitting TemplateAndArgumentStateFactory(_, None).
-  //       Their order might be important.
-  protected implicit def injectMissingArgumentStateFactory(operator: OperatorTaskTemplate): TemplateAndArgumentStateFactory =
-    TemplateAndArgumentStateFactory(operator, None)
-  protected implicit def injectMissingOptionAndArgumentStateFactory(operator: TemplateContext => OperatorTaskTemplate): Option[NewTemplate] =
-    Some((ctx: TemplateContext) => TemplateAndArgumentStateFactory(operator(ctx), None))
-  protected implicit def injectMissingOption(operator: NewTemplate): Option[NewTemplate] = Some(operator)
-
-  // NOTE: Ideally this flag would also be true for any serial pipelines in the parallel runtime, but
-  //       since we make the call on whether to fuse or not as we walk the logical plan, we do not yet
-  //       know whether the pipeline will be executed in serial (this is only known once we've seen the
-  //       last plan currently (ProduceResults)).
-  val serialExecutionOnly: Boolean = !parallelExecution
-
+object TemplateOperators {
   case class TemplateContext(slots: SlotConfiguration,
                              slotConfigurations: SlotConfigurations,
                              tokenContext: TokenContext,
@@ -190,6 +174,26 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
       () => expressionCompiler.compileExpression(astExpression, id)
         .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $astExpression"))
   }
+  case class TemplateAndArgumentStateFactory(template: OperatorTaskTemplate, argumentStateFactory: Option[ArgumentStateDescriptor])
+  type NewTemplate = TemplateContext => TemplateAndArgumentStateFactory
+}
+
+abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, fuseOverPipelines: Boolean) {
+
+  // NOTE: These implicits are used to reduce the boilerplate in the template match cases, which improves readability
+  //       They allow for example omitting Some(), and omitting TemplateAndArgumentStateFactory(_, None).
+  //       Their order might be important.
+  protected implicit def injectMissingArgumentStateFactory(operator: OperatorTaskTemplate): TemplateAndArgumentStateFactory =
+    TemplateAndArgumentStateFactory(operator, None)
+  protected implicit def injectMissingOptionAndArgumentStateFactory(operator: TemplateContext => OperatorTaskTemplate): Option[NewTemplate] =
+    Some((ctx: TemplateContext) => TemplateAndArgumentStateFactory(operator(ctx), None))
+  protected implicit def injectMissingOption(operator: NewTemplate): Option[NewTemplate] = Some(operator)
+
+  // NOTE: Ideally this flag would also be true for any serial pipelines in the parallel runtime, but
+  //       since we make the call on whether to fuse or not as we walk the logical plan, we do not yet
+  //       know whether the pipeline will be executed in serial (this is only known once we've seen the
+  //       last plan currently (ProduceResults)).
+  val serialExecutionOnly: Boolean = !parallelExecution
 
   protected def createTemplate(plan: LogicalPlan,
                                isHeadOperator: Boolean,

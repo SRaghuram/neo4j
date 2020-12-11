@@ -14,6 +14,8 @@ import org.neo4j.cypher.internal.PipelinedRuntimeName
 import org.neo4j.cypher.internal.RuntimeName
 import org.neo4j.cypher.internal.logical.plans.Apply
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
+import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition.FusedHead
+import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition.InterpretedHead
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.runtime.ExecutionMode
 import org.neo4j.cypher.internal.runtime.InputDataStream
@@ -155,8 +157,8 @@ object ExecutionGraphVisualizer {
       // Operator chain
       var current = pipe
       headPlan match {
-        case FusedHead(fuser) =>
-          fuser.fusedPlans.foreach { fusedPlan =>
+        case FusedHead(fusedPlans) =>
+          fusedPlans.foreach { fusedPlan =>
             val next = ops(fusedPlan.id.x)
             rels += new VirtualRelationshipHack(current, next, Map("fused" -> (true: lang.Boolean)), "NEXT_OPERATOR")
             current = next

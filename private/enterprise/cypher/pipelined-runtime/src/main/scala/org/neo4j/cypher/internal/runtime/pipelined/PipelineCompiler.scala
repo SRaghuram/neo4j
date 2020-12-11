@@ -13,19 +13,27 @@ import org.neo4j.cypher.internal.logical.plans.OrderedDistinct
 import org.neo4j.cypher.internal.logical.plans.PartialTop
 import org.neo4j.cypher.internal.logical.plans.Skip
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
-import org.neo4j.cypher.internal.physicalplanning.FusedHead
-import org.neo4j.cypher.internal.physicalplanning.InterpretedHead
 import org.neo4j.cypher.internal.physicalplanning.NoOutput
 import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition
+import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition.FusedHead
+import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition.InterpretedHead
+import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.planner.spi.TokenContext
+import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
+import org.neo4j.cypher.internal.runtime.pipelined.TemplateOperators.NewTemplate
 
 @deprecated // IntelliJ hook for devs having a hard time remembering that FuseOperators doesn't exist anymore.
 object FuseOperators
 
 class PipelineCompiler(operatorFactory: OperatorFactory,
                        tokenContext: TokenContext,
-                       parallelExecution: Boolean,
-                       codeGenerationMode: CodeGeneration.CodeGenerationMode) {
+                       codeGenerationMode: CodeGeneration.CodeGenerationMode,
+                       indexRegistrator: QueryIndexRegistrator,
+                       readOnly: Boolean,
+                       doProfile: Boolean,
+                       lenientCreateRelationship: Boolean,
+                       pipelineTemplates: Map[PipelineId, IndexedSeq[NewTemplate]]
+                      ) {
 
   private val physicalPlan = operatorFactory.executionGraphDefinition.physicalPlan
 
@@ -70,14 +78,30 @@ class PipelineCompiler(operatorFactory: OperatorFactory,
       needsFilteringMorsel ||
       p.middlePlans.exists(requiresUpstreamPipelinesToUseFilteringMorsel) ||
       (p.headPlan match {
-        case FusedHead(fuser) => fuser.fusedPlans.exists(requiresUpstreamPipelinesToUseFilteringMorsel)
+        case FusedHead(fusedPlans) => fusedPlans.exists(requiresUpstreamPipelinesToUseFilteringMorsel)
         case InterpretedHead(plan) => requiresUpstreamPipelinesToUseFilteringMorsel(plan)
       })
 
     val headOperator =
       p.headPlan match {
-        case f: FusedHead =>
-          f.operatorFuser.asInstanceOf[TemplateOperatorFuser].compile(executionGraphDefinition, p.id)
+        case FusedHead(fusedPlans) =>
+          val operatorCompiler = new FusedPlansCompiler(
+            readOnly,
+            doProfile,
+            fusedPlans.head.id,
+            p.inputBuffer.bufferSlotConfiguration,
+            lenientCreateRelationship,
+            fusedPlans,
+            pipelineTemplates(p.id)
+          )
+
+          operatorCompiler.compile(
+            executionGraphDefinition,
+            p.id,
+            tokenContext,
+            indexRegistrator,
+            codeGenerationMode
+          )
         case InterpretedHead(plan) =>
           operatorFactory.create(plan, p.inputBuffer)
       }

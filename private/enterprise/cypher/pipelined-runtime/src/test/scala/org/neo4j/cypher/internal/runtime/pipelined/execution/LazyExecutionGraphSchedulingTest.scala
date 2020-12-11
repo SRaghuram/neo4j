@@ -11,8 +11,8 @@ import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.physicalplanning.BufferVariant
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
-import org.neo4j.cypher.internal.physicalplanning.InterpretedHead
 import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition
+import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition.InterpretedHead
 import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 import org.neo4j.cypher.internal.physicalplanning.ReadOnlyArray

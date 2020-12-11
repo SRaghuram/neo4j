@@ -5,15 +5,12 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined
 
-import org.neo4j.codegen.api.CodeGeneration
 import org.neo4j.cypher.internal.logical.plans.Apply
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning.OperatorFuserFactory
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy.OPERATOR_FUSION_DISABLED
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
-import org.neo4j.cypher.internal.planner.spi.TokenContext
-import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.util.attribution.Id
 
 object TemplateOperatorPolicy {
@@ -40,15 +37,8 @@ class TemplateOperatorPolicy(override val fusionOverPipelineEnabled: Boolean,
   override def canFuseOverPipeline(lp: LogicalPlan, outerApplyPlanId: Id): Boolean =
     fusionOverPipelineEnabled && createTemplate(lp, isHeadOperator = false, hasNoNestedArguments = outerApplyPlanId == Id.INVALID_ID).isDefined
 
-  override def operatorFuserFactory(physicalPlan: PhysicalPlan,
-                                    tokenContext: TokenContext,
-                                    readOnly: Boolean,
-                                    doProfile: Boolean,
-                                    indexRegistrator: QueryIndexRegistrator,
-                                    parallelExecution: Boolean,
-                                    codeGenerationMode: CodeGeneration.CodeGenerationMode,
-                                    lenientCreateRelationship: Boolean): OperatorFuserFactory =
-    new TemplateOperatorFuserFactory(physicalPlan, tokenContext, readOnly, doProfile, indexRegistrator, parallelExecution, fusionOverPipelineEnabled, codeGenerationMode, lenientCreateRelationship)
+  override def operatorFuserFactory(physicalPlan: PhysicalPlan, readOnly: Boolean, parallelExecution: Boolean): OperatorFuserFactory =
+    new TemplateOperatorFuserFactory(physicalPlan, readOnly, parallelExecution, fusionOverPipelineEnabled)
 
   override def toString: String = {
     s"${this.getClass.getSimpleName}(fusionOverPipelineEnabled=$fusionOverPipelineEnabled,readOnly=$readOnly,parallelExecution=$parallelExecution,fusionOverPipelineLimit=$fusionOverPipelineLimit)"

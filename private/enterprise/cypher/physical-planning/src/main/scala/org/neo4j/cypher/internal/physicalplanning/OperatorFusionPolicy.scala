@@ -5,10 +5,7 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.codegen.api.CodeGeneration
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
-import org.neo4j.cypher.internal.planner.spi.TokenContext
-import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
@@ -46,13 +43,8 @@ trait OperatorFusionPolicy {
   def fusionOverPipelineLimit: Int
 
   def operatorFuserFactory(physicalPlan: PhysicalPlan,
-                           tokenContext: TokenContext,
                            readOnly: Boolean,
-                           doProfile: Boolean,
-                           indexRegistrator: QueryIndexRegistrator,
-                           parallelExecution: Boolean,
-                           codeGenerationMode: CodeGeneration.CodeGenerationMode,
-                           lenientCreateRelationship: Boolean): OperatorFuserFactory
+                           parallelExecution: Boolean): OperatorFuserFactory
 }
 
 object OperatorFusionPolicy {
@@ -63,13 +55,8 @@ object OperatorFusionPolicy {
     override def fusionEnabled: Boolean = false
     override def fusionOverPipelineEnabled: Boolean = false
     override def operatorFuserFactory(physicalPlan: PhysicalPlan,
-                                      tokenContext: TokenContext,
                                       readOnly: Boolean,
-                                      doProfile: Boolean,
-                                      indexRegistrator: QueryIndexRegistrator,
-                                      parallelExecution: Boolean,
-                                      codeGenerationMode: CodeGeneration.CodeGenerationMode,
-                                      lenientCreateRelationship: Boolean): OperatorFuserFactory = OperatorFuserFactory.NO_FUSION
+                                      parallelExecution: Boolean): OperatorFuserFactory = OperatorFuserFactory.NO_FUSION
     override def fusionOverPipelineLimit: Int = 0
   }
 }
@@ -78,15 +65,16 @@ object OperatorFusionPolicy {
   * Factory for constructing [[OperatorFuser]]s.
   */
 trait OperatorFuserFactory {
-  def newOperatorFuser(headPlanId: Id, inputSlotConfiguration: SlotConfiguration): OperatorFuser
+  def newOperatorFuser(headPlanId: Id): OperatorFuser
 }
 
 object OperatorFuserFactory {
   val NO_FUSION: OperatorFuserFactory =
-    (_: Id, _: SlotConfiguration) => new OperatorFuser {
+    (_: Id) => new OperatorFuser {
       override def fuseIn(plan: LogicalPlan): Boolean = false
       override def fuseIn(output: OutputDefinition): Boolean = false
       override def fusedPlans: IndexedSeq[LogicalPlan] = IndexedSeq.empty
+      override def templates: IndexedSeq[_] = IndexedSeq.empty
     }
 }
 
@@ -108,4 +96,11 @@ trait OperatorFuser {
     * Return plans for all the fused in operators so far. This includes the plan of any fused in [[OutputDefinition]].
     */
   def fusedPlans: IndexedSeq[LogicalPlan]
+
+  /**
+   * A sequence of templates that can be compiled to an Operator.
+   * We cannot make the type more specific in physicalplanning without moving large parts of pipelined into this module.
+   * The actual type should be IndexedSeq[TemplateOperators.NewTemplate]
+   */
+  def templates: IndexedSeq[_]
 }

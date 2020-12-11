@@ -16,7 +16,6 @@ import org.neo4j.cypher.internal.logical.plans.Aggregation
 import org.neo4j.cypher.internal.logical.plans.Anti
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
 import org.neo4j.cypher.internal.logical.plans.Distinct
-import org.neo4j.cypher.internal.logical.plans.EmptyResult
 import org.neo4j.cypher.internal.logical.plans.LeftOuterHashJoin
 import org.neo4j.cypher.internal.logical.plans.Limit
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
@@ -39,6 +38,9 @@ import org.neo4j.cypher.internal.logical.plans.ValueHashJoin
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.ApplyPlans
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.ArgumentSizes
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
+import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition.FusedHead
+import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition.HeadPlan
+import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition.InterpretedHead
 import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.ApplyBufferDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.ArgumentStateBufferDefiner
@@ -65,13 +67,15 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-sealed trait HeadPlan {
+sealed trait HeadPlanBuilder {
   def id: Id = plan.id
-  def plan: LogicalPlan
+  protected def plan: LogicalPlan
 }
 
-case class InterpretedHead(plan: LogicalPlan) extends HeadPlan
-case class FusedHead(operatorFuser: OperatorFuser) extends HeadPlan { def plan: LogicalPlan = operatorFuser.fusedPlans.head }
+case class InterpretedHeadBuilder(plan: LogicalPlan) extends HeadPlanBuilder
+case class FusedHeadBuilder(operatorFuser: OperatorFuser) extends HeadPlanBuilder {
+  override protected def plan: LogicalPlan = operatorFuser.fusedPlans.head
+}
 
 /**
  * Collection of mutable builder classes that are modified by [[PipelineTreeBuilder]] and finally
@@ -93,12 +97,12 @@ object PipelineTreeBuilder {
      * continuing with as many fusable consecutive middlePlans as possible.
      * If a plan is in `fusedPlans`. it will not be in `middlePlans` and vice versa.
      */
-    val headPlan: HeadPlan = {
-      val operatorFuser = operatorFuserFactory.newOperatorFuser(headLogicalPlan.id, inputBuffer.bufferConfiguration)
+    val headPlan: HeadPlanBuilder = {
+      val operatorFuser = operatorFuserFactory.newOperatorFuser(headLogicalPlan.id)
       if (operatorFuser.fuseIn(headLogicalPlan))
-        FusedHead(operatorFuser)
+        FusedHeadBuilder(operatorFuser)
       else
-        InterpretedHead(headLogicalPlan)
+        InterpretedHeadBuilder(headLogicalPlan)
     }
 
     val middlePlans = new ArrayBuffer[LogicalPlan]
@@ -107,7 +111,7 @@ object PipelineTreeBuilder {
 
     def fuse(plan: LogicalPlan): Boolean = {
       headPlan match {
-        case FusedHead(operatorFuser) if middlePlans.isEmpty && outputDefinition == NoOutput =>
+        case FusedHeadBuilder(operatorFuser) if middlePlans.isEmpty && outputDefinition == NoOutput =>
           operatorFuser.fuseIn(plan)
         case _ => false
       }
@@ -124,7 +128,7 @@ object PipelineTreeBuilder {
 
     def fuse(output: OutputDefinition): Boolean = {
       headPlan match {
-        case FusedHead(operatorFuser) if middlePlans.isEmpty =>
+        case FusedHeadBuilder(operatorFuser) if middlePlans.isEmpty =>
           operatorFuser.fuseIn(output)
         case _ => false
       }
@@ -138,13 +142,20 @@ object PipelineTreeBuilder {
 
     private def headPlanResult: HeadPlan =
       headPlan match {
-        case f: FusedHead =>
+        case f: FusedHeadBuilder =>
           if (f.operatorFuser.fusedPlans.size > 1)
-            f
+            FusedHead(f.operatorFuser.fusedPlans)
           else
             InterpretedHead(f.operatorFuser.fusedPlans.head)
-        case i: InterpretedHead => i
+        case InterpretedHeadBuilder(plan) => InterpretedHead(plan)
       }
+
+    def pipelineTemplates: IndexedSeq[_] =
+      headPlan match {
+        case FusedHeadBuilder(operatorFuser) => operatorFuser.templates
+        case InterpretedHeadBuilder(_) => IndexedSeq.empty
+      }
+
     def result: PipelineDefinition = PipelineDefinition(id, lhs, rhs, headPlanResult, inputBuffer.result, outputDefinition, middlePlans, serial, workCanceller)
   }
 
@@ -820,8 +831,8 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         val applyRhsPlan =
           if (rhs.middlePlans.isEmpty) {
             rhs.headPlan match {
-              case InterpretedHead(plan) => plan
-              case FusedHead(fuser) => fuser.fusedPlans.last
+              case InterpretedHeadBuilder(plan) => plan
+              case FusedHeadBuilder(fuser) => fuser.fusedPlans.last
             }
           } else {
             rhs.middlePlans.last

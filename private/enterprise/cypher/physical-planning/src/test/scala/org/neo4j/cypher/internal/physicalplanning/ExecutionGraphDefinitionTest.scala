@@ -621,8 +621,7 @@ class ExecutionGraphDefinitionTest extends CypherFunSuite {
   def operatorFuserFactory(fusablePlans: Class[_ <: LogicalPlan]*): OperatorFuserFactory =
     new OperatorFuserFactory {
       val fusable: Set[Class[_ <: LogicalPlan]] = fusablePlans.toSet
-      override def newOperatorFuser(headPlanId: Id,
-                                    inputSlotConfiguration: SlotConfiguration): OperatorFuser =
+      override def newOperatorFuser(headPlanId: Id): OperatorFuser =
         new OperatorFuser {
           val plans = new ArrayBuffer[LogicalPlan]
           override def fuseIn(plan: LogicalPlan): Boolean =
@@ -641,6 +640,8 @@ class ExecutionGraphDefinitionTest extends CypherFunSuite {
             }
 
           override def fusedPlans: IndexedSeq[LogicalPlan] = plans
+
+          override def templates: IndexedSeq[_] = IndexedSeq.empty
         }
     }
 }

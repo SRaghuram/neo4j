@@ -12,13 +12,21 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.Expression
 object ExecutionGraphDefiner {
 
   /**
+   * @param pipelineTemplates for each pipeline a sequence of templates that can be compiled to an Operator.
+   *                          This is not part of the executionGraphDefinition, since these Templates are lambda functions
+   *                          that we only need while building the ExecutableQuery, so we do not want to cache them,
+   *                          unlike the rest of the executionGraphDefinition.
+   */
+  case class Result(executionGraphDefinition: ExecutionGraphDefinition, pipelineTemplates: Map[PipelineId, IndexedSeq[_]])
+
+  /**
    * Builds an [[ExecutionGraphDefinition]], including [[PipelineDefinition]]s, for a given physical plan.
    */
   def defineFrom(breakingPolicy: PipelineBreakingPolicy,
                  operatorFuserFactory: OperatorFuserFactory,
                  physicalPlan: PhysicalPlan,
                  expressionConverters: ExpressionConverters,
-                 leveragedOrders: LeveragedOrders): ExecutionGraphDefinition = {
+                 leveragedOrders: LeveragedOrders): Result = {
 
     val executionStateDefiner = new ExecutionStateDefiner(physicalPlan)
     val pipelineTreeBuilder = new PipelineTreeBuilder(breakingPolicy,
@@ -30,10 +38,13 @@ object ExecutionGraphDefiner {
                                                       expressionConverters,
                                                       leveragedOrders)
     pipelineTreeBuilder.build(physicalPlan.logicalPlan)
-    ExecutionGraphDefinition(physicalPlan,
+    val egd = ExecutionGraphDefinition(physicalPlan,
       new ReadOnlyArray(executionStateDefiner.buffers.map(_.result).toArray),
       new ReadOnlyArray(executionStateDefiner.argumentStateMaps.toArray),
       pipelineTreeBuilder.pipelines.map(_.result),
       pipelineTreeBuilder.applyRhsPlans.toMap)
+    val pipelineTemplates = pipelineTreeBuilder.pipelines.map(p => p.id -> p.pipelineTemplates).toMap
+
+    Result(egd, pipelineTemplates)
   }
 }

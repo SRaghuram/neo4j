@@ -57,7 +57,7 @@ class ExecutionGraphDefinitionBuilder(operatorFuserFactory: OperatorFuserFactory
       CypherRuntimeConfiguration.defaultConfiguration,
       allocateArgumentSlots = true)
     val converters: ExpressionConverters = mock(classOf[ExpressionConverters])
-    ExecutionGraphDefiner.defineFrom(breakingPolicy, operatorFuserFactory, physicalPlan, converters, leveragedOrders)
+    ExecutionGraphDefiner.defineFrom(breakingPolicy, operatorFuserFactory, physicalPlan, converters, leveragedOrders).executionGraphDefinition
   }
 }
 

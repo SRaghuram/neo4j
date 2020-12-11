@@ -11,6 +11,8 @@ import org.neo4j.cypher.internal.physicalplanning
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition.NO_ARGUMENT_STATE_MAPS
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition.NO_ARGUMENT_STATE_MAP_INITIALIZATIONS
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition.NO_BUFFERS
+import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition.FusedHead
+import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition.InterpretedHead
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.scalatest.matchers.MatchResult
 import org.scalatest.matchers.Matcher
@@ -426,7 +428,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
     val gotPipelines = graph.pipelines.map { got =>
       val (interpretedHead, fusedHead) =
         got.headPlan match {
-          case FusedHead(fuser) => (Nil, fuser.fusedPlans)
+          case FusedHead(fusedPlans) => (Nil, fusedPlans)
           case InterpretedHead(plan) => (Seq(plan), Nil)
         }
       MatchablePipeline(got.id,
