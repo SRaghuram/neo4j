@@ -197,7 +197,7 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     types,
     missingTypes)(codeGen) {
 
-  private val hasWritten = field[Boolean](codeGen.namer.nextVariableName())
+  private val hasWritten = field[Boolean](codeGen.namer.nextVariableName("hasWritten"))
   private lazy val predicate: Option[IntermediateExpression] = generatePredicate.map(_())
 
   override final def scopeId: String = "optionalExpandAll" + id.x
@@ -264,7 +264,7 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       conditionallyProfileRow(innerCannotContinue, id, doProfile)
     )
 
-    val shouldWriteRow = codeGen.namer.nextVariableName()
+    val shouldWriteRow = codeGen.namer.nextVariableName("shouldWrite")
     block(
       doIfPredicate(declareAndAssign(typeRefOf[Boolean], shouldWriteRow, constant(false))),
       loop(or(not(loadField(hasWritten)), and(innermost.predicate, loadField(canContinue))))(
@@ -281,9 +281,21 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
               doIfPredicate(assign(shouldWriteRow, predicate.map(p => equal(nullCheckIfRequired(p), trueValue)).getOrElse(constant(true))))
             )),
           doIfPredicateOrElse(condition(load(shouldWriteRow))(innerBlock))(innerBlock),
-          doIfInnerCantContinue(
-            innermost.setUnlessPastLimit(canContinue,
-              and(loadField(canContinue), cursorNext[RelationshipTraversalCursor](loadField(relationshipsField))))),
+          doIfPredicateOrElse(
+            //NOTE: it is important here that if the predicate failed, we always need to advance the cursor
+            //      if not execution might hang if innerCanContinue is true.
+            ifElse(not(load(shouldWriteRow))){
+              setField(canContinue, cursorNext[RelationshipTraversalCursor](loadField(relationshipsField)))
+            } {
+              doIfInnerCantContinue(
+                innermost.setUnlessPastLimit(canContinue,
+                  and(loadField(canContinue), cursorNext[RelationshipTraversalCursor](loadField(relationshipsField)))))
+           }
+          )(
+            doIfInnerCantContinue(
+              innermost.setUnlessPastLimit(canContinue,
+                and(loadField(canContinue), cursorNext[RelationshipTraversalCursor](loadField(relationshipsField)))))
+          ),
           endInnerLoop
         )))
   }
