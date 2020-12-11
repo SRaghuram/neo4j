@@ -296,9 +296,21 @@ class OptionalExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
               doIfPredicate(assign(shouldWriteRow, predicate.map(p => equal(nullCheckIfRequired(p), trueValue)).getOrElse(constant(true))))
             )),
           doIfPredicateOrElse(condition(load(shouldWriteRow))(innerBlock))(innerBlock),
-          doIfInnerCantContinue(
-            innermost.setUnlessPastLimit(canContinue, and(loadField(canContinue),
-              cursorNext[RelationshipTraversalCursor](loadField(relationshipsField))))),
+          doIfPredicateOrElse(
+            //NOTE: it is important here that if the predicate failed, we always need to advance the cursor
+            //      if not execution might hang if innerCanContinue is true.
+            ifElse(not(load(shouldWriteRow))){
+              setField(canContinue, cursorNext[RelationshipTraversalCursor](loadField(relationshipsField)))
+            } {
+              doIfInnerCantContinue(
+                innermost.setUnlessPastLimit(canContinue,
+                  and(loadField(canContinue), cursorNext[RelationshipTraversalCursor](loadField(relationshipsField)))))
+            }
+          )(
+            doIfInnerCantContinue(
+              innermost.setUnlessPastLimit(canContinue,
+                and(loadField(canContinue), cursorNext[RelationshipTraversalCursor](loadField(relationshipsField)))))
+          ),
           endInnerLoop
         )))
   }
