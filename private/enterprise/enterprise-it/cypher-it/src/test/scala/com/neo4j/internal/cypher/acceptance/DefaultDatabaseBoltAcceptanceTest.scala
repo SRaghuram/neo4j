@@ -29,7 +29,6 @@ import org.neo4j.driver.Transaction
 import org.neo4j.driver.exceptions.FatalDiscoveryException
 import org.neo4j.driver.exceptions.TransientException
 import org.neo4j.fabric.FabricDatabaseManager
-import org.neo4j.graphdb.Label
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade
 import org.neo4j.kernel.internal.GraphDatabaseAPI
@@ -69,7 +68,6 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
 
   override def initTest(): Unit = {
     super.initTest()
-    cluster = ClusterConfig.createCluster(testDir.directory(Random.alphanumeric.take(8).mkString("")), clusterConfig)
   }
 
   private def withDriver(username: String, password: String, f: Transaction => Unit, databaseName: Option[String] = None): Unit = {
@@ -110,6 +108,7 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
   }
 
   private def withCluster(clusterTest: Cluster => Unit): Unit = {
+    cluster = ClusterConfig.createCluster(testDir.directory(Random.alphanumeric.take(8).mkString("")), clusterConfig)
     cluster.start()
     try {
       clusterTest(cluster)
@@ -288,50 +287,6 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
     }
   }
 
-  test("updating system default database during a user session does not change the default database for that session") {
-    initTest()
-
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE DATABASE foodb")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("CREATE ROLE foodbrole")
-    execute("GRANT ROLE foodbrole to foo")
-    execute("GRANT ALL ON DEFAULT DATABASE to foodbrole")
-    execute("GRANT ALL GRAPH PRIVILEGES ON DEFAULT GRAPH to foodbrole")
-
-    selectDatabase("foodb")
-    execute("CREATE (n:Foo{foo:'foo'}) RETURN n").toList
-    selectDatabase("neo4j")
-    execute("CREATE (n:Foo{foo:'neo4j'}) RETURN n").toList
-
-    // WHEN
-    val (driver, session) = driverExecutor("foo", "bar", None)
-    try {
-      var tx = session.beginTransaction()
-      tx.execute("MATCH (n) RETURN n.foo").toSet shouldBe Set(Map("n.foo" -> "neo4j"))
-      tx.commit()
-
-      // Update System default database to foodb
-      selectDatabase(SYSTEM_DATABASE_NAME)
-      val stx = graphOps.beginTx()
-      try {
-        stx.findNode(Label.label("Database"), "default", true).setProperty("default", false)
-        stx.findNode(Label.label("Database"), "name", "foodb").setProperty("default", true)
-        stx.commit()
-      } finally {
-        stx.close()
-      }
-
-      // THEN
-      tx = session.beginTransaction()
-      tx.execute("MATCH (n) RETURN n.foo").toSet shouldBe Set(Map("n.foo" -> "neo4j"))
-      tx.commit()
-    } finally {
-      driver.close()
-    }
-  }
-
   test(s"Should get user's default database when logging onto a cluster") {
     // GIVEN
     withCluster(cluster => {
@@ -367,7 +322,6 @@ class DefaultDatabaseBoltAcceptanceTest extends ExecutionEngineFunSuite with Ent
 
   test(s"Should get user's default database and permissions when logging onto a cluster using fabric routing") {
     // GIVEN
-    val settings: Map[Setting[_], String] = Map(GraphDatabaseSettings.routing_enabled -> "true")
     withCluster(cluster => {
       cluster.systemTx((_, tx) => {
         tx.execute("CREATE DATABASE foodb WAIT").close()
