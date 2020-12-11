@@ -559,6 +559,23 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute("SHOW DATABASE foo").toSet should be(Set(db("foo", offlineStatus)))
   }
 
+  test("should fail to start database with database management privilege") {
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("STOP DATABASE foo")
+    setupUserWithCustomRole("alice", "abc")
+    execute("GRANT DATABASE MANAGEMENT ON DBMS TO custom")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnSystem("alice", "abc", "START DATABASE foo")
+      // THEN
+    } should have message PERMISSION_DENIED_START
+
+    // THEN
+    execute("SHOW DATABASE foo").toSet should be(Set(db("foo", offlineStatus)))
+  }
+
   // STOP DATABASE
 
   test("admin should be allowed to stop database") {
@@ -773,6 +790,22 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute("CREATE DATABASE foo")
     setupUserWithCustomRole("alice", "abc")
     execute("GRANT ALL ON DATABASE foo TO custom")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnSystem("alice", "abc", "STOP DATABASE foo")
+      // THEN
+    } should have message PERMISSION_DENIED_STOP
+
+    // THEN
+    execute("SHOW DATABASE foo").toSet should be(Set(db("foo", onlineStatus)))
+  }
+
+  test("should fail to stop database with database management privilege") {
+    setup()
+    execute("CREATE DATABASE foo")
+    setupUserWithCustomRole("alice", "abc")
+    execute("GRANT DATABASE MANAGEMENT ON DBMS TO custom")
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
