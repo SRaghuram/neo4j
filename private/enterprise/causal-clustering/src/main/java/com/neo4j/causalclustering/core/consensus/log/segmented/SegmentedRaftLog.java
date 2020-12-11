@@ -173,6 +173,7 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
     @Override
     public synchronized void truncate( long fromIndex ) throws IOException
     {
+        log.debug( "Truncate from index %d", fromIndex );
         if ( state.appendIndex < fromIndex )
         {
             throw new IllegalArgumentException( "Cannot truncate at index " + fromIndex + " when append index is " +
@@ -270,6 +271,7 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
     @Override
     public long prune( long safeIndex )
     {
+        log.debug( "Prune to %s. Current state is %s", safeIndex, state );
         long pruneIndex = pruner.getIndexToPruneFrom( safeIndex, state.segments );
         SegmentFile oldestNotDisposed = state.segments.prune( pruneIndex );
 
@@ -285,6 +287,8 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
         {
             state.prevTerm = newPrevTerm;
         }
+
+        log.debug( "Updated state is now %s", state );
 
         state.terms.prune( state.prevIndex );
 

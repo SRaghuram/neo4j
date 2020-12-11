@@ -82,9 +82,14 @@ public class Terms
      */
     synchronized void truncate( long fromIndex )
     {
-        if ( fromIndex < 0 || fromIndex < min )
+        if ( fromIndex < 0 )
         {
             throw new IllegalStateException( "Cannot truncate a negative index. Tried to truncate from " + fromIndex );
+        }
+        else if ( fromIndex < min )
+        {
+            throw new IllegalStateException(
+                    "Cannot truncate index lower than current min'. Tried to truncate from " + fromIndex + " while current min is " + min );
         }
 
         max = fromIndex - 1;
