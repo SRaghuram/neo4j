@@ -44,6 +44,7 @@ import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStarted;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.forceReelection;
 import static com.neo4j.configuration.CausalClusteringSettings.election_failure_detection_window;
 import static com.neo4j.configuration.CausalClusteringSettings.leader_failure_detection_window;
@@ -80,6 +81,8 @@ class TokenReplicationStressIT
                                                              .withSharedCoreParam( election_failure_detection_window, "2s-3s" ) );
 
         cluster.start();
+        assertDatabaseEventuallyStarted( DEFAULT_DATABASE_NAME, cluster );
+
         executorService = Executors.newFixedThreadPool( 3 );
     }
 
@@ -91,6 +94,8 @@ class TokenReplicationStressIT
         {
             throw new TimeoutException( "Executor service did not terminate" );
         }
+
+        cluster.shutdown();
     }
 
     @Test
@@ -111,13 +116,14 @@ class TokenReplicationStressIT
         assertOperationExpectations( tokenCreator1, tokenCreator2, electionTrigger );
 
         // we need to allow time for the tokens to replicate
-        assertEventually( () -> verifyTokens( cluster ), 15, SECONDS );
+        assertEventually( () -> verifyTokens( cluster ), 30, SECONDS );
 
-        // assert number of tokens on every cluster member is the same after a restart
-        // restart is needed to make sure tokens are persisted and not only in token caches
+        // when: restart to test that tokens are persisted
         cluster.shutdown();
         cluster.start();
+        assertDatabaseEventuallyStarted( DEFAULT_DATABASE_NAME, cluster );
 
+        // then: tokens on every cluster member should be the same
         verifyTokens( cluster );
     }
 
@@ -128,7 +134,7 @@ class TokenReplicationStressIT
     ) throws InterruptedException, java.util.concurrent.ExecutionException
     {
         assertThat( electionTrigger ).as( "There should be at least one election" ).isCompletedWithValueMatching( elections -> elections > 0 );
-        final var elections = electionTrigger.get();
+        electionTrigger.get();
         assertThat( tokenCreator1 )
                 .as( "We should succeed in creating tokens sometimes" ).isCompletedWithValueMatching( outcome -> outcome.first() > 0 )
                 .as( "We should succeed more often than fail" ).isCompletedWithValueMatching( outcome -> outcome.first() > outcome.other() );
