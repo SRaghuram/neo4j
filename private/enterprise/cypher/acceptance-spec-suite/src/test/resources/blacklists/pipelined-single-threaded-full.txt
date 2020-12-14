@@ -45,8 +45,6 @@ Feature "PatternPredicates": Scenario "Filter using a pattern predicate that is 
 Feature "PatternPredicates": Scenario "Filter using a pattern predicate that is a logical OR between one negated subquery, a subquery, and an equality expression"
 Feature "PatternPredicates": Scenario "Filter using a pattern predicate that is a logical OR between one subquery and a negated subquery"
 Feature "PatternPredicates": Scenario "Filter using a pattern predicate that is a logical OR between two expressions and a subquery"
-Feature "ReturnAcceptance": Scenario "LIMIT 0 should stop not side effects"
-Feature "ReturnAcceptance": Scenario "LIMIT in projection should not stop side effects"
 Feature "SkipLimitAcceptance": Scenario "Floating point parameter for SKIP should fail"
 Feature "SkipLimitAcceptance": Scenario "Negative parameter for SKIP should fail"
 Feature "SubqueryAcceptance": Scenario "Aggregating top and bottom results within correlated subquery"

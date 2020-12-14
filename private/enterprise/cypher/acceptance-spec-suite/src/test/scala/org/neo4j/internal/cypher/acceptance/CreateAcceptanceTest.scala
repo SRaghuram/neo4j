@@ -259,7 +259,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
 
   test("should create node even though the predicate is always false") {
     val q = "CREATE (n) WITH n WHERE 1 < 0 RETURN 42"
-    val result = executeWith(Configs.InterpretedAndSlotted, q)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, q)
     result.queryStatistics() shouldEqual QueryStatistics(nodesCreated = 1)
     result shouldBe empty
   }
