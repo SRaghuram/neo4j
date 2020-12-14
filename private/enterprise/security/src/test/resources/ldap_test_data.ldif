@@ -25,6 +25,10 @@ objectclass: simpleSecurityObject
 objectclass: organizationalRole
 userpassword: {SSHA}szBKVyl4liWB/3FhbbpuYk1bf6dclbyD
 
+#########
+# Groups
+#########
+
 # Entry 3: ou=groups,dc=example,dc=com
 dn: ou=groups,dc=example,dc=com
 objectclass: organizationalUnit
@@ -70,6 +74,11 @@ gidnumber: 500
 memberUid: neo
 objectclass: posixGroup
 objectclass: top
+
+#########
+# Users
+# All passwords are (a hash of) "abc123"
+#########
 
 # Entry 9: ou=users,dc=example,dc=com
 dn: ou=users,dc=example,dc=com

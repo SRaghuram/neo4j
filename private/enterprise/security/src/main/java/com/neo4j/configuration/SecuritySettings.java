@@ -136,11 +136,18 @@ public class SecuritySettings implements SettingsDeclaration
 
     @Description( "Perform authentication with sAMAccountName instead of DN.\n" +
             "Using this setting requires `dbms.security.ldap.authorization.system_username` and " +
-            "dbms.security.ldap.authorization.system_password to be used since there is no way to log in " +
+            "`dbms.security.ldap.authorization.system_password` to be used since there is no way to log in " +
             "through ldap directly with the sAMAccountName, instead the login name will be resolved to a DN " +
             "that will be used to log in with." )
     public static final Setting<Boolean> ldap_authentication_use_samaccountname =
             newBuilder( "dbms.security.ldap.authentication.use_samaccountname", BOOL, false ).build();
+
+    @Description( "The attribute to use when looking up users.\n" +
+            "Using this setting requires `dbms.security.ldap.authentication.use_samaccountname` to be true " +
+            "and thus `dbms.security.ldap.authorization.system_username` and `dbms.security.ldap.authorization.system_password` " +
+            "to be configured." )
+    public static final Setting<String> ldap_authentication_user_search_attribute_name =
+            newBuilder( "dbms.security.ldap.authentication.user_search_attribute", STRING, "samaccountname" ).build();
 
     //-----------------------------------------------------
     // LDAP authorization settings

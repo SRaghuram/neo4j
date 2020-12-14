@@ -88,6 +88,7 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
     private Boolean authorizationEnabled;
     private Boolean useStartTls;
     private boolean useSAMAccountName;
+    private String userAttributeName;
     private String userSearchBase;
     private String userSearchFilter;
     private List<String> membershipAttributeNames;
@@ -449,6 +450,7 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
         userSearchBase = config.get( SecuritySettings.ldap_authorization_user_search_base );
         userSearchFilter = config.get( SecuritySettings.ldap_authorization_user_search_filter );
         useSAMAccountName = config.get( SecuritySettings.ldap_authentication_use_samaccountname );
+        userAttributeName = config.get( SecuritySettings.ldap_authentication_user_search_attribute_name );
         membershipAttributeNames = config.get( SecuritySettings.ldap_authorization_group_membership_attribute_names );
         useSystemAccountForAuthorization = config.get( SecuritySettings.ldap_authorization_use_system_account );
         groupToRoleMapping =
@@ -524,7 +526,7 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
             String[] attrs = {"cn"};
             SearchControls searchCtls = new SearchControls( SearchControls.SUBTREE_SCOPE, 1, 0, attrs, false, false );
             Object[] searchArguments = new Object[]{principal};
-            String filter = "sAMAccountName={0}";
+            String filter = userAttributeName + "={0}";
             NamingEnumeration<SearchResult> search = ctx.search( userSearchBase, filter, searchArguments, searchCtls );
             if ( search.hasMore() )
             {

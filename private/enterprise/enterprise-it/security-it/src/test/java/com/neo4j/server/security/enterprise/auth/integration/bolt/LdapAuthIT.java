@@ -482,6 +482,77 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
         }
     }
 
+    // ===== Tests for ldap_authentication_user_search_attribute_name =====
+
+    @Test
+    public void shouldBeAbleToLoginWithCustomSearchAttributeName()
+    {
+        startDatabaseWithSettings( Map.of(
+                SecuritySettings.ldap_authentication_use_samaccountname, true,
+                SecuritySettings.ldap_authentication_user_search_attribute_name, "uidnumber"
+        ) );
+
+        // Should login with uidnumber
+        assertAuth( boltUri, "1000", "abc123" );
+
+        // Should not login with uid
+        assertAuthFail( boltUri, "neo", "abc123" );
+    }
+
+    @Test
+    public void shouldNotBeAbleToLoginWithCustomSearchAttributeNameWithoutUseSAMAccountName()
+    {
+        startDatabaseWithSettings( Map.of(
+                SecuritySettings.ldap_authentication_use_samaccountname, false,
+                SecuritySettings.ldap_authentication_user_search_attribute_name, "uidnumber"
+        ) );
+
+        // Should not login with uidnumber
+        assertAuthFail( boltUri, "1000", "abc123" );
+
+        // Should login with uid
+        assertAuth( boltUri, "neo", "abc123" );
+    }
+
+    @Test
+    public void  shouldBeAbleToAuthorizeWithCustomSearchAttributeName()
+    {
+        startDatabaseWithSettings( Map.of(
+                SecuritySettings.ldap_authentication_use_samaccountname, true,
+                SecuritySettings.ldap_authentication_user_search_attribute_name, "uidnumber",
+                SecuritySettings.ldap_authorization_user_search_filter, "(&(objectClass=*)(uidnumber={0}))"
+        ) );
+
+        // Login and create node with publisher user
+        try ( Driver driver = connectDriver( boltUri, "1001", "abc123", "ldap") ) // tank
+        {
+            assertWriteSucceeds( driver );
+        }
+
+        // Login and read with reader user
+        try ( Driver driver = connectDriver( boltUri, "1000", "abc123", "ldap") ) // neo
+        {
+            assertReadSucceeds( driver );
+            assertWriteFails( driver);
+        }
+    }
+
+    @Test
+    public void  shouldNotBeAbleToAuthorizeWithCustomSearchAttributeNameWithoutCorrectSearchFilter()
+    {
+        startDatabaseWithSettings( Map.of(
+                SecuritySettings.ldap_authentication_use_samaccountname, true,
+                SecuritySettings.ldap_authentication_user_search_attribute_name, "uidnumber"
+        ) );
+
+        // Login and authorize with publisher user
+        try ( Driver driver = connectDriver( boltUri, "1001", "abc123", "ldap") ) // tank
+        {
+            assertEmptyRead( driver );
+            assertWriteFails( driver );
+        }
+    }
+
     // ===== Logging tests =====
 
     @Test
