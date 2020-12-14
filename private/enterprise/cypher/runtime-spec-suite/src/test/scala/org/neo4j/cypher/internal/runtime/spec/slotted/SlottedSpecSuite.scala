@@ -39,6 +39,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ExpandIntoWithOtherOperators
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpressionTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpressionWithTxStateChangesTests
 import org.neo4j.cypher.internal.runtime.spec.tests.FilterTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ForeachApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.FullSupportMemoryManagementTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.FullSupportProfileMemoryTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.InputTestBase
@@ -229,7 +230,6 @@ class SlottedRelationshipTypeScanTest extends RelationshipTypeScanTestBase(ENTER
 class SlottedCreateTest extends CreateTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedLenientCreateRelationshipTest extends LenientCreateRelationshipTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
 class SlottedSetPropertyTest extends SetPropertyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
-
-
+class SlottedForeachApplyTest extends ForeachApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedLockNodesTest extends LockNodesTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 
