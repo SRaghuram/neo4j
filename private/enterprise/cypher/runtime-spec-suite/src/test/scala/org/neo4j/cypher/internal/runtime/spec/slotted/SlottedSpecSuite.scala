@@ -104,6 +104,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.SetNodePropertyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SetPropertiesFromMapNodeTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SetPropertiesFromMapRelationshipTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SetPropertyTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.SetRelationshipPropertyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ShortestPathTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SkipTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SortTestBase
@@ -235,6 +236,7 @@ class SlottedRelationshipTypeScanTest extends RelationshipTypeScanTestBase(ENTER
 class SlottedCreateTest extends CreateTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedLenientCreateRelationshipTest extends LenientCreateRelationshipTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
 class SlottedSetPropertyTest extends SetPropertyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedSetRelationshipPropertyTest extends SetRelationshipPropertyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedSetNodePropertyTest extends SetNodePropertyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedForeachApplyTest extends ForeachApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedSetPropertiesFromMapNodeTest extends SetPropertiesFromMapNodeTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
