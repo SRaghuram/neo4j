@@ -503,7 +503,7 @@ class PipelinedLenientCreateRelationshipTest extends LenientCreateRelationshipTe
 class PipelinedLenientCreateRelationshipNoFusingTest extends LenientCreateRelationshipTestBase(NO_FUSING, PIPELINED) with PipelinedSpecSuite
 
 //SET PROPERTY
-class PipelinedSetPropertyTestBase extends SetPropertyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedSetPropertyTest extends SetPropertyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedSetPropertyNoFusingTest extends SetPropertyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedSetNodePropertyNoFusingTest extends SetNodePropertyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedSetNodePropertyTest extends SetNodePropertyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
