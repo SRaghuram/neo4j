@@ -27,9 +27,12 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.OutputStream;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -46,28 +49,39 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.DatabaseState;
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.StubDatabaseStateService;
+import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
+import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.NullLogProvider;
+import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.ports.PortAuthority;
+import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 // Exercises the case of a downing message reaching a member while it is reachable, which can happen if a partition heals at the right time.
 // ClusterShuttingDown will be detected and acted upon.
 // Does not trigger the ThisActorSystemQuarantinedEvent. It may not be viable to write a test that does so.
 // But much of the code path is the same.
+@TestDirectoryExtension
 class AkkaCoreTopologyDowningIT
 {
     private final List<TopologyServiceComponents> services = new ArrayList<>();
     private final Set<Integer> dynamicPorts = new HashSet<>();
+
+    @Inject
+    TestDirectory testDirectory;
+    private ResourceCloser<OutputStream> logProviderFactory = new ResourceCloser<>();
+    private ResourceCloser<JobScheduler> jobSchedulerFactory = new ResourceCloser<>( JobSchedulerFactory::createInitialisedScheduler );
 
     @AfterEach
     public void afterEach()
@@ -80,6 +94,8 @@ class AkkaCoreTopologyDowningIT
             }
             services.clear();
         }
+        logProviderFactory.close();
+        jobSchedulerFactory.close();
     }
 
     @Test
@@ -152,7 +168,7 @@ class AkkaCoreTopologyDowningIT
     @Test
     void shouldReconnectEachAfterDowningUsingDynamicResolver() throws Throwable
     {
-        // Given two topology services
+        // Given three topology services
         int port1 = PortAuthority.allocatePort();
         int port2 = PortAuthority.allocatePort();
         int port3 = PortAuthority.allocatePort();
@@ -210,7 +226,7 @@ class AkkaCoreTopologyDowningIT
     private static void assertEventuallyHasTopologySize( TopologyServiceComponents services, int expected ) throws InterruptedException
     {
         assertEventually( () -> services.topologyService().allCoreServers().entrySet(), new HamcrestCondition<>( Matchers.hasSize( expected ) ),
-                5, MINUTES );
+                          5, MINUTES );
     }
 
     private TopologyServiceComponents createAndStartListResolver( int myPort, int... otherPorts ) throws Throwable
@@ -233,20 +249,23 @@ class AkkaCoreTopologyDowningIT
         var boltAddress = new SocketAddress( "localhost", PortAuthority.allocatePort() );
 
         var config = Config.newBuilder()
-                .set( CausalClusteringSettings.discovery_listen_address, new SocketAddress( "localhost", myPort ) )
-                .set( CausalClusteringSettings.discovery_advertised_address, new SocketAddress( myPort ) )
-                .set( CausalClusteringSettings.initial_discovery_members, initialDiscoMembers )
-                .set( BoltConnector.enabled, true )
-                .set( BoltConnector.listen_address, boltAddress )
-                .set( BoltConnector.advertised_address, boltAddress )
-                .set( CausalClusteringSettings.middleware_logging_level, Level.DEBUG )
-                .set( GraphDatabaseSettings.store_internal_log_level, Level.DEBUG )
-                .build();
+                           .set( CausalClusteringSettings.discovery_listen_address, new SocketAddress( "localhost", myPort ) )
+                           .set( CausalClusteringSettings.discovery_advertised_address, new SocketAddress( myPort ) )
+                           .set( CausalClusteringSettings.initial_discovery_members, initialDiscoMembers )
+                           .set( BoltConnector.enabled, true )
+                           .set( BoltConnector.listen_address, boltAddress )
+                           .set( BoltConnector.advertised_address, boltAddress )
+                           .set( CausalClusteringSettings.middleware_logging_level, Level.DEBUG )
+                           .set( GraphDatabaseSettings.store_internal_log_level, Level.DEBUG )
+                           .build();
 
-        var logProvider = NullLogProvider.getInstance();
+        var logOutput = logProviderFactory.createMayThrow(
+                () -> Files.newOutputStream( testDirectory.createFile( "coreTopologyDowningIT_topologyService_" + myPort ) )
+        );
+        var logProvider = new Log4jLogProvider( logOutput );
 
         var firstStartupDetector = new TestFirstStartupDetector( true );
-        var actorSystemFactory = new ActorSystemFactory( Optional.empty(), firstStartupDetector, config, logProvider  );
+        var actorSystemFactory = new ActorSystemFactory( Optional.empty(), firstStartupDetector, config, logProvider );
         var actorSystemLifecycle = new TestActorSystemLifecycle( actorSystemFactory, resolverFactory, config, logProvider );
         var databaseIdRepository = new TestDatabaseIdRepository();
         Map<NamedDatabaseId,DatabaseState> states = Map.of( databaseIdRepository.defaultDatabase(),
@@ -262,7 +281,7 @@ class AkkaCoreTopologyDowningIT
                 new NoRetriesStrategy(),
                 ActorSystemRestarter.forTest( 1 ),
                 TestCoreDiscoveryMember::factory,
-                createInitialisedScheduler(),
+                jobSchedulerFactory.create(),
                 Clocks.systemClock(),
                 new Monitors(),
                 databaseStateService,
@@ -286,7 +305,7 @@ class AkkaCoreTopologyDowningIT
     private static class TestActorSystemLifecycle extends ActorSystemLifecycle
     {
         TestActorSystemLifecycle( ActorSystemFactory actorSystemFactory, Function<Config,RemoteMembersResolver> resolverFactory,
-                Config config, LogProvider logProvider )
+                                  Config config, LogProvider logProvider )
         {
             this( actorSystemFactory, resolverFactory.apply( config ), config, logProvider );
         }
@@ -365,6 +384,56 @@ class AkkaCoreTopologyDowningIT
         TestActorSystemLifecycle actorSystemLifecycle()
         {
             return actorSystemLifecycle;
+        }
+    }
+
+    private static class ResourceCloser<T extends AutoCloseable> implements AutoCloseable
+    {
+        private final List<AutoCloseable> allItems = new LinkedList<>();
+        private final Supplier<T> defaultSupplier;
+
+        ResourceCloser()
+        {
+            defaultSupplier = null;
+        }
+
+        ResourceCloser( Supplier<T> defaultSupplier )
+        {
+            this.defaultSupplier = defaultSupplier;
+        }
+
+        synchronized T createMayThrow( ThrowingSupplier<T,Exception> supplier ) throws Exception
+        {
+            var newInstance = supplier.get();
+            allItems.add( newInstance );
+            return newInstance;
+        }
+
+        synchronized T create( Supplier<T> supplier )
+        {
+            var newInstance = supplier.get();
+            allItems.add( newInstance );
+            return newInstance;
+        }
+
+        synchronized T create()
+        {
+            var newInstance = defaultSupplier.get();
+            allItems.add( newInstance );
+            return newInstance;
+        }
+
+        @Override
+        public synchronized void close()
+        {
+            try ( var errorHandler = new ErrorHandler( "Error when trying to close" ) )
+            {
+                for ( var service : allItems )
+                {
+                    errorHandler.execute( service::close );
+                }
+                allItems.clear();
+            }
         }
     }
 }
