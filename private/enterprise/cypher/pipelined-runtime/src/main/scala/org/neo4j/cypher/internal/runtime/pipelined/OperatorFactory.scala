@@ -63,6 +63,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SetNodePropertyOperation
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SetPropertyFromMapOperation
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SetPropertyOperation
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.SetRelationshipPropertyOperation
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AggregatorFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationOperator
@@ -1001,7 +1002,17 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             LazyPropertyKey(propertyKey)(semanticTable),
             converters.toCommandExpression(id, propertyValue),
             needsExclusiveLock = internal.expressions.Expression.hasPropertyReadDependency(idName, propertyValue, propertyKey)
-    )))
+          )))
+
+      case plans.SetRelationshipProperty(_, idName, propertyKey, propertyValue) if !parallelExecution =>
+        Some(new SetOperator(
+          WorkIdentity.fromPlan(plan),
+          SetRelationshipPropertyOperation(
+            idName,
+            LazyPropertyKey(propertyKey)(semanticTable),
+            converters.toCommandExpression(id, propertyValue),
+            needsExclusiveLock = internal.expressions.Expression.hasPropertyReadDependency(idName, propertyValue, propertyKey)
+          )))
 
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException)

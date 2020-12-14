@@ -123,6 +123,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelSkipO
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SetNodePropertyOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SetPropertiesFromMapOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SetPropertyOperatorTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SetRelationshipPropertyOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleExactSeekQueryNodeIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleNodeByIdSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleRangeSeekQueryNodeIndexSeekTaskTemplate
@@ -876,6 +877,11 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
         case plan@plans.SetNodeProperty(_, entity, propertyKey, value) =>
           ctx: TemplateContext =>
             new SetNodePropertyOperatorTemplate(ctx.inner, plan.id, ctx.slots(entity), propertyKey.name, ctx.compileExpression(value, plan.id),
+              needsExclusiveLock = internal.expressions.Expression.hasPropertyReadDependency(entity, value, propertyKey))(ctx.expressionCompiler)
+
+        case plan@plans.SetRelationshipProperty(_, entity, propertyKey, value) =>
+          ctx: TemplateContext =>
+            new SetRelationshipPropertyOperatorTemplate(ctx.inner, plan.id, ctx.slots(entity), propertyKey.name, ctx.compileExpression(value, plan.id),
               needsExclusiveLock = internal.expressions.Expression.hasPropertyReadDependency(entity, value, propertyKey))(ctx.expressionCompiler)
 
         case plan@plans.SetPropertiesFromMap(_, entity, expression, removeOtherProps) =>

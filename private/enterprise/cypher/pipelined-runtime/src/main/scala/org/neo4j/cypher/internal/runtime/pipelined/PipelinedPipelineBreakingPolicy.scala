@@ -64,6 +64,7 @@ import org.neo4j.cypher.internal.logical.plans.Selection
 import org.neo4j.cypher.internal.logical.plans.SetNodeProperty
 import org.neo4j.cypher.internal.logical.plans.SetPropertiesFromMap
 import org.neo4j.cypher.internal.logical.plans.SetProperty
+import org.neo4j.cypher.internal.logical.plans.SetRelationshipProperty
 import org.neo4j.cypher.internal.logical.plans.Skip
 import org.neo4j.cypher.internal.logical.plans.Sort
 import org.neo4j.cypher.internal.logical.plans.Top
@@ -214,6 +215,8 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy[Ne
 
         //WRITE operators
       case _: Create |
+           _: SetProperty |
+           _: SetRelationshipProperty |
            _: SetProperty |
            _: SetPropertiesFromMap |
            _: SetNodeProperty
