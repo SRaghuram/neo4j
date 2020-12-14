@@ -55,6 +55,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ExpandIntoWithOtherOperators
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpressionTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpressionWithTxStateChangesTests
 import org.neo4j.cypher.internal.runtime.spec.tests.FilterTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ForeachApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.InputTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LabelScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.LeftOuterHashJoinTestBase
@@ -463,6 +464,12 @@ class PipelinedRollupApplyNoFusingTest extends RollupApplyTestBase(NO_FUSING, PI
 // ROLLUP APPLY REWRITER
 class PipelinedRollupApplyRewriterTest extends RollupApplyRewriterTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedRollupApplyRewriterNoFusingTest extends RollupApplyRewriterTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
+// FOREACH APPLY
+class PipelinedForeachApplyTest extends ForeachApplyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedForeachApplyNoFusingTest extends ForeachApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+class PipelinedForeachForeachApplyRewriterTest extends ForeachApplyRewriterTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedForeachApplyRewriterNoFusingTest extends ForeachApplyRewriterTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // EMPTY RESULT
 class PipelinedEmptyResultTest extends EmptyResultTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
