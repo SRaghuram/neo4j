@@ -185,12 +185,6 @@ public class LoopbackAuthManager extends EnterpriseAuthManager
     private static final AuthSubject LOOPBACK_SUBJECT = new AuthSubject()
     {
         @Override
-        public void logout()
-        {
-            // TODO Ceterum autem censeo Carthaginem esse delendam
-        }
-
-        @Override
         public AuthenticationResult getAuthenticationResult()
         {
             return AuthenticationResult.SUCCESS;
