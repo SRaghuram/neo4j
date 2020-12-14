@@ -19,6 +19,8 @@ abstract class PipelinedDbHitsTestBase[CONTEXT <: RuntimeContext](edition: Editi
                                 runtime,
                                 sizeHint,
                                 costOfLabelLookup = 0,
+                                costOfSetProperty = 0,
+                                costOfPropertyToken = 0,
                                 costOfGetPropertyChain = 1,
                                 costOfPropertyJumpedOverInChain = 1,
                                 costOfProperty = 1,

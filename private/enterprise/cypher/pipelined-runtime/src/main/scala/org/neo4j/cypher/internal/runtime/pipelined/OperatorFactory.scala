@@ -993,7 +993,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         Some(new LockNodesOperator(WorkIdentity.fromPlan(plan), nodesToLock))
 
       case plans.SetNodeProperty(_, idName, propertyKey, propertyValue) if !parallelExecution =>
-        Some(new SetNodePropertyOperator(WorkIdentity.fromPlan(plan), idName, slots(idName), propertyKey.name, converters.toCommandExpression(id, propertyValue)))
+        Some(new SetNodePropertyOperator(WorkIdentity.fromPlan(plan), slots(idName), propertyKey.name, converters.toCommandExpression(id, propertyValue)))
 
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException)
