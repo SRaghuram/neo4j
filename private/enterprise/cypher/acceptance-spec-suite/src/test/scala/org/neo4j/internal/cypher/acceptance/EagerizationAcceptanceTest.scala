@@ -3129,6 +3129,47 @@ class EagerizationAcceptanceTest
     result.toList should equal(List(Map("count(*)" -> 2)))
   }
 
+  test("should not use exhaustive limit when the LIMIT happens before update") {
+    createNode()
+    createNode()
+    createNode()
+    val query = "MATCH (n), (m) WITH n, m LIMIT 1 CREATE (o) RETURN n, m"
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy =
+        ComparePlansWithAssertion(plan => {
+          plan should includeSomewhere.nTimes(1, aPlan().withName(EagerRegEx))
+          plan shouldNot includeSomewhere.aPlan("ExhaustiveLimit")
+        })
+    )
+    result.executionPlanDescription()
+    assertStats(result, nodesCreated = 1)
+    result.toList should have size 1
+  }
+
+  test("should perform updates when there is a LIMIT 0 and Eager") {
+    val n1 = createNode("val" -> 1)
+    val n2 = createNode("val" -> 1)
+    relate(n1, n2)
+
+    val query =
+      """MATCH (n)--(m)
+        |SET n.val = n.val + 1
+        |WITH * LIMIT 0
+        |UNWIND [1] as i WITH *
+        |RETURN n.val AS nv, m.val AS mv
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy =
+        ComparePlansWithAssertion(plan => {
+          plan should includeSomewhere.nTimes(1, aPlan().withName(EagerRegEx))
+          plan should includeSomewhere.aPlan("ExhaustiveLimit")
+        })
+    )
+    assertStats(result, propertiesWritten = 2)
+    result.toList shouldBe empty
+  }
+
   private def testEagerPlanComparisonStrategy(expectedEagerCount: Int,
                                               expectPlansToFailPredicate: TestConfiguration = TestConfiguration.empty,
                                               optimalEagerCount: Int = -1): PlanComparisonStrategy = {
