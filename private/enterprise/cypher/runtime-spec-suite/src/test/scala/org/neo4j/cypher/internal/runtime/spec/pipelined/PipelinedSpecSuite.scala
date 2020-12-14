@@ -46,6 +46,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeek
 import org.neo4j.cypher.internal.runtime.spec.tests.DistinctTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EmptyResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EnterpriseNodeIndexSeekTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ExhaustiveLimitTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllWithOtherOperatorsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandIntoTestBase
@@ -479,8 +480,14 @@ class PipelinedCreateTest extends CreateTestBase(FUSING, PIPELINED, SIZE_HINT) w
 class PipelinedCreateNoFusingTest extends CreateTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedLenientCreateRelationshipTest extends LenientCreateRelationshipTestBase(FUSING, PIPELINED) with PipelinedSpecSuite
 class PipelinedLenientCreateRelationshipNoFusingTest extends LenientCreateRelationshipTestBase(NO_FUSING, PIPELINED) with PipelinedSpecSuite
+
+//SET PROPERTY
 class PipelinedSetPropertyTestBase extends SetPropertyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedSetPropertyNoFusingTest extends SetPropertyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
+//EXHAUSTIVE LIMIT
+class PipelinedExhaustiveLimitTest extends ExhaustiveLimitTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedExhaustiveLimitNoFusingTest extends ExhaustiveLimitTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // GENERAL
 class PipelinedMiscTest extends MiscTestBase(FUSING, PIPELINED) with PipelinedSpecSuite

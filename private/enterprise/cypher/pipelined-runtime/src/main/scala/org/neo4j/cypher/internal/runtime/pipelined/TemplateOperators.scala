@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.expressions.ListLiteral
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.CompositeQueryExpression
 import org.neo4j.cypher.internal.logical.plans.Distinct
+import org.neo4j.cypher.internal.logical.plans.ExhaustiveLimit
 import org.neo4j.cypher.internal.logical.plans.ExistenceQueryExpression
 import org.neo4j.cypher.internal.logical.plans.ExpandAll
 import org.neo4j.cypher.internal.logical.plans.ExpandInto
@@ -102,12 +103,14 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.SeekExpression
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialDistinctOnRhsOfApplyOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialDistinctOnRhsOfApplyPrimitiveOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialDistinctOnRhsOfApplySinglePrimitiveOperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialExhaustiveLimitOnRhsOfApplyOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialLimitOnRhsOfApplyOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialSkipOnRhsOfApplyOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialSkipState.SerialSkipStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDistinctOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDistinctPrimitiveOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDistinctSinglePrimitiveOperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelExhaustiveLimitOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate.SerialLimitStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelSkipOperatorTaskTemplate
@@ -675,6 +678,29 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   argumentStateMapId,
                   ctx.compileExpression(countExpression, plan.id))(ctx.expressionCompiler),
                 Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, SerialLimitStateFactory, plan.id))
+              )
+            }
+
+        // Special case for limit with serial execution
+        case plan@ExhaustiveLimit(_, countExpression) if serialExecutionOnly =>
+          ctx: TemplateContext =>
+            val argumentStateMapId = ctx.executionGraphDefinition.findArgumentStateMapForPlan(plan.id)
+            if (hasNoNestedArguments) {
+              TemplateAndArgumentStateFactory(
+                new SerialTopLevelExhaustiveLimitOperatorTaskTemplate(ctx.inner,
+                  plan.id,
+                  ctx.innermost,
+                  argumentStateMapId,
+                  ctx.compileExpression(countExpression, plan.id))(ctx.expressionCompiler),
+                Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, SerialSkipStateFactory, plan.id))
+              )
+            } else {
+              TemplateAndArgumentStateFactory(
+                new SerialExhaustiveLimitOnRhsOfApplyOperatorTaskTemplate(ctx.inner,
+                  plan.id,
+                  argumentStateMapId,
+                  ctx.compileExpression(countExpression, plan.id))(ctx.expressionCompiler),
+                Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, SerialSkipStateFactory, plan.id))
               )
             }
 

@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.logical.plans.Aggregation
 import org.neo4j.cypher.internal.logical.plans.Anti
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
 import org.neo4j.cypher.internal.logical.plans.Distinct
+import org.neo4j.cypher.internal.logical.plans.ExhaustiveLimit
 import org.neo4j.cypher.internal.logical.plans.LeftOuterHashJoin
 import org.neo4j.cypher.internal.logical.plans.Limit
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
@@ -741,7 +742,7 @@ class PipelineTreeBuilder[TEMPLATE](breakingPolicy: PipelineBreakingPolicy,
           source
         }
 
-      case _: Distinct | _: OrderedDistinct | _: Skip =>
+      case _: Distinct | _: OrderedDistinct | _: Skip  | _: ExhaustiveLimit=>
         if (breakingPolicy.breakOn(plan, applyPlans(plan.id))) {
           throw new UnsupportedOperationException(s"Breaking on ${plan.getClass.getSimpleName} is not supported.")
         } else {

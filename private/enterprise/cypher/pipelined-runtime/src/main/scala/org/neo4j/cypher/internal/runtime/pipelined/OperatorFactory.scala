@@ -75,6 +75,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctPrimitiveOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctSinglePrimitiveOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.EmptyResultOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ExhaustiveLimitOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandIntoOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.FilterOperator
@@ -823,6 +824,10 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       case plans.Limit(_, count) =>
         val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
         Some(new LimitOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, count))(id))
+
+      case plans.ExhaustiveLimit(_, count) =>
+        val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
+        Some(new ExhaustiveLimitOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, count))(id))
 
       case plans.Skip(_, count) =>
         val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
