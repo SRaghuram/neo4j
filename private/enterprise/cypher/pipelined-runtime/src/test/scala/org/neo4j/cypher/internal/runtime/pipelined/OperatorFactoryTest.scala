@@ -13,7 +13,6 @@ import org.neo4j.cypher.internal.expressions.RelationshipChain
 import org.neo4j.cypher.internal.expressions.RelationshipPattern
 import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.expressions.ShortestPaths
-import org.neo4j.cypher.internal.expressions.SignedDecimalIntegerLiteral
 import org.neo4j.cypher.internal.expressions.UnsignedDecimalIntegerLiteral
 import org.neo4j.cypher.internal.ir.PatternRelationship
 import org.neo4j.cypher.internal.ir.ShortestPathPattern
@@ -21,9 +20,9 @@ import org.neo4j.cypher.internal.ir.VarPatternLength
 import org.neo4j.cypher.internal.logical.builder.PatternParser
 import org.neo4j.cypher.internal.logical.plans.AllNodesScan
 import org.neo4j.cypher.internal.logical.plans.Argument
-import org.neo4j.cypher.internal.logical.plans.ExhaustiveLimit
 import org.neo4j.cypher.internal.logical.plans.FindShortestPaths
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.NonPipelined
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.logical.plans.Selection
 import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
@@ -45,8 +44,8 @@ import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableE
 import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExhaustiveLimitPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.ShortestPathPipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.TestPipe
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AllNodeScanOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.FilterOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MiddleOperator
@@ -55,7 +54,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.Operator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeHeadOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeMiddleOperator
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
-import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.attribution.SameId
 import org.neo4j.cypher.internal.util.symbols
@@ -71,7 +69,7 @@ class OperatorFactoryTest extends CypherFunSuite with AstConstructionTestSupport
   private val source = Argument()
   private val patternParser = new PatternParser
 
-  private val TEST_FALLBACK_POLICY = SLOTTED_FALLBACK_BY_CLASS(classOf[FindShortestPaths], Seq(classOf[ExhaustiveLimit], classOf[ProduceResult]))
+  private val TEST_FALLBACK_POLICY = SLOTTED_FALLBACK_BY_CLASS(classOf[FindShortestPaths], Seq(classOf[NonPipelined], classOf[ProduceResult]))
   case class SLOTTED_FALLBACK_BY_CLASS(breaking: Class[_ <: LogicalPlan], nonBreaking: Seq[Class[_ <: LogicalPlan]]) extends InterpretedPipesFallbackPolicy {
     override def readOnly: Boolean = true
     override def breakOn(lp: LogicalPlan): Boolean = {
@@ -84,7 +82,7 @@ class OperatorFactoryTest extends CypherFunSuite with AstConstructionTestSupport
 
   test("should fully chain fallback pipes") {
     // given
-    val pipeline = shortestPath("x", "r", "y") ~> exhaustiveLimitZero ~> exhaustiveLimitZero
+    val pipeline = shortestPath("x", "r", "y") ~> nonPipelined ~> nonPipelined
 
     // when
     val (headOperator, middleOperators) = buildWithFactory(pipeline, TEST_FALLBACK_POLICY)
@@ -93,17 +91,17 @@ class OperatorFactoryTest extends CypherFunSuite with AstConstructionTestSupport
     middleOperators should have size 0
 
     headOperator shouldBe a[SlottedPipeHeadOperator]
-    headOperator.asInstanceOf[SlottedPipeHeadOperator].pipe shouldBe a[ExhaustiveLimitPipe]
-    headOperator.asInstanceOf[SlottedPipeHeadOperator].pipe.asInstanceOf[ExhaustiveLimitPipe].source shouldBe a[ExhaustiveLimitPipe]
-    headOperator.asInstanceOf[SlottedPipeHeadOperator].pipe.asInstanceOf[ExhaustiveLimitPipe].source.asInstanceOf[ExhaustiveLimitPipe]
+    headOperator.asInstanceOf[SlottedPipeHeadOperator].pipe shouldBe a[TestPipe]
+    headOperator.asInstanceOf[SlottedPipeHeadOperator].pipe.asInstanceOf[TestPipe].source shouldBe a[TestPipe]
+    headOperator.asInstanceOf[SlottedPipeHeadOperator].pipe.asInstanceOf[TestPipe].source.asInstanceOf[TestPipe]
       .source shouldBe a[ShortestPathPipe]
-    headOperator.asInstanceOf[SlottedPipeHeadOperator].pipe.asInstanceOf[ExhaustiveLimitPipe].source.asInstanceOf[ExhaustiveLimitPipe]
+    headOperator.asInstanceOf[SlottedPipeHeadOperator].pipe.asInstanceOf[TestPipe].source.asInstanceOf[TestPipe]
       .source.asInstanceOf[ShortestPathPipe].source shouldBe a[MorselFeedPipe]
   }
 
   test("should chain fallback pipes with interruption") {
     // given
-    val pipeline = shortestPath("x", "r", "y") ~> exhaustiveLimitZero ~> filter ~> exhaustiveLimitZero ~> exhaustiveLimitZero
+    val pipeline = shortestPath("x", "r", "y") ~> nonPipelined ~> filter ~> nonPipelined ~> nonPipelined
 
     // when
     val (headOperator, middleOperators) = buildWithFactory(pipeline, TEST_FALLBACK_POLICY)
@@ -115,7 +113,7 @@ class OperatorFactoryTest extends CypherFunSuite with AstConstructionTestSupport
 
   test("should interpret partial pipelines, chain fallback pipes") {
     // given
-    val pipeline = allNodes("x") ~> filter ~> exhaustiveLimitZero ~> exhaustiveLimitZero ~> exhaustiveLimitZero
+    val pipeline = allNodes("x") ~> filter ~> nonPipelined ~> nonPipelined ~> nonPipelined
 
     // when
     val (headOperator, middleOperators) = buildWithFactory(pipeline, TEST_FALLBACK_POLICY)
@@ -125,12 +123,12 @@ class OperatorFactoryTest extends CypherFunSuite with AstConstructionTestSupport
     middleOperators should have size 2
     middleOperators(0) shouldBe a[FilterOperator]
     middleOperators(1) shouldBe a[SlottedPipeMiddleOperator]
-    middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe shouldBe a[ExhaustiveLimitPipe]
+    middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe shouldBe a[TestPipe]
   }
 
   test("should interpret partial pipelines, chain fallback pipes with interruption") {
     // given
-    val pipeline = allNodes("x") ~> filter ~> exhaustiveLimitZero ~> exhaustiveLimitZero ~> filter ~> exhaustiveLimitZero ~> exhaustiveLimitZero
+    val pipeline = allNodes("x") ~> filter ~> nonPipelined ~> nonPipelined ~> filter ~> nonPipelined ~> nonPipelined
 
     // when
     val (headOperator, middleOperators) = buildWithFactory(pipeline, TEST_FALLBACK_POLICY)
@@ -141,15 +139,15 @@ class OperatorFactoryTest extends CypherFunSuite with AstConstructionTestSupport
 
     middleOperators(0) shouldBe a[FilterOperator]
     middleOperators(1) shouldBe a[SlottedPipeMiddleOperator]
-    middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe shouldBe a[ExhaustiveLimitPipe]
-    middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[ExhaustiveLimitPipe].source shouldBe a[ExhaustiveLimitPipe]
-    middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[ExhaustiveLimitPipe].source.asInstanceOf[ExhaustiveLimitPipe]
+    middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe shouldBe a[TestPipe]
+    middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[TestPipe].source shouldBe a[TestPipe]
+    middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[TestPipe].source.asInstanceOf[TestPipe]
       .source shouldBe a[MorselFeedPipe]
     middleOperators(2) shouldBe a[FilterOperator]
     middleOperators(3) shouldBe a[SlottedPipeMiddleOperator]
-    middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe shouldBe a[ExhaustiveLimitPipe]
-    middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[ExhaustiveLimitPipe].source shouldBe a[ExhaustiveLimitPipe]
-    middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[ExhaustiveLimitPipe].source.asInstanceOf[ExhaustiveLimitPipe]
+    middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe shouldBe a[TestPipe]
+    middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[TestPipe].source shouldBe a[TestPipe]
+    middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[TestPipe].source.asInstanceOf[TestPipe]
       .source shouldBe a[MorselFeedPipe]
   }
 
@@ -159,9 +157,9 @@ class OperatorFactoryTest extends CypherFunSuite with AstConstructionTestSupport
     builder
   }
 
-  def filter: LogicalPlan => LogicalPlan = Selection(Seq(trueLiteral), _)
+  def nonPipelined: LogicalPlan => LogicalPlan = NonPipelined(_)
 
-  def exhaustiveLimitZero: LogicalPlan => LogicalPlan = ExhaustiveLimit(_, SignedDecimalIntegerLiteral("0")(InputPosition.NONE))
+  def filter: LogicalPlan => LogicalPlan = Selection(Seq(trueLiteral), _)
 
   def shortestPath(from: String, relName: String, to: String): PipelineBuilder = {
     val min = 1
