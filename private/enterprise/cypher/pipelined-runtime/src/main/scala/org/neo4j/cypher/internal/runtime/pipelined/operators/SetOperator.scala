@@ -20,7 +20,7 @@ import org.neo4j.cypher.internal.macros.TranslateExceptionMacros.translateExcept
 import org.neo4j.cypher.internal.runtime.IsNoValue
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
-import org.neo4j.cypher.internal.runtime.interpreted.commands
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.SetOperation
 import org.neo4j.cypher.internal.runtime.makeValueNeoSafe
 import org.neo4j.cypher.internal.runtime.pipelined.MutableQueryStatistics
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
@@ -46,36 +46,23 @@ import org.neo4j.values.virtual.MapValue
 import org.neo4j.values.virtual.VirtualNodeValue
 import org.neo4j.values.virtual.VirtualRelationshipValue
 
-class SetPropertyOperator(val workIdentity: WorkIdentity,
-                          entity: commands.expressions.Expression,
-                          propertyKey: String,
-                          propertyValue: commands.expressions.Expression) extends StatelessOperator {
+class SetOperator(val workIdentity: WorkIdentity,
+                  setOperation: SetOperation) extends StatelessOperator {
 
   override def operate(morsel: Morsel,
                        state: PipelinedQueryState,
                        resources: QueryResources): Unit = {
 
     val queryState = state.queryStateForExpressionEvaluation(resources)
-    val write = state.query.transactionalContext.dataWrite
-    val token = state.query.transactionalContext.transaction.token()
 
     val cursor: MorselFullCursor = morsel.fullCursor()
     while (cursor.next()) {
-      val resolvedEntity = entity.apply(cursor, queryState)
-
-      SetPropertyOperator.setProperty(
-        resolvedEntity,
-        propertyKey,
-        propertyValue.apply(cursor, queryState),
-        token,
-        write,
-        resources.queryStatisticsTracker
-      )
+      setOperation.set(cursor, queryState, () => resources.queryStatisticsTracker.setProperty())
     }
   }
 }
 
-object SetPropertyOperator {
+object SetOperator {
   def addNodeProperties(nodeId: Long,
                         propertiesMap: AnyValue,
                         token: Token,
@@ -143,7 +130,7 @@ object SetPropertyOperator {
                   write: Write,
                   queryStatisticsTracker: MutableQueryStatistics): Unit = {
     entity match {
-      case node: VirtualNodeValue => SetPropertyOperator.setNodeProperty(
+      case node: VirtualNodeValue => SetOperator.setNodeProperty(
         node.id(),
         propertyKey,
         propertyValue,
@@ -200,7 +187,7 @@ class SetPropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
       declareAndAssign(typeRefOf[AnyValue], propertyValueVar, nullCheckIfRequired(propertyValue)),
       declareAndAssign(typeRefOf[AnyValue], entityValueVar, nullCheckIfRequired(entityValue)),
       invokeStatic(
-        method[SetPropertyOperator, Unit, AnyValue, String, AnyValue, Token, Write, MutableQueryStatistics]("setProperty"),
+        method[SetOperator, Unit, AnyValue, String, AnyValue, Token, Write, MutableQueryStatistics]("setProperty"),
         load(entityValueVar),
         constant(key),
         load(propertyValueVar),

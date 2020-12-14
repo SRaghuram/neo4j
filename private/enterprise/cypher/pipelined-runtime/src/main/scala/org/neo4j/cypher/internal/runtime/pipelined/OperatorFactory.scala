@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.logical.plans.QueryExpression
 import org.neo4j.cypher.internal.logical.plans.ResolvedCall
 import org.neo4j.cypher.internal.logical.plans.SelectOrAntiSemiApply
 import org.neo4j.cypher.internal.logical.plans.SelectOrSemiApply
+import org.neo4j.cypher.internal.logical.plans.SetProperty
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStreamBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
@@ -50,12 +51,14 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.True
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekMode
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekModeFactory
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyPropertyKey
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyType
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LockingUniqueIndexSeek
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.SetPropertyOperation
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AggregatorFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationOperator
@@ -122,7 +125,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectEndpointsHea
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectEndpointsMiddleOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipCountFromCountStoreOperator
-import org.neo4j.cypher.internal.runtime.pipelined.operators.SetPropertyOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SetOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SkipOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeHeadOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeMiddleOperator
@@ -965,8 +968,14 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           ))
         Some(new CreateOperator(WorkIdentity.fromPlan(plan), nodesToCreate.toArray, relationshipsToCreate.toArray, lenientCreateRelationship))
 
-      case plans.SetProperty(_, idName, propertyKey, propertyValue) if !parallelExecution =>
-        Some(new SetPropertyOperator(WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, idName), propertyKey.name, converters.toCommandExpression(id, propertyValue)))
+      case SetProperty(_, idName, propertyKey, propertyValue) if !parallelExecution =>
+        Some(new SetOperator(
+          WorkIdentity.fromPlan(plan),
+          SetPropertyOperation(
+            converters.toCommandExpression(id, idName),
+            LazyPropertyKey(propertyKey)(semanticTable),
+            converters.toCommandExpression(id, propertyValue),
+          )))
 
       case plans.LockNodes(_, nodesToLock) =>
         Some(new LockNodesOperator(WorkIdentity.fromPlan(plan), nodesToLock))
