@@ -30,11 +30,13 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.driver.Transaction;
 import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventually;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
 
 @ClusterExtension
@@ -103,6 +105,9 @@ public class SetDefaultDatabaseIT
             assertThat( row.get( "result" ) ).isEqualTo( "Default database set to foo" );
             tx.commit();
         } );
+
+        //WAIT
+        dataMatchesEventually( cluster, SYSTEM_DATABASE_NAME );
 
         // THEN
         assertSystemDefaultDatabase( "foo", cluster );
