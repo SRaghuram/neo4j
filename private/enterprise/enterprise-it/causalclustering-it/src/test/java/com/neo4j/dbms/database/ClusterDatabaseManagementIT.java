@@ -8,6 +8,7 @@ package com.neo4j.dbms.database;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.SecuritySettings;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
@@ -17,6 +18,8 @@ import com.neo4j.test.causalclustering.ClusterFactory;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.platform.commons.logging.Logger;
+import org.junit.platform.commons.logging.LoggerFactory;
 
 import java.util.Optional;
 import java.util.Set;
@@ -32,6 +35,7 @@ import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.logging.Level;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyDoesNotExist;
@@ -57,11 +61,14 @@ import static org.neo4j.test.conditions.Conditions.equalityCondition;
 @TestInstance( TestInstance.Lifecycle.PER_METHOD )
 class ClusterDatabaseManagementIT
 {
+    private final Logger logger = LoggerFactory.getLogger( this.getClass() );
+
     @Inject
     private ClusterFactory clusterFactory;
 
     private final ClusterConfig clusterConfig = clusterConfig()
             .withSharedCoreParam( GraphDatabaseSettings.auth_enabled, "true" )
+            .withSharedCoreParam( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() )
             .withSharedCoreParam( SecuritySettings.authentication_providers, SecuritySettings.NATIVE_REALM_NAME )
             .withNumberOfCoreMembers( 3 )
             .withNumberOfReadReplicas( 2 );
@@ -339,6 +346,7 @@ class ClusterDatabaseManagementIT
         //    recreated database without the missing member.
         var modifiedConfig = clusterConfig
                 .withNumberOfCoreMembers( 4 )
+                .withNumberOfReadReplicas( 0 )
                 .withSharedCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_formation, "3" )
                 .withSharedCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_runtime, "3" );
         var cluster = startCluster( modifiedConfig );
@@ -474,8 +482,27 @@ class ClusterDatabaseManagementIT
     private Cluster startCluster( ClusterConfig clusterConfig ) throws InterruptedException, ExecutionException
     {
         var cluster = clusterFactory.createCluster( clusterConfig );
-        cluster.start();
+        try
+        {
+            cluster.start();
+        }
+        catch ( Exception ex )
+        {
+            cluster.allMembers().forEach( member ->
+                                          {
+                                              final var topologyService = member.resolveDependency( DEFAULT_DATABASE_NAME, CoreTopologyService.class );
+                                              final var databaseId = member.database( DEFAULT_DATABASE_NAME ).databaseId();
+                                              final var coreTopology = topologyService.coreTopologyForDatabase( databaseId );
+                                              final var didBootstrapDatabase = topologyService.didBootstrapDatabase( databaseId );
+                                              if ( coreTopology.raftGroupId() == null || didBootstrapDatabase )
+                                              {
+                                                  logger.error( () -> "Incorrect behavior.CoreTopology is " + coreTopology + " and didBootstrapDatabase is " +
+                                                                      didBootstrapDatabase );
+                                              }
+                                          } );
 
+            throw ex;
+        }
         assertDefaultDatabasesAreAvailable( cluster );
         return cluster;
     }
