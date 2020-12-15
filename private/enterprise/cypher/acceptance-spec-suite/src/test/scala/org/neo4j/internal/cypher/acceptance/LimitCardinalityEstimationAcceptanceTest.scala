@@ -130,4 +130,300 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
     }
 
   }
+
+  test("should estimate rows with selectivity in children") {
+    val nodeCount = 100
+    val limit = 10
+    (0 until nodeCount).foreach(_ => createNode())
+
+    val result = executeSingle(s"MATCH (n) RETURN n LIMIT $limit")
+
+    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
+      .withLHS(aPlan("Limit").withEstimatedRows(limit)
+        .withLHS(aPlan("AllNodesScan").withEstimatedRows(limit))
+      )
+  }
+
+  test("should estimate rows with selectivity through CartesianProduct") {
+    val nodeCount = 100
+    val limit = 10
+    (0 until nodeCount).foreach(_ => createNode())
+
+    val result = executeSingle(s"MATCH (n), (m) RETURN n, m LIMIT $limit")
+
+    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
+      .withLHS(aPlan("Limit").withEstimatedRows(limit)
+        .withLHS(aPlan("CartesianProduct").withEstimatedRows(limit)
+          .withChildren(
+            aPlan("AllNodesScan").withEstimatedRowsBetween(math.floor(math.sqrt(limit)).toLong, math.ceil(math.sqrt(limit)).toLong),
+            aPlan("AllNodesScan").withEstimatedRowsBetween(math.floor(math.sqrt(limit)).toLong, math.ceil(math.sqrt(limit)).toLong)
+          )
+        )
+      )
+  }
+
+  test("should estimate rows with selectivity through NodeHashJoin") {
+    val nodeCount = 20
+    val limit = 5
+    (0 until nodeCount / 2).foreach(i => executeSingle(s"CREATE ({ind: $i})-[:REL]->({ind: ${i + nodeCount / 2}})"))
+
+    val result = executeSingle(s"MATCH (n)--(m) USING JOIN ON m RETURN m LIMIT $limit")
+
+    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
+      .withLHS(aPlan("Limit").withEstimatedRows(limit)
+        .withLHS(aPlan("NodeHashJoin").withEstimatedRows(limit)
+          .withChildren(
+            aPlan("AllNodesScan").withEstimatedRows(nodeCount),
+            aPlan("Expand(All)").withEstimatedRows(limit)
+              .withLHS(aPlan("AllNodesScan").withEstimatedRows(limit))
+          )
+        )
+      )
+  }
+
+  test("should estimate rows with reset selectivity through exhaustive limit") {
+    val nodeCount = 100
+    val limit = 50
+    (0 until nodeCount).foreach(_ => createNode())
+
+    val result = executeSingle(s"MATCH (n) CREATE (m:M) RETURN n LIMIT $limit")
+
+    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
+      .withLHS(aPlan("ExhaustiveLimit").withEstimatedRows(limit)
+        .withLHS(aPlan("Create").withEstimatedRows(nodeCount)
+          .withLHS(aPlan("AllNodesScan").withEstimatedRows(nodeCount))
+        )
+      )
+  }
+
+  test("should estimate rows with reset selectivity through sort") {
+    val nodeCount = 5000
+    val limit = 49
+    (0 until nodeCount).foreach(_ => createNode())
+
+    val result = executeSingle(s"PROFILE MATCH (n), (m) WITH n, m ORDER BY m RETURN n, m LIMIT $limit")
+
+    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
+      .withLHS(aPlan("Limit").withEstimatedRows(limit)
+        .withLHS(aPlan("CartesianProduct").withEstimatedRows(limit)
+          .withChildren(
+            aPlan("Sort").withEstimatedRows(math.sqrt(limit).toLong)
+              .withLHS(aPlan("AllNodesScan").withEstimatedRows(nodeCount)),
+            aPlan("AllNodesScan").withEstimatedRows(math.sqrt(limit).toLong)
+          )
+        )
+      )
+  }
+
+  test("something") {
+    val nodeCount = 100
+    val limit = 49
+    (0 until nodeCount).foreach(_ => createNode())
+
+    val result = executeSingle(s"MATCH (n), (m) WITH n, m ORDER BY m RETURN n, m LIMIT $limit")
+
+    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
+      .withLHS(aPlan("Limit").withEstimatedRows(limit)
+        .withLHS(aPlan("CartesianProduct").withEstimatedRows(limit)
+          .withChildren(
+            aPlan("Sort").withEstimatedRows(math.sqrt(limit).toLong)
+              .withLHS(aPlan("AllNodesScan").withEstimatedRows(nodeCount)),
+            aPlan("AllNodesScan").withEstimatedRows(math.sqrt(limit).toLong)
+          )
+        )
+      )
+  }
+
+  test("should estimate rows with reset selectivity through top") {
+    val nodeCount = 100
+    val limit = 50
+    (0 until nodeCount).foreach(_ => createNode())
+
+    val result = executeSingle(s"MATCH (n), (m) RETURN n, m ORDER BY n, m LIMIT $limit")
+
+    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
+      .withLHS(aPlan("Top").withEstimatedRows(limit)
+        .withLHS(aPlan("CartesianProduct").withEstimatedRows(nodeCount * nodeCount)
+          .withChildren(
+            aPlan("AllNodesScan").withEstimatedRows(nodeCount),
+            aPlan("AllNodesScan").withEstimatedRows(nodeCount)
+          )
+        )
+      )
+  }
+
+  test("should estimate rows with limit selectivity through partial top") {
+    val nodeCount = 100
+    val limit = 5
+    (0 until nodeCount).foreach(i => createLabeledNode(Map("idx" -> i), "Person"))
+    graph.createIndex("Person", "idx")
+
+    val result = executeSingle(s"MATCH (n:Person) WHERE exists(n.idx) RETURN n.idx, n.b ORDER BY n.idx, n.b LIMIT $limit")
+
+    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
+      .withLHS(aPlan("PartialTop").withEstimatedRows(limit)
+          .withLHS(aPlan("Projection").withEstimatedRows(limit)
+              .withLHS(aPlan("NodeIndexScan").withEstimatedRows(limit))
+          )
+      )
+  }
+
+  test("should estimate rows with reset selectivity through partial top and limit") {
+    val nodeCount = 100
+    val highLimit = 10
+    val lowLimit = 5
+    (0 until nodeCount).foreach(i => createLabeledNode(Map("idx" -> 1), "Person"))
+    graph.createIndex("Person", "idx")
+
+    val result = executeSingle(s"MATCH (n:Person) WHERE exists(n.idx) WITH n ORDER BY n.idx, n.b LIMIT $highLimit RETURN * LIMIT $lowLimit")
+
+    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(lowLimit)
+      .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
+        .withLHS(aPlan("PartialTop").withEstimatedRows(lowLimit)
+          .withLHS(aPlan("Projection").withEstimatedRows(lowLimit)
+            .withLHS(aPlan("NodeIndexScan").withEstimatedRows(lowLimit))
+          )
+        )
+      )
+  }
+
+  test("should estimate rows with lowest limit selectivity when lowest limit is earliest") {
+    val nodeCount = 100
+    val lowLimit = 9
+    val highLimit = 20
+    (0 until nodeCount).foreach(_ => createNode())
+
+    val result = executeSingle(s"MATCH (n), (m) WITH n, m LIMIT $lowLimit RETURN n, m LIMIT $highLimit")
+
+    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(lowLimit)
+      .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
+        .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
+          .withLHS(aPlan("CartesianProduct").withEstimatedRows(lowLimit)
+              .withChildren(
+                aPlan("AllNodesScan").withEstimatedRows(math.sqrt(lowLimit).toLong),
+                aPlan("AllNodesScan").withEstimatedRows(math.sqrt(lowLimit).toLong)
+              )
+          )
+        )
+      )
+  }
+
+  test("should estimate rows with lowest limit selectivity when lowest limit is latest") {
+    val nodeCount = 100
+    val lowLimit = 5
+    val highLimit = 200000
+    (0 until nodeCount).foreach(_ => createNode())
+
+    val result = executeSingle(s"MATCH (n), (m) WITH n, m LIMIT $highLimit RETURN n, m LIMIT $lowLimit")
+
+    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(lowLimit)
+      .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
+        .withLHS(aPlan("Limit").withEstimatedRows(lowLimit)
+          .withLHS(aPlan("CartesianProduct").withEstimatedRows(lowLimit)
+              .withChildren(
+                aPlan("AllNodesScan").withEstimatedRows(math.sqrt(lowLimit).toLong),
+                aPlan("AllNodesScan").withEstimatedRows(math.sqrt(lowLimit).toLong)
+              )
+          )
+        )
+      )
+  }
+
+  // TODO: Distinct (lazy), ordered distinct (lazy), aggregation (eager), ordered aggregation (lazy)
+
+  test("should estimate rows with limit selectivity through Distinct") {
+    val nodeCount = 100
+    val limit = 20
+    (0 until nodeCount).foreach(_ => createNode())
+
+    val result = executeSingle(s"MATCH (n) RETURN DISTINCT n LIMIT $limit")
+
+    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
+      .withLHS(aPlan("Limit").withEstimatedRows(limit)
+        .withLHS(aPlan("Distinct").withEstimatedRows(limit)
+          .withLHS(aPlan("AllNodesScan").withEstimatedRows((limit / PlannerDefaults.DEFAULT_DISTINCT_SELECTIVITY.factor).toLong))
+        )
+      )
+  }
+
+  test("should estimate rows with limit selectivity through OrderedDistinct") {
+    val nodeCount = 100
+    val limit = 20
+    (0 until nodeCount).foreach(_ => createNode())
+
+    val result = executeSingle(s"MATCH (n) WITH n ORDER BY n RETURN DISTINCT n LIMIT $limit")
+
+    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
+      .withLHS(aPlan("Limit").withEstimatedRows(limit)
+        .withLHS(aPlan("OrderedDistinct").withEstimatedRows(limit)
+          .withLHS(aPlan("Sort").withEstimatedRows((limit / PlannerDefaults.DEFAULT_DISTINCT_SELECTIVITY.factor).toLong)
+            .withLHS(aPlan("AllNodesScan").withEstimatedRows(nodeCount))
+          )
+        )
+      )
+  }
+
+  test("should estimate rows with reset selectivity through Aggregation") {
+    val nodeCount = 500
+    val limit = 20
+    (0 until nodeCount).foreach(_ => createNode())
+
+    val result = executeSingle(s"MATCH (n) RETURN n, collect(n) LIMIT $limit")
+
+    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
+      .withLHS(aPlan("Limit").withEstimatedRows(limit)
+        .withLHS(aPlan("EagerAggregation").withEstimatedRows(limit)
+          .withLHS(aPlan("AllNodesScan").withEstimatedRows(nodeCount))
+        )
+      )
+  }
+
+  test("should estimate rows with limit selectivity through OrderedAggregation") {
+    val nodeCount = 100
+    val limit = 5
+    (0 until nodeCount).foreach(_ => createNode())
+
+    val result = executeSingle(s"MATCH (n) WITH n ORDER BY n RETURN n, collect(n) LIMIT $limit")
+    
+    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
+      .withLHS(aPlan("Limit").withEstimatedRows(limit)
+        .withLHS(aPlan("OrderedAggregation").withEstimatedRows(limit)
+          .withLHS(aPlan("Sort").withEstimatedRows(((limit / math.sqrt(nodeCount)) * nodeCount).toLong)
+            .withLHS(aPlan("AllNodesScan").withEstimatedRows(nodeCount))
+          )
+        )
+      )
+  }
+
+  // TODO: SKIP and LIMIT test
+  test("should estimate rows with respect to SKIP when limit is higher than total nodes") {
+    val nodeCount = 100
+    val limit = 100
+    (0 until nodeCount).foreach(_ => createNode())
+
+    val result = executeSingle(s"MATCH (n) WITH n SKIP 5 RETURN n LIMIT $limit")
+
+    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit - PlannerDefaults.DEFAULT_SKIP_ROW_COUNT)
+      .withLHS(aPlan("Limit").withEstimatedRows(limit - PlannerDefaults.DEFAULT_SKIP_ROW_COUNT)
+        .withLHS(aPlan("Skip").withEstimatedRows(limit - PlannerDefaults.DEFAULT_SKIP_ROW_COUNT)
+          .withLHS(aPlan("AllNodesScan").withEstimatedRows(limit))
+        )
+      )
+  }
+
+  test("should still reflect SKIP after LIMIT") {
+    val nodeCount = 10
+    val limit = 5
+    (0 until nodeCount).foreach(_ => createNode())
+
+    val result = executeSingle(s"MATCH (n) WITH n SKIP 5 RETURN n LIMIT $limit")
+
+    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
+      .withLHS(aPlan("Limit").withEstimatedRows(limit)
+        .withLHS(aPlan("Skip").withEstimatedRows(limit)
+          .withLHS(aPlan("AllNodesScan").withEstimatedRows(limit + PlannerDefaults.DEFAULT_SKIP_ROW_COUNT)
+          )
+        )
+      )
+  }
 }
