@@ -69,20 +69,20 @@ public class StoreInfoCommandIT extends AbstractCommandIT
     void storeInfoCorrectlyDetectsRecoveryRequired() throws IOException
     {
         // given
-        managementService.createDatabase( "foo" );
-        var fooDb = (GraphDatabaseAPI) managementService.database( "foo" );
+        managementService.createDatabase( "bar" );
+        var barDb = (GraphDatabaseAPI) managementService.database( "bar" );
 
-        try ( var tx = fooDb.beginTx() )
+        try ( var tx = barDb.beginTx() )
         {
             tx.createNode();
             tx.commit();
         }
 
-        managementService.shutdownDatabase( "foo" );
-        RecoveryHelpers.removeLastCheckpointRecordFromLastLogFile( fooDb.databaseLayout(), fileSystem );
+        managementService.shutdownDatabase( "bar" );
+        RecoveryHelpers.removeLastCheckpointRecordFromLastLogFile( barDb.databaseLayout(), fileSystem );
 
         var format = RecordFormatSelector.defaultFormat();
-        var expected = "Database name:                foo" + System.lineSeparator() +
+        var expected = "Database name:                bar" + System.lineSeparator() +
                        "Database in use:              false" + System.lineSeparator() +
                        "Store format version:         " + format.storeVersion() + System.lineSeparator() +
                        "Store format introduced in:   " + format.introductionVersion() + System.lineSeparator() +
@@ -91,7 +91,7 @@ public class StoreInfoCommandIT extends AbstractCommandIT
 
         // when
         var command = new StoreInfoCommand( getExtensionContext() );
-        CommandLine.populateCommand( command, fooDb.databaseLayout().databaseDirectory().toString() );
+        CommandLine.populateCommand( command, barDb.databaseLayout().databaseDirectory().toString() );
         command.execute();
 
         // then
