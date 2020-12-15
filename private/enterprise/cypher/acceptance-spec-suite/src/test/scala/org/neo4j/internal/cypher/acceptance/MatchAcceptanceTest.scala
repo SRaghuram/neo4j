@@ -1084,7 +1084,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |    ))
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map("position" -> "2", "folderId" -> 0, "videoId" -> 0))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, params = Map("position" -> "2", "folderId" -> 0, "videoId" -> 0))
 
     result.toList should equal(List.empty)
   }

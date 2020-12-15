@@ -151,7 +151,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     val n3 = createNode()
 
     val query = "MATCH (n) WITH collect(n) AS nodes, $param AS data FOREACH (idx IN range(0,size(nodes)-1) | SET (nodes[idx]).num = data[idx])"
-    val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map("param" ->  Array("1", "2", "3")))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, params = Map("param" ->  Array("1", "2", "3")))
 
     assertStats(result, propertiesWritten = 3)
     n1 should haveProperty("num").withValue("1")
@@ -166,7 +166,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     val r3 = relate(createNode(), createNode())
 
     val query = "MATCH ()-[r]->() WITH collect(r) AS rels, $param as data FOREACH (idx IN range(0,size(rels)-1) | SET (rels[idx]).num = data[idx])"
-    val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map("param" ->  Array("1", "2", "3")))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, params = Map("param" ->  Array("1", "2", "3")))
 
     assertStats(result, propertiesWritten = 3)
     r1 should haveProperty("num").withValue("1")

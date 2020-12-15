@@ -2671,7 +2671,7 @@ class EagerizationAcceptanceTest
         |)
         |RETURN count(*)""".stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))
     result.columnAs[Long]("count(*)").next() should equal(1)
     assertStats(result, nodesCreated = 4, labelsAdded = 4)

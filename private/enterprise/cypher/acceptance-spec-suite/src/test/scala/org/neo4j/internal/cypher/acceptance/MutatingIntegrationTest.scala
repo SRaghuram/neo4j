@@ -235,7 +235,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
   }
 
   test("create node and rel in foreach") {
-    executeWith(Configs.InterpretedAndSlotted, """
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, """
                                                  |create (center {name: "center"})
                                                  |foreach(x in range(1,10) |
                                                  |  create (leaf1 {number : x}) , (center)-[:X]->(leaf1)
@@ -343,7 +343,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
 
   test("can create anonymous nodes inside foreach") {
     createNode()
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (me) where id(me) = 0 foreach (i in range(1,10) | create (me)-[:FRIEND]->())")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (me) where id(me) = 0 foreach (i in range(1,10) | create (me)-[:FRIEND]->())")
 
     result.toList shouldBe empty
   }
@@ -378,13 +378,13 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
   }
 
   test("for each applied to null should never execute") {
-    val result = executeWith(Configs.InterpretedAndSlotted, "foreach(x in null| create ())")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "foreach(x in null| create ())")
 
     assertStats(result, nodesCreated = 0)
   }
 
   test("should execute when null is contained in a collection") {
-    val result = executeWith(Configs.InterpretedAndSlotted, "foreach(x in [null]| create ())")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "foreach(x in [null]| create ())")
 
     assertStats(result, nodesCreated = 1)
   }
