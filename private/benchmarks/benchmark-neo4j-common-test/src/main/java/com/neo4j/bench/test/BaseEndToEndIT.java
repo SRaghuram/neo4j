@@ -47,6 +47,7 @@ import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -312,7 +313,8 @@ public abstract class BaseEndToEndIT
         try ( BufferedReader reader =
                       new BufferedReader( new InputStreamReader( processBuilder.start().getInputStream() ) ) )
         {
-            Integer kernelParameterValue = reader.lines()
+            var kernelParameterValues = reader.lines().collect( Collectors.toList() );
+            var kernelParameterValue = kernelParameterValues.stream()
                                                  .findFirst()
                                                  .map( s -> s.split( " = " ) )
                                                  .flatMap( s -> s.length == 2 ? Optional.of( s[1] ) : Optional.empty() )

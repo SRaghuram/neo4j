@@ -87,12 +87,12 @@ public class EmbeddedDatabase implements Database
 
     public static void verifyStoreFormat( Store store )
     {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        PrintStream out = new PrintStream( baos );
+        var baos = new ByteArrayOutputStream();
+        var out = new PrintStream( baos );
 
-        StoreInfoCommand storeInfoCommand =
-                new StoreInfoCommand( new ExecutionContext( Path.of( "" ).toAbsolutePath(), Path.of( "" ).toAbsolutePath(), out, System.err,
-                        new DefaultFileSystemAbstraction() ) );
+        var homeDir = store.topLevelDirectory().toAbsolutePath();
+        var confDir = homeDir.resolve( "conf" );
+        var storeInfoCommand = new StoreInfoCommand( new ExecutionContext( homeDir, confDir, out, System.err, new DefaultFileSystemAbstraction() ) );
         CommandLine.populateCommand( storeInfoCommand, store.graphDbDirectory().toAbsolutePath().toString() );
         storeInfoCommand.execute();
         out.flush();
