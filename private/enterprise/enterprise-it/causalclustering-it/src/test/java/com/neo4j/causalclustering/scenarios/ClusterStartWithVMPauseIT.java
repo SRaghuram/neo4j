@@ -6,13 +6,12 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.RaftMonitors;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
+import com.neo4j.causalclustering.core.consensus.LeaderListener;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
-import com.neo4j.causalclustering.core.consensus.RaftMessageTimerResetMonitor;
-import com.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.DatabaseStateChangedListener;
 import com.neo4j.dbms.DbmsReconciler;
@@ -49,7 +48,7 @@ class ClusterStartWithVMPauseIT
     private ClusterFactory clusterFactory;
 
     private Cluster cluster;
-    private CoreClusterMember leader;
+    private volatile CoreClusterMember leader;
 
     private int index;
 
@@ -144,8 +143,10 @@ class ClusterStartWithVMPauseIT
                 if ( leader == null && previousState.operatorState() == INITIAL && newState.operatorState() == STARTED )
                 {
                     var databaseName = previousState.databaseId().name();
-                    var monitors = core.resolveDependency( databaseName, RaftMonitors.class );
-                    monitors.addMonitorListener( new VmPauseSimulatorMonitor( core, databaseName ) );
+                    var raftMachine = core.resolveDependency( databaseName, RaftMachine.class );
+                    var raftMemberId = raftMachine.memberId();
+                    var leaderListener = new VmPauseSimulatorMonitor( core, raftMemberId );
+                    raftMachine.registerListener( leaderListener );
                 }
             }
             catch ( Exception t )
@@ -155,31 +156,28 @@ class ClusterStartWithVMPauseIT
         }
     }
 
-    private class VmPauseSimulatorMonitor implements RaftMessageTimerResetMonitor
+    private class VmPauseSimulatorMonitor implements LeaderListener
     {
         private final CoreClusterMember core;
-        private final String databaseName;
-        private boolean first = true;
+        private final RaftMemberId raftMemberId;
 
-        private VmPauseSimulatorMonitor( CoreClusterMember core, String databaseName )
+        VmPauseSimulatorMonitor( CoreClusterMember core, RaftMemberId raftMemberId )
         {
             this.core = core;
-            this.databaseName = databaseName;
+            this.raftMemberId = raftMemberId;
         }
 
         @Override
-        public void timerReset()
+        public void onLeaderSwitch( LeaderInfo leaderInfo )
         {
             try
             {
-                var raftMachine = core.resolveDependency( databaseName, RaftMachine.class );
-                if ( first && raftMachine.currentRole() == Role.CANDIDATE && leader == null )
+                if ( leader == null && raftMemberId.equals( leaderInfo.memberId() ) )
                 {
-                    // The first time the raft machine calls RaftMessageTimerResetMonitor when moving from CANDIDATE we pause for a bit, allowing to the main
+                    // The first time the raft machine calls LeaderListener when moving from CANDIDATE to LEADER we pause for a bit, allowing to the main
                     // thread to trigger an election, if would we wait long enough this would happen eventually too, but this allows to be more certain of it.
                     leader = core;
                     SECONDS.sleep( 2 );
-                    first = false;
                 }
             }
             catch ( Throwable t )
