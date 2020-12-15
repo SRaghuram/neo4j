@@ -106,7 +106,11 @@ import org.neo4j.cypher.internal.runtime.spec.tests.VarLengthExpandTestBase
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.test_helpers.TimeLimitedCypherTest
 import org.neo4j.cypher.result.OperatorProfile
+import org.neo4j.graphdb.Label.label
+import org.neo4j.graphdb.RelationshipType
 import org.scalatest.Outcome
+
+import scala.util.Random
 
 object ParallelRuntimeSpecSuite {
   val SIZE_HINT = 1000
@@ -226,7 +230,43 @@ class ParallelRuntimeExpandIntoTestNoFusing extends ExpandIntoTestBase(NO_FUSING
                                             with ExpandIntoWithOtherOperatorsTestBase[EnterpriseRuntimeContext] with ParallelRuntimeSpecSuite
 
 // OPTIONAL EXPAND ALL
-class ParallelRuntimeOptionalExpandAllTest extends OptionalExpandAllTestBase(FUSING, PARALLEL, SIZE_HINT)  with ParallelRuntimeSpecSuite
+class ParallelRuntimeOptionalExpandAllTest extends OptionalExpandAllTestBase(FUSING, PARALLEL, SIZE_HINT)  with ParallelRuntimeSpecSuite {
+  test("should handle many optional expand with random predicates II") {
+    // given
+    val nodeLabel = label("Label")
+    val nodes = given {
+      val allLabels = Array("A", "B", "C", "D", "E")
+      def randomLabel = label(allLabels(Random.nextInt(allLabels.length)))
+      val nodes = nodeGraph(sizeHint, "N")
+      nodes.foreach(n => {
+        (1 to Random.nextInt(10)).foreach(_ => n.createRelationshipTo(tx.createNode(randomLabel), RelationshipType.withName("R")))
+        (1 to Random.nextInt(10)).foreach(_ => n.createRelationshipTo(tx.createNode(randomLabel), RelationshipType.withName("S")))
+        (1 to Random.nextInt(10)).foreach(_ => n.createRelationshipTo(tx.createNode(randomLabel), RelationshipType.withName("T")))
+        (1 to Random.nextInt(10)).foreach(_ => n.createRelationshipTo(tx.createNode(randomLabel), RelationshipType.withName("U")))
+        (1 to Random.nextInt(10)).foreach(_ => n.createRelationshipTo(tx.createNode(randomLabel), RelationshipType.withName("V")))
+      })
+      nodes
+    }
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .nonFuseable()
+      .optionalExpandAll("(x)-[r1:V]->(e)", Some("e:E"))
+      .optionalExpandAll("(x)-[r1:U]->(d)", Some("d:D"))
+      .optionalExpandAll("(x)-[r1:T]->(c)", Some("c:C"))
+      .optionalExpandAll("(x)-[r1:S]->(b)", Some("b:B"))
+      .optionalExpandAll("(x)-[r1:R]->(a)", Some("a:A"))
+      .nodeByLabelScan("x", "N")
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime)
+
+    // then, just make sure the query finishes
+    consume(runtimeResult) should not be empty
+  }
+
+}
 class ParallelRuntimeOptionalExpandAllTestNoFusing extends OptionalExpandAllTestBase(NO_FUSING, PARALLEL, SIZE_HINT)  with ParallelRuntimeSpecSuite
 
 // OPTIONAL EXPAND INTO

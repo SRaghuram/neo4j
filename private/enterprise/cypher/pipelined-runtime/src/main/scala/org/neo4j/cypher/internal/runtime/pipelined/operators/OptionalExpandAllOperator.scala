@@ -94,18 +94,12 @@ class OptionalExpandAllOperator(val workIdentity: WorkIdentity,
 
     protected var hasWritten = false
 
-    protected def setUp(state: PipelinedQueryState,
-                        resources: QueryResources): Unit = {
-
-    }
-
     protected override def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
       val fromNode = getFromNodeFunction.applyAsLong(inputCursor)
       hasWritten = false
       if (entityIsNull(fromNode)) {
         relationships = emptyTraversalCursor(state.query.transactionalContext.dataRead)
       } else {
-        setUp(state, resources)
         val pools: CursorPools = resources.cursorPools
         nodeCursor = pools.nodeCursorPool.allocateAndTrace()
         relationships = getRelationshipsCursor(state.queryContext, pools, fromNode, dir, types.types(state.queryContext))
@@ -148,15 +142,13 @@ class OptionalExpandAllOperator(val workIdentity: WorkIdentity,
 
     private var expressionState: QueryState = _
 
-    override protected def setUp(state: PipelinedQueryState,
-                                 resources: QueryResources): Unit = {
+    override protected def enterOperate(state: PipelinedQueryState,
+                                        resources: QueryResources): Unit = {
       expressionState = state.queryStateForExpressionEvaluation(resources)
     }
 
     override protected def writeRow(outputRow: MorselFullCursor,
                                     relId: Long, otherSide: Long): Boolean = {
-
-      //preemptively write the row, if predicate fails it will be overwritten
       outputRow.copyFrom(inputCursor)
       outputRow.setLongAt(relOffset, relId)
       outputRow.setLongAt(toOffset, otherSide)
