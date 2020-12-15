@@ -151,6 +151,7 @@ public class CoreClusterMember implements ClusterMember
         config.set( CausalClusteringInternalSettings.experimental_raft_protocol, true );
         config.set( CausalClusteringInternalSettings.experimental_catchup_protocol, true );
         config.set( CausalClusteringInternalSettings.middleware_akka_seed_node_timeout, Duration.ofSeconds( 6 ));
+        config.set( CausalClusteringSettings.middleware_logging_level, Level.DEBUG);
         config.setRaw( extraParams );
 
         Map<String,String> instanceExtras = new HashMap<>();

@@ -38,7 +38,7 @@ class RaftMemberMappingActorIT extends BaseAkkaIT("MappingActorIT") {
       replicatedDataActorRef ! new PublishInitialData(snapshot)
 
       Then("the initial mappings should be published")
-      expectUpdateWithDatabase(data, namedDatabaseIds, raftMemberIds)
+      expectUpdateWithDatabase(data, namedDatabaseIds, raftMemberIds, 1)
     }
 
     "send metadata to core topology actor on update" in new Fixture {
@@ -67,7 +67,7 @@ class RaftMemberMappingActorIT extends BaseAkkaIT("MappingActorIT") {
 
       And("initial update")
       replicatedDataActorRef ! new PublishInitialData(snapshot)
-      val replicatedData = collectReplicatorUpdates(data, namedDatabaseIds.size)
+      val replicatedData = collectReplicatorUpdates(data, 1)
       replicatedDataActorRef ! Replicator.Changed(dataKey)(replicatedData)
 
       When("receive cleanup message")
@@ -86,7 +86,7 @@ class RaftMemberMappingActorIT extends BaseAkkaIT("MappingActorIT") {
 
       And("initial update")
       replicatedDataActorRef ! new PublishInitialData(snapshot)
-      collectReplicatorUpdates(data, namedDatabaseIds.size)
+      collectReplicatorUpdates(data, 1)
 
       When("receive both start messages")
       replicatedDataActorRef ! new RaftMemberKnownMessage(namedDatabaseId1)
@@ -110,14 +110,14 @@ class RaftMemberMappingActorIT extends BaseAkkaIT("MappingActorIT") {
       replicatedDataActorRef ! new RaftMemberKnownMessage(namedDatabaseId2)
 
       val replicatedData = expectUpdateWithDatabase(data,
-        namedDatabaseIds + namedDatabaseId1 + namedDatabaseId2, raftMemberIds + raftMemberId1 + raftMemberId2)
+        namedDatabaseIds + namedDatabaseId1 + namedDatabaseId2, raftMemberIds + raftMemberId1 + raftMemberId2, 3)
 
       When("receive both stop messages")
       replicatedDataActorRef ! new DatabaseStoppedMessage(namedDatabaseId1)
       replicatedDataActorRef ! new DatabaseStoppedMessage(namedDatabaseId2)
 
       Then("update replicator")
-      expectUpdateWithDatabase(replicatedData, namedDatabaseIds, raftMemberIds)
+      expectUpdateWithDatabase(replicatedData, namedDatabaseIds, raftMemberIds, 2)
     }
   }
 
@@ -149,14 +149,15 @@ class RaftMemberMappingActorIT extends BaseAkkaIT("MappingActorIT") {
     }
 
     def expectUpdateWithDatabase(namedDatabaseId: NamedDatabaseId, raftMemberId: RaftMemberId): LWWMap[DatabaseServer, RaftMemberId] = {
-      expectUpdateWithDatabase(LWWMap.create[DatabaseServer, RaftMemberId], Set(namedDatabaseId), Set(raftMemberId))
+      expectUpdateWithDatabase(LWWMap.create[DatabaseServer, RaftMemberId], Set(namedDatabaseId), Set(raftMemberId), 1)
     }
 
     def expectUpdateWithDatabase(initial: LWWMap[DatabaseServer, RaftMemberId],
                                  namedDatabaseIds: Set[NamedDatabaseId],
-                                 raftMemberIds: Set[RaftMemberId]): LWWMap[DatabaseServer, RaftMemberId] = {
+                                 raftMemberIds: Set[RaftMemberId],
+                                 messageCount: Int): LWWMap[DatabaseServer, RaftMemberId] = {
       namedDatabaseIds.size should equal(raftMemberIds.size)
-      val state = collectReplicatorUpdates(initial, namedDatabaseIds.size)
+      val state = collectReplicatorUpdates(initial, messageCount)
       val data = state.entries
       data.keySet.map(_.databaseId) should contain theSameElementsAs namedDatabaseIds.map(_.databaseId)
       data.keySet.map(_.serverId) should contain only myself

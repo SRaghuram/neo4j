@@ -61,12 +61,14 @@ public class RaftMemberMappingActor extends BaseReplicatedDataActor<LWWMap<Datab
     {
         var raftMemberId = myIdentity.raftMemberId( message.namedDatabaseId() );
         var mapping = new DatabaseServer( message.namedDatabaseId().databaseId(), myIdentity.serverId() );
+        log().debug( "add mapping {}", mapping );
         modifyReplicatedData( key, map -> map.put( cluster, mapping, raftMemberId ) );
     }
 
     private void handleDatabaseStoppedMessage( DatabaseStoppedMessage message )
     {
         var mapping = new DatabaseServer( message.namedDatabaseId().databaseId(), myIdentity.serverId() );
+        log().debug( "remove mapping {}", mapping );
         modifyReplicatedData( key, map -> map.remove( cluster, mapping ) );
     }
 
@@ -74,21 +76,32 @@ public class RaftMemberMappingActor extends BaseReplicatedDataActor<LWWMap<Datab
     public void sendInitialDataToReplicator( DiscoveryMember memberSnapshot )
     {
         var serverId = myIdentity.serverId();
-        memberSnapshot.discoverableDatabases().forEach( databaseId ->
-                modifyReplicatedData( key, map -> map.put( cluster,
-                        new DatabaseServer( databaseId, serverId ), myIdentity.raftMemberId( databaseId ) ) ) );
+        var localMappings = memberSnapshot.discoverableDatabases().stream()
+                .map( databaseId -> new DatabaseServer( databaseId, serverId ) )
+                .reduce( LWWMap.create(), this::addMapping, LWWMap::merge );
+
+        log().debug( "add initial mappings {}", localMappings );
+        modifyReplicatedData( key, map -> map.merge( localMappings ) );
+    }
+
+    private LWWMap<DatabaseServer,RaftMemberId> addMapping( LWWMap<DatabaseServer,RaftMemberId> acc,
+            DatabaseServer key )
+    {
+        return acc.put( cluster, key, myIdentity.raftMemberId( key.databaseId() ) );
     }
 
     private void removeDataFromReplicator( CleanupMessage message )
     {
         data.getEntries().keySet().stream()
                 .filter( ds -> ds.serverId().equals( message.serverId ) )
+                .peek( mapping -> log().debug( "remove mapping {}", mapping ) )
                 .forEach( ds -> modifyReplicatedData( key, map -> map.remove( cluster, ds ) ));
     }
 
     @Override
     protected void handleIncomingData( LWWMap<DatabaseServer,RaftMemberId> newData )
     {
+        log().debug( "incoming mappings {}", newData );
         data = newData;
         topologyActor.tell( new RaftMemberMappingMessage( data ), getSelf() );
     }
