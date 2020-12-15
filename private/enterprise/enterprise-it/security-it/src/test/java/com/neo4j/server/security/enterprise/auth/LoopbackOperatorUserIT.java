@@ -358,7 +358,7 @@ class LoopbackOperatorUserIT
     void shouldFailStartupWithNoOperatorPassword()
     {
         assertThatThrownBy( () -> getEnterpriseManagementService( Map.of( BoltConnectorInternalSettings.enable_loopback_auth, true,
-                                                                          BoltConnectorInternalSettings.unsupported_loopback_listen_file, LISTEN_FILE ) )
+                                                                          BoltConnectorInternalSettings.unsupported_loopback_listen_file, LISTEN_FILE  ) )
         )
                 .hasRootCauseMessage( "No password has been set for the loopback operator. Run `neo4j-admin set-operator-password <password>`." );
     }
@@ -438,11 +438,11 @@ class LoopbackOperatorUserIT
                                                       ValueUtils.asMapValue( emptyMap() ), SYSTEM_DATABASE_NAME ) );
         assertThat( unixSocket ).satisfies( util.eventuallyReceives( msgSuccess() ) );
         assertThat( unixSocket ).satisfies( util.eventuallyReceives( msgRecord( eqRecord( stringEquals( "neo4j" ), anyValue(), anyValue(), anyValue(),
-                                                                                          anyValue(), anyValue(), anyValue() ) ) ) );
-        assertThat( unixSocket ).satisfies( util.eventuallyReceives( msgRecord( eqRecord( stringEquals( "operational" ), anyValue(), anyValue(),
                                                                                           anyValue(), anyValue(), anyValue(), anyValue() ) ) ) );
+        assertThat( unixSocket ).satisfies( util.eventuallyReceives( msgRecord( eqRecord( stringEquals( "operational" ), anyValue(), anyValue(),
+                                                                                          anyValue(), anyValue(), anyValue(), anyValue(), anyValue() ) ) ) );
         assertThat( unixSocket ).satisfies( util.eventuallyReceives( msgRecord( eqRecord( stringEquals( "system" ), anyValue(), anyValue(), anyValue(),
-                                                                                          anyValue(), anyValue(), anyValue() ) ) ) );
+                                                                                          anyValue(), anyValue(), anyValue(), anyValue() ) ) ) );
         assertThat( unixSocket ).satisfies( util.eventuallyReceives( msgSuccess() ) );
     }
 
@@ -466,7 +466,7 @@ class LoopbackOperatorUserIT
                                                       ValueUtils.asMapValue( emptyMap() ), SYSTEM_DATABASE_NAME ) );
         assertThat( unixSocket ).satisfies( util.eventuallyReceives( msgSuccess() ) );
         assertThat( unixSocket ).satisfies( util.eventuallyReceives( msgRecord( eqRecord( stringEquals( "system" ), anyValue(), anyValue(), anyValue(),
-                                                                                          anyValue(), anyValue(), anyValue() ) ) ) );
+                                                                                          anyValue(), anyValue(), anyValue(), anyValue() ) ) ) );
         assertThat( unixSocket ).satisfies( util.eventuallyReceives( msgSuccess() ) );
     }
 
