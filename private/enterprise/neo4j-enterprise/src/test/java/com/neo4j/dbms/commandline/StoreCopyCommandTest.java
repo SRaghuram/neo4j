@@ -125,8 +125,9 @@ class StoreCopyCommandTest
                 "      --from-pagecache=<size>%n" +
                 "                             The size of the page cache to use for reading.%n" +
                 "                               Default: 8m%n" +
-                "      --to-pagecache=<size>  The size of the page cache to use for writing.%n" +
-                "                               Default: 8m"
+                "      --to-pagecache=<size>  (Advanced) The size of the page cache to use for%n" +
+                "                               writing. If not specified then an optimal size%n" +
+                "                               will be automatically selected"
         ) );
     }
 

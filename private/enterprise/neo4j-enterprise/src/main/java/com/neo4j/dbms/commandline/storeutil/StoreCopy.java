@@ -202,7 +202,6 @@ public class StoreCopy
                   FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
                   JobScheduler scheduler = createInitialisedScheduler();
                   PageCache fromPageCache = createPageCache( fs, fromPageCacheMemory, scheduler, clock, config );
-                  PageCache toPageCache = createPageCache( fs, toPageCacheMemory, scheduler, clock, config );
                   NeoStores neoStores = new StoreFactory( from, config, new ScanOnOpenReadOnlyIdGeneratorFactory(), fromPageCache, fs,
                                                           NullLogProvider.getInstance(), pageCacheTracer ).openAllNeoStores() )
             {
@@ -229,13 +228,18 @@ public class StoreCopy
                 log.info( "Target: %s (page cache %s)", toDatabaseLayout.databaseDirectory(), toPageCacheMemory );
                 log.info( "Empty database created, will start importing readable data from the source." );
 
-                BatchImporter batchImporter = BatchImporterFactory.withHighestPriority().instantiate(
-                        toDatabaseLayout, fs, toPageCache, PageCacheTracer.NULL, Configuration.defaultConfiguration( toDatabaseLayout.databaseDirectory() ),
-                        new SimpleLogService( logProvider ), executionMonitor, AdditionalInitialIds.EMPTY, config, recordFormats, NO_MONITOR, null,
-                        Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), EmptyMemoryTracker.INSTANCE );
+                // Not providing an explicit toPageCache is preferred because then the importer will instantiate
+                // its own optimally sized and configured page cache
+                try ( PageCache toPageCache = toPageCacheMemory != null ? createPageCache( fs, toPageCacheMemory, scheduler, clock, config ) : null )
+                {
+                    BatchImporter batchImporter = BatchImporterFactory.withHighestPriority().instantiate(
+                            toDatabaseLayout, fs, toPageCache, PageCacheTracer.NULL, Configuration.defaultConfiguration( toDatabaseLayout.databaseDirectory() ),
+                            new SimpleLogService( logProvider ), executionMonitor, AdditionalInitialIds.EMPTY, config, recordFormats, NO_MONITOR, scheduler,
+                            Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), EmptyMemoryTracker.INSTANCE );
 
-                batchImporter.doImport( Input.input( () -> nodeIterator( pageCacheTracer ), () -> relationshipIterator( pageCacheTracer ), IdType.INTEGER,
-                                                     getEstimates(), new Groups() ) );
+                    batchImporter.doImport( Input.input( () -> nodeIterator( pageCacheTracer ), () -> relationshipIterator( pageCacheTracer ), IdType.INTEGER,
+                            getEstimates(), new Groups() ) );
+                }
 
                 stats.printSummary();
 
