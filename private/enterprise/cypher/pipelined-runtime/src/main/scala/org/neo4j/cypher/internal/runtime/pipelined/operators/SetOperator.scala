@@ -7,17 +7,27 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.arrayOf
 import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.cast
+import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.constructor
 import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
+import org.neo4j.codegen.api.IntermediateRepresentation.fail
+import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
+import org.neo4j.codegen.api.IntermediateRepresentation.instanceOf
+import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
+import org.neo4j.codegen.api.IntermediateRepresentation.noValue
+import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.macros.TranslateExceptionMacros.translateException
-import org.neo4j.cypher.internal.runtime.IsNoValue
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SetOperation
@@ -29,6 +39,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_WRITE
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.LOCKS
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATS_TRACKER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATS_TRACKER_V
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.TOKEN
@@ -37,6 +48,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.exceptions.InvalidArgumentException
+import org.neo4j.internal.kernel.api.Locks
 import org.neo4j.internal.kernel.api.Token
 import org.neo4j.internal.kernel.api.Write
 import org.neo4j.values.AnyValue
@@ -88,7 +100,7 @@ object SetOperator {
         queryStatisticsTracker.setProperty()
       }
     } else {
-      translateException(token,  write.nodeSetProperty(nodeId, propertyKeyId, safeValue))
+      translateException(token, write.nodeSetProperty(nodeId, propertyKeyId, safeValue))
       queryStatisticsTracker.setProperty()
     }
   }
@@ -123,35 +135,6 @@ object SetOperator {
     }
   }
 
-  def setProperty(entity: AnyValue,
-                  propertyKey: String,
-                  propertyValue: AnyValue,
-                  token: Token,
-                  write: Write,
-                  queryStatisticsTracker: MutableQueryStatistics): Unit = {
-    entity match {
-      case node: VirtualNodeValue => SetOperator.setNodeProperty(
-        node.id(),
-        propertyKey,
-        propertyValue,
-        token,
-        write,
-        queryStatisticsTracker
-      )
-      case relationship: VirtualRelationshipValue => setRelationshipProperty(
-        relationship.id(),
-        propertyKey,
-        propertyValue,
-        token,
-        write,
-        queryStatisticsTracker
-      )
-      case IsNoValue() => // Do nothing
-      case _ => throw new InvalidArgumentException(
-        s"Expected to set property on a node or a relationship, but got $entity")
-    }
-  }
-
   private def safeCastToMap(value: AnyValue): MapValue = value match {
     case mapValue: MapValue => mapValue
     case _ =>
@@ -180,20 +163,31 @@ class SetPropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
       propertyValue = value()
     }
 
-    val propertyValueVar = codeGen.namer.nextVariableName("start")
-    val entityValueVar = codeGen.namer.nextVariableName("end")
+    val entityValueVar = codeGen.namer.nextVariableName("entity")
 
     block(
-      declareAndAssign(typeRefOf[AnyValue], propertyValueVar, nullCheckIfRequired(propertyValue)),
       declareAndAssign(typeRefOf[AnyValue], entityValueVar, nullCheckIfRequired(entityValue)),
-      invokeStatic(
-        method[SetOperator, Unit, AnyValue, String, AnyValue, Token, Write, MutableQueryStatistics]("setProperty"),
-        load(entityValueVar),
-        constant(key),
-        load(propertyValueVar),
-        loadField(TOKEN),
-        loadField(DATA_WRITE),
-        QUERY_STATS_TRACKER
+      ifElse(instanceOf[VirtualRelationshipValue](load(entityValueVar)))
+      (
+        setProperty(
+          entityValueVar,
+          isNode = false,
+          invoke(cast[VirtualRelationshipValue](load(entityValueVar)), method[VirtualRelationshipValue, Long]("id"))
+        )
+      )(
+        ifElse(instanceOf[VirtualNodeValue](load(entityValueVar)))(
+          setProperty(
+            entityValueVar,
+            isNode = true,
+            invoke(cast[VirtualNodeValue](load(entityValueVar)), method[VirtualNodeValue, Long]("id"))
+          )
+        )(
+          block(
+            condition(notEqual(load(entityValueVar), noValue))(
+              fail(newInstance(constructor[InvalidArgumentException, String], constant("Expected to set property on a node or a relationship.")))
+            )
+          )
+        )
       ),
       inner.genOperateWithExpressions,
       conditionallyProfileRow(innerCannotContinue, id, doProfile),
@@ -207,11 +201,39 @@ class SetPropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(QUERY_STATS_TRACKER_V)
 
-  override def genFields: Seq[Field] = Seq(DATA_WRITE, TOKEN)
+  override def genFields: Seq[Field] = Seq(DATA_WRITE, TOKEN, LOCKS)
 
   override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
 
   override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
 
   override protected def isHead: Boolean = false
+
+  private def setProperty(entityVar: String, isNode: Boolean, id: IntermediateRepresentation): IntermediateRepresentation = {
+    val errorVar = codeGen.namer.nextVariableName("errorN")
+    val acquireLockFunction = if (isNode) "acquireExclusiveNodeLock" else "acquireExclusiveRelationshipLock"
+    val releaseLockFunction = if (isNode) "releaseExclusiveNodeLock" else "releaseExclusiveRelationshipLock"
+    val setFunction = if (isNode) "setNodeProperty" else "setRelationshipProperty"
+
+    block(
+      invoke(loadField(LOCKS), method[Locks, Unit, Array[Long]](acquireLockFunction), arrayOf[Long](id)),
+      IntermediateRepresentation.tryCatch[Exception](errorVar)
+        (block(
+          invokeStatic(
+            method[SetOperator, Unit, Long, String, AnyValue, Token, Write, MutableQueryStatistics](setFunction),
+            id,
+            constant(key),
+            nullCheckIfRequired(propertyValue),
+            loadField(TOKEN),
+            loadField(DATA_WRITE),
+            QUERY_STATS_TRACKER,
+          ),
+          invoke(loadField(LOCKS), method[Locks, Unit, Array[Long]](releaseLockFunction), arrayOf[Long](id)),
+        ))
+        (block(
+          invoke(loadField(LOCKS), method[Locks, Unit, Array[Long]](releaseLockFunction), arrayOf[Long](id)),
+          fail(load(errorVar))
+        ))
+    )
+  }
 }
