@@ -45,6 +45,14 @@ trait WorkerManagement extends WorkerWaker {
    * @return `true` if there is at least one Worker for this WorkerManager. `false` otherwise.
    */
   def hasWorkers: Boolean
+
+  /**
+   * Wait until all workers have completed ongoing work according to current demand and settled down in an idle state
+   *
+   * @param timeoutMs Timeout in ms
+   * @return true if all workers settled in an idle state, or false if the timeout occurred
+   */
+  def waitForWorkersToIdle(timeoutMs: Int): Boolean
 }
 
 class WorkerManager(val numberOfWorkers: Int, threadFactory: ThreadFactory) extends WorkerManagement with Lifecycle {
@@ -67,6 +75,20 @@ class WorkerManager(val numberOfWorkers: Int, threadFactory: ThreadFactory) exte
       throw new RuntimeResourceLeakException(activeWorkers.mkString("\n"))
     }
     true
+  }
+
+  override def waitForWorkersToIdle(timeoutMs: Int): Boolean = {
+    val startTime = System.nanoTime()
+    val stopTime = startTime + timeoutMs.toLong * 1000000L
+    var currentTime = startTime
+    while (currentTime < stopTime) {
+      if (!_workers.exists(_.sleeper.isWorking)) {
+        return true
+      }
+      LockSupport.parkNanos(1000000L)
+      currentTime = System.nanoTime()
+    }
+    !_workers.exists(_.sleeper.isWorking)
   }
 
   // ========== WORKER WAKER ===========

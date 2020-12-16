@@ -47,6 +47,14 @@ trait QueryExecutor {
    * back to the query manager.
    */
   def assertAllReleased(): Unit
+
+  /**
+   * Wait until all query workers have completed ongoing work according to current demand and settled down in an idle state
+   *
+   * @param timeoutMs Timeout in ms
+   * @return true if all workers settled in an idle state, or false if the timeout occurred
+   */
+  def waitForWorkersToIdle(timeoutMs: Int): Boolean
 }
 
 case class ProfiledQuerySubscription(executingQuery: ExecutingQuery, profile: QueryProfile, memoryTracker: QueryMemoryTracker, mutableQueryStatistics: MutableQueryStatistics)

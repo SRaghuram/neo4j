@@ -57,6 +57,10 @@ case class TracingRuntimeContextManager(log: Log,
   override def assertAllReleased(): Unit = {
     runtimeEnvironment.getQueryExecutor(parallelExecution = true).assertAllReleased()
   }
+
+  override def waitForWorkersToIdle(timeoutMs: Int): Boolean = {
+    runtimeEnvironment.getQueryExecutor(parallelExecution = true).waitForWorkersToIdle(timeoutMs)
+  }
 }
 
 class TestCachingExpressionCompilerTracer() extends CachingExpressionCompilerTracer {

@@ -26,7 +26,6 @@ import org.neo4j.cypher.result.QueryProfile
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
-import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 
 /**
@@ -41,6 +40,8 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
   // The calling thread handles it's own resources, so there is
   // no way to assert centrally.
   override def assertAllReleased(): Unit = ()
+
+  override def waitForWorkersToIdle(timeoutMs: Int): Boolean = true
 
   override def execute[E <: Exception](executablePipelines: IndexedSeq[ExecutablePipeline],
                                        executionGraphDefinition: ExecutionGraphDefinition,

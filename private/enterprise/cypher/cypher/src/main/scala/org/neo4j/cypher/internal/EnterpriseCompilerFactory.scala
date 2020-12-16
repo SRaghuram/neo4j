@@ -147,4 +147,6 @@ case class EnterpriseRuntimeContextManager(log: Log,
     // This is for test assertions only, and should run on the parallel executor.
     runtimeEnvironment.getQueryExecutor(parallelExecution = true).assertAllReleased()
   }
+
+  override def waitForWorkersToIdle(timeoutMs: Int): Boolean = true
 }

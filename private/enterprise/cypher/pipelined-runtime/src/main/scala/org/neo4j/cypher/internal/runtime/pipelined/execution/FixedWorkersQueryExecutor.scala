@@ -36,11 +36,14 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
 
   // ========== QUERY EXECUTOR ===========
 
-    def assertAllReleased(): Unit = {
-      checkOnlyWhenAssertionsAreEnabled(workerResourceProvider.assertAllReleased() &&
-                        workerManager.assertNoWorkerIsActive())
+  override def assertAllReleased(): Unit = {
+    checkOnlyWhenAssertionsAreEnabled(workerResourceProvider.assertAllReleased() &&
+                                      workerManager.assertNoWorkerIsActive())
+  }
 
-    }
+  override def waitForWorkersToIdle(timeoutMs: Int): Boolean = {
+    workerManager.waitForWorkersToIdle(timeoutMs)
+  }
 
   override def execute[E <: Exception](executablePipelines: IndexedSeq[ExecutablePipeline],
                                        executionGraphDefinition: ExecutionGraphDefinition,
