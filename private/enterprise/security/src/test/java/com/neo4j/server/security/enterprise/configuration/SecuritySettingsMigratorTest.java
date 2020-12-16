@@ -14,7 +14,9 @@ import org.neo4j.configuration.Config;
 
 import static com.neo4j.configuration.SecuritySettings.authentication_providers;
 import static com.neo4j.configuration.SecuritySettings.authorization_providers;
+import static com.neo4j.configuration.SecuritySettings.ldap_authentication_use_attribute;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SecuritySettingsMigratorTest
 {
@@ -27,5 +29,24 @@ class SecuritySettingsMigratorTest
         List<String> expected = List.of( "ldap" );
         assertEquals( expected, authentication );
         assertEquals( expected, authorization );
+    }
+
+    @Test
+    void testSamAccountNameMigratorOverwriteDefaultValue()
+    {
+        var config = Config.newBuilder().setRaw( Map.of( "dbms.security.ldap.authentication.use_samaccountname", "true" ) ).build();
+        boolean useAttribute = config.get( ldap_authentication_use_attribute );
+        assertTrue( useAttribute );
+    }
+
+    @Test
+    void testSamAccountNameMigratorShouldNotOverwriteExplicitValue()
+    {
+        var config = Config.newBuilder()
+                .setRaw( Map.of( "dbms.security.ldap.authentication.use_samaccountname", "false",
+                        "dbms.security.ldap.authentication.search_for_attribute", "true" ) ).build();
+
+        boolean useAttribute = config.get( ldap_authentication_use_attribute );
+        assertTrue( useAttribute );
     }
 }

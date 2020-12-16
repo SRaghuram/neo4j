@@ -28,7 +28,6 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.cache.CaffeineCacheFactory;
-import org.neo4j.cypher.internal.cache.ExecutorBasedCaffeineCacheFactory;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -49,7 +48,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
 import static org.neo4j.logging.LogAssertions.assertThat;
 
@@ -171,7 +169,7 @@ class EnterpriseSecurityModuleTest
         when( config.get( SecuritySettings.ldap_connection_timeout ) ).thenReturn( Duration.ofSeconds( 5 ) );
         when( config.get( SecuritySettings.ldap_read_timeout ) ).thenReturn( Duration.ofSeconds( 5 ) );
         when( config.get( SecurityInternalSettings.ldap_authorization_connection_pooling ) ).thenReturn( false );
-        when( config.get( SecuritySettings.ldap_authentication_use_samaccountname ) ).thenReturn( false );
+        when( config.get( SecuritySettings.ldap_authentication_use_attribute ) ).thenReturn( false );
         when( config.get( SecuritySettings.ldap_authentication_cache_enabled ) ).thenReturn( false );
 
         // Then

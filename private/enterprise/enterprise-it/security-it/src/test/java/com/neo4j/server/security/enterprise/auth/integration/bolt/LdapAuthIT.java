@@ -488,7 +488,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     public void shouldBeAbleToLoginWithCustomSearchAttributeName()
     {
         startDatabaseWithSettings( Map.of(
-                SecuritySettings.ldap_authentication_use_samaccountname, true,
+                SecuritySettings.ldap_authentication_use_attribute, true,
                 SecuritySettings.ldap_authentication_user_search_attribute_name, "uidnumber"
         ) );
 
@@ -500,10 +500,10 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    public void shouldNotBeAbleToLoginWithCustomSearchAttributeNameWithoutUseSAMAccountName()
+    public void shouldNotBeAbleToLoginWithCustomSearchAttributeNameWithoutUseAttribute()
     {
         startDatabaseWithSettings( Map.of(
-                SecuritySettings.ldap_authentication_use_samaccountname, false,
+                SecuritySettings.ldap_authentication_use_attribute, false,
                 SecuritySettings.ldap_authentication_user_search_attribute_name, "uidnumber"
         ) );
 
@@ -518,7 +518,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     public void  shouldBeAbleToAuthorizeWithCustomSearchAttributeName()
     {
         startDatabaseWithSettings( Map.of(
-                SecuritySettings.ldap_authentication_use_samaccountname, true,
+                SecuritySettings.ldap_authentication_use_attribute, true,
                 SecuritySettings.ldap_authentication_user_search_attribute_name, "uidnumber",
                 SecuritySettings.ldap_authorization_user_search_filter, "(&(objectClass=*)(uidnumber={0}))"
         ) );
@@ -541,7 +541,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     public void  shouldNotBeAbleToAuthorizeWithCustomSearchAttributeNameWithoutCorrectSearchFilter()
     {
         startDatabaseWithSettings( Map.of(
-                SecuritySettings.ldap_authentication_use_samaccountname, true,
+                SecuritySettings.ldap_authentication_use_attribute, true,
                 SecuritySettings.ldap_authentication_user_search_attribute_name, "uidnumber"
         ) );
 

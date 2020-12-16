@@ -75,7 +75,7 @@ class LdapRealmTest
         when( config.get( SecuritySettings.ldap_connection_timeout ) ).thenReturn( Duration.ofSeconds( 1 ) );
         when( config.get( SecuritySettings.ldap_read_timeout ) ).thenReturn( Duration.ofSeconds( 1 ) );
         when( config.get( SecurityInternalSettings.ldap_authorization_connection_pooling ) ).thenReturn( true );
-        when( config.get( SecuritySettings.ldap_authentication_use_samaccountname ) ).thenReturn( false );
+        when( config.get( SecuritySettings.ldap_authentication_use_attribute ) ).thenReturn( false );
     }
 
     @Test

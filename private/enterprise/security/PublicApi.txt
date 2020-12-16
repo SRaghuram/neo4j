@@ -10,8 +10,10 @@ com.neo4j.configuration.SecuritySettings::authentication_providers org.neo4j.gra
 com.neo4j.configuration.SecuritySettings::authorization_providers org.neo4j.graphdb.config.Setting<java.util.List<java.lang.String>> public static final
 com.neo4j.configuration.SecuritySettings::ldap_authentication_cache_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
 com.neo4j.configuration.SecuritySettings::ldap_authentication_mechanism org.neo4j.graphdb.config.Setting<java.lang.String> public static final
+com.neo4j.configuration.SecuritySettings::ldap_authentication_use_attribute org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
 com.neo4j.configuration.SecuritySettings::ldap_authentication_use_samaccountname org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
 com.neo4j.configuration.SecuritySettings::ldap_authentication_user_dn_template org.neo4j.graphdb.config.Setting<java.lang.String> public static final
+com.neo4j.configuration.SecuritySettings::ldap_authentication_user_search_attribute_name org.neo4j.graphdb.config.Setting<java.lang.String> public static final
 com.neo4j.configuration.SecuritySettings::ldap_authorization_group_membership_attribute_names org.neo4j.graphdb.config.Setting<java.util.List<java.lang.String>> public static final
 com.neo4j.configuration.SecuritySettings::ldap_authorization_group_to_role_mapping org.neo4j.graphdb.config.Setting<java.lang.String> public static final
 com.neo4j.configuration.SecuritySettings::ldap_authorization_system_password org.neo4j.graphdb.config.Setting<org.neo4j.string.SecureString> public static final

@@ -134,20 +134,24 @@ public class SecuritySettings implements SettingsDeclaration
     public static final Setting<Boolean> ldap_authentication_cache_enabled =
             newBuilder( "dbms.security.ldap.authentication.cache_enabled", BOOL, true ).build();
 
-    @Description( "Perform authentication with sAMAccountName instead of DN.\n" +
-            "Using this setting requires `dbms.security.ldap.authorization.system_username` and " +
-            "`dbms.security.ldap.authorization.system_password` to be used since there is no way to log in " +
-            "through ldap directly with the sAMAccountName, instead the login name will be resolved to a DN " +
-            "that will be used to log in with." )
+    @Deprecated( since = "4.3.0", forRemoval = true )
+    @Description( "Perform authentication by searching for an unique attribute of a user.\n" +
+            "This setting is deprecated and has been replaced with `dbms.security.ldap.authentication.search_for_attribute`." )
     public static final Setting<Boolean> ldap_authentication_use_samaccountname =
             newBuilder( "dbms.security.ldap.authentication.use_samaccountname", BOOL, false ).build();
 
+        @Description( "Perform authentication by searching for an unique attribute of a user.\n" +
+            "Using this setting requires `dbms.security.ldap.authorization.system_username` and " +
+            "`dbms.security.ldap.authorization.system_password` to be configured." )
+    public static final Setting<Boolean> ldap_authentication_use_attribute =
+            newBuilder( "dbms.security.ldap.authentication.search_for_attribute", BOOL, false ).build();
+
     @Description( "The attribute to use when looking up users.\n" +
-            "Using this setting requires `dbms.security.ldap.authentication.use_samaccountname` to be true " +
+            "Using this setting requires `dbms.security.ldap.authentication.search_for_attribute` to be true " +
             "and thus `dbms.security.ldap.authorization.system_username` and `dbms.security.ldap.authorization.system_password` " +
             "to be configured." )
     public static final Setting<String> ldap_authentication_user_search_attribute_name =
-            newBuilder( "dbms.security.ldap.authentication.user_search_attribute", STRING, "samaccountname" ).build();
+            newBuilder( "dbms.security.ldap.authentication.attribute", STRING, "samaccountname" ).build();
 
     //-----------------------------------------------------
     // LDAP authorization settings

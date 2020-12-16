@@ -87,7 +87,7 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
     private Boolean authenticationEnabled;
     private Boolean authorizationEnabled;
     private Boolean useStartTls;
-    private boolean useSAMAccountName;
+    private boolean useSearchAttribute;
     private String userAttributeName;
     private String userSearchBase;
     private String userSearchFilter;
@@ -142,7 +142,7 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
     {
         if ( authenticationEnabled )
         {
-            if ( useSAMAccountName )
+            if ( useSearchAttribute )
             {
                 return queryForAuthenticationInfoSAM( token, ldapContextFactory );
             }
@@ -449,7 +449,7 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
 
         userSearchBase = config.get( SecuritySettings.ldap_authorization_user_search_base );
         userSearchFilter = config.get( SecuritySettings.ldap_authorization_user_search_filter );
-        useSAMAccountName = config.get( SecuritySettings.ldap_authentication_use_samaccountname );
+        useSearchAttribute = config.get( SecuritySettings.ldap_authentication_use_attribute );
         userAttributeName = config.get( SecuritySettings.ldap_authentication_user_search_attribute_name );
         membershipAttributeNames = config.get( SecuritySettings.ldap_authorization_group_membership_attribute_names );
         useSystemAccountForAuthorization = config.get( SecuritySettings.ldap_authorization_use_system_account );

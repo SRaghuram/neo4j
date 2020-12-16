@@ -246,7 +246,7 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
                                         "cn=architect,ou=groups,dc=example,dc=com=architect;" +
                                         "cn=admin,ou=groups,dc=example,dc=com=admin;" +
                                         "cn=role1,ou=groups,dc=example,dc=com=role1",
-                                SecuritySettings.ldap_authentication_use_samaccountname, TRUE
+                                SecuritySettings.ldap_authentication_use_attribute, TRUE
                         )
                 },
                 {"Native with unresponsive ldap", "abc123", false, false, "127.0.0.1",

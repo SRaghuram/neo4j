@@ -9,10 +9,12 @@ import java.util.Map;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.SettingMigrator;
+import org.neo4j.configuration.SettingMigrators;
 import org.neo4j.logging.Log;
 
 import static com.neo4j.configuration.SecuritySettings.authentication_providers;
 import static com.neo4j.configuration.SecuritySettings.authorization_providers;
+import static com.neo4j.configuration.SecuritySettings.ldap_authentication_use_attribute;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 @ServiceProvider
@@ -29,5 +31,7 @@ public class SecuritySettingsMigrator implements SettingMigrator
             values.putIfAbsent( authentication_providers.name(), value );
             values.putIfAbsent( authorization_providers.name(), value );
         }
+
+        SettingMigrators.migrateSettingNameChange( values, log, "dbms.security.ldap.authentication.use_samaccountname", ldap_authentication_use_attribute );
     }
 }
