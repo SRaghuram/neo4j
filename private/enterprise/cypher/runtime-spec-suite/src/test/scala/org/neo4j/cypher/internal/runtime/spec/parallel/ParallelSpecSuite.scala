@@ -56,6 +56,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductProvidedOrde
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DistinctTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.EagerTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EmptyResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EnterpriseNodeIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllTestBase
@@ -401,6 +402,10 @@ class ParallelRuntimeRollupApplyNoFusingTest extends RollupApplyTestBase(NO_FUSI
 // EMPTY RESULT
 class ParallelRuntimeEmptyResultTest extends EmptyResultTestBase(FUSING, PARALLEL, SIZE_HINT)
 class ParallelRuntimeEmptyResultNoFusingTest extends EmptyResultTestBase(NO_FUSING, PARALLEL, SIZE_HINT)
+
+// EAGER
+class ParallelRuntimeEagerTest extends EagerTestBase(FUSING, PARALLEL, SIZE_HINT)
+class ParallelRuntimeEagerNoFusingTest extends EagerTestBase(NO_FUSING, PARALLEL, SIZE_HINT)
 
 // GENERAL
 class ParallelRuntimeMiscTest extends MiscTestBase(FUSING, PARALLEL) with ParallelRuntimeSpecSuite

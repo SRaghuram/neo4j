@@ -27,6 +27,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.CreateTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DistinctTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EagerLimitProfileRowsTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.EagerTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EmptyResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EnterpriseNodeIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EsotericAssertSameNodeTestBase
@@ -220,6 +221,7 @@ class SlottedLetAntiSemiApplyTest extends LetAntiSemiApplyTestBase(ENTERPRISE.DE
 class SlottedNestedPlanExpressionTest extends NestedPlanExpressionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedRollupApplyTest extends RollupApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedEmptyResultTest extends EmptyResultTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedEagerTest extends EagerTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedTriadicSelectionTest extends TriadicSelectionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedAssertSameNodeTest extends AssertSameNodeTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT) with EsotericAssertSameNodeTestBase[EnterpriseRuntimeContext]
 class SlottedRelationshipTypeScanTest extends RelationshipTypeScanTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)

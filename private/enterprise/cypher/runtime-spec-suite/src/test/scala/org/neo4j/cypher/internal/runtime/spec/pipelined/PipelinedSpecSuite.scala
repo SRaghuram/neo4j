@@ -44,6 +44,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ConditionalApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CreateTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DistinctTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.EagerTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EmptyResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.EnterpriseNodeIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExhaustiveLimitTestBase
@@ -466,6 +467,10 @@ class PipelinedRollupApplyRewriterNoFusingTest extends RollupApplyRewriterTestBa
 // EMPTY RESULT
 class PipelinedEmptyResultTest extends EmptyResultTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedEmptyResultNoFusingTest extends EmptyResultTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
+// EAGER
+class PipelinedEagerTest extends EagerTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedEagerNoFusingTest extends EagerTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // TRIADIC SELECTION
 class PipelinedTriadicSelectionTest extends TriadicSelectionTestBase(FUSING, PIPELINED, SIZE_HINT)
