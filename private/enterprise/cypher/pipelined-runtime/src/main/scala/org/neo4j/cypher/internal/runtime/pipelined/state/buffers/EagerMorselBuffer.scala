@@ -78,7 +78,9 @@ class EagerMorselBuffer(id: BufferId,
   }
 
   override def decrement(argumentRowId: Long): Unit = {
-    argumentStateMap.decrement(argumentRowId)
+    if (argumentStateMap.decrement(argumentRowId) != null) {
+      readyForTake()
+    }
   }
 
   //---------------------------------------------------------------------------
