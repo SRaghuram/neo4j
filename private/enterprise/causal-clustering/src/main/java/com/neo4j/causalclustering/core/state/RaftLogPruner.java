@@ -24,6 +24,6 @@ public class RaftLogPruner
 
     public void prune() throws IOException
     {
-        raftMachine.handle( new RaftMessages.PruneRequest( applicationProcess.lastFlushed() ) );
+        raftMachine.handle( new RaftMessages.PruneRequest( applicationProcess.flush() ) );
     }
 }

@@ -26,6 +26,7 @@ import com.neo4j.causalclustering.helper.scheduling.SingleElementJobsQueue;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 import org.neo4j.logging.Log;
@@ -33,6 +34,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.util.locks.CriticalSection;
 
 import static java.lang.Math.max;
 import static java.lang.String.format;
@@ -55,10 +57,13 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
     private LimitingScheduler scheduler;
     private final StatUtil.StatContext batchStat;
 
-    private long lastFlushed = NOTHING;
-    private volatile int pauseCount = 1; // we are created in the paused state
+    private final AtomicLong lastFlushed = new AtomicLong( NOTHING );
+    private int pauseCount = 1; // we are created in the paused state
     private final ApplierState applierState = new ApplierState();
     private volatile boolean hasPanicked;
+
+    private final CriticalSection control = new CriticalSection();
+    private final CriticalSection data = new CriticalSection();
 
     public CommandApplicationProcess( RaftLog raftLog, int maxBatchSize, int flushEvery, LogProvider logProvider, ProgressTracker progressTracker,
                                       SessionTracker sessionTracker, CoreState coreState, InFlightCache inFlightCache, Monitors monitors,
@@ -88,12 +93,15 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
         }
     }
 
-    private synchronized void scheduleJob()
+    private void scheduleJob()
     {
-        if ( pauseCount == 0 && !hasPanicked )
-        {
-            scheduler.offerJob( this::applyJob );
-        }
+        control.lock( () ->
+                      {
+                          if ( pauseCount == 0 && !hasPanicked )
+                          {
+                              scheduler.offerJob( this::applyJob );
+                          }
+                      } );
     }
 
     @Override
@@ -195,14 +203,15 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
      */
     void installSnapshot( CoreSnapshot coreSnapshot )
     {
-        assert pauseCount > 0;
-        lastFlushed = coreSnapshot.prevIndex();
-        applierState.setLastApplied( lastFlushed );
-    }
-
-    synchronized long lastFlushed()
-    {
-        return lastFlushed;
+        control.lock( () ->
+                      {
+                          if ( pauseCount <= 0 )
+                          {
+                              throw new IllegalStateException( "Must be paused when installing a snapshot" );
+                          }
+                          lastFlushed.set( coreSnapshot.prevIndex() );
+                          applierState.setLastApplied( coreSnapshot.prevIndex() );
+                      } );
     }
 
     private void applyBatch( long lastIndex, List<DistributedOperation> batch ) throws Exception
@@ -214,12 +223,15 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
 
         batchStat.collect( batch.size() );
 
-        long startIndex = lastIndex - batch.size() + 1;
-        long lastHandledIndex = handleOperations( startIndex, batch );
-        assert lastHandledIndex == lastIndex;
-        applierState.setLastApplied( lastIndex );
+        data.lock( () ->
+                   {
+                       long startIndex = lastIndex - batch.size() + 1;
+                       long lastHandledIndex = handleOperations( startIndex, batch );
+                       assert lastHandledIndex == lastIndex;
+                       applierState.setLastApplied( lastIndex );
 
-        maybeFlushToDisk();
+                       maybeFlushToDisk();
+                   } );
     }
 
     private long handleOperations( long commandIndex, List<DistributedOperation> operations )
@@ -240,7 +252,7 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
 
                 CoreReplicatedContent command = (CoreReplicatedContent) operation.content();
                 command.dispatch( dispatcher, commandIndex,
-                        result -> progressTracker.trackResult( operation, result ) );
+                                  result -> progressTracker.trackResult( operation, result ) );
 
                 sessionTracker.update( operation.globalSession(), operation.operationId(), commandIndex );
                 commandIndex++;
@@ -251,79 +263,110 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
 
     private void maybeFlushToDisk() throws IOException
     {
-        if ( (applierState.lastApplied - lastFlushed) > flushEvery )
+        if ( (applierState.lastApplied - lastFlushed.get()) > flushEvery )
         {
-            coreState.flush( applierState.lastApplied );
-            lastFlushed = applierState.lastApplied;
+            doFlush();
         }
     }
 
-    public synchronized void start() throws Exception
+    private long doFlush() throws IOException
     {
-        // TODO: check None/Partial/Full here, because this is the first level which can
-        // TODO: bootstrapping RAFT can also be performed from here.
-
-        if ( lastFlushed == NOTHING )
-        {
-            lastFlushed = coreState.getLastFlushed();
-        }
-        applierState.setLastApplied( lastFlushed );
-
-        log.info( format( "Restoring last applied index to %d", lastFlushed ) );
-        sessionTracker.start();
-
-        /* Considering the order in which state is flushed, the state machines will
-         * always be furthest ahead and indicate the furthest possible state to
-         * which we must replay to reach a consistent state. */
-        long lastPossiblyApplying = max( coreState.getLastAppliedIndex(), applierState.getLastSeenCommitIndex() );
-
-        if ( lastPossiblyApplying > applierState.lastApplied )
-        {
-            log.info( "Applying up to: " + lastPossiblyApplying );
-            applyUpTo( lastPossiblyApplying );
-        }
-
-        resumeApplier( "startup" );
+        return data.lock( () ->
+                          {
+                              long flushIndex = applierState.lastApplied;
+                              if ( flushIndex > NOTHING )
+                              {
+                                  coreState.flush( flushIndex );
+                                  lastFlushed.set( flushIndex );
+                              }
+                              return flushIndex;
+                          } );
     }
 
-    public synchronized void stop() throws IOException
+    public long flush() throws IOException
     {
-        pauseApplier( "shutdown" );
-        coreState.flush( applierState.lastApplied );
+        return control.lock( () ->
+                             {
+                                 if ( pauseCount > 0 )
+                                 {
+                                     return NOTHING;
+                                 }
+                                 return doFlush();
+                             } );
     }
 
-    public synchronized void pauseApplier( String reason )
+    public void start() throws Exception
     {
-        if ( pauseCount < 0 )
-        {
-            throw new IllegalStateException( "Unmatched pause/resume" );
-        }
+        control.lock( () ->
+                      {
+                          lastFlushed.compareAndSet( NOTHING, coreState.getLastFlushed() );
+                          applierState.setLastApplied( lastFlushed.get() );
 
-        pauseCount++;
-        log.info( format( "Pausing due to %s (count = %d)", reason, pauseCount ) );
+                          log.info( format( "Restoring last applied index to %d", lastFlushed.get() ) );
+                          sessionTracker.start();
 
-        if ( pauseCount == 1 )
-        {
-            scheduler.stopAndFlush();
-            scheduler = null;
-        }
+                          /* Considering the order in which state is flushed, the state machines will
+                           * always be furthest ahead and indicate the furthest possible state to
+                           * which we must replay to reach a consistent state. */
+                          long lastPossiblyApplying = max( coreState.getLastAppliedIndex(), applierState.getLastSeenCommitIndex() );
+
+                          if ( lastPossiblyApplying > applierState.lastApplied )
+                          {
+                              log.info( "Applying up to: " + lastPossiblyApplying );
+                              applyUpTo( lastPossiblyApplying );
+                          }
+
+                          resumeApplier( "startup" );
+                      } );
     }
 
-    public synchronized void resumeApplier( String reason )
+    public void stop() throws IOException
     {
-        if ( pauseCount <= 0 )
-        {
-            throw new IllegalStateException( "Unmatched pause/resume" );
-        }
+        control.lock( () ->
+                      {
+                          pauseApplier( "shutdown" );
+                          doFlush();
+                      } );
+    }
 
-        pauseCount--;
-        log.info( format( "Resuming after %s (count = %d)", reason, pauseCount ) );
+    public void pauseApplier( String reason )
+    {
+        control.lock( () ->
+                      {
+                          if ( pauseCount < 0 )
+                          {
+                              throw new IllegalStateException( "Unmatched pause/resume" );
+                          }
 
-        if ( pauseCount == 0 )
-        {
-            assert scheduler == null;
-            scheduler = schedulerSupplier.get();
-            scheduleJob();
-        }
+                          pauseCount++;
+                          log.info( format( "Pausing due to %s (count = %d)", reason, pauseCount ) );
+
+                          if ( scheduler != null )
+                          {
+                              scheduler.stopAndFlush();
+                              scheduler = null;
+                          }
+                      } );
+    }
+
+    public void resumeApplier( String reason )
+    {
+        control.lock( () ->
+                      {
+                          if ( pauseCount <= 0 )
+                          {
+                              throw new IllegalStateException( "Unmatched pause/resume" );
+                          }
+
+                          pauseCount--;
+                          log.info( format( "Resuming after %s (count = %d)", reason, pauseCount ) );
+
+                          if ( pauseCount == 0 )
+                          {
+                              assert scheduler == null;
+                              scheduler = schedulerSupplier.get();
+                              scheduleJob();
+                          }
+                      } );
     }
 }

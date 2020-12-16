@@ -1162,6 +1162,39 @@ public interface RaftMessages
         {
             return handler.handle( this );
         }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            if ( this == o )
+            {
+                return true;
+            }
+            if ( o == null || getClass() != o.getClass() )
+            {
+                return false;
+            }
+            if ( !super.equals( o ) )
+            {
+                return false;
+            }
+            PruneRequest that = (PruneRequest) o;
+            return pruneIndex == that.pruneIndex;
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash( super.hashCode(), pruneIndex );
+        }
+
+        @Override
+        public String toString()
+        {
+            return "PruneRequest{" +
+                   "pruneIndex=" + pruneIndex +
+                   '}';
+        }
     }
 
     class StatusResponse extends RaftMessage
