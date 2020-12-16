@@ -14,7 +14,7 @@ public class BranchAndVersion
     public static void validate( Repository repository, String owner, String branch )
     {
         boolean isDefaultOwner = repository.isDefaultOwner( owner );
-        boolean isStandardBranch = repository.isStandardBranch( branch.toLowerCase() );
+        boolean isStandardBranch = repository.isStandardBranch( branch );
 
         if ( isDefaultOwner && !isStandardBranch )
         {

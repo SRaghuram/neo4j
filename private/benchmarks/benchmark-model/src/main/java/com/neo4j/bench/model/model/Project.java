@@ -117,7 +117,7 @@ public class Project
         map.put( COMMIT, commit.toLowerCase() );
         map.put( EDITION, edition.name().toLowerCase() );
         map.put( VERSION, version );
-        map.put( BRANCH, branch.toLowerCase() );
+        map.put( BRANCH, branch );
         map.put( OWNER, owner.toLowerCase() );
         return map;
     }
