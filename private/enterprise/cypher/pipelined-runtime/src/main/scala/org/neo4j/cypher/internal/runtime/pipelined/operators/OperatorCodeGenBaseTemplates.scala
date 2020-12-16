@@ -122,10 +122,8 @@ import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.Read
-import org.neo4j.memory.MemoryTracker
-import org.neo4j.internal.kernel.api.TokenWrite
-import org.neo4j.internal.kernel.api.Write
 import org.neo4j.kernel.api.KernelTransaction
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 
 import scala.collection.mutable
@@ -859,7 +857,7 @@ trait ContinuableOperatorTaskWithMorselDataTemplate extends ContinuableOperatorT
 trait ContinuableOperatorTaskWithSingleAccumulatorTemplate extends ContinuableOperatorTaskTemplate {
 
   override protected def genConstructorParameters(): Seq[Parameter] = Seq(
-    DATA_READ_CONSTRUCTOR_PARAMETER,
+    TX_CONSTRUCTOR_PARAMETER,
     INPUT_ACCUMULATORS_CONSTRUCTOR_PARAMETER,
     ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER
   )

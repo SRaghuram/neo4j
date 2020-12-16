@@ -73,11 +73,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.FilterOperatorTempl
 import org.neo4j.cypher.internal.runtime.pipelined.operators.InputMorselDataFromBufferOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.InputMorselFromEagerBufferOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.InputOperatorTemplate
-<<<<<<< HEAD
-import org.neo4j.cypher.internal.runtime.pipelined.operators.LockNodesOperatorTemplate
-=======
 import org.neo4j.cypher.internal.runtime.pipelined.operators.InputSingleAccumulatorFromMorselArgumentStateBufferOperatorTaskTemplate
->>>>>>> Support eager in pipelined runtime
+import org.neo4j.cypher.internal.runtime.pipelined.operators.LockNodesOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyNodeByIdsSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeCountFromCountStoreOperatorTemplate
