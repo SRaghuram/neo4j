@@ -103,7 +103,7 @@ trait PipelinedDebugGeneratedSource extends SaveGeneratedSource {
   val saveGeneratedSourceEnabled: Boolean = DebugSupport.DEBUG_GENERATED_SOURCE_CODE
 
   // Only enable this if you want to inspect the generated source files after the test run. Otherwise they will be deleted automatically.
-  override val keepSourceFilesAfterTestFinishes: Boolean = false
+  override val keepSourceFilesAfterTestFinishes: Boolean = true
 }
 
 trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupport with EnterpriseGraphDatabaseTestSupport {
@@ -269,10 +269,15 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
                             executeBefore: InternalTransaction => Unit = _ => {},
                             executeExpectedFailures: Boolean = true,
                             params: Map[String, Any] = Map.empty,
-                            printPlanDescription: Boolean = false): RewindableExecutionResult = {
+                            printPlanDescription: Boolean = false,
+                            printPlanBuilder: Boolean = false): RewindableExecutionResult = {
     if (printPlanDescription) {
       val result = executeSingle(s"EXPLAIN $query", params)
       println(result.executionPlanDescription())
+    }
+    if (printPlanBuilder) {
+      val result = executeSingle(s"CYPHER debug=tostring debug=logicalplanbuilder $query", params)
+      println("val logicalQuery = new LogicalQueryBuilder(this)\n" + result.toList.map(_("col")).mkString("  ", "\n  ", ""))
     }
     if (expectSucceed.scenarios.nonEmpty) {
       val compareResults = expectSucceed - expectedDifferentResults
