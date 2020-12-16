@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.LeaderListener;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
+import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.DatabaseStateChangedListener;
@@ -107,7 +108,7 @@ class ClusterStartWithVMPauseIT
 
             // in a few cases even triggering an election does not make the leader to step down, this means the simulation of the pause was no successful,
             // so the test cannot continue
-            if ( raftMachine.isLeader() )
+            if ( raftMachine.currentRole() != Role.FOLLOWER )
             {
                 return false;
             }
