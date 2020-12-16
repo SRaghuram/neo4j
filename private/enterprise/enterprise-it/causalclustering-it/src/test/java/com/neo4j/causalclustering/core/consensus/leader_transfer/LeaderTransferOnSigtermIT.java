@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.core.consensus.leader_transfer;
 import com.neo4j.causalclustering.common.CausalClusteringTestHelpers;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -67,6 +68,7 @@ class LeaderTransferOnSigtermIT
                         .withSharedCoreParam( CausalClusteringSettings.leader_failure_detection_window, "60s-70s" )
                         .withSharedCoreParam( CausalClusteringSettings.election_failure_detection_window, "1s-3s" )
                         .withSharedCoreParam( CausalClusteringSettings.log_shipping_retry_timeout, "500ms" )
+                        .withSharedCoreParam( CausalClusteringInternalSettings.akka_failure_detector_acceptable_heartbeat_pause, "5s" )
         );
         cluster.start();
     }

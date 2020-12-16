@@ -14,11 +14,14 @@ import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.Topology;
 import com.neo4j.causalclustering.helper.ErrorHandler;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.causalclustering.read_replica.TestReadReplicaGraphDatabase;
 import com.neo4j.causalclustering.readreplica.ReadReplicaEditionModule;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
+import org.junit.platform.commons.logging.Logger;
+import org.junit.platform.commons.logging.LoggerFactory;
 
 import java.net.URI;
 import java.nio.file.Path;
@@ -61,6 +64,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.internal.helpers.Exceptions;
+import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
@@ -105,6 +109,7 @@ public class Cluster implements ServerAddressResolver
 
     private final Map<Integer,CoreClusterMember> coreMembers = new ConcurrentHashMap<>();
     private final Map<Integer,ReadReplica> readReplicas = new ConcurrentHashMap<>();
+    private final Logger log;
     private int highestCoreIndex;
     private int highestReplicaIndex;
 
@@ -126,6 +131,7 @@ public class Cluster implements ServerAddressResolver
         var initialHosts = initialHosts( noOfCoreMembers, coreParams, instanceCoreParams );
         createCoreMembers( noOfCoreMembers, initialHosts, coreParams, instanceCoreParams, recordFormat );
         createReadReplicas( noOfReadReplicas, initialHosts, readReplicaParams, instanceReadReplicaParams, recordFormat );
+        this.log = LoggerFactory.getLogger( this.getClass() );
     }
 
     private List<SocketAddress> initialHosts( int noOfCoreMembers, Map<String,String> coreParams, Map<String,IntFunction<String>> instanceCoreParams )
@@ -490,13 +496,63 @@ public class Cluster implements ServerAddressResolver
 
     public void awaitAllCoresJoinedAllRaftGroups( Set<String> databases, long timeout, TimeUnit timeUnit ) throws TimeoutException
     {
-        await( () -> coreMembers.values().stream().allMatch( core -> databases.stream().allMatch(
-               databaseName -> core.resolveDependency( databaseName, RaftMachine.class ).votingMembers().containsAll(
-                        coreMembers.values().stream().map( member -> member.raftMemberIdFor( member.databaseId( databaseName ) ) )
-                                .collect( Collectors.toSet() ) ) ) ),
+        await( () -> getAllCoresJoinedAllRaftGroups( databases ),
                timeout,
-               timeUnit
+               timeUnit,
+               1,
+               TimeUnit.SECONDS
         );
+    }
+
+    private boolean getAllCoresJoinedAllRaftGroups( Set<String> databases )
+    {
+        var coreMembers = Set.copyOf( this.coreMembers.values() );
+        var expectedMembersPerDb = databases.stream()
+                                            .collect( Collectors.toMap( Function.identity(), dbName -> expectedMembers( coreMembers, dbName ) ) );
+        var allCoreDatabasePairs = coreMembers.stream()
+                                              .flatMap( core -> databases.stream().map( db -> Pair.of( core, db ) ) );
+
+        return allCoreDatabasePairs.map( coreDatabase -> votingMembersContainAllExpected( coreDatabase.first(), coreDatabase.other(), expectedMembersPerDb ) )
+                .reduce( true, Boolean::logicalAnd );
+    }
+
+    private boolean votingMembersContainAllExpected( CoreClusterMember coreMember, String databaseName, Map<String,Set<RaftMemberId>> expectedMembersPerDb )
+    {
+        var expectedMembers = expectedMembersPerDb.getOrDefault( databaseName, Set.of() );
+        var votingMembers =  votingMembers( coreMember, databaseName );
+        if ( !votingMembers.containsAll( expectedMembers ) )
+        {
+            log.warn( () -> String.format( "I am %s. My voting members are %s for database %s. Expecting members %s",
+                                           coreMember.serverId(),
+                                           votingMembers,
+                                           databaseName,
+                                           expectedMembers ) );
+            return false;
+        }
+        return true;
+    }
+
+    private Set<RaftMemberId> votingMembers( CoreClusterMember coreMember, String databaseName )
+    {
+        return coreMember.resolveDependency( databaseName, RaftMachine.class ).votingMembers();
+    }
+
+    private Set<RaftMemberId> expectedMembers( Collection<CoreClusterMember> coreMembers, String databaseName )
+    {
+        return coreMembers.stream()
+                          .flatMap( member ->
+                          {
+                              try
+                              {
+                                  return Stream.of( member.raftMemberIdFor( member.databaseId( databaseName ) ) );
+                              }
+                              catch ( IllegalStateException e )
+                              {
+                                  //IllegalStateException thrown when RaftMemberId is not yet registered in CoreIdentityModule
+                                  return Stream.empty();
+                              }
+                          } )
+                          .collect( Collectors.toSet() );
     }
 
     public int numberOfCoreMembersReportedByTopology( String databaseName )
