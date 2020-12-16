@@ -844,6 +844,9 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       case plans.NonFuseable(_) =>
         Some(new NonFuseableOperator(WorkIdentity.fromPlan(plan)))
 
+      case plans.Prober(_, probe) =>
+        Some(new ProberOperator(WorkIdentity.fromPlan(plan), probe))
+
       case plans.Limit(_, count) =>
         val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
         Some(new LimitOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, count))(id))

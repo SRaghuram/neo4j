@@ -55,6 +55,7 @@ import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
 import org.neo4j.cypher.internal.logical.plans.OrderedDistinct
 import org.neo4j.cypher.internal.logical.plans.PartialSort
 import org.neo4j.cypher.internal.logical.plans.PartialTop
+import org.neo4j.cypher.internal.logical.plans.Prober
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.logical.plans.Projection
 import org.neo4j.cypher.internal.logical.plans.RemoveLabels
@@ -468,7 +469,8 @@ class SlottedPipeMapper(fallback: PipeMapper,
            _: ExhaustiveLimit |
            _: ErrorPlan |
            _: Skip |
-           _: NonFuseable =>
+           _: NonFuseable |
+           _: Prober =>
         fallback.onOneChildPlan(plan, source)
 
       case Sort(_, sortItems) =>

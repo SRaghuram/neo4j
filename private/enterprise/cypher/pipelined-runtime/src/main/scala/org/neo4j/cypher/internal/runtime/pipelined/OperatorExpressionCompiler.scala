@@ -71,8 +71,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.nodeHasProperty
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.relationshipGetProperty
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.relationshipHasProperty
-import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.relationshipHasType
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.operations.CursorUtils
 import org.neo4j.cypher.operations.InCache
 import org.neo4j.internal.kernel.api.NodeCursor
@@ -493,8 +493,8 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
   /**
    * Used by [[copyFromInput]] to track the argument state
    */
-  private var nLongSlotsToCopyFromInput: Int = 0
-  private var nRefSlotsToCopyFromInput: Int = 0
+  protected var nLongSlotsToCopyFromInput: Int = 0
+  protected var nRefSlotsToCopyFromInput: Int = 0
 
   /**
    * Used for giving direct access to cursors from expressions.
@@ -880,6 +880,10 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     }
     all
   }
+
+  // Used for testing. Will generate code using the given rowRep as outputRow instead of ROW
+  def probeCompiler(rowRep: IntermediateRepresentation): ProbeOperatorExpressionCompiler =
+    new ProbeOperatorExpressionCompiler(slots, inputSlotConfiguration, readOnly, namer, locals, nLongSlotsToCopyFromInput, nRefSlotsToCopyFromInput, rowRep)
 }
 
 abstract class BaseCursorRepresentation extends CursorRepresentation {
@@ -998,4 +1002,18 @@ case class RelationshipCursorRepresentation(target: IntermediateRepresentation) 
   }
 }
 
+// Used for testing. Will generate code using the given rowRep as outputRow instead of ROW
+class ProbeOperatorExpressionCompiler(slots: SlotConfiguration,
+                                      inputSlotConfiguration: SlotConfiguration,
+                                      readOnly: Boolean,
+                                      namer: VariableNamer,
+                                      override protected val locals: LocalsForSlots,
+                                      _nLongSlotsToCopyFromInput: Int,
+                                      _nRefSlotsToCopyFromInput: Int,
+                                      rowRep: IntermediateRepresentation) extends OperatorExpressionCompiler(slots, inputSlotConfiguration, readOnly, namer) {
+  nLongSlotsToCopyFromInput = _nLongSlotsToCopyFromInput
+  nRefSlotsToCopyFromInput = _nRefSlotsToCopyFromInput
+
+  override def outputRow: IntermediateRepresentation = rowRep
+}
 

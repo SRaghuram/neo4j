@@ -204,6 +204,7 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy[Ne
            _: Selection |
            _: NonFuseable |
            _: LockNodes |
+           _: Prober |
            _: EmptyResult
       => (false, fuseIndex)
 

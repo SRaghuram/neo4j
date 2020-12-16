@@ -26,6 +26,7 @@ import org.neo4j.cypher.internal.logical.plans.ManyQueryExpression
 import org.neo4j.cypher.internal.logical.plans.ManySeekableArgs
 import org.neo4j.cypher.internal.logical.plans.PointDistanceSeekRangeWrapper
 import org.neo4j.cypher.internal.logical.plans.PrefixSeekRangeWrapper
+import org.neo4j.cypher.internal.logical.plans.Prober
 import org.neo4j.cypher.internal.logical.plans.QueryExpression
 import org.neo4j.cypher.internal.logical.plans.RangeBetween
 import org.neo4j.cypher.internal.logical.plans.RangeGreaterThan
@@ -98,6 +99,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalExpandAllOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalExpandIntoOperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ProberOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProcedureOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectEndpointsMiddleOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectOperatorTemplate
@@ -886,6 +888,10 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               new InputSingleAccumulatorFromMorselArgumentStateBufferOperatorTaskTemplate(ctx.inner, plan.id, ctx.innermost)(ctx.expressionCompiler),
               Some(DynamicFactoryArgumentStateDescriptor(argumentStateMapId, ArgumentStateBuffer, plan.id, ordered = false))
             )
+
+        case plan@plans.Prober(_, probe: Prober.Probe) =>
+          ctx: TemplateContext =>
+            new ProberOperatorTemplate(ctx.inner, plan.id, probe)(ctx.expressionCompiler)
 
         case _ =>
           None
