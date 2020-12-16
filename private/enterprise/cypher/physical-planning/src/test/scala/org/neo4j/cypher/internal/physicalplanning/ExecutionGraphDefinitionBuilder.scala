@@ -21,7 +21,7 @@ import org.neo4j.cypher.internal.util.attribution.Id
 
 import scala.collection.mutable.ArrayBuffer
 
-class ExecutionGraphDefinitionBuilder(operatorFuserFactory: OperatorFuserFactory = OperatorFuserFactory.NO_FUSION)
+class ExecutionGraphDefinitionBuilder(operatorFuserFactory: OperatorFuserFactory[_] = OperatorFuserFactory.NO_FUSION)
   extends AbstractLogicalPlanBuilder[ExecutionGraphDefinition, ExecutionGraphDefinitionBuilder](new NotImplementedTokenContext()) {
 
   private val plansToBreakOn = ArrayBuffer[Id]()

@@ -17,16 +17,16 @@ object ExecutionGraphDefiner {
    *                          that we only need while building the ExecutableQuery, so we do not want to cache them,
    *                          unlike the rest of the executionGraphDefinition.
    */
-  case class Result(executionGraphDefinition: ExecutionGraphDefinition, pipelineTemplates: Map[PipelineId, IndexedSeq[_]])
+  case class Result[TEMPLATE](executionGraphDefinition: ExecutionGraphDefinition, pipelineTemplates: Map[PipelineId, IndexedSeq[TEMPLATE]])
 
   /**
    * Builds an [[ExecutionGraphDefinition]], including [[PipelineDefinition]]s, for a given physical plan.
    */
-  def defineFrom(breakingPolicy: PipelineBreakingPolicy,
-                 operatorFuserFactory: OperatorFuserFactory,
+  def defineFrom[TEMPLATE](breakingPolicy: PipelineBreakingPolicy,
+                 operatorFuserFactory: OperatorFuserFactory[TEMPLATE],
                  physicalPlan: PhysicalPlan,
                  expressionConverters: ExpressionConverters,
-                 leveragedOrders: LeveragedOrders): Result = {
+                 leveragedOrders: LeveragedOrders): Result[TEMPLATE] = {
 
     val executionStateDefiner = new ExecutionStateDefiner(physicalPlan)
     val pipelineTreeBuilder = new PipelineTreeBuilder(breakingPolicy,

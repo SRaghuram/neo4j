@@ -10,8 +10,10 @@ import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
  * Policy that determines if a plan can be fused or not.
+ *
+ * @tparam TEMPLATE the type of template that together can be compiled into Operators.
  */
-trait OperatorFusionPolicy {
+trait OperatorFusionPolicy[+TEMPLATE] {
   /**
    * @return `true` if any fusion at all is enabled with this policy, otherwise `false`
    */
@@ -44,44 +46,48 @@ trait OperatorFusionPolicy {
 
   def operatorFuserFactory(physicalPlan: PhysicalPlan,
                            readOnly: Boolean,
-                           parallelExecution: Boolean): OperatorFuserFactory
+                           parallelExecution: Boolean): OperatorFuserFactory[TEMPLATE]
 }
 
 object OperatorFusionPolicy {
 
-  case object OPERATOR_FUSION_DISABLED extends OperatorFusionPolicy {
+  case object OPERATOR_FUSION_DISABLED extends OperatorFusionPolicy[Nothing] {
     override def canFuse(lp: LogicalPlan, outerApplyPlanId: Id): Boolean = false
     override def canFuseOverPipeline(lp: LogicalPlan, outerApplyPlanId: Id): Boolean = false
     override def fusionEnabled: Boolean = false
     override def fusionOverPipelineEnabled: Boolean = false
     override def operatorFuserFactory(physicalPlan: PhysicalPlan,
                                       readOnly: Boolean,
-                                      parallelExecution: Boolean): OperatorFuserFactory = OperatorFuserFactory.NO_FUSION
+                                      parallelExecution: Boolean): OperatorFuserFactory[Nothing] = OperatorFuserFactory.NO_FUSION
     override def fusionOverPipelineLimit: Int = 0
   }
 }
 
 /**
-  * Factory for constructing [[OperatorFuser]]s.
-  */
-trait OperatorFuserFactory {
-  def newOperatorFuser(headPlanId: Id): OperatorFuser
+ * Factory for constructing [[OperatorFuser]]s.
+ *
+ * @tparam TEMPLATE the type of template that together can be compiled into Operators.
+ */
+trait OperatorFuserFactory[+TEMPLATE] {
+  def newOperatorFuser(headPlanId: Id): OperatorFuser[TEMPLATE]
 }
 
 object OperatorFuserFactory {
-  val NO_FUSION: OperatorFuserFactory =
-    (_: Id) => new OperatorFuser {
+  val NO_FUSION: OperatorFuserFactory[Nothing] =
+    (_: Id) => new OperatorFuser[Nothing] {
       override def fuseIn(plan: LogicalPlan): Boolean = false
       override def fuseIn(output: OutputDefinition): Boolean = false
       override def fusedPlans: IndexedSeq[LogicalPlan] = IndexedSeq.empty
-      override def templates: IndexedSeq[_] = IndexedSeq.empty
+      override def templates: IndexedSeq[Nothing] = IndexedSeq.empty
     }
 }
 
 /**
-  * An OperatorFuser represents the ongoing fusion of operators into a fused operator.
-  */
-trait OperatorFuser {
+ * An OperatorFuser represents the ongoing fusion of operators into a fused operator.
+ *
+ * @tparam TEMPLATE the type of template that together can be compiled into Operators.
+ */
+trait OperatorFuser[+TEMPLATE] {
   /**
     * Fuse in `plan` after any previously fused in operators.
     */
@@ -99,8 +105,6 @@ trait OperatorFuser {
 
   /**
    * A sequence of templates that can be compiled to an Operator.
-   * We cannot make the type more specific in physicalplanning without moving large parts of pipelined into this module.
-   * The actual type should be IndexedSeq[TemplateOperators.NewTemplate]
    */
-  def templates: IndexedSeq[_]
+  def templates: IndexedSeq[TEMPLATE]
 }

@@ -35,8 +35,8 @@ import scala.collection.mutable.ArrayBuffer
 class TemplateOperatorFuserFactory(physicalPlan: PhysicalPlan,
                                    readOnly: Boolean,
                                    parallelExecution: Boolean,
-                                   fusionOverPipelineEnabled: Boolean) extends OperatorFuserFactory {
-  override def newOperatorFuser(headPlanId: Id): OperatorFuser =
+                                   fusionOverPipelineEnabled: Boolean) extends OperatorFuserFactory[NewTemplate] {
+  override def newOperatorFuser(headPlanId: Id): OperatorFuser[NewTemplate] =
     new TemplateOperatorFuser(physicalPlan,
                               readOnly,
                               parallelExecution,
@@ -48,7 +48,7 @@ class TemplateOperatorFuser(physicalPlan: PhysicalPlan,
                             readOnly: Boolean,
                             parallelExecution: Boolean,
                             fusionOverPipelineEnabled: Boolean,
-                            headPlanId: Id) extends TemplateOperators(readOnly, parallelExecution, fusionOverPipelineEnabled) with OperatorFuser {
+                            headPlanId: Id) extends TemplateOperators(readOnly, parallelExecution, fusionOverPipelineEnabled) with OperatorFuser[NewTemplate] {
 
   private val slots = physicalPlan.slotConfigurations(headPlanId)
   generateSlotAccessorFunctions(slots)

@@ -508,9 +508,9 @@ class ExecutionGraphVisualizerTest extends CypherFunSuite {
   private def asTNode(node: Node): TNode = TNode(node.getAllProperties.asScala.toMap, node.getLabels.asScala.toSeq.map(_.name()): _*)
   private def asTRel(rel: Relationship): TRel = TRel(asTNode(rel.getStartNode), asTNode(rel.getEndNode), rel.getAllProperties.asScala.toMap, rel.getType.name())
 
-  val fuseAllFactory: OperatorFuserFactory =
+  val fuseAllFactory: OperatorFuserFactory[Nothing] =
     (headPlanId: Id) =>
-      new OperatorFuser {
+      new OperatorFuser[Nothing] {
         val plans = new ArrayBuffer[LogicalPlan]
 
         override def fuseIn(plan: LogicalPlan): Boolean = {
@@ -527,6 +527,6 @@ class ExecutionGraphVisualizerTest extends CypherFunSuite {
 
         override def fusedPlans: IndexedSeq[LogicalPlan] = plans
 
-        override def templates: IndexedSeq[_] = IndexedSeq.empty
+        override def templates: IndexedSeq[Nothing] = IndexedSeq.empty
       }
 }

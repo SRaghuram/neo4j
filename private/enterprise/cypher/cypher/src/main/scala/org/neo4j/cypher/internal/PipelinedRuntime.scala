@@ -23,7 +23,6 @@ import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanner
 import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition.FusedHead
 import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition.InterpretedHead
-import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.plandescription.Arguments.PipelineInfo
@@ -153,7 +152,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
   /**
    * This tries to compile a plan, first with fusion enabled, second with fusion only inside a pipeline and third without fusion.
    */
-  private def compilePlan(operatorFusionPolicy: OperatorFusionPolicy,
+  private def compilePlan(operatorFusionPolicy: OperatorFusionPolicy[NewTemplate],
                           query: LogicalQuery,
                           context: EnterpriseRuntimeContext,
                           queryIndexRegistrator: QueryIndexRegistrator,
@@ -210,7 +209,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
     //=======================================================
 
     val ExecutionGraphDefiner.Result(executionGraphDefinition, pipelineTemplates) =
-      ExecutionGraphDefiner.defineFrom(
+      ExecutionGraphDefiner.defineFrom[NewTemplate](
         breakingPolicy,
         operatorFusionPolicy.operatorFuserFactory(physicalPlan, query.readOnly, parallelExecution),
         physicalPlan,
@@ -252,8 +251,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
       query.readOnly,
       query.doProfile,
       context.config.lenientCreateRelationship,
-      // This cast is currently necessary. See details in [[OperatorFuser.templates]]
-      pipelineTemplates.asInstanceOf[Map[PipelineId, IndexedSeq[NewTemplate]]]
+      pipelineTemplates
     )
 
     try {

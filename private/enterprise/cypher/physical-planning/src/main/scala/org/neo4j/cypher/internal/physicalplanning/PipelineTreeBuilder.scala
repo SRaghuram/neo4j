@@ -67,13 +67,13 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-sealed trait HeadPlanBuilder {
+sealed trait HeadPlanBuilder[+TEMPLATE] {
   def id: Id = plan.id
   protected def plan: LogicalPlan
 }
 
-case class InterpretedHeadBuilder(plan: LogicalPlan) extends HeadPlanBuilder
-case class FusedHeadBuilder(operatorFuser: OperatorFuser) extends HeadPlanBuilder {
+case class InterpretedHeadBuilder(plan: LogicalPlan) extends HeadPlanBuilder[Nothing]
+case class FusedHeadBuilder[TEMPLATE](operatorFuser: OperatorFuser[TEMPLATE]) extends HeadPlanBuilder[TEMPLATE] {
   override protected def plan: LogicalPlan = operatorFuser.fusedPlans.head
 }
 
@@ -85,8 +85,8 @@ object PipelineTreeBuilder {
   /**
    * Builder for [[PipelineDefinition]]
    */
-  class PipelineDefiner(val id: PipelineId,
-                        val operatorFuserFactory: OperatorFuserFactory,
+  class PipelineDefiner[TEMPLATE](val id: PipelineId,
+                        val operatorFuserFactory: OperatorFuserFactory[TEMPLATE],
                         val inputBuffer: BufferDefiner,
                         val headLogicalPlan: LogicalPlan) {
     var lhs: PipelineId = NO_PIPELINE
@@ -97,7 +97,7 @@ object PipelineTreeBuilder {
      * continuing with as many fusable consecutive middlePlans as possible.
      * If a plan is in `fusedPlans`. it will not be in `middlePlans` and vice versa.
      */
-    val headPlan: HeadPlanBuilder = {
+    val headPlan: HeadPlanBuilder[TEMPLATE] = {
       val operatorFuser = operatorFuserFactory.newOperatorFuser(headLogicalPlan.id)
       if (operatorFuser.fuseIn(headLogicalPlan))
         FusedHeadBuilder(operatorFuser)
@@ -142,7 +142,7 @@ object PipelineTreeBuilder {
 
     private def headPlanResult: HeadPlan =
       headPlan match {
-        case f: FusedHeadBuilder =>
+        case f: FusedHeadBuilder[_] =>
           if (f.operatorFuser.fusedPlans.size > 1)
             FusedHead(f.operatorFuser.fusedPlans)
           else
@@ -150,7 +150,7 @@ object PipelineTreeBuilder {
         case InterpretedHeadBuilder(plan) => InterpretedHead(plan)
       }
 
-    def pipelineTemplates: IndexedSeq[_] =
+    def pipelineTemplates: IndexedSeq[TEMPLATE] =
       headPlan match {
         case FusedHeadBuilder(operatorFuser) => operatorFuser.templates
         case InterpretedHeadBuilder(_) => IndexedSeq.empty
@@ -471,32 +471,32 @@ object PipelineTreeBuilder {
  * Fills an [[ExecutionStateDefiner]] and and array of [[PipelineDefiner]]s.
  * Final conversion to [[ExecutionGraphDefinition]] is done by [[ExecutionGraphDefiner]].
  */
-class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
-                          operatorFuserFactory: OperatorFuserFactory,
+class PipelineTreeBuilder[TEMPLATE](breakingPolicy: PipelineBreakingPolicy,
+                          operatorFuserFactory: OperatorFuserFactory[TEMPLATE],
                           stateDefiner: ExecutionStateDefiner,
                           slotConfigurations: SlotConfigurations,
                           argumentSizes: ArgumentSizes,
                           applyPlans: ApplyPlans,
                           expressionConverters: ExpressionConverters,
                           leveragedOrders: LeveragedOrders)
-  extends TreeBuilder[PipelineDefiner, ApplyBufferDefiner] {
+  extends TreeBuilder[PipelineDefiner[TEMPLATE], ApplyBufferDefiner] {
 
-  private[physicalplanning] val pipelines = new ArrayBuffer[PipelineDefiner]
+  private[physicalplanning] val pipelines = new ArrayBuffer[PipelineDefiner[TEMPLATE]]
   private[physicalplanning] val applyRhsPlans = new mutable.HashMap[Int, Int]()
 
-  private def newPipeline(plan: LogicalPlan, inputBuffer: BufferDefiner): PipelineDefiner = {
+  private def newPipeline(plan: LogicalPlan, inputBuffer: BufferDefiner): PipelineDefiner[TEMPLATE] = {
     val pipeline = new PipelineDefiner(PipelineId(pipelines.size), operatorFuserFactory, inputBuffer, plan)
     pipelines += pipeline
     pipeline
   }
 
-  private def outputToBuffer(pipeline: PipelineDefiner, nextPipelineHeadPlan: LogicalPlan): MorselBufferDefiner = {
+  private def outputToBuffer(pipeline: PipelineDefiner[TEMPLATE], nextPipelineHeadPlan: LogicalPlan): MorselBufferDefiner = {
     val output = stateDefiner.newBuffer(pipeline.id, nextPipelineHeadPlan.id, slotConfigurations(pipeline.headPlan.id))
     pipeline.fuseOrInterpretOutput(MorselBufferOutput(output.id, nextPipelineHeadPlan.id))
     output
   }
 
-  private def outputToUnionBuffer(lhs: PipelineDefiner, rhs: PipelineDefiner, nextPipelineHeadPlan: Id): UnionBufferDefiner = {
+  private def outputToUnionBuffer(lhs: PipelineDefiner[TEMPLATE], rhs: PipelineDefiner[TEMPLATE], nextPipelineHeadPlan: Id): UnionBufferDefiner = {
     // When fusing, buffer configuration is used to determine which slots are not modified by the pipeline and should be copied from input.
     val bufferSlotConfiguration = SlotConfiguration.empty // For Union we want it to be empty because:
                                                           // a) Union operator logic already copies everything we need.
@@ -508,14 +508,14 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     output
   }
 
-  private def outputToApplyBuffer(pipeline: PipelineDefiner, argumentSlotOffset: Int, nextPipelineHeadPlan: LogicalPlan): ApplyBufferDefiner = {
+  private def outputToApplyBuffer(pipeline: PipelineDefiner[TEMPLATE], argumentSlotOffset: Int, nextPipelineHeadPlan: LogicalPlan): ApplyBufferDefiner = {
     val output = stateDefiner.newApplyBuffer(pipeline.id, nextPipelineHeadPlan.id, argumentSlotOffset, slotConfigurations(pipeline.headPlan.id))
     pipeline.fuseOrInterpretOutput(MorselBufferOutput(output.id, nextPipelineHeadPlan.id))
     output
   }
 
   private def outputToConditionalSink(predicate: Expression,
-                                      pipeline: PipelineDefiner,
+                                      pipeline: PipelineDefiner[TEMPLATE],
                                       argumentSlotOffset: Int,
                                       currentPlan: LogicalPlan): ApplyBufferDefiner = {
     /*
@@ -543,7 +543,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     applyBuffer
   }
 
-  private def outputToAttachApplyBuffer(pipeline: PipelineDefiner,
+  private def outputToAttachApplyBuffer(pipeline: PipelineDefiner[TEMPLATE],
                                         attachingPlanId: Id,
                                         argumentSlotOffset: Int,
                                         postAttachSlotConfiguration: SlotConfiguration,
@@ -562,7 +562,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     output
   }
 
-  private def outputToArgumentStateBuffer(pipeline: PipelineDefiner, plan: LogicalPlan, applyBuffer: ApplyBufferDefiner, argumentSlotOffset: Int): ArgumentStateBufferDefiner = {
+  private def outputToArgumentStateBuffer(pipeline: PipelineDefiner[TEMPLATE], plan: LogicalPlan, applyBuffer: ApplyBufferDefiner, argumentSlotOffset: Int): ArgumentStateBufferDefiner = {
     val asm = stateDefiner.newArgumentStateMap(plan.id, argumentSlotOffset)
     val output = stateDefiner.newArgumentStateBuffer(pipeline.id, plan.id, asm.id, slotConfigurations(pipeline.headPlan.id))
     pipeline.fuseOrInterpretOutput(ReduceOutput(output.id, asm.id, plan))
@@ -570,7 +570,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     output
   }
 
-  private def outputToArgumentStreamBuffer(pipeline: PipelineDefiner,
+  private def outputToArgumentStreamBuffer(pipeline: PipelineDefiner[TEMPLATE],
                                            plan: LogicalPlan,
                                            applyBuffer: ApplyBufferDefiner,
                                            argumentSlotOffset: Int): ArgumentStreamMorselBufferDefiner = {
@@ -581,7 +581,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     output
   }
 
-  private def outputToAntiPipelinedBuffer(pipeline: PipelineDefiner,
+  private def outputToAntiPipelinedBuffer(pipeline: PipelineDefiner[TEMPLATE],
                                           plan: LogicalPlan,
                                           applyBuffer: ApplyBufferDefiner,
                                           argumentSlotOffset: Int): ArgumentStreamMorselBufferDefiner = {
@@ -592,8 +592,8 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     output
   }
 
-  private def outputToLhsAccumulatingRhsStreamingBuffer(maybeLhs: Option[PipelineDefiner],
-                                                        rhs: PipelineDefiner,
+  private def outputToLhsAccumulatingRhsStreamingBuffer(maybeLhs: Option[PipelineDefiner[TEMPLATE]],
+                                                        rhs: PipelineDefiner[TEMPLATE],
                                                         planId: Id,
                                                         applyBuffer: ApplyBufferDefiner,
                                                         argumentSlotOffset: Int,
@@ -625,7 +625,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
   }
 
   override protected def onLeaf(plan: LogicalPlan,
-                                argument: ApplyBufferDefiner): PipelineDefiner = {
+                                argument: ApplyBufferDefiner): PipelineDefiner[TEMPLATE] = {
     if (breakingPolicy.breakOn(plan, applyPlans(plan.id))) {
       val delegate = stateDefiner.newDelegateBuffer(argument, plan.id, argument.bufferConfiguration)
       argument.delegates += delegate.id
@@ -638,8 +638,8 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
   }
 
   override protected def onOneChildPlan(plan: LogicalPlan,
-                                        source: PipelineDefiner,
-                                        argument: ApplyBufferDefiner): PipelineDefiner = {
+                                        source: PipelineDefiner[TEMPLATE],
+                                        argument: ApplyBufferDefiner): PipelineDefiner[TEMPLATE] = {
 
     plan match {
       case produceResult: ProduceResult =>
@@ -677,7 +677,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
 
         val workCancellerAsmId = stateDefiner.newArgumentStateMap(plan.id, argument.argumentSlotOffset).id
         //if we are a toplevel PartialTop we want to propagate the limit upstream
-        val onPipeline: PipelineDefiner => Unit = createPropagateTopLevelLimitCallback(argument, workCancellerAsmId)
+        val onPipeline: PipelineDefiner[TEMPLATE] => Unit = createPropagateTopLevelLimitCallback(argument, workCancellerAsmId)
         //we want to propagate starting with source and then all upstream pipelines
         onPipeline(pipeline)
         markCancellerInUpstreamBuffers(pipeline.inputBuffer, argument, workCancellerAsmId, onPipeline)
@@ -733,7 +733,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         } else {
           val asm = stateDefiner.newArgumentStateMap(plan.id, argument.argumentSlotOffset)
           //if we are a toplevel limit we want to propagate the limit upstream
-          val onPipeline: PipelineDefiner => Unit = createPropagateTopLevelLimitCallback(argument, asm.id)
+          val onPipeline: PipelineDefiner[TEMPLATE] => Unit = createPropagateTopLevelLimitCallback(argument, asm.id)
           //we want to propagate starting with source and then all upstream pipelines
           onPipeline(source)
           markCancellerInUpstreamBuffers(source.inputBuffer, argument, asm.id, onPipeline)
@@ -768,7 +768,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
   }
 
   override protected def onTwoChildPlanComingFromLeft(plan: LogicalPlan,
-                                                      lhs: PipelineDefiner,
+                                                      lhs: PipelineDefiner[TEMPLATE],
                                                       argument: ApplyBufferDefiner): ApplyBufferDefiner =
   {
     plan match {
@@ -822,9 +822,9 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
   }
 
   override protected def onTwoChildPlanComingFromRight(plan: LogicalPlan,
-                                                       lhs: PipelineDefiner,
-                                                       rhs: PipelineDefiner,
-                                                       argument: ApplyBufferDefiner): PipelineDefiner = {
+                                                       lhs: PipelineDefiner[TEMPLATE],
+                                                       rhs: PipelineDefiner[TEMPLATE],
+                                                       argument: ApplyBufferDefiner): PipelineDefiner[TEMPLATE] = {
 
     plan match {
       case apply: plans.Apply =>
@@ -860,7 +860,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         val output = stateDefiner.newBuffer(rhs.id, plan.id, rhsSlotConfiguration)
         sink.onTrueBuffer = output
         rhs.fuseOrInterpretOutput(MorselBufferOutput(output.id, plan.id))
-        val pipeline: PipelineDefiner = newPipeline(plan, output)
+        val pipeline: PipelineDefiner[TEMPLATE] = newPipeline(plan, output)
         //this is weird, but used for getting the scheduler to do the right thing
         pipeline.lhs = rhs.id
         pipeline
@@ -978,7 +978,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
   private def markCancellerInUpstreamBuffers(buffer: BufferDefiner,
                                              applyBuffer: ApplyBufferDefiner,
                                              workCancellerASMID: ArgumentStateMapId,
-                                             onPipeline: PipelineDefiner => Unit): Unit = {
+                                             onPipeline: PipelineDefiner[TEMPLATE] => Unit): Unit = {
     traverseBuffers(buffer,
       applyBuffer,
       inputBuffer => inputBuffer.registerDownstreamWorkCanceller(workCancellerASMID),
@@ -1014,12 +1014,12 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
                               onLHSAccumulatingRHSStreamingBuffer: LHSAccumulatingRHSStreamingBufferDefiner => Unit,
                               onDelegateBuffer: DelegateBufferDefiner => Unit,
                               onLastDelegate: DelegateBufferDefiner => Unit,
-                              onPipeline: PipelineDefiner => Unit): Unit = {
+                              onPipeline: PipelineDefiner[TEMPLATE] => Unit): Unit = {
     @tailrec
     def bfs(buffers: Seq[BufferDefiner]): Unit = {
       val upstreams = new ArrayBuffer[BufferDefiner]()
 
-      def getPipeline(id: Int): PipelineDefiner = {
+      def getPipeline(id: Int): PipelineDefiner[TEMPLATE] = {
         val p = pipelines(id)
         onPipeline(p)
         p
@@ -1063,7 +1063,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     bfs(buffers)
   }
 
-  private def createPropagateTopLevelLimitCallback(argument: ApplyBufferDefiner, workCancellerAsmId: ArgumentStateMapId): PipelineDefiner => Unit =
+  private def createPropagateTopLevelLimitCallback(argument: ApplyBufferDefiner, workCancellerAsmId: ArgumentStateMapId): PipelineDefiner[TEMPLATE] => Unit =
     if (argument.argumentSlotOffset == TopLevelArgument.SLOT_OFFSET) {
       p => {
         if (p.workCanceller.isEmpty) {

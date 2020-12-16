@@ -75,11 +75,12 @@ import org.neo4j.cypher.internal.options.CypherInterpretedPipesFallbackOption
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
 import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
+import org.neo4j.cypher.internal.runtime.pipelined.TemplateOperators.NewTemplate
 import org.neo4j.cypher.internal.util.attribution.Attribute
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
 
-case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy,
+case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy[NewTemplate],
                                            interpretedPipesPolicy: InterpretedPipesFallbackPolicy,
                                            parallelExecution: Boolean,
                                            override val nestedPlanBreakingPolicy: PipelineBreakingPolicy) extends PipelineBreakingPolicy {

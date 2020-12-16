@@ -11,11 +11,12 @@ import org.neo4j.cypher.internal.physicalplanning.OperatorFuserFactory
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy.OPERATOR_FUSION_DISABLED
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
+import org.neo4j.cypher.internal.runtime.pipelined.TemplateOperators.NewTemplate
 import org.neo4j.cypher.internal.util.attribution.Id
 
 object TemplateOperatorPolicy {
 
-  def apply(fusionEnabled: Boolean, fusionOverPipelinesEnabled: Boolean, fusionOverPipelineLimit: Int, readOnly: Boolean, parallelExecution: Boolean): OperatorFusionPolicy =
+  def apply(fusionEnabled: Boolean, fusionOverPipelinesEnabled: Boolean, fusionOverPipelineLimit: Int, readOnly: Boolean, parallelExecution: Boolean): OperatorFusionPolicy[NewTemplate] =
     if (fusionEnabled)
       new TemplateOperatorPolicy(fusionOverPipelinesEnabled, fusionOverPipelineLimit, readOnly, parallelExecution)
     else
@@ -26,7 +27,7 @@ class TemplateOperatorPolicy(override val fusionOverPipelineEnabled: Boolean,
                              override val fusionOverPipelineLimit: Int,
                              readOnly: Boolean,
                              parallelExecution: Boolean)
-  extends TemplateOperators(readOnly, parallelExecution, fusionOverPipelineEnabled) with OperatorFusionPolicy {
+  extends TemplateOperators(readOnly, parallelExecution, fusionOverPipelineEnabled) with OperatorFusionPolicy[NewTemplate] {
 
   override def fusionEnabled: Boolean = true
 
@@ -37,7 +38,7 @@ class TemplateOperatorPolicy(override val fusionOverPipelineEnabled: Boolean,
   override def canFuseOverPipeline(lp: LogicalPlan, outerApplyPlanId: Id): Boolean =
     fusionOverPipelineEnabled && createTemplate(lp, isHeadOperator = false, hasNoNestedArguments = outerApplyPlanId == Id.INVALID_ID).isDefined
 
-  override def operatorFuserFactory(physicalPlan: PhysicalPlan, readOnly: Boolean, parallelExecution: Boolean): OperatorFuserFactory =
+  override def operatorFuserFactory(physicalPlan: PhysicalPlan, readOnly: Boolean, parallelExecution: Boolean): OperatorFuserFactory[NewTemplate] =
     new TemplateOperatorFuserFactory(physicalPlan, readOnly, parallelExecution, fusionOverPipelineEnabled)
 
   override def toString: String = {
