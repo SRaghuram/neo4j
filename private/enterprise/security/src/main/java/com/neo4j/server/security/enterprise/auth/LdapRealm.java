@@ -524,7 +524,10 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
             ctx = useStartTls ? getSystemLdapContextUsingStartTls( ldapContextFactory ) :
                                       ldapContextFactory.getSystemLdapContext();
             String[] attrs = {"cn"};
-            SearchControls searchCtls = new SearchControls( SearchControls.SUBTREE_SCOPE, 1, 0, attrs, false, false );
+
+            // Need to return all entries that satisfy the filter to check for duplicates.
+            SearchControls searchCtls = new SearchControls( SearchControls.SUBTREE_SCOPE, 0, 0, attrs, false, false );
+
             Object[] searchArguments = new Object[]{principal};
             String filter = userAttributeName + "={0}";
             NamingEnumeration<SearchResult> search = ctx.search( userSearchBase, filter, searchArguments, searchCtls );

@@ -201,7 +201,23 @@ uid: jane
 uidnumber: 1005
 userpassword: {MD5}6ZoYxCjLONXyYIU2eJIuAw==
 
-# Entry 17: cn=local.user,ou=local,ou=users,dc=example,dc=com
+# Entry 17: cn=joe,ou=users,dc=example,dc=com
+dn: cn=joe,ou=users,dc=example,dc=com
+memberof: cn=role1,ou=groups,dc=example,dc=com
+cn:  joe
+gidnumber: 505
+homedirectory: /home/users/joe
+objectclass: inetOrgPerson
+objectclass: posixAccount
+objectclass: top
+objectclass: simulatedMicrosoftSecurityPrincipal
+samAccountName: joe
+sn: joe
+uid: joe
+uidnumber: 1006
+userpassword: {MD5}6ZoYxCjLONXyYIU2eJIuAw==
+
+# Entry 18: cn=local.user,ou=local,ou=users,dc=example,dc=com
 dn: cn=local.user,ou=local,ou=users,dc=example,dc=com
 memberOf: cn=admin,ou=groups,dc=example,dc=com
 objectClass: top
@@ -212,7 +228,7 @@ cn: local.user
 sn: local.user
 userpassword: {MD5}6ZoYxCjLONXyYIU2eJIuAw==
 
- # Entry 18: cn=remote.user,ou=remote,ou=users,dc=example,dc=com
+ # Entry 19: cn=remote.user,ou=remote,ou=users,dc=example,dc=com
 dn: cn=remote.user,ou=remote,ou=users,dc=example,dc=com
 memberOf: cn=reader,ou=groups,dc=example,dc=com
 objectClass: top

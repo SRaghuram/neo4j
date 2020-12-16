@@ -158,7 +158,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
         settings.put( SecuritySettings.ldap_authentication_cache_enabled, true );
         settings.put( SecuritySettings.ldap_authorization_system_username, "uid=admin,ou=system" );
         settings.put( SecuritySettings.ldap_authorization_system_password, new SecureString( "secret" ) );
-        settings.put( SecuritySettings.ldap_authorization_user_search_base, "dc=example,dc=com" );
+        settings.put( SecuritySettings.ldap_authorization_user_search_base, "ou=users,dc=example,dc=com" );
         settings.put( SecuritySettings.ldap_authorization_user_search_filter, "(&(objectClass=*)(uid={0}))" );
         settings.put( SecuritySettings.ldap_authorization_group_membership_attribute_names, List.of( "gidnumber" ) );
         settings.put( SecuritySettings.ldap_authorization_group_to_role_mapping, "500=reader;501=publisher;502=architect;503=admin;504=agent" );
@@ -515,6 +515,22 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
+    public void shouldOnlyLoginWithUniqueSearchAttribute() throws IOException
+    {
+        startDatabaseWithSettings( Map.of(
+                SecuritySettings.ldap_authentication_use_attribute, true,
+                SecuritySettings.ldap_authentication_user_search_attribute_name, "gidnumber"
+        ) );
+
+        // Should log in with unique gidnumber
+        assertAuth( boltUri, "503", "abc123" );
+
+        // Should not login with non-unique gidnumber
+        assertAuthFail( boltUri, "505", "abc123" );
+        assertSecurityLogContains("More than one user matching: 505");
+    }
+
+    @Test
     public void  shouldBeAbleToAuthorizeWithCustomSearchAttributeName()
     {
         startDatabaseWithSettings( Map.of(
@@ -666,6 +682,8 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
         assertSecurityLogContains( "LDAP connection refused" );
         assertSecurityLogContains( REFUSED_IP );
     }
+
+    // ===== Caching tests =====
 
     @Test
     public void shouldClearAuthenticationCache() throws NamingException

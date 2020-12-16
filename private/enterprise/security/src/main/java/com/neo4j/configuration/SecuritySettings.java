@@ -13,6 +13,7 @@ import org.neo4j.annotations.api.PublicApi;
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Description;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.SettingConstraints;
 import org.neo4j.configuration.SettingsDeclaration;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.ByteUnit;
@@ -151,7 +152,10 @@ public class SecuritySettings implements SettingsDeclaration
             "and thus `dbms.security.ldap.authorization.system_username` and `dbms.security.ldap.authorization.system_password` " +
             "to be configured." )
     public static final Setting<String> ldap_authentication_user_search_attribute_name =
-            newBuilder( "dbms.security.ldap.authentication.attribute", STRING, "samaccountname" ).build();
+            newBuilder( "dbms.security.ldap.authentication.attribute", STRING, "samaccountname" )
+                    .addConstraint( SettingConstraints.matches( "[A-Za-z0-9-]*",
+                            "has to be a valid LDAP attribute name, only containing letters [A-Za-z], digits [0-9] and hyphens [-]." ) )
+                    .build();
 
     //-----------------------------------------------------
     // LDAP authorization settings

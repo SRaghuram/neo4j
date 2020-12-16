@@ -204,6 +204,23 @@ class LdapRealmTest
     }
 
     @Test
+    void searchAttributeShouldBeAbleToContainAllValidCharacters()
+    {
+        // Allowed to contain A-Z, a-z, 0-9 and -
+        Config conf = Config.newBuilder().set( SecuritySettings.ldap_authentication_user_search_attribute_name, "0-uSer123-Dn" ).build();
+        assertThat( conf.get( SecuritySettings.ldap_authentication_user_search_attribute_name ) ).isEqualTo( "0-uSer123-Dn" );
+    }
+
+    @Test
+    void searchAttributeShouldNotBeAbleToContainIllegalCharacters()
+    {
+         var e = assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
+                 .set( SecuritySettings.ldap_authentication_user_search_attribute_name, "user_dn" ).build() );
+
+         assertThat( e.getMessage() ).contains( "has to be a valid LDAP attribute name, only containing letters [A-Za-z], digits [0-9] and hyphens [-]" );
+    }
+
+    @Test
     void shouldWarnAboutUserSearchFilterWithoutArgument() throws Exception
     {
         when( config.get( SecuritySettings.ldap_authorization_user_search_filter ) ).thenReturn( "" );
