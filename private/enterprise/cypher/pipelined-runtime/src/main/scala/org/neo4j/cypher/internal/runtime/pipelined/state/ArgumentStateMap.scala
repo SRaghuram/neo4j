@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ArgumentSlots
 import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorsel
@@ -15,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBuffer
 import org.neo4j.memory.MemoryTracker
 
@@ -252,6 +254,11 @@ object ArgumentStateMap {
      * Update internal state using the provided data.
      */
     def update(data: DATA, resources: QueryResources): Unit
+
+    /**
+     * Create a read cursor over a snapshot of all morsels in this accumulator
+     */
+    def readCursor(onFirstRow: Boolean = false): MorselReadCursor = ???
   }
 
   /**
@@ -277,8 +284,10 @@ object ArgumentStateMap {
     def completeOnConstruction: Boolean = false
   }
 
-  trait ArgumentStateBufferFactoryFactory {
-    def createFactory(stateFactory: StateFactory, operatorId: Int): ArgumentStateFactory[ArgumentStateBuffer]
+  trait ArgumentStateBufferFactoryFactory extends ArgumentStateFactoryFactory[ArgumentStateBuffer]
+
+  trait ArgumentStateFactoryFactory[S <: ArgumentState] {
+    def createFactory(stateFactory: StateFactory, operatorId: Int): ArgumentStateFactory[S]
   }
 
   /**
@@ -463,11 +472,15 @@ object ArgumentStateMap {
              morsel: Morsel,
              f: Morsel => T): IndexedSeq[PerArgument[T]] = {
 
-    val result = new ArrayBuffer[PerArgument[T]]()
-    foreach(argumentSlotOffset,
-      morsel,
-      (argumentRowId, view) => result += PerArgument(argumentRowId, f(view)))
-    result
+    if (argumentSlotOffset == TopLevelArgument.SLOT_OFFSET) {
+      singletonIndexedSeq(PerArgument(TopLevelArgument.VALUE, f(morsel)))
+    } else {
+      val result = new ArrayBuffer[PerArgument[T]]()
+      foreach(argumentSlotOffset,
+              morsel,
+              (argumentRowId, view) => result += PerArgument(argumentRowId, f(view)))
+      result
+    }
   }
 
   def foreach[T](argumentSlotOffset: Int,

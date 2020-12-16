@@ -69,8 +69,14 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.EmptyResultOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandIntoOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.FilterOperatorTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.InputMorselDataFromBufferOperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.InputMorselFromEagerBufferOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.InputOperatorTemplate
+<<<<<<< HEAD
 import org.neo4j.cypher.internal.runtime.pipelined.operators.LockNodesOperatorTemplate
+=======
+import org.neo4j.cypher.internal.runtime.pipelined.operators.InputSingleAccumulatorFromMorselArgumentStateBufferOperatorTaskTemplate
+>>>>>>> Support eager in pipelined runtime
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyNodeByIdsSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeCountFromCountStoreOperatorTemplate
@@ -92,7 +98,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalExpandAllOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalExpandIntoOperatorTaskTemplate
-import org.neo4j.cypher.internal.runtime.pipelined.operators.PreserveOrderOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProcedureOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectEndpointsMiddleOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectOperatorTemplate
@@ -130,7 +135,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.VoidProcedureOperat
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateBufferFactoryFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStreamArgumentStateBuffer
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EagerArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.DistinctAllPrimitive
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.DistinctWithReferences
@@ -814,7 +821,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
           ctx: TemplateContext =>
             val argumentStateMapId = ctx.executionGraphDefinition.findArgumentStateMapForPlan(plan.id)
             TemplateAndArgumentStateFactory(
-              new PreserveOrderOperatorTaskTemplate(ctx.inner, plan.id, ctx.innermost)(ctx.expressionCompiler),
+              new InputMorselDataFromBufferOperatorTaskTemplate(ctx.inner, plan.id, ctx.innermost)(ctx.expressionCompiler),
               Some(DynamicFactoryArgumentStateDescriptor(
                 argumentStateMapId,
                 ArgumentStreamArgumentStateBuffer,
@@ -863,6 +870,23 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
         case plan@plans.LockNodes(_, nodesToLock) =>
           ctx: TemplateContext =>
             new LockNodesOperatorTemplate(ctx.inner, plan.id, nodesToLock.map(ctx.slots(_)).toSeq)(ctx.expressionCompiler)
+
+        case plan: plans.Eager if isHeadOperator && hasNoNestedArguments => // Top-level eager
+          ctx: TemplateContext =>
+            val argumentStateMapId = ctx.executionGraphDefinition.findArgumentStateMapForPlan(plan.id)
+            TemplateAndArgumentStateFactory(
+              new InputMorselFromEagerBufferOperatorTaskTemplate(ctx.inner, plan.id, ctx.innermost)(ctx.expressionCompiler),
+              Some(StaticFactoryArgumentStateDescriptor(argumentStateMapId, EagerArgumentStateFactory, plan.id))
+            )
+
+        case plan: plans.Eager if isHeadOperator => // Eager per argument
+          ctx: TemplateContext =>
+            val argumentStateMapId = ctx.executionGraphDefinition.findArgumentStateMapForPlan(plan.id)
+            TemplateAndArgumentStateFactory(
+              new InputSingleAccumulatorFromMorselArgumentStateBufferOperatorTaskTemplate(ctx.inner, plan.id, ctx.innermost)(ctx.expressionCompiler),
+              Some(DynamicFactoryArgumentStateDescriptor(argumentStateMapId, ArgumentStateBuffer, plan.id, ordered = false))
+            )
+
         case _ =>
           None
       }

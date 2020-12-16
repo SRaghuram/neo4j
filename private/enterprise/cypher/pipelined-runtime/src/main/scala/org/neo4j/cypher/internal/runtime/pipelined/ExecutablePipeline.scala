@@ -193,6 +193,9 @@ class PipelineState(val pipeline: ExecutablePipeline,
   private def innerNextTask(state: PipelinedQueryState,
                             resources: QueryResources): PipelineTask = {
     if (!executionState.canPut(pipeline)) {
+      if (DebugSupport.SCHEDULING.enabled) {
+        DebugSupport.SCHEDULING.log(s"[nextTask] pipeline cannot put! ($pipeline)")
+      }
       return null
     }
     val task = executionState.takeContinuation(pipeline)

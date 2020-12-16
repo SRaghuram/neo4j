@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.logical.plans.Aggregation
 import org.neo4j.cypher.internal.logical.plans.Anti
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
 import org.neo4j.cypher.internal.logical.plans.Distinct
+import org.neo4j.cypher.internal.logical.plans.Eager
 import org.neo4j.cypher.internal.logical.plans.ExhaustiveLimit
 import org.neo4j.cypher.internal.logical.plans.LeftOuterHashJoin
 import org.neo4j.cypher.internal.logical.plans.Limit
@@ -50,6 +51,7 @@ import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.AttachBuff
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.BufferDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.ConditionalBufferDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.DelegateBufferDefiner
+import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.EagerMorselBufferDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.ExecutionStateDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.LHSAccumulatingRHSStreamingBufferDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.MorselBufferDefiner
@@ -190,6 +192,14 @@ object PipelineTreeBuilder {
                             val producingPipelineId: PipelineId,
                             bufferConfiguration: SlotConfiguration) extends BufferDefiner(id, memoryTrackingOperatorId, bufferConfiguration) {
     override protected def variant: BufferVariant = RegularBufferVariant
+  }
+
+  class EagerMorselBufferDefiner(id: BufferId,
+                                 memoryTrackingOperatorId: Id,
+                                 val producingPipelineId: PipelineId,
+                                 val argumentStateMapId: ArgumentStateMapId,
+                                 bufferConfiguration: SlotConfiguration) extends BufferDefiner(id, memoryTrackingOperatorId, bufferConfiguration) {
+    override protected def variant: BufferVariant = EagerBufferVariant(argumentStateMapId)
   }
 
   class UnionBufferDefiner(id: BufferId,
@@ -338,6 +348,16 @@ object PipelineTreeBuilder {
                   bufferSlotConfiguration: SlotConfiguration): MorselBufferDefiner = {
       val x = buffers.size
       val buffer = new MorselBufferDefiner(BufferId(x), memoryTrackingOperatorId, producingPipelineId, bufferSlotConfiguration)
+      buffers += buffer
+      buffer
+    }
+
+    def newEagerBuffer(producingPipelineId: PipelineId,
+                       memoryTrackingOperatorId: Id,
+                       argumentStateMapId: ArgumentStateMapId,
+                       bufferSlotConfiguration: SlotConfiguration): EagerMorselBufferDefiner = {
+      val x = buffers.size
+      val buffer = new EagerMorselBufferDefiner(BufferId(x), memoryTrackingOperatorId, producingPipelineId, argumentStateMapId, bufferSlotConfiguration)
       buffers += buffer
       buffer
     }
@@ -497,6 +517,14 @@ class PipelineTreeBuilder[TEMPLATE](breakingPolicy: PipelineBreakingPolicy,
     output
   }
 
+  private def outputToEagerBuffer(pipeline: PipelineDefiner[TEMPLATE], nextPipelineHeadPlan: LogicalPlan, applyBuffer: ApplyBufferDefiner): EagerMorselBufferDefiner = {
+    val asm = stateDefiner.newArgumentStateMap(nextPipelineHeadPlan.id, TopLevelArgument.SLOT_OFFSET)
+    val output = stateDefiner.newEagerBuffer(pipeline.id, nextPipelineHeadPlan.id, asm.id, slotConfigurations(pipeline.headPlan.id))
+    pipeline.fuseOrInterpretOutput(MorselBufferOutput(output.id, nextPipelineHeadPlan.id))
+    markReducerInUpstreamBuffers(pipeline.inputBuffer, applyBuffer, asm)
+    output
+  }
+
   private def outputToUnionBuffer(lhs: PipelineDefiner[TEMPLATE], rhs: PipelineDefiner[TEMPLATE], nextPipelineHeadPlan: Id): UnionBufferDefiner = {
     // When fusing, buffer configuration is used to determine which slots are not modified by the pipeline and should be copied from input.
     val bufferSlotConfiguration = SlotConfiguration.empty // For Union we want it to be empty because:
@@ -563,10 +591,15 @@ class PipelineTreeBuilder[TEMPLATE](breakingPolicy: PipelineBreakingPolicy,
     output
   }
 
-  private def outputToArgumentStateBuffer(pipeline: PipelineDefiner[TEMPLATE], plan: LogicalPlan, applyBuffer: ApplyBufferDefiner, argumentSlotOffset: Int): ArgumentStateBufferDefiner = {
+  private def outputToArgumentStateBuffer(pipeline: PipelineDefiner[TEMPLATE],
+                                          plan: LogicalPlan,
+                                          applyBuffer: ApplyBufferDefiner,
+                                          argumentSlotOffset: Int,
+                                          useGenericOutputOperator: Boolean = false): ArgumentStateBufferDefiner = {
     val asm = stateDefiner.newArgumentStateMap(plan.id, argumentSlotOffset)
     val output = stateDefiner.newArgumentStateBuffer(pipeline.id, plan.id, asm.id, slotConfigurations(pipeline.headPlan.id))
-    pipeline.fuseOrInterpretOutput(ReduceOutput(output.id, asm.id, plan))
+    pipeline.fuseOrInterpretOutput(if (useGenericOutputOperator) MorselArgumentStateBufferOutput(output.id, argumentSlotOffset, plan.id)
+                                   else ReduceOutput(output.id, asm.id, plan))
     markReducerInUpstreamBuffers(pipeline.inputBuffer, applyBuffer, asm)
     output
   }
@@ -664,6 +697,25 @@ class PipelineTreeBuilder[TEMPLATE](breakingPolicy: PipelineBreakingPolicy,
           val pipeline = newPipeline(plan, argumentStateBuffer)
           pipeline.lhs = source.id
           pipeline
+        } else {
+          throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
+        }
+
+      case _: Eager =>
+        if (breakingPolicy.breakOn(plan, applyPlans(plan.id))) {
+          if (argument.argumentSlotOffset == TopLevelArgument.SLOT_OFFSET) {
+            // Common case for top-level eager
+            val argumentStateBuffer = outputToEagerBuffer(source, plan, argument)
+            val pipeline = newPipeline(plan, argumentStateBuffer)
+            pipeline.lhs = source.id
+            pipeline
+          } else {
+            // Handle the esoteric use-case of eager per argument under an apply
+            val argumentStateBuffer = outputToArgumentStateBuffer(source, plan, argument, argument.argumentSlotOffset, useGenericOutputOperator = true)
+            val pipeline = newPipeline(plan, argumentStateBuffer)
+            pipeline.lhs = source.id
+            pipeline
+          }
         } else {
           throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
         }
@@ -1044,6 +1096,9 @@ class PipelineTreeBuilder[TEMPLATE](breakingPolicy: PipelineBreakingPolicy,
           onDelegateBuffer(d)
           upstreams += getPipeline(d.applyBuffer.producingPipelineId.x).inputBuffer
         case b: MorselBufferDefiner =>
+          onInputBuffer(b)
+          upstreams += getPipeline(b.producingPipelineId.x).inputBuffer
+        case b: EagerMorselBufferDefiner =>
           onInputBuffer(b)
           upstreams += getPipeline(b.producingPipelineId.x).inputBuffer
         case b: UnionBufferDefiner =>

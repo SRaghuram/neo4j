@@ -2388,28 +2388,30 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       getLongAt(offset)
     }
 
-  final def getLongFromExecutionContext(offset: Int, context: IntermediateRepresentation = ROW): IntermediateRepresentation =
+  protected def outputRow: IntermediateRepresentation = ROW
+
+  final def getLongFromExecutionContext(offset: Int, context: IntermediateRepresentation = outputRow): IntermediateRepresentation =
     invoke(context, method[ReadableRow, Long, Int]("getLongAt"), constant(offset))
 
-  final def getRefFromExecutionContext(offset: Int, context: IntermediateRepresentation = ROW): IntermediateRepresentation =
+  final def getRefFromExecutionContext(offset: Int, context: IntermediateRepresentation = outputRow): IntermediateRepresentation =
     invoke(context, method[ReadableRow, AnyValue, Int]("getRefAt"), constant(offset))
 
-  final def getCachedPropertyFromExecutionContext(offset: Int, context: IntermediateRepresentation = ROW): IntermediateRepresentation =
+  final def getCachedPropertyFromExecutionContext(offset: Int, context: IntermediateRepresentation = outputRow): IntermediateRepresentation =
     getCachedPropertyFromExecutionContextWithDynamicOffset(constant(offset), context)
 
-  final def getCachedPropertyFromExecutionContextWithDynamicOffset(offset: IntermediateRepresentation, context: IntermediateRepresentation = ROW): IntermediateRepresentation =
+  final def getCachedPropertyFromExecutionContextWithDynamicOffset(offset: IntermediateRepresentation, context: IntermediateRepresentation = outputRow): IntermediateRepresentation =
     invoke(context, method[CachedPropertiesRow, Value, Int]("getCachedPropertyAt"), offset)
 
   final def setRefInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
-    invokeSideEffect(ROW, method[WritableRow, Unit, Int, AnyValue]("setRefAt"),
+    invokeSideEffect(outputRow, method[WritableRow, Unit, Int, AnyValue]("setRefAt"),
                      constant(offset), value)
 
   final def setLongInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
-    invokeSideEffect(ROW, method[WritableRow, Unit, Int, Long]("setLongAt"),
+    invokeSideEffect(outputRow, method[WritableRow, Unit, Int, Long]("setLongAt"),
                      constant(offset), value)
 
   protected final def setCachedPropertyInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
-    invokeSideEffect(ROW, method[CachedPropertiesRow, Unit, Int, Value]("setCachedPropertyAt"),
+    invokeSideEffect(outputRow, method[CachedPropertiesRow, Unit, Int, Value]("setCachedPropertyAt"),
                      constant(offset), value)
 
   //==================================================================================================
@@ -2715,7 +2717,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
       case _ =>
         val varName = namer.nextVariableName()
-        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], varName, invoke(ROW,
+        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], varName, invoke(outputRow,
           method[ReadableRow, AnyValue, String]("getByName"), constant(name))))
         computeRepresentation(ir = block(lazySet, load(varName)),
                               nullCheck = Some(block(lazySet, equal(load(varName), noValue))), nullable = true)

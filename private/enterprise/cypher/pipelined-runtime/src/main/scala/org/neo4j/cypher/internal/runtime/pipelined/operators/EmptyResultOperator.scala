@@ -7,8 +7,8 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
-import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
@@ -19,7 +19,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
- * Takes an input morsel and compacts all rows to the beginning of it, only keeping the rows that match a predicate
+ * Truncates the morsel on the first row, i.e. produces no output rows
  */
 class EmptyResultOperator(val workIdentity: WorkIdentity) extends StatelessOperator {
 

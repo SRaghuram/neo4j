@@ -26,6 +26,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.TopOperator.TopTable
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
@@ -127,8 +128,10 @@ case class TopOperator(workIdentity: WorkIdentity,
       this
     }
 
-    override def nextTasks(input: IndexedSeq[TopTable],
-                           resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[Morsel, TopTable]] = {
+    override def nextTasks(state: PipelinedQueryState,
+                           input: IndexedSeq[TopTable],
+                           resources: QueryResources,
+                           argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithAccumulators[Morsel, TopTable]] = {
       singletonIndexedSeq(new OTask(input))
     }
 

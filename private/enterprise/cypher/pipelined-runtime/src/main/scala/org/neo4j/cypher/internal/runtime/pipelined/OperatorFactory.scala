@@ -20,6 +20,7 @@ import org.neo4j.cypher.internal.logical.plans.SelectOrSemiApply
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStreamBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
+import org.neo4j.cypher.internal.physicalplanning.EagerBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.physicalplanning.LHSAccumulatingRHSStreamingBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.MorselArgumentStateBufferOutput
@@ -79,7 +80,10 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.ExhaustiveLimitOper
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandIntoOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.FilterOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.InputMorselDataFromBufferOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.InputMorselFromEagerBufferOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.InputOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.InputSingleAccumulatorFromMorselArgumentStateBufferOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.LabelScanOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.LimitOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.LockNodesOperator
@@ -110,7 +114,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OrderedDistinctOper
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.PartialSortOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.PartialTopOperator
-import org.neo4j.cypher.internal.runtime.pipelined.operators.PreserveOrderOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ProberOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProcedureCallMiddleOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProcedureCallOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProduceResultOperator
@@ -135,6 +139,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.UnwindOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ValueHashJoinOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.VarExpandOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.VarLengthProjectEndpointsMiddleOperator
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBuffer
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStreamArgumentStateBuffer
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EagerArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityMutableDescription
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityMutableDescriptionImpl
@@ -569,7 +576,11 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
       case _: plans.PreserveOrder =>
         val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
-        new PreserveOrderOperator(argumentStateMapId, WorkIdentity.fromPlan(plan))(id)
+        new InputMorselDataFromBufferOperator("PreserveOrder",
+                                              WorkIdentity.fromPlan(plan),
+                                              argumentStateMapId,
+                                              ArgumentStreamArgumentStateBuffer,
+                                              ordered = true)(id)
 
       case plans.Top(_, sortItems, limit) =>
         val ordering = sortItems.map(translateColumnOrder(slots, _))
@@ -740,6 +751,18 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                                     slots.getLongOffsetFor(end),
                                     lazyTypes,
                                     length.isSimple)
+
+      case _: plans.Eager if inputBuffer.variant.isInstanceOf[EagerBufferVariant] => // Top-level eager
+        val argumentStateMapId = inputBuffer.variant.asInstanceOf[EagerBufferVariant].argumentStateMapId
+        new InputMorselFromEagerBufferOperator("Eager", WorkIdentity.fromPlan(plan), argumentStateMapId, EagerArgumentStateFactory, ordered = false)(id)
+
+      case _: plans.Eager => // Eager per argument
+        val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStateBufferVariant].argumentStateMapId
+        new InputSingleAccumulatorFromMorselArgumentStateBufferOperator("Eager",
+                                                                        WorkIdentity.fromPlan(plan),
+                                                                        argumentStateMapId,
+                                                                        ArgumentStateBuffer,
+                                                                        ordered = false)(id)
 
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException otherwise)

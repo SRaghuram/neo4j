@@ -47,6 +47,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.AggregatedRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.AggregatedRowAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.AggregatedRowUpdaters
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -248,8 +249,10 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
       this
     }
 
-    override def nextTasks(input: IndexedSeq[AggregatedRowAccumulator],
-                           resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[AnyRef, AggregatedRowAccumulator]] = {
+    override def nextTasks(state: PipelinedQueryState,
+                           input: IndexedSeq[AggregatedRowAccumulator],
+                           resources: QueryResources,
+                           argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithAccumulators[AnyRef, AggregatedRowAccumulator]] = {
       singletonIndexedSeq(new OTask(input))
     }
 

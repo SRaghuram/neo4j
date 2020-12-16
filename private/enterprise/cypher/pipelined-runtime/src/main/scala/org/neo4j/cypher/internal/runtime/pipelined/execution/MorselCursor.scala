@@ -142,7 +142,7 @@ trait MorselFullCursor extends MorselReadCursor with MorselWriteCursor with Cyph
 object ArgumentSlots {
 
   def getArgumentAt(row: ReadableRow, offset: Int): Long =
-    if (offset == TopLevelArgument.SLOT_OFFSET) 0L
+    if (offset == TopLevelArgument.SLOT_OFFSET) TopLevelArgument.VALUE
     else row.getLongAt(offset)
 
   def setArgumentAt(row: WritableRow, offset: Int, argument: Long): Unit =

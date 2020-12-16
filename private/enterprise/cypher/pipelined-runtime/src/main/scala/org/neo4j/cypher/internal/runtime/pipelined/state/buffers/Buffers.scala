@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.physicalplanning.AttachBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.physicalplanning.ConditionalBufferVariant
+import org.neo4j.cypher.internal.physicalplanning.EagerBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.Initialization
 import org.neo4j.cypher.internal.physicalplanning.LHSAccumulatingBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.LHSAccumulatingRHSStreamingBufferVariant
@@ -24,6 +25,7 @@ import org.neo4j.cypher.internal.physicalplanning.RHSStreamingBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.ReadOnlyArray
 import org.neo4j.cypher.internal.physicalplanning.RegularBufferVariant
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
+import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
@@ -45,6 +47,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.DataHol
 class Buffers(numBuffers: Int,
               tracker: QueryCompletionTracker,
               argumentStateMaps: ArgumentStateMaps,
+              argumentStateMapCreator: ArgumentStateMapCreator,
               stateFactory: StateFactory,
               morselSize: Int) {
 
@@ -108,6 +111,8 @@ class Buffers(numBuffers: Int,
         case x: ArgumentStreamMorselBuffer if x.argumentStateMapId == argumentStateMapId =>
           return x
         case x: AntiMorselBuffer if x.argumentStateMapId == argumentStateMapId =>
+          return x
+        case x: EagerMorselBuffer if x.argumentStateMapId == argumentStateMapId =>
           return x
         case _ =>
       }
@@ -244,6 +249,18 @@ class Buffers(numBuffers: Int,
             bufferDefinition.workCancellerIds,
             argumentStateMaps,
             stateFactory.newBuffer[Morsel](bufferDefinition.memoryTrackingOperatorId))
+
+        case EagerBufferVariant(argumentStateMapId) =>
+          new EagerMorselBuffer(bufferDefinition.id,
+            tracker,
+            reducers,
+            bufferDefinition.workCancellerIds,
+            argumentStateMaps,
+            stateFactory.newBuffer[Morsel](bufferDefinition.memoryTrackingOperatorId),
+            bufferDefinition.memoryTrackingOperatorId,
+            argumentStateMapId,
+            argumentStateMapCreator,
+            stateFactory)
       }
   }
 

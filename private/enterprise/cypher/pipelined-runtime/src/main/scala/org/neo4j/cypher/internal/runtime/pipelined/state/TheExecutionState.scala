@@ -65,6 +65,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   private val buffers: Buffers = new Buffers(executionGraphDefinition.buffers.length,
     tracker,
     argumentStateMaps,
+    this,
     stateFactory,
     queryState.morselSize)
 
@@ -207,7 +208,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
       DebugSupport.ERROR_HANDLING.log("[putContinuation] Closing %s because of query cancellation", task)
       task.close(resources)
     } else {
-      DebugSupport.BUFFERS.log("[putContinuation]   %s <- %s", this, task)
+      DebugSupport.BUFFERS.log("[putContinuation]   %s", task)
       // Put the continuation before unlocking (closeWorkUnit)
       // so that in serial pipelines we can guarantee that the continuation
       // is the next thing which is picked up

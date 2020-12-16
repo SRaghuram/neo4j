@@ -108,6 +108,12 @@ sealed trait BufferVariant
 case object RegularBufferVariant extends BufferVariant
 
 /**
+ * Eager pipelined buffer.
+ * It has to receive everything from the producer pipeline before the consumer pipeline can start.
+ */
+case class EagerBufferVariant(argumentStateMapId: ArgumentStateMapId) extends BufferVariant
+
+/**
  * A buffer between two pipelines before an Optional/Anti operator, or a delegate after an ApplyBuffer. Maps to an ArgumentStreamMorselBuffer/AntiMorselBuffer.
  */
 case class ArgumentStreamBufferVariant(argumentStateMapId: ArgumentStateMapId,
@@ -179,6 +185,7 @@ case class LHSAccumulatingRHSStreamingBufferVariant(lhsSink: BufferDefinition,
 sealed trait OutputDefinition
 case class ProduceResultOutput(plan: ProduceResult) extends OutputDefinition
 case class MorselBufferOutput(id: BufferId, nextPipelineHeadPlanId: Id) extends OutputDefinition
+case class EagerMorselBufferOutput(id: BufferId, nextPipelineHeadPlanId: Id) extends OutputDefinition
 case class MorselArgumentStateBufferOutput(id: BufferId, argumentSlotOffset: Int, nextPipelineHeadPlanId: Id) extends OutputDefinition
 case class ReduceOutput(bufferId: BufferId, argumentStateMapId: ArgumentStateMapId, plan: LogicalPlan) extends OutputDefinition
 case object NoOutput extends OutputDefinition

@@ -6,14 +6,18 @@
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateBufferFactoryFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
+
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * Delegating [[Buffer]] used in argument state maps.
@@ -46,9 +50,25 @@ class ArgumentStateBuffer(override val argumentRowId: Long,
   }
 
   override def shallowSize: Long = ArgumentStateBuffer.SHALLOW_SIZE // NOTE: This is not final since it is overridden by ArgumentStreamArgumentStateBuffer
+
+  /**
+   * Returns a [[MorselReadCursor]] over all containing morsels.
+   */
+  override def readCursor(onFirstRow: Boolean = false): MorselReadCursor = {
+    if (inner.hasData) {
+      val morsels = new ArrayBuffer[Morsel]()
+      inner.foreach(m => morsels += m)
+      MorselsSnapshot(morsels).readCursor(onFirstRow)
+    }
+    else {
+      Morsel.empty.readCursor(onFirstRow)
+    }
+  }
+
+  case class MorselsSnapshot(override val morsels: IndexedSeq[Morsel]) extends MorselIndexedSeq
 }
 
-object ArgumentStateBuffer {
+object ArgumentStateBuffer extends ArgumentStateBufferFactoryFactory {
   final val SHALLOW_SIZE = HeapEstimator.shallowSizeOfInstance(classOf[ArgumentStateBuffer])
 
   class Factory(stateFactory: StateFactory, operatorId: Id) extends ArgumentStateFactory[ArgumentStateBuffer] {
@@ -60,5 +80,9 @@ object ArgumentStateBuffer {
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
       new ArgumentStateBuffer(argumentRowId, stateFactory.newBuffer[Morsel](operatorId), argumentRowIdsForReducers)
+  }
+
+  def createFactory(stateFactory: StateFactory, operatorId: Int): Factory = {
+    new Factory(stateFactory, Id(operatorId))
   }
 }

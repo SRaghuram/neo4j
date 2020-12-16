@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
+import org.neo4j.cypher.internal.expressions.ASTCachedProperty
 import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
 import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
@@ -12,6 +13,8 @@ import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.INITIAL_SLOT_CO
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.MemoizingMeasurable
 import org.neo4j.cypher.internal.runtime.ReadableRow
+import org.neo4j.cypher.internal.runtime.ResourceLinenumber
+import org.neo4j.cypher.internal.runtime.pipelined.state.StandardAggregators.SHALLOW_SIZE
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.symbols.CTNode
@@ -25,6 +28,7 @@ import org.neo4j.values.storable.Value
 import org.neo4j.values.virtual.VirtualNodeValue
 import org.neo4j.values.virtual.VirtualRelationshipValue
 
+import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
@@ -460,4 +464,99 @@ class Morsel(private[execution] final val longs: Array[Long],
 
   private def fail(): Nothing =
     throw new InternalException("Tried using a wrong row.")
+}
+
+trait MorselIndexedSeq {
+  def morsels: IndexedSeq[Morsel]
+
+  /**
+   * Returns a [[MorselReadCursor]] over all containing morsels.
+   */
+  def readCursor(onFirstRow: Boolean = false): MorselReadCursor = {
+    if (morsels.nonEmpty) new Cursor(onFirstRow)
+    else Morsel.empty.readCursor(onFirstRow)
+  }
+
+  class Cursor(onFirstRow: Boolean) extends MorselReadCursor {
+    require(morsels.nonEmpty)
+
+    private var morselCursor: MorselReadCursor = morsels(0).readCursor(onFirstRow = false)
+    private var nextMorselSeqIndex = 1
+
+    if (onFirstRow) next()
+
+    @inline
+    private[this] def setMorselCursor(index: Int) = {
+      morselCursor = morsels(index).readCursor()
+      nextMorselSeqIndex = index + 1
+    }
+
+    override def getLongAt(offset: Int): Long = morselCursor.getLongAt(offset)
+    override def getRefAt(offset: Int): AnyValue = morselCursor.getRefAt(offset)
+    override def getByName(name: String): AnyValue = morselCursor.getByName(name)
+    override def getLinenumber: Option[ResourceLinenumber] = morselCursor.getLinenumber
+    override def setRow(row: Int): Unit = morselCursor.setRow(row)
+
+    override def setToStart(): Unit = setMorselCursor(0)
+
+    override def setToEnd(): Unit = {
+      setMorselCursor(morsels.size - 1)
+      morselCursor.setToEnd()
+    }
+
+    override def onValidRow(): Boolean = morselCursor != null && morselCursor.onValidRow()
+
+    @tailrec
+    override final def next(): Boolean = {
+      if (morselCursor.next()) {
+        true
+      } else if (nextMorselSeqIndex >= morsels.size) {
+        false
+      } else {
+        morselCursor = morsels(nextMorselSeqIndex).readCursor()
+        nextMorselSeqIndex += 1
+        next()
+      }
+    }
+
+    override def hasNext: Boolean = morselCursor.hasNext || upcomingMorselsHasNext
+
+    private def upcomingMorselsHasNext(): Boolean = {
+      var i = nextMorselSeqIndex
+      val size = morsels.size
+      while (i < size) {
+        if (morsels(i).hasData) return true
+        i += 1
+      }
+      false
+    }
+
+    override def snapshot(): MorselRow = morselCursor.snapshot()
+
+    override def row: Int = throw new UnsupportedOperationException("row not supported in MorselData.Cursor")
+
+    override def morsel: Morsel = morselCursor.morsel
+
+    override def longOffset(offsetInRow: Int): Int = morselCursor.longOffset(offsetInRow)
+
+    override def refOffset(offsetInRow: Int): Int = morselCursor.refOffset(offsetInRow)
+
+    override def shallowInstanceHeapUsage: Long = SHALLOW_SIZE
+
+    override def getCachedProperty(key: ASTCachedProperty): Value = morselCursor.getCachedProperty(key)
+
+    override def getCachedPropertyAt(offset: Int): Value = morselCursor.getCachedPropertyAt(offset)
+
+    override def setCachedProperty(key: ASTCachedProperty, value: Value): Unit = morselCursor.setCachedProperty(key, value)
+
+    override def setCachedPropertyAt(offset: Int, value: Value): Unit = morselCursor.setCachedPropertyAt(offset, value)
+
+    override def copyAllToSlottedRow(target: SlottedRow): Unit = morselCursor.copyAllToSlottedRow(target)
+
+    override def copyToSlottedRow(target: SlottedRow, nLongs: Int, nRefs: Int): Unit = morselCursor.copyToSlottedRow(target, nLongs, nRefs)
+  }
+
+  object Cursor {
+    final val SHALLOW_SIZE = shallowSizeOfInstance(classOf[Cursor])
+  }
 }

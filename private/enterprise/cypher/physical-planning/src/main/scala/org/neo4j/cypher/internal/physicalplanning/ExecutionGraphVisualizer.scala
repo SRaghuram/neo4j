@@ -180,6 +180,8 @@ object ExecutionGraphVisualizer {
       outputDefinition match {
         case MorselBufferOutput(BufferId(bufferId), _) =>
           rels += new VirtualRelationshipHack(current, bufs(bufferId), Map.empty, "WRITES_TO")
+        case EagerMorselBufferOutput(BufferId(bufferId), _) =>
+          rels += new VirtualRelationshipHack(current, bufs(bufferId), Map.empty, "WRITES_TO")
         case ProduceResultOutput(plan) =>
           rels += new VirtualRelationshipHack(current, ops(plan.id.x), Map("fused" -> (false: lang.Boolean)), "NEXT_OPERATOR")
         case ReduceOutput(BufferId(bufferId), _, _) =>

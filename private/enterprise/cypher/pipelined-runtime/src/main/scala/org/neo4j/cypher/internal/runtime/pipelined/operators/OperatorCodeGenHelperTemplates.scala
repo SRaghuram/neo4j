@@ -71,6 +71,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -150,7 +151,9 @@ object OperatorCodeGenHelperTemplates {
   val TX_CONSTRUCTOR_PARAMETER: Parameter = param[KernelTransaction]("tx")
   val INPUT_MORSEL_CONSTRUCTOR_PARAMETER: Parameter = param[Morsel]("inputMorsel")
   val INPUT_MORSEL_DATA_CONSTRUCTOR_PARAMETER: Parameter = param[MorselData]("morselData")
+  val INPUT_ACCUMULATORS_CONSTRUCTOR_PARAMETER: Parameter = param[IndexedSeq[MorselAccumulator[AnyRef]]]("inputAccumulators")
   val ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER: Parameter = param[ArgumentStateMaps]("argumentStateMaps")
+  val QUERY_RESOURCES_CONSTRUCTOR_PARAMETER: Parameter = param[QueryResources]("resources")
 
   // Other method parameters
   val QUERY_RESOURCE_PARAMETER: Parameter = param[QueryResources]("resources")
@@ -179,11 +182,23 @@ object OperatorCodeGenHelperTemplates {
         method[MorselData, MorselReadCursor, Boolean]("readCursor"), constant(true)
       )
     )
+
+  val INPUT_SINGLE_ACCUMULATOR_CURSOR_FIELD: InstanceField = // This takes just a single accumulator from the accumulators (assumes accumulatorsPerTask == 1)
+    field[MorselReadCursor](INPUT_CURSOR_FIELD_NAME, // Note, must be identical with INPUT_CURSOR_FIELD!
+      invoke(
+        invoke(load(INPUT_ACCUMULATORS_CONSTRUCTOR_PARAMETER.name),
+               method[IndexedSeq[_], MorselAccumulator[_], Unit]("head")),
+        method[MorselData, MorselReadCursor, Boolean]("readCursor"), constant(true)
+      )
+    )
+
   val INPUT_CURSOR: IntermediateRepresentation = loadField(INPUT_CURSOR_FIELD)
   val INPUT_MORSEL_FIELD: InstanceField =
     field[Morsel]("inputMorsel", load(INPUT_MORSEL_CONSTRUCTOR_PARAMETER.name))
   val INPUT_MORSEL_DATA_FIELD: InstanceField =
     field[MorselData]("morselDataField", load(INPUT_MORSEL_DATA_CONSTRUCTOR_PARAMETER.name))
+  val INPUT_ACCUMULATORS_FIELD: InstanceField =
+    field[IndexedSeq[MorselAccumulator[AnyRef]]]("inputAccumulatorsField", load(INPUT_ACCUMULATORS_CONSTRUCTOR_PARAMETER.name))
 
   val SHOULD_BREAK: LocalVariable = variable[Boolean]("shouldBreak", constant(false))
   val NO_MEMORY_TRACKER: GetStatic = getStatic[EmptyMemoryTracker, MemoryTracker]("INSTANCE")

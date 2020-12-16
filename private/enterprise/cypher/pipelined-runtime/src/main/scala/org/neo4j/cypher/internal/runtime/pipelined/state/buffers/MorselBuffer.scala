@@ -27,8 +27,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselBuffer.IN
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselBuffer.INVALID_ARG_SLOT_OFFSET
 
 object MorselBuffer {
-  private val INVALID_ARG_ROW_ID = -1L
-  private val INVALID_ARG_SLOT_OFFSET = -2
+  private[buffers] val INVALID_ARG_ROW_ID = -1L
+  private[buffers] val INVALID_ARG_SLOT_OFFSET = -2
 }
 
 /**

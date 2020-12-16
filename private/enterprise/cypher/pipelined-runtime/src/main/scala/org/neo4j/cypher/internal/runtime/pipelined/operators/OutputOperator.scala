@@ -122,6 +122,34 @@ case class MorselBufferPreparedOutput(bufferId: BufferId,
     executionState.putMorsel(bufferId, outputMorsel, resources)
 }
 
+// PIPELINED EAGER BUFFER OUTPUT
+
+// we need the the id of the head plan of the next pipeline because that is where er attribute time spent
+// during prepare output in profiling.
+case class EagerMorselBufferOutputOperator(bufferId: BufferId, nextPipelineHeadPlanId: Id, nextPipelineCanTrackTime: Boolean) extends OutputOperator {
+  override def outputBuffer: Option[BufferId] = Some(bufferId)
+  override val workIdentity: WorkIdentity = WorkIdentityImpl(nextPipelineHeadPlanId, s"Output morsel to eager $bufferId")
+  override def createState(executionState: ExecutionState, stateFactory: StateFactory): OutputOperatorState =
+    //if nextPipelineCanTrackTime is false we shouldn't attribute time to nextPipelineHeadPlanId
+    EagerMorselBufferOutputState(workIdentity, nextPipelineCanTrackTime, bufferId, executionState)
+}
+case class EagerMorselBufferOutputState(override val workIdentity: WorkIdentity,
+                                        override val trackTime: Boolean,
+                                        bufferId: BufferId,
+                                        executionState: ExecutionState) extends OutputOperatorState {
+  override def prepareOutput(outputMorsel: Morsel,
+                             state: PipelinedQueryState,
+                             resources: QueryResources,
+                             operatorExecutionEvent: OperatorProfileEvent): PreparedOutput =
+    EagerMorselBufferPreparedOutput(bufferId, executionState, outputMorsel)
+}
+case class EagerMorselBufferPreparedOutput(bufferId: BufferId,
+                                           executionState: ExecutionState,
+                                           outputMorsel: Morsel) extends PreparedOutput {
+  override def produce(resources: QueryResources): Unit =
+    executionState.putMorsel(bufferId, outputMorsel, resources)
+}
+
 // PIPELINED ARGUMENT STATE BUFFER OUTPUT
 
 // we need the the id of the head plan of the next pipeline because that is where er attribute time spent
