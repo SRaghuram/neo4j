@@ -22,6 +22,7 @@ import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.switchLeaderTo;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -152,16 +153,10 @@ class RaftIdReuseIT
         assertEquals( 2, creationLeaderIdGenerator.getDefragCount() );
 
         // Restart and re-elect first leader
-        cluster.removeCoreMemberWithIndex( creationLeader.index() );
-        cluster.addCoreMemberWithIndex( creationLeader.index() ).start();
-
-        CoreClusterMember leader = cluster.awaitLeader();
-        while ( leader.index() != creationLeader.index() )
-        {
-            cluster.removeCoreMemberWithIndex( leader.index() );
-            cluster.addCoreMemberWithIndex( leader.index() ).start();
-            leader = cluster.awaitLeader();
-        }
+        var leader  = creationLeader;
+        leader.shutdown();
+        leader.start();
+        switchLeaderTo(cluster, leader);
 
         idMaintenanceOnLeader( leader );
         IdGeneratorFactory leaderIdGeneratorFactory = resolveDependency( leader, IdGeneratorFactory.class );
