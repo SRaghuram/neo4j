@@ -18,10 +18,12 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import scala.concurrent.duration.FiniteDuration;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import org.neo4j.io.marshal.EndOfStreamException;
 
@@ -74,7 +76,7 @@ class ActorRefMarshalTest
     @AfterAll
     static void teardown()
     {
-        TestKit.shutdownActorSystem(system);
+        TestKit.shutdownActorSystem(system,  new FiniteDuration( 20, TimeUnit.SECONDS ), true );
         system = null;
     }
 }
