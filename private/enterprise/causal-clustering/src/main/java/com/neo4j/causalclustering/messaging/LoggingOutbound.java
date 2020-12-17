@@ -8,32 +8,26 @@ package com.neo4j.causalclustering.messaging;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.logging.RaftMessageLogger;
 
-import org.neo4j.function.Suppliers.Lazy;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 public class LoggingOutbound<MEMBER, MESSAGE extends RaftMessages.RaftMessage> implements Outbound<MEMBER, MESSAGE>
 {
     private final Outbound<MEMBER,MESSAGE> outbound;
     private final NamedDatabaseId databaseId;
-    private final Lazy<MEMBER> me;
     private final RaftMessageLogger<MEMBER> raftMessageLogger;
 
-    public LoggingOutbound( Outbound<MEMBER,MESSAGE> outbound, NamedDatabaseId databaseId, Lazy<MEMBER> me,
+    public LoggingOutbound( Outbound<MEMBER,MESSAGE> outbound, NamedDatabaseId databaseId,
             RaftMessageLogger<MEMBER> raftMessageLogger )
     {
         this.outbound = outbound;
         this.databaseId = databaseId;
-        this.me = me;
         this.raftMessageLogger = raftMessageLogger;
     }
 
     @Override
     public void send( MEMBER to, MESSAGE message, boolean block )
     {
-        if ( me.isInitialised() )
-        {
-            raftMessageLogger.logOutbound( databaseId, me.get(), message, to );
-            outbound.send( to, message );
-        }
+        raftMessageLogger.logOutbound( databaseId, to, message );
+        outbound.send( to, message );
     }
 }

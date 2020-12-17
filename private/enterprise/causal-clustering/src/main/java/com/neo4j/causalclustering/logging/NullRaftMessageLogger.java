@@ -12,12 +12,12 @@ import static com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage
 public class NullRaftMessageLogger<MEMBER> implements RaftMessageLogger<MEMBER>
 {
     @Override
-    public void logOutbound( NamedDatabaseId databaseId, MEMBER me, RaftMessage message, MEMBER remote )
+    public void logOutbound( NamedDatabaseId databaseId, MEMBER remote, RaftMessage message  )
     {
     }
 
     @Override
-    public void logInbound( NamedDatabaseId databaseId, MEMBER remote, RaftMessage message, MEMBER me )
+    public void logInbound( NamedDatabaseId databaseId, MEMBER remote, RaftMessage message )
     {
     }
 }

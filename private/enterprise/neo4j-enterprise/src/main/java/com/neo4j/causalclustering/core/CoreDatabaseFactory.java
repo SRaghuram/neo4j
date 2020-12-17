@@ -235,7 +235,7 @@ class CoreDatabaseFactory
 
         var raftOutbound = new LoggingOutbound<>(
                 new RaftOutbound( topologyService, raftSender, raftMessageDispatcher, raftBinder, debugLog, logThresholdMillis, raftMemberId, clock ),
-                namedDatabaseId, raftMemberId, raftLogger );
+                namedDatabaseId, raftLogger );
 
         var statusResponseCollector = new ClusterStatusResponseCollector();
 

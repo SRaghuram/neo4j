@@ -11,7 +11,7 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 
 public interface RaftMessageLogger<MEMBER>
 {
-    void logOutbound( NamedDatabaseId databaseId, MEMBER me, RaftMessage message, MEMBER remote );
+    void logOutbound( NamedDatabaseId databaseId, MEMBER remote, RaftMessage message );
 
-    void logInbound( NamedDatabaseId databaseId, MEMBER remote, RaftMessage message, MEMBER me );
+    void logInbound( NamedDatabaseId databaseId, MEMBER remote, RaftMessage message );
 }

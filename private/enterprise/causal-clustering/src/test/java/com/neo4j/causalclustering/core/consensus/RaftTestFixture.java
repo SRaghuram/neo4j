@@ -64,7 +64,7 @@ public class RaftTestFixture
             fixtureMember.raftLog = new InMemoryRaftLog();
             fixtureMember.member = id;
 
-            RaftTestFixtureLogger raftMessageLogger = new RaftTestFixtureLogger( id, new PrintWriter( writer ) );
+            RaftTestFixtureLogger raftMessageLogger = new RaftTestFixtureLogger( new PrintWriter( writer ) );
             DatabaseIdRepository fakeDatabaseIdRepository = new DatabaseIdRepository()
             {
                 @Override
@@ -80,8 +80,8 @@ public class RaftTestFixture
                 }
             };
 
-            var inbound = new LoggingInbound( net.new Inbound( fixtureMember.member ), raftMessageLogger, coreIdentity( id ), fakeDatabaseIdRepository );
-            var outbound = new LoggingOutbound<>( net.new Outbound( id ), namedDatabaseId, fixtureMember.lazyMember(), raftMessageLogger );
+            var inbound = new LoggingInbound( net.new Inbound( fixtureMember.member ), raftMessageLogger, fakeDatabaseIdRepository );
+            var outbound = new LoggingOutbound<>( net.new Outbound( id ), namedDatabaseId, raftMessageLogger );
 
             fixtureMember.raftMachine = new RaftMachineBuilder( fixtureMember.member, expectedClusterSize, RaftTestMemberSetBuilder.INSTANCE, clock )
                     .inbound( inbound )
@@ -274,7 +274,7 @@ public class RaftTestFixture
     {
         final PrintWriter printWriter;
 
-        RaftTestFixtureLogger( RaftMemberId me, PrintWriter printWriter )
+        RaftTestFixtureLogger( PrintWriter printWriter )
         {
             super( null, null, Clock.systemUTC() );
             this.printWriter = printWriter;

@@ -116,7 +116,7 @@ public class RaftServerFactory
         var raftServer = new Server( channelInitializer, installedProtocolsHandler, serverNameService, raftListenAddress, raftServerExecutor,
                 globalModule.getConnectorPortRegister(), BootstrapConfiguration.serverConfig( config ) );
 
-        var loggingRaftInbound = new LoggingInbound( nettyHandler, raftMessageLogger, myIdentity, databaseIdRepository );
+        var loggingRaftInbound = new LoggingInbound( nettyHandler, raftMessageLogger, databaseIdRepository );
         loggingRaftInbound.registerHandler( raftMessageDispatcher );
 
         return raftServer;

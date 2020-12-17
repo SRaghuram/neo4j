@@ -33,7 +33,6 @@ public class BetterRaftMessageLogger<MEMBER> extends LifecycleAdapter implements
 
     private enum Direction
     {
-        INFO( "---" ),
         OUTBOUND( "-->" ),
         INBOUND( "<--" );
 
@@ -91,17 +90,17 @@ public class BetterRaftMessageLogger<MEMBER> extends LifecycleAdapter implements
     }
 
     @Override
-    public void logOutbound( NamedDatabaseId databaseId, MEMBER me, RaftMessage message, MEMBER remote )
+    public void logOutbound( NamedDatabaseId databaseId, MEMBER remote, RaftMessage message )
     {
-        // timestamp me --> remote for database type message
-        log( convertDatabaseId( databaseId ), me, Direction.OUTBOUND, remote, nullSafeMessageType( message ), valueOf( message ) );
+        // timestamp --> remote for database type message
+        log( convertDatabaseId( databaseId ), Direction.OUTBOUND, remote, nullSafeMessageType( message ), valueOf( message ) );
     }
 
     @Override
-    public void logInbound( NamedDatabaseId databaseId, MEMBER remote, RaftMessage message, MEMBER me )
+    public void logInbound( NamedDatabaseId databaseId, MEMBER remote, RaftMessage message )
     {
-        // timestamp me <-- remote for database type message
-        log( convertDatabaseId( databaseId ), me, Direction.INBOUND, remote, nullSafeMessageType( message ), valueOf( message ) );
+        // timestamp <-- remote for database type message
+        log( convertDatabaseId( databaseId ), Direction.INBOUND, remote, nullSafeMessageType( message ), valueOf( message ) );
     }
 
     private String convertDatabaseId( NamedDatabaseId databaseId )
@@ -116,7 +115,7 @@ public class BetterRaftMessageLogger<MEMBER> extends LifecycleAdapter implements
         return new PrintWriter( fs.openAsOutputStream( logFile, true ) );
     }
 
-    private void log( String forDatabase, MEMBER first, Direction direction, MEMBER second, String type, String message )
+    private void log( String forDatabase, Direction direction, MEMBER remote, String type, String message )
     {
         lifecycleLock.readLock().lock();
         try
@@ -124,7 +123,7 @@ public class BetterRaftMessageLogger<MEMBER> extends LifecycleAdapter implements
             if ( printWriter != null )
             {
                 var timestamp = ZonedDateTime.now( clock ).format( DATE_TIME_FORMATTER );
-                var text = format( "%s %s %s %s %s %s \"%s\"", timestamp, first, direction.arrow, second, forDatabase, type, message );
+                var text = format( "%s %s %s %s %s \"%s\"", timestamp, direction.arrow, remote, forDatabase, type, message );
                 printWriter.println( text );
                 printWriter.flush();
             }
@@ -139,7 +138,7 @@ public class BetterRaftMessageLogger<MEMBER> extends LifecycleAdapter implements
     {
         if ( Objects.isNull( message ) )
         {
-            return "null";
+            return "unknown type";
         }
         else
         {
