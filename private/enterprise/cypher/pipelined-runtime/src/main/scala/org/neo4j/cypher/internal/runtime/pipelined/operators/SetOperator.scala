@@ -28,6 +28,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.macros.TranslateExceptionMacros.translateException
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SetOperation
@@ -44,6 +45,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATS_TRACKER_V
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.TOKEN
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.conditionallyProfileRow
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.dbHit
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CypherTypeException
@@ -61,6 +63,7 @@ import org.neo4j.values.virtual.VirtualRelationshipValue
 class SetOperator(val workIdentity: WorkIdentity,
                   setOperation: SetOperation) extends StatelessOperator {
 
+  var event: OperatorProfileEvent = _
   override def operate(morsel: Morsel,
                        state: PipelinedQueryState,
                        resources: QueryResources): Unit = {
@@ -69,8 +72,15 @@ class SetOperator(val workIdentity: WorkIdentity,
 
     val cursor: MorselFullCursor = morsel.fullCursor()
     while (cursor.next()) {
+      // write::nodeSetProperty and write::relationshipSetProperty uses an internal property cursor
+      // to get the previous value of the property.
+      event.dbHit()
       setOperation.set(cursor, queryState, () => resources.queryStatisticsTracker.setProperty())
     }
+  }
+
+  override def setExecutionEvent(event: OperatorProfileEvent): Unit = {
+    this.event = event
   }
 }
 
@@ -189,6 +199,7 @@ class SetPropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
           )
         )
       ),
+      dbHit(loadField(executionEventField)),
       inner.genOperateWithExpressions,
       conditionallyProfileRow(innerCannotContinue, id, doProfile),
     )

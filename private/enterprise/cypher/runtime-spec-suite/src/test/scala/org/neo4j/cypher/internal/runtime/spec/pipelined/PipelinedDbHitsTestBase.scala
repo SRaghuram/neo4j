@@ -22,6 +22,7 @@ abstract class PipelinedDbHitsTestBase[CONTEXT <: RuntimeContext](edition: Editi
                                 costOfGetPropertyChain = 1,
                                 costOfPropertyJumpedOverInChain = 1,
                                 costOfProperty = 1,
+                                costOfPropertyToken = 0,
                                 costOfExpandGetRelCursor = 1,
                                 costOfExpandOneRel = 1,
                                 costOfRelationshipTypeLookup = 0,
