@@ -3,14 +3,17 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.model.model;
+package com.neo4j.bench.jmh.api;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.Benchmark.Mode;
 
-import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
@@ -18,19 +21,34 @@ import static java.util.stream.Collectors.toList;
 
 public class Benchmarks
 {
+    private static final String LABEL_SEPARATOR = ":";
+
     private final Benchmark parentBenchmark;
     private final List<Benchmark> childBenchmarks;
 
-    @JsonCreator
-    public Benchmarks( @JsonProperty( "parentBenchmark" ) Benchmark parentBenchmark )
+    static Benchmarks create( String benchmarkDescription,
+                              String primaryName,
+                              Collection<String> secondaryLabels,
+                              Mode mode,
+                              Map<String,String> parametersMap )
     {
-        this.parentBenchmark = parentBenchmark;
-        this.childBenchmarks = new ArrayList<>();
+        Benchmark parentBenchmark = Benchmark.benchmarkFor( benchmarkDescription, primaryName, mode, parametersMap );
+        List<Benchmark> childBenchmarks = secondaryLabels
+                .stream()
+                .map( label -> Benchmark.benchmarkFor( benchmarkDescription, childLabel( primaryName, label ), mode, parametersMap ) )
+                .collect( toList() );
+        return new Benchmarks( parentBenchmark, childBenchmarks );
     }
 
-    public void addChildBenchmark( Benchmark childBenchmark )
+    private static String childLabel( String primaryName, String label )
     {
-        childBenchmarks.add( childBenchmark );
+        return primaryName + LABEL_SEPARATOR + label;
+    }
+
+    private Benchmarks( Benchmark parentBenchmark, List<Benchmark> childBenchmarks )
+    {
+        this.parentBenchmark = parentBenchmark;
+        this.childBenchmarks = childBenchmarks;
     }
 
     public Benchmark parentBenchmark()
@@ -43,10 +61,15 @@ public class Benchmarks
         return childBenchmarks.stream().anyMatch( benchmark -> benchmark.simpleName().endsWith( label ) );
     }
 
+    public Set<Benchmark> childBenchmarks()
+    {
+        return new HashSet<>( childBenchmarks );
+    }
+
     public Benchmark childBenchmarkWith( String label )
     {
         List<Benchmark> matches = childBenchmarks.stream()
-                                                 .filter( benchmark -> benchmark.simpleName().endsWith( ":" + label ) )
+                                                 .filter( benchmark -> benchmark.simpleName().endsWith( LABEL_SEPARATOR + label ) )
                                                  .collect( toList() );
         if ( matches.isEmpty() )
         {

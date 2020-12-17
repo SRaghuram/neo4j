@@ -23,7 +23,6 @@ import com.neo4j.bench.jmh.api.profile.NoOpProfiler;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
-import com.neo4j.bench.model.model.Benchmarks;
 import com.neo4j.bench.model.model.Metrics;
 import com.neo4j.bench.model.model.Neo4jConfig;
 import org.openjdk.jmh.infra.BenchmarkParams;

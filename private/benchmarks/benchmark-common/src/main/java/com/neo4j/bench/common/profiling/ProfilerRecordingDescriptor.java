@@ -12,7 +12,10 @@ import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.profiling.RecordingType;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ProfilerRecordingDescriptor
 {
@@ -22,14 +25,28 @@ public class ProfilerRecordingDescriptor
                                                       ParameterizedProfiler profiler,
                                                       Parameters additionalParams )
     {
+        return create( benchmarkGroup, benchmark, runPhase, profiler, additionalParams, Collections.emptySet() );
+    }
+
+    public static ProfilerRecordingDescriptor create( BenchmarkGroup benchmarkGroup,
+                                                      Benchmark benchmark,
+                                                      RunPhase runPhase,
+                                                      ParameterizedProfiler profiler,
+                                                      Parameters additionalParams,
+                                                      Set<Benchmark> secondary )
+    {
+        FullBenchmarkName benchmarkName = FullBenchmarkName.from( benchmarkGroup, benchmark );
         List<RecordingType> secondaryRecordingTypes = new ArrayList<>( profiler.profilerType().allRecordingTypes() );
         secondaryRecordingTypes.remove( profiler.profilerType().recordingType() );
-        return new ProfilerRecordingDescriptor( benchmarkGroup,
-                                                benchmark,
+        Set<FullBenchmarkName> secondaryBenchmarks = secondary.stream()
+                                                              .map( secondaryBenchmark -> FullBenchmarkName.from( benchmarkGroup, secondaryBenchmark ) )
+                                                              .collect( Collectors.toSet() );
+        return new ProfilerRecordingDescriptor( benchmarkName,
                                                 runPhase,
                                                 profiler.profilerType().recordingType(),
                                                 secondaryRecordingTypes,
-                                                additionalParams );
+                                                additionalParams,
+                                                secondaryBenchmarks );
     }
 
     private final FullBenchmarkName benchmarkName;
@@ -37,19 +54,21 @@ public class ProfilerRecordingDescriptor
     private final RecordingType recordingType;
     private final List<RecordingType> secondaryRecordingTypes;
     private final Parameters additionalParams;
+    private final Set<FullBenchmarkName> secondaryBenchmarks;
 
-    public ProfilerRecordingDescriptor( BenchmarkGroup benchmarkGroup,
-                                        Benchmark benchmark,
-                                        RunPhase runPhase,
-                                        RecordingType recordingType,
-                                        List<RecordingType> secondaryRecordingTypes,
-                                        Parameters additionalParams )
+    private ProfilerRecordingDescriptor( FullBenchmarkName benchmarkName,
+                                         RunPhase runPhase,
+                                         RecordingType recordingType,
+                                         List<RecordingType> secondaryRecordingTypes,
+                                         Parameters additionalParams,
+                                         Set<FullBenchmarkName> secondaryBenchmarks )
     {
-        this.benchmarkName = FullBenchmarkName.from( benchmarkGroup, benchmark );
+        this.benchmarkName = benchmarkName;
         this.runPhase = runPhase;
         this.recordingType = recordingType;
         this.secondaryRecordingTypes = secondaryRecordingTypes;
         this.additionalParams = additionalParams;
+        this.secondaryBenchmarks = secondaryBenchmarks;
     }
 
     public RecordingDescriptor recordingDescriptorFor( RecordingType aRecordingType )
@@ -59,7 +78,7 @@ public class ProfilerRecordingDescriptor
             throw new RuntimeException( "Invalid recording type: " + aRecordingType + "\n" +
                                         "Valid types: " + recordingTypes() );
         }
-        return new RecordingDescriptor( benchmarkName, runPhase, aRecordingType, additionalParams );
+        return new RecordingDescriptor( benchmarkName, runPhase, aRecordingType, additionalParams, secondaryBenchmarks );
     }
 
     private List<RecordingType> recordingTypes()

@@ -9,7 +9,6 @@ import com.neo4j.bench.jmh.api.benchmarks.valid.ValidDisabledBenchmark;
 import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark1;
 import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark2;
 import com.neo4j.bench.jmh.api.config.ParameterValue;
-import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.infra.IterationParams;
@@ -18,6 +17,7 @@ import org.openjdk.jmh.runner.WorkloadParams;
 import org.openjdk.jmh.runner.options.TimeValue;
 
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -126,13 +126,69 @@ class BenchmarkDiscoveryUtilsTest
         runnerParams.asList()
                     .forEach( runnerParam -> workloadParams.put( runnerParam.name(), runnerParam.value(), 1 ) );
 
-        BenchmarkParams benchmarkParams = new BenchmarkParams(
-                "doThing", /* benchmark */
+        BenchmarkParams benchmarkParams = createBenchmarkParams( paramThreads, workloadParams,
+                                                                 "com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark1.methodOne",
+                                                                 Collections.emptyList() );
+
+        List<ParameterValue> parameterValues = extractParameterValues( benchmarkParams, runnerParams );
+
+        assertTrue( parameterValues.contains( param1 ) );
+        assertTrue( parameterValues.contains( param2 ) );
+        assertTrue( parameterValues.contains( param3 ) );
+        assertTrue( parameterValues.contains( paramThreads ) );
+        assertThat(
+                parameterValues.stream().map( ParameterValue::toString ).collect( joining( "\n" ) ),
+                parameterValues.size(),
+                equalTo( 4 ) );
+    }
+
+    @Test
+    void shouldCreateBenchmarks()
+    {
+        ParameterValue paramThreads = new ParameterValue( THREADS_PARAM, "1" );
+        RunnerParams runnerParams = RunnerParams.create( Paths.get( "." ) );
+        WorkloadParams workloadParams = new WorkloadParams();
+        List<String> threadGroupLabels = Collections.emptyList();
+        BenchmarkParams benchmarkParams = createBenchmarkParams( paramThreads, workloadParams,
+                                                                 "com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark1.methodOne",
+                                                                 threadGroupLabels );
+
+        Benchmarks benchmarks = BenchmarkDiscoveryUtils.toBenchmarks( benchmarkParams, runnerParams );
+
+        assertThat( benchmarks.parentBenchmark().simpleName(), equalTo( "ValidEnabledBenchmark1.methodOne" ) );
+        assertFalse( benchmarks.isGroup() );
+    }
+
+    @Test
+    void shouldCreateChildBenchmarksForGroup()
+    {
+        ParameterValue paramThreads = new ParameterValue( THREADS_PARAM, "1" );
+        RunnerParams runnerParams = RunnerParams.create( Paths.get( "." ) );
+        WorkloadParams workloadParams = new WorkloadParams();
+        List<String> threadGroupLabels = Arrays.asList( "methodOne", "methodTwo" );
+        BenchmarkParams benchmarkParams = createBenchmarkParams( paramThreads, workloadParams,
+                                                                 "com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledGroupBenchmark.group",
+                                                                 threadGroupLabels );
+
+        Benchmarks benchmarks = BenchmarkDiscoveryUtils.toBenchmarks( benchmarkParams, runnerParams );
+
+        assertThat( benchmarks.parentBenchmark().simpleName(), equalTo( "ValidEnabledGroupBenchmark.group" ) );
+        assertTrue( benchmarks.isGroup() );
+        assertTrue( benchmarks.hasChildBenchmarkWith( "methodOne" ), "contains benchmark with label 'methodOne'" );
+        assertTrue( benchmarks.hasChildBenchmarkWith( "methodTwo" ), "contains benchmark with label 'methodTwo'" );
+        assertFalse( benchmarks.hasChildBenchmarkWith( "methodThree" ), "not contain benchmark with label 'methodThree'" );
+    }
+
+    private BenchmarkParams createBenchmarkParams( ParameterValue paramThreads, WorkloadParams workloadParams, String benchmark,
+                                                   List<String> threadGroupLabels )
+    {
+        return new BenchmarkParams(
+                benchmark, /* benchmark */
                 "generatedDoThings", /* generatedTarget */
                 false, /* syncIterations */
                 Integer.parseInt( paramThreads.value() ),
                 new int[]{},/* threadGroups */
-                Collections.emptyList(), /* threadGroupLabels */
+                threadGroupLabels, /* threadGroupLabels */
                 1, /* forks */
                 1, /* warmupForks */
                 new IterationParams(
@@ -156,16 +212,5 @@ class BenchmarkDiscoveryUtilsTest
                 "1.8.0", /* vm version */
                 "1.19", /* jmh version */
                 TimeValue.NONE /* timeout */ );
-
-        List<ParameterValue> parameterValues = extractParameterValues( benchmarkParams, runnerParams );
-
-        assertTrue( parameterValues.contains( param1 ) );
-        assertTrue( parameterValues.contains( param2 ) );
-        assertTrue( parameterValues.contains( param3 ) );
-        assertTrue( parameterValues.contains( paramThreads ) );
-        assertThat(
-                parameterValues.stream().map( ParameterValue::toString ).collect( joining( "\n" ) ),
-                parameterValues.size(),
-                CoreMatchers.equalTo( 4 ) );
     }
 }

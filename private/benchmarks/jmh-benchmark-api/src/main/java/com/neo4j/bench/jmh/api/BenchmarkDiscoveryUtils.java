@@ -5,17 +5,15 @@
  */
 package com.neo4j.bench.jmh.api;
 
-import com.google.common.collect.Lists;
-import com.neo4j.bench.model.model.Benchmark;
-import com.neo4j.bench.model.model.Benchmark.Mode;
-import com.neo4j.bench.model.model.BenchmarkGroup;
-import com.neo4j.bench.model.model.Benchmarks;
-import com.neo4j.bench.model.model.Metrics;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParameterValue;
+import com.neo4j.bench.model.model.Benchmark.Mode;
+import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.Metrics;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.util.Statistics;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -52,29 +50,13 @@ public class BenchmarkDiscoveryUtils
         // for 'symmetric' (non-@Group) benchmarks simple name will be class + method
         // for 'asymmetric' (@Group) benchmarks simple name will be class + group
         String simpleBenchmarkName = withoutPackageName( benchmarkParams.getBenchmark() );
-        List<String> simpleBenchmarkNames = Lists.newArrayList( simpleBenchmarkName );
         // thread group labels will be empty for 'symmetric' (non-@Group) benchmarks
-        benchmarkParams.getThreadGroupLabels().stream()
-                       .map( label -> simpleBenchmarkName + ":" + label )
-                       .forEach( simpleBenchmarkNames::add );
-
+        Collection<String> labels = benchmarkParams.getThreadGroupLabels();
         // all benchmark methods for a given class (regardless of @Group/non-@Group) have the same parameters
         List<ParameterValue> parameterValues = extractParameterValues( benchmarkParams, runnerParams );
+        Map<String,String> parametersMap = parametersAsMap( parameterValues );
 
-        Benchmarks benchmarks = new Benchmarks(
-                Benchmark.benchmarkFor( benchmarkDescription,
-                                        simpleBenchmarkNames.get( 0 ),
-                                        mode,
-                                        parametersAsMap( parameterValues ) ) );
-        for ( int i = 1; i < simpleBenchmarkNames.size(); i++ )
-        {
-            benchmarks.addChildBenchmark(
-                    Benchmark.benchmarkFor( benchmarkDescription,
-                                            simpleBenchmarkNames.get( i ),
-                                            mode,
-                                            parametersAsMap( parameterValues ) ) );
-        }
-        return benchmarks;
+        return Benchmarks.create( benchmarkDescription, simpleBenchmarkName, labels, mode, parametersMap );
     }
 
     static Map<String,String> parametersAsMap( List<ParameterValue> parameterValues )

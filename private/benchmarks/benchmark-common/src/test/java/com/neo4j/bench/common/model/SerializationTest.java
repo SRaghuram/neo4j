@@ -23,7 +23,6 @@ import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkPlans;
 import com.neo4j.bench.model.model.BenchmarkMetrics;
 import com.neo4j.bench.model.model.BenchmarkPlan;
 import com.neo4j.bench.model.model.BenchmarkTool;
-import com.neo4j.bench.model.model.Benchmarks;
 import com.neo4j.bench.model.model.Environment;
 import com.neo4j.bench.model.model.Instance;
 import com.neo4j.bench.model.model.Java;
@@ -50,6 +49,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -210,8 +210,11 @@ public class SerializationTest
         // given
         BenchmarkGroup group = new BenchmarkGroup( "group1" );
         Benchmark benchmark = benchmarkFor( "desc", "simple_name", Benchmark.Mode.THROUGHPUT, Collections.singletonMap( "key", "val" ) );
+        Benchmark secondary = benchmarkFor( "desc", "simple_name-child1", Benchmark.Mode.THROUGHPUT, Collections.emptyMap() );
         FullBenchmarkName fullBenchmarkName = FullBenchmarkName.from( group, benchmark );
-        RecordingDescriptor recordingDescriptor = new RecordingDescriptor( fullBenchmarkName, RunPhase.MEASUREMENT, RecordingType.JFR, Parameters.CLIENT );
+        Set<FullBenchmarkName> secondaryBenchmarks = Collections.singleton( FullBenchmarkName.from( group, secondary ) );
+        RecordingDescriptor recordingDescriptor =
+                new RecordingDescriptor( fullBenchmarkName, RunPhase.MEASUREMENT, RecordingType.JFR, Parameters.CLIENT, secondaryBenchmarks );
 
         shouldSerializeAndDeserialize( recordingDescriptor );
     }
@@ -331,18 +334,6 @@ public class SerializationTest
                 params,
                 metrics.toMap(),
                 auxiliaryMetrics.toMap() );
-        // then
-        shouldSerializeAndDeserialize( before );
-    }
-
-    @Test
-    void shouldSerializeBenchmarks()
-    {
-        // given
-        Map<String,String> params = new HashMap<>();
-        params.put( "key", "value" );
-        Benchmark benchmark1 = benchmarkFor( "desc", "name", LATENCY, params );
-        Benchmarks before = new Benchmarks( benchmark1 );
         // then
         shouldSerializeAndDeserialize( before );
     }

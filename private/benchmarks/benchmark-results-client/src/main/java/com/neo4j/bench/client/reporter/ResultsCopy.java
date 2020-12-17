@@ -6,10 +6,11 @@
 package com.neo4j.bench.client.reporter;
 
 import com.google.common.collect.Sets;
+import com.neo4j.bench.common.profiling.FullBenchmarkName;
 import com.neo4j.bench.common.profiling.RecordingDescriptor;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
-import com.neo4j.bench.model.model.BenchmarkGroupBenchmark;
+import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.model.model.TestRunReport;
 import com.neo4j.bench.model.profiling.ProfilerRecordings;
@@ -17,8 +18,11 @@ import com.neo4j.bench.model.profiling.RecordingType;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.appendIfMissing;
@@ -42,53 +46,95 @@ public class ResultsCopy
      *   <li>Copy each discovered recording to `tempProfilerRecordingsDir`</li>
      * </ol>
      */
-    static void extractProfilerRecordings( BenchmarkGroupBenchmarkMetrics metrics, Path tempProfilerRecordingsDir, URI s3FolderUri, Path workDir )
+    static void extractProfilerRecordings( BenchmarkGroupBenchmarkMetrics metrics,
+                                           Path tempProfilerRecordingsDir,
+                                           URI s3FolderUri,
+                                           Path workDir )
     {
         String s3Folder = appendIfMissing( removeStart( s3FolderUri.toString(), "s3://" ), "/" );
+        Set<FullBenchmarkName> successfulBenchmarks = extractSuccessfulBenchmarks( metrics );
 
         for ( BenchmarkGroupDirectory benchmarkGroupDirectory : BenchmarkGroupDirectory.searchAllIn( workDir ) )
         {
             for ( BenchmarkDirectory benchmarksDirectory : benchmarkGroupDirectory.benchmarkDirectories() )
             {
-                BenchmarkGroupBenchmark benchmarkGroupBenchmark = new BenchmarkGroupBenchmark( benchmarkGroupDirectory.benchmarkGroup(),
-                                                                                               benchmarksDirectory.benchmark() );
-                // Only process successful benchmarks
-                if ( metrics.benchmarkGroupBenchmarks().contains( benchmarkGroupBenchmark ) )
-                {
-                    ProfilerRecordings profilerRecordings = new ProfilerRecordings();
+                Map<FullBenchmarkName,ProfilerRecordings> benchmarkRecordings = new HashMap<>();
+                copyValidRecordings( benchmarksDirectory, tempProfilerRecordingsDir, successfulBenchmarks )
+                        .forEach( ( recordingDescriptor, path ) ->
+                                          benchmarkRecordings.computeIfAbsent( recordingDescriptor.benchmarkName(), key -> new ProfilerRecordings() )
+                                                             // attach valid/copied recordings to test run report
+                                                             .with( recordingDescriptor.recordingType(),
+                                                                    recordingDescriptor.additionalParams(),
+                                                                    s3Folder + path.toString() )
+                        );
 
-                    copyValidRecordings( benchmarksDirectory, tempProfilerRecordingsDir )
-                            .forEach( ( recordingDescriptor, path ) ->
-                                              // attached valid/copied recordings to test run report
-                                              profilerRecordings.with( recordingDescriptor.recordingType(),
-                                                                       recordingDescriptor.additionalParams(),
-                                                                       s3Folder + path.toString() )
-                            );
-
-                    if ( !profilerRecordings.toMap().isEmpty() )
-                    {
-                        // TODO once we have parameterized profilers we should assert that every expected recording exists
-                        metrics
-                                .attachProfilerRecording( benchmarkGroupBenchmark.benchmarkGroup(),
-                                                          benchmarkGroupBenchmark.benchmark(),
-                                                          profilerRecordings );
-                    }
-                }
+                benchmarkRecordings
+                        .forEach( ( fullBenchmarkName, profilerRecordings ) ->
+                                          // TODO once we have parameterized profilers we should assert that every expected recording exists
+                                          metrics.attachProfilerRecording( fullBenchmarkName.benchmarkGroup(),
+                                                                           fullBenchmarkName.benchmark(),
+                                                                           profilerRecordings ) );
             }
         }
     }
 
-    private static Map<RecordingDescriptor,Path> copyValidRecordings( BenchmarkDirectory benchmarksDirectory, Path tempProfilerRecordingsDir )
+    private static Set<FullBenchmarkName> extractSuccessfulBenchmarks( BenchmarkGroupBenchmarkMetrics metrics )
     {
-        return benchmarksDirectory.forks().stream()
-                                  .flatMap( forkDirectory -> forkDirectory.copyProfilerRecordings( tempProfilerRecordingsDir, ResultsCopy::shouldUpload )
-                                                                          .entrySet()
-                                                                          .stream() )
-                                  .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) );
+        return metrics.benchmarkGroupBenchmarks()
+                      .stream()
+                      .map( benchmarkGroupBenchmark -> FullBenchmarkName.from( benchmarkGroupBenchmark.benchmarkGroup(), benchmarkGroupBenchmark.benchmark() ) )
+                      .collect( Collectors.toSet() );
     }
 
-    private static boolean shouldUpload( RecordingDescriptor recordingDescriptor )
+    private static Map<RecordingDescriptor,Path> copyValidRecordings( BenchmarkDirectory benchmarksDirectory,
+                                                                      Path tempProfilerRecordingsDir,
+                                                                      Set<FullBenchmarkName> successfulBenchmarks )
     {
-        return !IGNORED_RECORDING_TYPES.contains( recordingDescriptor.recordingType() );
+        return benchmarksDirectory
+                .forks()
+                .stream()
+                .map( forkDirectory -> copyValidRecordings( forkDirectory, tempProfilerRecordingsDir, successfulBenchmarks ) )
+                .flatMap( map -> map.entrySet().stream() )
+                .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) );
+    }
+
+    private static Map<RecordingDescriptor,Path> copyValidRecordings( ForkDirectory forkDirectory,
+                                                                      Path tempProfilerRecordingsDir,
+                                                                      Set<FullBenchmarkName> successfulBenchmarks )
+    {
+        Map<RecordingDescriptor,Path> descriptorToPath = forkDirectory
+                .copyProfilerRecordings( tempProfilerRecordingsDir, descriptor -> shouldUpload( descriptor, successfulBenchmarks ) );
+
+        return descriptorToPath
+                .entrySet()
+                .stream()
+                .map( entry -> expandSuccessfulDescriptors( entry.getKey(), entry.getValue(), successfulBenchmarks ) )
+                .flatMap( map -> map.entrySet().stream() )
+                .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) );
+    }
+
+    private static boolean shouldUpload( RecordingDescriptor recordingDescriptor,
+                                         Set<FullBenchmarkName> successfulBenchmarks )
+    {
+        return !IGNORED_RECORDING_TYPES.contains( recordingDescriptor.recordingType() ) &&
+               !findSuccessfulDescriptors( successfulBenchmarks, recordingDescriptor ).isEmpty();
+    }
+
+    private static Map<RecordingDescriptor,Path> expandSuccessfulDescriptors( RecordingDescriptor recordingDescriptor,
+                                                                              Path path,
+                                                                              Set<FullBenchmarkName> successfulBenchmarks )
+    {
+        return findSuccessfulDescriptors( successfulBenchmarks, recordingDescriptor )
+                .stream()
+                .collect( Collectors.toMap( Function.identity(), descriptor -> path ) );
+    }
+
+    private static Set<RecordingDescriptor> findSuccessfulDescriptors( Set<FullBenchmarkName> successfulBenchmarks,
+                                                                       RecordingDescriptor recordingDescriptor )
+    {
+        Set<RecordingDescriptor> descriptors = Sets.union( Collections.singleton( recordingDescriptor ), recordingDescriptor.secondaryRecordingDescriptors() );
+        return descriptors.stream()
+                          .filter( descriptor -> successfulBenchmarks.contains( descriptor.benchmarkName() ) )
+                          .collect( Collectors.toSet() );
     }
 }

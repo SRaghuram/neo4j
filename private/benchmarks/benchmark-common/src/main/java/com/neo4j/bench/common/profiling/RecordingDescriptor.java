@@ -21,6 +21,9 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static com.neo4j.bench.common.util.BenchmarkUtil.sanitize;
 
@@ -54,17 +57,25 @@ public class RecordingDescriptor
     private final RunPhase runPhase;
     private final RecordingType recordingType;
     private final Parameters additionalParams;
+    private final Set<FullBenchmarkName> secondaryBenchmarks;
 
     @JsonCreator
     public RecordingDescriptor( @JsonProperty( "benchmarkName" ) FullBenchmarkName benchmarkName,
                                 @JsonProperty( "runPhase" ) RunPhase runPhase,
                                 @JsonProperty( "recordingType" ) RecordingType recordingType,
-                                @JsonProperty( "additionalParams" ) Parameters additionalParams )
+                                @JsonProperty( "additionalParams" ) Parameters additionalParams,
+                                @JsonProperty( "secondaryBenchmarks" ) Set<FullBenchmarkName> secondaryBenchmarks )
     {
         this.benchmarkName = benchmarkName;
         this.runPhase = runPhase;
         this.recordingType = recordingType;
         this.additionalParams = additionalParams;
+        this.secondaryBenchmarks = secondaryBenchmarks;
+    }
+
+    public FullBenchmarkName benchmarkName()
+    {
+        return benchmarkName;
     }
 
     public RunPhase runPhase()
@@ -123,6 +134,18 @@ public class RecordingDescriptor
                                         ? ""
                                         : ADDITIONAL_PARAMS_SEPARATOR + additionalParams.toString();
         return benchmarkName.name() + runPhase.nameModifier() + additionalParamsString;
+    }
+
+    public Set<RecordingDescriptor> secondaryRecordingDescriptors()
+    {
+        return secondaryBenchmarks.stream()
+                                  .map( this::copySecondaryRecordingDescriptor )
+                                  .collect( Collectors.toSet() );
+    }
+
+    private RecordingDescriptor copySecondaryRecordingDescriptor( FullBenchmarkName secondaryBenchmark )
+    {
+        return new RecordingDescriptor( secondaryBenchmark, runPhase, recordingType, additionalParams, Collections.emptySet() );
     }
 
     @Override

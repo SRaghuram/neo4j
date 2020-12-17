@@ -38,6 +38,16 @@ public class FullBenchmarkName
         this.benchmark = benchmark;
     }
 
+    public BenchmarkGroup benchmarkGroup()
+    {
+        return benchmarkGroup;
+    }
+
+    public Benchmark benchmark()
+    {
+        return benchmark;
+    }
+
     public String sanitizedName()
     {
         return sanitize( name() );
