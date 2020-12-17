@@ -79,6 +79,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_MORSEL_DATA_CONSTRUCTOR_PARAMETER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_MORSEL_DATA_FIELD
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_ROW_IS_VALID
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_SINGLE_ACCUMULATOR_CONSTRUCTOR_PARAMETER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_SINGLE_ACCUMULATOR_CURSOR_FIELD
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.MORSEL_DATA_INPUT_CURSOR_FIELD
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NEXT
@@ -183,19 +184,23 @@ trait CompiledStreamingOperatorWithAccumulators[DATA <: AnyRef, ACC <: MorselAcc
                          input: IndexedSeq[ACC],
                          resources: QueryResources,
                          argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithAccumulators[DATA, ACC]] = {
-    singletonIndexedSeq(compiledNextTask(state.queryContext.transactionalContext.dataRead, input, argumentStateMaps))
+    singletonIndexedSeq(compiledNextTask(state.queryContext.transactionalContext.transaction, input, argumentStateMaps, input.head))
   }
 
   def nextTasks(state: PipelinedQueryState,
                 input: Object,
                 resources: QueryResources,
                 argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
-    singletonIndexedSeq(compiledNextTask(state.queryContext.transactionalContext.dataRead, input.asInstanceOf[IndexedSeq[ACC]], argumentStateMaps))
+    singletonIndexedSeq(compiledNextTask(state.queryContext.transactionalContext.transaction,
+                                         input.asInstanceOf[IndexedSeq[ACC]],
+                                         argumentStateMaps,
+                                         input.asInstanceOf[IndexedSeq[ACC]].head))
   }
 
-  protected def compiledNextTask(dataRead: Read,
+  protected def compiledNextTask(tx: KernelTransaction,
                                  inputAccumulators: IndexedSeq[ACC],
-                                 argumentStateMaps: ArgumentStateMaps): ContinuableOperatorTaskWithAccumulators[DATA, ACC]
+                                 argumentStateMaps: ArgumentStateMaps,
+                                 singleInputAccumulator: ACC): ContinuableOperatorTaskWithAccumulators[DATA, ACC]
 
 }
 
@@ -251,16 +256,20 @@ case class CompiledStreamingOperatorWithAccumulatorsTemplate(accumulatorsPerTask
   override protected def genCompiledNextTask(taskClassHandle: ClassHandle): MethodDeclaration = {
     MethodDeclaration("compiledNextTask",
       returnType = typeRefOf[ContinuableOperatorTaskWithAccumulators[AnyRef, MorselAccumulator[AnyRef]]],
-      parameters = Seq(param[Read]("dataRead"),
+      parameters = Seq(
+        param[KernelTransaction]("tx"),
         param[IndexedSeq[MorselAccumulator[AnyRef]]]("inputAccumulators"),
-        param[ArgumentStateMaps]("argumentStateMaps")),
+        param[ArgumentStateMaps]("argumentStateMaps"),
+        param[MorselAccumulator[AnyRef]]("singleInputAccumulator")),
       body = newInstance(Constructor(taskClassHandle,
-        Seq(TypeReference.typeReference(classOf[Read]),
+        Seq(TypeReference.typeReference(classOf[KernelTransaction]),
           TypeReference.typeReference(classOf[IndexedSeq[MorselAccumulator[AnyRef]]]),
-          TypeReference.typeReference(classOf[ArgumentStateMaps]))),
-        load("dataRead"),
+          TypeReference.typeReference(classOf[ArgumentStateMaps]),
+          TypeReference.typeReference(classOf[MorselAccumulator[AnyRef]]))),
+        load("tx"),
         load("inputAccumulators"),
-        load("argumentStateMaps")))
+        load("argumentStateMaps"),
+        load("singleInputAccumulator")))
   }
 
   override protected def inputOperatorType: TypeReference = typeRefOf[CompiledStreamingOperatorWithAccumulators[AnyRef, MorselAccumulator[AnyRef]]]
@@ -318,8 +327,8 @@ trait CompiledStreamingOperatorTemplate[T <: Operator] {
     ClassDeclaration[T](
       packageName,
       className,
-      extendsClass = None,
-      implementsInterfaces = Seq(inputOperatorType),
+      extendsClass = genExtendsClass,
+      implementsInterfaces = genImplementsInterfaces,
       constructorParameters = Seq(),
       initializationCode = noop(),
       methods = Seq(
@@ -356,6 +365,8 @@ trait CompiledStreamingOperatorTemplate[T <: Operator] {
 
   protected def genCompiledNextTask(taskClassHandle: ClassHandle): MethodDeclaration
   protected def inputOperatorType: codegen.TypeReference
+  protected def genExtendsClass: Option[codegen.TypeReference] = None
+  protected def genImplementsInterfaces: Seq[codegen.TypeReference] = Seq(inputOperatorType)
   protected def genMoreMethodDeclarations: Seq[MethodDeclaration]
 }
 
@@ -859,8 +870,9 @@ trait ContinuableOperatorTaskWithSingleAccumulatorTemplate extends ContinuableOp
   override protected def genConstructorParameters(): Seq[Parameter] = Seq(
     TX_CONSTRUCTOR_PARAMETER,
     INPUT_ACCUMULATORS_CONSTRUCTOR_PARAMETER,
-    ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER
-  )
+    ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER,
+    INPUT_SINGLE_ACCUMULATOR_CONSTRUCTOR_PARAMETER
+    )
 
   override protected def genMoreMethodDeclarations: Seq[MethodDeclaration] = Seq(
     // This is only needed because we extend an abstract scala class containing `val accumulators: IndexedSeq[ACC]`
@@ -871,7 +883,7 @@ trait ContinuableOperatorTaskWithSingleAccumulatorTemplate extends ContinuableOp
     )
   )
 
-  override protected def genImplementsInterfaces: Seq[TypeReference] = Seq(typeRefOf[CompiledTaskWithAccumulators[AnyRef, MorselAccumulator[AnyRef]]])
+  override protected def genImplementsInterfaces: Seq[TypeReference] = Seq(typeRefOf[CompiledTaskWithAccumulators[_, MorselAccumulator[_]]])
 
   override def genInputCursorField: InstanceField = INPUT_SINGLE_ACCUMULATOR_CURSOR_FIELD
 
@@ -924,7 +936,7 @@ trait ContinuableOperatorTaskTemplate extends OperatorTaskTemplate {
     ClassDeclaration[CompiledTask](
       packageName,
       className,
-      extendsClass = None,
+      extendsClass = genExtendsClass,
       implementsInterfaces = genImplementsInterfaces,
       constructorParameters = genConstructorParameters,
       initializationCode = genInit,
@@ -1032,6 +1044,8 @@ trait ContinuableOperatorTaskTemplate extends OperatorTaskTemplate {
   protected def genConstructorParameters: Seq[Parameter]
 
   protected def genMoreMethodDeclarations: Seq[MethodDeclaration]
+
+  protected def genExtendsClass: Option[codegen.TypeReference] = None
 
   protected def genImplementsInterfaces: Seq[codegen.TypeReference]
 

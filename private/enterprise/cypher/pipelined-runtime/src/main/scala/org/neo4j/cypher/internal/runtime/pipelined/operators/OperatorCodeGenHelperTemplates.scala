@@ -152,6 +152,7 @@ object OperatorCodeGenHelperTemplates {
   val INPUT_MORSEL_CONSTRUCTOR_PARAMETER: Parameter = param[Morsel]("inputMorsel")
   val INPUT_MORSEL_DATA_CONSTRUCTOR_PARAMETER: Parameter = param[MorselData]("morselData")
   val INPUT_ACCUMULATORS_CONSTRUCTOR_PARAMETER: Parameter = param[IndexedSeq[MorselAccumulator[AnyRef]]]("inputAccumulators")
+  val INPUT_SINGLE_ACCUMULATOR_CONSTRUCTOR_PARAMETER: Parameter = param[MorselAccumulator[AnyRef]]("singleInputAccumulator")
   val ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER: Parameter = param[ArgumentStateMaps]("argumentStateMaps")
   val QUERY_RESOURCES_CONSTRUCTOR_PARAMETER: Parameter = param[QueryResources]("resources")
 
@@ -185,10 +186,8 @@ object OperatorCodeGenHelperTemplates {
 
   val INPUT_SINGLE_ACCUMULATOR_CURSOR_FIELD: InstanceField = // This takes just a single accumulator from the accumulators (assumes accumulatorsPerTask == 1)
     field[MorselReadCursor](INPUT_CURSOR_FIELD_NAME, // Note, must be identical with INPUT_CURSOR_FIELD!
-      invoke(
-        invoke(load(INPUT_ACCUMULATORS_CONSTRUCTOR_PARAMETER.name),
-               method[IndexedSeq[_], MorselAccumulator[_], Unit]("head")),
-        method[MorselData, MorselReadCursor, Boolean]("readCursor"), constant(true)
+      invoke(load(INPUT_SINGLE_ACCUMULATOR_CONSTRUCTOR_PARAMETER.name),
+             method[MorselData, MorselReadCursor, Boolean]("readCursor"), constant(true)
       )
     )
 
