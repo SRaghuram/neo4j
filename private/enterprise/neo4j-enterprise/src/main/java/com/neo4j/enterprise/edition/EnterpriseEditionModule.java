@@ -208,8 +208,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     }
 
     @Override
-    public void registerSystemGraphComponents( SystemGraphComponents systemGraphComponents, GlobalModule globalModule,
-                                               DatabaseManager<?> databaseManager )
+    public void registerSystemGraphComponents( SystemGraphComponents systemGraphComponents, GlobalModule globalModule )
     {
         var fabricDatabaseManager = dependencies.resolveDependency( FabricDatabaseManager.class );
         var systemGraphComponent = new FabricSystemGraphComponent( globalModule.getGlobalConfig(), fabricDatabaseManager );

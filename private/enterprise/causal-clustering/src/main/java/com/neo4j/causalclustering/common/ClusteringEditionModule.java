@@ -27,6 +27,7 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.DatabaseOperationCounts;
 import org.neo4j.dbms.database.DbmsRuntimeRepository;
 import org.neo4j.dbms.database.DbmsRuntimeSystemGraphComponent;
+import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.function.Predicates;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
@@ -74,6 +75,12 @@ public abstract class ClusteringEditionModule extends AbstractEditionModule
     {
         return Predicates.any( DEFAULT_FILENAME_PREDICATE,
                 filename -> filename.endsWith( PageCacheWarmer.SUFFIX_CACHEPROF ) );
+    }
+
+    @Override
+    public SystemGraphInitializer createSystemGraphInitializer( GlobalModule globalModule )
+    {
+        return globalModule.getGlobalDependencies().satisfyDependency( SystemGraphInitializer.NO_OP );
     }
 
     @Override

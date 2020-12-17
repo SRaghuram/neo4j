@@ -60,7 +60,6 @@ import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphComponents;
-import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.module.GlobalModule;
@@ -276,14 +275,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     }
 
     @Override
-    public SystemGraphInitializer createSystemGraphInitializer( GlobalModule globalModule, DatabaseManager<?> databaseManager )
-    {
-        return globalModule.getGlobalDependencies().satisfyDependency( SystemGraphInitializer.NO_OP );
-    }
-
-    @Override
-    public void registerSystemGraphComponents( SystemGraphComponents systemGraphComponents, GlobalModule globalModule,
-                                               DatabaseManager<?> databaseManager )
+    public void registerSystemGraphComponents( SystemGraphComponents systemGraphComponents, GlobalModule globalModule )
     {
         var systemGraphComponent = new EnterpriseSystemGraphComponent( globalModule.getGlobalConfig() );
         systemGraphComponents.register( systemGraphComponent );

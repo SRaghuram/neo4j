@@ -10,7 +10,6 @@ import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventList
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.DbmsRuntimeRepository;
 import org.neo4j.dbms.database.DbmsRuntimeSystemGraphComponent;
-import org.neo4j.dbms.database.DbmsRuntimeVersion;
 
 /**
  * A version of {@link} DbmsRuntimeRepository for cluster editions.
@@ -38,7 +37,7 @@ public class ClusterDbmsRuntimeRepository extends DbmsRuntimeRepository implemen
     private void maybeUpdateStateFromSystemDatabase()
     {
         // no check is needed if we are at the latest version, because downgrade is not supported
-        if ( getVersion() != LATEST_VERSION )
+        if ( !getVersion().isCurrent() )
         {
             fetchStateFromSystemDatabase();
         }
