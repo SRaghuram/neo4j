@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClient;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
+import com.neo4j.causalclustering.catchup.tx.TxPullRequestBatchingLogger;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.TransactionBackupServiceProvider;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
@@ -21,6 +22,7 @@ import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -55,6 +57,7 @@ import static org.neo4j.monitoring.PanicEventGenerator.NO_OP;
 public final class CatchupComponentsProvider
 {
     private static final String CATCHUP_SERVER_NAME = "catchup-server";
+    public static final Duration TX_PULL_REQUEST_BATCHING_TIME = Duration.ofMinutes( 5 );
     private final PipelineBuilders pipelineBuilders;
     private final LogProvider logProvider;
     private final ApplicationSupportedProtocols supportedCatchupProtocols;
@@ -74,6 +77,7 @@ public final class CatchupComponentsProvider
     private final MemoryTracker otherMemoryGlobalTracker;
     private final SystemNanoClock clock;
     private final CompositeDatabaseAvailabilityGuard availabilityGuard;
+    private final CatchupInboundEventListener catchupInboundEventListener;
 
     public CatchupComponentsProvider( GlobalModule globalModule, PipelineBuilders pipelineBuilders )
     {
@@ -100,6 +104,8 @@ public final class CatchupComponentsProvider
         this.storeCopyBackoffStrategy = new DefaultTimeoutStrategy( 100, maximumWait, TimeUnit.MILLISECONDS,
                                                                                              i -> i + 100 );
         this.availabilityGuard = globalModule.getGlobalAvailabilityGuard();
+        this.catchupInboundEventListener = globalLife.add(
+                new TxPullRequestBatchingLogger( logProvider, scheduler, TX_PULL_REQUEST_BATCHING_TIME ) );
     }
 
     private CatchupClientFactory createCatchupClientFactory()
@@ -143,6 +149,7 @@ public final class CatchupComponentsProvider
                 .debugLogProvider( logProvider )
                 .serverName( CATCHUP_SERVER_NAME )
                 .handshakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
+                .catchupInboundEventListener( catchupInboundEventListener )
                 .build();
     }
 

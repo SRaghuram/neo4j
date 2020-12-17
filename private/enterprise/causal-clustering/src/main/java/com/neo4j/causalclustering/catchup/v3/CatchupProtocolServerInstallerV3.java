@@ -5,9 +5,10 @@
  */
 package com.neo4j.causalclustering.catchup.v3;
 
+import com.neo4j.causalclustering.catchup.CatchupInboundEventListener;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
-import com.neo4j.causalclustering.catchup.ServerInboundRequestsLogger;
+import com.neo4j.causalclustering.catchup.ServerInboundRequestPublisher;
 import com.neo4j.causalclustering.catchup.RequestDecoderDispatcher;
 import com.neo4j.causalclustering.catchup.RequestMessageTypeEncoder;
 import com.neo4j.causalclustering.catchup.ResponseMessageTypeEncoder;
@@ -53,10 +54,13 @@ public class CatchupProtocolServerInstallerV3 implements ProtocolInstaller<Orien
 
     public static class Factory extends ProtocolInstaller.Factory<Orientation.Server,CatchupProtocolServerInstallerV3>
     {
-        public Factory( NettyPipelineBuilderFactory pipelineBuilderFactory, LogProvider logProvider, CatchupServerHandler catchupServerHandler )
+        public Factory( NettyPipelineBuilderFactory pipelineBuilderFactory,
+                        LogProvider logProvider,
+                        CatchupServerHandler catchupServerHandler,
+                        CatchupInboundEventListener listener )
         {
             super( APPLICATION_PROTOCOL,
-                   modifiers -> new CatchupProtocolServerInstallerV3( pipelineBuilderFactory, modifiers, logProvider, catchupServerHandler ) );
+                   modifiers -> new CatchupProtocolServerInstallerV3( pipelineBuilderFactory, modifiers, logProvider, catchupServerHandler, listener ) );
         }
     }
 
@@ -66,15 +70,20 @@ public class CatchupProtocolServerInstallerV3 implements ProtocolInstaller<Orien
 
     private final LogProvider logProvider;
     private final CatchupServerHandler catchupServerHandler;
+    private final CatchupInboundEventListener listener;
 
-    public CatchupProtocolServerInstallerV3( NettyPipelineBuilderFactory pipelineBuilderFactory, List<ModifierProtocolInstaller<Orientation.Server>> modifiers,
-                                             LogProvider logProvider, CatchupServerHandler catchupServerHandler )
+    public CatchupProtocolServerInstallerV3( NettyPipelineBuilderFactory pipelineBuilderFactory,
+                                             List<ModifierProtocolInstaller<Orientation.Server>> modifiers,
+                                             LogProvider logProvider,
+                                             CatchupServerHandler catchupServerHandler,
+                                             CatchupInboundEventListener listener )
     {
         this.pipelineBuilderFactory = pipelineBuilderFactory;
         this.modifiers = modifiers;
         this.log = logProvider.getLog( getClass() );
         this.logProvider = logProvider;
         this.catchupServerHandler = catchupServerHandler;
+        this.listener = listener;
     }
 
     /**
@@ -116,7 +125,7 @@ public class CatchupProtocolServerInstallerV3 implements ProtocolInstaller<Orien
 
     protected ServerNettyPipelineBuilder handlers( ServerNettyPipelineBuilder builder, CatchupServerProtocol state )
     {
-        return builder.add( "log_inbound_req", new ServerInboundRequestsLogger( logProvider ) )
+        return builder.add( "log_inbound_req", new ServerInboundRequestPublisher( listener ) )
                 .add( "hnd_req_database_id", catchupServerHandler.getDatabaseIdRequestHandler( state ) )
                 .add( "hnd_req_tx", catchupServerHandler.txPullRequestHandler( state ) )
                 .add( "hnd_req_store_id", catchupServerHandler.getStoreIdRequestHandler( state ) )

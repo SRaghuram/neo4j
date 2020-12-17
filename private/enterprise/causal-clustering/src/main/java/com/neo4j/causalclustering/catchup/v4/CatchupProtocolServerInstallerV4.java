@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup.v4;
 
+import com.neo4j.causalclustering.catchup.CatchupInboundEventListener;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.RequestDecoderDispatcher;
@@ -31,18 +32,23 @@ public class CatchupProtocolServerInstallerV4 extends CatchupProtocolServerInsta
 
     public static class Factory extends ProtocolInstaller.Factory<Orientation.Server,CatchupProtocolServerInstallerV3>
     {
-        public Factory( NettyPipelineBuilderFactory pipelineBuilderFactory, LogProvider logProvider, CatchupServerHandler catchupServerHandler )
+        public Factory( NettyPipelineBuilderFactory pipelineBuilderFactory,
+                        LogProvider logProvider,
+                        CatchupServerHandler catchupServerHandler,
+                        CatchupInboundEventListener listener )
         {
             super( APPLICATION_PROTOCOL, modifiers ->
-                    new CatchupProtocolServerInstallerV4( pipelineBuilderFactory, modifiers, logProvider, catchupServerHandler ) );
+                    new CatchupProtocolServerInstallerV4( pipelineBuilderFactory, modifiers, logProvider, catchupServerHandler, listener ) );
         }
     }
 
     public CatchupProtocolServerInstallerV4( NettyPipelineBuilderFactory pipelineBuilderFactory,
                                              List<ModifierProtocolInstaller<Orientation.Server>> modifiers,
-                                             LogProvider logProvider, CatchupServerHandler catchupServerHandler )
+                                             LogProvider logProvider,
+                                             CatchupServerHandler catchupServerHandler,
+                                             CatchupInboundEventListener listener )
     {
-        super( pipelineBuilderFactory, modifiers, logProvider, catchupServerHandler );
+        super( pipelineBuilderFactory, modifiers, logProvider, catchupServerHandler, listener );
     }
 
     @Override

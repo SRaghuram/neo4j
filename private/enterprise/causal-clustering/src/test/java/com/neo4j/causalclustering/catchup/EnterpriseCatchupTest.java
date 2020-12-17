@@ -198,19 +198,22 @@ abstract class EnterpriseCatchupTest
         {
             new CatchupProtocolClientInstallerV3( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler,
                                                   new TestCommandReaderFactory() ).install( client );
-            new CatchupProtocolServerInstallerV3( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, serverResponseHandler ).install( server );
+            new CatchupProtocolServerInstallerV3( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, serverResponseHandler, CatchupInboundEventListener.NO_OP )
+                    .install( server );
         }
         else if ( applicationProtocols == ApplicationProtocols.CATCHUP_4_0 )
         {
             new CatchupProtocolClientInstallerV4( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler,
                                                   new TestCommandReaderFactory() ).install( client );
-            new CatchupProtocolServerInstallerV4( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, serverResponseHandler ).install( server );
+            new CatchupProtocolServerInstallerV4( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, serverResponseHandler, CatchupInboundEventListener.NO_OP )
+                    .install( server );
         }
         else if ( applicationProtocols == ApplicationProtocols.CATCHUP_5_0 )
         {
             new CatchupProtocolClientInstallerV5( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler,
                                                   new TestCommandReaderFactory() ).install( client );
-            new CatchupProtocolServerInstallerV5( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, serverResponseHandler ).install( server );
+            new CatchupProtocolServerInstallerV5( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, serverResponseHandler, CatchupInboundEventListener.NO_OP )
+                    .install( server );
         }
         else
         {

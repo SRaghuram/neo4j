@@ -6,6 +6,7 @@
 package com.neo4j.bench.micro.benchmarks.cluster.catchup;
 
 import com.neo4j.bench.micro.benchmarks.cluster.ProtocolInstallers;
+import com.neo4j.causalclustering.catchup.CatchupInboundEventListener;
 import com.neo4j.causalclustering.catchup.CatchupResponseHandler;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.v3.CatchupProtocolClientInstallerV3;
@@ -61,10 +62,10 @@ class CatchupProtocolInstallers implements ProtocolInstallers
         switch ( version )
         {
         case V3:
-            return new CatchupProtocolServerInstallerV3( pipelineBuilderFactory, emptyList(), logProvider, serverHandler );
+            return new CatchupProtocolServerInstallerV3( pipelineBuilderFactory, emptyList(), logProvider, serverHandler, CatchupInboundEventListener.NO_OP );
         case V4:
         case LATEST:
-            return new CatchupProtocolServerInstallerV4( pipelineBuilderFactory, emptyList(), logProvider, serverHandler );
+            return new CatchupProtocolServerInstallerV4( pipelineBuilderFactory, emptyList(), logProvider, serverHandler, CatchupInboundEventListener.NO_OP );
         default:
             throw new IllegalArgumentException( "Can't handle: " + version );
         }

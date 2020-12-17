@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup;
 
+import com.neo4j.causalclustering.catchup.tx.TxPullRequestBatchingLogger;
 import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstallerV3;
 import com.neo4j.causalclustering.catchup.v4.CatchupProtocolServerInstallerV4;
 import com.neo4j.causalclustering.catchup.v5.CatchupProtocolServerInstallerV5;
@@ -32,6 +33,7 @@ import java.util.concurrent.ExecutorService;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.LogProvider;
 
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.CATCHUP;
@@ -60,10 +62,13 @@ class TestCatchupServer extends Server
 
         NettyPipelineBuilderFactory pipelineBuilder = NettyPipelineBuilderFactory.insecure();
 
+        var txPullRqLogger = new TxPullRequestBatchingLogger(
+                logProvider, JobSchedulerFactory.createInitialisedScheduler(), Duration.ofSeconds( 30 ) );
+
         List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> protocolInstallers = List.of(
-                new CatchupProtocolServerInstallerV3.Factory( pipelineBuilder, logProvider, catchupServerHandler ),
-                new CatchupProtocolServerInstallerV4.Factory( pipelineBuilder, logProvider, catchupServerHandler ),
-                new CatchupProtocolServerInstallerV5.Factory( pipelineBuilder, logProvider, catchupServerHandler )
+                new CatchupProtocolServerInstallerV3.Factory( pipelineBuilder, logProvider, catchupServerHandler, txPullRqLogger ),
+                new CatchupProtocolServerInstallerV4.Factory( pipelineBuilder, logProvider, catchupServerHandler, txPullRqLogger ),
+                new CatchupProtocolServerInstallerV5.Factory( pipelineBuilder, logProvider, catchupServerHandler, txPullRqLogger )
         );
 
         ProtocolInstallerRepository<ProtocolInstaller.Orientation.Server> protocolInstallerRepository = new ProtocolInstallerRepository<>(

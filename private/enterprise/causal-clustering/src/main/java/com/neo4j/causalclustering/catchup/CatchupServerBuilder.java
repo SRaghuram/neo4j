@@ -78,6 +78,7 @@ public final class CatchupServerBuilder
         private String serverName = "catchup-server";
         private BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration;
         private Config config = Config.defaults();
+        private CatchupInboundEventListener catchupInboundEventListener = CatchupInboundEventListener.NO_OP;
 
         private StepBuilder()
         {
@@ -161,6 +162,13 @@ public final class CatchupServerBuilder
         }
 
         @Override
+        public AcceptsOptionalParams catchupInboundEventListener( CatchupInboundEventListener listener )
+        {
+            this.catchupInboundEventListener = listener;
+            return this;
+        }
+
+        @Override
         public AcceptsOptionalParams handshakeTimeout( Duration handshakeTimeout )
         {
             this.handshakeTimeout = handshakeTimeout;
@@ -191,7 +199,7 @@ public final class CatchupServerBuilder
             var serverLogService = new ServerNameService( debugLogProvider, userLogProvider, serverName );
 
             List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> protocolInstallers =
-                    buildProtocolList( serverLogService, config, pipelineBuilder, catchupServerHandler );
+                    buildProtocolList( serverLogService, config, pipelineBuilder, catchupServerHandler, catchupInboundEventListener );
 
             ProtocolInstallerRepository<ProtocolInstaller.Orientation.Server> protocolInstallerRepository = new ProtocolInstallerRepository<>(
                     protocolInstallers, ModifierProtocolInstaller.allServerInstallers );
@@ -204,27 +212,40 @@ public final class CatchupServerBuilder
 
             Executor executor = scheduler.executor( Group.CATCHUP_SERVER );
 
-            return new Server( channelInitializer, parentHandler, serverLogService, listenAddress, executor, portRegister,
-                    bootstrapConfiguration );
+            return new Server( channelInitializer, parentHandler, serverLogService, listenAddress,
+                                      executor, portRegister, bootstrapConfiguration );
         }
 
         private static List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> buildProtocolList(
-                ServerNameService serverNameService, Config config, NettyPipelineBuilderFactory pipelineBuilder,
-                CatchupServerHandler catchupServerHandler )
+                ServerNameService serverNameService,
+                Config config,
+                NettyPipelineBuilderFactory pipelineBuilder,
+                CatchupServerHandler catchupServerHandler,
+                CatchupInboundEventListener catchupInboundEventListener )
         {
             final var maximumProtocol = ApplicationProtocols.maximumCatchupProtocol( config );
-            final var protocolMap = createApplicationProtocolMap( pipelineBuilder, serverNameService.getInternalLogProvider(), catchupServerHandler );
+            final var protocolMap =
+                    createApplicationProtocolMap( pipelineBuilder,
+                                                  serverNameService.getInternalLogProvider(),
+                                                  catchupServerHandler,
+                                                  catchupInboundEventListener );
             checkInstallersExhaustive( protocolMap.keySet(), CATCHUP );
 
             return buildServerInstallers( protocolMap, maximumProtocol );
         }
 
         private static Map<ApplicationProtocol,ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> createApplicationProtocolMap(
-                NettyPipelineBuilderFactory pipelineBuilder, LogProvider debugLogProvider, CatchupServerHandler catchupServerHandler )
+                NettyPipelineBuilderFactory pipelineBuilder,
+                LogProvider debugLogProvider,
+                CatchupServerHandler catchupServerHandler,
+                CatchupInboundEventListener listener )
         {
-            return Map.of( CATCHUP_3_0, new CatchupProtocolServerInstallerV3.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler ),
-                           CATCHUP_4_0, new CatchupProtocolServerInstallerV4.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler ),
-                           CATCHUP_5_0, new CatchupProtocolServerInstallerV5.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler ) );
+            return Map.of( CATCHUP_3_0, new CatchupProtocolServerInstallerV3.Factory( pipelineBuilder, debugLogProvider,
+                                                                                      catchupServerHandler, listener ),
+                           CATCHUP_4_0, new CatchupProtocolServerInstallerV4.Factory( pipelineBuilder, debugLogProvider,
+                                                                                      catchupServerHandler, listener ),
+                           CATCHUP_5_0, new CatchupProtocolServerInstallerV5.Factory( pipelineBuilder, debugLogProvider,
+                                                                                      catchupServerHandler, listener ) );
         }
     }
 
@@ -287,6 +308,8 @@ public final class CatchupServerBuilder
         AcceptsOptionalParams debugLogProvider( LogProvider debugLogProvider );
 
         AcceptsOptionalParams handshakeTimeout( Duration handshakeTimeout );
+
+        AcceptsOptionalParams catchupInboundEventListener( CatchupInboundEventListener listener );
 
         Server build();
     }

@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup.v5;
 
+import com.neo4j.causalclustering.catchup.CatchupInboundEventListener;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstallerV3;
 import com.neo4j.causalclustering.catchup.v4.CatchupProtocolServerInstallerV4;
@@ -23,17 +24,22 @@ public class CatchupProtocolServerInstallerV5 extends CatchupProtocolServerInsta
 
     public static class Factory extends ProtocolInstaller.Factory<Orientation.Server,CatchupProtocolServerInstallerV3>
     {
-        public Factory( NettyPipelineBuilderFactory pipelineBuilderFactory, LogProvider logProvider, CatchupServerHandler catchupServerHandler )
+        public Factory( NettyPipelineBuilderFactory pipelineBuilderFactory,
+                        LogProvider logProvider,
+                        CatchupServerHandler catchupServerHandler,
+                        CatchupInboundEventListener listener )
         {
             super( APPLICATION_PROTOCOL,
-                   modifiers -> new CatchupProtocolServerInstallerV5( pipelineBuilderFactory, modifiers, logProvider, catchupServerHandler ) );
+                   modifiers -> new CatchupProtocolServerInstallerV5( pipelineBuilderFactory, modifiers, logProvider, catchupServerHandler, listener ) );
         }
     }
 
     public CatchupProtocolServerInstallerV5( NettyPipelineBuilderFactory pipelineBuilderFactory,
                                              List<ModifierProtocolInstaller<Orientation.Server>> modifiers,
-                                             LogProvider logProvider, CatchupServerHandler catchupServerHandler )
+                                             LogProvider logProvider,
+                                             CatchupServerHandler catchupServerHandler,
+                                             CatchupInboundEventListener listener )
     {
-        super( pipelineBuilderFactory, modifiers, logProvider, catchupServerHandler );
+        super( pipelineBuilderFactory, modifiers, logProvider, catchupServerHandler, listener );
     }
 }
