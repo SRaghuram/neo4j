@@ -322,6 +322,12 @@ class Morsel(private[execution] final val longs: Array[Long],
     }
 
     override def shallowInstanceHeapUsage: Long = Cursor.SHALLOW_SIZE
+
+    override type Position = Int
+
+    override def position: Position = row
+
+    override def setPosition(position: Position): Unit = setRow(position)
   }
 
   object Cursor {
@@ -554,6 +560,19 @@ trait MorselIndexedSeq {
     override def copyAllToSlottedRow(target: SlottedRow): Unit = morselCursor.copyAllToSlottedRow(target)
 
     override def copyToSlottedRow(target: SlottedRow, nLongs: Int, nRefs: Int): Unit = morselCursor.copyToSlottedRow(target, nLongs, nRefs)
+
+    override type Position = (Int, Int)
+
+    override def position: Position = (nextMorselSeqIndex - 1, morselCursor.row)
+
+    override def setPosition(position: Position): Unit = {
+      val morselSeqIndex = position._1
+      if (morselSeqIndex != nextMorselSeqIndex - 1) {
+        nextMorselSeqIndex = morselSeqIndex + 1
+        morselCursor = morsels(morselSeqIndex).readCursor()
+      }
+      morselCursor.setRow(position._2)
+    }
   }
 
   object Cursor {

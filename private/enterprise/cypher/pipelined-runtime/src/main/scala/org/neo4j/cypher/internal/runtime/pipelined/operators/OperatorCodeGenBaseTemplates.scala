@@ -810,16 +810,16 @@ object OperatorTaskTemplate {
                           argumentOffset: Int): Unit = {
     // do nothing if cursor is not on a valid row
     if (cursor.onValidRow()) {
-      var endRow = cursor.row
+      var endRow = cursor.position
       while (cursor.onValidRow() && currentArgument == cursor.getLongAt(argumentOffset) && cursor.next()) {
         if (currentArgument == cursor.getLongAt(argumentOffset)) {
-          endRow = cursor.row
+          endRow = cursor.position
         }
       }
 
       // set to last valid row
       if (!cursor.onValidRow()) {
-        cursor.setRow(endRow)
+        cursor.setPosition(endRow)
       }
     }
   }

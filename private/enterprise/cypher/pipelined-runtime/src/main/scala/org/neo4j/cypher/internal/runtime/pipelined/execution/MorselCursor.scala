@@ -66,6 +66,8 @@ trait MorselDerivedRow extends SlottedCompatible with Measurable {
   */
 trait MorselCursor extends MorselDerivedRow {
 
+  type Position
+
   /**
     * Point this cursor to a provided row. The row is interpreted as the row offset
     * into the morsel. This operation might leave the cursor pointing to an out-of-bounds
@@ -103,6 +105,16 @@ trait MorselCursor extends MorselDerivedRow {
     * Create an immutable snapshot of the current row.
     */
   def snapshot(): MorselRow
+
+  /**
+   * Retrieve the current position of the cursor to be able to set later with [[setPosition]]
+   */
+  def position: Position
+
+  /**
+   * Set a position that was retrieved by [[position]]
+   */
+  def setPosition(position: Position): Unit
 }
 
 // We need the Morsel*Cursors to be actual traits instead of type aliases in the
