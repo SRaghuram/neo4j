@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.state.RaftLogPruner;
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.configuration.CausalClusteringSettings;
@@ -38,6 +39,7 @@ import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
+import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventually;
 import static com.neo4j.causalclustering.upstream.TestStoreId.assertAllStoresHaveTheSameStoreId;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -135,8 +137,9 @@ class ClusterBindingIT
         // GIVEN
         DataCreator.createDataInOneTransaction( cluster, 1 );
 
-        //TODO: Work out if/why this won't potentially remove a leader?
-        cluster.removeCoreMemberWithIndex( 0 );
+        var laggingFollower = cluster.getMemberWithAnyRole( Role.FOLLOWER );
+        var laggingFollowerIndex = laggingFollower.index();
+        cluster.removeCoreMemberWithIndex(  laggingFollowerIndex );
 
         DataCreator.createDataInMultipleTransactions( cluster, 100 );
 
@@ -146,12 +149,14 @@ class ClusterBindingIT
         }
 
         // WHEN
-        cluster.addCoreMemberWithIndex( 0 ).start();
-
+        laggingFollower = cluster.addCoreMemberWithIndex( laggingFollowerIndex );
+        laggingFollower.start();
         cluster.awaitLeader();
 
         // THEN
         assertEquals( 3, cluster.healthyCoreMembers().size() );
+
+        dataMatchesEventually( laggingFollower, cluster.allMembers() );
 
         var databaseLayouts = databaseLayouts( cluster.coreMembers() );
         cluster.shutdown();
