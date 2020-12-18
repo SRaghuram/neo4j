@@ -160,7 +160,7 @@ trait PipelinedDebugGeneratedSource extends SaveGeneratedSource {
   val saveGeneratedSourceEnabled: Boolean = DebugSupport.DEBUG_GENERATED_SOURCE_CODE
 
   // Only enable this if you want to inspect the generated source files after the test run. Otherwise they will be deleted automatically.
-  override val keepSourceFilesAfterTestFinishes: Boolean = true
+  override val keepSourceFilesAfterTestFinishes: Boolean = false
 
   override val debugOptions: CypherDebugOptions =
     if (saveGeneratedSourceEnabled) CypherDebugOptions.default.withOptionEnabled(CypherDebugOption.generateJavaSource)
