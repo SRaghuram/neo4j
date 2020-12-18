@@ -115,7 +115,7 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunToolMacroWorkl
 
         int waitFor = process.waitFor();
         //if the benchmark process failed upload all artifacts
-        FileFilter fileFilter = process.exitValue() == 0 ? TrueFileFilter.INSTANCE : new IgnoreProfilerFileFilter();
+        FileFilter fileFilter = waitFor == 0 ? new IgnoreProfilerFileFilter() : TrueFileFilter.INSTANCE;
         Workspace resultsWorkspace = Workspace.create( workDir ).withFilesRecursively( fileFilter ).build();
 
         artifactStorage.uploadBuildArtifacts( artifactBaseUri.resolve( "results" ), resultsWorkspace );
