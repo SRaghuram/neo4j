@@ -187,7 +187,7 @@ object OperatorCodeGenHelperTemplates {
   val INPUT_SINGLE_ACCUMULATOR_CURSOR_FIELD: InstanceField = // This takes just a single accumulator from the accumulators (assumes accumulatorsPerTask == 1)
     field[MorselReadCursor](INPUT_CURSOR_FIELD_NAME, // Note, must be identical with INPUT_CURSOR_FIELD!
       invoke(load(INPUT_SINGLE_ACCUMULATOR_CONSTRUCTOR_PARAMETER.name),
-             method[MorselData, MorselReadCursor, Boolean]("readCursor"), constant(true)
+             method[MorselAccumulator[_], MorselReadCursor, Boolean]("readCursor"), constant(true)
       )
     )
 

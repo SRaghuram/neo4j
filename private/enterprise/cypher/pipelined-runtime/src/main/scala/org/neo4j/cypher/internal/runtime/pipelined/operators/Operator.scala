@@ -151,7 +151,7 @@ trait OperatorState {
                 operatorInput: OperatorInput,
                 parallelism: Int,
                 resources: QueryResources,
-                argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask]
+                argumentStateMaps: ArgumentStateMaps): IndexedSeq[_ <: ContinuableOperatorTask]
 }
 
 /**
@@ -165,7 +165,7 @@ class MemoryTrackingOperatorState(delegate: OperatorState, operatorId: Int, stat
                                operatorInput: OperatorInput,
                                parallelism: Int,
                                resources: QueryResources,
-                               argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
+                               argumentStateMaps: ArgumentStateMaps): IndexedSeq[_ <: ContinuableOperatorTask] = {
 
     resources.setMemoryTracker(memoryTracker)
     try {
@@ -181,7 +181,7 @@ trait MorselInputOperatorState extends OperatorState {
                                operatorInput: OperatorInput,
                                parallelism: Int,
                                resources: QueryResources,
-                               argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
+                               argumentStateMaps: ArgumentStateMaps): IndexedSeq[_ <: ContinuableOperatorTask] = {
     val input = operatorInput.takeMorsel()
     if (input != null) {
       try {

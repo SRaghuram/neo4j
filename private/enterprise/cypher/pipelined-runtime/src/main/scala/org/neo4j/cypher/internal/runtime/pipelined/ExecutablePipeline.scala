@@ -18,7 +18,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFactory
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.operators.CompiledStreamingOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.CompiledStreamingOperatorWithAccumulators
+import org.neo4j.cypher.internal.runtime.pipelined.operators.CompiledStreamingOperatorWithMorsel
+import org.neo4j.cypher.internal.runtime.pipelined.operators.CompiledStreamingOperatorWithMorselData
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CompiledTask
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTask
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MiddleOperator
@@ -56,7 +58,9 @@ case class ExecutablePipeline(id: PipelineId,
                               needsFilteringMorsel: Boolean = false) extends WorkIdentity {
 
   def startOperatorCanTrackTime: Boolean = start match {
-    case _: CompiledStreamingOperator => false
+    case _: CompiledStreamingOperatorWithMorsel => false
+    case _: CompiledStreamingOperatorWithMorselData => false
+    case _: CompiledStreamingOperatorWithAccumulators => false
     case _: SlottedPipeHeadOperator => false
     case _ => true
   }
