@@ -355,6 +355,8 @@ object InterpretedPipesFallbackPolicy {
       // Blacklisted non-eager plans
       case lp: Skip => // Maintains state
         throw unsupported(lp.getClass.getSimpleName, runtimeName)
+      case lp: Limit => // Maintains state
+        throw unsupported(lp.getClass.getSimpleName, runtimeName)
 
       // Not supported in parallel execution
       case lp: ProcedureCall if parallelExecution =>
