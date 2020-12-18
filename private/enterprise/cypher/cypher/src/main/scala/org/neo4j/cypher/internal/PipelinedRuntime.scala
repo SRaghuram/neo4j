@@ -81,6 +81,7 @@ import org.neo4j.graphdb.QueryStatistics
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
+import org.neo4j.util.VisibleForTesting
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
 
@@ -410,90 +411,6 @@ class PipelinedRuntime private(parallelExecution: Boolean,
     override val internalPlanDescriptionRewriter: Option[InternalPlanDescriptionRewriter] = Some(new FusedPlanDescriptionArgumentRewriter)
   }
 
-  class PipelinedRuntimeResult(executablePipelines: IndexedSeq[ExecutablePipeline],
-                               executionGraphDefinition: ExecutionGraphDefinition,
-                               queryIndexes: Array[IndexReadSession],
-                               nExpressionSlots: Int,
-                               prePopulateResults: Boolean,
-                               inputDataStream: InputDataStream,
-                               queryContext: QueryContext,
-                               params: Array[AnyValue],
-                               override val fieldNames: Array[String],
-                               queryExecutor: QueryExecutor,
-                               schedulerTracer: SchedulerTracer,
-                               subscriber: QuerySubscriber,
-                               doProfile: Boolean,
-                               batchSize: Int,
-                               memoryTracking: MemoryTracking,
-                               executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy) extends RuntimeResult {
-
-    private var executingQuery: ExecutingQuery = _
-    private var _queryProfile: QueryProfile = _
-    private var _memoryTracker: QueryMemoryTracker = _
-    private var _queryStatisticsTracker: MutableQueryStatistics = _
-
-    override def queryStatistics(): QueryStatistics = _queryStatisticsTracker
-
-    override def totalAllocatedMemory(): Long = {
-      ensureQuerySubscription()
-      _memoryTracker.totalAllocatedMemory
-    }
-
-    override def consumptionState: RuntimeResult.ConsumptionState =
-      if (executingQuery == null) ConsumptionState.NOT_STARTED
-      else if (!executingQuery.hasSucceeded) ConsumptionState.HAS_MORE // Not exactly true, but EXHAUSTED would be more wrong.
-      else ConsumptionState.EXHAUSTED
-
-    override def close(): Unit = {}
-
-    override def queryProfile(): QueryProfile = _queryProfile
-
-    override def request(numberOfRecords: Long): Unit = {
-      ensureQuerySubscription()
-      executingQuery.request(numberOfRecords)
-    }
-
-    override def cancel(): Unit = {
-      ensureQuerySubscription()
-      executingQuery.cancel()
-    }
-
-    override def await(): Boolean = {
-      ensureQuerySubscription()
-      executingQuery.await()
-    }
-
-    private def ensureQuerySubscription(): Unit = {
-      if (executingQuery == null) {
-        // Only call onResult on first call. Having this callback before execute()
-        // ensure that we do not leave any inconsistent state around if onResult
-        // throws an exception.
-        subscriber.onResult(fieldNames.length)
-
-        val ProfiledQuerySubscription(sub, prof, memTrack, queryStatisticsTracker) = queryExecutor.execute(
-          executablePipelines,
-          executionGraphDefinition,
-          inputDataStream,
-          queryContext,
-          params,
-          schedulerTracer,
-          queryIndexes,
-          nExpressionSlots,
-          prePopulateResults,
-          subscriber,
-          doProfile,
-          batchSize,
-          memoryTracking,
-          executionGraphSchedulingPolicy)
-
-        executingQuery = sub
-        _queryProfile = prof
-        _memoryTracker = memTrack
-        _queryStatisticsTracker = queryStatisticsTracker
-      }
-    }
-  }
-
   /**
    * Fake pipe used for now to allow using NestedPipeSlottedExpression from Pipelined.
    */
@@ -501,5 +418,95 @@ class PipelinedRuntime private(parallelExecution: Boolean,
     override protected def internalCreateResults(state: QueryState): ClosingIterator[CypherRow] =
       throw new IllegalStateException("Cannot use NoPipe to create results")
     override def id: Id = Id.INVALID_ID
+  }
+}
+
+class PipelinedRuntimeResult(executablePipelines: IndexedSeq[ExecutablePipeline],
+                             executionGraphDefinition: ExecutionGraphDefinition,
+                             queryIndexes: Array[IndexReadSession],
+                             nExpressionSlots: Int,
+                             prePopulateResults: Boolean,
+                             inputDataStream: InputDataStream,
+                             queryContext: QueryContext,
+                             params: Array[AnyValue],
+                             override val fieldNames: Array[String],
+                             queryExecutor: QueryExecutor,
+                             schedulerTracer: SchedulerTracer,
+                             subscriber: QuerySubscriber,
+                             doProfile: Boolean,
+                             batchSize: Int,
+                             memoryTracking: MemoryTracking,
+                             executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy) extends RuntimeResult {
+
+  private var executingQuery: ExecutingQuery = _
+  private var _queryProfile: QueryProfile = _
+  private var _memoryTracker: QueryMemoryTracker = _
+  private var _queryStatisticsTracker: MutableQueryStatistics = _
+
+  override def queryStatistics(): QueryStatistics = _queryStatisticsTracker
+
+  override def totalAllocatedMemory(): Long = {
+    ensureQuerySubscription()
+    _memoryTracker.totalAllocatedMemory
+  }
+
+  override def consumptionState: RuntimeResult.ConsumptionState =
+    if (executingQuery == null) ConsumptionState.NOT_STARTED
+    else if (!executingQuery.hasSucceeded) ConsumptionState.HAS_MORE // Not exactly true, but EXHAUSTED would be more wrong.
+    else ConsumptionState.EXHAUSTED
+
+  override def close(): Unit = {}
+
+  override def queryProfile(): QueryProfile = _queryProfile
+
+  override def request(numberOfRecords: Long): Unit = {
+    ensureQuerySubscription()
+    executingQuery.request(numberOfRecords)
+  }
+
+  override def cancel(): Unit = {
+    ensureQuerySubscription()
+    executingQuery.cancel()
+  }
+
+  override def await(): Boolean = {
+    ensureQuerySubscription()
+    executingQuery.await()
+  }
+
+  private def ensureQuerySubscription(): Unit = {
+    if (executingQuery == null) {
+      // Only call onResult on first call. Having this callback before execute()
+      // ensure that we do not leave any inconsistent state around if onResult
+      // throws an exception.
+      subscriber.onResult(fieldNames.length)
+
+      val ProfiledQuerySubscription(sub, prof, memTrack, queryStatisticsTracker) = createQuerySubscription
+
+      executingQuery = sub
+      _queryProfile = prof
+      _memoryTracker = memTrack
+      _queryStatisticsTracker = queryStatisticsTracker
+    }
+  }
+
+  @VisibleForTesting
+  def createQuerySubscription: ProfiledQuerySubscription = {
+    queryExecutor.execute(
+      executablePipelines,
+      executionGraphDefinition,
+      inputDataStream,
+      queryContext,
+      params,
+      schedulerTracer,
+      queryIndexes,
+      nExpressionSlots,
+      prePopulateResults,
+      subscriber,
+      doProfile,
+      batchSize,
+      memoryTracking,
+      executionGraphSchedulingPolicy
+    )
   }
 }

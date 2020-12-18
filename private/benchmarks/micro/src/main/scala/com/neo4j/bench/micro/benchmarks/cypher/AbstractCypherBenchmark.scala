@@ -21,7 +21,6 @@ import org.neo4j.cypher.internal.ExecutionPlan
 import org.neo4j.cypher.internal.LogicalQuery
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.frontend.PlannerName
-import org.neo4j.cypher.internal.ir.SinglePlannerQuery
 import org.neo4j.cypher.internal.ir.ordering.ProvidedOrder
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
@@ -35,7 +34,6 @@ import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
-import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Solveds
 import org.neo4j.cypher.internal.runtime.NoInput
 import org.neo4j.cypher.internal.runtime.NormalMode
 import org.neo4j.cypher.internal.runtime.QueryContext
@@ -50,6 +48,7 @@ import org.neo4j.cypher.internal.util.LabelId
 import org.neo4j.cypher.internal.util.RelTypeId
 import org.neo4j.cypher.internal.util.Selectivity
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.cypher.internal.util.attribution.IdGen
 import org.neo4j.cypher.internal.util.devNullLogger
 import org.neo4j.cypher.result.RuntimeResult
 import org.neo4j.graphdb.Label
@@ -90,14 +89,14 @@ case class TestSetup(
   logicalPlan: LogicalPlan,
   semanticTable: SemanticTable,
   resultColumns: List[String],
-  leveragedOrders: LeveragedOrders = new LeveragedOrders
+  leveragedOrders: LeveragedOrders = new LeveragedOrders,
+  cardinalities: Cardinalities = new Cardinalities,
+  providedOrders: ProvidedOrders = new ProvidedOrders,
+  idGen: IdGen = Plans.IdGen
 )
 
 abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
   private val defaultPlannerName: PlannerName = CostBasedPlannerName.default
-  private val solveds = new Solveds
-  private val cardinalities = new Cardinalities
-  private val providedOrders = new ProvidedOrders
   val users: mutable.Map[String, LoginContext] = mutable.Map[String, LoginContext]()
 
   class CountSubscriber(bh: Blackhole) extends QuerySubscriberAdapter {
@@ -209,11 +208,12 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
   def beginInternalTransaction(loginContext: LoginContext): InternalTransaction =
     new GraphDatabaseCypherService(db).beginTransaction(Type.EXPLICIT, loginContext)
 
-  private def solve(logicalPlan: LogicalPlan) {
-    solveds.set(logicalPlan.id, SinglePlannerQuery.empty)
-    cardinalities.set(logicalPlan.id, 0.0)
-    logicalPlan.lhs.foreach(solve)
-    logicalPlan.rhs.foreach(solve)
+  private def updateCardinalities(logicalPlan: LogicalPlan, cardinalities: Cardinalities) {
+    if (!cardinalities.isDefinedAt(logicalPlan.id)) {
+      cardinalities.set(logicalPlan.id, 0.0)
+    }
+    logicalPlan.lhs.foreach(lhsPlan => updateCardinalities(lhsPlan, cardinalities))
+    logicalPlan.rhs.foreach(rhsPlan => updateCardinalities(rhsPlan, cardinalities))
   }
 
   def buildPlan(cypherRuntime: CypherRuntime, useCompiledExpressions: Boolean = true): ExecutablePlan = {
@@ -237,7 +237,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       val workerManager = dependencyResolver.resolveDependency( classOf[WorkerManagement] )
       val runtimeContext = getContext(cypherRuntime, planContext, useCompiledExpressions, schemaRead, cursors, lifeSupport, workerManager)
       val testSetup = setup(planContext)
-      solve(testSetup.logicalPlan)
+      updateCardinalities(testSetup.logicalPlan, testSetup.cardinalities)
       val compilationStateBefore = getLogicalQuery(testSetup)
       val runtime = EnterpriseRuntimeFactory.getRuntime(cypherRuntimeOption(cypherRuntime), disallowFallback = true)
       val executionPlan = runtime.compileToExecutable(compilationStateBefore, runtimeContext)
@@ -297,12 +297,12 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       readOnly = true,
       testSetup.resultColumns.toArray,
       testSetup.semanticTable,
-      cardinalities,
-      providedOrders,
+      testSetup.cardinalities,
+      testSetup.providedOrders,
       testSetup.leveragedOrders,
       hasLoadCSV = false,
       Option.empty,
-      Plans.IdGen,
+      testSetup.idGen,
       doProfile = false)
   }
 

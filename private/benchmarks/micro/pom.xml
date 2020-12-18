@@ -94,6 +94,11 @@
             <version>${neo4j.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-cypher-logical-plan-builder</artifactId>
+            <version>${neo4j.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-causal-clustering</artifactId>
             <version>${neo4j.version}</version>
