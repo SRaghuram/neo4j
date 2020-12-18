@@ -1,6 +1,3 @@
-Feature "ConstraintAcceptance": Scenario "Works with property in map that gets set"
-Feature "ConstraintAcceptance": Scenario "Works with property repeated in literal map in set"
-Feature "DeleteAcceptance": Scenario "Return properties from deleted node"
 Feature "ForeachAcceptance": Scenario "Add labels inside FOREACH"
 Feature "ForeachAcceptance": Scenario "Inside nested FOREACH"
 Feature "ForeachAcceptance": Scenario "Inside nested FOREACH, nodes inlined"
@@ -11,4 +8,3 @@ Feature "ForeachAcceptance": Scenario "Merging inside a FOREACH using two previo
 Feature "ForeachAcceptance": Scenario "Merging inside a FOREACH using two previously merged nodes"
 Feature "ForeachAcceptance": Scenario "Should handle running merge inside a foreach loop"
 Feature "IndexAcceptance": Scenario "Should be able to merge using property from match with index"
-Feature "MergeLegacyAcceptance": Scenario "Introduce named paths"

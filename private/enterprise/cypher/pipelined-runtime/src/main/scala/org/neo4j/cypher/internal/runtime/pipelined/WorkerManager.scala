@@ -78,14 +78,16 @@ class WorkerManager(val numberOfWorkers: Int, threadFactory: ThreadFactory) exte
   }
 
   override def waitForWorkersToIdle(timeoutMs: Int): Boolean = {
+    val parkTime = TimeUnit.MILLISECONDS.toNanos(1L)
+    val waitTime = TimeUnit.MILLISECONDS.toNanos(timeoutMs.toLong)
     val startTime = System.nanoTime()
-    val stopTime = startTime + timeoutMs.toLong * 1000000L
+    val stopTime = startTime + waitTime
     var currentTime = startTime
     while (currentTime < stopTime) {
       if (!_workers.exists(_.sleeper.isWorking)) {
         return true
       }
-      LockSupport.parkNanos(1000000L)
+      LockSupport.parkNanos(parkTime)
       currentTime = System.nanoTime()
     }
     !_workers.exists(_.sleeper.isWorking)
