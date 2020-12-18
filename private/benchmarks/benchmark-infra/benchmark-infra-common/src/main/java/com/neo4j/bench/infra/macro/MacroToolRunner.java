@@ -21,9 +21,11 @@ import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.JobParams;
 import com.neo4j.bench.infra.Workspace;
 import com.neo4j.bench.infra.ResultStoreCredentials;
+import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileFilter;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
@@ -112,8 +114,9 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunToolMacroWorkl
                 .start();
 
         int waitFor = process.waitFor();
-
-        Workspace resultsWorkspace = Workspace.create( workDir ).withFilesRecursively( new IgnoreProfilerFileFilter() ).build();
+        //if the benchmark process failed upload all artifacts
+        FileFilter fileFilter = process.exitValue() == 0 ? TrueFileFilter.INSTANCE : new IgnoreProfilerFileFilter();
+        Workspace resultsWorkspace = Workspace.create( workDir ).withFilesRecursively( fileFilter ).build();
 
         artifactStorage.uploadBuildArtifacts( artifactBaseUri.resolve( "results" ), resultsWorkspace );
 
