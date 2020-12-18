@@ -74,7 +74,9 @@ class SetOperator(val workIdentity: WorkIdentity,
     while (cursor.next()) {
       // write::nodeSetProperty and write::relationshipSetProperty uses an internal property cursor
       // to get the previous value of the property.
-      event.dbHit()
+      if (event != null) {
+        event.dbHit()
+      }
       setOperation.set(cursor, queryState, () => resources.queryStatisticsTracker.setProperty())
     }
   }
@@ -159,7 +161,8 @@ class SetPropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
                                   value: () => IntermediateExpression)(protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
 
   private var entityValue: IntermediateExpression = _
-  private var propertyValue: IntermediateExpression = _
+  private var relationshipProperty: IntermediateExpression = _
+  private var nodeProperty: IntermediateExpression = _
 
   override def genInit: IntermediateRepresentation = {
     inner.genInit
@@ -169,36 +172,40 @@ class SetPropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
     if (entityValue == null) {
       entityValue = entity()
     }
-    if (propertyValue == null) {
-      propertyValue = value()
+    if (relationshipProperty == null) {
+      // We need two separate IntermediateExpressions to make sure the property value is evaluated
+      // at the correct place. If the "value()" contains a "oneTime"-expression, it would otherwise
+      // end up with only evaluating the expression in the first condition.
+      relationshipProperty = value()
+      nodeProperty = value()
     }
 
     val entityValueVar = codeGen.namer.nextVariableName("entity")
+    val relProp = nullCheckIfRequired(relationshipProperty)
+    val nodeProp = nullCheckIfRequired(nodeProperty)
 
     block(
       declareAndAssign(typeRefOf[AnyValue], entityValueVar, nullCheckIfRequired(entityValue)),
-      ifElse(instanceOf[VirtualRelationshipValue](load(entityValueVar)))
+      ifElse(instanceOf[VirtualNodeValue](load(entityValueVar)))(
+        setProperty(
+          isNode = true,
+          invoke(cast[VirtualNodeValue](load(entityValueVar)), method[VirtualNodeValue, Long]("id")),
+          nodeProp
+        )
+      )(ifElse(instanceOf[VirtualRelationshipValue](load(entityValueVar)))
       (
         setProperty(
-          entityValueVar,
           isNode = false,
-          invoke(cast[VirtualRelationshipValue](load(entityValueVar)), method[VirtualRelationshipValue, Long]("id"))
+          invoke(cast[VirtualRelationshipValue](load(entityValueVar)), method[VirtualRelationshipValue, Long]("id")),
+          relProp
         )
       )(
-        ifElse(instanceOf[VirtualNodeValue](load(entityValueVar)))(
-          setProperty(
-            entityValueVar,
-            isNode = true,
-            invoke(cast[VirtualNodeValue](load(entityValueVar)), method[VirtualNodeValue, Long]("id"))
-          )
-        )(
-          block(
-            condition(notEqual(load(entityValueVar), noValue))(
-              fail(newInstance(constructor[InvalidArgumentException, String], constant("Expected to set property on a node or a relationship.")))
-            )
+        block(
+          condition(notEqual(load(entityValueVar), noValue))(
+            fail(newInstance(constructor[InvalidArgumentException, String], constant("Expected to set property on a node or a relationship.")))
           )
         )
-      ),
+      )),
       dbHit(loadField(executionEventField)),
       inner.genOperateWithExpressions,
       conditionallyProfileRow(innerCannotContinue, id, doProfile),
@@ -208,7 +215,7 @@ class SetPropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation =
     inner.genSetExecutionEvent(event)
 
-  override def genExpressions: Seq[IntermediateExpression] = Seq(entityValue, propertyValue)
+  override def genExpressions: Seq[IntermediateExpression] = Seq(entityValue, relationshipProperty, nodeProperty)
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(QUERY_STATS_TRACKER_V)
 
@@ -220,7 +227,7 @@ class SetPropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
 
   override protected def isHead: Boolean = false
 
-  private def setProperty(entityVar: String, isNode: Boolean, id: IntermediateRepresentation): IntermediateRepresentation = {
+  private def setProperty(isNode: Boolean, id: IntermediateRepresentation, propValue: IntermediateRepresentation): IntermediateRepresentation = {
     val errorVar = codeGen.namer.nextVariableName("errorN")
     val acquireLockFunction = if (isNode) "acquireExclusiveNodeLock" else "acquireExclusiveRelationshipLock"
     val releaseLockFunction = if (isNode) "releaseExclusiveNodeLock" else "releaseExclusiveRelationshipLock"
@@ -234,7 +241,7 @@ class SetPropertyOperatorTemplate(override val inner: OperatorTaskTemplate,
             method[SetOperator, Unit, Long, String, AnyValue, Token, Write, MutableQueryStatistics](setFunction),
             id,
             constant(key),
-            nullCheckIfRequired(propertyValue),
+            propValue,
             loadField(TOKEN),
             loadField(DATA_WRITE),
             QUERY_STATS_TRACKER,
