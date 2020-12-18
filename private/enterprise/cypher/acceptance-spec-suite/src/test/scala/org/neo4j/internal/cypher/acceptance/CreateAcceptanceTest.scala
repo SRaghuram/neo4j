@@ -205,7 +205,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
   test("should throw on CREATE relationship if start-point is missing") {
     graph.withTx( tx => tx.execute("CREATE (a), (b)"))
 
-    val config = Configs.InterpretedAndSlotted
+    val config = Configs.InterpretedAndSlottedAndPipelined
 
     failWithError(config, """MATCH (a), (b)
                             |WHERE id(a)=0 AND id(b)=1
@@ -219,7 +219,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
   test("should throw on CREATE relationship if end-point is missing") {
     graph.withTx( tx => tx.execute("CREATE (a), (b)"))
 
-    val config = Configs.InterpretedAndSlotted
+    val config = Configs.InterpretedAndSlottedAndPipelined
 
     failWithError(config, """MATCH (a), (b)
                             |WHERE id(a)=0 AND id(b)=1

@@ -228,7 +228,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
     relate(root, b)
     relate(root, c)
 
-    executeWith(Configs.InterpretedAndSlotted, "match (root) where id(root) = 0 match (root)-->(other) create (new {name:other.name}), (root)-[:REL]->(new)")
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (root) where id(root) = 0 match (root)-->(other) create (new {name:other.name}), (root)-[:REL]->(new)")
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (root) where id(root) = 0 match (root)-->(other) return other.name order by other.name").columnAs[String]("other.name").toList
     result should equal(List("Alfa", "Alfa", "Beta", "Beta", "Gamma", "Gamma"))
@@ -293,7 +293,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
   test("full path in one create") {
     createNode()
     createNode()
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (a), (b) where id(a) = 0 AND id(b) = 1 create (a)-[:KNOWS]->()-[:LOVES]->(b)")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (a), (b) where id(a) = 0 AND id(b) = 1 create (a)-[:KNOWS]->()-[:LOVES]->(b)")
 
     assertStats(result, nodesCreated = 1, relationshipsCreated = 2)
   }
@@ -406,7 +406,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
     createNode("prop" -> 42)
     val query = "UNWIND range(0, 1) as i MATCH (n) CREATE (m) WITH * MATCH (o) RETURN count(*) as count"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     assertStats(result, nodesCreated = 8)
     val unwind = 2

@@ -25,11 +25,12 @@ class LenientCreateRelationshipAcceptanceTest extends ExecutionEngineFunSuite wi
     graph.withTx( tx => tx.execute("CREATE (a), (b)"))
 
 
-    val result = executeWith(Configs.InterpretedAndSlotted, """MATCH (a), (b)
-                                                              |WHERE id(a)=0 AND id(b)=1
-                                                              |OPTIONAL MATCH (b)-[:LINK_TO]->(c)
-                                                              |CREATE (b)-[:LINK_TO]->(a)
-                                                              |CREATE (c)-[r:MISSING_C]->(a)""".stripMargin)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+    """MATCH (a), (b)
+      |WHERE id(a)=0 AND id(b)=1
+      |OPTIONAL MATCH (b)-[:LINK_TO]->(c)
+      |CREATE (b)-[:LINK_TO]->(a)
+      |CREATE (c)-[r:MISSING_C]->(a)""".stripMargin)
 
     assertStats(result, relationshipsCreated = 1)
   }
@@ -38,7 +39,7 @@ class LenientCreateRelationshipAcceptanceTest extends ExecutionEngineFunSuite wi
     graph.withTx( tx => tx.execute("CREATE (a), (b)"))
 
     //List(Map(r1 -> (?)-[RELTYPE(0),0]->(?), r2 -> null))
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       """MATCH (a), (b)
         |WHERE id(a)=0 AND id(b)=1
         |OPTIONAL MATCH (b)-[:LINK_TO]->(c)
@@ -54,11 +55,12 @@ class LenientCreateRelationshipAcceptanceTest extends ExecutionEngineFunSuite wi
   test("should silently not CREATE relationship if end-point is missing") {
     graph.withTx( tx => tx.execute("CREATE (a), (b)"))
 
-    val result = executeWith(Configs.InterpretedAndSlotted, """MATCH (a), (b)
-                                                              |WHERE id(a)=0 AND id(b)=1
-                                                              |OPTIONAL MATCH (b)-[:LINK_TO]->(c)
-                                                              |CREATE (b)-[:LINK_TO]->(a)
-                                                              |CREATE (a)-[r:MISSING_C]->(c)""".stripMargin)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      """MATCH (a), (b)
+        |WHERE id(a)=0 AND id(b)=1
+        |OPTIONAL MATCH (b)-[:LINK_TO]->(c)
+        |CREATE (b)-[:LINK_TO]->(a)
+        |CREATE (a)-[r:MISSING_C]->(c)""".stripMargin)
 
     assertStats(result, relationshipsCreated = 1)
   }
