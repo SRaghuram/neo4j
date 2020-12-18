@@ -1195,4 +1195,70 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     //then
     result.toList should contain theSameElementsAs List(Map("x" -> n), Map("x" -> r), Map("x" -> m), Map("x" -> n), Map("x" -> r), Map("x" -> m))
   }
+
+  test("should handle less <= pattern expression in all runtimes") {
+    //given
+    executeSingle("CREATE (:A)-[:AB]->(:b), (:B)")
+
+    //when
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) WHERE size( (n)-[]-() ) <= 1 RETURN count(*)")
+
+    //then
+    result.toList should equal(List(Map("count(*)" -> 3)))
+  }
+
+  test("should handle < on pattern expression in all runtimes") {
+    //given
+    executeSingle("CREATE (:A)-[:AB]->(:B), (:A)")
+
+    //when
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) WHERE size( (n)-[]-() ) < 1 RETURN count(*)")
+
+    //then
+    result.toList should equal(List(Map("count(*)" -> 1)))
+  }
+
+  test("should handle = on pattern expression in all runtimes") {
+    //given
+    executeSingle("CREATE (:A)-[:AB]->(:B), (:A)")
+
+    //when
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) WHERE size( (n)-[]-() ) = 1 RETURN count(*)")
+
+    //then
+    result.toList should equal(List(Map("count(*)" -> 2)))
+  }
+
+  test("should handle <> on pattern expression in all runtimes") {
+    //given
+    executeSingle("CREATE (:A)-[:AB]->(:B), (:A)")
+
+    //when
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) WHERE size( (n)-[]-() ) <> 1 RETURN count(*)")
+
+    //then
+    result.toList should equal(List(Map("count(*)" -> 1)))
+  }
+
+  test("should handle >= on pattern expression in all runtimes") {
+    //given
+    executeSingle("CREATE (:A)-[:AB]->(:B), (:A)")
+
+    //when
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) WHERE size( (n)-[]-() ) >= 1 RETURN count(*)")
+
+    //then
+    result.toList should equal(List(Map("count(*)" -> 2)))
+  }
+
+  test("should handle > on pattern expression in all runtimes") {
+    //given
+    executeSingle("CREATE (:A)-[:AB]->(:B), (:A)")
+
+    //when
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) WHERE size( (n)-[]-() ) > 1 RETURN count(*)")
+
+    //then
+    result.toList should equal(List(Map("count(*)" -> 0)))
+  }
 }
