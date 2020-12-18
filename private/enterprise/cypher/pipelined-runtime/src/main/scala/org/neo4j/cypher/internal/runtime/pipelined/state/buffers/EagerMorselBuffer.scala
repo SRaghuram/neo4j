@@ -117,6 +117,9 @@ class EagerMorselBuffer(id: BufferId,
   }
 
   private[this] def readyForTake(): Boolean = {
+    // NOTE: We do not do `... || _hasCompletedVolatile` in this first check based on the assumption that we expect only a small time window after
+    // flipping to ready before `_hasCompleted` becomes visible in parallel (maximum one failed attempt at `argumentStateMap.takeCompleted(1)` per worker)
+    // Experimental or formal invalidation is welcome :)
     if (_hasCompleted) {
       true
     } else {

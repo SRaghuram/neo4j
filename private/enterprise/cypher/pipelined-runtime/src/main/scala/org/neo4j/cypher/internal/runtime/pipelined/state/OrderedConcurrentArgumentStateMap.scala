@@ -26,17 +26,20 @@ class OrderedConcurrentArgumentStateMap[STATE <: ArgumentState](argumentStateMap
 
   override def takeCompleted(n: Int): IndexedSeq[STATE] = {
     var nextIsComplete = true
-    val builder = new ArrayBuffer[STATE]
+    var builder: ArrayBuffer[STATE] = null
 
-    while(nextIsComplete && builder.size < n) {
+    while(nextIsComplete && (builder == null || builder.size < n)) {
       val state = takeOneIfCompletedOrElsePeek()
       if (state != null && state.isCompleted) {
+        if (builder == null) {
+          builder = new ArrayBuffer[STATE]
+        }
         builder += state.argumentState
       } else {
         nextIsComplete = false
       }
     }
-    if (builder.isEmpty)
+    if (builder == null)
       null.asInstanceOf[IndexedSeq[STATE]]
     else
       builder
