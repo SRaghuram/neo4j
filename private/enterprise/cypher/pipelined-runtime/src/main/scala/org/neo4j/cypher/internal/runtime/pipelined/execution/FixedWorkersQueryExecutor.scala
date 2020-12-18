@@ -58,7 +58,8 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
                                        doProfile: Boolean,
                                        morselSize: Int,
                                        memoryTracking: MemoryTracking,
-                                       executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy): ProfiledQuerySubscription = {
+                                       executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy,
+                                       lenientCreateRelationship: Boolean): ProfiledQuerySubscription = {
 
     if (queryContext.transactionalContext.dataRead.transactionStateHasChanges) {
       throw new RuntimeUnsupportedException("The parallel runtime is not supported if there are changes in the transaction state. Use another runtime.")
@@ -88,7 +89,8 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
                                 prePopulateResults,
                                 doProfile,
                                 inputDataStream,
-                                stateFactory.memoryTracker)
+                                stateFactory.memoryTracker,
+                                lenientCreateRelationship = lenientCreateRelationship)
 
     val executionState = new TheExecutionState(executionGraphDefinition,
                                                executablePipelines,

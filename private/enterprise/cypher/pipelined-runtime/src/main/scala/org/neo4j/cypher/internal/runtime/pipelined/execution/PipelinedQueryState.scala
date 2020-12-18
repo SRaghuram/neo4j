@@ -30,7 +30,8 @@ case class PipelinedQueryState(queryContext: QueryContext,
                                override val prePopulateResults: Boolean,
                                doProfile: Boolean,
                                override val input: InputDataStream,
-                               override val memoryTracker: QueryMemoryTracker)
+                               override val memoryTracker: QueryMemoryTracker,
+                               override val lenientCreateRelationship: Boolean)
   extends QueryState(queryContext,
     null,
     params,
@@ -39,7 +40,8 @@ case class PipelinedQueryState(queryContext: QueryContext,
     null,
     subscriber,
     memoryTracker,
-    prePopulateResults = prePopulateResults
+    prePopulateResults = prePopulateResults,
+    lenientCreateRelationship = lenientCreateRelationship
   ) {
 
   /**

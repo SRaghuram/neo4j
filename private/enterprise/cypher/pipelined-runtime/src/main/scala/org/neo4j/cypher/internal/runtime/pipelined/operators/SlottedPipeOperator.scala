@@ -238,6 +238,7 @@ object SlottedPipeOperator {
       morselQueryState.subscriber,
       memoryTracker,
       pipeDecorator,
+      lenientCreateRelationship = morselQueryState.lenientCreateRelationship,
       profileInformation = profileInformation,
       morselCursor = if (inputMorsel != null) inputMorsel.fullCursor() else null)
   }

@@ -56,7 +56,8 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
                                        doProfile: Boolean,
                                        morselSize: Int,
                                        memoryTracking: MemoryTracking,
-                                       executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy): ProfiledQuerySubscription = {
+                                       executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy,
+                                       lenientCreateRelationship: Boolean): ProfiledQuerySubscription = {
 
     DebugLog.log("CallingThreadQueryExecutor.execute()")
 
@@ -84,7 +85,8 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
                                 prePopulateResults,
                                 doProfile,
                                 inputDataStream,
-                                stateFactory.memoryTracker)
+                                stateFactory.memoryTracker,
+                                lenientCreateRelationship = lenientCreateRelationship)
 
     val executionState = new TheExecutionState(executionGraphDefinition,
       executablePipelines,

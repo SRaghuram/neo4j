@@ -296,7 +296,8 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                                  metadata,
                                  warnings,
                                  executionGraphSchedulingPolicy,
-                                 logicalPlan)
+                                 logicalPlan,
+                                 context.config.lenientCreateRelationship)
     } catch {
       case e:Exception if operatorFusionPolicy.fusionEnabled =>
         // We failed to compile all the pipelines. Retry physical planning with fusing disabled.
@@ -334,7 +335,8 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                                override val metadata: Seq[Argument],
                                warnings: Set[InternalNotification],
                                executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy,
-                               optimizedLogicalPlan: LogicalPlan) extends ExecutionPlan {
+                               optimizedLogicalPlan: LogicalPlan,
+                               lenientCreateRelationship: Boolean) extends ExecutionPlan {
 
     override def run(queryContext: QueryContext,
                      executionMode: ExecutionMode,
@@ -360,7 +362,8 @@ class PipelinedRuntime private(parallelExecution: Boolean,
         doProfile,
         batchSize,
         memoryTrackingController.memoryTracking(doProfile),
-        executionGraphSchedulingPolicy)
+        executionGraphSchedulingPolicy,
+        lenientCreateRelationship)
     }
 
     override def runtimeName: RuntimeName = PipelinedRuntime.this.runtimeName
@@ -436,7 +439,8 @@ class PipelinedRuntimeResult(executablePipelines: IndexedSeq[ExecutablePipeline]
                              doProfile: Boolean,
                              batchSize: Int,
                              memoryTracking: MemoryTracking,
-                             executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy) extends RuntimeResult {
+                             executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy,
+                             lenientCreateRelationship: Boolean) extends RuntimeResult {
 
   private var executingQuery: ExecutingQuery = _
   private var _queryProfile: QueryProfile = _
@@ -506,7 +510,8 @@ class PipelinedRuntimeResult(executablePipelines: IndexedSeq[ExecutablePipeline]
       doProfile,
       batchSize,
       memoryTracking,
-      executionGraphSchedulingPolicy
+      executionGraphSchedulingPolicy,
+      lenientCreateRelationship
     )
   }
 }

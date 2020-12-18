@@ -14,7 +14,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.ExecutablePipeline
 import org.neo4j.cypher.internal.runtime.pipelined.MutableQueryStatistics
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
 import org.neo4j.cypher.result.QueryProfile
-import org.neo4j.graphdb.QueryStatistics
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
@@ -40,7 +39,8 @@ trait QueryExecutor {
                               doProfile: Boolean,
                               morselSize: Int,
                               memoryTracking: MemoryTracking,
-                              executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy): ProfiledQuerySubscription
+                              executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy,
+                              lenientCreateRelationship: Boolean): ProfiledQuerySubscription
 
   /**
    * Assert that all resources that have been acquired for query execution by any query have also been released
