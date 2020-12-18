@@ -554,7 +554,7 @@ public interface RaftMessages
 
             public Request( RaftMemberId from, long leaderTerm, long prevLogIndex, long prevLogTerm, RaftLogEntry[] entries, long leaderCommit )
             {
-                super( from, Type.APPEND_ENTRIES_REQUEST );
+                super( from, Type.APPEND_ENTRIES_REQUEST, true, true );
                 Objects.requireNonNull( entries );
                 assert !((prevLogIndex == -1 && prevLogTerm != -1) || (prevLogTerm == -1 && prevLogIndex != -1)) :
                         format( "prevLogIndex was %d and prevLogTerm was %d", prevLogIndex, prevLogTerm );
@@ -923,7 +923,7 @@ public interface RaftMessages
 
             public Request( RaftMemberId from, ReplicatedContent content )
             {
-                super( from, Type.NEW_ENTRY_REQUEST );
+                super( from, Type.NEW_ENTRY_REQUEST, true, false );
                 this.content = content;
             }
 
@@ -974,7 +974,7 @@ public interface RaftMessages
 
             public BatchRequest( List<ReplicatedContent> batch )
             {
-                super( null, Type.NEW_BATCH_REQUEST );
+                super( null, Type.NEW_BATCH_REQUEST, true, false );
                 this.batch = batch;
             }
 
@@ -1470,17 +1470,36 @@ public interface RaftMessages
     abstract class RaftMessage
     {
         protected final RaftMemberId from;
+        private final boolean containsData;
+        private final boolean requiresOrdering;
         private final Type type;
 
-        RaftMessage( RaftMemberId from, Type type )
+        RaftMessage( RaftMemberId from, Type type, boolean containsData, boolean requiresOrdering )
         {
             this.from = from;
             this.type = type;
+            this.containsData = containsData;
+            this.requiresOrdering = requiresOrdering;
+        }
+
+        RaftMessage( RaftMemberId from, Type type )
+        {
+            this( from, type, false, false );
         }
 
         public RaftMemberId from()
         {
             return from;
+        }
+
+        public boolean containsData()
+        {
+            return containsData;
+        }
+
+        public boolean requiresOrdering()
+        {
+            return requiresOrdering;
         }
 
         public Type type()

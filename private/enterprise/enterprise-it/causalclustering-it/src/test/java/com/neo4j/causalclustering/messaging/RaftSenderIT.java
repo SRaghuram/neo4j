@@ -262,9 +262,10 @@ class RaftSenderIT
         Server raftServer = life.add( raftServer( nettyHandler, clientProtocol ) );
 
         // given: raft messaging service
-        RaftChannelPoolService raftPoolService = life.add( raftPoolService( clientProtocol ) );
+        var raftDataChannelPoolService = life.add( raftPoolService( clientProtocol ) );
+        var raftControlChannelPoolService = life.add( raftPoolService( clientProtocol, 1 ) );
 
-        RaftSender sender = new RaftSender( logProvider, raftPoolService );
+        RaftSender sender = new RaftSender( logProvider, raftDataChannelPoolService, raftControlChannelPoolService );
 
         // when
         SocketAddress to = new SocketAddress( raftServer.address().getHostname(), raftServer.address().getPort() );
@@ -337,6 +338,12 @@ class RaftSenderIT
 
     private RaftChannelPoolService raftPoolService( ApplicationProtocols clientProtocol )
     {
+        var maxChannels = CausalClusteringSettings.max_raft_channels.defaultValue();
+        return raftPoolService( clientProtocol, maxChannels );
+    }
+
+    private RaftChannelPoolService raftPoolService( ApplicationProtocols clientProtocol, int maxChannels )
+    {
         NettyPipelineBuilderFactory pipelineFactory = NettyPipelineBuilderFactory.insecure();
 
         ProtocolInstallerRepository<ProtocolInstaller.Orientation.Client> protocolInstaller;
@@ -382,7 +389,6 @@ class RaftSenderIT
 
         ClientChannelInitializer channelInitializer = new ClientChannelInitializer( handshakeInitializer, pipelineFactory, handshakeTimeout, logProvider );
 
-        var maxChannels = CausalClusteringSettings.max_raft_channels.defaultValue();
         return new RaftChannelPoolService( BootstrapConfiguration.clientConfig( Config.defaults() ), scheduler, logProvider, channelInitializer , maxChannels );
     }
 

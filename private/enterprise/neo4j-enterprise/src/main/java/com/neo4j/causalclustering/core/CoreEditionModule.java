@@ -238,14 +238,20 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         supportedRaftProtocols = supportedProtocolCreator.getSupportedRaftProtocolsFromConfiguration();
         supportedModifierProtocols = supportedProtocolCreator.createSupportedModifierProtocols();
 
-        RaftChannelPoolService raftChannelPoolService = buildRaftChannelPoolService( globalModule );
-        globalLife.add( raftChannelPoolService );
+        var config = globalModule.getGlobalConfig();
+        var maxChannels = config.get( CausalClusteringSettings.max_raft_channels );
+        var raftDataChannelPoolService = buildRaftChannelPoolService( globalModule, maxChannels );
+        globalLife.add( raftDataChannelPoolService );
 
-        this.clientInstalledProtocols = raftChannelPoolService::installedProtocols;
+        var raftControlChannelPoolService = buildRaftChannelPoolService( globalModule, 1 );
+        globalLife.add( raftControlChannelPoolService );
+
+        this.clientInstalledProtocols = combineInstalledProtocols( raftDataChannelPoolService::installedProtocols,
+                                                                   raftControlChannelPoolService::installedProtocols );
         serverInstalledProtocolHandler = new InstalledProtocolHandler();
         serverInstalledProtocols = serverInstalledProtocolHandler::installedProtocols;
 
-        this.raftSender = new RaftSender( logProvider, raftChannelPoolService );
+        this.raftSender = new RaftSender( logProvider, raftDataChannelPoolService, raftControlChannelPoolService );
 
         satisfyEnterpriseOnlyDependencies( this.globalModule );
 
@@ -257,6 +263,12 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
         securityLog = new SecurityLog( globalModule.getGlobalConfig(), globalModule.getFileSystem() );
         globalModule.getGlobalLife().add( securityLog );
+    }
+
+    private static Supplier<Stream<Pair<SocketAddress,ProtocolStack>>> combineInstalledProtocols(
+            Supplier<Stream<Pair<SocketAddress,ProtocolStack>>> protocols1, Supplier<Stream<Pair<SocketAddress,ProtocolStack>>> protocols2 )
+    {
+        return () -> Stream.concat( protocols1.get(), protocols2.get() );
     }
 
     private static void setGlobalRaftParallelism( GlobalModule globalModule, Config globalConfig )
@@ -490,10 +502,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         return coreDatabaseFactory;
     }
 
-    private RaftChannelPoolService buildRaftChannelPoolService( GlobalModule globalModule )
+    private RaftChannelPoolService buildRaftChannelPoolService( GlobalModule globalModule, int maxChannels )
     {
-        var config = globalModule.getGlobalConfig();
-        var maxChannels = config.get( CausalClusteringSettings.max_raft_channels );
         var clientChannelInitializer = buildClientChannelInitializer( globalModule.getLogService() );
         var bootstrapConfig = BootstrapConfiguration.clientConfig( this.globalConfig );
         return new RaftChannelPoolService( bootstrapConfig, globalModule.getJobScheduler(), logProvider, clientChannelInitializer, maxChannels );

@@ -22,12 +22,14 @@ import org.neo4j.logging.LogProvider;
 
 public class RaftSender implements Outbound<SocketAddress,RaftMessages.OutboundRaftMessageContainer<?>>
 {
-    private final RaftChannelPoolService channels;
+    private final RaftChannelPoolService dataChannels;
+    private final RaftChannelPoolService controlChannels;
     private final Log log;
 
-    public RaftSender( LogProvider logProvider, RaftChannelPoolService channelPoolService )
+    public RaftSender( LogProvider logProvider, RaftChannelPoolService dataChannelsPoolService, RaftChannelPoolService controlChannelsPoolService )
     {
-        this.channels = channelPoolService;
+        this.dataChannels = dataChannelsPoolService;
+        this.controlChannels = controlChannelsPoolService;
         this.log = logProvider.getLog( getClass() );
     }
 
@@ -35,13 +37,21 @@ public class RaftSender implements Outbound<SocketAddress,RaftMessages.OutboundR
     public void send( SocketAddress to, RaftMessages.OutboundRaftMessageContainer<?> message, boolean block )
     {
         var raftGroupSocket = new RaftGroupSocket( message.raftGroupId(), to );
-        // Wait for channel because Raft relies on messages being sent in order on the channel, otherwise they may have to be re-sent.
-        var pooledChannel = waitForPooledChannel( raftGroupSocket );
-        if ( pooledChannel == null )
+        var raftMessage = message.message();
+        CompletableFuture<Void> fOperation;
+
+        if ( raftMessage.containsData() || raftMessage.requiresOrdering() )
         {
-            return;
+            fOperation = tryDataChannel( raftGroupSocket, message );
+            if ( fOperation == null )
+            {
+                return;
+            }
         }
-        var fOperation = sendMessage( pooledChannel, message );
+        else
+        {
+            fOperation = useControlChannel( raftGroupSocket, message );
+        }
 
         if ( block )
         {
@@ -71,11 +81,31 @@ public class RaftSender implements Outbound<SocketAddress,RaftMessages.OutboundR
         }
     }
 
-    private PooledChannel waitForPooledChannel( RaftGroupSocket to )
+    private CompletableFuture<Void> useControlChannel( RaftGroupSocket raftGroupSocket, RaftMessages.OutboundRaftMessageContainer<?> message )
+    {
+        return controlChannels.acquire( raftGroupSocket )
+                              .thenCompose( pooledChannel -> sendMessage( pooledChannel, message ) );
+    }
+
+    private CompletableFuture<Void> tryDataChannel( RaftGroupSocket raftGroupSocket, RaftMessages.OutboundRaftMessageContainer<?> message )
+    {
+        // Wait for channel because Raft relies on some messages being sent in order on the channel, otherwise they may have to be re-sent.
+        var pooledChannel = waitForPooledDataChannel( raftGroupSocket );
+        if ( pooledChannel == null )
+        {
+            return null;
+        }
+        else
+        {
+            return sendMessage( pooledChannel, message );
+        }
+    }
+
+    private PooledChannel waitForPooledDataChannel( RaftGroupSocket to )
     {
         try
         {
-            return channels.acquire( to ).get();
+            return dataChannels.acquire( to ).get();
         }
         catch ( InterruptedException e )
         {
