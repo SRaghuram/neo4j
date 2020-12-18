@@ -8,6 +8,8 @@ package com.neo4j.causalclustering.core.consensus.leader_transfer;
 import com.neo4j.causalclustering.common.CausalClusteringTestHelpers;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.consensus.RaftMachine;
+import com.neo4j.causalclustering.identity.RaftMemberId;
 import com.neo4j.configuration.CausalClusteringInternalSettings;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.test.causalclustering.ClusterExtension;
@@ -31,6 +33,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import org.neo4j.function.Predicates;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.test.conditions.Conditions;
 import org.neo4j.test.extension.Inject;
@@ -40,6 +43,7 @@ import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -69,6 +73,7 @@ class LeaderTransferOnSigtermIT
                         .withSharedCoreParam( CausalClusteringSettings.election_failure_detection_window, "1s-3s" )
                         .withSharedCoreParam( CausalClusteringSettings.log_shipping_retry_timeout, "500ms" )
                         .withSharedCoreParam( CausalClusteringInternalSettings.akka_failure_detector_acceptable_heartbeat_pause, "5s" )
+                        .withSharedCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_runtime, "2" )
         );
         cluster.start();
     }
@@ -106,6 +111,7 @@ class LeaderTransferOnSigtermIT
         {
             // given a healthy functioning cluster
             var leaderToRemove = assertClusterHealthyAndGetLeader( defaultDatabaseName, clusterStabilityTimeout );
+            var leaderToRemoveMemberId = leaderToRemove.raftMemberIdFor( leaderToRemove.databaseId( defaultDatabaseName ) );
             checkNodeCreation();
 
             // when we ask to remove a core gracefully ...
@@ -147,6 +153,9 @@ class LeaderTransferOnSigtermIT
 
             // Check that cluster is still writeable
             checkNodeCreation();
+
+            // Check that removed Leader has been voted out
+            awaitMemberNotInRaftGroup( defaultDatabaseName, leaderToRemoveMemberId, Duration.ofSeconds( 10 ) );
 
             // now replace the core we removed
             var newMember = cluster.newCoreMember();
@@ -242,6 +251,21 @@ class LeaderTransferOnSigtermIT
                 sleepUnchecked( 100 );
             }
         };
+    }
+
+    private void awaitMemberNotInRaftGroup( String databaseName, RaftMemberId memberId, Duration timeout ) throws TimeoutException
+    {
+        Predicates.await( () -> memberNotInRaftGroup( databaseName, memberId ),
+                          timeout.toMillis(), MILLISECONDS,
+                          100, MILLISECONDS );
+    }
+
+    private boolean memberNotInRaftGroup( String databaseName, RaftMemberId memberId )
+    {
+        var raftMembersUnion = cluster.allMembers().stream()
+                                      .flatMap( m -> m.resolveDependency( databaseName, RaftMachine.class ).replicationMembers().stream() )
+                                      .collect( Collectors.toSet() );
+        return !raftMembersUnion.contains( memberId );
     }
 
     private CoreClusterMember awaitLeader( String databaseName, Duration timeout )
