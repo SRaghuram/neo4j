@@ -6,6 +6,8 @@
 package org.neo4j.cypher.internal.runtime.pipelined.rewriters
 
 import org.neo4j.cypher.internal.expressions.Expression
+import org.neo4j.cypher.internal.expressions.IsNull
+import org.neo4j.cypher.internal.expressions.Ors
 import org.neo4j.cypher.internal.expressions.Variable
 import org.neo4j.cypher.internal.expressions.functions.IsEmpty
 import org.neo4j.cypher.internal.logical.plans.Apply
@@ -36,7 +38,7 @@ import org.neo4j.cypher.internal.util.bottomUp
  * to
  *
  * {{{
- *  SelectOrSemiApply(isEmpty(l))
+ *  SelectOrSemiApply(l IS NULL OR isEmpty(l))
  *       /                  \
  * Projection(LIST AS l)   Apply
  *    /                     / \
@@ -61,7 +63,7 @@ import org.neo4j.cypher.internal.util.bottomUp
  * is rewritten to
  *
  *{{{
- *  SelectOrSemiApply(isEmpty(l))
+ *  SelectOrSemiApply(l IS NULL OR isEmpty(l))
  *       /                  \
  * Projection(LIST AS l)   Create
  *    /                      \
@@ -105,7 +107,7 @@ case class foreachApplyRewriter(cardinalities: Cardinalities,
           apply
       }
 
-      SelectOrSemiApply(newLhs, newRhs, IsEmpty.asInvocation(listProjected)(InputPosition.NONE))(SameId(o.id))
+      SelectOrSemiApply(newLhs, newRhs, Ors(Seq(IsNull(listProjected)(InputPosition.NONE), IsEmpty.asInvocation(listProjected)(InputPosition.NONE)))(InputPosition.NONE))(SameId(o.id))
   }, stopper)
 
   override def apply(input: AnyRef): AnyRef = instance.apply(input)

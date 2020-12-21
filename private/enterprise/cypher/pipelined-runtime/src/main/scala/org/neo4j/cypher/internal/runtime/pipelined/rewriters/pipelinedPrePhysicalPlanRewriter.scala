@@ -36,7 +36,7 @@ case object pipelinedPrePhysicalPlanRewriter {
         assertSameNodeNodeRewriter(stopper = stopper)
       ),
       cartesianProductLeveragedOrderToApplyPreserveOrder(cardinalities, providedOrders, leveragedOrders, parallelExecution, idGen, stopper),
-      foreachApplyRewriter(cardinalities, providedOrders, idGen, stopper),//foreach rewrites to selectOrSemiApply so much come before semiApplyToLimitApply
+      foreachApplyRewriter(cardinalities, providedOrders, idGen, stopper),//foreach rewrites to selectOrSemiApply so must come before semiApplyToLimitApply
       semiApplyToLimitApply(cardinalities, providedOrders, idGen, stopper),
       antiSemiApplyToAntiLimitApply(cardinalities, providedOrders, idGen, stopper),
       rollupApplyToAggregationApply(cardinalities, providedOrders, idGen, stopper),
