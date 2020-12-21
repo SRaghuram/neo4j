@@ -53,6 +53,7 @@ import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.internal.kernel.api.Locks
 import org.neo4j.internal.kernel.api.Token
 import org.neo4j.internal.kernel.api.Write
+import org.neo4j.token.api.TokenConstants
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.storable.Values.NO_VALUE
@@ -91,6 +92,7 @@ class SetOperator(val workIdentity: WorkIdentity,
 }
 
 object SetOperator {
+
   def addNodeProperties(nodeId: Long,
                         propertiesMap: AnyValue,
                         token: Token,
@@ -109,13 +111,14 @@ object SetOperator {
                       token: Token,
                       write: Write,
                       queryStatisticsTracker: MutableQueryStatistics): Unit = {
-    val propertyKeyId = token.propertyKeyGetOrCreateForName(propertyKey)
     val safeValue = makeValueNeoSafe(propertyValue)
     if (safeValue == Values.NO_VALUE) {
-      if (!(write.nodeRemoveProperty(nodeId, propertyKeyId) eq Values.NO_VALUE)) {
+      val propertyToken = token.propertyKey(propertyKey)
+      if (propertyToken != TokenConstants.NO_TOKEN && !(write.nodeRemoveProperty(nodeId, propertyToken) eq Values.NO_VALUE)) {
         queryStatisticsTracker.setProperty()
       }
     } else {
+      val propertyKeyId = token.propertyKeyGetOrCreateForName(propertyKey)
       translateException(token, write.nodeSetProperty(nodeId, propertyKeyId, safeValue))
       queryStatisticsTracker.setProperty()
     }
@@ -139,13 +142,14 @@ object SetOperator {
                               token: Token,
                               write: Write,
                               queryStatisticsTracker: MutableQueryStatistics): Unit = {
-    val propertyKeyId = token.propertyKeyGetOrCreateForName(propertyKey)
     val safeValue = makeValueNeoSafe(propertyValue)
     if (safeValue == Values.NO_VALUE) {
-      if (!(write.relationshipRemoveProperty(relationshipId, propertyKeyId) eq Values.NO_VALUE)) {
+      val propertyToken = token.propertyKey(propertyKey)
+      if (propertyToken != TokenConstants.NO_TOKEN && !(write.relationshipRemoveProperty(relationshipId, propertyToken) eq Values.NO_VALUE)) {
         queryStatisticsTracker.setProperty()
       }
     } else {
+      val propertyKeyId = token.propertyKeyGetOrCreateForName(propertyKey)
       translateException(token, write.relationshipSetProperty(relationshipId, propertyKeyId, safeValue))
       queryStatisticsTracker.setProperty()
     }
