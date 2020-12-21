@@ -98,7 +98,9 @@ case class foreachApplyRewriter(cardinalities: Cardinalities,
         case Seq(a: Argument) => //special case for single branch plans
           rhs.endoRewrite(addUnwindToLeftMostLeaf(a, variableName, listProjected))
         case _ => //general case
-          val unwind = newPlan(Argument()(idGen), UnwindCollection(_, variableName, listProjected)(idGen))
+          val unwind = UnwindCollection(Argument()(idGen), variableName, listProjected)(idGen)
+          cardinalities.copy(rhs.id, unwind.id)
+          providedOrders.copy(rhs.id, unwind.id)
           val apply = newPlan(unwind, Apply(_, rhs)(idGen))
           apply
       }
