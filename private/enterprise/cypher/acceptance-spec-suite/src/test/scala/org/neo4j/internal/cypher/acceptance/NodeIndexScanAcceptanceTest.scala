@@ -166,4 +166,17 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
     result should be(empty)
   }
+
+  test("Should handle OR between labels when one index is available") {
+    graph.createIndex("Continent", "prop")
+    val query =
+      """MATCH (n)
+        |WHERE exists(n.prop) AND (n: GeneratingUnit OR n: Continent)
+        |RETURN n
+        |""".stripMargin
+    val result = executeSingle(query)
+
+    result.executionPlanDescription() should includeSomewhere.nTimes(1, aPlan("NodeIndexScan"))
+    result.executionPlanDescription() should includeSomewhere.nTimes(1, aPlan("NodeByLabelScan"))
+  }
 }

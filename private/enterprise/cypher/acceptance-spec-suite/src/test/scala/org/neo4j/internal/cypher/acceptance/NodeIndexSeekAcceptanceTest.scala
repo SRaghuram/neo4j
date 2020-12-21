@@ -645,4 +645,30 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
     graph.createIndex("Crew", "name")
   }
+
+  test("Should handle OR between labels when using index") {
+    graph.createIndex("GeneratingUnit", "id")
+    graph.createIndex("Continent", "id")
+    val query =
+      """MATCH (n {id: '656ba4d4-09a2-42e6-a5ae-4dbf1603d5df'})
+        |WHERE n: GeneratingUnit OR n: Continent
+        |RETURN n
+        |""".stripMargin
+    val result = executeSingle(query)
+
+    result.executionPlanDescription() should includeSomewhere.nTimes(2, aPlan("NodeIndexSeek"))
+  }
+
+  test("Should handle OR between labels when one index is available") {
+    graph.createIndex("GeneratingUnit", "id")
+    val query =
+      """MATCH (n {id: '656ba4d4-09a2-42e6-a5ae-4dbf1603d5df'})
+        |WHERE n: GeneratingUnit OR n: Continent
+        |RETURN n
+        |""".stripMargin
+    val result = executeSingle(query)
+
+    result.executionPlanDescription() should includeSomewhere.nTimes(1, aPlan("NodeIndexSeek"))
+    result.executionPlanDescription() should includeSomewhere.nTimes(1, aPlan("NodeByLabelScan"))
+  }
 }
