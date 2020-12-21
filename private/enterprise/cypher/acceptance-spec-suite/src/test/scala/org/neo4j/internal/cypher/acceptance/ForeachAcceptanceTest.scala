@@ -43,7 +43,7 @@ class ForeachAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
         | )
         |)""".stripMargin
 
-    val result = executeWith(Configs.ForEachApply, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     // then
     assertStats(result, nodesCreated = 110, relationshipsCreated = 110, propertiesWritten = 110, labelsAdded = 110)
@@ -58,7 +58,7 @@ class ForeachAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
     val query = "FOREACH( n in range( 0, 1 ) | CREATE (p:Person) )"
 
     // when
-    val result = executeWith(Configs.ForEachApply, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("Foreach").withRHS(aPlan("Create"))
@@ -146,7 +146,7 @@ class ForeachAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
         |FOREACH (x IN CASE WHEN condition THEN nodes ELSE [] END | CREATE (a)-[:X]->(x) );""".stripMargin
 
     // when
-    val result = executeWith(Configs.ForEachApply, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     // then
     assertStats(result, nodesCreated = 2, relationshipsCreated = 1)
