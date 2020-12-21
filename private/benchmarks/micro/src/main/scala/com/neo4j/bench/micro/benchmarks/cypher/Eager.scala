@@ -34,7 +34,7 @@ import org.openjdk.jmh.infra.Blackhole
 class Eager extends AbstractCypherBenchmark {
   @ParamValues(
     allowed = Array(Interpreted.NAME, Slotted.NAME, Pipelined.NAME, Parallel.NAME),
-    base = Array(Interpreted.NAME, Slotted.NAME, Pipelined.NAME))
+    base = Array(Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
   var runtime: String = _
 
