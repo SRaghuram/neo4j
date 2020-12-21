@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.logical.plans.QueryExpression
 import org.neo4j.cypher.internal.logical.plans.ResolvedCall
 import org.neo4j.cypher.internal.logical.plans.SelectOrAntiSemiApply
 import org.neo4j.cypher.internal.logical.plans.SelectOrSemiApply
+import org.neo4j.cypher.internal.logical.plans.SetPropertiesFromMap
 import org.neo4j.cypher.internal.logical.plans.SetProperty
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStreamBufferVariant
@@ -58,6 +59,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.SetPropertyFromMapOperation
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SetPropertyOperation
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AggregatorFactory
@@ -975,6 +977,15 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             converters.toCommandExpression(id, idName),
             LazyPropertyKey(propertyKey)(semanticTable),
             converters.toCommandExpression(id, propertyValue),
+          )))
+
+      case SetPropertiesFromMap(_, idName, expression, removeOtherProps) if !parallelExecution =>
+        Some(new SetOperator(
+          WorkIdentity.fromPlan(plan),
+          SetPropertyFromMapOperation(
+            converters.toCommandExpression(id, idName),
+            converters.toCommandExpression(id, expression),
+            removeOtherProps,
           )))
 
       case plans.LockNodes(_, nodesToLock) =>

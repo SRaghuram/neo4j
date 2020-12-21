@@ -163,7 +163,7 @@ trait PipelinedDebugGeneratedSource extends SaveGeneratedSource {
   val saveGeneratedSourceEnabled: Boolean = DebugSupport.DEBUG_GENERATED_SOURCE_CODE
 
   // Only enable this if you want to inspect the generated source files after the test run. Otherwise they will be deleted automatically.
-  override val keepSourceFilesAfterTestFinishes: Boolean = false
+  override val keepSourceFilesAfterTestFinishes: Boolean = true
 
   override val debugOptions: CypherDebugOptions =
     if (saveGeneratedSourceEnabled) CypherDebugOptions.default.withOptionEnabled(CypherDebugOption.generateJavaSource)
@@ -499,9 +499,12 @@ class PipelinedCreateNoFusingTest extends CreateTestBase(NO_FUSING, PIPELINED, S
 class PipelinedLenientCreateRelationshipTest extends LenientCreateRelationshipTestBase(FUSING, PIPELINED) with PipelinedSpecSuite
 class PipelinedLenientCreateRelationshipNoFusingTest extends LenientCreateRelationshipTestBase(NO_FUSING, PIPELINED) with PipelinedSpecSuite
 
-//SET PROPERTY
+//SET
 class PipelinedSetPropertyTestBase extends SetPropertyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedSetPropertyNoFusingTest extends SetPropertyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedSetPropertiesFromMapTestBase extends SetPropertiesFromMapTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedSetPropertiesFromMapNoFusingTest extends SetPropertiesFromMapTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
 
 //EXHAUSTIVE LIMIT
 class PipelinedExhaustiveLimitTest extends ExhaustiveLimitTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
