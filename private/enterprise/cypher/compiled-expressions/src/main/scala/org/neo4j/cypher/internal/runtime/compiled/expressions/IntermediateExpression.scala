@@ -24,9 +24,9 @@ case class IntermediateExpression(ir: IntermediateRepresentation,
                                   variables: Seq[LocalVariable],
                                   nullChecks: Set[IntermediateRepresentation],
                                   requireNullCheck: Boolean = true) {
-  def withVariable(variable: LocalVariable): IntermediateExpression = copy(variables = variables :+ variable)
+  def withVariable(variable: LocalVariable*): IntermediateExpression = copy(variables = variables ++ variable)
 }
 
 object IntermediateExpression {
-  val EMPTY: IntermediateExpression = IntermediateExpression(IntermediateRepresentation.noop(), Seq.empty, Seq.empty, Set.empty)
+  val  EMPTY: IntermediateExpression = IntermediateExpression(IntermediateRepresentation.noop(), Seq.empty, Seq.empty, Set.empty)
 }

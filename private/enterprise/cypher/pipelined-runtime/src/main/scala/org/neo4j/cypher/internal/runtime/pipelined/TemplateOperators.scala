@@ -118,6 +118,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelExhau
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate.SerialLimitStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelSkipOperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SetPropertiesFromMapOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SetPropertyOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleExactSeekQueryNodeIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleNodeByIdSeekTaskTemplate
@@ -865,6 +866,10 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
         case plan@plans.SetProperty(_, entity, propertyKey, value) =>
           ctx: TemplateContext =>
             new SetPropertyOperatorTemplate(ctx.inner, plan.id, ctx.compileExpression(entity, plan.id), propertyKey.name, ctx.compileExpression(value, plan.id))(ctx.expressionCompiler)
+
+        case plan@plans.SetPropertiesFromMap(_, entity, expression, removeOtherProps) =>
+          ctx: TemplateContext =>
+            new SetPropertiesFromMapOperatorTemplate(ctx.inner, plan.id, ctx.compileExpression(entity, plan.id), ctx.compileExpression(expression, plan.id), removeOtherProps)(ctx.expressionCompiler)
 
         case plan@plans.LockNodes(_, nodesToLock) =>
           ctx: TemplateContext =>
