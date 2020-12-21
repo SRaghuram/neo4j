@@ -256,7 +256,8 @@ object ArgumentStateMap {
     /**
      * Create a read cursor over a snapshot of all morsels in this accumulator
      */
-    def readCursor(onFirstRow: Boolean = false): MorselReadCursor = ???
+    def readCursor(onFirstRow: Boolean = false): MorselReadCursor =
+      throw new UnsupportedOperationException(s"${getClass.getCanonicalName} does not support readCursor")
   }
 
   /**

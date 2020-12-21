@@ -1,5 +1,4 @@
 Feature "AggregationAcceptance": Scenario "Projection during aggregation in WITH before MERGE and after WITH with predicate"
-Feature "CreateAcceptance": Scenario "Combine MATCH, WITH and CREATE"
 Feature "CreateAcceptance": Scenario "A bound node should be recognized after projection with WITH + MERGE pattern"
 Feature "CreateAcceptance": Scenario "A bound node should be recognized after projection with WITH + MERGE node"
 Feature "DeleteAcceptance": Scenario "Create and delete in same query"

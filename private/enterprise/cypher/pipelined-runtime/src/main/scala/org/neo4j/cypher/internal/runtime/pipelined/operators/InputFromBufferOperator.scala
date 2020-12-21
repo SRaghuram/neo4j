@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.and
 import org.neo4j.codegen.api.IntermediateRepresentation.block
@@ -192,7 +191,7 @@ abstract class InputFromBufferOperatorTaskTemplate(override val inner: OperatorT
 
   override def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
-  override def genFields: Seq[Field] = Seq.empty
+  // NOTE: genFields is implemented by specialized traits and should not be overridden here
 
   override def genLocalVariables: Seq[LocalVariable] = Seq.empty
 
