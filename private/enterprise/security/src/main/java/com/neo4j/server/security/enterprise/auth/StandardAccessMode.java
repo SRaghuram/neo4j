@@ -9,10 +9,10 @@ import org.eclipse.collections.api.set.primitive.IntSet;
 
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 import org.neo4j.graphdb.security.AuthorizationViolationException;
+import org.neo4j.internal.kernel.api.RelTypeSupplier;
 import org.neo4j.internal.kernel.api.TokenSet;
 import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AdminAccessMode;
@@ -470,7 +470,7 @@ class StandardAccessMode implements AccessMode
     }
 
     @Override
-    public boolean allowsReadRelationshipProperty( IntSupplier relType, int propertyKey )
+    public boolean allowsReadRelationshipProperty( RelTypeSupplier relType, int propertyKey )
     {
         if ( allowsReadPropertyAllRelTypes( propertyKey ) )
         {
@@ -484,19 +484,19 @@ class StandardAccessMode implements AccessMode
         return canAccessRelProperty( relType, propertyKey, readAllow, readDisallow).allowsAccess();
     }
 
-    private PermissionState canAccessRelProperty( IntSupplier relType, int propertyKey, PropertyPrivileges allow, PropertyPrivileges disallow )
+    private PermissionState canAccessRelProperty( RelTypeSupplier relType, int propertyKey, PropertyPrivileges allow, PropertyPrivileges disallow )
     {
         IntSet whitelisted = allow.getRelTypesForProperty().get( propertyKey );
         IntSet blacklisted = disallow.getRelTypesForProperty().get( propertyKey );
 
         boolean allowed =
-                (whitelisted != null && whitelisted.contains( relType.getAsInt() )) ||
-                allow.getRelTypesForAllProperties().contains( relType.getAsInt() ) ||
+                (whitelisted != null && whitelisted.contains( relType.getRelType() )) ||
+                allow.getRelTypesForAllProperties().contains( relType.getRelType() ) ||
                 allow.isAllPropertiesAllRelTypes() || allow.getRelationshipPropertiesForAllTypes().contains( propertyKey );
 
         boolean disallowedRelType =
-                (blacklisted != null && blacklisted.contains( relType.getAsInt() )) ||
-                disallow.getRelTypesForAllProperties().contains( relType.getAsInt() );
+                (blacklisted != null && blacklisted.contains( relType.getRelType() )) ||
+                disallow.getRelTypesForAllProperties().contains( relType.getRelType() );
 
         return PermissionState.fromBlacklist( !disallowedRelType ).combine( PermissionState.fromWhitelist( allowed ));
     }
@@ -688,7 +688,7 @@ class StandardAccessMode implements AccessMode
     }
 
     @Override
-    public boolean allowsSetProperty( IntSupplier relType, int propertyKey )
+    public boolean allowsSetProperty( RelTypeSupplier relType, int propertyKey )
     {
         if ( disallowWrites )
         {
