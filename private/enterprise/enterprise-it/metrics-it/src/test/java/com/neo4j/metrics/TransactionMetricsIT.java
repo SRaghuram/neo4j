@@ -30,7 +30,7 @@ import static com.neo4j.metrics.MetricsTestHelper.readHistogramCountValue;
 import static com.neo4j.metrics.MetricsTestHelper.readHistogramMeanValue;
 import static com.neo4j.metrics.MetricsTestHelper.readLongCounterAndAssert;
 import static com.neo4j.metrics.MetricsTestHelper.readLongGaugeValue;
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.neo4j.configuration.GraphDatabaseSettings.preallocate_logical_logs;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -51,7 +51,7 @@ public class TransactionMetricsIT
     {
         metricsDirectory = directory.homePath( "metrics" );
         builder.setConfig( MetricsSettings.metrics_enabled, true )
-                .setConfig( MetricsSettings.metrics_filter, GlobbingPattern.create( "*" ) )
+                .setConfig( MetricsSettings.metrics_filter, GlobbingPattern.create( "*.transaction.*" ) )
                 .setConfig( MetricsSettings.csv_enabled, true )
                 .setConfig( MetricsSettings.csv_interval, Duration.ofMillis( 10 ) )
                 .setConfig( preallocate_logical_logs, false )
@@ -192,22 +192,22 @@ public class TransactionMetricsIT
 
     private void assertMetrics( String message, String metricName, Condition<Long> condition )
     {
-        assertEventually( message, () -> readLongCounterAndAssert( metricsCsv( metricsDirectory, metricName ), -1, ( a, b ) -> true ), condition, 5, SECONDS );
+        assertEventually( message, () -> readLongCounterAndAssert( metricsCsv( metricsDirectory, metricName ), -1, ( a, b ) -> true ), condition, 1, MINUTES );
     }
 
     private void assertGauge( String message, String metricName, Condition<Long> condition )
     {
-        assertEventually( message, () -> readLongGaugeValue( metricsCsv( metricsDirectory, metricName ) ), condition, 5, SECONDS );
+        assertEventually( message, () -> readLongGaugeValue( metricsCsv( metricsDirectory, metricName ) ), condition, 1, MINUTES );
     }
 
     private void assertHistogramCount( String message, String metricName, Condition<Integer> condition )
     {
-        assertEventually( message, () -> readHistogramCountValue( metricsCsv( metricsDirectory, metricName ) ), condition, 5, SECONDS );
+        assertEventually( message, () -> readHistogramCountValue( metricsCsv( metricsDirectory, metricName ) ), condition, 1, MINUTES );
     }
 
     private void assertHistogramMeanValue( String message, String metricName, Condition<Double> condition )
     {
-        assertEventually( message, () -> readHistogramMeanValue( metricsCsv( metricsDirectory, metricName ) ), condition, 5, SECONDS );
+        assertEventually( message, () -> readHistogramMeanValue( metricsCsv( metricsDirectory, metricName ) ), condition, 1, MINUTES );
     }
 
     private String createFullMetricName( String metricName )
