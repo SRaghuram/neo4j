@@ -129,6 +129,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeMiddleOp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SortMergeOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SortPreOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.Top1WithTiesOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.TopOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.TriadicBuildOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.TriadicFilterOperator
@@ -589,6 +590,12 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           ordering,
           converters.toCommandExpression(id, limit)).reducer(argumentStateMapId, id)
 
+      case plans.Top1WithTies(_, sortItems) =>
+        val ordering = sortItems.map(translateColumnOrder(slots, _))
+        val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStateBufferVariant].argumentStateMapId
+        Top1WithTiesOperator(WorkIdentity.fromPlan(plan),
+          ordering).reducer(argumentStateMapId, id)
+
       case plans.PartialTop(_, alreadySortedPrefix, stillToSortSuffix, limit, skipSortingPrefixLength) =>
         val prefixComparator = MorselSorting.createComparator(alreadySortedPrefix.map(translateColumnOrder(slots, _)))
         val suffixComparator = MorselSorting.createComparator(stillToSortSuffix.map(translateColumnOrder(slots, _)))
@@ -1010,6 +1017,11 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             TopOperator(WorkIdentity.fromPlan(plan, "Pre"),
               ordering,
               converters.toCommandExpression(id, limit)).mapper(argumentSlotOffset, bufferId)
+
+          case plans.Top1WithTies(_, sortItems) =>
+            val ordering = sortItems.map(translateColumnOrder(slots, _))
+            Top1WithTiesOperator(WorkIdentity.fromPlan(plan, "Pre"),
+              ordering).mapper(argumentSlotOffset, bufferId)
 
           case plans.Aggregation(_, groupingExpressions, aggregationExpression) if groupingExpressions.isEmpty =>
             val (aggregators, expressions) = buildAggregators(id, aggregationExpression)

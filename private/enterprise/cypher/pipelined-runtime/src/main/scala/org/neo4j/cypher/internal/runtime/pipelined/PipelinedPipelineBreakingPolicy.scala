@@ -65,6 +65,7 @@ import org.neo4j.cypher.internal.logical.plans.SetProperty
 import org.neo4j.cypher.internal.logical.plans.Skip
 import org.neo4j.cypher.internal.logical.plans.Sort
 import org.neo4j.cypher.internal.logical.plans.Top
+import org.neo4j.cypher.internal.logical.plans.Top1WithTies
 import org.neo4j.cypher.internal.logical.plans.TriadicBuild
 import org.neo4j.cypher.internal.logical.plans.TriadicFilter
 import org.neo4j.cypher.internal.logical.plans.UndirectedRelationshipByIdSeek
@@ -168,6 +169,7 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy[Ne
            _: Sort |
            _: PartialSort |
            _: Top |
+           _: Top1WithTies |
            _: PartialTop |
            _: Aggregation |
            _: OrderedAggregation |

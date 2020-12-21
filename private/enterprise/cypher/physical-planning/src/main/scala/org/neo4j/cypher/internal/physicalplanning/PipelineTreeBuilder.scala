@@ -34,6 +34,7 @@ import org.neo4j.cypher.internal.logical.plans.RightOuterHashJoin
 import org.neo4j.cypher.internal.logical.plans.Skip
 import org.neo4j.cypher.internal.logical.plans.Sort
 import org.neo4j.cypher.internal.logical.plans.Top
+import org.neo4j.cypher.internal.logical.plans.Top1WithTies
 import org.neo4j.cypher.internal.logical.plans.TriadicBuild
 import org.neo4j.cypher.internal.logical.plans.TriadicFilter
 import org.neo4j.cypher.internal.logical.plans.ValueHashJoin
@@ -691,7 +692,8 @@ class PipelineTreeBuilder[TEMPLATE](breakingPolicy: PipelineBreakingPolicy,
 
       case _: Sort |
            _: Aggregation |
-           _: Top =>
+           _: Top |
+           _: Top1WithTies =>
         if (breakingPolicy.breakOn(plan, applyPlans(plan.id))) {
           val argumentStateBuffer = outputToArgumentStateBuffer(source, plan, argument, argument.argumentSlotOffset)
           val pipeline = newPipeline(plan, argumentStateBuffer)

@@ -98,6 +98,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ShortestPathTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SkipTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SortTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SubscriberErrorTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.Top1WithTiesTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.TopTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UndirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UnionTestBase
@@ -328,6 +329,11 @@ class ParallelRuntimeSortNoFusingTest extends SortTestBase(NO_FUSING, PARALLEL, 
 // TOP
 class ParallelRuntimeTopTest extends TopTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 class ParallelRuntimeTopNoFusingTest extends TopTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+
+// TOP1 WITH TIES
+class ParallelRuntimeTop1WithTiesTest extends Top1WithTiesTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeTop1WithTiesNoFusingTest extends Top1WithTiesTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+
 
 // AGGREGATION
 class ParallelRuntimeAggregationTest extends AggregationTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite

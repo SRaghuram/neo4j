@@ -123,6 +123,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.SlottedPipeFallbackTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SortTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SubscriberErrorTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ThreadUnsafeExpressionTests
+import org.neo4j.cypher.internal.runtime.spec.tests.Top1WithTiesTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.TopTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.TriadicSelectionTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UndirectedRelationshipByIdSeekTestBase
@@ -334,6 +335,10 @@ class PipelinedPartialSortNoFusingTest extends PartialSortTestBase(NO_FUSING, PI
 // TOP
 class PipelinedTopTest extends TopTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedTopNoFusingTest extends TopTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
+// TOP 1 WITH TIES
+class PipelinedTop1WithTiesTest extends Top1WithTiesTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedTop1WithTIesNoFusingTest extends Top1WithTiesTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // PARTIAL TOP N
 class PipelinedPartialTopNTest extends PartialTopNTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
