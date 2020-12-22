@@ -95,6 +95,8 @@ object PipelineTreeBuilder {
                         val headLogicalPlan: LogicalPlan) {
     var lhs: PipelineId = NO_PIPELINE
     var rhs: PipelineId = NO_PIPELINE
+    var schedulingHint: SchedulingHint = NoSchedulingHint
+
     private var outputDefinition: OutputDefinition = NoOutput
     /**
      * The list of fused plans contains all fusable plans starting from the headPlan and
@@ -160,7 +162,7 @@ object PipelineTreeBuilder {
         case InterpretedHeadBuilder(_) => IndexedSeq.empty
       }
 
-    def result: PipelineDefinition = PipelineDefinition(id, lhs, rhs, headPlanResult, inputBuffer.result, outputDefinition, middlePlans, serial, workCanceller)
+    def result: PipelineDefinition = PipelineDefinition(id, lhs, rhs, headPlanResult, inputBuffer.result, outputDefinition, middlePlans, serial, workCanceller, NoSchedulingHint)
   }
 
   abstract class BufferDefiner(val id: BufferId, val memoryTrackingOperatorId: Id, val bufferConfiguration: SlotConfiguration) {
@@ -916,8 +918,8 @@ class PipelineTreeBuilder[TEMPLATE](breakingPolicy: PipelineBreakingPolicy,
         sink.onTrueBuffer = output
         rhs.fuseOrInterpretOutput(MorselBufferOutput(output.id, plan.id))
         val pipeline: PipelineDefiner[TEMPLATE] = newPipeline(plan, output)
-        //this is weird, but used for getting the scheduler to do the right thing
-        pipeline.lhs = rhs.id
+        pipeline.lhs = NO_PIPELINE
+        pipeline.rhs = rhs.id
         pipeline
 
       case _: CartesianProduct =>
@@ -926,6 +928,7 @@ class PipelineTreeBuilder[TEMPLATE](breakingPolicy: PipelineBreakingPolicy,
           val pipeline = newPipeline(plan, buffer)
           pipeline.lhs = lhs.id
           pipeline.rhs = rhs.id
+          pipeline.schedulingHint = LazyRhsSchedulingHint
           pipeline
         } else {
           throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
@@ -943,6 +946,7 @@ class PipelineTreeBuilder[TEMPLATE](breakingPolicy: PipelineBreakingPolicy,
           val pipeline = newPipeline(plan, buffer)
           pipeline.lhs = lhs.id
           pipeline.rhs = rhs.id
+          pipeline.schedulingHint = EagerLhsSchedulingHint
           pipeline
         } else {
           throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
@@ -954,6 +958,7 @@ class PipelineTreeBuilder[TEMPLATE](breakingPolicy: PipelineBreakingPolicy,
           val pipeline = newPipeline(plan, buffer)
           pipeline.lhs = lhs.id
           pipeline.rhs = rhs.id
+          pipeline.schedulingHint = AllLazySchedulingHint
           pipeline
         } else {
           throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")

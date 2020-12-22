@@ -6,6 +6,8 @@
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
 import org.eclipse.collections.impl.factory.primitive.IntStacks
+import org.neo4j.cypher.internal.physicalplanning.AllLazySchedulingHint
+import org.neo4j.cypher.internal.physicalplanning.EagerLhsSchedulingHint
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
@@ -22,7 +24,7 @@ object LazyScheduling extends SchedulingPolicy {
 
 class LazyExecutionGraphScheduling(executionGraphDefinition: ExecutionGraphDefinition) extends ExecutionGraphSchedulingPolicy {
   // The pipelines in the correct order for this scheduling policy
-  private[execution] val pipelinesInLHSDepthFirstOrder: Array[PipelineId] = {
+  private[execution] val pipelinesInLazyOrder: Array[PipelineId] = {
     val pipelinesInExecutionOrder = executionGraphDefinition.pipelines
     val result = new Array[PipelineId](pipelinesInExecutionOrder.length)
 
@@ -40,11 +42,22 @@ class LazyExecutionGraphScheduling(executionGraphDefinition: ExecutionGraphDefin
         i += 1
 
         visited(pipelineId) = true
-        if (pipelineState.rhs != NO_PIPELINE) {
-          stack.push(pipelineState.rhs.x)
-        }
-        if (pipelineState.lhs != NO_PIPELINE) {
-          stack.push(pipelineState.lhs.x)
+        pipelineState.schedulingHint match {
+          case EagerLhsSchedulingHint | AllLazySchedulingHint =>
+            if (pipelineState.rhs != NO_PIPELINE) {
+              stack.push(pipelineState.rhs.x)
+            }
+            if (pipelineState.lhs != NO_PIPELINE) {
+              stack.push(pipelineState.lhs.x)
+            }
+
+          case _ => // In lazy scheduling we prioritize rhs (which corresponds to rhs of logical plan) by default
+            if (pipelineState.lhs != NO_PIPELINE) {
+              stack.push(pipelineState.lhs.x)
+            }
+            if (pipelineState.rhs != NO_PIPELINE) {
+              stack.push(pipelineState.rhs.x)
+            }
         }
       }
     }
@@ -53,7 +66,7 @@ class LazyExecutionGraphScheduling(executionGraphDefinition: ExecutionGraphDefin
   }
 
   override def querySchedulingPolicy(executingQuery: ExecutingQuery): QuerySchedulingPolicy =
-    new LazyQueryScheduling(executingQuery, pipelinesInLHSDepthFirstOrder)
+    new LazyQueryScheduling(executingQuery, pipelinesInLazyOrder)
 }
 
 class LazyQueryScheduling(executingQuery: ExecutingQuery,

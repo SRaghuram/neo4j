@@ -14,6 +14,7 @@ import org.mockito.Mockito.when
 import org.neo4j.cypher.internal.logical.plans.Argument
 import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
+import org.neo4j.cypher.internal.physicalplanning.NoSchedulingHint
 import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition
 import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition.InterpretedHead
 import org.neo4j.cypher.internal.physicalplanning.PipelineId
@@ -93,8 +94,8 @@ class CallingThreadExecutingQueryTest extends CypherFunSuite {
 
   def getExecutingQuery(executionState: ExecutionState): CallingThreadExecutingQuery = {
     val executionGraphDefinition = ExecutionGraphDefinition(
-      null, null, null, Array(PipelineDefinition(PipelineId(0), PipelineId.NO_PIPELINE, PipelineId.NO_PIPELINE, InterpretedHead(Argument()(idGen)), mock[BufferDefinition], null, null, serial = false, None)), null
-    )
+      null, null, null, Array(PipelineDefinition(PipelineId(0), PipelineId.NO_PIPELINE, PipelineId.NO_PIPELINE, InterpretedHead(Argument()(idGen)), mock[BufferDefinition], null, null, serial = false, None, NoSchedulingHint)), null
+      )
 
     new CallingThreadExecutingQuery(
       executionState,

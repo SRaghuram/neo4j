@@ -150,7 +150,7 @@ object ExecutionGraphVisualizer {
     val pipes = mutable.Map[Int, VirtualNodeHack]()
 
     executionGraphDefinition.pipelines.foreach { pipeline =>
-      val PipelineDefinition(PipelineId(id), lhs, rhs, headPlan, inputBuffer, outputDefinition, middlePlans, serial, _) = pipeline
+      val PipelineDefinition(PipelineId(id), lhs, rhs, headPlan, inputBuffer, outputDefinition, middlePlans, serial, _, _) = pipeline
       val pipe = new VirtualNodeHack(Map("name" -> s"Pipeline[$id]", "id" -> (id: Integer), "serial" -> (serial: lang.Boolean)), "Pipeline")
       pipes(id) = pipe
       rels += new VirtualRelationshipHack(bufs(inputBuffer.id.x), pipe, Map.empty, "READ_BY")

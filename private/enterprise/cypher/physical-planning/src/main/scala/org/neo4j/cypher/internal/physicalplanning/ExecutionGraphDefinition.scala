@@ -54,6 +54,7 @@ object PipelineDefinition {
  * @param middlePlans      Contains all non-fused middle plans of the pipeline
  * @param serial           `true` if the pipeline should be executed serially otherwise `false`
  * @param workLimiter      Optional reference to a workCanceller via an ArgumentStateMapId
+ * @param schedulingHint   Hint to the scheduling policy
  */
 case class PipelineDefinition(id: PipelineId,
                               lhs: PipelineId,
@@ -63,7 +64,8 @@ case class PipelineDefinition(id: PipelineId,
                               outputDefinition: OutputDefinition,
                               middlePlans: IndexedSeq[LogicalPlan],
                               serial: Boolean,
-                              workLimiter: Option[ArgumentStateMapId])
+                              workLimiter: Option[ArgumentStateMapId],
+                              schedulingHint: SchedulingHint)
 
 /**
  * Maps to one ArgumentStateMap.
@@ -189,6 +191,13 @@ case class EagerMorselBufferOutput(id: BufferId, nextPipelineHeadPlanId: Id) ext
 case class MorselArgumentStateBufferOutput(id: BufferId, argumentSlotOffset: Int, nextPipelineHeadPlanId: Id) extends OutputDefinition
 case class ReduceOutput(bufferId: BufferId, argumentStateMapId: ArgumentStateMapId, plan: LogicalPlan) extends OutputDefinition
 case object NoOutput extends OutputDefinition
+
+// -- SCHEDULING
+sealed trait SchedulingHint
+case object NoSchedulingHint extends SchedulingHint
+case object EagerLhsSchedulingHint extends SchedulingHint
+case object LazyRhsSchedulingHint extends SchedulingHint
+case object AllLazySchedulingHint extends SchedulingHint
 
 // -- EXECUTION GRAPH
 case class ExecutionGraphDefinition(physicalPlan: PhysicalPlan,

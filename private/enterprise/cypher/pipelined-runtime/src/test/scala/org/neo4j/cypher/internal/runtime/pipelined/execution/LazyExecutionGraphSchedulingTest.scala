@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.physicalplanning.BufferVariant
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
+import org.neo4j.cypher.internal.physicalplanning.NoSchedulingHint
 import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition
 import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition.InterpretedHead
 import org.neo4j.cypher.internal.physicalplanning.PipelineId
@@ -36,7 +37,7 @@ class LazyExecutionGraphSchedulingTest extends CypherFunSuite {
     val policy = new LazyExecutionGraphScheduling(executingGraphDefinition(input))
 
     // then
-    policy.pipelinesInLHSDepthFirstOrder.toList should be(List(
+    policy.pipelinesInLazyOrder.toList should be(List(
       PipelineId(2),
       PipelineId(1),
       PipelineId(0)
@@ -55,7 +56,7 @@ class LazyExecutionGraphSchedulingTest extends CypherFunSuite {
     val policy = new LazyExecutionGraphScheduling(executingGraphDefinition(input))
 
     // then
-    policy.pipelinesInLHSDepthFirstOrder.toList should be(List(
+    policy.pipelinesInLazyOrder.toList should be(List(
       PipelineId(2),
       PipelineId(0),
       PipelineId(1)
@@ -75,7 +76,7 @@ class LazyExecutionGraphSchedulingTest extends CypherFunSuite {
     val policy = new LazyExecutionGraphScheduling(executingGraphDefinition(input))
 
     // then
-    policy.pipelinesInLHSDepthFirstOrder.toList should be(List(
+    policy.pipelinesInLazyOrder.toList should be(List(
       PipelineId(3),
       PipelineId(1),
       PipelineId(0),
@@ -89,7 +90,7 @@ class LazyExecutionGraphSchedulingTest extends CypherFunSuite {
                inputBufferVariant: BufferVariant = RegularBufferVariant,
                headPlan: LogicalPlan = plan): PipelineDefinition = {
     val inputBuffer = BufferDefinition(BufferId(-1), Id.INVALID_ID, ReadOnlyArray.empty, ReadOnlyArray.empty, inputBufferVariant)(null)
-    PipelineDefinition(id, lhs, rhs, InterpretedHead(headPlan), inputBuffer, null, null, serial = false, None)
+    PipelineDefinition(id, lhs, rhs, InterpretedHead(headPlan), inputBuffer, null, null, serial = false, None, NoSchedulingHint)
   }
 
   def executingGraphDefinition(pipelines: Array[PipelineDefinition]): ExecutionGraphDefinition =
