@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
+import org.neo4j.collection.trackable.HeapTrackingCollections
+import org.neo4j.collection.trackable.HeapTrackingLongHashSet
 import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.CypherRow
@@ -12,6 +14,7 @@ import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.GrowingArray
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
+import org.neo4j.cypher.internal.runtime.pipelined.operators.VarExpandCursor.IdSetMinPathLength
 import org.neo4j.cypher.internal.runtime.pipelined.operators.VarExpandCursor.relationshipFromCursor
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.Read
@@ -19,10 +22,13 @@ import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.allCursor
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.incomingCursor
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.outgoingCursor
+import org.neo4j.kernel.api.StatementConstants.NO_SUCH_ENTITY
 import org.neo4j.kernel.impl.newapi.Cursors.emptyTraversalCursor
+import org.neo4j.memory.HeapEstimator.shallowSizeOfInstance
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.ListValue
+import org.neo4j.values.virtual.ListValue.AppendList
 import org.neo4j.values.virtual.RelationshipValue
 import org.neo4j.values.virtual.VirtualValues
 
@@ -50,8 +56,18 @@ abstract class VarExpandCursor(val fromNode: Long,
   private var pathLength: Int = 0
   private var event: OperatorProfileEvent = _
 
-  private val relTraversalCursors: GrowingArray[RelationshipTraversalCursor] = new GrowingArray[RelationshipTraversalCursor](memoryTracker)
   private val selectionCursors: GrowingArray[RelationshipTraversalCursor] = new GrowingArray[RelationshipTraversalCursor](memoryTracker)
+  private val emptyRelationCursor: RelationshipTraversalCursor = emptyTraversalCursor(read)
+
+   // This cache is an optimisation for var length expands with very long paths
+   // (we had one example with 1 000 000 relationships that failed to finish in pipelined before this change).
+  private val relationshipCache: MemoryTrackingAppendedListCache = new MemoryTrackingAppendedListCache(memoryTracker)
+
+  // Set to true when `idSet` is populated.
+  private var useIdSet = false
+
+  // Contains all relationship ids in the current path if `useIdSet` is true.
+  private var idSet: HeapTrackingLongHashSet = _
 
   // this needs to be explicitly managed on every work unit, to avoid parallel workers accessing each others cursorPools.
   private var cursorPools: CursorPools = _
@@ -91,7 +107,19 @@ abstract class VarExpandCursor(val fromNode: Long,
         case EMIT =>
           val r = pathLength - 1
           val selectionCursor = selectionCursors.get(r)
+
+          if (useIdSet) {
+            val oldId = selectionCursor.relationshipReference()
+            if (oldId != -1) {
+              idSet.remove(oldId)
+            }
+          }
+
           var hasNext = false
+
+          // Invalidate cache at `r` because the selection cursor will move
+          relationshipCache.softInvalidate(r)
+
           do {
             hasNext = selectionCursor.next()
           } while (hasNext &&
@@ -100,6 +128,12 @@ abstract class VarExpandCursor(val fromNode: Long,
               ))
 
           if (hasNext) {
+            if (useIdSet) {
+              idSet.add(selectionCursor.relationshipReference())
+            } else if (pathLength == IdSetMinPathLength) {
+              initIdSet()
+            }
+
             if (pathLength < maxLength) {
               expandStatus = EXPAND
             }
@@ -115,33 +149,43 @@ abstract class VarExpandCursor(val fromNode: Long,
     false
   }
 
-  private def validToNode: Boolean = targetToNode < 0 || targetToNode == toNode
+  private def validToNode: Boolean = targetToNode == NO_SUCH_ENTITY || targetToNode == toNode
 
   private def relationshipIsUniqueInPath(relInPath: Int, relationshipId: Long): Boolean = {
-    var i = relInPath - 1
-    while (i >= 0) {
-      if (selectionCursors.get(i).relationshipReference() == relationshipId)
-        return false
-      i -= 1
+    if (useIdSet) {
+      !idSet.contains(relationshipId)
+    } else {
+      var i = relInPath - 1
+      while (i >= 0) {
+        if (selectionCursors.get(i).relationshipReference() == relationshipId)
+          return false
+        i -= 1
+      }
+      true
     }
-    true
   }
 
   private def expand(node: Long): Unit = {
-
     read.singleNode(node, nodeCursor)
-    val cursor =
-      if (!nodeCursor.next()) {
-        emptyTraversalCursor(read)
-      } else {
-        val traversalCursor = relTraversalCursors.computeIfAbsent(pathLength, () => {
-          val cursor = cursorPools.relationshipTraversalCursorPool.allocateAndTrace()
-          cursor.setTracer(event)
-          cursor
-        })
-        selectionCursor(traversalCursor, nodeCursor, relTypes)
+    val previousCursor = selectionCursors.getOrNull(pathLength)
+
+    if (!nodeCursor.next()) {
+      if (previousCursor != null) {
+        cursorPools.relationshipTraversalCursorPool.free(previousCursor)
       }
-    selectionCursors.set(pathLength, cursor)
+      selectionCursors.set(pathLength, emptyRelationCursor)
+    } else {
+      if (previousCursor != null && previousCursor != emptyRelationCursor) {
+        // Re-use current cursor
+        selectionCursor(previousCursor, nodeCursor, relTypes)
+      } else {
+        // Allocate new cursor
+        val cursor = cursorPools.relationshipTraversalCursorPool.allocateAndTrace()
+        cursor.setTracer(event)
+        selectionCursor(cursor, nodeCursor, relTypes)
+        selectionCursors.set(pathLength, cursor)
+      }
+    }
   }
 
   def toNode: Long = {
@@ -152,45 +196,87 @@ abstract class VarExpandCursor(val fromNode: Long,
     }
   }
 
+  private def updateCache(index: Int, prevList: ListValue): AppendList = {
+    val cursor = selectionCursors.get(index)
+    val relationship = relationshipFromCursor(dbAccess, cursor)
+    val list = prevList.append(relationship)
+    relationshipCache.append(list)
+    list
+  }
+
+  /*
+   * Updates the relationship cache with all new relationship values and returns the
+   * list of relationships in the current path.
+   *
+   * Let's assume we have a graph: ()-[r1]->()-[r2]->()-[r3]->()-[r4]->()-[r5]->()
+   *
+   * If pathLength = 4 and relationShipCache.getSize = 2
+   * We will need to update the cache with the following:
+   * 2 -> [r1, r2, r3]
+   * 3 -> [r1, r2, r3, r4]
+   *
+   * The function will then return the last AppendList in the cache: [r1, r2, r3, r4]
+   */
   def relationships: ListValue = {
-    val r = new Array[AnyValue](pathLength)
+    if (pathLength == 0) {
+      return VirtualValues.EMPTY_LIST
+    }
+    assert(relationshipCache.getSize <= pathLength)
+
+    var list = relationshipCache.lastOrDefault(() => VirtualValues.EMPTY_LIST) // Depends on assertion
+    var i = relationshipCache.getSize
+
+    while (i < pathLength) {
+      list = updateCache(i, list)
+      i += 1
+    }
+
     if (projectBackwards) {
-      var i = pathLength - 1
-      while (i >= 0) {
-        val cursor = selectionCursors.get(i)
-        r(pathLength - 1 - i) = relationshipFromCursor(dbAccess, cursor)
-        i -= 1
-      }
+      list.reverse()
     } else {
+      list
+    }
+  }
+
+  def initIdSet(): Unit = {
+    if (!useIdSet) {
+      idSet = HeapTrackingCollections.newLongSet(memoryTracker, pathLength * 2)
       var i = 0
       while (i < pathLength) {
-        val cursor = selectionCursors.get(i)
-        r(i) = relationshipFromCursor(dbAccess, cursor)
+        idSet.add(selectionCursors.get(i).relationshipReference())
         i += 1
       }
+      useIdSet = true
     }
-    VirtualValues.list(r:_*)
   }
 
   def setTracer(event: OperatorProfileEvent): Unit = {
     this.event = event
     nodeCursor.setTracer(event)
-    relTraversalCursors.foreach(_.setTracer(event))
+
+    // Should never call setTracer when selectionCursors is closed with event != null
+    if (!(selectionCursors.isClosed() && event == null))
+      selectionCursors.foreach(_.setTracer(event))
   }
 
   def free(cursorPools: CursorPools): Unit = {
     cursorPools.nodeCursorPool.free(nodeCursor)
-    relTraversalCursors.foreach(cursor => cursorPools.relationshipTraversalCursorPool.free(cursor))
-    if (relTraversalCursors != null) {
-      relTraversalCursors.close()
-    }
-    if (selectionCursors != null) {
+    if (!selectionCursors.isClosed()) {
+      selectionCursors.foreach(cursor => cursorPools.relationshipTraversalCursorPool.free(cursor))
       selectionCursors.close()
     }
+    if (idSet != null) {
+      idSet.close()
+      idSet = null
+    }
+    relationshipCache.close()
   }
 }
 
 object VarExpandCursor {
+  // Use `idSet` after this path length has been passed. Below this limit searching the `selectionCursors` array directly is faster.
+  val IdSetMinPathLength = 128
+
   def apply(direction: SemanticDirection,
             fromNode: Long,
             targetToNode: Long,
@@ -396,4 +482,56 @@ abstract class AllVarExpandCursor(fromNode: Long,
   override protected def selectionCursor(traversalCursor: RelationshipTraversalCursor,
                                          node: NodeCursor,
                                          types: Array[Int]): RelationshipTraversalCursor = allCursor(traversalCursor, node, types)
+}
+
+class MemoryTrackingAppendedListCache(memoryTracker: MemoryTracker) extends AutoCloseable {
+  // TODO: Track size of append lists.
+  // We don't track memory of the append lists, since the size of an AppendList
+  // might change from when it is inserted to when it is removed.
+  private val appendLists = new GrowingArray[ListValue](memoryTracker)
+  private var size = 0
+
+  /*
+   * append value to cache
+   */
+  def append(value: ListValue): Unit = {
+    appendLists.set(size, value)
+    size = size + 1
+  }
+
+  /*
+   * Updates the size, but does not remove anything from the appendLists.
+   * We will override values at index greater or equal to i when calling the append function.
+   */
+  def softInvalidate(i: Int): Unit = {
+    if (size > i) {
+      size = i
+    }
+  }
+
+  /*
+   * returns the size of the valid cached lists.
+   */
+  def getSize: Int = {
+    size
+  }
+
+  /*
+   * returns the last cached value or default if cache is empty.
+   */
+  def lastOrDefault(default: () => ListValue): ListValue = {
+    if (size > 0) {
+      appendLists.get(size - 1)
+    } else {
+      default()
+    }
+  }
+
+  override def close(): Unit = {
+    appendLists.close()
+  }
+}
+
+object MemoryTrackingAppendedListCache {
+  val SHALLOW_SIZE: Long = shallowSizeOfInstance(classOf[MemoryTrackingAppendedListCache])
 }
