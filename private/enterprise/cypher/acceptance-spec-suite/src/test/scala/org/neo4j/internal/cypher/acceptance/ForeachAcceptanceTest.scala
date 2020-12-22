@@ -7,6 +7,7 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.QueryStatisticsTestSupport
+import org.neo4j.cypher.internal.plandescription.Arguments.Runtime
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
@@ -61,9 +62,19 @@ class ForeachAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("Foreach").withRHS(aPlan("Create"))
-      },
-        expectPlansToFail = Configs.Pipelined//we rewrite foreach in pipelined
+        val isPipelined = plan.arguments.collectFirst { case Runtime(r) => r.toLowerCase == "pipelined" }.getOrElse(false)
+
+        if (isPipelined) {
+          plan should includeSomewhere
+            .aPlan("SelectOrSemiApply")
+            .withRHS(aPlan("ExhaustiveLimit")
+              .withLHS(aPlan("Create")
+                .withLHS(aPlan("Unwind")
+                  .withLHS(aPlan("Argument")))))
+        } else {
+          plan should includeSomewhere.aPlan("Foreach").withRHS(aPlan("Create"))
+        }
+      }
       ))
 
     // then
