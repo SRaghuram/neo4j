@@ -5,6 +5,11 @@
  */
 package com.neo4j.bench.infra.scheduler;
 
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.services.cloudformation.AmazonCloudFormation;
+import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
+import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
+import com.amazonaws.services.cloudformation.model.Output;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.client.StoreClient;
@@ -12,15 +17,17 @@ import com.neo4j.bench.client.queries.submit.CreateJob;
 import com.neo4j.bench.infra.AWSCredentials;
 import com.neo4j.bench.infra.ArtifactStorage;
 import com.neo4j.bench.infra.ArtifactStoreException;
+import com.neo4j.bench.infra.InfraNamesHelper;
 import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.JobId;
-import com.neo4j.bench.infra.InfraNamesHelper;
 import com.neo4j.bench.infra.JobParams;
 import com.neo4j.bench.infra.JobScheduler;
 import com.neo4j.bench.infra.JobStatus;
 import com.neo4j.bench.infra.Workspace;
 import com.neo4j.bench.infra.aws.AWSBatchJobScheduler;
 import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
+import com.neo4j.bench.infra.resources.Infrastructure;
+import com.neo4j.bench.infra.resources.InfrastructureMatcher;
 import com.neo4j.bench.model.util.JsonUtil;
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;
@@ -48,9 +55,33 @@ public class BenchmarkJobScheduler
     private static final Logger LOG = LoggerFactory.getLogger( BenchmarkJobScheduler.class );
     private static final Duration DEFAULT_JOB_STATUS_CHECK_DELAY = Duration.ofSeconds( 5 );
 
-    public static BenchmarkJobScheduler create( String jobQueue, String jobDefinition, String batchStack, AWSCredentials awsCredentials )
+    /**
+     * Create job scheduler, created from job queue reference (output in CloudFormation)
+     *
+     * @param jobQueueRef    job queue reference from CloudFormation output
+     * @param jobDefinition  job definition
+     * @param batchStack     batch CloudFormation stack name
+     * @param awsCredentials AWS credentials
+     */
+    public static BenchmarkJobScheduler create( String jobQueueRef, String jobDefinition, String batchStack, AWSCredentials awsCredentials )
     {
-        return new BenchmarkJobScheduler( AWSBatchJobScheduler.getJobScheduler( awsCredentials, jobQueue, jobDefinition, batchStack ),
+        String jobQueue = getJobQueueCustomName( jobQueueRef, awsCredentials.awsCredentialsProvider(), awsCredentials.awsRegion(), batchStack );
+        return new BenchmarkJobScheduler( AWSBatchJobScheduler.getJobScheduler( awsCredentials, new Infrastructure( jobQueue, jobDefinition ), batchStack ),
+                                          AWSS3ArtifactStorage.create( awsCredentials ),
+                                          awsCredentials,
+                                          DEFAULT_JOB_STATUS_CHECK_DELAY );
+    }
+
+    /**
+     * Create job scheduler, created from {@link InfrastructureMatcher}
+     *
+     * @param infrastructure AWS batch infrastructure
+     * @param batchStack     batch CloudFormation stack name
+     * @param awsCredentials AWS credentials
+     */
+    public static BenchmarkJobScheduler create( Infrastructure infrastructure, String batchStack, AWSCredentials awsCredentials )
+    {
+        return new BenchmarkJobScheduler( AWSBatchJobScheduler.getJobScheduler( awsCredentials, infrastructure, batchStack ),
                                           AWSS3ArtifactStorage.create( awsCredentials ),
                                           awsCredentials,
                                           DEFAULT_JOB_STATUS_CHECK_DELAY );
@@ -63,6 +94,23 @@ public class BenchmarkJobScheduler
                                          Duration jobStatusCheckDelay )
     {
         return new BenchmarkJobScheduler( jobScheduler, artifactStorage, awsCredentials, jobStatusCheckDelay );
+    }
+
+    private static String getJobQueueCustomName( String jobQueueRef, AWSCredentialsProvider credentialsProvider, String region, String stack )
+    {
+        AmazonCloudFormation amazonCloudFormation = AmazonCloudFormationClientBuilder.standard()
+                                                                                     .withCredentials( credentialsProvider )
+                                                                                     .withRegion( region )
+                                                                                     .build();
+
+        return amazonCloudFormation.describeStacks( new DescribeStacksRequest().withStackName( stack ) )
+                                   .getStacks()
+                                   .stream()
+                                   .flatMap( stacks -> stacks.getOutputs().stream() )
+                                   .filter( output -> output.getOutputKey().equals( jobQueueRef ) )
+                                   .map( Output::getOutputValue )
+                                   .findFirst()
+                                   .orElseThrow( () -> new RuntimeException( format( "job queue %s not found in stack %s ", jobQueueRef, stack ) ) );
     }
 
     private static List<JobStatus> jobStatuses( JobScheduler jobScheduler,

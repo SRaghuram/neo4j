@@ -5,26 +5,19 @@
  */
 package com.neo4j.bench.infra.aws;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.batch.AWSBatch;
 import com.amazonaws.services.batch.AWSBatchClientBuilder;
 import com.amazonaws.services.batch.model.DescribeJobsRequest;
 import com.amazonaws.services.batch.model.JobDetail;
 import com.amazonaws.services.batch.model.SubmitJobRequest;
 import com.amazonaws.services.batch.model.SubmitJobResult;
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
-import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
-import com.amazonaws.services.cloudformation.model.Output;
 import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
 import com.neo4j.bench.infra.AWSCredentials;
 import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.JobId;
 import com.neo4j.bench.infra.JobScheduler;
 import com.neo4j.bench.infra.JobStatus;
+import com.neo4j.bench.infra.resources.Infrastructure;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,102 +43,23 @@ public class AWSBatchJobScheduler implements JobScheduler
     /**
      * Create AWS batch job scheduler using default credentials chain, https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html.
      *
-     * @param region        AWS region
-     * @param jobQueue      job queue name in CloudFormation stack
-     * @param jobDefinition job definition name in CloudFormation stack
-     * @param stack         CloudFormation stack name
+     * @param awsCredentials AWS credentials
+     * @param infrastructure AWS Batch infrastructure
+     * @param batchStack     CloudFormation stack name
      * @return AWS job scheduler
      */
-    public static JobScheduler create(
-            String region,
-            String jobQueue,
-            String jobDefinition,
-            String stack )
+    public static JobScheduler getJobScheduler( AWSCredentials awsCredentials, Infrastructure infrastructure, String batchStack )
     {
-        AWSCredentialsProvider credentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();
-        return create( credentialsProvider, region, jobQueue, jobDefinition, stack );
-    }
-
-    /**
-     * Create AWS batch job scheduler using provided AWS key and secret.
-     *
-     * @param region        AWS region
-     * @param awsKey        AWS key
-     * @param awsSecret     AWS secret
-     * @param jobQueue      job queue name in CloudFormation stack
-     * @param jobDefinition job definition name in CloudFormation stack
-     * @param stack         CloudFormation stack name
-     * @return AWS job scheduler
-     */
-    public static JobScheduler create(
-            String region,
-            String awsKey,
-            String awsSecret,
-            String jobQueue,
-            String jobDefinition,
-            String stack )
-    {
-        Objects.requireNonNull( awsKey );
-        Objects.requireNonNull( awsSecret );
-
-        AWSCredentialsProvider credentialsProvider = new AWSStaticCredentialsProvider( new BasicAWSCredentials( awsKey, awsSecret ) );
-        return create( credentialsProvider, region, jobQueue, jobDefinition, stack );
-    }
-
-    public static JobScheduler getJobScheduler( AWSCredentials awsCredentials, String jobQueue, String jobDefinition, String batchStack )
-    {
-        if ( awsCredentials.hasAwsCredentials() )
-        {
-            return create( awsCredentials.awsRegion(),
-                           awsCredentials.awsAccessKeyId(),
-                           awsCredentials.awsSecretAccessKey(),
-                           jobQueue,
-                           jobDefinition,
-                           batchStack );
-        }
-        else
-        {
-            return create( awsCredentials.awsRegion(),
-                           jobQueue,
-                           jobDefinition,
-                           batchStack );
-        }
-    }
-
-    private static JobScheduler create( AWSCredentialsProvider credentialsProvider,
-                                        String region,
-                                        String jobQueue,
-                                        String jobDefinition,
-                                        String stack )
-    {
-        Objects.requireNonNull( region );
-        Objects.requireNonNull( jobQueue );
-        Objects.requireNonNull( jobDefinition );
-        Objects.requireNonNull( stack );
+        Objects.requireNonNull( awsCredentials );
+        Objects.requireNonNull( infrastructure );
+        Objects.requireNonNull( batchStack );
 
         return new AWSBatchJobScheduler( AWSBatchClientBuilder.standard()
-                                                              .withCredentials( credentialsProvider )
-                                                              .withRegion( region )
+                                                              .withCredentials( awsCredentials.awsCredentialsProvider() )
+                                                              .withRegion( awsCredentials.awsRegion() )
                                                               .build(),
-                                         getJobQueueCustomName( jobQueue, credentialsProvider, region, stack ),
-                                         jobDefinition );
-    }
-
-    private static String getJobQueueCustomName( String jobQueue, AWSCredentialsProvider credentialsProvider, String region, String stack )
-    {
-        AmazonCloudFormation amazonCloudFormation = AmazonCloudFormationClientBuilder.standard()
-                                                                                     .withCredentials( credentialsProvider )
-                                                                                     .withRegion( region )
-                                                                                     .build();
-
-        return amazonCloudFormation.describeStacks( new DescribeStacksRequest().withStackName( stack ) )
-                                   .getStacks()
-                                   .stream()
-                                   .flatMap( stacks -> stacks.getOutputs().stream() )
-                                   .filter( output -> output.getOutputKey().equals( jobQueue ) )
-                                   .map( Output::getOutputValue )
-                                   .findFirst()
-                                   .orElseThrow( () -> new RuntimeException( format( "job queue %s not found in stack %s ", jobQueue, stack ) ) );
+                                         infrastructure.jobQueue(),
+                                         infrastructure.jobDefinition() );
     }
 
     private final AWSBatch awsBatch;

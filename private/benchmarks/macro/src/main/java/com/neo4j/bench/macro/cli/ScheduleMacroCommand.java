@@ -151,11 +151,11 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
 
     private static final String CMD_INFRASTRUCTURE_CAPABILITIES = "--infrastructure-capabilities";
     @Option( type = OptionType.COMMAND,
-             name = CMD_INFRASTRUCTURE_CAPABILITIES,
-             description = "set of required infrastructure capabilities to run benchmark " +
-                           "(e.g., hardware:totalMemory=16384,hardware:availableCores=8,jdk=oracle-8 " +
-                           "or AWS:instanceType=m5d.xlarge,jdk=oracle-8)",
-             title = "Infrastructure capabilities" )
+            name = CMD_INFRASTRUCTURE_CAPABILITIES,
+            description = "set of required infrastructure capabilities to run benchmark " +
+                          "(e.g., hardware:totalMemory=16384,hardware:availableCores=8,jdk=oracle-8 " +
+                          "or AWS:instanceType=m5d.xlarge,jdk=oracle-8)",
+            title = "Infrastructure capabilities" )
     private String infrastructureCapabilities;
 
     private static String getJobName( String tool, String benchmark, String version, String triggered )
@@ -189,11 +189,7 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                 workspace = Workspace.defaultMacroEmbeddedWorkspace( workspacePath );
             }
 
-            BenchmarkJobScheduler benchmarkJobScheduler =
-                    BenchmarkJobScheduler.create( infrastructure.jobQueue(),
-                                                  infrastructure.jobDefinition(),
-                                                  batchStack,
-                                                  awsCredentials );
+            BenchmarkJobScheduler benchmarkJobScheduler = BenchmarkJobScheduler.create( infrastructure, batchStack, awsCredentials );
             URI artifactBaseWorkloadURI = artifactBaseUri.resolve( URIHelper.toURIPart( runMacroWorkloadParams.triggeredBy() ) )
                                                          .resolve( URIHelper.toURIPart( runMacroWorkloadParams.teamcityBuild().toString() ) )
                                                          .resolve( URIHelper.toURIPart( runMacroWorkloadParams.workloadName() ) );

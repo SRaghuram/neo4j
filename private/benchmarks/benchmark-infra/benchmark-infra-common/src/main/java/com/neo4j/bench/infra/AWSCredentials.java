@@ -5,6 +5,10 @@
  */
 package com.neo4j.bench.infra;
 
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.commons.lang3.builder.EqualsBuilder;
@@ -44,6 +48,18 @@ public class AWSCredentials
     public boolean hasAwsCredentials()
     {
         return awsAccessKeyId != null && awsSecretAccessKey != null;
+    }
+
+    public AWSCredentialsProvider awsCredentialsProvider()
+    {
+        if ( hasAwsCredentials() )
+        {
+            return new AWSStaticCredentialsProvider( new BasicAWSCredentials( awsAccessKeyId(), awsSecretAccessKey() ) );
+        }
+        else
+        {
+            return DefaultAWSCredentialsProviderChain.getInstance();
+        }
     }
 
     @Override
