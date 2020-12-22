@@ -5,6 +5,8 @@
  */
 package com.neo4j.kernel.impl.pagecache;
 
+import org.apache.commons.lang3.mutable.MutableLong;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -228,21 +230,33 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
 
     private long loadEverythingFromProfile() throws IOException
     {
-        long pagesLoaded = 0;
+        final MutableLong pagesLoaded = new MutableLong();
+        final long maxCachedPages = pageCache.maxCachedPages();
+
+        ReheatController controller = () -> pagesLoaded.incrementAndGet() < maxCachedPages;
         List<PagedFile> pagedFilesInDatabase = pageCache.listExistingMappings();
         Profile[] existingProfiles = findExistingProfiles( pagedFilesInDatabase );
         for ( PagedFile file : pagedFilesInDatabase )
         {
             try
             {
-                pagesLoaded += reheat( file, existingProfiles );
+                reheat( file, existingProfiles, controller );
             }
             catch ( FileIsNotMappedException ignore )
             {
                 // The database is allowed to map and unmap files while we are trying to heat it up.
             }
         }
-        return pagesLoaded;
+        return pagesLoaded.getValue();
+    }
+
+    private interface ReheatController
+    {
+        /**
+         * Call each time a page is loaded
+         * @return true if re-heater is allowed to continue loading, false otherwise
+         */
+        boolean pageLoaded();
     }
 
     /**
@@ -282,7 +296,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
         return OptionalLong.of( pagesInMemory );
     }
 
-    private long reheat( PagedFile file, Profile[] existingProfiles ) throws IOException
+    private void reheat( PagedFile file, Profile[] existingProfiles, ReheatController controller ) throws IOException
     {
         Optional<Profile> savedProfile = filterRelevant( existingProfiles, file )
                 .sorted( Comparator.reverseOrder() ) // Try most recent profile first.
@@ -291,11 +305,10 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
 
         if ( savedProfile.isEmpty() )
         {
-            return 0;
+            return;
         }
 
         // The file contents checks out. Let's load it in.
-        long pagesLoaded = 0;
         try ( InputStream input = savedProfile.get().read( fs );
               PageLoader loader = pageLoaderFactory.getLoader( file, pageCacheTracer ) )
         {
@@ -307,19 +320,21 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
                 {
                     if ( stopped )
                     {
-                        return pagesLoaded;
+                        return;
                     }
                     if ( (b & 1) == 1 )
                     {
                         loader.load( pageId );
-                        pagesLoaded++;
+                        if ( !controller.pageLoaded() )
+                        {
+                            return;
+                        }
                     }
                     b >>= 1;
                     pageId++;
                 }
             }
         }
-        return pagesLoaded;
     }
 
     private boolean verifyChecksum( Profile profile )

@@ -36,6 +36,7 @@ import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
+import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -580,6 +581,56 @@ class PageCacheWarmerTest
             warmer.stop();
             handle.waitTermination();
         }
+    }
+
+    @Test
+    void shouldOnlyWarmupWhatFitsInPageCache() throws IOException
+    {
+        //Given
+        PageCacheTracer largeCacheTracer = new DefaultPageCacheTracer();
+        PageCacheConfig largePageCache = PageCacheConfig.config().withMemory( "3M" ).withTracer( largeCacheTracer );
+        PageCacheConfig smallPageCache = PageCacheConfig.config().withMemory( "1M" ).withTracer( this.cacheTracer );
+
+        //When
+        long largePageCacheMaxPages;
+        try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, largePageCache );
+                PagedFile pf = pageCache.map( file, pageCache.pageSize(), immutable.of( CREATE ) ) )
+        {
+            try ( var tracer = largeCacheTracer.createPageCursorTracer( "mustReheatProfiledPageCache" );
+                    PageCursor writer = pf.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, tracer ) )
+            {
+                for ( int i = 0; i < pageCache.maxCachedPages(); i++ )
+                {
+                    writer.next( i );
+                    writer.putLong( -1 );
+                }
+            }
+            pf.flushAndForce();
+            PageCacheWarmer warmer = createPageCacheWarmer( pageCache, Config.defaults(), log );
+            warmer.start();
+            warmer.profile();
+            warmer.stop();
+
+            largePageCacheMaxPages = pageCache.maxCachedPages();
+            assertThat( largePageCacheMaxPages ).isEqualTo( largeCacheTracer.faults() );
+        }
+
+        //Then (profile will contain all pages, load in a smaller cache)
+        long smallPageCacheMaxPages;
+        try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, smallPageCache );
+                PagedFile pf = pageCache.map( file, pageCache.pageSize(), immutable.of( CREATE ) ) )
+        {
+            PageCacheWarmer warmer = createPageCacheWarmer( pageCache, Config.defaults(), log );
+            warmer.start();
+            long pagesReportedLoaded = warmer.reheat().orElse( 0 );
+            warmer.stop();
+
+            smallPageCacheMaxPages = pageCache.maxCachedPages();
+            assertThat( pagesReportedLoaded ).isEqualTo( smallPageCacheMaxPages );
+            assertThat( cacheTracer.faults() ).isEqualTo( smallPageCacheMaxPages );
+        }
+
+        assertThat( smallPageCacheMaxPages ).isEqualTo( largePageCacheMaxPages / 3 );
     }
 
     private PageCacheWarmer createPageCacheWarmer( PageCache pageCache, Config defaults, Log log )
