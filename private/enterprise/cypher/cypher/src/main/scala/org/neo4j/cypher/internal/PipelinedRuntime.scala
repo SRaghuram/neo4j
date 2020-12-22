@@ -306,7 +306,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
         val warning = CodeGenerationFailedNotification(e.getMessage)
 
         val nextOperatorFusionPolicy =
-          if (operatorFusionPolicy.fusionOverPipelineEnabled)
+          if (operatorFusionPolicy.fusionOverPipelineEnabled && executionGraphDefinition.pipelines.size > 1)
           // Try again with fusion within pipeline enabled
             TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = false, context.config.operatorFusionOverPipelineLimit, query.readOnly, parallelExecution)
           else
