@@ -58,6 +58,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
+import org.neo4j.configuration.GraphDatabaseInternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 
 import static com.google.common.collect.Sets.newHashSet;
@@ -207,8 +208,9 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                                                                       .removeSetting( load_csv_file_url_root );
             if ( params.executionMode().equals( ExecutionMode.PLAN ) )
             {
-
-                neo4jConfigBuilder = neo4jConfigBuilder.withSetting( GraphDatabaseSettings.query_cache_size, "0" );
+                neo4jConfigBuilder = neo4jConfigBuilder
+                        .withSetting( GraphDatabaseSettings.query_cache_size, "0" )
+                        .withSetting( GraphDatabaseInternalSettings.data_collector_max_recent_query_count, "0" );
             }
             Neo4jConfig neo4jConfig = neo4jConfigBuilder.build();
 
