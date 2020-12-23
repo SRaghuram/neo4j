@@ -80,7 +80,6 @@ import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
 import static org.neo4j.logging.LogAssertions.assertThat;
 
 @EphemeralTestDirectoryExtension
-@Disabled
 class PageCacheWarmerTest
 {
     @RegisterExtension
@@ -312,6 +311,7 @@ class PageCacheWarmerTest
     }
 
     @Test
+    @Disabled
     void profilerMustProfileMultipleFilesWithSameName() throws IOException
     {
         Path aaFile = testDirectory.homePath().resolve( "a" ).resolve( "a" );
