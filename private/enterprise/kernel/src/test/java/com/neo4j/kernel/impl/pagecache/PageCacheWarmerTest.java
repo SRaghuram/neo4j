@@ -584,6 +584,34 @@ class PageCacheWarmerTest
     }
 
     @Test
+    void shouldOnlyPrefetchWhatFitsInPageCache() throws IOException, InterruptedException
+    {
+        //Given
+        PageCacheConfig smallPageCache = PageCacheConfig.config().withMemory( "1M" ).withTracer( this.cacheTracer );
+        Path testFile = testDirectory.createFile( "testfile" );
+        fs.write( testFile ).writeAll( ByteBuffer.wrap( new byte[(int) ByteUnit.mebiBytes( 3 )] ) );
+
+        try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, smallPageCache ) )
+        {
+
+            try ( PagedFile ignore = pageCache.map( testFile, pageCache.pageSize(), immutable.of( CREATE ) ) )
+            {
+                //When
+                Config config = Config.newBuilder()
+                        .set( pagecache_warmup_prefetch, true )
+                        .build();
+                PageCacheWarmer warmer = createPageCacheWarmer( pageCache, config, log );
+                warmer.start();
+                long pagesLoadedReportedByWarmer = warmer.reheat().orElse( -1 );
+                warmer.stop();
+
+                assertThat( pagesLoadedReportedByWarmer ).isEqualTo( pageCache.maxCachedPages() );
+                //The actual page-loading during prefetch is asynchronous so we can not assert on tracer faults
+            }
+        }
+    }
+
+    @Test
     void shouldOnlyWarmupWhatFitsInPageCache() throws IOException
     {
         //Given

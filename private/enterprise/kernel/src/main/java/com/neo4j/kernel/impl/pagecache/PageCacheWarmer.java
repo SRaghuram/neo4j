@@ -25,7 +25,7 @@ import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.LongAdder;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -181,14 +181,17 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
             Pattern allowList = Pattern.compile( config.get( pagecache_warmup_prefetch_allowlist ) );
             log.info( "Warming up page cache by pre-fetching files matching regex: %s", allowList.pattern() );
             List<JobHandle> handles = new ArrayList<>();
-            LongAdder totalPageCounter = new LongAdder();
+            AtomicLong pagesLoaded = new AtomicLong();
+            final long maxCachedPages = pageCache.maxCachedPages();
+            ReheatController controller = () -> pagesLoaded.incrementAndGet() < maxCachedPages;
+
             for ( PagedFile pagedFile : pageCache.listExistingMappings() )
             {
                 if ( allowList.matcher( pagedFile.path().toString() ).find() )
                 {
                     var fileName = pagedFile.path().getFileName();
                     var monitoringParams = systemJob( databaseName, "Pre-fetching file '" + fileName + "' into the page cache" );
-                    handles.add( scheduler.schedule( Group.FILE_IO_HELPER, monitoringParams, () -> totalPageCounter.add( touchAllPages( pagedFile ) ) ) );
+                    handles.add( scheduler.schedule( Group.FILE_IO_HELPER, monitoringParams, () -> touchAllPages( pagedFile, controller ) ) );
                 }
             }
             for ( JobHandle handle : handles )
@@ -197,7 +200,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
             }
             log.info( "Warming of page cache completed" );
 
-            return totalPageCounter.sum();
+            return pagesLoaded.get();
         }
         catch ( IOException e )
         {
@@ -209,18 +212,19 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
         }
     }
 
-    private long touchAllPages( PagedFile pagedFile )
+    private void touchAllPages( PagedFile pagedFile, ReheatController controller )
     {
         log.debug( "Pre-fetching %s", pagedFile.path().getFileName() );
         try ( PageCursorTracer cursorTracer = pageCacheTracer.createPageCursorTracer( PAGE_CACHE_WARMER );
               PageCursor cursor = pagedFile.io( 0, PF_READ_AHEAD | PF_SHARED_READ_LOCK, cursorTracer ) )
         {
-            long pages = 0;
             while ( !stopped && cursor.next() )
             {
-                pages++; // Iterate over all pages
+                if ( !controller.pageLoaded() )
+                {
+                    return;
+                }
             }
-            return pages;
         }
         catch ( IOException e )
         {
