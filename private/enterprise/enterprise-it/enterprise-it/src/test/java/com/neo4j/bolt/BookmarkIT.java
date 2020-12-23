@@ -33,6 +33,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.configuration.helpers.ReadOnlyDatabaseChecker;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.driver.Bookmark;
@@ -52,9 +53,10 @@ import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.IOUtils;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
-import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
+import org.neo4j.kernel.impl.api.InternalTransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
 import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
@@ -371,17 +373,18 @@ class BookmarkIT
         }
 
         @Override
-        public TransactionCommitProcess create( TransactionAppender appender, StorageEngine storageEngine, Config config )
+        public TransactionCommitProcess create( TransactionAppender appender, StorageEngine storageEngine, NamedDatabaseId databaseId,
+                                                ReadOnlyDatabaseChecker readOnlyDatabaseChecker )
         {
-            return new CustomCommitProcess( appender, storageEngine, commitBlocker );
+            return new CustomCommitProcessInternal( appender, storageEngine, commitBlocker );
         }
     }
 
-    private static class CustomCommitProcess extends TransactionRepresentationCommitProcess
+    private static class CustomCommitProcessInternal extends InternalTransactionCommitProcess
     {
         final CommitBlocker commitBlocker;
 
-        CustomCommitProcess( TransactionAppender appender, StorageEngine storageEngine, CommitBlocker commitBlocker )
+        CustomCommitProcessInternal( TransactionAppender appender, StorageEngine storageEngine, CommitBlocker commitBlocker )
         {
             super( appender, storageEngine );
             this.commitBlocker = commitBlocker;

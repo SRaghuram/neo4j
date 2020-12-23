@@ -13,10 +13,11 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.ReadOnlyDatabaseChecker;
 import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
-import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
+import org.neo4j.kernel.impl.api.InternalTransactionCommitProcess;
 import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
 import org.neo4j.storageengine.api.StorageEngine;
 
@@ -35,21 +36,22 @@ class CoreCommitProcessFactoryTest
     private final TransactionAppender appender = mock( TransactionAppender.class );
     private final StorageEngine storageEngine = mock( StorageEngine.class );
     private final Config config = Config.defaults();
+    private final ReadOnlyDatabaseChecker readOnlyDatabaseChecker = new ReadOnlyDatabaseChecker.Default( config );
 
-    private final CoreCommitProcessFactory commitProcessFactory =
-            new CoreCommitProcessFactory( namedDatabaseId, replicator, coreStateMachines, leaseCoordinator, LogEntryWriterFactory.LATEST );
+    private final CoreCommitProcessFactory commitProcessFactory = new CoreCommitProcessFactory( replicator, coreStateMachines,
+                                                                                                leaseCoordinator, LogEntryWriterFactory.LATEST );
 
     @Test
     void shouldCreateReplicatedCommitProcess()
     {
-        var commitProcess = commitProcessFactory.create( appender, storageEngine, config );
+        var commitProcess = commitProcessFactory.create( appender, storageEngine, namedDatabaseId, readOnlyDatabaseChecker );
         assertThat( commitProcess, Matchers.instanceOf( ReplicatedTransactionCommitProcess.class ) );
     }
 
     @Test
     void shouldInstallCommitProcess()
     {
-        commitProcessFactory.create( appender, storageEngine, config );
-        verify( coreStateMachines ).installCommitProcess( any( TransactionRepresentationCommitProcess.class ) );
+        commitProcessFactory.create( appender, storageEngine, namedDatabaseId, readOnlyDatabaseChecker );
+        verify( coreStateMachines ).installCommitProcess( any( InternalTransactionCommitProcess.class ) );
     }
 }

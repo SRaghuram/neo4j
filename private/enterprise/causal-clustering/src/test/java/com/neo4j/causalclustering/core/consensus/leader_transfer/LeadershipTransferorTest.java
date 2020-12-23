@@ -122,7 +122,7 @@ class LeadershipTransferorTest
     }
 
     @Test
-    void shouldNotSendToPenalisedPriortyGroupMember()
+    void shouldNotSendToPenalisedPriorityGroupMember()
     {
         // given
         databasePenalties.issuePenalty( other.serverId(), fooId );

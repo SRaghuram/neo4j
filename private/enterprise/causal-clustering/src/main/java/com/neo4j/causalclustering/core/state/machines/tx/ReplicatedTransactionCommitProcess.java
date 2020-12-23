@@ -9,7 +9,9 @@ import com.neo4j.causalclustering.core.replication.ReplicationResult;
 import com.neo4j.causalclustering.core.replication.Replicator;
 import com.neo4j.causalclustering.core.state.machines.lease.ClusterLeaseCoordinator;
 
+import org.neo4j.configuration.helpers.ReadOnlyDatabaseChecker;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.kernel.api.exceptions.ReadOnlyDbException;
 import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
@@ -29,27 +31,24 @@ public class ReplicatedTransactionCommitProcess implements TransactionCommitProc
     private final NamedDatabaseId namedDatabaseId;
     private final ClusterLeaseCoordinator leaseCoordinator;
     private final LogEntryWriterFactory logEntryWriterFactory;
+    private final ReadOnlyDatabaseChecker readOnlyDatabaseChecker;
 
     public ReplicatedTransactionCommitProcess( Replicator replicator, NamedDatabaseId namedDatabaseId, ClusterLeaseCoordinator leaseCoordinator,
-                                               LogEntryWriterFactory logEntryWriterFactory )
+                                               LogEntryWriterFactory logEntryWriterFactory, ReadOnlyDatabaseChecker readOnlyDatabaseChecker )
     {
         this.replicator = replicator;
         this.namedDatabaseId = namedDatabaseId;
         this.leaseCoordinator = leaseCoordinator;
         this.logEntryWriterFactory = logEntryWriterFactory;
+        this.readOnlyDatabaseChecker = readOnlyDatabaseChecker;
     }
 
     @Override
     public long commit( TransactionToApply tx, CommitEvent commitEvent, TransactionApplicationMode mode ) throws TransactionFailureException
     {
-        TransactionRepresentation txRepresentation = tx.transactionRepresentation();
-        int leaseId = txRepresentation.getLeaseId();
-
-        if ( leaseId != NO_LEASE && leaseCoordinator.isInvalid( leaseId ) )
-        {
-            throw new TransactionFailureException( LeaseExpired, "The lease has been invalidated" );
-        }
-
+        validate( tx, readOnlyDatabaseChecker );
+        var txRepresentation = tx.transactionRepresentation();
+        var leaseId = txRepresentation.getLeaseId();
         TransactionRepresentationReplicatedTransaction transaction = ReplicatedTransaction.from( txRepresentation, namedDatabaseId, logEntryWriterFactory );
 
         ReplicationResult replicationResult;
@@ -86,6 +85,22 @@ public class ReplicatedTransactionCommitProcess implements TransactionCommitProc
             }
         default:
             throw new TransactionFailureException( UnknownError, "Unexpected outcome: " + replicationResult.outcome() );
+        }
+    }
+
+    private void validate( TransactionToApply tx, ReadOnlyDatabaseChecker readOnlyDatabaseChecker ) throws TransactionFailureException
+    {
+        TransactionRepresentation txRepresentation = tx.transactionRepresentation();
+        int leaseId = txRepresentation.getLeaseId();
+
+        if ( leaseId != NO_LEASE && leaseCoordinator.isInvalid( leaseId ) )
+        {
+            throw new TransactionFailureException( LeaseExpired, "The lease has been invalidated" );
+        }
+
+        if ( readOnlyDatabaseChecker.test( namedDatabaseId.name() ) )
+        {
+            throw new RuntimeException( new ReadOnlyDbException( namedDatabaseId.name() ) );
         }
     }
 }

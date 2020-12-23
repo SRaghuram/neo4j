@@ -28,7 +28,7 @@ import java.util.function.Supplier;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
-import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
+import org.neo4j.kernel.impl.api.InternalTransactionCommitProcess;
 import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
@@ -161,7 +161,7 @@ public class CatchupProcessManager extends SafeLifecycle
                 () -> new IllegalArgumentException( String.format( "No StoreCopyProcess instance exists for database %s.", databaseContext.databaseId() ) ) );
 
         // TODO: We can do better than this. Core already exposes its commit process. Why not RR.
-        Supplier<TransactionCommitProcess> writableCommitProcess = () -> new TransactionRepresentationCommitProcess(
+        Supplier<TransactionCommitProcess> writableCommitProcess = () -> new InternalTransactionCommitProcess(
                 databaseContext.kernelDatabase().getDependencyResolver().resolveDependency( TransactionAppender.class ),
                 databaseContext.kernelDatabase().getDependencyResolver().resolveDependency( StorageEngine.class ) );
 

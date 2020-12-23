@@ -8,11 +8,13 @@ package com.neo4j.causalclustering.core.state.machines.token;
 import com.neo4j.causalclustering.core.replication.ReplicationResult;
 import com.neo4j.causalclustering.core.replication.Replicator;
 import com.neo4j.causalclustering.core.state.StateMachineResult;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.function.Supplier;
 
+import org.neo4j.configuration.helpers.ReadOnlyDatabaseChecker;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
@@ -36,9 +38,11 @@ import org.neo4j.token.TokenRegistry;
 import org.neo4j.token.api.NamedToken;
 
 import static java.util.Arrays.asList;
+import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Answers.RETURNS_MOCKS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
@@ -47,6 +51,8 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 
 class ReplicatedTokenHolderTest
 {
@@ -61,7 +67,7 @@ class ReplicatedTokenHolderTest
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
         ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, registry, null, null, storageEngineSupplier,
-                PageCacheTracer.NULL, logEntryWriterFactory );
+                                                                            NULL, logEntryWriterFactory, ReadOnlyDatabaseChecker.neverReadOnly() );
 
         // when
         tokenHolder.setInitialTokens( asList( new NamedToken( "name1", 1 ), new NamedToken( "name2", 2 ) ) );
@@ -86,7 +92,7 @@ class ReplicatedTokenHolderTest
         when( replicator.replicate( any() ) ).thenReturn( replicationResult );
 
         var tokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, registry, replicator, factory, storageEngineSupplier, cacheTracer,
-                logEntryWriterFactory );
+                                                          logEntryWriterFactory, ReadOnlyDatabaseChecker.neverReadOnly() );
         tokenHolder.createToken( "foo", false );
 
         verify( cacheTracer ).createPageCursorTracer( any() );
@@ -99,7 +105,8 @@ class ReplicatedTokenHolderTest
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
         ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, registry, null,
-                null, storageEngineSupplier, PageCacheTracer.NULL, logEntryWriterFactory );
+                                                                            null, storageEngineSupplier, NULL, logEntryWriterFactory,
+                                                                            ReadOnlyDatabaseChecker.neverReadOnly() );
         tokenHolder.setInitialTokens( asList( new NamedToken( "name1", 1 ), new NamedToken( "name2", 2 ) ) );
 
         // when
@@ -124,8 +131,9 @@ class ReplicatedTokenHolderTest
         TokenRegistry registry = new TokenRegistry( "Label" );
         int generatedTokenId = 1;
         ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, registry,
-                content -> ReplicationResult.applied( StateMachineResult.of( generatedTokenId ) ), idGeneratorFactory, storageEngineSupplier,
-                PageCacheTracer.NULL, logEntryWriterFactory );
+                                                                            content -> ReplicationResult.applied( StateMachineResult.of( generatedTokenId ) ),
+                                                                            idGeneratorFactory, storageEngineSupplier,
+                                                                            NULL, logEntryWriterFactory, ReadOnlyDatabaseChecker.neverReadOnly() );
 
         // when
         Integer tokenId = tokenHolder.getOrCreateId( "name1" );
@@ -134,29 +142,44 @@ class ReplicatedTokenHolderTest
         assertThat( tokenId, equalTo( generatedTokenId ) );
     }
 
+    @Test
+    void shouldThrowExceptionIfIsExecutedOnReadOnlyDatabase()
+    {
+        //given
+        TokenRegistry registry = new TokenRegistry( "Label" );
+        ReadOnlyDatabaseChecker alwaysReadOnly = databaseName -> true;
+        final var holder = new ReplicatedLabelTokenHolder( namedDatabaseId, registry, null, null, storageEngineSupplier, NULL,
+                                                           logEntryWriterFactory, alwaysReadOnly );
+        //when
+        final var exception = assertThrows( RuntimeException.class, () -> holder.createToken( "foo", false ) );
+        Assertions.assertThat( getRootCause( exception ).getMessage() )
+                  .contains( "This Neo4j instance is read only for the database " + DEFAULT_DATABASE_NAME );
+    }
+
     private StorageEngine mockedStorageEngine() throws Exception
     {
         StorageEngine storageEngine = mock( StorageEngine.class );
         doAnswer( invocation ->
-        {
-            Collection<StorageCommand> target = invocation.getArgument( 0 );
-            ReadableTransactionState txState = invocation.getArgument( 1 );
-            txState.accept( new TxStateVisitor.Adapter()
-            {
-                @Override
-                public void visitCreatedLabelToken( long id, String name, boolean internal )
-                {
-                    LabelTokenRecord before = new LabelTokenRecord( id );
-                    LabelTokenRecord after = before.copy();
-                    after.setInUse( true );
-                    after.setInternal( internal );
-                    target.add( new Command.LabelTokenCommand( before, after ) );
-                }
-            } );
-            return null;
-        } ).when( storageEngine ).createCommands( anyCollection(), any( ReadableTransactionState.class ),
-                any( StorageReader.class ), any( CommandCreationContext.class ),
-                any( ResourceLocker.class ), anyLong(), any( TxStateVisitor.Decorator.class ), any( PageCursorTracer.class ), any( MemoryTracker.class ) );
+                  {
+                      Collection<StorageCommand> target = invocation.getArgument( 0 );
+                      ReadableTransactionState txState = invocation.getArgument( 1 );
+                      txState.accept( new TxStateVisitor.Adapter()
+                      {
+                          @Override
+                          public void visitCreatedLabelToken( long id, String name, boolean internal )
+                          {
+                              LabelTokenRecord before = new LabelTokenRecord( id );
+                              LabelTokenRecord after = before.copy();
+                              after.setInUse( true );
+                              after.setInternal( internal );
+                              target.add( new Command.LabelTokenCommand( before, after ) );
+                          }
+                      } );
+                      return null;
+                  } ).when( storageEngine ).createCommands( anyCollection(), any( ReadableTransactionState.class ),
+                                                            any( StorageReader.class ), any( CommandCreationContext.class ),
+                                                            any( ResourceLocker.class ), anyLong(), any( TxStateVisitor.Decorator.class ),
+                                                            any( PageCursorTracer.class ), any( MemoryTracker.class ) );
 
         StorageReader readLayer = mock( StorageReader.class );
         when( storageEngine.newReader() ).thenReturn( readLayer );

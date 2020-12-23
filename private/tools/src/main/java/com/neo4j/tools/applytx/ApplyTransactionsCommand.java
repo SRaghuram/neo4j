@@ -21,7 +21,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
+import org.neo4j.kernel.impl.api.InternalTransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
@@ -95,8 +95,8 @@ public class ApplyTransactionsCommand extends ArgsCommand
             long fromTxExclusive, long toTxInclusive, PrintStream out ) throws Exception
     {
         DependencyResolver resolver = toDb.getDependencyResolver();
-        TransactionRepresentationCommitProcess commitProcess =
-                new TransactionRepresentationCommitProcess(
+        InternalTransactionCommitProcess commitProcess =
+                new InternalTransactionCommitProcess(
                         resolver.resolveDependency( TransactionAppender.class ),
                         resolver.resolveDependency( StorageEngine.class ) );
         LifeSupport life = new LifeSupport();

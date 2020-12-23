@@ -39,10 +39,12 @@ import com.neo4j.configuration.ServerGroupsSupplier;
 
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.ReadOnlyDatabaseChecker;
 import org.neo4j.function.Suppliers.Lazy;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.marshal.ChannelMarshal;
@@ -75,10 +77,10 @@ public class RaftGroup
 
     RaftGroup( Config config, DatabaseLogService logService, FileSystemAbstraction fileSystem, JobScheduler jobScheduler, SystemNanoClock clock,
             Lazy<RaftMemberId> myself, LifeSupport raftComponents, Monitors monitors, Dependencies dependencies,
-            Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound, ClusterStateLayout clusterState,
-            ClusterStateStorageFactory storageFactory, NamedDatabaseId namedDatabaseId, LeaderTransferService leaderTransferService,
-            LeaderListener leaderListener, MemoryTracker memoryTracker, ServerGroupsSupplier serverGroupsSupplier, AvailabilityGuard globalAvailabilityGuard,
-            Consumer<RaftMessages.StatusResponse> statusResponseConsumer, LogEntryWriterFactory logEntryWriterFactory )
+            Outbound<RaftMemberId,RaftMessages.RaftMessage> outbound, ClusterStateLayout clusterState, ClusterStateStorageFactory storageFactory,
+            NamedDatabaseId namedDatabaseId, LeaderTransferService leaderTransferService, LeaderListener leaderListener, MemoryTracker memoryTracker,
+            ServerGroupsSupplier serverGroupsSupplier, AvailabilityGuard globalAvailabilityGuard, Consumer<RaftMessages.StatusResponse> statusResponseConsumer,
+            LogEntryWriterFactory logEntryWriterFactory, ReadOnlyDatabaseChecker readOnlyDatabaseChecker )
     {
         DatabaseLogProvider logProvider = logService.getInternalLogProvider();
         TimerService timerService = new TimerService( jobScheduler, logProvider );
@@ -118,8 +120,8 @@ public class RaftGroup
         var leaderTransfers = new ExpiringSet<RaftMemberId>( config.get( CausalClusteringInternalSettings.leader_transfer_timeout ), clock );
 
         var state = new RaftState( myself, termState, raftMembershipManager, raftLog, voteState, inFlightCache, logProvider, leaderTransfers );
-        var messageHandlingContext = new RaftMessageHandlingContext( state, config, serverGroupsSupplier, globalAvailabilityGuard::isShutdown );
-
+        BooleanSupplier isReadOnly = () -> readOnlyDatabaseChecker.test( namedDatabaseId.name() );
+        var messageHandlingContext = new RaftMessageHandlingContext( state, config, serverGroupsSupplier, globalAvailabilityGuard::isShutdown, isReadOnly );
         var raftMessageTimerResetMonitor = monitors.newMonitor( RaftMessageTimerResetMonitor.class );
         var raftOutcomeApplier = new RaftOutcomeApplier( state, outbound, leaderAvailabilityTimers, raftMessageTimerResetMonitor, logShipping,
                                                          raftMembershipManager, logProvider,

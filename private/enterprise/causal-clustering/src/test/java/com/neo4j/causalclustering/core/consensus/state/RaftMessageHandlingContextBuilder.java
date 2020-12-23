@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.core.consensus.state;
 import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.io.IOException;
+import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 import org.neo4j.configuration.Config;
@@ -46,7 +47,8 @@ public class RaftMessageHandlingContextBuilder
     private RaftStateBuilder stateBuilder;
     private boolean refuseToBeLeader;
     private boolean supportsPreVoting;
-    private Supplier<Boolean> shutdownInProgressSupplier = () -> false;
+    private BooleanSupplier shutdownInProgressSupplier = () -> false;
+    private BooleanSupplier isReadOnly = () -> false;
 
     private RaftMessageHandlingContextBuilder( ReadableRaftState state )
     {
@@ -68,7 +70,7 @@ public class RaftMessageHandlingContextBuilder
         {
             state = stateBuilder.build();
         }
-        return new RaftMessageHandlingContext( state, config, listen( config ), shutdownInProgressSupplier );
+        return new RaftMessageHandlingContext( state, config, listen( config ), shutdownInProgressSupplier, isReadOnly );
     }
 
     public RaftMessageHandlingContextBuilder refusesToBeLeader( boolean refuseToBeLeader )
@@ -86,6 +88,12 @@ public class RaftMessageHandlingContextBuilder
     public RaftMessageHandlingContextBuilder shutdownInProgress( boolean shutdownInProgress )
     {
         this.shutdownInProgressSupplier = () -> shutdownInProgress;
+        return this;
+    }
+
+    public RaftMessageHandlingContextBuilder isReadOnly( boolean isReadOnly )
+    {
+        this.isReadOnly = () -> isReadOnly;
         return this;
     }
 }

@@ -116,7 +116,7 @@ public class RaftMachineBuilder
 
         var raftState = new RaftState( member, termStateStorage, membershipManager, raftLog, voteStateStorage, inFlightCache, logProvider,
                                        new ExpiringSet<>( Duration.ofMillis( 100 ), clock ) );
-        var raftMessageHandlingContext = new RaftMessageHandlingContext( raftState, config, listen( config ), () -> false );
+        var raftMessageHandlingContext = new RaftMessageHandlingContext( raftState, config, listen( config ), () -> false, () -> false );
         var raftMessageTimerResetMonitor = monitors.newMonitor( RaftMessageTimerResetMonitor.class );
         var outcomeApplier = new RaftOutcomeApplier( raftState, outbound, leaderAvailabilityTimers, raftMessageTimerResetMonitor, logShipping,
                                                      membershipManager, logProvider, rejection -> {}, c -> {} );

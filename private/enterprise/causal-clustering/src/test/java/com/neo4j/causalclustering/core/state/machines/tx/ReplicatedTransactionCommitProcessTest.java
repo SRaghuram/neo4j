@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.core.state.machines.lease.ClusterLeaseCoordina
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.neo4j.configuration.helpers.ReadOnlyDatabaseChecker;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.database.LogEntryWriterFactory;
@@ -22,6 +23,8 @@ import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
 
+import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -29,6 +32,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
 
 class ReplicatedTransactionCommitProcessTest
@@ -38,14 +42,15 @@ class ReplicatedTransactionCommitProcessTest
     private final ClusterLeaseCoordinator leaseCoordinator = mock( ClusterLeaseCoordinator.class );
     private final Replicator replicator = mock( Replicator.class );
 
-    private TransactionRepresentation tx = mock( TransactionRepresentation.class );
+    private final TransactionRepresentation tx = mock( TransactionRepresentation.class );
     private ReplicatedTransactionCommitProcess commitProcess;
 
     @BeforeEach
     void tx()
     {
         when( tx.additionalHeader() ).thenReturn( new byte[]{} );
-        commitProcess = new ReplicatedTransactionCommitProcess( replicator, DATABASE_ID, leaseCoordinator, LogEntryWriterFactory.LATEST );
+        commitProcess = new ReplicatedTransactionCommitProcess( replicator, DATABASE_ID, leaseCoordinator,
+                                                                LogEntryWriterFactory.LATEST, ReadOnlyDatabaseChecker.neverReadOnly() );
     }
 
     @Test
@@ -108,10 +113,27 @@ class ReplicatedTransactionCommitProcessTest
 
         // when
         TransactionFailureException commitException = assertThrows( TransactionFailureException.class,
-                () -> commitProcess.commit( new TransactionToApply( tx, PageCursorTracer.NULL ), CommitEvent.NULL, EXTERNAL ) );
+                                                                    () -> commitProcess
+                                                                            .commit( new TransactionToApply( tx, PageCursorTracer.NULL ), CommitEvent.NULL,
+                                                                                     EXTERNAL ) );
 
         // then
         assertEquals( replicatorException, commitException.getCause() );
         verify( leaseCoordinator ).invalidateLease( anyInt() );
+    }
+
+    @Test
+    void shouldFailIfDatabaseIsReadOnly()
+    {
+        //given
+        ReadOnlyDatabaseChecker readOnly = databaseName -> true;
+        final var commitProcess =
+                new ReplicatedTransactionCommitProcess( replicator, DATABASE_ID, leaseCoordinator, LogEntryWriterFactory.LATEST, readOnly );
+
+        // when
+        final var exception = assertThrows( RuntimeException.class,
+                                            () -> commitProcess.commit( new TransactionToApply( tx, PageCursorTracer.NULL ), CommitEvent.NULL, EXTERNAL ) );
+        assertThat( getRootCause( exception ).getMessage() )
+                  .contains( "This Neo4j instance is read only for the database " + DEFAULT_DATABASE_NAME );
     }
 }

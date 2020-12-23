@@ -77,7 +77,7 @@ class Follower implements RaftMessageHandler
         var upToDate = localAppendIndex >= request.previousIndex();
         var myGroups = ctx.serverGroups();
 
-        var mayBecomeLeaderAtAll = !ctx.refusesToBeLeader() && !ctx.isProcessShutdownInProgress();
+        var mayBecomeLeaderAtAll = !ctx.isReadOnly() && !ctx.refusesToBeLeader() && !ctx.isProcessShutdownInProgress();
         var satisfiesRequestPriorities = noRequestedPriority( request ) || iAmInPriority( myGroups, request );
 
         if ( mayBecomeLeaderAtAll && sameTerm && upToDate && satisfiesRequestPriorities )

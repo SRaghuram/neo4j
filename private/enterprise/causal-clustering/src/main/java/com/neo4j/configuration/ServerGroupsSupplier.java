@@ -16,6 +16,7 @@ import static java.util.Set.copyOf;
 
 public class ServerGroupsSupplier implements Supplier<Set<ServerGroupName>>
 {
+    public static ServerGroupsSupplier EMPTY = new ServerGroupsSupplier();
     private Set<ServerGroupName> current = Set.of();
 
     public static ServerGroupsSupplier listen( Config config )

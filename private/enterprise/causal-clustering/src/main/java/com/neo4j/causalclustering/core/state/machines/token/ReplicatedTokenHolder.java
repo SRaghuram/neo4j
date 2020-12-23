@@ -12,20 +12,20 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.function.Supplier;
 
+import org.neo4j.configuration.helpers.ReadOnlyDatabaseChecker;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.TransientTransactionFailureException;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.kernel.api.exceptions.ReadOnlyDbException;
 import org.neo4j.kernel.api.txstate.TransactionState;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.api.state.TxState;
 import org.neo4j.kernel.impl.util.collection.OnHeapCollectionsFactory;
 import org.neo4j.lock.ResourceLocker;
 import org.neo4j.memory.EmptyMemoryTracker;
-import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.CommandCreationContext;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
@@ -44,15 +44,16 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
     private final TokenType type;
     private final Supplier<StorageEngine> storageEngineSupplier;
     private final ReplicatedTokenCreator tokenCreator;
-    private final DatabaseId databaseId;
+    private final NamedDatabaseId namedDatabaseId;
     private final PageCacheTracer pageCacheTracer;
     private final LogEntryWriterFactory logEntryWriterFactory;
+    private final ReadOnlyDatabaseChecker readOnlyDatabaseChecker;
 
     ReplicatedTokenHolder( NamedDatabaseId namedDatabaseId, TokenRegistry tokenRegistry, Replicator replicator,
-            IdGeneratorFactory idGeneratorFactory, IdType tokenIdType,
-            Supplier<StorageEngine> storageEngineSupplier, TokenType type,
-            ReplicatedTokenCreator tokenCreator, PageCacheTracer pageCacheTracer,
-            LogEntryWriterFactory logEntryWriterFactory )
+                           IdGeneratorFactory idGeneratorFactory, IdType tokenIdType,
+                           Supplier<StorageEngine> storageEngineSupplier, TokenType type,
+                           ReplicatedTokenCreator tokenCreator, PageCacheTracer pageCacheTracer,
+                           LogEntryWriterFactory logEntryWriterFactory, ReadOnlyDatabaseChecker readOnlyDatabaseChecker )
     {
         super( tokenRegistry );
         this.replicator = replicator;
@@ -61,9 +62,10 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
         this.type = type;
         this.storageEngineSupplier = storageEngineSupplier;
         this.tokenCreator = tokenCreator;
-        this.databaseId = namedDatabaseId.databaseId();
+        this.namedDatabaseId = namedDatabaseId;
         this.pageCacheTracer = pageCacheTracer;
         this.logEntryWriterFactory = logEntryWriterFactory;
+        this.readOnlyDatabaseChecker = readOnlyDatabaseChecker;
     }
 
     @Override
@@ -87,17 +89,20 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
     @Override
     protected int createToken( String tokenName, boolean internal )
     {
-        ReplicatedTokenRequest tokenRequest = new ReplicatedTokenRequest( databaseId, type, tokenName, createCommands( tokenName, internal ) );
+        validateNotReadOnly( readOnlyDatabaseChecker );
+
+        ReplicatedTokenRequest tokenRequest = new ReplicatedTokenRequest( namedDatabaseId.databaseId(), type,
+                                                                          tokenName, createCommands( tokenName, internal ) );
         ReplicationResult replicationResult = replicator.replicate( tokenRequest );
 
         switch ( replicationResult.outcome() )
         {
         case NOT_REPLICATED:
             // The caller can safely retry this action because we know it was not replicated
-            throw new TransientTransactionFailureException( "Could not replicate token for " + databaseId, replicationResult.failure() );
+            throw new TransientTransactionFailureException( "Could not replicate token for " + namedDatabaseId, replicationResult.failure() );
         case MAYBE_REPLICATED:
             // The caller can safely retry this action because it is idempotent.
-            throw new TransientTransactionFailureException( "Could not replicate token for " + databaseId, replicationResult.failure() );
+            throw new TransientTransactionFailureException( "Could not replicate token for " + namedDatabaseId, replicationResult.failure() );
         case APPLIED:
             break;
         default:
@@ -119,6 +124,14 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
         }
     }
 
+    private void validateNotReadOnly( ReadOnlyDatabaseChecker readOnlyDatabaseChecker )
+    {
+        if ( readOnlyDatabaseChecker.test( namedDatabaseId.name() ) )
+        {
+            throw new RuntimeException( new ReadOnlyDbException( namedDatabaseId.name() ) );
+        }
+    }
+
     private byte[] createCommands( String tokenName, boolean internal )
     {
         StorageEngine storageEngine = storageEngineSupplier.get();
@@ -137,7 +150,7 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
             }
             catch ( KernelException e )
             {
-                throw new RuntimeException( "Unable to create token '" + tokenName + "' for " + databaseId, e );
+                throw new RuntimeException( "Unable to create token '" + tokenName + "' for " + namedDatabaseId, e );
             }
         }
 

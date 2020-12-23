@@ -17,6 +17,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.ReadOnlyDatabaseChecker;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
@@ -26,12 +27,13 @@ import static java.util.stream.Collectors.toMap;
 
 class TransferLeaderJob implements Runnable
 {
-    private static final RandomStrategy PRIORITISED_SELECTION_STRATEGY = new RandomStrategy();
+    private static final RandomStrategy RANDOMISED_SELECTION_STRATEGY = new RandomStrategy();
     private final LeadershipTransferor leadershipTransferor;
     private final SelectionStrategy selectionStrategy;
     private final ServerGroupsSupplier myServerGroups;
     private final Config config;
     private final Supplier<List<NamedDatabaseId>> leadershipsResolver;
+    private final ReadOnlyDatabaseChecker readOnlyDatabaseChecker;
 
     TransferLeaderJob( LeadershipTransferor leadershipTransferor, ServerGroupsSupplier myServerGroups, Config config,
             SelectionStrategy leaderLoadBalancing, Supplier<List<NamedDatabaseId>> leadershipsResolver )
@@ -41,12 +43,18 @@ class TransferLeaderJob implements Runnable
         this.leadershipsResolver = leadershipsResolver;
         this.leadershipTransferor = leadershipTransferor;
         this.selectionStrategy = leaderLoadBalancing;
+        this.readOnlyDatabaseChecker = new ReadOnlyDatabaseChecker.Default( config );
     }
 
     @Override
     public void run()
     {
         var myLeaderships = leadershipsResolver.get();
+
+        if ( transferLeadershipIfReadOnly( myLeaderships ) )
+        {
+            return;
+        }
 
         // We only balance leadership for one database at a time,
         //   and we give priority to balancing according to prioritised groups over other strategies
@@ -62,8 +70,8 @@ class TransferLeaderJob implements Runnable
     private boolean doPrioritisedBalancing( List<NamedDatabaseId> leaderships )
     {
         var undesiredLeaderships = undesiredLeaderships( leaderships );
-        return leadershipTransferor.toPrioritisedGroup( undesiredLeaderships.keySet(), PRIORITISED_SELECTION_STRATEGY,
-                databaseId -> Set.of( undesiredLeaderships.get( databaseId ) ) );
+        return leadershipTransferor.toPrioritisedGroup( undesiredLeaderships.keySet(), RANDOMISED_SELECTION_STRATEGY,
+                                                        databaseId -> Set.of( undesiredLeaderships.get( databaseId ) ) );
     }
 
     private void doBalancing( List<NamedDatabaseId> leaderships )
@@ -107,5 +115,13 @@ class TransferLeaderJob implements Runnable
                             .map( dbId -> Pair.of( dbId, prioritisedGroupsPerDatabase.getOrDefault( dbId.name(), defaultPriorityGroup ) ) )
                             .filter( pair -> !Objects.equals( pair.other(), ServerGroupName.EMPTY ) )
                             .collect( toMap( Pair::first, Pair::other ) );
+    }
+
+    private boolean transferLeadershipIfReadOnly( List<NamedDatabaseId> myLeaderships )
+    {
+        var readOnlyLeaderships = myLeaderships.stream()
+                                               .filter( db -> readOnlyDatabaseChecker.test( db.name() ) )
+                                               .collect( Collectors.toList() );
+        return leadershipTransferor.balanceLeadership( readOnlyLeaderships, RANDOMISED_SELECTION_STRATEGY );
     }
 }

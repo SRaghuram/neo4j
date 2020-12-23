@@ -118,7 +118,7 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
         TxProbingEditionModule( GlobalModule globalModule )
         {
             super( globalModule );
-            commitProcessFactory = ( appender, storageEngine, config ) -> (TransactionCommitProcess) ( batch, commitEvent, mode ) ->
+            commitProcessFactory = ( appender, storageEngine, databaseId, readOnlyChecker ) -> (TransactionCommitProcess) ( batch, commitEvent, mode ) ->
             {
                 long txId = batch.transactionId();
 

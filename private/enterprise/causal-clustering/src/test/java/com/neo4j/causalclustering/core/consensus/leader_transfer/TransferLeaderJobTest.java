@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.configuration.ServerGroupName;
+import com.neo4j.configuration.ServerGroupsSupplier;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -23,12 +24,15 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.configuration.ServerGroupsSupplier.listen;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.read_only_databases;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 import static org.neo4j.time.Clocks.fakeClock;
@@ -46,6 +50,28 @@ class TransferLeaderJobTest
     private final DatabasePenalties databasePenalties = new DatabasePenalties( Duration.ofMillis( 1 ), fakeClock() );
     private final LeadershipTransferor leadershipTransferor =
             new LeadershipTransferor( messageHandler, myIdentity, databasePenalties, raftMembershipResolver, fakeClock() );
+
+    @Test
+    void shouldChooseToTransferIfReadOnlyEvenWithNoOpStrategy()
+    {
+        // given
+        var config = Map.<Setting<?>,Object>of( read_only_databases, Set.of( databaseId1.name() ) );
+        var myLeaderships = List.of( databaseId1 );
+        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor,
+                                                       ServerGroupsSupplier.EMPTY,
+                                                       Config.defaults(config),
+                                                       SelectionStrategy.NO_OP,
+                                                       () -> myLeaderships );
+
+        // when
+        transferLeaderJob.run();
+
+        // then
+        assertEquals( messageHandler.proposals.size(), 1 );
+        var propose = messageHandler.proposals.get( 0 );
+        assertEquals( propose.raftGroupId().uuid(), databaseId1.databaseId().uuid() );
+        assertEquals( propose.message().proposed(), remoteIdentity.raftMemberId( databaseId1 ) );
+    }
 
     @Test
     void shouldChooseToTransferIfIAmNotInPriority()
@@ -436,10 +462,43 @@ class TransferLeaderJobTest
 
         // then
         assertThat( prioritisedGroups.size() ).isEqualTo( myLeaderships.size() );
-        for ( var entry: prioritisedGroups.entrySet() )
+        for ( var entry : prioritisedGroups.entrySet() )
         {
             assertTrue( entry.getValue().equals( explicitGroupNames.get( entry.getKey() ) ) );
         }
+    }
+
+    @Test
+    void shouldTransferPrioritisedLeadershipIfReadOnly()
+    {
+        // Priority group exist and I am in it
+        var prios = Map.of(
+                new LeadershipPriorityGroupSetting( databaseId1.name() ).leadership_priority_group.name(), "prio",
+                new LeadershipPriorityGroupSetting( databaseId2.name() ).leadership_priority_group.name(), "prio" );
+        var config = Config.newBuilder()
+                           .setRaw( prios )
+                           .set( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "prio" ) )
+                           .set( read_only_databases, Set.of( databaseId1.name() ) ).build();
+        var serverGroupsSupplier = listen( config );
+        var myLeaderships = new ArrayList<>( List.of( databaseId1, databaseId2 ) );
+        var transferLeaderJob = new TransferLeaderJob( leadershipTransferor, serverGroupsSupplier, config, new RandomStrategy(), () -> myLeaderships );
+
+        //when
+        transferLeaderJob.run();
+
+        //then
+        assertThat( messageHandler.proposals ).hasSize( 1 );
+        var propose = messageHandler.proposals.get( 0 );
+        assertEquals( propose.message().proposed(), remoteIdentity.raftMemberId( databaseId1 ) );
+        assertEquals( propose.raftGroupId().uuid(), databaseId1.databaseId().uuid() );
+
+        // when
+        myLeaderships.remove( databaseId1 ); //database 1 was transferred already
+        messageHandler.reset();
+        transferLeaderJob.run();
+
+        // then
+        assertThat( messageHandler.proposals ).isEmpty(); //We shouldn't balance database 2
     }
 
     static class TrackingMessageHandler implements Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>>
@@ -459,6 +518,11 @@ class TransferLeaderJobTest
                 others.add( message );
                 throw new IllegalArgumentException( "Unexpected message type " + message );
             }
+        }
+
+        void reset()
+        {
+            proposals.clear();
         }
     }
 

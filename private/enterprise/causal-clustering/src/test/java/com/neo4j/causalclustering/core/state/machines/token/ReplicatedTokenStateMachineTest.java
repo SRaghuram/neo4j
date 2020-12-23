@@ -38,7 +38,7 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
-import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
+import org.neo4j.kernel.impl.api.InternalTransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.store.IdUpdateListener;
 import org.neo4j.kernel.impl.store.NeoStores;
@@ -253,7 +253,7 @@ class ReplicatedTokenStateMachineTest
         // given
         var logIndex = 1;
 
-        var commitProcess = new StubTransactionCommitProcess( null, null );
+        var commitProcess = new StubInternalTransactionCommitProcess( null, null );
         var stateMachine = newTokenStateMachine( new TokenRegistry( "Token" ) );
         stateMachine.installCommitProcess( commitProcess, -1 );
 
@@ -335,11 +335,11 @@ class ReplicatedTokenStateMachineTest
         return new ReplicatedTokenStateMachine( new DummyStateMachineCommitHelper(), tokenRegistry, nullLogProvider(), INSTANCE );
     }
 
-    private static class StubTransactionCommitProcess extends TransactionRepresentationCommitProcess
+    private static class StubInternalTransactionCommitProcess extends InternalTransactionCommitProcess
     {
         private final List<TransactionRepresentation> transactionsToApply = new ArrayList<>();
 
-        StubTransactionCommitProcess( TransactionAppender appender, StorageEngine storageEngine )
+        StubInternalTransactionCommitProcess( TransactionAppender appender, StorageEngine storageEngine )
         {
             super( appender, storageEngine );
         }

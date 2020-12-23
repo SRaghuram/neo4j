@@ -10,9 +10,11 @@ import com.neo4j.configuration.ServerGroupName;
 import com.neo4j.configuration.ServerGroupsSupplier;
 
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.ReadOnlyDatabaseChecker;
 
 import static java.util.Set.copyOf;
 
@@ -22,16 +24,18 @@ public class RaftMessageHandlingContext
     private final boolean supportPreVoting;
     private final boolean refuseToBeLeader;
     private final ServerGroupsSupplier serverGroupsSupplier;
-    private final Supplier<Boolean> shutdownInProgressSupplier;
+    private final BooleanSupplier shutdownInProgressSupplier;
+    private final BooleanSupplier isReadOnly;
 
-    public RaftMessageHandlingContext( ReadableRaftState state, Config config,
-            ServerGroupsSupplier serverGroupsSupplier, Supplier<Boolean> shutdownInProgressSupplier )
+    public RaftMessageHandlingContext( ReadableRaftState state, Config config, ServerGroupsSupplier serverGroupsSupplier,
+            BooleanSupplier shutdownInProgressSupplier, BooleanSupplier isReadOnly )
     {
         this.state = state;
         this.supportPreVoting = config.get( CausalClusteringSettings.enable_pre_voting );
         this.refuseToBeLeader = config.get( CausalClusteringSettings.refuse_to_be_leader );
         this.serverGroupsSupplier = serverGroupsSupplier;
         this.shutdownInProgressSupplier = shutdownInProgressSupplier;
+        this.isReadOnly = isReadOnly;
     }
 
     public ReadableRaftState state()
@@ -56,6 +60,11 @@ public class RaftMessageHandlingContext
 
     public boolean isProcessShutdownInProgress()
     {
-        return shutdownInProgressSupplier.get();
+        return shutdownInProgressSupplier.getAsBoolean();
+    }
+
+    public boolean isReadOnly()
+    {
+        return isReadOnly.getAsBoolean();
     }
 }

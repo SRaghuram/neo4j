@@ -54,6 +54,35 @@ class FollowerTest
     private final RaftMemberId member4 = raftMember( 4 );
 
     @Test
+    void shouldRejectLeadershipTransferRequestIfReadOnly() throws Exception
+    {
+        // given
+        var entryLog = new InMemoryRaftLog();
+        entryLog.append( new RaftLogEntry( 1, new ReplicatedString( "foo" ) ) );
+        var state = builder()
+                .myself( myself )
+                .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( 1 ).build() )
+                .entryLog( entryLog )
+                .votingMembers( myself, member1, member2 )
+                .build();
+        var ctx = contextBuilder( state )
+                .supportsPreVoting( true )
+                .isReadOnly( true )
+                .build();
+
+        var message = new RaftMessages.LeadershipTransfer.Request( member2, 3, 1, Set.of() );
+        var follower = new Follower();
+        appendSomeEntriesToLog( state, ctx, follower, 3, 1, 1 );
+
+        // when
+        var outcome = follower.handle( message, ctx , log() );
+
+        // then
+        assertThat( messageFor( outcome, member2 ).type() ).isEqualTo( RaftMessages.Type.LEADERSHIP_TRANSFER_REJECTION );
+        assertThat( outcome.getOutgoingMessages() ).hasSize( 1 );
+    }
+
+    @Test
     void shouldImmediatelyHandleRejectionMessageOnLeadershipTransferProposal() throws Exception
     {
         // given

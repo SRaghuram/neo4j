@@ -9,23 +9,24 @@ import com.neo4j.causalclustering.core.replication.Replicator;
 
 import java.util.function.Supplier;
 
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.ReadOnlyDatabaseChecker;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.database.LogEntryWriterFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
-import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.token.TokenRegistry;
 
 public class ReplicatedLabelTokenHolder extends ReplicatedTokenHolder
 {
     public ReplicatedLabelTokenHolder( NamedDatabaseId namedDatabaseId, TokenRegistry registry, Replicator replicator,
-            IdGeneratorFactory idGeneratorFactory, Supplier<StorageEngine> storageEngineSupplier, PageCacheTracer pageCacheTracer,
-            LogEntryWriterFactory logEntryWriterFactory )
+                                       IdGeneratorFactory idGeneratorFactory, Supplier<StorageEngine> storageEngineSupplier, PageCacheTracer pageCacheTracer,
+                                       LogEntryWriterFactory logEntryWriterFactory, ReadOnlyDatabaseChecker readOnlyDatabaseChecker )
     {
         super( namedDatabaseId, registry, replicator, idGeneratorFactory, IdType.LABEL_TOKEN, storageEngineSupplier,
-                TokenType.LABEL, TransactionState::labelDoCreateForName, pageCacheTracer, logEntryWriterFactory );
+               TokenType.LABEL, TransactionState::labelDoCreateForName, pageCacheTracer, logEntryWriterFactory, readOnlyDatabaseChecker );
     }
 }
