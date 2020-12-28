@@ -90,11 +90,6 @@ public class SetDefaultDatabaseIT
         CausalClusteringTestHelpers.stopDatabase( "neo4j", cluster );
         CausalClusteringTestHelpers.assertDatabaseEventuallyInStateSeenByAll( "foo", cluster.allMembers(), STARTED );
         CausalClusteringTestHelpers.assertDatabaseEventuallyInStateSeenByAll( "neo4j", cluster.allMembers(), STOPPED );
-        cluster.coreTx( "foo", ( db, tx ) ->
-        {
-            tx.execute( "CREATE (a {dbName:'foo'})" ).close();
-            tx.commit();
-        } );
 
         cluster.systemTx( ( db, tx ) ->
         {
@@ -115,7 +110,7 @@ public class SetDefaultDatabaseIT
         // Check that we really get the new default when we connect over bolt
         String boltAddress = cluster.randomCoreMember( true ).get().boltAdvertisedAddress();
         withDriver( boltAddress, tx ->
-            assertThat( tx.run( "MATCH (n) RETURN n.dbName" ).single().asMap() ).isEqualTo( Map.of( "n.dbName", "foo" ) )
+            assertThat( tx.run( "CALL db.info() YIELD name RETURN name" ).single().asMap() ).isEqualTo( Map.of( "name", "foo" ) )
         );
     }
 
