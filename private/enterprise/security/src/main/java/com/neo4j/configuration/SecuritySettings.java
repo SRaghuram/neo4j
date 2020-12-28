@@ -20,6 +20,7 @@ import org.neo4j.io.ByteUnit;
 import org.neo4j.logging.Level;
 import org.neo4j.string.SecureString;
 
+import static com.neo4j.configuration.SecuritySettingContraints.validateGroupMapping;
 import static java.time.Duration.ofMinutes;
 import static java.time.Duration.ofSeconds;
 import static org.neo4j.configuration.SettingConstraints.min;
@@ -223,7 +224,8 @@ public class SecuritySettings implements SettingsDeclaration
             "         \"cn=Neo4j Administrator,cn=users,dc=example,dc=com\"  = admin\n" +
             "----" )
     public static final Setting<String> ldap_authorization_group_to_role_mapping =
-            newBuilder( "dbms.security.ldap.authorization.group_to_role_mapping", STRING, null ).build();
+            newBuilder( "dbms.security.ldap.authorization.group_to_role_mapping", STRING, "" )
+                    .addConstraint( validateGroupMapping() ).build();
 
     //=========================================================================
     // Cache settings
