@@ -27,7 +27,6 @@ import org.openjdk.jmh.runner.options.VerboseMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,12 +49,12 @@ class BenchmarksRunner extends Runner
     /**
      * Constructor for Micro benchmarks implementation of Runner
      *
-     * @param baseNeo4jConfig base Neo4j configuration that will be used to run every benchmark
-     * @param forkCount number of measurement forks
-     * @param iterations number of benchmark iterations per fork
-     * @param duration duration of each benchmark iteration
+     * @param baseNeo4jConfig           base Neo4j configuration that will be used to run every benchmark
+     * @param forkCount                 number of measurement forks
+     * @param iterations                number of benchmark iterations per fork
+     * @param duration                  duration of each benchmark iteration
      * @param extendedAnnotationSupport specifies if the JMH configuration should include the values of all JMH annotations present on the benchmark classes.
-     * Only true in interactive mode, to apply more benchmark annotations that are normally ignored by this framework.
+     *                                  Only true in interactive mode, to apply more benchmark annotations that are normally ignored by this framework.
      */
     BenchmarksRunner( Neo4jConfig baseNeo4jConfig,
                       int forkCount,
@@ -79,69 +78,64 @@ class BenchmarksRunner extends Runner
     {
         // Run every benchmark once to create stores -- triggers store generation in benchmark setups
         // Ensures generation does not occur in benchmark setup later, which would, for example, pollute the heap
-        LOG.debug( "\n\n" );
-        LOG.debug( "-----------------------------------------------------------------------------------" );
-        LOG.debug( "------------------------------  STORE GENERATION  ---------------------------------" );
-        LOG.debug( "-----------------------------------------------------------------------------------" );
-        LOG.debug( "\n\n" );
+        logStageHeader( "STORE GENERATION" );
 
         long storeGenerationStart = System.currentTimeMillis();
 
         Stores stores = new Stores( runnerParams.workDir() );
 
         List<BenchmarkDescription> benchmarksWithStores = new ArrayList<>( benchmarks );
-        try
+        for ( BenchmarkDescription benchmark : benchmarks )
         {
-            for ( BenchmarkDescription benchmark : benchmarks )
+            try
             {
-                try
-                {
-                    ChainedOptionsBuilder builder = baseBuilder(
-                            runnerParams.copyWithNewRunId()
-                                        .copyWithProfilers( ParameterizedProfiler.defaultProfilers( ProfilerType.NO_OP ) ),
-                            benchmark,
-                            1, // thread count
-                            jvm,
-                            jvmArgs );
-                    builder = builder
-                            .warmupIterations( 0 )
-                            .warmupTime( TimeValue.NONE )
-                            .measurementIterations( 1 )
-                            .measurementTime( TimeValue.NONE )
-                            .verbosity( VerboseMode.SILENT )
-                            .forks( Math.min( forkCount, 1 ) );
-                    // necessary for robust fork directory creation
-                    builder = builder.addProfiler( NoOpProfiler.class );
-                    Options options = builder.build();
-                    // sanity check, make sure provided benchmarks were correctly exploded
-                    JmhOptionsUtil.assertExactlyOneBenchmarkIsEnabled( options );
+                Options options = buildOptions( runnerParams, jvm, jvmArgs, benchmark );
+                // sanity check, make sure provided benchmarks were correctly exploded
+                JmhOptionsUtil.assertExactlyOneBenchmarkIsEnabled( options );
 
-                    // Clear the JMH lifecycle event log for every new execution
-                    JmhLifecycleTracker.load( runnerParams.workDir() ).reset();
+                // Clear the JMH lifecycle event log for every new execution
+                JmhLifecycleTracker.load( runnerParams.workDir() ).reset();
 
-                    new org.openjdk.jmh.runner.Runner( options ).run();
-                }
-                catch ( Exception e )
-                {
-                    benchmarksWithStores.remove( benchmark );
-                    errorReporter.recordOrThrow( e, benchmark.group(), benchmark.guessSingleName() );
-                }
-                finally
-                {
-                    // make sure any temporary store copies are cleaned up
-                    stores.deleteTemporaryStoreCopies();
-                }
+                new org.openjdk.jmh.runner.Runner( options ).run();
             }
-            return benchmarksWithStores;
+            catch ( Exception e )
+            {
+                benchmarksWithStores.remove( benchmark );
+                errorReporter.recordOrThrow( e, benchmark.group(), benchmark.guessSingleName() );
+            }
+            finally
+            {
+                // make sure stores of failed benchmarks are cleaned up
+                stores.deleteFailedStores();
+            }
         }
-        finally
-        {
-            long storeGenerationFinish = System.currentTimeMillis();
-            Duration storeGenerationDuration = Duration.of( storeGenerationFinish - storeGenerationStart, MILLIS );
-            // Print details of storage directory
-            LOG.debug( "\nStore generation took: " + durationToString( storeGenerationDuration ) + "\n" );
-            LOG.debug( stores.details() );
-        }
+        long storeGenerationFinish = System.currentTimeMillis();
+        Duration storeGenerationDuration = Duration.of( storeGenerationFinish - storeGenerationStart, MILLIS );
+        // Print details of storage directory
+        LOG.info( "Store generation took: {}", durationToString( storeGenerationDuration ) );
+        LOG.info( stores.details() );
+        return benchmarksWithStores;
+    }
+
+    private Options buildOptions( RunnerParams runnerParams, Jvm jvm, String[] jvmArgs, BenchmarkDescription benchmark )
+    {
+        ChainedOptionsBuilder builder = baseBuilder(
+                runnerParams.copyWithNewRunId()
+                            .copyWithProfilers( ParameterizedProfiler.defaultProfilers( ProfilerType.NO_OP ) ),
+                benchmark,
+                1, // thread count
+                jvm,
+                jvmArgs );
+        builder = builder
+                .warmupIterations( 0 )
+                .warmupTime( TimeValue.NONE )
+                .measurementIterations( 1 )
+                .measurementTime( TimeValue.NONE )
+                .verbosity( VerboseMode.SILENT )
+                .forks( Math.min( forkCount, 1 ) );
+        // necessary for robust fork directory creation
+        builder = builder.addProfiler( NoOpProfiler.class );
+        return builder.build();
     }
 
     @Override
@@ -150,7 +144,7 @@ class BenchmarksRunner extends Runner
                                                        RunnerParams runnerParams,
                                                        ChainedOptionsBuilder optionsBuilder )
     {
-        return augmentOptions( optionsBuilder, runnerParams.workDir(), benchmark );
+        return augmentOptions( optionsBuilder, benchmark );
     }
 
     @Override
@@ -164,7 +158,7 @@ class BenchmarksRunner extends Runner
                                                           RunnerParams runnerParams,
                                                           ChainedOptionsBuilder optionsBuilder )
     {
-        return augmentOptions( optionsBuilder, runnerParams.workDir(), benchmark ).forks( forkCount );
+        return augmentOptions( optionsBuilder, benchmark ).forks( forkCount );
     }
 
     @Override
@@ -185,7 +179,7 @@ class BenchmarksRunner extends Runner
         return runnerParams.copyWithParam( PARAM_NEO4J_CONFIG, baseNeo4jConfig.toJson() );
     }
 
-    private ChainedOptionsBuilder augmentOptions( ChainedOptionsBuilder optionsBuilder, Path workDir, BenchmarkDescription benchmark )
+    private ChainedOptionsBuilder augmentOptions( ChainedOptionsBuilder optionsBuilder, BenchmarkDescription benchmark )
     {
         if ( extendedAnnotationSupport )
         {

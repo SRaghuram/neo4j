@@ -5,6 +5,8 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import org.mockito.Mockito
+
 import java.time.Clock
 import java.util.concurrent.Executors
 
@@ -30,9 +32,8 @@ import org.neo4j.kernel.lifecycle.LifeSupport
 import org.neo4j.logging.NullLog
 import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.scheduler.JobScheduler
-import org.scalatest.mockito.MockitoSugar
 
-object ContextHelper extends MockitoSugar {
+object ContextHelper {
 
   // Always use the big morsel size here, since the generated plans do not have cardinality information
   // and we would otherwise end up using the small morsel size even though the micro benchmarks

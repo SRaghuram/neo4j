@@ -36,31 +36,41 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.concurrent.NotThreadSafe;
 
 import org.neo4j.io.fs.FileUtils;
+import org.neo4j.util.VisibleForTesting;
 
+import static com.neo4j.bench.common.util.BenchmarkUtil.bytes;
 import static com.neo4j.bench.common.util.BenchmarkUtil.bytesToString;
 import static com.neo4j.bench.common.util.BenchmarkUtil.durationToString;
 import static com.neo4j.bench.common.util.BenchmarkUtil.tryMkDir;
 import static java.lang.String.format;
-import static java.util.stream.Collectors.toList;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASES_ROOT_DIR_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATA_DIR_NAME;
 
+/**
+ * There can be only one store set {@link StoreUsage#inProgress}. Also {@link StoreUsage#save()} may override other threads (or VMs) changes if called
+ * concurrently.
+ */
+@NotThreadSafe
 public class Stores
 {
     private static final Logger LOG = LoggerFactory.getLogger( Stores.class );
 
     private static final String DB_DIR_NAME = "graph.db";
-    private static final String CONFIG_FILENAME = "data_gen_config.json";
-    private static final String TEMP_STORE_COPY_MARKER_FILENAME = "this_is_a_temporary_store.tmp";
+    @VisibleForTesting
+    static final String CONFIG_FILENAME = "data_gen_config.json";
     // Used by benchmarks that do not need a database
     // Definitely a hack that needs to be removed later, but that requires rewriting more of this class
     private static final String NULL_STORE_DIR_NAME = "no_database_lives_in_this_database_directory";
@@ -92,70 +102,47 @@ public class Stores
             Path neo4jConfigFile,
             int threads )
     {
-        List<Path> topLevelDirs = findAllStoresMatchingConfig( config, storesDir );
+        deleteFailedStores();
+        Path store = getOrGenerate( config, group, benchmark, augmenterizer, neo4jConfigFile, threads );
+        StoreAndConfig storeAndConfig = new StoreAndConfig( storesDir, store, neo4jConfigFile, config.isReusable() );
+        loadStoreUsage().setInProgress( store, group, benchmark );
+        return storeAndConfig;
+    }
 
-        if ( topLevelDirs.isEmpty() )
+    private Path getOrGenerate( DataGeneratorConfig config,
+                                BenchmarkGroup group,
+                                Benchmark benchmark,
+                                Augmenterizer augmenterizer,
+                                Path neo4jConfigFile,
+                                int threads )
+    {
+        Optional<Path> maybeSecondaryCopy = findSecondaryCopy( config );
+
+        if ( config.isReusable() && maybeSecondaryCopy.isPresent() )
         {
-            StoreAndConfig initialStoreAndConfig = generateDb(
-                    config,
-                    augmenterizer,
-                    group,
-                    benchmark,
-                    neo4jConfigFile,
-                    threads );
-            if ( config.isReusable() )
-            {
-                return initialStoreAndConfig;
-            }
-            else
-            {
-                return getCopyOf( group, benchmark, initialStoreAndConfig );
-            }
-        }
-        else if ( topLevelDirs.size() == 1 )
-        {
-            Path topLevelDir = topLevelDirs.get( 0 );
-
-            // if configs are identical in all ways except re-usability, make persisted config not-reusable
-            // saves time (only generate once) & saves space (only one permanent store per equivalent config)
-            // reminder: re-usable means 'mv store/ temp_copy/' does not need to be done for every run
-            DataGeneratorConfig existingStoreConfig = DataGeneratorConfig.from( topLevelDir.resolve( CONFIG_FILENAME ) );
-            if ( existingStoreConfig.isReusable() && !config.isReusable() )
-            {
-                config = DataGeneratorConfigBuilder
-                        .from( config )
-                        .isReusableStore( false )
-                        .build();
-                config.serialize( topLevelDir.resolve( CONFIG_FILENAME ) );
-            }
-
-            if ( config.isReusable() )
-            {
-                LOG.debug( "Reusing store...\n" +
-                                    "  > Benchmark group: " + group.name() + "\n" +
-                                    "  > Benchmark:       " + benchmark.name() + "\n" +
-                                    "  > Store:           " + topLevelDir.toAbsolutePath() + "\n" +
-                                    "  > Config:          " + neo4jConfigFile.toAbsolutePath() );
-                return new StoreAndConfig( topLevelDir, neo4jConfigFile );
-            }
-            else
-            {
-                return getCopyOf( group, benchmark, new StoreAndConfig( topLevelDir, neo4jConfigFile ) );
-            }
+            // We've first cleaned up all failed copies, so we're sure that this copy must be reusable
+            return maybeSecondaryCopy.get();
         }
         else
         {
-            throw new IllegalStateException( format( "Found too many stores for config\n" +
-                                                     "Stores: %s\n" +
-                                                     "%s", topLevelDirs, config ) );
+            Path primaryCopy = getOrCreatePrimaryCopy( config, augmenterizer, neo4jConfigFile, threads );
+            return getCopyOf( group, benchmark, primaryCopy, neo4jConfigFile );
         }
     }
 
-    private StoreAndConfig generateDb(
+    private Path getOrCreatePrimaryCopy( DataGeneratorConfig config,
+                                         Augmenterizer augmenterizer,
+                                         Path neo4jConfigFile,
+                                         int threads )
+    {
+
+        return findPrimaryCopy( config )
+                .orElseGet( () -> generateDb( config, augmenterizer, neo4jConfigFile, threads ) );
+    }
+
+    private Path generateDb(
             DataGeneratorConfig config,
             Augmenterizer augmenterizer,
-            BenchmarkGroup benchmarkGroup,
-            Benchmark benchmark,
             Path neo4jConfigFile,
             int threads )
     {
@@ -173,24 +160,14 @@ public class Stores
         try
         {
             new DataGenerator( config ).generate( Neo4jStore.createFrom( topLevelStoreDir ), neo4jConfigFile );
-            String storeName = topLevelStoreDir.getFileName().toString();
-            StoreUsage.loadOrCreateIfAbsent( storesDir )
-                      .register( storeName, benchmarkGroup, benchmark );
         }
         catch ( Exception e )
         {
-            try
-            {
-                LOG.debug( "Deleting failed store: " + topLevelStoreDir.toAbsolutePath() );
-                FileUtils.deleteDirectory( topLevelStoreDir );
-            }
-            catch ( IOException ioe )
-            {
-                throw new UncheckedIOException( "Error deleting failed store: " + topLevelStoreDir.toAbsolutePath(), ioe );
-            }
+            LOG.debug( "Deleting failed store: " + topLevelStoreDir.toAbsolutePath() );
+            deleteStore( topLevelStoreDir );
             throw new Kaboom( "Error creating store at: " + topLevelStoreDir.toAbsolutePath(), e );
         }
-        StoreAndConfig storeAndConfig = new StoreAndConfig( topLevelStoreDir, neo4jConfigFile );
+        StoreAndConfig storeAndConfig = new StoreAndConfig( storesDir, topLevelStoreDir, neo4jConfigFile, config.isReusable() );
 
         LOG.debug( "Executing store augmentation step..." );
         Instant augmentStart = Instant.now();
@@ -198,24 +175,27 @@ public class Stores
         Duration augmentDuration = Duration.between( augmentStart, Instant.now() );
         LOG.debug( "Store augmentation step took: " + durationToString( augmentDuration ) );
 
+        loadStoreUsage().registerPrimary( topLevelStoreDir );
         config.serialize( topLevelStoreDir.resolve( CONFIG_FILENAME ) );
-        return storeAndConfig;
+        return topLevelStoreDir;
     }
 
-    private StoreAndConfig getCopyOf(
+    private Path getCopyOf(
             BenchmarkGroup benchmarkGroup,
             Benchmark benchmark,
-            StoreAndConfig storeAndConfig )
+            Path topLevelDir,
+            Path config )
     {
         LOG.debug( "Reusing copy of store...\n" +
-                            "  > Benchmark group: " + benchmarkGroup.name() + "\n" +
-                            "  > Benchmark:       " + benchmark.name() + "\n" +
-                            "  > Original store:  " + storeAndConfig.store().topLevelDirectory().toAbsolutePath() + "\n" +
-                            "  > Config:          " + storeAndConfig.config().toAbsolutePath() );
-        Path newTopLevelDir = getCopyOf( storeAndConfig.store().topLevelDirectory() );
-        LOG.debug( "Copied: " + bytesToString( storeAndConfig.store().bytes() ) + "\n" +
-                            "  > Store copy:      " + newTopLevelDir.toAbsolutePath() );
-        return new StoreAndConfig( newTopLevelDir, storeAndConfig.config() );
+                   "  > Benchmark group: " + benchmarkGroup.name() + "\n" +
+                   "  > Benchmark:       " + benchmark.name() + "\n" +
+                   "  > Original store:  " + topLevelDir.toAbsolutePath() + "\n" +
+                   "  > Config:          " + config.toAbsolutePath() );
+        Path newTopLevelDir = getCopyOf( topLevelDir );
+        LOG.debug( "Copied: " + bytesToString( BenchmarkUtil.bytes( topLevelDir ) ) + "\n" +
+                   "  > Store copy:      " + newTopLevelDir.toAbsolutePath() );
+        loadStoreUsage().registerSecondary( topLevelDir, newTopLevelDir );
+        return newTopLevelDir;
     }
 
     private Path getCopyOf( Path from )
@@ -226,8 +206,6 @@ public class Stores
             CopyDirVisitor visitor = new CopyDirVisitor( from, to );
             Files.walkFileTree( from, visitor );
             visitor.awaitCompletion();
-            Path tempStoreCopyMarkerFile = to.resolve( TEMP_STORE_COPY_MARKER_FILENAME );
-            Files.createFile( tempStoreCopyMarkerFile );
             return to;
         }
         catch ( Exception e )
@@ -250,19 +228,27 @@ public class Stores
         return storesDir.resolve( UUID.randomUUID().toString() );
     }
 
-    public void deleteTemporaryStoreCopies()
+    public void deleteFailedStores()
     {
-        for ( Path temporaryStore : findAllTemporaryStoreCopies( storesDir ) )
+        StoreUsage storeUsage = loadStoreUsage();
+        storeUsage.getInProgress( storesDir )
+                  .ifPresent( store ->
+                              {
+                                  deleteStore( store );
+                                  storeUsage.clearInProgress( store );
+                              } );
+    }
+
+    private static void deleteStore( Path store )
+    {
+        try
         {
-            try
-            {
-                LOG.debug( "Deleting: " + temporaryStore.toAbsolutePath() );
-                FileUtils.deleteDirectory( temporaryStore );
-            }
-            catch ( IOException e )
-            {
-                throw new UncheckedIOException( "Could not delete store: " + temporaryStore, e );
-            }
+            LOG.debug( format( "Deleting store [%s] at: %s", bytesToString( bytes( store ) ), store ) );
+            FileUtils.deleteDirectory( store );
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( "Could not delete store: " + store, e );
         }
     }
 
@@ -275,11 +261,13 @@ public class Stores
                 .append( format( "\t%1$-20s %2$s\n", bytesToString( BenchmarkUtil.bytes( storesDir ) ),
                                  storesDir.toAbsolutePath() ) )
                 .append( "---------------------------------------------------------------------\n" );
-        StoreUsage storeUsage = StoreUsage.loadOrCreateIfAbsent( storesDir );
-        for ( Path topLevelDir : findAllTopLevelDirs( storesDir ) )
+        StoreUsage storeUsage = loadStoreUsage();
+        for ( Map.Entry<Path,Set<String>> entry : storeUsage.allStoreBenchmarkInfo( storesDir ).entrySet() )
         {
-            sb.append( format( "\t%1$-20s %2$s\n", bytesToString( BenchmarkUtil.bytes( topLevelDir ) ), topLevelDir.toAbsolutePath() ) );
-            for ( String benchmarkName : storeUsage.benchmarksUsingStore( topLevelDir.getFileName().toString() ) )
+            Path topLevelDir = entry.getKey();
+            Set<String> benchmarks = entry.getValue();
+            sb.append( format( "\t%1$-20s %2$s\n", bytesToString( bytes( topLevelDir ) ), topLevelDir.toAbsolutePath() ) );
+            for ( String benchmarkName : benchmarks )
             {
                 sb.append( "\t\t" ).append( benchmarkName ).append( "\n" );
             }
@@ -289,23 +277,46 @@ public class Stores
                 .toString();
     }
 
-    // returns stores that are supposed to be temporary copies -- used to clean up after a benchmark crashes
-    private List<Path> findAllTemporaryStoreCopies( Path storesDir )
+    private Optional<Path> findPrimaryCopy( DataGeneratorConfig config )
     {
-        return findAllTopLevelDirs( storesDir ).stream()
-                                               .filter( topLevelDir -> Files.exists( topLevelDir.resolve( TEMP_STORE_COPY_MARKER_FILENAME ) ) )
-                                               .collect( toList() );
+        return findStoreMatchingConfig( config, true );
+    }
+
+    private Optional<Path> findSecondaryCopy( DataGeneratorConfig config )
+    {
+        return findStoreMatchingConfig( config, false );
+    }
+
+    private Optional<Path> findStoreMatchingConfig( DataGeneratorConfig config, boolean primary )
+    {
+        List<Path> topLevelDirs = findAllStoresMatchingConfig( config, primary );
+
+        if ( topLevelDirs.isEmpty() )
+        {
+            return Optional.empty();
+        }
+        else if ( topLevelDirs.size() == 1 )
+        {
+            return Optional.of( topLevelDirs.get( 0 ) );
+        }
+        else
+        {
+            throw new IllegalStateException( format( "Found too many stores for config\n" +
+                                                     "Stores: %s\n" +
+                                                     "%s", topLevelDirs, config ) );
+        }
     }
 
     // returns all stores with equal configs, where 'equal' means equal in all ways except
     //  (1) re-usability
     //  (2) that neither config has been augmented
-    // if either (new or existing) config is not reusable, persisted config will be overwritten as not reusable
-    private List<Path> findAllStoresMatchingConfig( DataGeneratorConfig config, Path storesDir )
+    private List<Path> findAllStoresMatchingConfig( DataGeneratorConfig config, boolean isPrimary )
     {
-        return findAllTopLevelDirs( storesDir ).stream()
-                                               .filter( topLevelDir -> storeMatchesConfig( config, topLevelDir ) )
-                                               .collect( toList() );
+        StoreUsage storeUsage = loadStoreUsage();
+        return findAllTopLevelDirs().stream()
+                                    .filter( topLevelDir -> storeMatchesConfig( config, topLevelDir ) )
+                                    .filter( path -> isPrimary == storeUsage.isPrimary( path ) )
+                                    .collect( Collectors.toList() );
     }
 
     private static boolean storeMatchesConfig( DataGeneratorConfig config, Path topLevelDir )
@@ -315,11 +326,11 @@ public class Stores
                DataGeneratorConfig.from( storeConfigFile ).equals( config );
     }
 
-    private List<Path> findAllTopLevelDirs( Path storesDir )
+    private List<Path> findAllTopLevelDirs()
     {
         try ( Stream<Path> entries = Files.list( storesDir ) )
         {
-            return entries.filter( Stores::isTopLevelDir ).collect( toList() );
+            return entries.filter( Stores::isTopLevelDir ).collect( Collectors.toList() );
         }
         catch ( IOException e )
         {
@@ -341,15 +352,25 @@ public class Stores
                 topStoreLevelDir.endsWith( NULL_STORE_DIR_NAME );
     }
 
-    public static class StoreAndConfig
+    @VisibleForTesting
+    StoreUsage loadStoreUsage()
     {
+        return StoreUsage.loadOrCreateIfAbsent( storesDir );
+    }
+
+    public static class StoreAndConfig implements AutoCloseable
+    {
+        private final Path storesDir;
         private final Store store;
         private final Path config;
+        private final boolean reusable;
 
-        private StoreAndConfig( Path topLevelStoreDir, Path config )
+        private StoreAndConfig( Path storesDir, Path topLevelStoreDir, Path config, boolean reusable )
         {
+            this.storesDir = storesDir;
             this.store = Neo4jStore.createFrom( topLevelStoreDir );
             this.config = config;
+            this.reusable = reusable;
         }
 
         public Store store()
@@ -360,6 +381,17 @@ public class Stores
         public Path config()
         {
             return config;
+        }
+
+        @Override
+        public void close()
+        {
+            if ( !reusable )
+            {
+                deleteStore( store.topLevelDirectory() );
+            }
+            StoreUsage.loadOrCreateIfAbsent( storesDir )
+                      .clearInProgress( store.topLevelDirectory() );
         }
     }
 
@@ -415,7 +447,7 @@ public class Stores
     {
         private static final String STORE_USAGE_JSON = "store-usage.json";
 
-        static StoreUsage loadOrCreateIfAbsent( Path dir )
+        private static StoreUsage loadOrCreateIfAbsent( Path dir )
         {
             Path jsonPath = dir.resolve( STORE_USAGE_JSON );
             if ( !Files.exists( jsonPath ) )
@@ -429,7 +461,7 @@ public class Stores
                     throw new UncheckedIOException( "Failed to create: " + jsonPath.toAbsolutePath(), e );
                 }
                 StoreUsage storeUsage = new StoreUsage( jsonPath );
-                JsonUtil.serializeJson( jsonPath );
+                storeUsage.save();
                 return storeUsage;
             }
             else
@@ -439,11 +471,12 @@ public class Stores
         }
 
         private Path jsonPath;
-        private Map<String,Set<String>> storeBenchmarks;
+        private Map<String,Set<String>> primaryToBenchmarks = new HashMap<>();
+        private Map<String,String> secondaryToPrimary = new HashMap<>();
+        private String inProgress;
 
         /**
-         * WARNING: Never call this explicitly.
-         * No-params constructor is only used for JSON (de)serialization.
+         * WARNING: Never call this explicitly. No-params constructor is only used for JSON (de)serialization.
          */
         private StoreUsage()
         {
@@ -453,7 +486,6 @@ public class Stores
         private StoreUsage( Path jsonPath )
         {
             this.jsonPath = jsonPath;
-            this.storeBenchmarks = new HashMap<>();
         }
 
         /**
@@ -461,31 +493,97 @@ public class Stores
          *
          * @throws IllegalStateException if benchmark had already been registered previously.
          */
-        void register( String storeName, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+        @VisibleForTesting
+        void registerPrimary( Path store )
         {
-            Set<String> benchmarks = storeBenchmarks.computeIfAbsent( storeName, name -> new HashSet<>() );
-            String benchmarkName = FullBenchmarkName.from( benchmarkGroup, benchmark ).name();
-            if ( !benchmarks.add( benchmarkName ) )
+            String storeName = getStoreName( store );
+            if ( primaryToBenchmarks.containsKey( storeName ) )
             {
-                throw new IllegalStateException( format( "Benchmark '%s' was already registered to store '%s'", benchmarkName, storeName ) );
+                throw new IllegalStateException( format( "Store '%s' was already registered", storeName ) );
             }
+            primaryToBenchmarks.put( storeName, new HashSet<>() );
+            save();
+        }
+
+        @VisibleForTesting
+        public void registerSecondary( Path primaryStore, Path secondaryStore )
+        {
+            String primaryStoreName = getStoreName( primaryStore );
+            String secondaryStoreName = getStoreName( secondaryStore );
+            if ( !primaryToBenchmarks.containsKey( primaryStoreName ) )
+            {
+                throw new IllegalStateException( format( "Store '%s' has unknown primary store '%s'", secondaryStoreName, primaryStoreName ) );
+            }
+            if ( secondaryToPrimary.containsKey( secondaryStoreName ) )
+            {
+                throw new IllegalStateException( format( "Store '%s' was already registered to primary store '%s'", secondaryStoreName,
+                                                         secondaryToPrimary.get( secondaryStoreName ) ) );
+            }
+            secondaryToPrimary.put( secondaryStoreName, primaryStoreName );
+            save();
+        }
+
+        private boolean isPrimary( Path store )
+        {
+            return primaryToBenchmarks.containsKey( getStoreName( store ) );
+        }
+
+        void setInProgress( Path store, BenchmarkGroup group, Benchmark benchmark )
+        {
+            Objects.requireNonNull( store );
+            if ( inProgress != null )
+            {
+                throw new IllegalStateException( format( "Store '%s' was in progress", inProgress ) );
+            }
+            String storeName = getStoreName( store );
+            trackHistory( storeName, group, benchmark );
+            inProgress = storeName;
+            save();
+        }
+
+        private void trackHistory( String secondaryStoreName, BenchmarkGroup group, Benchmark benchmark )
+        {
+            String benchmarkName = FullBenchmarkName.from( group, benchmark ).name();
+            if ( !secondaryToPrimary.containsKey( secondaryStoreName ) )
+            {
+                throw new IllegalStateException( format( "Benchmark '%s' has unknown primary store '%s'", benchmarkName, secondaryStoreName ) );
+            }
+            String primaryStoreName = secondaryToPrimary.get( secondaryStoreName );
+            Set<String> benchmarks = primaryToBenchmarks.get( primaryStoreName );
+            benchmarks.add( benchmarkName );
+        }
+
+        private Optional<Path> getInProgress( Path storesDir )
+        {
+            return Optional.ofNullable( inProgress ).map( storesDir::resolve );
+        }
+
+        void clearInProgress( Path store )
+        {
+            String storeName = getStoreName( store );
+            if ( !storeName.equals( inProgress ) )
+            {
+                throw new IllegalStateException( format( "Store '%s' was not in progress (currently in progress %s)", storeName, inProgress ) );
+            }
+            inProgress = null;
+            save();
+        }
+
+        private static String getStoreName( Path store )
+        {
+            return store.getFileName().toString();
+        }
+
+        Map<Path,Set<String>> allStoreBenchmarkInfo( Path storesDir )
+        {
+            return primaryToBenchmarks.entrySet()
+                                      .stream()
+                                      .collect( Collectors.toMap( entry -> storesDir.resolve( entry.getKey() ), Map.Entry::getValue ) );
+        }
+
+        private void save()
+        {
             JsonUtil.serializeJson( jsonPath, this );
-        }
-
-        /**
-         * @return all store-to-benchmark mappings
-         */
-        Map<String,Set<String>> allStoreBenchmarkInfo()
-        {
-            return storeBenchmarks;
-        }
-
-        /**
-         * @return all benchmarks registered as using the provided store
-         */
-        Iterable<String> benchmarksUsingStore( String storeName )
-        {
-            return storeBenchmarks.get( storeName );
         }
     }
 }

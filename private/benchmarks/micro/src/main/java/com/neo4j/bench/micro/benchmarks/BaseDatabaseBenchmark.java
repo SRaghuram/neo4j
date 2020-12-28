@@ -73,6 +73,7 @@ public abstract class BaseDatabaseBenchmark extends BaseBenchmark
         DO_NOT_START_DB
     }
 
+    private Stores.StoreAndConfig storeAndConfig;
     protected ManagedStore managedStore;
 
     protected GraphDatabaseService db()
@@ -83,11 +84,6 @@ public abstract class BaseDatabaseBenchmark extends BaseBenchmark
     protected GraphDatabaseService systemDb()
     {
         return managedStore.systemDb();
-    }
-
-    protected Store store()
-    {
-        return managedStore.store();
     }
 
     @Override
@@ -115,7 +111,7 @@ public abstract class BaseDatabaseBenchmark extends BaseBenchmark
                 .withRngSeed( DataGenerator.DEFAULT_RNG_SEED )
                 .augmentedBy( augmenterizer.augmentKey( FullBenchmarkName.from( group, benchmark ) ) )
                 .build();
-        Stores.StoreAndConfig storeAndConfig = stores.prepareDb(
+        storeAndConfig = stores.prepareDb(
                 finalGeneratorConfig,
                 group,
                 benchmark,
@@ -123,8 +119,7 @@ public abstract class BaseDatabaseBenchmark extends BaseBenchmark
                 neo4jConfigFile,
                 benchmarkParams.getThreads() );
 
-        managedStore = new ManagedStore( finalGeneratorConfig, storeAndConfig );
-
+        managedStore = new ManagedStore( storeAndConfig );
         if ( afterDataGeneration().equals( StartDatabaseInstruction.START_DB ) )
         {
             managedStore.startDb();
@@ -140,6 +135,7 @@ public abstract class BaseDatabaseBenchmark extends BaseBenchmark
     protected final void onTearDown() throws Exception
     {
         managedStore.tearDownDb();
+        storeAndConfig.close();
         benchmarkTearDown();
     }
 

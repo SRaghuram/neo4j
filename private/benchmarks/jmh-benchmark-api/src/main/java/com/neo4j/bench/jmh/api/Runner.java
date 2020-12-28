@@ -25,6 +25,7 @@ import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.model.model.Metrics;
 import com.neo4j.bench.model.model.Neo4jConfig;
+import org.apache.commons.lang3.StringUtils;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.results.Result;
 import org.openjdk.jmh.results.RunResult;
@@ -72,6 +73,7 @@ public abstract class Runner
 {
 
     private static final Logger LOG = LoggerFactory.getLogger( Runner.class );
+    private static final int STAGE_HEADER_WIDTH = 72;
 
     public static SuiteDescription createSuiteDescriptionFor( String packageName, Path benchConfigFile )
     {
@@ -283,11 +285,7 @@ public abstract class Runner
             RunnerParams runnerParams,
             ErrorReporter errorReporter )
     {
-        LOG.debug( "\n\n" );
-        LOG.debug( "------------------------------------------------------------------------" );
-        LOG.debug( "---------------------------  PROFILING ---------------------------------" );
-        LOG.debug( "------------------------------------------------------------------------" );
-        LOG.debug( "\n\n" );
+        logStageHeader( "PROFILING" );
 
         List<BenchmarkDescription> benchmarksWithProfiles = new ArrayList<>( benchmarks );
 
@@ -357,11 +355,7 @@ public abstract class Runner
             RunnerParams runnerParams,
             ErrorReporter errorReporter )
     {
-        LOG.debug( "\n\n" );
-        LOG.debug( "-------------------------------------------------------------------------" );
-        LOG.debug( "---------------------------  EXECUTION  ---------------------------------" );
-        LOG.debug( "-------------------------------------------------------------------------" );
-        LOG.debug( "\n\n" );
+        logStageHeader( "EXECUTION" );
 
         RunnerParams finalRunnerParams = runnerParams.copyWithProfilers( ParameterizedProfiler.defaultProfilers( NO_OP ) );
         for ( int threadCount : threadCounts )
@@ -401,6 +395,15 @@ public abstract class Runner
                 }
             }
         }
+    }
+
+    protected void logStageHeader( String header )
+    {
+        LOG.info( "\n\n" );
+        LOG.info( StringUtils.repeat( '-', STAGE_HEADER_WIDTH ) );
+        LOG.info( StringUtils.center( " " + header + " ", STAGE_HEADER_WIDTH, '-' ) );
+        LOG.info( StringUtils.repeat( '-', STAGE_HEADER_WIDTH ) );
+        LOG.info( "\n\n" );
     }
 
     private void executeBenchmarksForConfig(

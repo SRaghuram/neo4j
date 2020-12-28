@@ -10,6 +10,7 @@ import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.common.util.Jvm;
+import com.neo4j.bench.jmh.api.BaseBenchmark;
 import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
 import com.neo4j.bench.jmh.api.config.Validation;
 import com.neo4j.bench.micro.benchmarks.core.ConcurrentReadWriteLabelsV2;
@@ -61,12 +62,12 @@ class InteractiveRunIT extends AnnotationsFixture
     @Test
     void shouldRunExactlyOneMethodOfBenchmarkClassZeroFork() throws Exception
     {
-        Class benchmark = ReadById.class;
+        Class<? extends BaseBenchmark> benchmark = ReadById.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation(), getAnnotations() );
         int benchmarkMethodCount = benchmarkDescription.methods().size();
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 ) / benchmarkMethodCount;
         // parameters affect store content, in this benchmark
-        int expectedStoreCount = benchmarkDescription.storeCount( newArrayList( "format" ) );
+        int expectedStoreCount = benchmarkDescription.storeCount( newArrayList( "format" ) ) * 2;
         int forkCount = 0;
         runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL, forkCount, "randomNodeById" );
     }
@@ -74,12 +75,12 @@ class InteractiveRunIT extends AnnotationsFixture
     @Test
     void shouldRunExactlyOneMethodOfBenchmarkClassOneFork() throws Exception
     {
-        Class benchmark = ReadById.class;
+        Class<? extends BaseBenchmark> benchmark = ReadById.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation(), getAnnotations() );
         int benchmarkMethodCount = benchmarkDescription.methods().size();
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 ) / benchmarkMethodCount;
         // parameters affect store content, in this benchmark
-        int expectedStoreCount = benchmarkDescription.storeCount( newArrayList( "format" ) );
+        int expectedStoreCount = benchmarkDescription.storeCount( newArrayList( "format" ) ) * 2;
         int forkCount = 1;
         runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL, forkCount, "randomNodeById" );
     }
@@ -87,11 +88,11 @@ class InteractiveRunIT extends AnnotationsFixture
     @Test
     void shouldRunAllMethodsOfBenchmarkClassZeroFork() throws Exception
     {
-        Class benchmark = AllNodesScan.class;
+        Class<? extends BaseBenchmark> benchmark = AllNodesScan.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation(), getAnnotations() );
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 );
         // parameters affect store content, in this benchmark
-        int expectedStoreCount = benchmarkDescription.storeCount( newArrayList( "auth" ) );
+        int expectedStoreCount = benchmarkDescription.storeCount( newArrayList( "auth" ) ) * 2;
         int forkCount = 0;
         runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL, forkCount );
     }
@@ -99,11 +100,11 @@ class InteractiveRunIT extends AnnotationsFixture
     @Test
     void shouldRunAllMethodsOfBenchmarkClassOneFork() throws Exception
     {
-        Class benchmark = AllNodesScan.class;
+        Class<? extends BaseBenchmark> benchmark = AllNodesScan.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation(), getAnnotations() );
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 );
         // parameters affect store content, in this benchmark
-        int expectedStoreCount = benchmarkDescription.storeCount( newArrayList( "auth" ) );
+        int expectedStoreCount = benchmarkDescription.storeCount( newArrayList( "auth" ) ) * 2;
         int forkCount = 1;
         runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL, forkCount );
     }
@@ -111,7 +112,7 @@ class InteractiveRunIT extends AnnotationsFixture
     @Test
     void shouldRunAllMethodsOfGroupBenchmarkClass() throws Exception
     {
-        Class benchmark = ConcurrentReadWriteLabelsV2.class;
+        Class<? extends BaseBenchmark> benchmark = ConcurrentReadWriteLabelsV2.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation(), getAnnotations() );
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 );
         // parameters affect store content, in this benchmark
@@ -123,11 +124,11 @@ class InteractiveRunIT extends AnnotationsFixture
     @Test
     void shouldRunConstantDataConstantAugment() throws Exception
     {
-        Class benchmark = ConstantDataConstantAugment.class;
+        Class<? extends BaseBenchmark> benchmark = ConstantDataConstantAugment.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation(), getTestOnlyAnnotations() );
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 );
         // parameters DO NOT affect store content, in this benchmark
-        int expectedStoreCount = 1;
+        int expectedStoreCount = 2;
         int forkCount = 1;
         runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL, forkCount );
     }
@@ -135,11 +136,11 @@ class InteractiveRunIT extends AnnotationsFixture
     @Test
     void shouldRunConstantDataVariableAugment() throws Exception
     {
-        Class benchmark = ConstantDataVariableAugment.class;
+        Class<? extends BaseBenchmark> benchmark = ConstantDataVariableAugment.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation(), getTestOnlyAnnotations() );
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 );
         // parameters affect store content, in this benchmark
-        int expectedStoreCount = expectedBenchmarkCount;
+        int expectedStoreCount = expectedBenchmarkCount * 2;
         int forkCount = 1;
         runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL, forkCount );
     }
@@ -147,7 +148,7 @@ class InteractiveRunIT extends AnnotationsFixture
     @Test
     void shouldRunBenchmarkThatIsDisabledByDefault() throws Exception
     {
-        Class benchmark = DefaultDisabled.class;
+        Class<? extends BaseBenchmark> benchmark = DefaultDisabled.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation(), getTestOnlyAnnotations() );
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 );
         // extends BaseRegularBenchmark not BaseDatabaseBenchmark, so no store should be created
@@ -159,7 +160,7 @@ class InteractiveRunIT extends AnnotationsFixture
     @Test
     void shouldNotThrowExceptionWhenErrorPolicyIsSkip() throws Exception
     {
-        Class benchmark = AlwaysCrashes.class;
+        Class<? extends BaseBenchmark> benchmark = AlwaysCrashes.class;
         // no benchmarks will complete, so no profiler recordings will be created
         int expectedBenchmarkCount = 0;
         // parameters DO NOT affect store content, in this benchmark
@@ -172,7 +173,7 @@ class InteractiveRunIT extends AnnotationsFixture
     @Test
     void shouldThrowExceptionWhenErrorPolicyIsFail()
     {
-        Class benchmark = AlwaysCrashes.class;
+        Class<? extends BaseBenchmark> benchmark = AlwaysCrashes.class;
         // no benchmarks will complete, so no profiler recordings will be created
         int expectedBenchmarkCount = 0;
         // parameters DO NOT affect store content, in this benchmark
@@ -184,7 +185,7 @@ class InteractiveRunIT extends AnnotationsFixture
     }
 
     private void runInteractively(
-            Class benchmark,
+            Class<? extends BaseBenchmark> benchmark,
             int expectedBenchmarkCount,
             int expectedStoreCount,
             ErrorPolicy errorPolicy,
