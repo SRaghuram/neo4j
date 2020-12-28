@@ -84,8 +84,8 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
     public static final String LDAP_READ_TIMEOUT_CLIENT_MESSAGE = "LDAP response timed out.";
     public static final String LDAP_CONNECTION_REFUSED_CLIENT_MESSAGE = "LDAP connection refused.";
 
-    private Boolean authenticationEnabled;
-    private Boolean authorizationEnabled;
+    private final Boolean authenticationEnabled;
+    private final Boolean authorizationEnabled;
     private Boolean useStartTls;
     private boolean useSearchAttribute;
     private String userAttributeName;
@@ -101,7 +101,7 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
     // Parser regex for group-to-role-mapping
     private static final String KEY_GROUP = "\\s*('(.+)'|\"(.+)\"|(\\S)|(\\S.*\\S))\\s*";
     private static final String VALUE_GROUP = "\\s*(.*)";
-    private Pattern keyValuePattern = Pattern.compile( KEY_GROUP + KEY_VALUE_DELIMITER + VALUE_GROUP );
+    private final Pattern keyValuePattern = Pattern.compile( KEY_GROUP + KEY_VALUE_DELIMITER + VALUE_GROUP );
 
     public LdapRealm( Config config, LogProvider logProvider, SecurityLog securityLog, SecureHasher secureHasher, boolean authenticationEnabled,
                       boolean authorizationEnabled )
@@ -303,7 +303,7 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
     private String getUsername( PrincipalCollection principals )
     {
         String username = null;
-        Collection ldapPrincipals = principals.fromRealm( getName() );
+        Collection<?> ldapPrincipals = principals.fromRealm( getName() );
         if ( !ldapPrincipals.isEmpty() )
         {
             username = (String) ldapPrincipals.iterator().next();
@@ -570,7 +570,7 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
         // Use search argument to prevent potential code injection
         Object[] searchArguments = new Object[]{username};
 
-        NamingEnumeration result = ldapContext.search( userSearchBase, userSearchFilter, searchArguments, searchCtls );
+        NamingEnumeration<?> result = ldapContext.search( userSearchBase, userSearchFilter, searchArguments, searchCtls );
 
         if ( result.hasMoreElements() )
         {
@@ -596,7 +596,7 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
             Attributes attributes = searchResult.getAttributes();
             if ( attributes != null )
             {
-                NamingEnumeration attributeEnumeration = attributes.getAll();
+                NamingEnumeration<?> attributeEnumeration = attributes.getAll();
                 while ( attributeEnumeration.hasMore() )
                 {
                     Attribute attribute = (Attribute) attributeEnumeration.next();
