@@ -69,6 +69,7 @@ import org.neo4j.kernel.diagnostics.providers.ConfigDiagnostics;
 import org.neo4j.string.SecureString;
 import org.neo4j.test.DoubleLatch;
 
+import static com.neo4j.configuration.SecuritySettings.ldap_authorization_group_to_role_mapping;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertAuth;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertAuthFail;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertEmptyRead;
@@ -161,7 +162,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
         settings.put( SecuritySettings.ldap_authorization_user_search_base, "ou=users,dc=example,dc=com" );
         settings.put( SecuritySettings.ldap_authorization_user_search_filter, "(&(objectClass=*)(uid={0}))" );
         settings.put( SecuritySettings.ldap_authorization_group_membership_attribute_names, List.of( "gidnumber" ) );
-        settings.put( SecuritySettings.ldap_authorization_group_to_role_mapping, "500=reader;501=publisher;502=architect;503=admin;504=agent" );
+        settings.put( ldap_authorization_group_to_role_mapping, "500=reader;501=publisher;502=architect;503=admin;504=agent" );
         settings.put( GraphDatabaseSettings.procedure_roles, "test.staticReadProcedure:role1" );
         settings.put( SecuritySettings.ldap_read_timeout, Duration.ofSeconds( 1 ) );
         settings.put( SecuritySettings.ldap_authorization_use_system_account, false );
@@ -258,11 +259,38 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     @Test
     public void shouldBeAbleToLoginAndAuthorizeNoPermissionUserWithLdapOnlyAndNoGroupToRoleMapping()
     {
-        startDatabaseWithSettings( Map.of( SecuritySettings.ldap_authorization_group_to_role_mapping, "" ) );
+        startDatabaseWithSettings( Map.of( ldap_authorization_group_to_role_mapping, "" ) );
         // Then
         // User 'neo' has reader role by default, but since we are not passing a group-to-role mapping
         // he should get no permissions
         assertEmptyRead( boltUri, "neo", "abc123" );
+    }
+
+    @Test
+    public void shouldUpdateGroupToRoleMapping()
+    {
+        startDatabaseWithSettings( Map.of( ldap_authorization_group_to_role_mapping, "500=reader" ) );
+        try ( Driver driver = connectDriver( boltUri, "neo", "abc123" );
+              Session session = driver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ) ) )
+        {
+            // when
+            Record record = session.run( "SHOW CURRENT USER" ).single();
+            // then
+            assertThat( record.get( "roles" ).asList(), equalTo( List.of( "reader", PredefinedRoles.PUBLIC ) ) );
+        }
+
+        // update the setting
+        executeOnSystem( String.format( "CALL dbms.setConfigValue( '%s', '%s' )", ldap_authorization_group_to_role_mapping.name(), "500=publisher" ) );
+        executeOnSystem( "CALL dbms.security.clearAuthCache()" );
+
+        try ( Driver driver = connectDriver( boltUri, "neo", "abc123" );
+              Session session = driver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ) ) )
+        {
+            // when
+            Record record = session.run( "SHOW CURRENT USER" ).single();
+            // then
+            assertThat( record.get( "roles" ).asList(), equalTo( List.of( "publisher", PredefinedRoles.PUBLIC ) ) );
+        }
     }
 
     @Test
@@ -323,7 +351,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     @Test
     public void shouldKeepAuthorizationForLifetimeOfTransactionWithProcedureAllowed() throws Throwable
     {
-        startDatabaseWithSettings( Map.of( SecuritySettings.ldap_authorization_group_to_role_mapping, "503=admin;504=role1" ) );
+        startDatabaseWithSettings( Map.of( ldap_authorization_group_to_role_mapping, "503=admin;504=role1" ) );
         dbRule.resolveDependency( GlobalProcedures.class ).registerProcedure( ProcedureInteractionTestBase.ClassWithProcedures.class );
         createRole( "role1" );
         assertKeepAuthorizationForLifetimeOfTransaction( "smith",

@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 
 import java.util.ArrayList;
@@ -15,6 +14,7 @@ import java.util.Set;
 
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
+import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.procedure.Context;
 
@@ -25,7 +25,7 @@ import static org.neo4j.server.security.systemgraph.SystemGraphRealmHelper.IS_SU
 public class AuthProceduresBase
 {
     @Context
-    public EnterpriseSecurityContext securityContext;
+    public SecurityContext securityContext;
 
     @Context
     public GraphDatabaseAPI graph;

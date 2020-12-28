@@ -114,6 +114,7 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
         this.authorizationEnabled = authorizationEnabled;
         setName( SecuritySettings.LDAP_REALM_NAME );
         configureRealm( config );
+        config.addListener( SecuritySettings.ldap_authorization_group_to_role_mapping, ( before, after ) -> updateGroupToRoleMapping( after ) );
         if ( isAuthenticationCachingEnabled() )
         {
             setCredentialsMatcher( secureHasher.getHashedCredentialsMatcher() );
@@ -453,8 +454,7 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
         userAttributeName = config.get( SecuritySettings.ldap_authentication_user_search_attribute_name );
         membershipAttributeNames = config.get( SecuritySettings.ldap_authorization_group_membership_attribute_names );
         useSystemAccountForAuthorization = config.get( SecuritySettings.ldap_authorization_use_system_account );
-        groupToRoleMapping =
-                parseGroupToRoleMapping( config.get( SecuritySettings.ldap_authorization_group_to_role_mapping ) );
+        updateGroupToRoleMapping( config.get( SecuritySettings.ldap_authorization_group_to_role_mapping ) );
 
         setAuthenticationCachingEnabled( config.get( SecuritySettings.ldap_authentication_cache_enabled ) );
         setAuthorizationCachingEnabled( true );
@@ -464,6 +464,11 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
     {
         return (rawLdapServer == null) ? null :
                rawLdapServer.contains( "://" ) ? rawLdapServer : "ldap://" + rawLdapServer;
+    }
+
+    private void updateGroupToRoleMapping( String groupToRoleMappingString )
+    {
+        groupToRoleMapping = parseGroupToRoleMapping( groupToRoleMappingString );
     }
 
     private Map<String,Collection<String>> parseGroupToRoleMapping( String groupToRoleMappingString )

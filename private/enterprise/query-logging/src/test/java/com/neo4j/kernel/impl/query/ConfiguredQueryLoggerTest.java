@@ -29,6 +29,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.CypherQueryObfuscatorFactory;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
+import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.query.CompilerInfo;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QueryObfuscator;
@@ -888,6 +889,7 @@ class ConfiguredQueryLoggerTest
             registerComponent( Transaction.class );
             registerComponent( GraphDatabaseAPI.class ) ;
             registerComponent( SecurityLog.class );
+            registerComponent( SecurityContext.class );
 
             registerProcedure( UserManagementProcedures.class );
         }

@@ -225,7 +225,7 @@ public class SecuritySettings implements SettingsDeclaration
             "----" )
     public static final Setting<String> ldap_authorization_group_to_role_mapping =
             newBuilder( "dbms.security.ldap.authorization.group_to_role_mapping", STRING, "" )
-                    .addConstraint( validateGroupMapping() ).build();
+                    .addConstraint( validateGroupMapping() ).dynamic().build();
 
     //=========================================================================
     // Cache settings
