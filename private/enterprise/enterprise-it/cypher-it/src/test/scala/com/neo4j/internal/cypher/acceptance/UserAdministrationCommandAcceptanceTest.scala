@@ -1128,7 +1128,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       execute("ALTER USER foo SET PASSWORD 'imAString'+$password", Map("password" -> "imAParameter"))
       // THEN
     }
-    exception.getMessage should include("Invalid input '+': expected whitespace, SET, CHANGE, DEFAULT DATABASE db, ';' or end of input")
+    exception.getMessage should include("Invalid input '+': expected whitespace, CHANGE, SET, ';' or end of input")
   }
 
   test("should fail when altering user password as missing parameter") {
