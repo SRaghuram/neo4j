@@ -533,9 +533,9 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .withOrder(ProvidedOrder.asc(prop("a", "age")))
       .onTopOf(aPlan("Projection")
         .containingArgumentForProjection("`a.age`" -> "a.age")
-        .onTopOf(aPlan("Distinct")
+        .onTopOf(aPlan("OrderedDistinct")
           .containingVariables("a", "name")
-          .containingArgument("a.name AS name, a")
+          .containingArgument("a, a.name AS name")
         )
       )
 
@@ -608,7 +608,6 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   }
 
   test("ORDER BY column that isn't referenced in WITH GROUP BY") {
-    // sum is not supported in compiled
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (a:A) WITH a.name AS name, a, sum(a.age) AS age ORDER BY a.foo RETURN name, age")
 
     result.executionPlanDescription() should includeSomewhere
@@ -616,9 +615,9 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .withOrder(ProvidedOrder.asc(prop("a", "foo")))
       .onTopOf(aPlan("Projection")
         .containingArgumentForProjection("`a.foo`" -> "a.foo")
-        .onTopOf(aPlan("EagerAggregation")
+        .onTopOf(aPlan("OrderedAggregation")
           .containingVariables("age", "name") // the introduced variables
-          .containingArgument("a.name AS name, a, sum(a.age) AS age") // the details column
+          .containingArgument("a, a.name AS name, sum(a.age) AS age") // the details column
         ))
 
     result.toList should equal(List(
