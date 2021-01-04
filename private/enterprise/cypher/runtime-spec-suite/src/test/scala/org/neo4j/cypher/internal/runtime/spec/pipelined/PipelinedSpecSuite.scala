@@ -116,6 +116,8 @@ import org.neo4j.cypher.internal.runtime.spec.tests.RollupApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SelectOrAntiSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SelectOrSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SemiApplyTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.SetPropertiesFromMapNodeTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.SetPropertiesFromMapRelationshipTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SetPropertyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ShortestPathTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SkipTestBase
@@ -502,8 +504,10 @@ class PipelinedLenientCreateRelationshipNoFusingTest extends LenientCreateRelati
 //SET
 class PipelinedSetPropertyTestBase extends SetPropertyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedSetPropertyNoFusingTest extends SetPropertyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
-class PipelinedSetPropertiesFromMapTestBase extends SetPropertiesFromMapTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
-class PipelinedSetPropertiesFromMapNoFusingTest extends SetPropertiesFromMapTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedSetPropertiesFromMapNodeTestBase extends SetPropertiesFromMapNodeTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedSetPropertiesFromMapNoFusingNodeTest extends SetPropertiesFromMapNodeTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedSetPropertiesFromMapRelationshipTestBase extends SetPropertiesFromMapRelationshipTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedSetPropertiesFromMapNoFusingRelationshipTest extends SetPropertiesFromMapRelationshipTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 
 //EXHAUSTIVE LIMIT

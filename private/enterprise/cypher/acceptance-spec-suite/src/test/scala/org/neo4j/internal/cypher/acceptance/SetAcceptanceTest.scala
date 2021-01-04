@@ -97,7 +97,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
         |RETURN entity.prop, entity.data
         |""".stripMargin
 
-    val r = executeWith(Configs.InterpretedAndSlotted, q)
+    val r = executeWith(Configs.InterpretedAndSlottedAndPipelined, q)
     r.toList should equal(List(Map("entity.prop" -> 1, "entity.data" -> 1), Map("entity.prop" -> 2, "entity.data" -> 2)))
   }
 
@@ -114,7 +114,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
         |RETURN entity.prop, entity.data
         |""".stripMargin
 
-    val r = executeWith(Configs.InterpretedAndSlotted, q)
+    val r = executeWith(Configs.InterpretedAndSlottedAndPipelined, q)
     r.toList should equal(List(Map("entity.prop" -> 1, "entity.data" -> null), Map("entity.prop" -> 2, "entity.data" -> null)))
   }
 

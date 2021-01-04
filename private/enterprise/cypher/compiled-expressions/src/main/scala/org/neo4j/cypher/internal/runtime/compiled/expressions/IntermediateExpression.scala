@@ -28,5 +28,5 @@ case class IntermediateExpression(ir: IntermediateRepresentation,
 }
 
 object IntermediateExpression {
-  val  EMPTY: IntermediateExpression = IntermediateExpression(IntermediateRepresentation.noop(), Seq.empty, Seq.empty, Set.empty)
+  val EMPTY: IntermediateExpression = IntermediateExpression(IntermediateRepresentation.noop(), Seq.empty, Seq.empty, Set.empty)
 }

@@ -24,6 +24,7 @@ import org.neo4j.internal.kernel.api.Token
 import org.neo4j.internal.kernel.api.Write
 import org.neo4j.token.api.TokenConstants
 import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.Value
 import org.neo4j.values.storable.Values
 import org.neo4j.values.storable.Values.NO_VALUE
 import org.neo4j.values.virtual.MapValue
@@ -37,6 +38,7 @@ class SetOperator(val workIdentity: WorkIdentity,
                   setOperation: SetOperation) extends StatelessOperator {
 
   var event: OperatorProfileEvent = _
+
   override def operate(morsel: Morsel,
                        state: PipelinedQueryState,
                        resources: QueryResources): Unit = {
@@ -82,33 +84,25 @@ object SetOperator {
                       propertyValue: AnyValue,
                       token: Token,
                       write: Write,
-                      queryStatisticsTracker: MutableQueryStatistics) : Unit = {
-    val safeValue = makeValueNeoSafe(propertyValue)
-    if (safeValue == Values.NO_VALUE) {
-      val propertyToken = token.propertyKey(propertyKey)
-      if (propertyToken != TokenConstants.NO_TOKEN && !(write.nodeRemoveProperty(nodeId, propertyToken) eq Values.NO_VALUE)) {
-        queryStatisticsTracker.setProperty()
-      }
-    } else {
-      val propertyKeyId = token.propertyKeyGetOrCreateForName(propertyKey)
-      translateException(token, write.nodeSetProperty(nodeId, propertyKeyId, safeValue))
-      queryStatisticsTracker.setProperty()
-    }
+                      queryStatisticsTracker: MutableQueryStatistics): Unit = {
+    val safeValue: Value = makeValueNeoSafe(propertyValue)
+    val propertyId = getPropertyKey(propertyKey, safeValue, token)
+    setNodeProperty(nodeId, propertyId, propertyValue, token, write, queryStatisticsTracker)
   }
 
-  def setNodeProperty(nodeId: Long,
-                      propertyToken: Int,
+  private def setNodeProperty(nodeId: Long,
+                      propertyId: Int,
                       propertyValue: AnyValue,
                       token: Token,
                       write: Write,
                       queryStatisticsTracker: MutableQueryStatistics): Unit = {
     val safeValue = makeValueNeoSafe(propertyValue)
     if (safeValue == Values.NO_VALUE) {
-      if (!(write.nodeRemoveProperty(nodeId, propertyToken) eq Values.NO_VALUE)) {
+      if (!(write.nodeRemoveProperty(nodeId, propertyId) eq Values.NO_VALUE)) {
         queryStatisticsTracker.setProperty()
       }
     } else {
-      translateException(token, write.nodeSetProperty(nodeId, propertyToken, safeValue))
+      translateException(token, write.nodeSetProperty(nodeId, propertyId, safeValue))
       queryStatisticsTracker.setProperty()
     }
   }
@@ -123,28 +117,15 @@ object SetOperator {
                                nodeCursor: NodeCursor,
                                relCursor: RelationshipScanCursor,
                                propertyCursor: PropertyCursor): Unit = {
-
-    val propValueMap = transformToPropertyMap(propertiesMap, token, read, nodeCursor, relCursor, propertyCursor)
-    propValueMap.foreach{case (k, v) => setNodeProperty(nodeId, k, v, token, write, queryStatisticsTracker)}
+    val propValueMap = transformToPropertyValueMap(propertiesMap, token, read, nodeCursor, relCursor, propertyCursor)
+    propValueMap.foreach { case (k, v) => setNodeProperty(nodeId, k, v, token, write, queryStatisticsTracker) }
 
     //delete remaining properties
     if (removeOtherProps) {
       read.singleNode(nodeId, nodeCursor)
       if (nodeCursor.next()) {
-        val setKeys = propValueMap.keySet
-
         nodeCursor.properties(propertyCursor)
-        val propsToRemove = ArrayBuffer[Int]()
-        while (propertyCursor.next()) {
-          if (!setKeys.contains(propertyCursor.propertyKey)) {
-            propsToRemove.append(propertyCursor.propertyKey())
-          }
-        }
-
-        propsToRemove.foreach(prop => {
-          write.nodeRemoveProperty(nodeId, prop)
-          queryStatisticsTracker.setProperty()
-        })
+        removeProperties(propertyCursor, propValueMap, queryStatisticsTracker, write.nodeRemoveProperty(nodeId, _))
       }
     }
   }
@@ -168,31 +149,22 @@ object SetOperator {
                               write: Write,
                               queryStatisticsTracker: MutableQueryStatistics): Unit = {
     val safeValue = makeValueNeoSafe(propertyValue)
-    if (safeValue == Values.NO_VALUE) {
-      val propertyToken = token.propertyKey(propertyKey)
-      if (propertyToken != TokenConstants.NO_TOKEN && !(write.relationshipRemoveProperty(relationshipId, propertyToken) eq Values.NO_VALUE)) {
-        queryStatisticsTracker.setProperty()
-      }
-    } else {
-      val propertyKeyId = token.propertyKeyGetOrCreateForName(propertyKey)
-      translateException(token, write.relationshipSetProperty(relationshipId, propertyKeyId, safeValue))
-      queryStatisticsTracker.setProperty()
-    }
+    val propertyId = getPropertyKey(propertyKey, safeValue, token)
+    setRelationshipProperty(relationshipId, propertyId, safeValue, token, write, queryStatisticsTracker)
   }
 
-  def setRelationshipProperty(relationshipId: Long,
-                              propertyKeyId: Int,
-                              propertyValue: AnyValue,
+  private def setRelationshipProperty(relationshipId: Long,
+                              propertyId: Int,
+                              safeValue: Value,
                               token: Token,
                               write: Write,
                               queryStatisticsTracker: MutableQueryStatistics): Unit = {
-    val safeValue = makeValueNeoSafe(propertyValue)
     if (safeValue == Values.NO_VALUE) {
-      if (!(write.relationshipRemoveProperty(relationshipId, propertyKeyId) eq Values.NO_VALUE)) {
+      if (!(write.relationshipRemoveProperty(relationshipId, propertyId) eq Values.NO_VALUE)) {
         queryStatisticsTracker.setProperty()
       }
     } else {
-      translateException(token, write.relationshipSetProperty(relationshipId, propertyKeyId, safeValue))
+      translateException(token, write.relationshipSetProperty(relationshipId, propertyId, safeValue))
       queryStatisticsTracker.setProperty()
     }
   }
@@ -205,53 +177,58 @@ object SetOperator {
                                        read: Read,
                                        queryStatisticsTracker: MutableQueryStatistics,
                                        nodeCursor: NodeCursor,
-                                       relCursor: RelationshipScanCursor ,
+                                       relCursor: RelationshipScanCursor,
                                        propertyCursor: PropertyCursor): Unit = {
-
-    val propValueMap = transformToPropertyMap(propertiesMap, token, read, nodeCursor, relCursor, propertyCursor)
-    propValueMap.foreach{case (k, v) => setRelationshipProperty(relationShipId, k, v, token, write, queryStatisticsTracker)}
+    val propValueMap = transformToPropertyValueMap(propertiesMap, token, read, nodeCursor, relCursor, propertyCursor)
+    propValueMap.foreach { case (propertyId, value) => setRelationshipProperty(relationShipId, propertyId, makeValueNeoSafe(value), token, write, queryStatisticsTracker) }
 
     //delete remaining properties
     if (removeOtherProps) {
       read.singleRelationship(relationShipId, relCursor)
       if (relCursor.next()) {
-        val setKeys = propValueMap.keySet
-
         relCursor.properties(propertyCursor)
-        val propsToRemove = ArrayBuffer[Int]()
-        while (propertyCursor.next()) {
-          if (!setKeys.contains(propertyCursor.propertyKey)) {
-            propsToRemove.append(propertyCursor.propertyKey())
-          }
-        }
-
-        propsToRemove.foreach(prop => {
-          write.relationshipRemoveProperty(relationShipId, prop)
-          queryStatisticsTracker.setProperty()
-        })
+        removeProperties(propertyCursor, propValueMap, queryStatisticsTracker, write.relationshipRemoveProperty(relationShipId, _))
       }
     }
+  }
+
+  def removeProperties(propertyCursor: PropertyCursor,
+                       propertiesToKeep: mutable.Map[Int, AnyValue],
+                       queryStatisticsTracker: MutableQueryStatistics,
+                       removeFunc: Int => Unit): Unit = {
+    val propertyKeysToKeep = propertiesToKeep.keySet
+    val propsToRemove = ArrayBuffer[Int]()
+    while (propertyCursor.next()) {
+      if (!propertyKeysToKeep.contains(propertyCursor.propertyKey)) {
+        propsToRemove.append(propertyCursor.propertyKey())
+      }
+    }
+
+    propsToRemove.foreach(prop => {
+      removeFunc(prop)
+      queryStatisticsTracker.setProperty()
+    })
   }
 
   private def safeCastToMap(value: AnyValue): MapValue = value match {
     case mapValue: MapValue => mapValue
     case _ =>
-      throw new CypherTypeException(s"Parameter provided for node creation is not a Map, instead got $value")
+      throw new CypherTypeException(s"Parameter provided for setting properties is not a Map, instead got $value")
   }
 
-  private def transformToPropertyMap(value: AnyValue,
-                                     token: Token,
-                                     read: Read,
-                                     nodeCursor: NodeCursor,
-                                     relCursor: RelationshipScanCursor,
-                                     propertyCursor: PropertyCursor): mutable.Map[Int, AnyValue] = value match {
+  private def transformToPropertyValueMap(value: AnyValue,
+                                          token: Token,
+                                          read: Read,
+                                          nodeCursor: NodeCursor,
+                                          relCursor: RelationshipScanCursor,
+                                          propertyCursor: PropertyCursor): mutable.Map[Int, AnyValue] = value match {
     case mapValue: MapValue =>
       val map = mutable.Map[Int, AnyValue]()
       mapValue.foreach {
-        case (k: String, v: AnyValue) =>
-          val propertyKey = if (v == Values.NO_VALUE) token.propertyKey(k) else token.propertyKeyGetOrCreateForName(k)
+        case (propertyName: String, value: AnyValue) =>
+          val propertyKey = getPropertyKey(propertyName, makeValueNeoSafe(value), token)
           if (propertyKey != TokenConstants.NO_TOKEN) {
-            map.put(propertyKey, v)
+            map += (propertyKey -> value)
           }
       }
       map
@@ -259,7 +236,7 @@ object SetOperator {
       read.singleNode(vNode.id(), nodeCursor)
       if (nodeCursor.next()) {
         nodeCursor.properties(propertyCursor)
-        createMap(propertyCursor)
+        createPropertyValueMap(propertyCursor)
       } else {
         mutable.Map.empty
       }
@@ -267,18 +244,26 @@ object SetOperator {
       read.singleRelationship(vRelation.id(), relCursor)
       if (relCursor.next()) {
         relCursor.properties(propertyCursor)
-        createMap(propertyCursor)
+        createPropertyValueMap(propertyCursor)
       } else {
         mutable.Map.empty
       }
     case _ =>
-      throw new CypherTypeException(s"Parameter provided for node creation is not a Map, instead got $value")
+      throw new CypherTypeException(s"Parameter provided for setting properties is not a Map, instead got $value")
   }
 
-  def createMap(propertyCursor: PropertyCursor): mutable.Map[Int, AnyValue] = {
+  private def getPropertyKey(propertyName: String, value: Value, token: Token): Int = {
+    if (value == Values.NO_VALUE) {
+      token.propertyKey(propertyName)
+    } else {
+      token.propertyKeyGetOrCreateForName(propertyName)
+    }
+  }
+
+  private def createPropertyValueMap(propertyCursor: PropertyCursor): mutable.Map[Int, AnyValue] = {
     val map = mutable.Map[Int, AnyValue]()
-    while(propertyCursor.next()) {
-      map.put(propertyCursor.propertyKey(), propertyCursor.propertyValue())
+    while (propertyCursor.next()) {
+      map += (propertyCursor.propertyKey() -> propertyCursor.propertyValue())
     }
     map
   }

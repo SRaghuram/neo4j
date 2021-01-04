@@ -51,6 +51,8 @@ import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.internal.kernel.api.Locks
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.PropertyCursor
+import org.neo4j.internal.kernel.api.Read
+import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.kernel.api.Token
 import org.neo4j.internal.kernel.api.Write
 import org.neo4j.values.AnyValue
@@ -59,15 +61,13 @@ import org.neo4j.values.virtual.VirtualRelationshipValue
 
 class SetPropertiesFromMapOperatorTemplate(override val inner: OperatorTaskTemplate,
                                            override val id: Id,
-                                           entity: () => IntermediateExpression, // n, r
-                                           propertiesExpression: () => IntermediateExpression, // prop -> {"prop":1}
+                                           entity: () => IntermediateExpression,
+                                           propertiesExpression: () => IntermediateExpression,
                                            removeOtherProps: Boolean)(protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
 
   private var entityValue: IntermediateExpression = _
-  private var nodePropertiesMap: IntermediateExpression = _ // {"prop": 1}
-  private var relationshipPropertiesMap: IntermediateExpression = _ // {"prop": 1}
-  //private val propertyCursorField = field[PropertyCursor](codeGen.namer.nextVariableName("propertyCursor"))
-
+  private var nodePropertiesMap: IntermediateExpression = _
+  private var relationshipPropertiesMap: IntermediateExpression = _
 
   override def genInit: IntermediateRepresentation = {
     inner.genInit
@@ -142,7 +142,7 @@ class SetPropertiesFromMapOperatorTemplate(override val inner: OperatorTaskTempl
       IntermediateRepresentation.tryCatch[Exception](errorVar)
         (block(
           invokeStatic(
-            method[SetOperator, Unit, Long, AnyValue, Boolean, Token, Write, MutableQueryStatistics, NodeCursor, PropertyCursor](setFunction),
+            method[SetOperator, Unit, Long, AnyValue, Boolean, Token, Write, Read, MutableQueryStatistics, NodeCursor, RelationshipScanCursor, PropertyCursor](setFunction),
             id,
             propValueMap,
             constant(removeOtherProps),

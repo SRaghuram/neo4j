@@ -2267,7 +2267,7 @@ class EagerizationAcceptanceTest
   test("matching generic property, writing with += should be eager") {
     relate(createNode(Map("prop" -> 5)), createNode())
     val query = "MATCH (n {prop : 5})-[r]-(m) UNWIND [n, r] AS e SET e += {prop: 5} RETURN count(*)"
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     assertStats(result, propertiesWritten = 2)
     result.toList should equal(List(Map("count(*)" -> 2)))
@@ -2276,7 +2276,7 @@ class EagerizationAcceptanceTest
   test("matching generic property, writing with = should be eager") {
     relate(createNode(Map("prop" -> 5)), createNode())
     val query = "MATCH (n {prop : 5})-[r]-(m) UNWIND [n, r] AS e SET e = {prop: 5} RETURN count(*)"
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     assertStats(result, propertiesWritten = 2)
     result.toList should equal(List(Map("count(*)" -> 2)))
