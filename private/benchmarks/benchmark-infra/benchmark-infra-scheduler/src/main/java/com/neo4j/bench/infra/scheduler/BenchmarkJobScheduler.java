@@ -65,7 +65,7 @@ public class BenchmarkJobScheduler
      */
     public static BenchmarkJobScheduler create( String jobQueueRef, String jobDefinition, String batchStack, AWSCredentials awsCredentials )
     {
-        String jobQueue = getJobQueueCustomName( jobQueueRef, awsCredentials.awsCredentialsProvider(), awsCredentials.awsRegion(), batchStack );
+        String jobQueue = resolveJobQueueName( jobQueueRef, awsCredentials.awsCredentialsProvider(), awsCredentials.awsRegion(), batchStack );
         return new BenchmarkJobScheduler( AWSBatchJobScheduler.getJobScheduler( awsCredentials, new Infrastructure( jobQueue, jobDefinition ), batchStack ),
                                           AWSS3ArtifactStorage.create( awsCredentials ),
                                           awsCredentials,
@@ -87,16 +87,15 @@ public class BenchmarkJobScheduler
                                           DEFAULT_JOB_STATUS_CHECK_DELAY );
     }
 
-    // for testing
-    static BenchmarkJobScheduler create( JobScheduler jobScheduler,
-                                         ArtifactStorage artifactStorage,
-                                         AWSCredentials awsCredentials,
-                                         Duration jobStatusCheckDelay )
-    {
-        return new BenchmarkJobScheduler( jobScheduler, artifactStorage, awsCredentials, jobStatusCheckDelay );
-    }
-
-    private static String getJobQueueCustomName( String jobQueueRef, AWSCredentialsProvider credentialsProvider, String region, String stack )
+    /**
+     * Resolves queue name in CloudFormation stack (where queue names are output of CloudFormation template).
+     *
+     * @param jobQueueRef         queue name in CloudFormation output
+     * @param credentialsProvider AWS credentials provider
+     * @param region              AWS region
+     * @param stack               benchmarking batch stack name
+     */
+    public static String resolveJobQueueName( String jobQueueRef, AWSCredentialsProvider credentialsProvider, String region, String stack )
     {
         AmazonCloudFormation amazonCloudFormation = AmazonCloudFormationClientBuilder.standard()
                                                                                      .withCredentials( credentialsProvider )
@@ -111,6 +110,15 @@ public class BenchmarkJobScheduler
                                    .map( Output::getOutputValue )
                                    .findFirst()
                                    .orElseThrow( () -> new RuntimeException( format( "job queue %s not found in stack %s ", jobQueueRef, stack ) ) );
+    }
+
+    // for testing
+    static BenchmarkJobScheduler create( JobScheduler jobScheduler,
+                                         ArtifactStorage artifactStorage,
+                                         AWSCredentials awsCredentials,
+                                         Duration jobStatusCheckDelay )
+    {
+        return new BenchmarkJobScheduler( jobScheduler, artifactStorage, awsCredentials, jobStatusCheckDelay );
     }
 
     private static List<JobStatus> jobStatuses( JobScheduler jobScheduler,

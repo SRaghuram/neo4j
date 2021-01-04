@@ -261,7 +261,9 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
         Infrastructure infrastructure;
         if ( isNotEmpty( jobDefinition ) && isNotEmpty( jobQueue ) && isEmpty( infrastructureCapabilities ) )
         {
-            infrastructure = new Infrastructure( jobQueue, jobDefinition );
+            infrastructure = new Infrastructure(
+                    BenchmarkJobScheduler.resolveJobQueueName( jobQueue, awsCredentials.awsCredentialsProvider(), awsCredentials.awsRegion(), batchStack ),
+                    jobDefinition );
         }
         else if ( isEmpty( jobDefinition ) && isEmpty( jobQueue ) && isNotEmpty( infrastructureCapabilities ) )
         {
