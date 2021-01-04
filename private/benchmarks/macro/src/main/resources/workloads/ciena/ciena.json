@@ -44,6 +44,16 @@
       "queryFile": "queries/Q1_pluggablename.cypher"
     },
     {
+      "name": "Q1 ORDER BY physicalConnection.drniId",
+      "description": "Q1, ordering by physicalConnection.drniId",
+      "queryFile": "queries/Q1_physicalConnection.cypher"
+    },
+    {
+      "name": "Q1 ORDER BY physicalConnection.drniId, name",
+      "description": "Q1, ordering by physicalConnection.drniId and then name",
+      "queryFile": "queries/Q1_physicalConnection_2cols.cypher"
+    },
+    {
       "name": "Q1 ORDER BY otherEndParentLocation.name",
       "description": "Q1, ordering by otherEndParentLocation.name",
       "queryFile": "queries/Q1_otherEndParentLocationName.cypher"
