@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.akka.DummyPanicService;
-import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember;
+import com.neo4j.causalclustering.discovery.member.TestCoreServerSnapshot;
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.EnterpriseDatabaseState;
@@ -66,7 +66,7 @@ class AkkaCoreTopologyServiceIT
 
         service = new AkkaDiscoveryServiceFactory().coreTopologyService( config, identityModule, jobScheduler, logProvider, logProvider,
                                                                          initialDiscoveryMemberResolver, new NoRetriesStrategy(), sslPolicyLoader,
-                                                                         TestCoreDiscoveryMember::factory, firstStartupDetector,
+                                                                         TestCoreServerSnapshot::factory, firstStartupDetector,
                                                                          new Monitors(), Clocks.systemClock(), databaseStateService, panicker );
     }
 

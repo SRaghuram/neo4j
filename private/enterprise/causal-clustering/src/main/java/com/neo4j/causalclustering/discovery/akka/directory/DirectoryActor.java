@@ -15,7 +15,7 @@ import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
-import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
+import com.neo4j.causalclustering.discovery.member.ServerSnapshot;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -47,9 +47,9 @@ public class DirectoryActor extends BaseReplicatedDataActor<ORMap<DatabaseId,Rep
     }
 
     @Override
-    protected void sendInitialDataToReplicator( DiscoveryMember memberSnapshot )
+    protected void sendInitialDataToReplicator( ServerSnapshot serverSnapshot )
     {
-        var localLeaderships = memberSnapshot.databaseLeaderships().entrySet().stream()
+        var localLeaderships = serverSnapshot.databaseLeaderships().entrySet().stream()
                                              .filter( entry -> isPublishableLeaderInfo( entry.getValue() ) )
                                              .reduce( ORMap.create(), this::addLeadership, ORMap::merge );
 

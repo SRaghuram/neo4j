@@ -16,8 +16,8 @@ import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.akka.ActorSystemRestarter;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.AkkaTopologyClient;
-import com.neo4j.causalclustering.discovery.member.CoreDiscoveryMemberFactory;
-import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
+import com.neo4j.causalclustering.discovery.member.CoreServerSnapshotFactory;
+import com.neo4j.causalclustering.discovery.member.ServerSnapshotFactory;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import org.junit.jupiter.api.BeforeAll;
@@ -135,7 +135,7 @@ public class AkkaDiscoveryRestartIT
         public TestAkkaCoreTopologyService coreTopologyService(
                 Config config, CoreServerIdentity myIdentity, JobScheduler jobScheduler, LogProvider logProvider, LogProvider userLogProvider,
                 RemoteMembersResolver remoteMembersResolver, RetryStrategy catchupAddressRetryStrategy, SslPolicyLoader sslPolicyLoader,
-                CoreDiscoveryMemberFactory discoveryMemberFactory, DiscoveryFirstStartupDetector firstStartupDetector, Monitors monitors, Clock clock,
+                CoreServerSnapshotFactory serverSnapshotFactory, DiscoveryFirstStartupDetector firstStartupDetector, Monitors monitors, Clock clock,
                 DatabaseStateService databaseStateService, Panicker panicker )
         {
             ActorSystemRestarter actorSystemRestarter = ActorSystemRestarter.forConfig( config);
@@ -145,9 +145,10 @@ public class AkkaDiscoveryRestartIT
                     myIdentity,
                     actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader ),
                     logProvider,
-                    userLogProvider, catchupAddressRetryStrategy,
+                    userLogProvider,
+                    catchupAddressRetryStrategy,
                     actorSystemRestarter,
-                    discoveryMemberFactory,
+                    serverSnapshotFactory,
                     jobScheduler,
                     clock,
                     monitors,
@@ -159,7 +160,7 @@ public class AkkaDiscoveryRestartIT
         @Override
         public AkkaTopologyClient readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler,
                 ServerIdentity myIdentity, RemoteMembersResolver remoteMembersResolver, SslPolicyLoader sslPolicyLoader,
-                DiscoveryMemberFactory discoveryMemberFactory, Clock clock, DatabaseStateService databaseStateService )
+                ServerSnapshotFactory serverSnapshotFactory, Clock clock, DatabaseStateService databaseStateService )
         {
             return null;
         }
@@ -188,11 +189,11 @@ public class AkkaDiscoveryRestartIT
         TestAkkaCoreTopologyService(
                 Config config, CoreServerIdentity identityModule, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
                 LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, ActorSystemRestarter actorSystemRestarter,
-                CoreDiscoveryMemberFactory discoveryMemberFactory, JobScheduler jobScheduler, Clock clock, Monitors monitors,
+                CoreServerSnapshotFactory serverSnapshotFactory, JobScheduler jobScheduler, Clock clock, Monitors monitors,
                 DatabaseStateService databaseStateService, Panicker panicker )
         {
             super( config, identityModule, actorSystemLifecycle, logProvider, userLogProvider, catchupAddressRetryStrategy, actorSystemRestarter,
-                   discoveryMemberFactory, jobScheduler, clock, monitors, databaseStateService, panicker );
+                   serverSnapshotFactory, jobScheduler, clock, monitors, databaseStateService, panicker );
             this.actorSystemLifecycle = actorSystemLifecycle;
         }
 

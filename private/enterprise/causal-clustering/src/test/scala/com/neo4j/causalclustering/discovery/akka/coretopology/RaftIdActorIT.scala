@@ -15,8 +15,8 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.PublishInitialData
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
-import com.neo4j.causalclustering.discovery.member.CoreDiscoveryMemberFactory
-import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember
+import com.neo4j.causalclustering.discovery.member.CoreServerSnapshotFactory
+import com.neo4j.causalclustering.discovery.member.TestCoreServerSnapshot
 import com.neo4j.causalclustering.identity.IdFactory
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity
 import com.neo4j.causalclustering.identity.RaftGroupId
@@ -60,7 +60,7 @@ class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
       Given("some initial raft membership and a RaftIdActor")
       val dbId = randomNamedDatabaseId
       val stateService = databaseStateService(Set(dbId))
-      val snapshotFactory: CoreDiscoveryMemberFactory = TestCoreDiscoveryMember.factory _
+      val snapshotFactory: CoreServerSnapshotFactory = TestCoreServerSnapshot.factory _
       val expectedMapping = Map(RaftGroupId.from(dbId.databaseId) -> identityModule.raftMemberId(dbId))
       val replicatorProbe = TestProbe("replicatorProbe")
       val actor = system.actorOf(RaftIdActor.props(cluster, replicatorProbe.ref, coreTopologyProbe.ref, monitor, 3))
@@ -82,7 +82,7 @@ class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
     val coreTopologyProbe = TestProbe("coreTopologyActor")
     val identityModule = new InMemoryCoreServerIdentity()
     val db1 = randomNamedDatabaseId
-    val memberSnapshotFactory: CoreDiscoveryMemberFactory = TestCoreDiscoveryMember.factory _
+    val serverSnapshotFactory: CoreServerSnapshotFactory = TestCoreServerSnapshot.factory _
     val props = RaftIdActor.props(cluster, replicator.ref, coreTopologyProbe.ref, monitor, 3)
     override val replicatedDataActorRef: ActorRef = system.actorOf(props)
   }

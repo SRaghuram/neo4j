@@ -17,7 +17,7 @@ import com.neo4j.causalclustering.core.state.RaftBootstrapper;
 import com.neo4j.causalclustering.discovery.PublishRaftIdOutcome;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
-import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
+import com.neo4j.causalclustering.discovery.member.ServerSnapshot;
 import com.neo4j.causalclustering.identity.RaftBinder;
 import com.neo4j.causalclustering.identity.RaftGroupId;
 import com.neo4j.causalclustering.identity.RaftMemberId;
@@ -59,13 +59,13 @@ public class RaftIdActor extends BaseReplicatedDataActor<LWWMap<RaftGroupId,Raft
     }
 
     @Override
-    protected void sendInitialDataToReplicator( DiscoveryMember memberSnapshot )
+    protected void sendInitialDataToReplicator( ServerSnapshot serverSnapshot )
     {
         Predicate<Map.Entry<DatabaseId,RaftMemberId>> isRaftIdPublishable = entry ->
-                memberSnapshot.databaseStates().containsKey( entry.getKey() )
-                && memberSnapshot.databaseStates().get( entry.getKey() ).operatorState() != INITIAL;
+                serverSnapshot.databaseStates().containsKey( entry.getKey() )
+                && serverSnapshot.databaseStates().get( entry.getKey() ).operatorState() != INITIAL;
 
-        var localRaftIdsMap = memberSnapshot.databaseMemberships().entrySet()
+        var localRaftIdsMap = serverSnapshot.databaseMemberships().entrySet()
                                             .stream()
                                             .filter( isRaftIdPublishable )
                                             .reduce( LWWMap.create(), this::addRaftId, LWWMap::merge );

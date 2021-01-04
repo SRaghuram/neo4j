@@ -28,7 +28,7 @@ import com.neo4j.causalclustering.discovery.akka.TopologyUpdateSink
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage
-import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember
+import com.neo4j.causalclustering.discovery.member.TestCoreServerSnapshot
 import com.neo4j.causalclustering.identity.IdFactory
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity
 import com.neo4j.causalclustering.identity.RaftGroupId
@@ -227,10 +227,10 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
 
     val databaseStates = databaseIds.map(id => id -> new EnterpriseDatabaseState(id, EnterpriseOperatorState.STARTED)).toMap[NamedDatabaseId,DatabaseState]
     val databaseStateService = new StubDatabaseStateService(databaseStates.asJava, EnterpriseDatabaseState.unknown _)
-    val discoveryMemberSnapshot = TestCoreDiscoveryMember.factory(identityModule,databaseStateService,Map.empty[DatabaseId,LeaderInfo].asJava)
+    val serverSnapshot = TestCoreServerSnapshot.factory(identityModule,databaseStateService,Map.empty[DatabaseId,LeaderInfo].asJava)
     val clusterClientProbe = TestProbe()
     val props = ClientTopologyActor.props(
-      discoveryMemberSnapshot,
+      serverSnapshot,
       coreTopologySink,
       readReplicaTopologySink,
       discoverySink,

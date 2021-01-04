@@ -13,7 +13,7 @@ import akka.cluster.ddata.Replicator;
 import akka.japi.pf.ReceiveBuilder;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
-import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
+import com.neo4j.causalclustering.discovery.member.ServerSnapshot;
 import scala.concurrent.duration.FiniteDuration;
 
 import java.time.Duration;
@@ -54,7 +54,7 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
         getTimers().startPeriodicTimer( METRIC_TIMER_KEY, MetricsRefresh.getInstance(), Duration.ofMinutes( 1 ) );
     }
 
-    protected abstract void sendInitialDataToReplicator( DiscoveryMember memberSnapshot );
+    protected abstract void sendInitialDataToReplicator( ServerSnapshot serverSnapshot );
 
     @Override
     public final void postStop()

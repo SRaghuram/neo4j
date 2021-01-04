@@ -15,7 +15,7 @@ import com.neo4j.causalclustering.discovery.akka.DummyPanicService;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.akka.system.JoinMessageFactory;
-import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember;
+import com.neo4j.causalclustering.discovery.member.TestCoreServerSnapshot;
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.dbms.EnterpriseDatabaseState;
@@ -99,7 +99,7 @@ class AkkaCoreTopologyMisConfiguredIT
                 logProvider,
                 new NoRetriesStrategy(),
                 ActorSystemRestarter.forTest( 2 ),
-                TestCoreDiscoveryMember::new,
+                TestCoreServerSnapshot::new,
                 jobScheduler,
                 Clocks.systemClock(),
                 new Monitors(),

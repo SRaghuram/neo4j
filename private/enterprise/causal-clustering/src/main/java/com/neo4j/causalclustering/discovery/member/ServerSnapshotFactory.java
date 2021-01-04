@@ -13,7 +13,7 @@ import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.kernel.database.DatabaseId;
 
 @FunctionalInterface
-public interface DiscoveryMemberFactory
+public interface ServerSnapshotFactory
 {
-    DiscoveryMember createSnapshot( DatabaseStateService databaseStateService, Map<DatabaseId,LeaderInfo> databaseLeaderships );
+    ServerSnapshot createSnapshot( DatabaseStateService databaseStateService, Map<DatabaseId,LeaderInfo> databaseLeaderships );
 }

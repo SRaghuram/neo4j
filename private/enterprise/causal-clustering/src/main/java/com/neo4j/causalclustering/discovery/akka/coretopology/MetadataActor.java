@@ -17,7 +17,7 @@ import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
-import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
+import com.neo4j.causalclustering.discovery.member.ServerSnapshot;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -78,9 +78,9 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
     }
 
     @Override
-    public void sendInitialDataToReplicator( DiscoveryMember memberSnapshot )
+    public void sendInitialDataToReplicator( ServerSnapshot serverSnapshot )
     {
-        var databaseIds = memberSnapshot.discoverableDatabases();
+        var databaseIds = serverSnapshot.discoverableDatabases();
         startedDatabases.addAll( databaseIds );
         sendCoreServerInfo();
     }

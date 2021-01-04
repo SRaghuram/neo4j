@@ -5,22 +5,22 @@
  */
 package com.neo4j.causalclustering.discovery.akka;
 
-import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
+import com.neo4j.causalclustering.discovery.member.ServerSnapshot;
 
 import java.util.Objects;
 
 public final class PublishInitialData
 {
-    private final DiscoveryMember memberSnapshot;
+    private final ServerSnapshot serverSnapshot;
 
-    public PublishInitialData( DiscoveryMember memberSnapshot )
+    public PublishInitialData( ServerSnapshot serverSnapshot )
     {
-        this.memberSnapshot = memberSnapshot;
+        this.serverSnapshot = serverSnapshot;
     }
 
-    public DiscoveryMember getSnapshot()
+    public ServerSnapshot getSnapshot()
     {
-        return memberSnapshot;
+        return serverSnapshot;
     }
 
     @Override
@@ -35,12 +35,12 @@ public final class PublishInitialData
             return false;
         }
         PublishInitialData that = (PublishInitialData) o;
-        return Objects.equals( memberSnapshot, that.memberSnapshot );
+        return Objects.equals( serverSnapshot, that.serverSnapshot );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( memberSnapshot );
+        return Objects.hash( serverSnapshot );
     }
 }

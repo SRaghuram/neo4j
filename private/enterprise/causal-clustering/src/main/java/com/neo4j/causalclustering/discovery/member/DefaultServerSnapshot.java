@@ -24,7 +24,7 @@ import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
 
-public final class DefaultDiscoveryMember implements DiscoveryMember
+public final class DefaultServerSnapshot implements ServerSnapshot
 {
     static final Set<OperatorState> DISCOVERABLE_DATABASE_STATES = Set.of( INITIAL, STARTED, STORE_COPYING );
 
@@ -32,7 +32,7 @@ public final class DefaultDiscoveryMember implements DiscoveryMember
     private final Map<DatabaseId,RaftMemberId> databaseMemberships;
     private final Map<DatabaseId,LeaderInfo> databaseLeaderships;
 
-    private DefaultDiscoveryMember( Map<DatabaseId,RaftMemberId> databaseMemberships, Map<DatabaseId,DatabaseState> databaseStates,
+    private DefaultServerSnapshot( Map<DatabaseId,RaftMemberId> databaseMemberships, Map<DatabaseId,DatabaseState> databaseStates,
             Map<DatabaseId,LeaderInfo> databaseLeaderships )
     {
         this.databaseStates = databaseStates;
@@ -40,16 +40,16 @@ public final class DefaultDiscoveryMember implements DiscoveryMember
         this.databaseLeaderships = databaseLeaderships;
     }
 
-    public static DefaultDiscoveryMember coreFactory( CoreServerIdentity identityModule,
+    public static DefaultServerSnapshot coreSnapshot( CoreServerIdentity identityModule,
             DatabaseStateService databaseStateService, Map<DatabaseId,LeaderInfo> databaseLeaderships )
     {
-        return new DefaultDiscoveryMember( databaseMemberships( databaseStateService, identityModule ),
+        return new DefaultServerSnapshot( databaseMemberships( databaseStateService, identityModule ),
                                            databaseStates( databaseStateService ), Map.copyOf( databaseLeaderships ) );
     }
 
-    public static DefaultDiscoveryMember rrFactory( DatabaseStateService databaseStateService, Map<DatabaseId,LeaderInfo> databaseLeaderships )
+    public static DefaultServerSnapshot rrSnapshot( DatabaseStateService databaseStateService, Map<DatabaseId,LeaderInfo> databaseLeaderships )
     {
-        return new DefaultDiscoveryMember( Map.of(), databaseStates( databaseStateService ), Map.copyOf( databaseLeaderships ) );
+        return new DefaultServerSnapshot( Map.of(), databaseStates( databaseStateService ), Map.copyOf( databaseLeaderships ) );
     }
 
     private static Map<DatabaseId,DatabaseState> databaseStates( DatabaseStateService databaseStateService )
@@ -102,7 +102,7 @@ public final class DefaultDiscoveryMember implements DiscoveryMember
         {
             return false;
         }
-        DefaultDiscoveryMember that = (DefaultDiscoveryMember) o;
+        DefaultServerSnapshot that = (DefaultServerSnapshot) o;
         return Objects.equals( databaseStates, that.databaseStates ) &&
                Objects.equals( databaseMemberships, that.databaseMemberships ) &&
                Objects.equals( databaseLeaderships, that.databaseLeaderships );

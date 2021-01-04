@@ -47,7 +47,7 @@ public class ReplicatedRaftMappingMarshal extends SafeChannelMarshal<ReplicatedR
     public void marshal( ReplicatedRaftMapping replicatedRaftMapping, WritableChannel channel ) throws IOException
     {
         ServerId.Marshal.INSTANCE.marshal( replicatedRaftMapping.serverId(), channel );
-        var mapping = Map.copyOf( replicatedRaftMapping.mapping() );
+        var mapping = Map.copyOf( replicatedRaftMapping.databaseToRaftMap() );
         channel.putInt( mapping.size() );
 
         for ( var entry : mapping.entrySet() )

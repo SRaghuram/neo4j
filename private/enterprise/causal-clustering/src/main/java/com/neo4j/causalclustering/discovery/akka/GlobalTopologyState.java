@@ -27,7 +27,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.helpers.SocketAddress;
@@ -48,7 +47,7 @@ import static java.util.Optional.ofNullable;
 public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateSink, BootstrapStateUpdateSink, DatabaseStateUpdateSink, RaftMappingUpdateSink
 {
     private final Log log;
-    private final BiConsumer<DatabaseId,Set<RaftMemberId>> callback;
+    private final RaftListener raftListener;
     private final TopologyLogger topologyLogger;
     private final DatabaseStateLogger stateLogger;
     private volatile Map<ServerId,CoreServerInfo> coresByServerId;
@@ -61,14 +60,14 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     private final Map<DatabaseId,ReplicatedDatabaseState> readReplicaStatesByDatabase = new ConcurrentHashMap<>();
     private final RaftMappingState raftMappingState;
 
-    GlobalTopologyState( LogProvider logProvider, BiConsumer<DatabaseId,Set<RaftMemberId>> listener, JobScheduler jobScheduler )
+    GlobalTopologyState( LogProvider logProvider, RaftListener raftListener, JobScheduler jobScheduler )
     {
         var timerService = new TimerService( jobScheduler, logProvider );
         this.log = logProvider.getLog( getClass() );
         this.coresByServerId = emptyMap();
         this.readReplicasByServerId = emptyMap();
         this.remoteDbLeaderMap = emptyMap();
-        this.callback = listener;
+        this.raftListener = raftListener;
         this.raftMappingState = new RaftMappingState( log );
         this.topologyLogger = new TopologyLogger( timerService, logProvider, getClass(), this::getAllDatabases );
         this.stateLogger = new DatabaseStateLogger( timerService, logProvider, getClass(), this::getAllDatabases );
@@ -86,9 +85,9 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
             {
                 currentCoreTopology = DatabaseCoreTopology.empty( databaseId );
             }
-            this.coresByServerId = extractServerInfos( coreTopologiesByDatabase );
+            coresByServerId = extractServerInfos( coreTopologiesByDatabase );
             topologyLogger.logChange( "core topology", newCoreTopology, currentCoreTopology );
-            callback.accept( databaseId, newCoreTopology.members( this::resolveRaftMemberForServer ) );
+            notifyRaftListener( newCoreTopology );
         }
 
         if ( hasNoMembers( newCoreTopology ) )
@@ -168,8 +167,16 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     public void onRaftMappingUpdate( ReplicatedRaftMapping mapping )
     {
         var changedDatabaseIds = raftMappingState.update( mapping );
-        changedDatabaseIds.stream().filter( Objects::nonNull ).map( coreTopologiesByDatabase::get ).filter( Objects::nonNull )
-                .forEach( newCoreTopology -> callback.accept( newCoreTopology.databaseId(), newCoreTopology.members( this::resolveRaftMemberForServer ) ) );
+        changedDatabaseIds
+                .stream()
+                .map( coreTopologiesByDatabase::get )
+                .filter( Objects::nonNull )
+                .forEach( this::notifyRaftListener );
+    }
+
+    private void notifyRaftListener( DatabaseCoreTopology coreDatabaseTopology )
+    {
+        raftListener.accept( coreDatabaseTopology.databaseId(), coreDatabaseTopology.resolve( this::resolveRaftMemberForServer ) );
     }
 
     private static String printLeaderInfoMap( Map<DatabaseId,LeaderInfo> leaderInfoMap, Map<DatabaseId,LeaderInfo> oldDbLeaderMap )

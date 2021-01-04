@@ -87,6 +87,6 @@ class CoreTopologyListenerServiceTest
         var coreServerInfo = TestTopology.addressesForCore( 1, false );
         var coreTopology = new DatabaseCoreTopology(
                 id.databaseId(), RaftGroupId.from( id.databaseId() ), Map.of( IdFactory.randomServerId(), coreServerInfo ) );
-        return coreTopology.members( ( databaseId, serverId ) -> IdFactory.randomRaftMemberId() );
+        return coreTopology.resolve( ( databaseId, serverId ) -> IdFactory.randomRaftMemberId() );
     }
 }

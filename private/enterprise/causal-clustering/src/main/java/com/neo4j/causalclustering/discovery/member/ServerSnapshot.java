@@ -15,9 +15,9 @@ import org.neo4j.dbms.DatabaseState;
 import org.neo4j.kernel.database.DatabaseId;
 
 /**
- * Immutable snapshot of information about this discovery member
+ * Immutable snapshot of discovery information for a server.
  */
-public interface DiscoveryMember
+public interface ServerSnapshot
 {
     Map<DatabaseId,LeaderInfo> databaseLeaderships();
 

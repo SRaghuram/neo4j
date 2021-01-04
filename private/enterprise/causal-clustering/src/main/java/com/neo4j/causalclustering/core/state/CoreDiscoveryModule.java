@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.discovery.DiscoveryFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
-import com.neo4j.causalclustering.discovery.member.DefaultDiscoveryMember;
+import com.neo4j.causalclustering.discovery.member.DefaultServerSnapshot;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.configuration.CausalClusteringSettings;
@@ -65,7 +65,7 @@ public class CoreDiscoveryModule
     {
         RemoteMembersResolver remoteMembersResolver = chooseResolver( config, logService );
         CoreTopologyService topologyService = discoveryServiceFactory.coreTopologyService( config, myIdentity, jobScheduler, debugLog, userLog,
-                remoteMembersResolver, resolveStrategy( config ), sslPolicyLoader, DefaultDiscoveryMember::coreFactory, firstStartupDetector, monitors, clock,
+                remoteMembersResolver, resolveStrategy( config ), sslPolicyLoader, DefaultServerSnapshot::coreSnapshot, firstStartupDetector, monitors, clock,
                 databaseStateService, panicker );
 
         globalLife.add( topologyService );

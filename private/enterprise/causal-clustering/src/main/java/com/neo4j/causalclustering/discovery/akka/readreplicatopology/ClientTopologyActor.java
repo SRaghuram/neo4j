@@ -22,7 +22,7 @@ import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.RaftMemberKnownMessage;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
-import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
+import com.neo4j.causalclustering.discovery.member.ServerSnapshot;
 import com.neo4j.configuration.CausalClusteringSettings;
 
 import java.time.Clock;
@@ -45,13 +45,13 @@ public class ClientTopologyActor extends AbstractActorWithTimers
     private static final String REFRESH = "topology refresh";
     private static final int REFRESHES_BEFORE_REMOVE_TOPOLOGY = 3;
 
-    public static Props props( DiscoveryMember discoveryMemberSnapshot, SourceQueueWithComplete<DatabaseCoreTopology> coreTopologySink,
+    public static Props props( ServerSnapshot serverSnapshot, SourceQueueWithComplete<DatabaseCoreTopology> coreTopologySink,
             SourceQueueWithComplete<DatabaseReadReplicaTopology> rrTopologySink, SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> discoverySink,
             SourceQueueWithComplete<ReplicatedDatabaseState> stateSink, SourceQueueWithComplete<ReplicatedRaftMapping> raftMappingSink,
             ActorRef clusterClientManager, Config config, LogProvider logProvider, Clock clock, ServerId myself )
     {
         return Props.create( ClientTopologyActor.class,
-                () -> new ClientTopologyActor( discoveryMemberSnapshot, coreTopologySink, rrTopologySink, discoverySink, stateSink, raftMappingSink,
+                () -> new ClientTopologyActor( serverSnapshot, coreTopologySink, rrTopologySink, discoverySink, stateSink, raftMappingSink,
                                                config, logProvider, clock, clusterClientManager, myself ) );
     }
 
@@ -59,7 +59,7 @@ public class ClientTopologyActor extends AbstractActorWithTimers
 
     private final Duration refreshDuration;
     private final ServerId myself;
-    private final DiscoveryMember discoveryMemberSnapshot;
+    private final ServerSnapshot serverSnapshot;
     private final PruningStateSink<DatabaseCoreTopology> coreTopologySink;
     private final PruningStateSink<DatabaseReadReplicaTopology> readreplicaTopologySink;
     private final PruningStateSink<ReplicatedDatabaseState> coresDbStateSink;
@@ -73,12 +73,12 @@ public class ClientTopologyActor extends AbstractActorWithTimers
 
     private final Set<DatabaseId> startedDatabases = new HashSet<>();
 
-    private ClientTopologyActor( DiscoveryMember discoveryMemberSnapshot, SourceQueueWithComplete<DatabaseCoreTopology> coreTopologySink,
+    private ClientTopologyActor( ServerSnapshot serverSnapshot, SourceQueueWithComplete<DatabaseCoreTopology> coreTopologySink,
             SourceQueueWithComplete<DatabaseReadReplicaTopology> rrTopologySink, SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> leaderInfoSink,
             SourceQueueWithComplete<ReplicatedDatabaseState> stateSink, SourceQueueWithComplete<ReplicatedRaftMapping> raftMappingSink, Config config,
             LogProvider logProvider, Clock clock, ActorRef clusterClientManager, ServerId myself )
     {
-        this.discoveryMemberSnapshot = discoveryMemberSnapshot;
+        this.serverSnapshot = serverSnapshot;
         this.refreshDuration = config.get( CausalClusteringSettings.cluster_topology_refresh );
         this.myself = myself;
         var maxTopologyLifetime = refreshDuration.multipliedBy( REFRESHES_BEFORE_REMOVE_TOPOLOGY );
@@ -115,7 +115,7 @@ public class ClientTopologyActor extends AbstractActorWithTimers
     public void preStart()
     {
         getTimers().startPeriodicTimer( REFRESH, TopologiesRefresh.INSTANCE, refreshDuration );
-        var databaseIds = discoveryMemberSnapshot.discoverableDatabases();
+        var databaseIds = serverSnapshot.discoverableDatabases();
         startedDatabases.addAll( databaseIds );
         sendReadReplicaInfo();
     }

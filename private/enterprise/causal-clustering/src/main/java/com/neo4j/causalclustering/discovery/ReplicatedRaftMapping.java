@@ -19,12 +19,12 @@ import org.neo4j.kernel.database.DatabaseId;
 public class ReplicatedRaftMapping
 {
     private final ServerId serverId;
-    private final Map<DatabaseId,RaftMemberId> mapping;
+    private final Map<DatabaseId,RaftMemberId> databaseToRaftMap;
 
-    private ReplicatedRaftMapping( ServerId serverId, Map<DatabaseId,RaftMemberId> mapping )
+    private ReplicatedRaftMapping( ServerId serverId, Map<DatabaseId,RaftMemberId> databaseToRaftMap )
     {
         this.serverId = serverId;
-        this.mapping = mapping;
+        this.databaseToRaftMap = databaseToRaftMap;
     }
 
     public static ReplicatedRaftMapping of( ServerId serverId, Map<DatabaseId,RaftMemberId> mapping )
@@ -42,9 +42,9 @@ public class ReplicatedRaftMapping
         return serverId;
     }
 
-    public Map<DatabaseId,RaftMemberId> mapping()
+    public Map<DatabaseId,RaftMemberId> databaseToRaftMap()
     {
-        return Collections.unmodifiableMap( mapping );
+        return Collections.unmodifiableMap( databaseToRaftMap );
     }
 
     @Override
@@ -59,19 +59,19 @@ public class ReplicatedRaftMapping
             return false;
         }
         ReplicatedRaftMapping that = (ReplicatedRaftMapping) o;
-        return Objects.equals( serverId, that.serverId ) && Objects.equals( mapping, that.mapping );
+        return Objects.equals( serverId, that.serverId ) && Objects.equals( databaseToRaftMap, that.databaseToRaftMap );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( serverId, mapping );
+        return Objects.hash( serverId, databaseToRaftMap );
     }
 
     @Override
     public String toString()
     {
-        return String.format( "%s{%s}", serverId, mapping );
+        return String.format( "%s{%s}", serverId, databaseToRaftMap );
     }
 
     private static ReplicatedRaftMapping add( ReplicatedRaftMapping existing, DatabaseServer key, RaftMemberId raftMemberId )
@@ -80,7 +80,7 @@ public class ReplicatedRaftMapping
         {
             existing = ReplicatedRaftMapping.emptyOf( key.serverId() );
         }
-        existing.mapping.put( key.databaseId(), raftMemberId );
+        existing.databaseToRaftMap.put( key.databaseId(), raftMemberId );
         return existing;
     }
 

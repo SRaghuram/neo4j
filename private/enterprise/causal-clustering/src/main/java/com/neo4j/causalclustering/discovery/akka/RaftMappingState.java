@@ -27,8 +27,9 @@ import static java.util.Collections.emptySet;
 public class RaftMappingState
 {
     private final Log log;
-    private final Set<UUID> serversOnceProvidedMappings = new HashSet<>();
-    private final Map<ServerId,Map<DatabaseId,RaftMemberId>> raftMembersByServerAndDatabase = new ConcurrentHashMap<>();
+    // when set it means that the server has been upgraded to 4.3, and thus we no longer allow the fallbacks for UUIDs
+    private final Set<UUID> serversOnceProvidedMappings = ConcurrentHashMap.newKeySet();
+    private final Map<ServerId,Map<DatabaseId,RaftMemberId>> raftMappingsByServer = new ConcurrentHashMap<>();
 
     private volatile Map<RaftMemberId,ServerId> serverByRaftMember;
     private volatile int mappingCounter;
@@ -43,32 +44,32 @@ public class RaftMappingState
     Set<DatabaseId> update( ReplicatedRaftMapping mapping )
     {
         var serverId = mapping.serverId();
-        var newEntries = mapping.mapping();
-        var actualEntries = raftMembersByServerAndDatabase.getOrDefault( serverId, Collections.emptyMap() );
-        if ( !Objects.equals( newEntries, actualEntries ) )
+        var newMap = mapping.databaseToRaftMap();
+        var currentMap = raftMappingsByServer.getOrDefault( serverId, Collections.emptyMap() );
+        if ( Objects.equals( newMap, currentMap ) )
         {
-            if ( !newEntries.isEmpty() )
-            {
-                raftMembersByServerAndDatabase.put( serverId, newEntries );
-                reverseMap();
-                serversOnceProvidedMappings.add( serverId.uuid() );
-            }
-            else if ( !actualEntries.isEmpty() )
-            {
-                raftMembersByServerAndDatabase.remove( serverId );
-                reverseMap();
-            }
-            return changedDatabaseIds( serverId, newEntries, actualEntries );
+            return emptySet();
         }
-        return emptySet();
+        if ( !newMap.isEmpty() )
+        {
+            raftMappingsByServer.put( serverId, newMap );
+            makeReverseMap();
+            serversOnceProvidedMappings.add( serverId.uuid() );
+        }
+        else if ( !currentMap.isEmpty() )
+        {
+            raftMappingsByServer.remove( serverId );
+            makeReverseMap();
+        }
+        return changedDatabaseIds( serverId, currentMap, newMap );
     }
 
-    private void reverseMap()
+    private void makeReverseMap()
     {
         var mappingCounter = 0;
-        var raftMembersByServerAndDatabase = Map.copyOf( this.raftMembersByServerAndDatabase );
+        var raftMappingsByServer = Map.copyOf( this.raftMappingsByServer );
         var serverByRaftMember = new HashMap<RaftMemberId,ServerId>();
-        for ( var entry : raftMembersByServerAndDatabase.entrySet() )
+        for ( var entry : raftMappingsByServer.entrySet() )
         {
             mappingCounter += entry.getValue().size();
             entry.getValue().values().forEach( raftMemberId -> serverByRaftMember.put( raftMemberId, entry.getKey() ) );
@@ -85,14 +86,14 @@ public class RaftMappingState
 
     RaftMemberId resolveRaftMemberForServer( DatabaseId databaseId, ServerId serverId )
     {
-        var map = raftMembersByServerAndDatabase.get( serverId );
-        var result = map == null ? null : map.get( databaseId );
-        return result == null ? fallbackRaftMemberForServer( serverId.uuid() ) : result;
+        var raftByDatabaseId = raftMappingsByServer.get( serverId );
+        var raftMemberId = raftByDatabaseId == null ? null : raftByDatabaseId.get( databaseId );
+        return raftMemberId == null ? fallbackRaftMemberForServer( serverId.uuid() ) : raftMemberId;
     }
 
     void clearRemoteData( ServerId localServerId )
     {
-        raftMembersByServerAndDatabase.entrySet().removeIf( entry -> !entry.getKey().equals( localServerId ) );
+        raftMappingsByServer.entrySet().removeIf( entry -> !entry.getKey().equals( localServerId ) );
         serverByRaftMember.entrySet().removeIf( entry -> !entry.getValue().equals( localServerId ) );
         log.debug( "All remote mappings removed (local=%s) mappings remaining: ", localServerId, serverByRaftMember.size() );
     }
@@ -107,20 +108,24 @@ public class RaftMappingState
         return serversOnceProvidedMappings.contains( uuid ) ? null : new RaftMemberId( uuid );
     }
 
-    private HashSet<DatabaseId> changedDatabaseIds( ServerId serverId,
-            Map<DatabaseId,RaftMemberId> newEntries, Map<DatabaseId,RaftMemberId> actualEntries )
+    private HashSet<DatabaseId> changedDatabaseIds( ServerId serverId, Map<DatabaseId,RaftMemberId> currentMap, Map<DatabaseId,RaftMemberId> newMap )
     {
-        var removedEntries = new HashMap<>( actualEntries );
-        removedEntries.keySet().removeAll( newEntries.keySet() );
+        var removedEntries = new HashMap<>( currentMap );
+        removedEntries.keySet().removeAll( newMap.keySet() );
         var changedDatabaseIds = new HashSet<>( removedEntries.keySet() );
 
-        var addedOrChangedEntries = new HashMap<>( newEntries );
-        addedOrChangedEntries.keySet().removeIf( key -> actualEntries.containsKey( key ) && newEntries.get( key ).equals( actualEntries.get( key ) ) );
+        var addedOrChangedEntries = new HashMap<>( newMap );
+        addedOrChangedEntries.entrySet().removeIf( entry -> hasEqualEntry( entry, currentMap ) );
         changedDatabaseIds.addAll( addedOrChangedEntries.keySet() );
 
         logRaftMappingChange( serverId, removedEntries.keySet(), addedOrChangedEntries );
 
         return changedDatabaseIds;
+    }
+
+    private static <K, V> boolean hasEqualEntry( Map.Entry<K,V> entry, Map<K,V> map )
+    {
+        return map.containsKey( entry.getKey() ) && entry.getValue().equals( map.get( entry.getKey() ) );
     }
 
     private void logRaftMappingChange( ServerId serverId, Set<DatabaseId> removedEntries, Map<DatabaseId,RaftMemberId> addedOrChangedEntries )

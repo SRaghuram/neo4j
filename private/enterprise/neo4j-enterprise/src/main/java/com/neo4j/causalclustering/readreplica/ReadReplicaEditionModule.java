@@ -15,7 +15,7 @@ import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.discovery.member.DefaultDiscoveryMember;
+import com.neo4j.causalclustering.discovery.member.DefaultServerSnapshot;
 import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import com.neo4j.causalclustering.discovery.procedures.ReadReplicaRoleProcedure;
 import com.neo4j.causalclustering.discovery.procedures.ReadReplicaToggleProcedure;
@@ -314,7 +314,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     {
         var hostnameResolver = ResolutionResolverFactory.chooseResolver( globalConfig, logService );
         return discoveryServiceFactory.readReplicaTopologyService( globalConfig, logProvider, jobScheduler, identityModule,
-                                                                   hostnameResolver, sslPolicyLoader, DefaultDiscoveryMember::rrFactory,
+                                                                   hostnameResolver, sslPolicyLoader, DefaultServerSnapshot::rrSnapshot,
                                                                    globalModule.getGlobalClock(), databaseStateService );
     }
 

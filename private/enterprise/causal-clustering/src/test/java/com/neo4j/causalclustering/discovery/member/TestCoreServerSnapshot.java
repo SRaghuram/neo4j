@@ -19,22 +19,22 @@ import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
-import static com.neo4j.causalclustering.discovery.member.DefaultDiscoveryMember.DISCOVERABLE_DATABASE_STATES;
+import static com.neo4j.causalclustering.discovery.member.DefaultServerSnapshot.DISCOVERABLE_DATABASE_STATES;
 
-public class TestCoreDiscoveryMember implements DiscoveryMember
+public class TestCoreServerSnapshot implements ServerSnapshot
 {
     private final Map<DatabaseId,DatabaseState> databaseStates;
     private final Map<DatabaseId,RaftMemberId> databaseMemberships;
     private final Map<DatabaseId,LeaderInfo> databaseLeaderships;
 
-    public TestCoreDiscoveryMember( CoreServerIdentity myIdentity,
+    public TestCoreServerSnapshot( CoreServerIdentity myIdentity,
             DatabaseStateService databaseStateService,
             Map<DatabaseId,LeaderInfo> databaseLeaderships )
     {
         this( databaseStates( databaseStateService.stateOfAllDatabases() ), databaseMemberships( myIdentity, databaseStateService ), databaseLeaderships );
     }
 
-    private TestCoreDiscoveryMember( Map<DatabaseId,DatabaseState> databaseStates,
+    private TestCoreServerSnapshot( Map<DatabaseId,DatabaseState> databaseStates,
             Map<DatabaseId,RaftMemberId> databaseMemberships,
             Map<DatabaseId,LeaderInfo> databaseLeaderships )
     {
@@ -55,10 +55,10 @@ public class TestCoreDiscoveryMember implements DiscoveryMember
                              .collect( Collectors.toMap( entry -> entry.getKey().databaseId(), Map.Entry::getValue ) );
     }
 
-    public static TestCoreDiscoveryMember factory( CoreServerIdentity myIdentity, DatabaseStateService databaseStateService,
+    public static TestCoreServerSnapshot factory( CoreServerIdentity myIdentity, DatabaseStateService databaseStateService,
             Map<DatabaseId,LeaderInfo> databaseLeaderships )
     {
-        return new TestCoreDiscoveryMember( myIdentity, databaseStateService, databaseLeaderships );
+        return new TestCoreServerSnapshot( myIdentity, databaseStateService, databaseLeaderships );
     }
 
     @Override
@@ -99,7 +99,7 @@ public class TestCoreDiscoveryMember implements DiscoveryMember
         {
             return false;
         }
-        TestCoreDiscoveryMember that = (TestCoreDiscoveryMember) o;
+        TestCoreServerSnapshot that = (TestCoreServerSnapshot) o;
         return Objects.equals( databaseStates, that.databaseStates ) &&
                Objects.equals( databaseMemberships, that.databaseMemberships ) &&
                Objects.equals( databaseLeaderships, that.databaseLeaderships );

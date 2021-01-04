@@ -16,7 +16,7 @@ import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.RaftMemberKnownMessage;
 import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseServer;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
-import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
+import com.neo4j.causalclustering.discovery.member.ServerSnapshot;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
@@ -73,12 +73,12 @@ public class RaftMemberMappingActor extends BaseReplicatedDataActor<LWWMap<Datab
     }
 
     @Override
-    public void sendInitialDataToReplicator( DiscoveryMember memberSnapshot )
+    public void sendInitialDataToReplicator( ServerSnapshot serverSnapshot )
     {
         var serverId = myIdentity.serverId();
-        var localMappings = memberSnapshot.discoverableDatabases().stream()
-                .map( databaseId -> new DatabaseServer( databaseId, serverId ) )
-                .reduce( LWWMap.create(), this::addMapping, LWWMap::merge );
+        var localMappings = serverSnapshot.discoverableDatabases().stream()
+                                          .map( databaseId -> new DatabaseServer( databaseId, serverId ) )
+                                          .reduce( LWWMap.create(), this::addMapping, LWWMap::merge );
 
         log().debug( "add initial mappings {}", localMappings );
         modifyReplicatedData( key, map -> map.merge( localMappings ) );

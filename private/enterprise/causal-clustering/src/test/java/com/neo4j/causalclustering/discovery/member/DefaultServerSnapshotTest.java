@@ -33,14 +33,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-class DefaultDiscoveryMemberTest
+class DefaultServerSnapshotTest
 {
     private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
     private final CoreServerIdentity identityModule = new InMemoryCoreServerIdentity();
 
     private static Set<OperatorState> discoverableStates()
     {
-        return DefaultDiscoveryMember.DISCOVERABLE_DATABASE_STATES;
+        return DefaultServerSnapshot.DISCOVERABLE_DATABASE_STATES;
     }
 
     private static Set<OperatorState> undiscoverableStates()
@@ -72,31 +72,31 @@ class DefaultDiscoveryMemberTest
         allStates.putAll( discoverableDatabaseStates );
 
         var databaseStates = new StubDatabaseStateService( allStates, EnterpriseDatabaseState::unknown );
-        var discoveryMember = DefaultDiscoveryMember.coreFactory( identityModule, databaseStates, Map.of() );
+        var coreSnapshot = DefaultServerSnapshot.coreSnapshot( identityModule, databaseStates, Map.of() );
 
         var expected = discoverableDatabaseStates.keySet().stream()
                                                  .map( NamedDatabaseId::databaseId )
                                                  .collect( Collectors.toSet() );
-        assertEquals( expected, discoveryMember.discoverableDatabases() );
+        assertEquals( expected, coreSnapshot.discoverableDatabases() );
     }
 
     @Test
-    void discoveryMemberContentsShouldBeUnmodifiable()
+    void serverSnapshotContentsShouldBeUnmodifiable()
     {
         var databaseId1 = databaseIdRepository.getRaw( "one" );
         var databaseId2 = databaseIdRepository.getRaw( "two" );
         var databaseStates = new StubDatabaseStateService( EnterpriseDatabaseState::unknown );
-        var discoveryMember = DefaultDiscoveryMember.coreFactory( identityModule, databaseStates, Map.of() );
+        var coreSnapshot = DefaultServerSnapshot.coreSnapshot( identityModule, databaseStates, Map.of() );
 
-        assertSame( discoveryMember.databaseStates(), discoveryMember.databaseStates() );
-        assertThat( discoveryMember.databaseStates() ).isEmpty();
+        assertSame( coreSnapshot.databaseStates(), coreSnapshot.databaseStates() );
+        assertThat( coreSnapshot.databaseStates() ).isEmpty();
         assertThrows( UnsupportedOperationException.class,
-                      () -> discoveryMember.databaseLeaderships().put( databaseId2.databaseId(), LeaderInfo.INITIAL ) );
+                      () -> coreSnapshot.databaseLeaderships().put( databaseId2.databaseId(), LeaderInfo.INITIAL ) );
         assertThrows( UnsupportedOperationException.class,
-                      () -> discoveryMember.databaseMemberships().put( databaseId2.databaseId(), identityModule.raftMemberId( databaseId2.databaseId() ) ) );
+                      () -> coreSnapshot.databaseMemberships().put( databaseId2.databaseId(), identityModule.raftMemberId( databaseId2.databaseId() ) ) );
         assertThrows( UnsupportedOperationException.class,
-                      () -> discoveryMember.databaseStates().put( databaseId2.databaseId(), new EnterpriseDatabaseState( databaseId2, STARTED ) ) );
+                      () -> coreSnapshot.databaseStates().put( databaseId2.databaseId(), new EnterpriseDatabaseState( databaseId2, STARTED ) ) );
         assertThrows( UnsupportedOperationException.class,
-                      () -> discoveryMember.discoverableDatabases().add( databaseId1.databaseId() ) );
+                      () -> coreSnapshot.discoverableDatabases().add( databaseId1.databaseId() ) );
     }
 }

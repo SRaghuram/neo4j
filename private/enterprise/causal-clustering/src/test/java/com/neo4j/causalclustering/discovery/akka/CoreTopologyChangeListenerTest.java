@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
-import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember;
+import com.neo4j.causalclustering.discovery.member.TestCoreServerSnapshot;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
@@ -57,7 +57,7 @@ class CoreTopologyChangeListenerTest
             NullLogProvider.getInstance(),
             catchupAddressRetryStrategy,
             actorSystemRestarter,
-            TestCoreDiscoveryMember::factory,
+            TestCoreServerSnapshot::factory,
             jobScheduler,
             Clocks.systemClock(),
             new Monitors(),
@@ -73,6 +73,6 @@ class CoreTopologyChangeListenerTest
         when( listener.namedDatabaseId() ).thenReturn( namedDatabaseId );
         service.addLocalCoreTopologyListener( listener );
         service.topologyState().onTopologyUpdate( coreTopology );
-        verify( listener, times( 2 ) ).onCoreTopologyChange( coreTopology.members( service.topologyState()::resolveRaftMemberForServer ) );
+        verify( listener, times( 2 ) ).onCoreTopologyChange( coreTopology.resolve( service.topologyState()::resolveRaftMemberForServer ) );
     }
 }

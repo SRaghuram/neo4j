@@ -56,7 +56,7 @@ public class DatabaseCoreTopology implements Topology<CoreServerInfo>
         return raftGroupId;
     }
 
-    public Set<RaftMemberId> members( BiFunction<DatabaseId,ServerId,RaftMemberId> resolver )
+    public <T> Set<T> resolve( BiFunction<DatabaseId,ServerId,T> resolver )
     {
         return servers().keySet().stream().map( serverId -> resolver.apply( databaseId, serverId ) )
                 .filter( Objects::nonNull ).collect( Collectors.toSet() );

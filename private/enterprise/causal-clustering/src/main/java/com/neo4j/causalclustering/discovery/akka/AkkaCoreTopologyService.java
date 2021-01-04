@@ -41,7 +41,7 @@ import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
-import com.neo4j.causalclustering.discovery.member.CoreDiscoveryMemberFactory;
+import com.neo4j.causalclustering.discovery.member.CoreServerSnapshotFactory;
 import com.neo4j.causalclustering.error_handling.DbmsPanicEvent;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
@@ -86,7 +86,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     private final LogProvider logProvider;
     private final RetryStrategy catchupAddressRetryStrategy;
     private final ActorSystemRestarter actorSystemRestarter;
-    private final CoreDiscoveryMemberFactory memberSnapshotFactory;
+    private final CoreServerSnapshotFactory serverSnapshotFactory;
     private final JobScheduler jobScheduler;
     private final CallableExecutor executor;
     private final Clock clock;
@@ -110,14 +110,14 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
 
     public AkkaCoreTopologyService( Config config, CoreServerIdentity myIdentity, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
                                     LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, ActorSystemRestarter actorSystemRestarter,
-                                    CoreDiscoveryMemberFactory memberSnapshotFactory, JobScheduler jobScheduler, Clock clock, Monitors monitors,
+                                    CoreServerSnapshotFactory serverSnapshotFactory, JobScheduler jobScheduler, Clock clock, Monitors monitors,
                                     DatabaseStateService databaseStateService, Panicker panicker )
     {
         this.actorSystemLifecycle = actorSystemLifecycle;
         this.logProvider = logProvider;
         this.catchupAddressRetryStrategy = catchupAddressRetryStrategy;
         this.actorSystemRestarter = actorSystemRestarter;
-        this.memberSnapshotFactory = memberSnapshotFactory;
+        this.serverSnapshotFactory = serverSnapshotFactory;
         this.jobScheduler = jobScheduler;
         this.executor = jobScheduler.executor( Group.AKKA_HELPER );
         this.clock = clock;
@@ -202,10 +202,10 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
 
     private void publishInitialData( ActorRef... actorRefs )
     {
-        var memberSnapshot = memberSnapshotFactory.createSnapshot( myIdentity, databaseStateService, localLeadershipsSnapshot() );
+        var serverSnapshot = serverSnapshotFactory.createSnapshot( myIdentity, databaseStateService, localLeadershipsSnapshot() );
         for ( ActorRef actorRef : actorRefs )
         {
-            actorRef.tell( new PublishInitialData( memberSnapshot ), noSender() );
+            actorRef.tell( new PublishInitialData( serverSnapshot ), noSender() );
         }
     }
 
@@ -246,7 +246,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     public void addLocalCoreTopologyListener( Listener listener )
     {
         listenerService.addCoreTopologyListener( listener );
-        listener.onCoreTopologyChange( coreTopologyForDatabase( listener.namedDatabaseId() ).members( globalTopologyState::resolveRaftMemberForServer ) );
+        listener.onCoreTopologyChange( coreTopologyForDatabase( listener.namedDatabaseId() ).resolve( globalTopologyState::resolveRaftMemberForServer ) );
     }
 
     @Override

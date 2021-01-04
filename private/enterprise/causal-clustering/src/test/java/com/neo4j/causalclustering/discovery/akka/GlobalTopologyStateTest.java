@@ -26,7 +26,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.BiConsumer;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.identity.ServerId;
@@ -54,7 +53,7 @@ import static org.neo4j.logging.LogAssertions.assertThat;
 class GlobalTopologyStateTest
 {
     @SuppressWarnings( "unchecked" )
-    private final BiConsumer<DatabaseId,Set<RaftMemberId>> listener = mock( BiConsumer.class );
+    private final RaftListener listener = mock( RaftListener.class );
     private final AssertableLogProvider logProvider = new AssertableLogProvider();
     private final GlobalTopologyState state = new GlobalTopologyState( logProvider, listener, new JobSchedulerAdapter() );
 
@@ -477,6 +476,6 @@ class GlobalTopologyStateTest
 
     private Set<RaftMemberId> toRaftMembers( DatabaseCoreTopology coreTopology )
     {
-        return coreTopology.members( state::resolveRaftMemberForServer );
+        return coreTopology.resolve( state::resolveRaftMemberForServer );
     }
 }

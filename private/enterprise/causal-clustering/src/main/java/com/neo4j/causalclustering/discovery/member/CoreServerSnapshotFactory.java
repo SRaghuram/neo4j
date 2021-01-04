@@ -14,8 +14,8 @@ import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.kernel.database.DatabaseId;
 
 @FunctionalInterface
-public interface CoreDiscoveryMemberFactory
+public interface CoreServerSnapshotFactory
 {
-    DiscoveryMember createSnapshot( CoreServerIdentity identityModule,
+    ServerSnapshot createSnapshot( CoreServerIdentity identityModule,
             DatabaseStateService databaseStateService, Map<DatabaseId,LeaderInfo> databaseLeaderships );
 }

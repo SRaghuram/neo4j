@@ -18,20 +18,20 @@ import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
-import static com.neo4j.causalclustering.discovery.member.DefaultDiscoveryMember.DISCOVERABLE_DATABASE_STATES;
+import static com.neo4j.causalclustering.discovery.member.DefaultServerSnapshot.DISCOVERABLE_DATABASE_STATES;
 
-public class TestReadReplicaDiscoveryMember implements DiscoveryMember
+public class TestReadReplicaServerSnapshot implements ServerSnapshot
 {
     private final Map<DatabaseId,DatabaseState> databaseStates;
     private final Map<DatabaseId,RaftMemberId> databaseMemberships;
     private final Map<DatabaseId,LeaderInfo> databaseLeaderships;
 
-    public TestReadReplicaDiscoveryMember( DatabaseStateService databaseStateService, Map<DatabaseId,LeaderInfo> databaseLeaderships )
+    public TestReadReplicaServerSnapshot( DatabaseStateService databaseStateService, Map<DatabaseId,LeaderInfo> databaseLeaderships )
     {
         this( databaseStates( databaseStateService.stateOfAllDatabases() ), Map.of(), databaseLeaderships );
     }
 
-    private TestReadReplicaDiscoveryMember( Map<DatabaseId,DatabaseState> databaseStates,
+    private TestReadReplicaServerSnapshot( Map<DatabaseId,DatabaseState> databaseStates,
             Map<DatabaseId,RaftMemberId> databaseMemberships,
             Map<DatabaseId,LeaderInfo> databaseLeaderships )
     {
@@ -46,10 +46,10 @@ public class TestReadReplicaDiscoveryMember implements DiscoveryMember
                              .collect( Collectors.toMap( entry -> entry.getKey().databaseId(), Map.Entry::getValue ) );
     }
 
-    public static TestReadReplicaDiscoveryMember factory( DatabaseStateService databaseStateService,
+    public static TestReadReplicaServerSnapshot factory( DatabaseStateService databaseStateService,
             Map<DatabaseId,LeaderInfo> databaseLeaderships )
     {
-        return new TestReadReplicaDiscoveryMember( databaseStateService, databaseLeaderships );
+        return new TestReadReplicaServerSnapshot( databaseStateService, databaseLeaderships );
     }
 
     @Override
@@ -90,7 +90,7 @@ public class TestReadReplicaDiscoveryMember implements DiscoveryMember
         {
             return false;
         }
-        TestReadReplicaDiscoveryMember that = (TestReadReplicaDiscoveryMember) o;
+        TestReadReplicaServerSnapshot that = (TestReadReplicaServerSnapshot) o;
         return Objects.equals( databaseStates, that.databaseStates ) &&
                Objects.equals( databaseMemberships, that.databaseMemberships ) &&
                Objects.equals( databaseLeaderships, that.databaseLeaderships );

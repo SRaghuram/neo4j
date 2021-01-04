@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.discovery.akka;
 
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
-import com.neo4j.causalclustering.discovery.member.TestReadReplicaDiscoveryMember;
+import com.neo4j.causalclustering.discovery.member.TestReadReplicaServerSnapshot;
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.readreplica.ReadReplicaIdentityModule;
 import com.neo4j.dbms.EnterpriseDatabaseState;
@@ -52,7 +52,7 @@ class AkkaTopologyClientTest
 
         var topologyClient = new AkkaTopologyClient( Config.defaults(), nullLogProvider(), identityModule,
                                                      mock( ActorSystemLifecycle.class, RETURNS_MOCKS ),
-                                                     TestReadReplicaDiscoveryMember::factory,
+                                                     TestReadReplicaServerSnapshot::factory,
                                                      Clocks.systemClock(), new JobSchedulerAdapter(), databaseStateService );
 
         topologyClient.init();

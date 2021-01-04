@@ -14,9 +14,8 @@ import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.akka.system.JoinMessageFactory;
-import com.neo4j.causalclustering.discovery.member.CoreDiscoveryMemberFactory;
-import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
-import com.neo4j.causalclustering.error_handling.PanicService;
+import com.neo4j.causalclustering.discovery.member.CoreServerSnapshotFactory;
+import com.neo4j.causalclustering.discovery.member.ServerSnapshotFactory;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
 
@@ -40,7 +39,7 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
     public final AkkaCoreTopologyService coreTopologyService( Config config, CoreServerIdentity myIdentity, JobScheduler jobScheduler,
                                                               LogProvider logProvider, LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver,
                                                               RetryStrategy catchupAddressRetryStrategy,
-                                                              SslPolicyLoader sslPolicyLoader, CoreDiscoveryMemberFactory discoveryMemberFactory,
+                                                              SslPolicyLoader sslPolicyLoader, CoreServerSnapshotFactory serverSnapshotFactory,
                                                               DiscoveryFirstStartupDetector firstStartupDetector,
                                                               Monitors monitors, Clock clock, DatabaseStateService databaseStateService,
                                                               Panicker panicker )
@@ -55,7 +54,7 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
                 userLogProvider,
                 catchupAddressRetryStrategy,
                 actorSystemRestarter,
-                discoveryMemberFactory,
+                serverSnapshotFactory,
                 jobScheduler,
                 clock,
                 monitors,
@@ -67,14 +66,14 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
     @Override
     public final AkkaTopologyClient readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler,
             ServerIdentity myIdentity, RemoteMembersResolver remoteMembersResolver, SslPolicyLoader sslPolicyLoader,
-            DiscoveryMemberFactory discoveryMemberFactory, Clock clock, DatabaseStateService databaseStateService )
+            ServerSnapshotFactory serverSnapshotFactory, Clock clock, DatabaseStateService databaseStateService )
     {
         return new AkkaTopologyClient(
                 config,
                 logProvider,
                 myIdentity,
                 actorSystemLifecycle( config, logProvider, remoteMembersResolver, sslPolicyLoader, new ReadReplicaDiscoveryFirstStartupDetector() ),
-                discoveryMemberFactory,
+                serverSnapshotFactory,
                 clock,
                 jobScheduler,
                 databaseStateService );

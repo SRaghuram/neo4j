@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
-import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember;
+import com.neo4j.causalclustering.discovery.member.TestCoreServerSnapshot;
 import com.neo4j.causalclustering.identity.CoreServerIdentity;
 import com.neo4j.causalclustering.identity.IdFactory;
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
@@ -116,7 +116,7 @@ class AkkaCoreTopologyServiceTest
                 userLogProvider,
                 catchupAddressretryStrategy,
                 actorSystemRestarter,
-                TestCoreDiscoveryMember::factory,
+                TestCoreServerSnapshot::factory,
                 new JobSchedulerAdapter(),
                 clock,
                 new Monitors(),
@@ -138,7 +138,7 @@ class AkkaCoreTopologyServiceTest
         service.init();
         service.start();
 
-        var expectedSnapshot = TestCoreDiscoveryMember.factory( myIdentity, databaseStateService, Map.of() );
+        var expectedSnapshot = TestCoreServerSnapshot.factory( myIdentity, databaseStateService, Map.of() );
         var expectedMessage = new PublishInitialData( expectedSnapshot );
         testKit.expectMsgEquals( expectedMessage );
 

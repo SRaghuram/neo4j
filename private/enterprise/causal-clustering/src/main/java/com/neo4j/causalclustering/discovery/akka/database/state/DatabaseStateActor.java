@@ -15,7 +15,7 @@ import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
-import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
+import com.neo4j.causalclustering.discovery.member.ServerSnapshot;
 
 import java.util.Map;
 import java.util.stream.Collector;
@@ -66,10 +66,10 @@ public class DatabaseStateActor extends BaseReplicatedDataActor<LWWMap<DatabaseS
     }
 
     @Override
-    protected void sendInitialDataToReplicator( DiscoveryMember memberSnapshot )
+    protected void sendInitialDataToReplicator( ServerSnapshot serverSnapshot )
     {
-        var localStatesMap = memberSnapshot.databaseStates().entrySet().stream()
-                                                .reduce( LWWMap.create(), this::addState, LWWMap::merge );
+        var localStatesMap = serverSnapshot.databaseStates().entrySet().stream()
+                                           .reduce( LWWMap.create(), this::addState, LWWMap::merge );
 
         if ( !localStatesMap.isEmpty() )
         {

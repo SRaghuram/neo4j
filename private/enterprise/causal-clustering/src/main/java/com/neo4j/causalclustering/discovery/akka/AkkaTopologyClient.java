@@ -24,7 +24,7 @@ import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabas
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ClientTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ClusterClientManager;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
-import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
+import com.neo4j.causalclustering.discovery.member.ServerSnapshotFactory;
 import com.neo4j.causalclustering.identity.RaftMemberId;
 
 import java.time.Clock;
@@ -49,7 +49,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
 {
     private final Config config;
     private final ActorSystemLifecycle actorSystemLifecycle;
-    private final DiscoveryMemberFactory discoveryMemberFactory;
+    private final ServerSnapshotFactory serverSnapshotFactory;
     private final ServerIdentity myIdentity;
     private final LogProvider logProvider;
     private final Clock clock;
@@ -60,12 +60,12 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     private volatile GlobalTopologyState globalTopologyState;
 
     AkkaTopologyClient( Config config, LogProvider logProvider, ServerIdentity myIdentity, ActorSystemLifecycle actorSystemLifecycle,
-            DiscoveryMemberFactory discoveryMemberFactory, Clock clock, JobScheduler jobScheduler, DatabaseStateService databaseStateService )
+            ServerSnapshotFactory serverSnapshotFactory, Clock clock, JobScheduler jobScheduler, DatabaseStateService databaseStateService )
     {
         this.config = config;
         this.myIdentity = myIdentity;
         this.actorSystemLifecycle = actorSystemLifecycle;
-        this.discoveryMemberFactory = discoveryMemberFactory;
+        this.serverSnapshotFactory = serverSnapshotFactory;
         this.logProvider = logProvider;
         this.jobScheduler = jobScheduler;
         this.globalTopologyState = newGlobalTopologyState( logProvider, jobScheduler );
@@ -96,9 +96,9 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
         SourceQueueWithComplete<ReplicatedRaftMapping> raftMappingSink =
                 actorSystemLifecycle.queueMostRecent( globalTopologyState::onRaftMappingUpdate );
 
-        var discoveryMemberSnapshot = discoveryMemberFactory.createSnapshot( databaseStateService, Map.of() );
+        var serverSnapshot = serverSnapshotFactory.createSnapshot( databaseStateService, Map.of() );
         var clientTopologyProps = ClientTopologyActor.props(
-                discoveryMemberSnapshot,
+                serverSnapshot,
                 coreTopologySink,
                 rrTopologySink,
                 directorySink,

@@ -23,7 +23,7 @@ import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.DirectoryUpdateSink
 import com.neo4j.causalclustering.discovery.akka.PublishInitialData
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
-import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember
+import com.neo4j.causalclustering.discovery.member.TestCoreServerSnapshot
 import com.neo4j.causalclustering.identity.IdFactory
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity
 import org.neo4j.kernel.database.DatabaseId
@@ -69,7 +69,7 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
       val identityModule = new InMemoryCoreServerIdentity
 
       When("PublishInitialData request received")
-      actor ! new PublishInitialData(new TestCoreDiscoveryMember(identityModule,stateService,leadershipSnapshot.asJava))
+      actor ! new PublishInitialData(new TestCoreServerSnapshot(identityModule,stateService,leadershipSnapshot.asJava))
 
       Then("the initial leaderships should be published")
       val update = expectReplicatorUpdates(replicator, dataKey)
@@ -90,7 +90,7 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
       val identityModule = new InMemoryCoreServerIdentity
 
       When("PublishInitialData request received")
-      actor ! new PublishInitialData(new TestCoreDiscoveryMember(identityModule,stateService,leadershipSnapshot.asJava))
+      actor ! new PublishInitialData(new TestCoreServerSnapshot(identityModule,stateService,leadershipSnapshot.asJava))
 
       Then("the initial leaderships should be published")
       val update = expectReplicatorUpdates(replicator, dataKey)

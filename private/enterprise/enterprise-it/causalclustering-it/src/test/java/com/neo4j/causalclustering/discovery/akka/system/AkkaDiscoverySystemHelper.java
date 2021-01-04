@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.TestFirstStartupDetector;
 import com.neo4j.causalclustering.discovery.akka.DummyPanicService;
-import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember;
+import com.neo4j.causalclustering.discovery.member.TestCoreServerSnapshot;
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity;
 import com.neo4j.dbms.EnterpriseDatabaseState;
 
@@ -83,7 +83,7 @@ public class AkkaDiscoverySystemHelper
         var panicker = DummyPanicService.PANICKER;
 
         return discoveryServiceFactory.coreTopologyService( config, identityModule, createInitialisedScheduler(), logProvider,
-                                                            logProvider, membersResolver, retryStrategy, sslPolicyLoader, TestCoreDiscoveryMember::factory,
+                                                            logProvider, membersResolver, retryStrategy, sslPolicyLoader, TestCoreServerSnapshot::factory,
                                                             firstStartupDetector, monitors, Clocks.systemClock(), databaseStateService, panicker );
     }
 }

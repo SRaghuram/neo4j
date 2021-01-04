@@ -18,8 +18,8 @@ import com.neo4j.causalclustering.discovery.akka.PublishInitialData
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
-import com.neo4j.causalclustering.discovery.member.CoreDiscoveryMemberFactory
-import com.neo4j.causalclustering.discovery.member.TestCoreDiscoveryMember
+import com.neo4j.causalclustering.discovery.member.CoreServerSnapshotFactory
+import com.neo4j.causalclustering.discovery.member.TestCoreServerSnapshot
 import com.neo4j.causalclustering.identity.IdFactory
 import com.neo4j.causalclustering.identity.InMemoryCoreServerIdentity
 import com.neo4j.dbms.EnterpriseDatabaseState
@@ -51,10 +51,10 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
       val databaseStates = Map(
         systemDatabaseId -> new EnterpriseDatabaseState(systemDatabaseId, EnterpriseOperatorState.STOPPED),
         notSystemDatabaseId -> new EnterpriseDatabaseState(notSystemDatabaseId, EnterpriseOperatorState.INITIAL) )
-      val memberSnapshot = memberSnapshotFactory.createSnapshot(identityModule, databaseStateService(databaseStates), Map.empty[DatabaseId,LeaderInfo].asJava)
+      val serverSnapshot = serverSnapshotFactory.createSnapshot(identityModule, databaseStateService(databaseStates), Map.empty[DatabaseId,LeaderInfo].asJava)
 
       When("PublishInitialData request received")
-      replicatedDataActorRef ! new PublishInitialData( memberSnapshot )
+      replicatedDataActorRef ! new PublishInitialData( serverSnapshot )
 
       Then("only discoverable serverInfos should be published")
       expectUpdateWithDatabases(Set(notSystemDatabaseId))
@@ -158,8 +158,8 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
     val notSystemDatabaseId = databaseIdRepository.getRaw("not_system")
     val namedDatabaseIds = Set(systemDatabaseId,notSystemDatabaseId)
     val stateService = databaseStateService(namedDatabaseIds)
-    val memberSnapshotFactory: CoreDiscoveryMemberFactory = TestCoreDiscoveryMember.factory _
-    val snapshot = memberSnapshotFactory.createSnapshot(identityModule, stateService, Map.empty[DatabaseId, LeaderInfo].asJava)
+    val serverSnapshotFactory: CoreServerSnapshotFactory = TestCoreServerSnapshot.factory _
+    val snapshot = serverSnapshotFactory.createSnapshot(identityModule, stateService, Map.empty[DatabaseId, LeaderInfo].asJava)
 
     val coreServerInfo = TestTopology.addressesForCore(0, false, (Set.empty[DatabaseId] ++ namedDatabaseIds.map(_.databaseId())).asJava)
 
