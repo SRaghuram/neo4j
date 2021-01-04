@@ -20,8 +20,8 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
-import org.neo4j.internal.index.label.RelationshipTypeScanStoreSettings;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.impl.index.schema.RelationshipTypeScanStoreSettings;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.time.Stopwatch;
 

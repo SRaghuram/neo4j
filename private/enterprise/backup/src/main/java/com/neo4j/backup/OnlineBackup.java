@@ -16,7 +16,7 @@ import java.nio.file.Path;
 import org.neo4j.annotations.api.PublicApi;
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
-import org.neo4j.internal.index.label.RelationshipTypeScanStoreSettings;
+import org.neo4j.kernel.impl.index.schema.RelationshipTypeScanStoreSettings;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.log4j.Log4jLogProvider;
 import org.neo4j.time.Clocks;
