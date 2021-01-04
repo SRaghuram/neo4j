@@ -13,6 +13,7 @@ import java.io.PrintStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Iterator;
+import java.util.concurrent.TimeUnit;
 
 import org.neo4j.cli.AdminTool;
 import org.neo4j.cli.ExecutionContext;
@@ -108,6 +109,8 @@ class StandardToAlignedUpgradeIT
                 assertThat( count( tx.getAllRelationships() ) ).isEqualTo( 3659 );
                 assertThat( count( tx.schema().getIndexes() ) ).isEqualTo( 11 );
                 assertThat( count( tx.schema().getConstraints() ) ).isEqualTo( 3 );
+
+                tx.schema().awaitIndexesOnline( 1, TimeUnit.HOURS );
                 // simply verify that the indexes have got at least some entries in them and the consistency checker below will
                 // verify that the index entries matches the data
                 Iterator<IndexDescriptor> indexes = tx.kernelTransaction().schemaRead().indexesGetAll();
