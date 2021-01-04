@@ -215,25 +215,6 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
       )
   }
 
-  test("something") {
-    val nodeCount = 100
-    val limit = 49
-    (0 until nodeCount).foreach(_ => createNode())
-
-    val result = executeSingle(s"MATCH (n), (m) WITH n, m ORDER BY m RETURN n, m LIMIT $limit")
-
-    result.executionPlanDescription() should haveAsRoot.aPlan("ProduceResults").withEstimatedRows(limit)
-      .withLHS(aPlan("Limit").withEstimatedRows(limit)
-        .withLHS(aPlan("CartesianProduct").withEstimatedRows(limit)
-          .withChildren(
-            aPlan("Sort").withEstimatedRows(math.sqrt(limit).toLong)
-              .withLHS(aPlan("AllNodesScan").withEstimatedRows(nodeCount)),
-            aPlan("AllNodesScan").withEstimatedRows(math.sqrt(limit).toLong)
-          )
-        )
-      )
-  }
-
   test("should estimate rows with reset selectivity through top") {
     val nodeCount = 100
     val limit = 50
@@ -329,8 +310,6 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
       )
   }
 
-  // TODO: Distinct (lazy), ordered distinct (lazy), aggregation (eager), ordered aggregation (lazy)
-
   test("should estimate rows with limit selectivity through Distinct") {
     val nodeCount = 100
     val limit = 20
@@ -395,7 +374,6 @@ class LimitCardinalityEstimationAcceptanceTest extends ExecutionEngineFunSuite w
       )
   }
 
-  // TODO: SKIP and LIMIT test
   test("should estimate rows with respect to SKIP when limit is higher than total nodes") {
     val nodeCount = 100
     val limit = 100
