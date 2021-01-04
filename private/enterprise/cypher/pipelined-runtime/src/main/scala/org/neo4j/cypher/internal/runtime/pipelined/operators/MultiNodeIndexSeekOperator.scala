@@ -102,18 +102,21 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
         // [Here we have an optimization opportunity to skip this step if the variables that the seek depends on did not change compared to the last input row]
         indexQueries = indexSeekers(i).computeIndexQueries(queryState, initExecutionContext)
         val indexQueryIterator = indexQueries.toIterator
-        require(indexQueryIterator.hasNext, "An index query should always have at least one predicate")
         seeks(i).clear()
         do {
-          val indexQuery = indexQueryIterator.next()
-          val indexSeek: () => Unit = seek(state.queryIndexes(nodeIndexSeekParameters(i).queryIndex),
-                                           nodeCursors(i),
-                                           read,
-                                           indexQuery,
-                                           indexSeekers(i).needsValues,
-                                           nodeIndexSeekParameters(i).kernelIndexOrder,
-                                           i)
-          seeks(i) += indexSeek
+          if (indexQueryIterator.hasNext) {
+            val indexQuery = indexQueryIterator.next()
+            val indexSeek: () => Unit = seek(state.queryIndexes(nodeIndexSeekParameters(i).queryIndex),
+              nodeCursors(i),
+              read,
+              indexQuery,
+              indexSeekers(i).needsValues,
+              nodeIndexSeekParameters(i).kernelIndexOrder,
+              i)
+            seeks(i) += indexSeek
+          } else {
+            seeks(i) += (() => {})
+          }
         } while (indexQueryIterator.hasNext)
 
         // Start the first index query of the seek

@@ -603,6 +603,27 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     result.executionPlanDescription() shouldNot includeSomewhere.aPlan("CartesianProduct")
   }
 
+  test("should handle cartesian product of seeks where one seek is empty") {
+    // given
+    graph.createNodeKeyConstraint("Person", "name")
+    graph.createIndex("Person", "age")
+    createLabeledNode(Map("name" -> "Bob", "age" -> 47), "Person")
+    createLabeledNode(Map("name" -> "Alice", "age" -> 42), "Person")
+    graph.awaitIndexesOnline()
+
+    // when
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      """
+        |MATCH (user1:Person {name: "Bob"}), (user2:Person)
+        |WHERE user2.age IN []
+        |RETURN user2
+        |""".stripMargin
+    )
+
+    //then
+    result.toList shouldBe empty
+  }
+
   private def setUpDatabaseForTests() {
     executeWith(Configs.InterpretedAndSlottedAndPipelined,
       """CREATE (architect:Matrix { name:'The Architect' }),
